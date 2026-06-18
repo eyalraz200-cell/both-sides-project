@@ -1,1343 +1,484 @@
-const LEFT_LIGHT  = "#b8d9ff";
-const LEFT_MID    = "#4e9af1";
-const LEFT_DARK   = "#0d2d5e";
-
-const RIGHT_LIGHT = "#ffd4a8";
-const RIGHT_MID   = "#f97316";
-const RIGHT_DARK  = "#7a2e00";
-
-const PAD_TOP    = 160;
-const PAD_BOT    = 40;
-const GAP        = 220;
-const CENTER_PAD  = 6;
-const S3_LABEL_H   = 20;
-const S3_LABEL_GAP = 8;
-const S3_CAT_GAP   = 24;
-
-function lerpColor(a, b, t) {
-  const r  = c => parseInt(c.slice(1,3), 16);
-  const g  = c => parseInt(c.slice(3,5), 16);
-  const bl = c => parseInt(c.slice(5,7), 16);
-  return `rgb(${Math.round(r(a)+(r(b)-r(a))*t)},${Math.round(g(a)+(g(b)-g(a))*t)},${Math.round(bl(a)+(bl(b)-bl(a))*t)})`;
-}
-
-function severityColor(light, mid, dark, i) {
-  const half = (SEVERITY.length - 1) / 2;
-  const t = Math.min(Math.max(i, 0), SEVERITY.length - 1);
-  return t <= half
-    ? lerpColor(light, mid, t / half)
-    : lerpColor(mid, dark, (t - half) / half);
-}
-
-const SEVERITY = [
-  "Peaceful protest",
-  "Road blocking",
-  "Harassment",
-  "Property destruction",
-  "Land seizure",
-  "Mob violence",
-  "Physical assault",
-  "Armed attack",
-  "Abduction",
-];
-
-const COUNTS = {
-  Left: {
-    "Peaceful protest":    2470,
-    "Road blocking":        470,
-    "Harassment":             1,
-    "Property destruction":  40,
-    "Land seizure":           0,
-    "Mob violence":          64,
-    "Physical assault":       9,
-    "Armed attack":           1,
-    "Abduction":              0,
-  },
-  Right: {
-    "Peaceful protest":      41,
-    "Road blocking":         18,
-    "Harassment":           107,
-    "Property destruction": 1422,
-    "Land seizure":         282,
-    "Mob violence":        1206,
-    "Physical assault":    1152,
-    "Armed attack":         427,
-    "Abduction":             20,
-  },
-};
-
-const WEAPONS = ["Stones", "Gas", "Arson", "Firearm", "Explosive"];
-
-const WEAPON_COUNTS = {
-  Left: {
-    "Stones":    { "Road blocking": 1, "Mob violence": 2 },
-    "Gas":       { "Peaceful protest": 1, "Mob violence": 1, "Armed attack": 1 },
-    "Arson":     {},
-    "Firearm":   {},
-    "Explosive": {},
-  },
-  Right: {
-    "Stones":    { "Road blocking": 5, "Harassment": 11, "Property destruction": 140, "Land seizure": 1, "Mob violence": 818, "Physical assault": 309, "Armed attack": 1 },
-    "Gas":       { "Harassment": 1, "Property destruction": 5, "Land seizure": 1, "Mob violence": 35, "Physical assault": 15, "Armed attack": 11 },
-    "Arson":     { "Road blocking": 1, "Harassment": 1, "Property destruction": 314, "Land seizure": 3, "Mob violence": 42, "Physical assault": 34, "Armed attack": 16, "Abduction": 1 },
-    "Firearm":   { "Road blocking": 2, "Harassment": 6, "Property destruction": 26, "Land seizure": 3, "Mob violence": 41, "Physical assault": 40, "Armed attack": 396, "Abduction": 1 },
-    "Explosive": { "Property destruction": 1, "Armed attack": 2 },
-  },
-};
-
-const TARGET_TYPES = [
-  "Government",
-  "Civilians",
-  "Property",
-  "Israeli forces",
-  "Activists",
-];
-
-// Counts broken down by severity within each target type
-const TARGET_COUNTS = {
-  Left: {
-    "Activists":      {},
-    "Civilians":      { "Peaceful protest": 1 },
-    "Government":     { "Peaceful protest": 2446, "Road blocking": 466, "Harassment": 1, "Property destruction": 39, "Mob violence": 62, "Physical assault": 8, "Armed attack": 1 },
-    "Israeli forces": { "Peaceful protest": 21, "Road blocking": 4, "Mob violence": 2, "Physical assault": 1 },
-    "Property":       { "Peaceful protest": 2, "Property destruction": 1 },
-  },
-  Right: {
-    "Activists":      { "Peaceful protest": 1, "Harassment": 1, "Land seizure": 1, "Physical assault": 9, "Armed attack": 2 },
-    "Civilians":      { "Road blocking": 15, "Harassment": 99, "Property destruction": 204, "Land seizure": 5, "Mob violence": 1043, "Physical assault": 1127, "Armed attack": 395, "Abduction": 20 },
-    "Government":     { "Peaceful protest": 13 },
-    "Israeli forces": { "Peaceful protest": 1, "Property destruction": 1, "Land seizure": 1, "Mob violence": 4, "Physical assault": 2 },
-    "Property":       { "Peaceful protest": 2, "Road blocking": 2, "Harassment": 1, "Property destruction": 1217, "Land seizure": 275, "Mob violence": 159, "Physical assault": 14, "Armed attack": 30 },
-  },
-};
-
-const STRUCTURE_TYPES = [
-  "Trees",
-  "Vehicle",
-  "Home",
-  "Privately owned property",
-  "Infrastructure",
-];
-
-const STRUCTURE_COUNTS = {
-  Left: {
-    "Trees":                   {},
-    "Vehicle":                 { "Mob violence": 2, "Peaceful protest": 2, "Property destruction": 2 },
-    "Home":                    { "Property destruction": 1 },
-    "Privately owned property":{ "Mob violence": 1 },
-    "Infrastructure":          { "Armed attack": 1, "Mob violence": 26, "Peaceful protest": 3, "Physical assault": 1, "Property destruction": 36, "Road blocking": 14 },
-  },
-  Right: {
-    "Trees":                   { "Abduction": 1, "Armed attack": 21, "Land seizure": 14, "Mob violence": 92, "Physical assault": 48, "Property destruction": 642, "Road blocking": 1 },
-    "Vehicle":                 { "Armed attack": 59, "Mob violence": 134, "Physical assault": 82, "Property destruction": 242, "Road blocking": 1 },
-    "Home":                    { "Armed attack": 37, "Harassment": 1, "Land seizure": 12, "Mob violence": 74, "Physical assault": 31, "Property destruction": 129 },
-    "Privately owned property":{ "Abduction": 1, "Armed attack": 15, "Harassment": 2, "Land seizure": 5, "Mob violence": 20, "Physical assault": 55, "Property destruction": 224 },
-    "Infrastructure":          { "Armed attack": 9, "Land seizure": 3, "Mob violence": 6, "Physical assault": 6, "Property destruction": 78 },
-  },
-};
-
 const canvas = document.getElementById("canvas");
 const ctx    = canvas.getContext("2d");
 
-const IDF_GREEN = "#22c55e";
+const PAGES = [drawPage1, drawPage2, drawPage3, drawPage4, drawPage5, drawPage7, drawPage8, drawPage9];
+let currentPage = 0;
 
-const SEVERITY_HE = {
-  "Peaceful protest":    "הפגנה לא אלימה",
-  "Road blocking":       "חסימת כביש",
-  "Harassment":          "הטרדה",
-  "Property destruction":"הרס רכוש",
-  "Land seizure":        "תפיסת קרקע",
-  "Mob violence":        "התפרעות",
-  "Physical assault":    "תקיפה פיזית",
-  "Armed attack":        "תקיפה עם כלי נשק חם",
-  "Abduction":           "חטיפה",
-};
-const IDF_COUNTS = {
-  "Mob violence": 130, "Physical assault": 117, "Property destruction": 110,
-  "Armed attack": 72, "Land seizure": 28, "Harassment": 19,
-  "Abduction": 3, "Road blocking": 3, "Peaceful protest": 1,
-};
-const IDF_TARGET_COUNTS = {
-  "Civilians": 360, "Property": 116, "Israeli forces": 1, "Activists": 3, "Government": 0,
-};
-const IDF_STRUCTURE_COUNTS = {
-  "Trees": 59, "Vehicle": 36, "Home": 65, "Privately owned property": 26, "Infrastructure": 8,
-};
-const IDF_WEAPON_COUNTS = {
-  "Stones": 62, "Gas": 55, "Arson": 24, "Firearm": 145, "Explosive": 1,
-};
-
-let screen1Dots = [];
-let screen1bDots = [];
-let screen2Dots = [];
-let screen3Dots = [];
-let screen3Bounds = { left: 0, right: 0 };
-let screen4Dots = [];
-let screen5Dots = [];
-let spacing = 6;
-
-
-function computeSpacing(W, H) {
-  const fullSectionH = (H - PAD_TOP - PAD_BOT) / SEVERITY.length;
-  const maxSectionCount = Math.max(...SEVERITY.flatMap(cat =>
-    [COUNTS.Left[cat] || 0, COUNTS.Right[cat] || 0]
-  ));
-  let s = Math.floor(Math.sqrt((W / 2 / 2) * fullSectionH / maxSectionCount));
-  return Math.max(3, s);
+function drawBackground(ctx, W, H) {
+  ctx.fillStyle = "#FFFFFC";
+  ctx.fillRect(0, 0, W, H);
+  // The vignette is a single CSS layer (.vignette in style.css) spanning the whole
+  // viewport — canvas + text column together — so there's no seam at the column edge.
 }
 
-function generateScreen1(W, H) {
-  const mid        = W / 2;
-  const leftCount  = Object.values(COUNTS.Left).reduce((a, b) => a + b, 0);
-  const rightCount = Object.values(COUNTS.Right).reduce((a, b) => a + b, 0);
-  const maxRows    = Math.floor((H - PAD_TOP - PAD_BOT) / spacing);
-  const cols       = Math.ceil(Math.max(leftCount, rightCount) / maxRows);
-
-  screen1Dots = [];
-
-  [
-    { side: "Left",  count: leftCount,  color: LEFT_MID  },
-    { side: "Right", count: rightCount, color: RIGHT_MID },
-  ].forEach(({ side, count, color }) => {
-    const startX = side === "Left"
-      ? mid - spacing / 2 - CENTER_PAD
-      : mid + spacing / 2 + CENTER_PAD;
-
-    for (let k = 0; k < count; k++) {
-      const row = Math.floor(k / cols);
-      const col = k % cols;
-      const x = side === "Left"
-        ? startX - col * spacing
-        : startX + col * spacing;
-      const y = H - PAD_BOT - spacing / 2 - row * spacing;
-      screen1Dots.push({ x, y, color });
-    }
-  });
-}
-
-function generateScreen1b(W, H) {
-  const mid        = W / 2;
-  const leftCount  = Object.values(COUNTS.Left).reduce((a, b) => a + b, 0);
-  const rightCount = Object.values(COUNTS.Right).reduce((a, b) => a + b, 0);
-  const maxRows    = Math.floor((H - PAD_TOP - PAD_BOT) / spacing);
-  const cols       = Math.ceil(Math.max(leftCount, rightCount) / maxRows);
-  const idfTotal   = Object.values(IDF_COUNTS).reduce((a, b) => a + b, 0);
-
-  screen1bDots = [];
-
-  // Left side — same as screen1
-  const leftStartX = mid - spacing / 2 - CENTER_PAD;
-  for (let k = 0; k < leftCount; k++) {
-    const row = Math.floor(k / cols);
-    const col = k % cols;
-    screen1bDots.push({
-      x: leftStartX - col * spacing,
-      y: H - PAD_BOT - spacing / 2 - row * spacing,
-      color: LEFT_MID,
-    });
-  }
-
-  // Right side — non-IDF first (orange), IDF last (green → they end up at top)
-  const rightStartX = mid + spacing / 2 + CENTER_PAD;
-  const nonIdf = rightCount - idfTotal;
-  for (let k = 0; k < rightCount; k++) {
-    const row  = Math.floor(k / cols);
-    const col  = k % cols;
-    screen1bDots.push({
-      x: rightStartX + col * spacing,
-      y: H - PAD_BOT - spacing / 2 - row * spacing,
-      color: k < nonIdf ? RIGHT_MID : IDF_GREEN,
-    });
-  }
-}
-
-function generateScreen2(W, H) {
-  const mid          = W / 2;
-  const fullSectionH = (H - PAD_TOP - PAD_BOT) / SEVERITY.length;
-  const rowsPerSec   = Math.floor(fullSectionH / spacing);
-
-  screen2Dots = [];
-
-  SEVERITY.forEach((cat, i) => {
-    const lColor        = severityColor(LEFT_LIGHT,  LEFT_MID,  LEFT_DARK,  i);
-    const rColor        = severityColor(RIGHT_LIGHT, RIGHT_MID, RIGHT_DARK, i);
-    const sectionBottom = PAD_TOP + (i + 1) * rowsPerSec * spacing;
-
-    ["Left", "Right"].forEach(side => {
-      const count  = COUNTS[side][cat] || 0;
-      const baseColor = side === "Left" ? lColor : rColor;
-      const idf    = side === "Right" ? (IDF_COUNTS[cat] || 0) : 0;
-      const startX = side === "Left"
-        ? mid - spacing / 2 - CENTER_PAD
-        : mid + spacing / 2 + CENTER_PAD;
-
-      for (let k = 0; k < count; k++) {
-        const row      = k % rowsPerSec;
-        const localCol = Math.floor(k / rowsPerSec);
-        const x = side === "Left"
-          ? startX - localCol * spacing
-          : startX + localCol * spacing;
-        const y     = sectionBottom - row * spacing;
-        const color = (side === "Right" && k >= count - idf) ? IDF_GREEN : baseColor;
-        screen2Dots.push({ x, y, color });
-      }
-    });
-  });
-}
-
-function weaponsForSide(side) {
-  return WEAPONS.filter(w =>
-    Object.values(WEAPON_COUNTS[side][w] || {}).reduce((a, b) => a + b, 0) > 0
-  );
-}
-
-const WEAPON_GAP = 24;
-
-function weaponCount(side, weapon) {
-  return Object.values(WEAPON_COUNTS[side][weapon] || {}).reduce((a, b) => a + b, 0);
-}
-
-function screen5Layout(W, H) {
-  const leftWeapons  = weaponsForSide("Left");
-  const rightWeapons = weaponsForSide("Right");
-  const maxCount     = Math.max(
-    ...leftWeapons.map(w  => weaponCount("Left",  w)),
-    ...rightWeapons.map(w => weaponCount("Right", w)),
-  );
-  const sideW    = (W / 2 - CENTER_PAD - spacing / 2) * 0.65;
-  const secW     = sideW / Math.max(leftWeapons.length, rightWeapons.length);
-  const cols     = Math.max(Math.floor(secW / spacing), 1);
-  const rows     = Math.max(Math.ceil(maxCount / cols), 1);
-  return { leftWeapons, rightWeapons, rows };
-}
-
-function weaponOffset(weapons, side, targetIdx, rows) {
-  let offset = 0;
-  for (let i = 0; i < targetIdx; i++) {
-    const count = weaponCount(side, weapons[i]);
-    const cols  = Math.max(Math.ceil(count / rows), 1);
-    offset += cols * spacing + WEAPON_GAP;
-  }
-  if (side === "Left" && weapons[targetIdx] === "Gas") offset += 20;
-  return offset;
-}
-
-function screen3CategoryTop(tt, W, H) {
-  const maxCols = Math.min(Math.floor((W / 2 - CENTER_PAD - spacing / 2) / spacing), 80);
-  const totalForTarget = (side, t) =>
-    Object.values(TARGET_COUNTS[side][t] || {}).reduce((a, b) => a + b, 0);
-
-  const catH = t => {
-    const maxCount = Math.max(totalForTarget("Left", t), totalForTarget("Right", t));
-    const rows     = Math.max(Math.ceil(maxCount / maxCols), 1);
-    return S3_LABEL_H + S3_LABEL_GAP + rows * spacing;
-  };
-
-  const totalContent = TARGET_TYPES.reduce((s, t) => s + catH(t), 0);
-  const availH       = (H || canvas.height) - PAD_TOP - PAD_BOT - 60;
-  const gap          = Math.max((availH - totalContent) / (TARGET_TYPES.length - 1), S3_CAT_GAP);
-
-  let y = PAD_TOP;
-  for (const t of TARGET_TYPES) {
-    if (t === tt) return y;
-    y += catH(t) + gap;
-  }
-  return y;
-}
-
-function generateScreen3(W, H) {
-  const mid = W / 2;
-
-  const totalForTarget = (side, tt) =>
-    Object.values(TARGET_COUNTS[side][tt] || {}).reduce((a, b) => a + b, 0);
-
-  screen3Dots = [];
-
-  const maxCols = Math.min(
-    Math.floor((W / 2 - CENTER_PAD - spacing / 2) / spacing),
-    80
-  );
-
-  TARGET_TYPES.forEach((tt, i) => {
-    const catTop  = screen3CategoryTop(tt, W, H);
-    const dotsTop = catTop + S3_LABEL_H + S3_LABEL_GAP;
-
-    ["Left", "Right"].forEach(side => {
-      const total  = totalForTarget(side, tt);
-      const startX = side === "Left"
-        ? mid - spacing / 2 - CENTER_PAD
-        : mid + spacing / 2 + CENTER_PAD;
-      const startY = dotsTop + spacing / 2;
-
-      const idf          = side === "Right" ? (IDF_TARGET_COUNTS[tt] || 0) : 0;
-      const rowsForBlock = Math.max(Math.ceil(total / maxCols), 1);
-      let k = 0;
-      SEVERITY.forEach((sev, si) => {
-        const count = (TARGET_COUNTS[side][tt] || {})[sev] || 0;
-        const baseColor = side === "Left"
-          ? severityColor(LEFT_LIGHT, LEFT_MID, LEFT_DARK,  si)
-          : severityColor(RIGHT_LIGHT, RIGHT_MID, RIGHT_DARK, si);
-
-        for (let j = 0; j < count; j++, k++) {
-          const col   = Math.floor(k / rowsForBlock);
-          const row   = k % rowsForBlock;
-          const x     = side === "Left"
-            ? startX - col * spacing
-            : startX + col * spacing;
-          const y     = startY + row * spacing;
-          const color = (side === "Right" && k >= total - idf) ? IDF_GREEN : baseColor;
-          screen3Dots.push({ x, y, color });
-        }
-      });
-    });
-  });
-}
-
-function drawScreen3() {
-  const W   = canvas.width;
-  const H   = canvas.height;
-  const mid = W / 2;
-
-  const r = spacing / 2 - 0.5;
-
-  ctx.clearRect(0, 0, W, H);
-
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, W, PAD_TOP);
-  ctx.font = "13px monospace";
-  ctx.fillStyle = "#111";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("קיצוניים משני הצדדים", W / 2, PAD_TOP / 2 - 12);
-  ctx.font = "11px monospace";
-  ctx.fillStyle = "#555";
-  ctx.fillText("סוג מטרה", W / 2, PAD_TOP / 2 + 12);
-
-  const TARGET_HE = {
-    "Government":     "ממשל",
-    "Property":       "רכוש",
-    "Israeli forces": "כוחות ישראליים",
-    "Activists":      "פעילים",
-    "Civilians":      "אזרחים",
-  };
-
-  ctx.font = "12px monospace";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "top";
-  ctx.fillStyle = "#111";
-  TARGET_TYPES.forEach((label, i) => {
-    const y = screen3CategoryTop(label, W, H) + (S3_LABEL_H - 12) / 2;
-    ctx.fillText(TARGET_HE[label] || label, mid, y);
-  });
-
-  for (const { x, y, color } of screen3Dots) {
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-  }
-}
-
-function screen4CategoryTop(tt, W, H) {
-  const maxCols = Math.min(Math.floor((W / 2 - CENTER_PAD - spacing / 2) / spacing), 80);
-  const totalFor = (side, t) =>
-    Object.values(STRUCTURE_COUNTS[side][t] || {}).reduce((a, b) => a + b, 0);
-  const catH = t => {
-    const maxCount = Math.max(totalFor("Left", t), totalFor("Right", t));
-    const rows     = Math.max(Math.ceil(maxCount / maxCols), 1);
-    return S3_LABEL_H + S3_LABEL_GAP + rows * spacing;
-  };
-  const totalContent = STRUCTURE_TYPES.reduce((s, t) => s + catH(t), 0);
-  const availH       = (H || canvas.height) - PAD_TOP - PAD_BOT - 60;
-  const gap          = Math.max((availH - totalContent) / (STRUCTURE_TYPES.length - 1), S3_CAT_GAP);
-  let y = PAD_TOP;
-  for (const t of STRUCTURE_TYPES) {
-    if (t === tt) return y;
-    y += catH(t) + gap;
-  }
-  return y;
-}
-
-function generateScreen4(W, H) {
-  const mid = W / 2;
-  const maxCols = Math.min(Math.floor((W / 2 - CENTER_PAD - spacing / 2) / spacing), 80);
-  const totalFor = (side, tt) =>
-    Object.values(STRUCTURE_COUNTS[side][tt] || {}).reduce((a, b) => a + b, 0);
-
-  screen4Dots = [];
-
-  STRUCTURE_TYPES.forEach((tt, i) => {
-    const catTop  = screen4CategoryTop(tt, W, H);
-    const dotsTop = catTop + S3_LABEL_H + S3_LABEL_GAP;
-
-    ["Left", "Right"].forEach(side => {
-      const total          = totalFor(side, tt);
-      const rowsForBlock   = Math.max(Math.ceil(total / maxCols), 1);
-      const startX         = side === "Left"
-        ? mid - spacing / 2 - CENTER_PAD
-        : mid + spacing / 2 + CENTER_PAD;
-      const startY         = dotsTop + spacing / 2;
-
-      const idf = side === "Right" ? (IDF_STRUCTURE_COUNTS[tt] || 0) : 0;
-      let k = 0;
-      SEVERITY.forEach((sev, si) => {
-        const count = (STRUCTURE_COUNTS[side][tt] || {})[sev] || 0;
-        const baseColor = side === "Left"
-          ? severityColor(LEFT_LIGHT, LEFT_MID, LEFT_DARK,  si)
-          : severityColor(RIGHT_LIGHT, RIGHT_MID, RIGHT_DARK, si);
-
-        for (let j = 0; j < count; j++, k++) {
-          const col   = Math.floor(k / rowsForBlock);
-          const row   = k % rowsForBlock;
-          const x     = side === "Left"
-            ? startX - col * spacing
-            : startX + col * spacing;
-          const y     = startY + row * spacing;
-          const color = (side === "Right" && k >= total - idf) ? IDF_GREEN : baseColor;
-          screen4Dots.push({ x, y, color });
-        }
-      });
-    });
-  });
-}
-
-const STRUCTURE_HE = {
-  "Trees":                   "עצים",
-  "Vehicle":                 "רכבים",
-  "Home":                    "בתים",
-  "Privately owned property":"רכוש פרטי",
-  "Infrastructure":          "תשתיות",
-};
-
-function drawScreen4() {
-  const W   = canvas.width;
-  const H   = canvas.height;
-  const mid = W / 2;
-  const r   = spacing / 2 - 0.5;
-
-  ctx.clearRect(0, 0, W, H);
-
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, W, PAD_TOP);
-  ctx.font = "13px monospace";
-  ctx.fillStyle = "#111";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("קיצוניים משני הצדדים", W / 2, PAD_TOP / 2 - 12);
-  ctx.font = "11px monospace";
-  ctx.fillStyle = "#555";
-  ctx.fillText("נזק לרכוש", W / 2, PAD_TOP / 2 + 12);
-
-  ctx.font = "12px monospace";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "top";
-  ctx.fillStyle = "#111";
-  STRUCTURE_TYPES.forEach((tt) => {
-    const y = screen4CategoryTop(tt, W, H) + (S3_LABEL_H - 12) / 2;
-    ctx.fillText(STRUCTURE_HE[tt] || tt, mid, y);
-  });
-
-  for (const { x, y, color } of screen4Dots) {
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-  }
-}
-
-function generateScreen5(W, H) {
-  const mid = W / 2;
-  const { leftWeapons, rightWeapons, rows } = screen5Layout(W, H);
-
-  screen5Dots = [];
-
-  [
-    { side: "Left",  weapons: leftWeapons  },
-    { side: "Right", weapons: rightWeapons },
-  ].forEach(({ side, weapons }) => {
-    weapons.forEach((weapon, wi) => {
-      const offset = weaponOffset(weapons, side, wi, rows);
-      const startX = side === "Left"
-        ? mid - CENTER_PAD - spacing / 2 - offset
-        : mid + CENTER_PAD + spacing / 2 + offset;
-      const startY = H / 2 - (rows * spacing) / 2 + spacing / 2;
-
-      const total = Object.values(WEAPON_COUNTS[side][weapon] || {}).reduce((a, b) => a + b, 0);
-      const idf   = side === "Right" ? (IDF_WEAPON_COUNTS[weapon] || 0) : 0;
-      let k = 0;
-      SEVERITY.forEach((sev, si) => {
-        const count = (WEAPON_COUNTS[side][weapon] || {})[sev] || 0;
-        const baseColor = side === "Left"
-          ? severityColor(LEFT_LIGHT, LEFT_MID, LEFT_DARK, si)
-          : severityColor(RIGHT_LIGHT, RIGHT_MID, RIGHT_DARK, si);
-
-        for (let j = 0; j < count; j++, k++) {
-          const col   = Math.floor(k / rows);
-          const row   = k % rows;
-          const x     = side === "Left"
-            ? startX - col * spacing
-            : startX + col * spacing;
-          const y     = startY + row * spacing;
-          const color = (side === "Right" && k >= total - idf) ? IDF_GREEN : baseColor;
-          screen5Dots.push({ x, y, color });
-        }
-      });
-    });
-  });
-}
-
-function drawScreen5() {
-  const W = canvas.width;
-  const H = canvas.height;
-  const mid = W / 2;
-  const r = spacing / 2 - 0.5;
-  const { leftWeapons, rightWeapons, rows } = screen5Layout(W, H);
-  const bandTop = H / 2 - (rows * spacing) / 2;
-
-  ctx.clearRect(0, 0, W, H);
-
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, W, PAD_TOP);
-  const WEAPONS_HE = {
-    "Stones":    "אבנים",
-    "Gas":       "גז",
-    "Arson":     "הצתה",
-    "Firearm":   "נשק חם",
-    "Explosive": "נפץ",
-  };
-
-  ctx.font = "13px monospace";
-  ctx.fillStyle = "#111";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("קיצוניים משני הצדדים", W / 2, PAD_TOP / 2 - 12);
-  ctx.font = "11px monospace";
-  ctx.fillStyle = "#555";
-  ctx.fillText("נשק בשימוש", W / 2, PAD_TOP / 2 + 12);
-
-  ctx.font = "12px monospace";
-  ctx.textBaseline = "bottom";
-  ctx.fillStyle = "#111";
-
-  leftWeapons.forEach((weapon, wi) => {
-    const offset = weaponOffset(leftWeapons, "Left", wi, rows);
-    ctx.textAlign = "right";
-    ctx.fillText(WEAPONS_HE[weapon] || weapon, mid - CENTER_PAD - spacing / 2 - offset, bandTop - 8);
-  });
-  rightWeapons.forEach((weapon, wi) => {
-    const offset = weaponOffset(rightWeapons, "Right", wi, rows);
-    ctx.textAlign = "left";
-    ctx.fillText(WEAPONS_HE[weapon] || weapon, mid + CENTER_PAD + spacing / 2 + offset, bandTop - 8);
-  });
-
-  for (const { x, y, color } of screen5Dots) {
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-  }
-
-}
-
-function drawScreen1() {
-  const W   = canvas.width;
-  const H   = canvas.height;
-  const r   = spacing / 2 - 0.5;
-
-  ctx.clearRect(0, 0, W, H);
-
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, W, PAD_TOP);
-  ctx.font = "13px monospace";
-  ctx.fillStyle = "#111";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("קיצוניים משני הצדדים", W / 2, PAD_TOP / 2 - 12);
-  ctx.font = "11px monospace";
-  ctx.fillStyle = "#555";
-  ctx.fillText("אירועים מדווחים מ1.1.2023 - 2.6.2025", W / 2, PAD_TOP / 2 + 12);
-
-  for (const { x, y, color } of screen1Dots) {
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-  }
-
-  const mid        = W / 2;
-  const leftCount  = Object.values(COUNTS.Left).reduce((a, b) => a + b, 0);
-  const rightCount = Object.values(COUNTS.Right).reduce((a, b) => a + b, 0);
-  const maxRows    = Math.floor((H - PAD_TOP - PAD_BOT) / spacing);
-  const cols       = Math.ceil(Math.max(leftCount, rightCount) / maxRows);
-
-  const leftTopY  = H - PAD_BOT - spacing / 2 - (Math.ceil(leftCount  / cols) - 1) * spacing;
-  const rightTopY = H - PAD_BOT - spacing / 2 - (Math.ceil(rightCount / cols) - 1) * spacing;
-  const leftCenterX  = mid - spacing / 2 - CENTER_PAD - ((cols - 1) * spacing) / 2;
-  const rightCenterX = mid + spacing / 2 + CENTER_PAD + ((cols - 1) * spacing) / 2;
-
-  ctx.font = "11px monospace";
-  ctx.fillStyle = "#333";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "bottom";
-  ctx.fillText(leftCount.toLocaleString(),  leftCenterX,  leftTopY  - 8);
-  ctx.fillText(rightCount.toLocaleString(), rightCenterX, rightTopY - 8);
-
-  const leftOuterX  = mid - spacing / 2 - CENTER_PAD - (cols - 1) * spacing;
-  const rightOuterX = mid + spacing / 2 + CENTER_PAD + (cols - 1) * spacing;
-  ctx.font = "11px monospace";
-  ctx.fillStyle = "#555";
-  ctx.textBaseline = "bottom";
-  ctx.textAlign = "right";
-  ctx.fillText("הפגנות השמאל נגד הממשלה",      leftOuterX - 12,  H - PAD_BOT - spacing / 2);
-  ctx.textAlign = "left";
-  ctx.fillText("פעילות מתיישבים נגד פלסטינים", rightOuterX + 12, H - PAD_BOT - spacing / 2);
-}
-
-function drawScreen1b() {
-  const W   = canvas.width;
-  const H   = canvas.height;
-  const r   = spacing / 2 - 0.5;
-
-  ctx.clearRect(0, 0, W, H);
-
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, W, PAD_TOP);
-  ctx.font = "13px monospace";
-  ctx.fillStyle = "#111";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("קיצוניים משני הצדדים", W / 2, PAD_TOP / 2 - 12);
-  ctx.font = "11px monospace";
-  ctx.fillStyle = "#555";
-  ctx.fillText("אירועים מדווחים מ1.1.2023 - 2.6.2025", W / 2, PAD_TOP / 2 + 12);
-
-  for (const { x, y, color } of screen1bDots) {
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-  }
-
-  const mid       = W / 2;
-  const leftCount  = Object.values(COUNTS.Left).reduce((a, b) => a + b, 0);
-  const rightCount = Object.values(COUNTS.Right).reduce((a, b) => a + b, 0);
-  const maxRows    = Math.floor((H - PAD_TOP - PAD_BOT) / spacing);
-  const cols       = Math.ceil(Math.max(leftCount, rightCount) / maxRows);
-  const leftOuterX  = mid - spacing / 2 - CENTER_PAD - (cols - 1) * spacing;
-  const rightOuterX = mid + spacing / 2 + CENTER_PAD + (cols - 1) * spacing;
-  const rightTopY   = H - PAD_BOT - spacing / 2 - (Math.ceil(rightCount / cols) - 1) * spacing;
-
-  ctx.font = "11px monospace";
-  ctx.fillStyle = "#555";
-  ctx.textAlign = "right";
-  ctx.textBaseline = "bottom";
-  ctx.fillText("הפגנות השמאל נגד הממשלה",         leftOuterX - 12,  H - PAD_BOT - spacing / 2);
-  ctx.textAlign = "left";
-  ctx.fillText("פעילות מתיישבים נגד פלסטינים",    rightOuterX + 12, H - PAD_BOT - spacing / 2);
-  ctx.textBaseline = "middle";
-  ctx.fillText("אירועים בשיתוף פעולה עם כוחות הביטחון", rightOuterX + 12, rightTopY);
-}
-
-function drawScreen2() {
-  const W   = canvas.width;
-  const H   = canvas.height;
-  const mid = W / 2;
-  const r   = spacing / 2 - 0.5;
-  const fullSectionH = (H - PAD_TOP - PAD_BOT) / SEVERITY.length;
-  const rowsPerSec   = Math.floor(fullSectionH / spacing);
-
-  ctx.clearRect(0, 0, W, H);
-
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, W, PAD_TOP);
-  ctx.font = "13px monospace";
-  ctx.fillStyle = "#111";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("קיצוניים משני הצדדים", W / 2, PAD_TOP / 2 - 12);
-  ctx.font = "11px monospace";
-  ctx.fillStyle = "#555";
-  ctx.fillText("סוג אירוע", W / 2, PAD_TOP / 2 + 12);
-
-  ctx.font = "12px monospace";
-  ctx.textBaseline = "middle";
-  const GAP_LABEL = 80;
-  const sharedLabelX = Math.max(...SEVERITY.map(cat => {
-    const count   = COUNTS.Right[cat] || 0;
-    const numCols = count > 0 ? Math.ceil(count / rowsPerSec) : 1;
-    return (mid + spacing / 2) + (numCols - 1) * spacing;
-  })) + GAP_LABEL;
-
-  SEVERITY.forEach((cat, i) => {
-    const count     = COUNTS.Right[cat] || 0;
-    const numCols   = count > 0 ? Math.ceil(count / rowsPerSec) : 1;
-    const rightmost = (mid + spacing / 2) + (numCols - 1) * spacing;
-    const y = PAD_TOP + (i + 0.5) * rowsPerSec * spacing;
-    const t = i / (SEVERITY.length - 1);
-    const v = Math.round(200 - t * 180);
-    ctx.fillStyle = `rgb(${v},${v},${v})`;
-    ctx.textAlign = "left";
-    ctx.fillText(SEVERITY_HE[cat], sharedLabelX, y);
-  });
-
-  for (const { x, y, color } of screen2Dots) {
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-  }
-
+function draw() {
+  const W = canvas.clientWidth, H = canvas.clientHeight;
+  PAGES[currentPage](ctx, W, H);
 }
 
 function init() {
-  canvas.width  = window.innerWidth;
-  canvas.height = window.innerHeight;
-  spacing = computeSpacing(canvas.width, canvas.height);
-  generateScreen1(canvas.width, canvas.height);
-  generateScreen1b(canvas.width, canvas.height);
-  generateScreen2(canvas.width, canvas.height);
-  generateScreen3(canvas.width, canvas.height);
-  generateScreen4(canvas.width, canvas.height);
-  generateScreen5(canvas.width, canvas.height);
-  generateScreenInjury(canvas.width, canvas.height);
-  generateScreenInjury2(canvas.width, canvas.height);
-  generateScreenInjury3(canvas.width, canvas.height);
-  generateScreen10();
-  render();
+  const dpr  = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  draw();
 }
 
-function drawScreen0() {
-  const W = canvas.width;
-  const H = canvas.height;
-  ctx.clearRect(0, 0, W, H);
+// ── Scrollytelling: which text section is active drives the pinned canvas ──
+const sections = Array.from(document.querySelectorAll(".text-section"));
 
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-
-  ctx.font = "28px monospace";
-  ctx.fillStyle = "#111";
-  ctx.fillText("קיצוניים משני הצדדים", W / 2, H / 2 - 20);
-
-  ctx.font = "15px monospace";
-  ctx.fillStyle = "#555";
-  ctx.fillText("ביטויי קיצוניות פוליטית מימין ומשמאל", W / 2, H / 2 + 20);
+function setActivePage(page) {
+  if (page === currentPage) return;
+  currentPage = page;
+  draw();
+  // Re-sync immediately rather than waiting for the next scroll event — currentPage
+  // can flip here slightly out of step with scroll position, and without this the
+  // overlay can stay visible a frame too long when leaving page 3 for page 4 (or
+  // page 4 for page 5/6).
+  page4UpdateFromScroll();
 }
 
-function drawScreen0b() {
-  const W   = canvas.width;
-  const H   = canvas.height;
-  const mid = W / 2;
-  const r   = spacing / 2 - 0.5;
+const sectionObserver = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) setActivePage(Number(entry.target.dataset.page));
+  });
+}, { rootMargin: "-50% 0px -50% 0px", threshold: 0 });
 
-  ctx.clearRect(0, 0, W, H);
+sections.forEach(sec => sectionObserver.observe(sec));
 
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+// ── Page 7's tall section is a pure scroll-driver: scroll position -> date.
+// It also opens with page 6's old intro title (the two "כל ריבוע..." /
+// "הצבע מציין..." lines, fused in here instead of being its own scroll step,
+// see .page6-intro in index.html/style.css) — a static header sitting above
+// the timeline's month list the whole time it's pinned, no animation. ──
+const page7Section = document.getElementById("page-5");
+let page7Ticking = false;
 
-  ctx.font = "28px monospace";
-  ctx.fillStyle = "#111";
-  ctx.fillText("קיצוניים משני הצדדים", mid, H / 2 - 20);
+function page7UpdateFromScroll() {
+  const rect = page7Section.getBoundingClientRect();
 
-  ctx.font = "15px monospace";
-  ctx.fillStyle = "#555";
-  ctx.fillText("ביטויי קיצוניות פוליטית מימין ומשמאל", mid, H / 2 + 20);
+  // t=0 when the section's top reaches the viewport top, t=1 one scrub-range of scrolling
+  // later. The scrub range is the section height minus one viewport height — that trailing
+  // viewport height is slack reserved for the sticky timeline (#page7Timeline) to release
+  // from its pinned position without affecting the date (see .page7-scrub in style.css).
+  const scrubRange = rect.height - window.innerHeight;
+  const t = scrubRange > 0 ? Math.max(0, Math.min(1, -rect.top / scrubRange)) : 0;
 
-  ctx.font = "12px monospace";
-  ctx.fillStyle = "#555";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "bottom";
-  ctx.fillText("כל עיגול מייצג אירוע מתועד מהקצה הפוליטי", mid, H / 2 + 160);
+  if (!p7.ready) return;
+  const minD = new Date(p7.minDate + "T00:00:00Z");
+  const maxD = new Date(p7.maxDate + "T00:00:00Z");
+  const totalDays = Math.round((maxD - minD) / 86400000);
+  const cur = new Date(minD);
+  cur.setUTCDate(cur.getUTCDate() + Math.round(t * totalDays));
+  p7.currentDate = cur.toISOString().slice(0, 10);
+  p7RenderTimeline();
 
-  ctx.beginPath();
-  ctx.arc(mid - spacing / 2 - CENTER_PAD, H / 2 + 160 + r + 12, r, 0, Math.PI * 2);
-  ctx.fillStyle = LEFT_MID;
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.arc(mid + spacing / 2 + CENTER_PAD, H / 2 + 160 + r + 12, r, 0, Math.PI * 2);
-  ctx.fillStyle = RIGHT_MID;
-  ctx.fill();
+  if (currentPage === 5) draw();
 }
 
-const INJURY_LEFT_BY_CAT = {
-  "Peaceful protest": 16, "Road blocking": 14, "Property destruction": 1, "Mob violence": 29, "Physical assault": 10,
-};
-const INJURY_RIGHT_BY_CAT = {
-  "Property destruction": 68, "Land seizure": 11, "Mob violence": 251, "Physical assault": 537, "Armed attack": 219, "Abduction": 3,
-};
-const IDF_INJURY_COUNTS = {
-  "Physical assault": 163, "Mob violence": 115, "Armed attack": 90, "Property destruction": 48, "Land seizure": 11, "Abduction": 2,
-};
+window.addEventListener("scroll", () => {
+  if (page7Ticking) return;
+  page7Ticking = true;
+  requestAnimationFrame(() => { page7UpdateFromScroll(); page7Ticking = false; });
+}, { passive: true });
 
-let screenInjuryDots = [];
+// ── Page 2's title glides up from below into a pinned, centered spot, then the
+// legend's group swatches reveal one by one as scrolling continues — two scroll-
+// driven phases sharing the section's slack (see .page2-panel in style.css). ──
+const page2Section     = document.getElementById("page-1");
+const page2TitleEl      = document.querySelector("#page-1 .section-title");
+const page2LegendItems  = Array.from(document.querySelectorAll("#page-1 .page2-legend-item"));
+const PAGE2_TITLE_TRAVEL  = 180; // px the title glides upward before locking in place
+const PAGE2_LEGEND_STAGGER = 140; // px of additional scroll between each legend item revealing — wide enough that
+                                   // a single wheel/trackpad tick can't skip past more than one item's threshold
+let page2Ticking = false;
 
-function generateScreenInjury(W, H) {
-  const mid      = W / 2;
-  const byCat    = { Left: INJURY_LEFT_BY_CAT, Right: INJURY_RIGHT_BY_CAT };
-  const totalFor = side => Object.values(byCat[side]).reduce((a, b) => a + b, 0);
-  const leftTotal  = totalFor("Left");
-  const rightTotal = totalFor("Right");
-  const maxRows    = Math.floor((H - PAD_TOP - PAD_BOT) / spacing);
-  const cols       = Math.ceil(Math.max(leftTotal, rightTotal) / maxRows);
+function page2UpdateFromScroll() {
+  const rect = page2Section.getBoundingClientRect();
+  const scrolled = -rect.top;
 
-  screenInjuryDots = [];
+  const titleT = Math.max(0, Math.min(1, scrolled / PAGE2_TITLE_TRAVEL));
+  page2TitleEl.style.transform = `translateY(${(1 - titleT) * PAGE2_TITLE_TRAVEL}px)`;
 
-  ["Left", "Right"].forEach(side => {
-    const startX = side === "Left"
-      ? mid - spacing / 2 - CENTER_PAD
-      : mid + spacing / 2 + CENTER_PAD;
-    let k = 0;
-    // Non-IDF dots first
-    SEVERITY.forEach((cat, si) => {
-      const count     = byCat[side][cat] || 0;
-      const idf       = side === "Right" ? (IDF_INJURY_COUNTS[cat] || 0) : 0;
-      const nonIdf    = count - idf;
-      const baseColor = side === "Left"
-        ? severityColor(LEFT_LIGHT, LEFT_MID, LEFT_DARK, si)
-        : severityColor(RIGHT_LIGHT, RIGHT_MID, RIGHT_DARK, si);
-      for (let j = 0; j < nonIdf; j++, k++) {
-        const row = Math.floor(k / cols);
-        const col = k % cols;
-        const x   = side === "Left" ? startX - col * spacing : startX + col * spacing;
-        const y   = H - PAD_BOT - spacing / 2 - row * spacing;
-        screenInjuryDots.push({ x, y, color: baseColor });
-      }
-    });
-    // IDF dots last (appear at top)
-    SEVERITY.forEach((cat, si) => {
-      const idf = side === "Right" ? (IDF_INJURY_COUNTS[cat] || 0) : 0;
-      for (let j = 0; j < idf; j++, k++) {
-        const row = Math.floor(k / cols);
-        const col = k % cols;
-        const x   = side === "Left" ? startX - col * spacing : startX + col * spacing;
-        const y   = H - PAD_BOT - spacing / 2 - row * spacing;
-        screenInjuryDots.push({ x, y, color: IDF_GREEN });
-      }
-    });
+  // Not clamped to 0: items must stay hidden until scrolling has gone past the
+  // title's full travel distance, not just until the (clamped) value reaches 0.
+  const legendScroll = scrolled - PAGE2_TITLE_TRAVEL;
+  page2LegendItems.forEach((item, i) => {
+    item.classList.toggle("is-visible", legendScroll > i * PAGE2_LEGEND_STAGGER);
   });
 }
 
-function drawScreenInjury() {
-  const W   = canvas.width;
-  const H   = canvas.height;
-  const mid = W / 2;
-  const r   = spacing / 2 - 0.5;
+window.addEventListener("scroll", () => {
+  if (page2Ticking) return;
+  page2Ticking = true;
+  requestAnimationFrame(() => { page2UpdateFromScroll(); page2Ticking = false; });
+}, { passive: true });
 
-  ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, W, PAD_TOP);
-
-  ctx.font = "13px monospace";
-  ctx.fillStyle = "#111";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("קיצוניים משני הצדדים", W / 2, PAD_TOP / 2 - 12);
-  ctx.font = "11px monospace";
-  ctx.fillStyle = "#555";
-  ctx.fillText("אירועים עם נפגעים", W / 2, PAD_TOP / 2 + 12);
-
-  for (const { x, y, color } of screenInjuryDots) {
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-  }
-
-  const leftTotal  = Object.values(INJURY_LEFT_BY_CAT).reduce((a, b) => a + b, 0);
-  const rightTotal = Object.values(INJURY_RIGHT_BY_CAT).reduce((a, b) => a + b, 0);
-  const maxRows    = Math.floor((H - PAD_TOP - PAD_BOT) / spacing);
-  const cols       = Math.ceil(Math.max(leftTotal, rightTotal) / maxRows);
-  const leftTopY   = H - PAD_BOT - spacing / 2 - (Math.ceil(leftTotal  / cols) - 1) * spacing;
-  const rightTopY  = H - PAD_BOT - spacing / 2 - (Math.ceil(rightTotal / cols) - 1) * spacing;
-  const leftCenterX  = mid - spacing / 2 - CENTER_PAD - ((cols - 1) * spacing) / 2;
-  const rightCenterX = mid + spacing / 2 + CENTER_PAD + ((cols - 1) * spacing) / 2;
-
-  ctx.font = "11px monospace";
-  ctx.fillStyle = "#333";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "bottom";
-  ctx.fillText(leftTotal.toLocaleString(),  leftCenterX,  leftTopY  - 8);
-  ctx.fillText(rightTotal.toLocaleString(), rightCenterX, rightTopY - 8);
-}
-
-const INJURY_BY_CAT_LIGHT = {
-  Left:  { "Peaceful protest":12, "Road blocking":7, "Property destruction":0, "Mob violence":27, "Physical assault":6 },
-  Right: { "Property destruction":51, "Land seizure":10, "Mob violence":179, "Physical assault":376, "Armed attack":86, "Abduction":2 },
-};
-const INJURY_BY_CAT_SEVERE = {
-  Left:  { "Peaceful protest":4, "Road blocking":7, "Property destruction":1, "Mob violence":2, "Physical assault":4 },
-  Right: { "Property destruction":16, "Land seizure":1, "Mob violence":68, "Physical assault":160, "Armed attack":119, "Abduction":1 },
-};
-const INJURY_BY_CAT_FATAL = {
-  Left:  {},
-  Right: { "Property destruction":1, "Mob violence":4, "Physical assault":1, "Armed attack":14 },
-};
-
-// Events with injuries by category (total, not split by severity)
-const EVENTS_LEFT_BY_CAT  = { "Mob violence":13, "Peaceful protest":8, "Road blocking":12, "Physical assault":3, "Property destruction":1 };
-const EVENTS_RIGHT_BY_CAT = { "Physical assault":280, "Property destruction":22, "Armed attack":87, "Mob violence":104, "Land seizure":2, "Abduction":3 };
-const IDF_EVENTS_BY_CAT   = { "Physical assault":38, "Armed attack":25, "Mob violence":29, "Property destruction":9, "Land seizure":2, "Abduction":2 };
-
-let screenInjury2Dots = [];
-let groupOffsets = [];
-
-function generateScreenInjury2(W, H) {
-  const mid      = W / 2;
-  const GAP_ROWS = 3;
-  const leftTotal  = Object.values(INJURY_LEFT_BY_CAT).reduce((a, b) => a + b, 0);
-  const rightTotal = Object.values(INJURY_RIGHT_BY_CAT).reduce((a, b) => a + b, 0);
-  const maxRows    = Math.floor((H - PAD_TOP - PAD_BOT) / spacing);
-  const cols       = Math.ceil(Math.max(leftTotal, rightTotal) / maxRows);
-
-  screenInjury2Dots = [];
-
-  // Pre-compute group offsets based on max(left,right) so both sides align
-  groupOffsets = [];
-  let ro = 0;
-  [INJURY_BY_CAT_LIGHT, INJURY_BY_CAT_SEVERE, INJURY_BY_CAT_FATAL].forEach(byGroup => {
-    groupOffsets.push(ro);
-    const lc = Object.values(byGroup.Left  || {}).reduce((a, b) => a + b, 0);
-    const rc = Object.values(byGroup.Right || {}).reduce((a, b) => a + b, 0);
-    ro += Math.ceil(Math.max(lc, rc) / cols) + GAP_ROWS;
-  });
-
-  ["Left", "Right"].forEach(side => {
-    const startX = side === "Left"
-      ? mid - spacing / 2 - CENTER_PAD
-      : mid + spacing / 2 + CENTER_PAD;
-
-    [INJURY_BY_CAT_LIGHT, INJURY_BY_CAT_SEVERE, INJURY_BY_CAT_FATAL].forEach((byGroup, gi) => {
-      const rowOffset = groupOffsets[gi];
-      let groupK = 0;
-
-      // Pass 1: non-IDF dots
-      SEVERITY.forEach((cat, si) => {
-        const count = (byGroup[side] || {})[cat] || 0;
-        const idf   = gi === 0 ? Math.round((IDF_INJURY_COUNTS[cat] || 0) * 0.64)
-                    : gi === 1 ? Math.round((IDF_INJURY_COUNTS[cat] || 0) * 0.35)
-                    : (IDF_INJURY_COUNTS[cat] || 0) - Math.round((IDF_INJURY_COUNTS[cat] || 0) * 0.64) - Math.round((IDF_INJURY_COUNTS[cat] || 0) * 0.35);
-        const nonIdf = count - (side === "Right" ? idf : 0);
-        const baseColor = side === "Left"
-          ? severityColor(LEFT_LIGHT, LEFT_MID, LEFT_DARK, si)
-          : severityColor(RIGHT_LIGHT, RIGHT_MID, RIGHT_DARK, si);
-        for (let j = 0; j < nonIdf; j++, groupK++) {
-          const localRow = Math.floor(groupK / cols);
-          const col      = groupK % cols;
-          const x = side === "Left" ? startX - col * spacing : startX + col * spacing;
-          const y = H - PAD_BOT - spacing / 2 - (rowOffset + localRow) * spacing;
-          screenInjury2Dots.push({ x, y, color: baseColor });
-        }
-      });
-
-      // Pass 2: IDF dots last → appear at top of group
-      SEVERITY.forEach((cat, si) => {
-        const count = (byGroup[side] || {})[cat] || 0;
-        const idf   = gi === 0 ? Math.round((IDF_INJURY_COUNTS[cat] || 0) * 0.64)
-                    : gi === 1 ? Math.round((IDF_INJURY_COUNTS[cat] || 0) * 0.35)
-                    : (IDF_INJURY_COUNTS[cat] || 0) - Math.round((IDF_INJURY_COUNTS[cat] || 0) * 0.64) - Math.round((IDF_INJURY_COUNTS[cat] || 0) * 0.35);
-        const idfCount = side === "Right" ? Math.min(idf, count) : 0;
-        for (let j = 0; j < idfCount; j++, groupK++) {
-          const localRow = Math.floor(groupK / cols);
-          const col      = groupK % cols;
-          const x = side === "Left" ? startX - col * spacing : startX + col * spacing;
-          const y = H - PAD_BOT - spacing / 2 - (rowOffset + localRow) * spacing;
-          screenInjury2Dots.push({ x, y, color: IDF_GREEN });
-        }
-      });
-
-    });
-  });
-}
-
-function drawScreenInjury2() {
-  const W   = canvas.width;
-  const H   = canvas.height;
-  const r   = spacing / 2 - 0.5;
-
-  ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, W, PAD_TOP);
-
-  ctx.font = "13px monospace";
-  ctx.fillStyle = "#111";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("קיצוניים משני הצדדים", W / 2, PAD_TOP / 2 - 12);
-  ctx.font = "11px monospace";
-  ctx.fillStyle = "#555";
-  ctx.fillText("אירועים עם נפגעים", W / 2, PAD_TOP / 2 + 12);
-
-  for (const { x, y, color } of screenInjury2Dots) {
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-  }
-
-  // Labels per group
-  const mid        = W / 2;
-  const leftTotal  = Object.values(INJURY_LEFT_BY_CAT).reduce((a, b) => a + b, 0);
-  const rightTotal = Object.values(INJURY_RIGHT_BY_CAT).reduce((a, b) => a + b, 0);
-  const maxRows    = Math.floor((H - PAD_TOP - PAD_BOT) / spacing);
-  const cols       = Math.ceil(Math.max(leftTotal, rightTotal) / maxRows);
-  const GAP_ROWS   = 3;
-
-  const GROUPS_DATA = [
-    { label: "פציעות קלות", data: INJURY_BY_CAT_LIGHT  },
-    { label: "פציעות קשות", data: INJURY_BY_CAT_SEVERE },
-    { label: "הרוגים",      data: INJURY_BY_CAT_FATAL  },
-  ];
-
-  ctx.font = "11px monospace";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  ctx.fillStyle = "#333";
-
-  GROUPS_DATA.forEach(({ label, data }, gi) => {
-    const lc        = Object.values(data.Left  || {}).reduce((a, b) => a + b, 0);
-    const rc        = Object.values(data.Right || {}).reduce((a, b) => a + b, 0);
-    const groupRows = Math.max(Math.ceil(Math.max(lc, rc) / cols), 1);
-    const groupCols = Math.min(rc, cols);
-    const rowOffset = groupOffsets[gi];
-    const centerRow = rowOffset + groupRows / 2;
-    const centerY   = H - PAD_BOT - spacing / 2 - centerRow * spacing;
-    const labelX    = mid + spacing / 2 + CENTER_PAD + (groupCols - 1) * spacing + spacing * 3;
-    ctx.fillText(label, labelX, centerY);
-  });
-}
-
-let screenInjury3Dots = [];
-
-function generateScreenInjury3(W, H) {
-  const mid     = W / 2;
-  const ROWS    = 3;
-  const centerY = (PAD_TOP + H) / 2;
-  const byCat   = { Left: EVENTS_LEFT_BY_CAT, Right: EVENTS_RIGHT_BY_CAT };
-
-  screenInjury3Dots = [];
-
-  ["Left", "Right"].forEach(side => {
-    const startX = side === "Left"
-      ? mid - spacing / 2 - CENTER_PAD
-      : mid + spacing / 2 + CENTER_PAD;
-    let k = 0;
-
-    const place = (color) => {
-      const col = Math.floor(k / ROWS);
-      const row = k % ROWS;
-      const x   = side === "Left" ? startX - col * spacing : startX + col * spacing;
-      const y   = centerY - (ROWS - 1) / 2 * spacing + row * spacing;
-      screenInjury3Dots.push({ x, y, color });
-      k++;
-    };
-
-    SEVERITY.forEach((cat, si) => {
-      const count     = byCat[side][cat] || 0;
-      const idf       = side === "Right" ? (IDF_EVENTS_BY_CAT[cat] || 0) : 0;
-      const nonIdf    = count - idf;
-      const baseColor = side === "Left"
-        ? severityColor(LEFT_LIGHT, LEFT_MID, LEFT_DARK, si)
-        : severityColor(RIGHT_LIGHT, RIGHT_MID, RIGHT_DARK, si);
-      for (let j = 0; j < nonIdf; j++) place(baseColor);
-    });
-    SEVERITY.forEach((cat) => {
-      const idf = side === "Right" ? (IDF_EVENTS_BY_CAT[cat] || 0) : 0;
-      for (let j = 0; j < idf; j++) place(IDF_GREEN);
-    });
-  });
-}
-
-function drawScreenInjury3() {
-  const W   = canvas.width;
-  const H   = canvas.height;
-  const mid = W / 2;
-  const r   = spacing / 2 - 0.5;
-
-  ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, W, PAD_TOP);
-
-  ctx.font = "13px monospace";
-  ctx.fillStyle = "#111";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("קיצוניים משני הצדדים", W / 2, PAD_TOP / 2 - 12);
-  ctx.font = "11px monospace";
-  ctx.fillStyle = "#555";
-  ctx.fillText("אירועים עם נפגעים", W / 2, PAD_TOP / 2 + 12);
-
-  for (const { x, y, color } of screenInjury3Dots) {
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-  }
-
-  const ROWS       = 3;
-  const centerY    = (PAD_TOP + H) / 2;
-  const leftTotal  = Object.values(EVENTS_LEFT_BY_CAT).reduce((a, b) => a + b, 0);
-  const rightTotal = Object.values(EVENTS_RIGHT_BY_CAT).reduce((a, b) => a + b, 0);
-  const leftCols   = Math.ceil(leftTotal  / ROWS);
-  const rightCols  = Math.ceil(rightTotal / ROWS);
-  const topY       = centerY - spacing;
-  const leftEndX   = mid - spacing / 2 - CENTER_PAD - (leftCols  - 1) * spacing;
-  const rightEndX  = mid + spacing / 2 + CENTER_PAD + (rightCols - 1) * spacing;
-
-  ctx.font = "11px monospace";
-  ctx.fillStyle = "#333";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "bottom";
-  ctx.fillText(leftTotal.toLocaleString(),  leftEndX,  topY - 8);
-  ctx.fillText(rightTotal.toLocaleString(), rightEndX, topY - 8);
-}
-
-// Screen 10: single scrollable column, one dot = one injured person, colored by who got hurt
-const VICTIM_BLUE     = "#4e9af1";
-const VICTIM_ORANGE   = "#f97316";
-const VICTIM_RED      = "#c0392b";
-const VICTIM_PINK     = "#f9a8d4";
-const VICTIM_DKGREEN  = "#166534";
-
-// Who got hurt, split by severity group
-const HURT_GROUPS = [
-  {
-    label: "פצועים קל",
-    entries: [
-      { color: VICTIM_RED,     count: 657 },
-      { color: VICTIM_PINK,    count: 32  },
-      { color: VICTIM_DKGREEN, count: 10  },
-      { color: VICTIM_BLUE,    count: 4   },
-      { color: VICTIM_ORANGE,  count: 11  },
-    ]
-  },
-  {
-    label: "פצועים קשה",
-    entries: [
-      { color: VICTIM_RED,     count: 347 },
-      { color: VICTIM_PINK,    count: 17  },
-      { color: VICTIM_BLUE,    count: 1   },
-    ]
-  },
-  {
-    label: "נהרגו",
-    entries: [
-      { color: VICTIM_RED,     count: 17  },
-      { color: VICTIM_PINK,    count: 1   },
-      { color: VICTIM_ORANGE,  count: 1   },
-    ]
-  },
+// ── Once every legend swatch has fully appeared, continued scrolling sends them
+// all gliding together into their spots in page 3's centered list — the legend's
+// reveal stays a clean, finished moment first, and only afterward does the page 3
+// approach take over. A DOM overlay duplicates each legend item (the real one
+// hides once the glide starts, so there's only one visible copy) and tweens it
+// via transform from a snapshot of its dock position to the row position page 3
+// would otherwise draw on canvas. ──
+const PAGE3_GROUPS = [
+  { label: "מתיישבים",             color: "#F9880D" },
+  { label: "מתנגדי הרפורמה המשפטית", color: "#0C7AE0" },
+  { label: "חרדים",                color: "#16181D" },
+  { label: "פעילי ימין",           color: "#69DB12" },
+  { label: "יוצאי אתיופיה",        color: "#9B30D9" },
+  { label: "פעילי שמאל",           color: "#EF3890" },
+  { label: "ערבים ישראלים",        color: "#0E7A14" },
 ];
 
-const SCREEN10_GROUP_GAP = 6; // extra dot-spacings between groups
+const groupsOverlayEl = document.getElementById("groupsOverlay");
 
-let screen10Dots = [];   // array of { color, groupLabel? }
-let screen10Groups = []; // [{label, startIndex, count}]
-let screen10ScrollY = 0;
+const groupItems = PAGE3_GROUPS.map(({ label, color }) => {
+  const legendEl = document.querySelector(`#page-1 .page2-legend-item[data-group="${label}"]`);
 
-function shuffle(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-}
+  const el = document.createElement("div");
+  el.className = "group-item";
+  const swatch = document.createElement("span");
+  swatch.className = "group-swatch";
+  swatch.style.background = color;
+  el.appendChild(swatch);
+  el.appendChild(document.createTextNode(label));
+  groupsOverlayEl.appendChild(el);
 
-function generateScreen10() {
-  screen10Dots = [];
-  screen10Groups = [];
+  return { legendEl, el };
+});
 
-  HURT_GROUPS.forEach(({ label, entries }) => {
-    const groupDots = [];
-    entries.forEach(({ color, count }) => {
-      for (let i = 0; i < count; i++) groupDots.push(color);
+// Scroll position at which the last legend item finishes revealing — the glide
+// to page 3 only starts past this point, never before every item has appeared.
+const PAGE2_REVEAL_END = PAGE2_TITLE_TRAVEL + (PAGE3_GROUPS.length - 1) * PAGE2_LEGEND_STAGGER;
+// Extra scroll, past PAGE2_REVEAL_END, during which the title and the fully-revealed
+// row of groups just sit still — a deliberate pause before the cascade to page 3
+// starts, instead of the glide beginning the instant the last item finishes revealing.
+const PAGE2_GLIDE_HOLD = 420;
+const GROUP_GLIDE_START = PAGE2_REVEAL_END + PAGE2_GLIDE_HOLD;
+const page2StickyEl = document.querySelector("#page-1 .page2-sticky");
+let groupMorphStartRects = null; // snapshot of each legend item's dock rect, captured the instant the glide begins
+let groupMorphTicking = false;
+
+// The next item's window starts very soon after the current one (HANDOFF below) —
+// not once the current item is mostly done, but while it's still near the start of
+// its own eased motion (eased = HANDOFF * GROUP_GLIDE_SPEED ≈ 0.24) — so the cascade
+// reads as a continuous flow instead of each item visibly racing ahead before the
+// next one even begins. Collisions are avoided not by keeping items out of each
+// other's way in time, but in space: each item's own horizontal and vertical motion
+// are eased so vertical separation grows from the very first frame (never flat at
+// zero while only x is changing), so by the time two overlapping items are both
+// near the same x, they already have meaningfully different y.
+const GROUP_GLIDE_HANDOFF = 0.12;
+const GROUP_GLIDE_WINDOW = 1 / (GROUP_GLIDE_HANDOFF * (PAGE3_GROUPS.length - 1) + 1);
+const GROUP_GLIDE_STRIDE = GROUP_GLIDE_HANDOFF * GROUP_GLIDE_WINDOW;
+const GROUP_GLIDE_SPEED = 2; // each item finishes its own motion at 1/this fraction of its window, then holds
+
+let page2to3T = 0; // last t computed below, read by page3to4UpdateFromScroll's is-active check
+
+function page2to3UpdateFromScroll() {
+  const scrolled = -page2Section.getBoundingClientRect().top;
+  const sectionHeight = page2Section.offsetHeight;
+  const runway = Math.max(1, sectionHeight - GROUP_GLIDE_START);
+  const t = Math.max(0, Math.min(1, (scrolled - GROUP_GLIDE_START) / runway));
+  page2to3T = t;
+
+  if (t > 0 && !groupMorphStartRects) {
+    // Store each item's offset from the sticky wrapper's own top edge, rather than
+    // its raw viewport position — the wrapper is still mid-pin at GROUP_GLIDE_START
+    // in ordinary scrolling, but a fast fling or programmatic jump can land the
+    // first t>0 frame after the wrapper has already started releasing (sliding up
+    // with the rest of the section), which would otherwise bake in an off-screen
+    // position and leave every item invisible for the rest of the glide.
+    const stickyTop = page2StickyEl.getBoundingClientRect().top;
+    groupMorphStartRects = groupItems.map(({ legendEl }) => {
+      const r = legendEl.getBoundingClientRect();
+      return { left: r.left, width: r.width, height: r.height, top: r.top - stickyTop };
     });
-    shuffle(groupDots);
-
-    const startIndex = screen10Dots.length;
-    screen10Groups.push({ label, startIndex, count: groupDots.length });
-    screen10Dots.push(...groupDots);
-    // gap: push null entries
-    for (let g = 0; g < SCREEN10_GROUP_GAP; g++) screen10Dots.push(null);
-  });
-}
-
-function drawScreen10() {
-  const W = canvas.width;
-  const H = canvas.height;
-  const r = spacing / 2 - 0.5;
-  const x = W / 2;
-
-  ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, W, PAD_TOP);
-
-  ctx.font = "13px monospace";
-  ctx.fillStyle = "#111";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("קיצוניים משני הצדדים", W / 2, PAD_TOP / 2 - 12);
-  ctx.font = "11px monospace";
-  ctx.fillStyle = "#555";
-  ctx.fillText("נפגעים", W / 2, PAD_TOP / 2 + 12);
-
-  // Draw dots
-  for (let i = 0; i < screen10Dots.length; i++) {
-    if (!screen10Dots[i]) continue;
-    const y = PAD_TOP + spacing / 2 + i * spacing - screen10ScrollY;
-    if (y + r < PAD_TOP || y - r > H) continue;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = screen10Dots[i];
-    ctx.fill();
+  } else if (t === 0) {
+    groupMorphStartRects = null;
+    // Restore every real legend item's CSS-driven opacity — without this, an item
+    // hidden during a previous glide (t > 0) stays stuck at opacity 0 forever,
+    // since the loop that would normally reset it never runs once t is back to 0.
+    groupItems.forEach(({ legendEl }) => { legendEl.style.opacity = ""; });
   }
 
-  // Draw group labels
-  ctx.font = "11px monospace";
-  ctx.fillStyle = "#333";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  const labelX = x + spacing + 8;
-  screen10Groups.forEach(({ label, startIndex }) => {
-    const y = PAD_TOP + spacing / 2 + startIndex * spacing - screen10ScrollY;
-    if (y > PAD_TOP && y < H) ctx.fillText(label, labelX, y);
+  groupsOverlayEl.classList.toggle("is-active", (t > 0 && currentPage === 1) || currentPage === 2);
+
+  if (!groupMorphStartRects) return;
+
+  // Re-add the sticky wrapper's current top so the dock position tracks it even
+  // while it's mid-release, instead of being frozen to wherever it was at capture.
+  const stickyTop = page2StickyEl.getBoundingClientRect().top;
+  const W = canvas.clientWidth, H = canvas.clientHeight;
+  const itemH = 36, totalH = PAGE3_GROUPS.length * itemH, startY = H / 2 - totalH / 2, centerX = W / 2;
+
+  groupItems.forEach(({ legendEl, el }, i) => {
+    const start = groupMorphStartRects[i];
+    const startTop = start.top + stickyTop;
+    const rowY = startY + i * itemH + itemH / 2;
+    const endLeft = centerX + 6 - start.width; // square's right edge (centerX+6) anchors the item's right edge
+    const endTop  = rowY - start.height / 2;
+
+    // Each item gets its own overlapping window for its left-then-down journey —
+    // bottom row (last item) goes first, and the next one starts well before the
+    // current one finishes (GROUP_GLIDE_STRIDE), so the cascade keeps flowing
+    // instead of waiting for each item to settle. Within its own window, an item
+    // still leans toward "left, then down" (tx outpaces ty early on), but ty is
+    // never flat at zero — it's already easing in from the first frame — so two
+    // overlapping items always have some vertical separation, not just a shared
+    // horizontal line.
+    const slot = PAGE3_GROUPS.length - 1 - i; // bottom row (last item) goes first
+    const windowStart = slot * GROUP_GLIDE_STRIDE;
+    const localT = Math.max(0, Math.min(1, (t - windowStart) / GROUP_GLIDE_WINDOW));
+    // Reach the final position well before the window ends (GROUP_GLIDE_SPEED), then
+    // hold there — the staggered start is what keeps the cascade flowing, this just
+    // makes each item's own motion snap into place quickly instead of drifting for
+    // its whole window.
+    const eased = Math.min(1, localT * GROUP_GLIDE_SPEED);
+    const tx = 1 - (1 - eased) * (1 - eased); // ease-out: fast early, leads the vertical leg
+    const ty = eased * eased;                 // ease-in: slower early, but never zero once moving
+
+    el.style.left = `${start.left}px`;
+    el.style.top  = `${startTop}px`;
+    el.style.transform = `translate(${(endLeft - start.left) * tx}px, ${(endTop - startTop) * ty}px)`;
+    el.style.opacity = 1;
+
+    // Only one copy should be visible at a time: hide the real legend item once
+    // the glide starts, restore CSS-driven opacity once we scroll back above it.
+    legendEl.style.opacity = t > 0 ? 0 : "";
   });
 }
 
-let currentScreen = 0;
+window.addEventListener("scroll", () => {
+  if (groupMorphTicking) return;
+  groupMorphTicking = true;
+  requestAnimationFrame(() => { page2to3UpdateFromScroll(); groupMorphTicking = false; });
+}, { passive: true });
 
-function render() {
-  if (currentScreen === 0) drawScreen0();
-  else if (currentScreen === 1) drawScreen0b();
-  else if (currentScreen === 2) drawScreen1();
-  else if (currentScreen === 3) drawScreen1b();
-  else if (currentScreen === 4) drawScreen2();
-  else if (currentScreen === 5) drawScreen3();
-  else if (currentScreen === 6) drawScreen5();
-  else if (currentScreen === 7) drawScreen4();
-  else if (currentScreen === 8) drawScreenInjury3();
-  else drawScreen10();
-}
+// ── Page 3's title locks in place once its section is pinned, and during that hold
+// the canvas's centered list rearranges into page 4's scattered layout. The two
+// groups page 4 doesn't use (יוצאי אתיופיה, ערבים ישראלים) settle into a small
+// centered list below the cluster instead of vanishing. Same DOM-overlay approach
+// as the page 2 → page 3 handoff, but simpler: both endpoints here (page 3's
+// centered-list math and page4.js's sqX/sqY/labelSide table) are pure functions of
+// canvas size, so there's no live DOM snapshot to capture — just two formulas to
+// interpolate between. ──
+const PAGE4_GROUPS = [
+  { label: "מתיישבים",             color: "#F9880D", sqX: 884, sqY: 524, labelSide: "right" },
+  { label: "פעילי ימין",           color: "#69DB12", sqX: 884, sqY: 558, labelSide: "right" },
+  { label: "חרדים",                color: "#16181D", sqX: 884, sqY: 592, labelSide: "right" },
+  { label: "מתנגדי הרפורמה המשפטית", color: "#0C7AE0", sqX: 837, sqY: 541, labelSide: "left"  },
+  { label: "פעילי שמאל",           color: "#EF3890", sqX: 837, sqY: 575, labelSide: "left"  },
+];
+const PAGE4_LABELS = new Set(PAGE4_GROUPS.map(g => g.label));
+const PAGE4_LEFTOVER_GROUPS = PAGE3_GROUPS.filter(g => !PAGE4_LABELS.has(g.label));
+const PAGE4_BY_LABEL = new Map(PAGE4_GROUPS.map(g => [g.label, g]));
+const PAGE4_LEFTOVER_INDEX = new Map(PAGE4_LEFTOVER_GROUPS.map((g, i) => [g.label, i]));
 
-init();
-window.addEventListener("resize", init);
-window.addEventListener("wheel", (e) => {
-  if (currentScreen === 9) {
-    const maxScroll = Math.max(0, screen10Dots.length * spacing - (canvas.height - PAD_TOP - PAD_BOT));
-    if (e.deltaY > 0) {
-      screen10ScrollY = Math.min(maxScroll, screen10ScrollY + 80);
-    } else {
-      if (screen10ScrollY <= 0) {
-        currentScreen--;
-        screen10ScrollY = 0;
+const page3Section = document.getElementById("page-2");
+const PAGE3_MORPH_HOLD = 200;   // px of scroll the title sits stuck before the rearrange starts
+const PAGE3_MORPH_RUNWAY = 550; // px of scroll the rearrange itself plays out over
+const leftoverSettled = {}; // label -> { left, top, width }, filled in below, read by page4UpdateFromScroll
+let page3to4Ticking = false;
+
+function page3to4UpdateFromScroll() {
+  // Sets the baseline (page 3 centered-list) position for every item — this phase
+  // only overrides that baseline once its own t is past 0.
+  page2to3UpdateFromScroll();
+
+  const scrolled = -page3Section.getBoundingClientRect().top;
+  const t = Math.max(0, Math.min(1, (scrolled - PAGE3_MORPH_HOLD) / PAGE3_MORPH_RUNWAY));
+
+  groupsOverlayEl.classList.toggle("is-active",
+    (page2to3T > 0 && currentPage === 1) || currentPage === 2 || currentPage === 3 || currentPage === 4);
+
+  if (t === 0) {
+    // Restore plain RTL layout in case a "right" labelSide item had flipped to ltr,
+    // for when we've scrolled back above this phase.
+    groupItems.forEach(({ el }) => { el.style.direction = ""; });
+    return;
+  }
+
+  const W = canvas.clientWidth, H = canvas.clientHeight;
+  const rx = x => x / 1728 * W, ry = y => y / 1117 * H;
+  const itemH = 36, totalH3 = PAGE3_GROUPS.length * itemH, startY3 = H / 2 - totalH3 / 2, centerX3 = W / 2;
+  const leftoverY = ry(592) + 3 + 100; // below page 4's lowest row, both leftovers share this row
+
+  // Both leftover items sit side by side on that one row, centered as a pair —
+  // need both widths up front to lay them out, rather than each anchoring to
+  // centerX3 independently (which would stack them on top of each other).
+  const leftoverGap = 24;
+  const leftoverWidths = PAGE4_LEFTOVER_GROUPS.map(g =>
+    groupItems[PAGE3_GROUPS.findIndex(p3 => p3.label === g.label)].el.getBoundingClientRect().width
+  );
+  const leftoverTotalWidth = leftoverWidths.reduce((sum, w) => sum + w, 0) + leftoverGap * (leftoverWidths.length - 1);
+  let leftoverRightEdge = centerX3 + leftoverTotalWidth / 2; // rightmost item starts here, in RTL order
+
+  groupItems.forEach(({ el }, i) => {
+    const label = PAGE3_GROUPS[i].label;
+    const rect = el.getBoundingClientRect();
+    const width = rect.width, height = rect.height;
+
+    // Where this item sits in page 3's centered list — same formula
+    // page2to3UpdateFromScroll uses for its own endLeft/endTop.
+    const rowY3 = startY3 + i * itemH + itemH / 2;
+    const fromLeft = centerX3 + 6 - width;
+    const fromTop = rowY3 - height / 2;
+
+    let toLeft, toTop, ltr = false;
+    const p4 = PAGE4_BY_LABEL.get(label);
+    if (p4) {
+      const sqLeft = rx(p4.sqX), centerY = ry(p4.sqY) + 3;
+      if (p4.labelSide === "right") {
+        toLeft = sqLeft; // swatch flush with the container's left edge once it's ltr
+        ltr = true;
       } else {
-        screen10ScrollY = Math.max(0, screen10ScrollY - 80);
+        toLeft = sqLeft + 6 - width; // square's right edge (sqLeft+6) anchors the item's right edge
       }
+      toTop = centerY - height / 2;
+    } else {
+      const leftoverIndex = PAGE4_LEFTOVER_INDEX.get(label);
+      if (leftoverIndex > 0) leftoverRightEdge -= leftoverWidths[leftoverIndex - 1] + leftoverGap;
+      toLeft = leftoverRightEdge - width;
+      toTop = leftoverY - height / 2;
+      // Stashed for page4UpdateFromScroll, which slides these two further left once
+      // page 4's own hold ends — avoids recomputing this side-by-side layout there.
+      leftoverSettled[label] = { left: toLeft, top: toTop, width };
     }
-    render();
-  } else if (e.deltaY > 0 && currentScreen < 9) {
-    currentScreen++;
-    render();
-  } else if (e.deltaY < 0 && currentScreen > 0) {
-    currentScreen--;
-    render();
+
+    el.style.direction = ltr ? "ltr" : "";
+    el.style.left = `${fromLeft}px`;
+    el.style.top  = `${fromTop}px`;
+    el.style.transform = `translate(${(toLeft - fromLeft) * t}px, ${(toTop - fromTop) * t}px)`;
+  });
+}
+
+window.addEventListener("scroll", () => {
+  if (page3to4Ticking) return;
+  page3to4Ticking = true;
+  requestAnimationFrame(() => { page3to4UpdateFromScroll(); page3to4Ticking = false; });
+}, { passive: true });
+
+// ── Page 4's title locks in place once its section is pinned, and during that hold
+// the two leftover groups (still sitting below the cluster, settled there by
+// page3to4UpdateFromScroll) slide out past the left edge of the screen instead of
+// lingering once they're no longer relevant to what's on screen. ──
+const page4Section = document.getElementById("page-3");
+const PAGE4_EXIT_HOLD = 200;   // px of scroll the title sits stuck before the exit starts
+const PAGE4_EXIT_RUNWAY = 400; // px of scroll the exit itself plays out over
+let page4Ticking = false;
+
+function page4UpdateFromScroll() {
+  // Sets the baseline (settled page 3→4 position) for every item, including the
+  // leftover pair's leftoverSettled entries this phase slides further left.
+  page3to4UpdateFromScroll();
+
+  const scrolled = -page4Section.getBoundingClientRect().top;
+  const t = Math.max(0, Math.min(1, (scrolled - PAGE4_EXIT_HOLD) / PAGE4_EXIT_RUNWAY));
+
+  if (t === 0) return;
+
+  PAGE4_LEFTOVER_GROUPS.forEach(({ label }) => {
+    const settled = leftoverSettled[label];
+    if (!settled) return;
+    const el = groupItems[PAGE3_GROUPS.findIndex(p3 => p3.label === label)].el;
+    const exitLeft = -(settled.width + 100); // fully past the left edge, regardless of viewport width
+    el.style.left = `${settled.left}px`;
+    el.style.top  = `${settled.top}px`;
+    el.style.transform = `translate(${(exitLeft - settled.left) * t}px, 0px)`;
+  });
+}
+
+window.addEventListener("scroll", () => {
+  if (page4Ticking) return;
+  page4Ticking = true;
+  requestAnimationFrame(() => { page4UpdateFromScroll(); page4Ticking = false; });
+}, { passive: true });
+
+// ── Page 8 holds page7's final layout until its title actually reaches the
+// viewport's vertical center — not just whenever currentPage flips to 6, which
+// (via the -50% IntersectionObserver above) can fire slightly before the title
+// has visually settled there. That crossing triggers p8Trigger (page8.js), which
+// plays a fixed-duration glide toward page9's starting layout entirely on its
+// own clock — scrolling is never blocked, so the title is free to keep scrolling
+// past while the glide plays in the background. Scrolling back up past that same
+// point (recorded as p8TriggerScrollY) plays the glide back in reverse via
+// p8TriggerReverse, once currentPage has made it back to 6. ──
+const page8TitleEl = document.querySelector("#page-6 .section-title");
+let page8Ticking = false;
+
+function page8CheckScroll() {
+  if (!p8Engaged) {
+    const rect = page8TitleEl.getBoundingClientRect();
+    const titleCenter = rect.top + rect.height / 2;
+    if (titleCenter <= window.innerHeight / 2) p8Trigger();
+  } else if (currentPage === 6 && p8TriggerScrollY !== null && window.scrollY < p8TriggerScrollY) {
+    p8TriggerReverse();
   }
+}
+
+window.addEventListener("scroll", () => {
+  if (page8Ticking) return;
+  page8Ticking = true;
+  requestAnimationFrame(() => { page8CheckScroll(); page8Ticking = false; });
+}, { passive: true });
+
+// ── Page 9's title glides up into its docked spot (matching the canvas legend's y
+// line) over the section's scroll slack, instead of snapping there instantly —
+// position:sticky alone has no travel distance here since the title sits flush
+// with its sticky wrapper's edge the moment that wrapper engages. ──
+const page9Section  = document.getElementById("page-7");
+const page9TitleEl  = document.querySelector("#page-7 .section-text");
+const page9StickyEl = document.querySelector("#page-7 .page9-sticky");
+const PAGE9_TITLE_TRAVEL = 220; // px the title glides upward before locking in place
+let page9Ticking = false;
+let page9LinePast = false; // previous "title past the horizontal line" state, so the line
+                            // trigger only fires on the transition
+
+function page9UpdateFromScroll() {
+  const rect = page9Section.getBoundingClientRect();
+  const t = Math.max(0, Math.min(1, -rect.top / PAGE9_TITLE_TRAVEL));
+  page9TitleEl.style.transform = `translateY(${(1 - t) * PAGE9_TITLE_TRAVEL}px)`;
+  // The vertical dashed divider lines (.page9-divider-line, in style.css) only
+  // fade in once the title has fully finished gliding up into its docked spot —
+  // they belong to the resting layout, not something the title travels past.
+  page9StickyEl.classList.toggle("docked", t >= 1);
+
+  // The canvas-drawn horizontal divider (page9.js) triggers on a different
+  // condition entirely: not the title's own glide finishing, but the title
+  // element having scrolled up past the line's actual on-screen position
+  // (P9_MID, page9.js — the same fraction of viewport height drawPage9 draws
+  // the line at). It's a fixed-duration animation once triggered (and reverses
+  // if the title scrolls back below the line before settling), not scroll-driven.
+  const lineY = window.innerHeight * P9_MID;
+  const titlePastLine = page9TitleEl.getBoundingClientRect().bottom <= lineY;
+  if (titlePastLine !== page9LinePast) {
+    page9LinePast = titlePastLine;
+    p9TriggerLine(titlePastLine ? 1 : 0);
+  }
+}
+
+window.addEventListener("scroll", () => {
+  if (page9Ticking) return;
+  page9Ticking = true;
+  requestAnimationFrame(() => { page9UpdateFromScroll(); page9Ticking = false; });
+}, { passive: true });
+
+// Explicitly load both weights so canvas gets the real font on first draw
+Promise.all([
+  document.fonts.load("400 24px 'HadassahFriedlaender'"),
+  document.fonts.load("100 16px 'HadassahFriedlaender'"),
+  document.fonts.load("400 16px 'Assistant'"),
+  document.fonts.load("700 16px 'Assistant'"),
+]).then(() => {
+  initPage7().then(() => { draw(); p7RenderTimeline(); });
+  init();
+  page7UpdateFromScroll();
+  page2UpdateFromScroll();
+  page4UpdateFromScroll();
+  page8CheckScroll();
+  page9UpdateFromScroll();
+  window.addEventListener("resize", () => { init(); p7RenderTimeline(); });
 });

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "emil-design-eng": {
+      "source": "emilkowalski/skill",
+      "sourceType": "github",
+      "skillPath": "skills/emil-design-eng/SKILL.md",
+      "computedHash": "8bdf9e4e6de7a4969147bf4828a4ad2c5aacd9fba4b690b250a85e0467ca387d"
+    },
+    "scrollytelling": {
+      "source": "doodledood/claude-code-plugins",
+      "sourceType": "github",
+      "skillPath": "claude-plugins/frontend-design/skills/scrollytelling/SKILL.md",
+      "computedHash": "e01bbc844aff7bd581e0f99e2413369521bc4784d358ffc69ecd5408eee4ef11"
+    }
+  }
+}
