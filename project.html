@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Radical Events</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300..800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="layout">
+    <div class="graphic-col">
+      <canvas id="canvas"></canvas>
+      <!-- Single persistent overlay for all 9 groups across the legend (fold 2)
+           through fold 5 — one set of DOM nodes that's continuously
+           repositioned/restyled as the user scrolls, rather than separate
+           per-fold overlays crossfading into each other (see GROUPS/
+           updateGroups in main.js). -->
+      <div class="groups-overlay" id="groupsOverlay" aria-hidden="true"></div>
+      <!-- 10 small squares (Figma node 120:1279) that fade in at the center,
+           taking the cluster's place once it settles into fold6's left
+           mini-legend — see FOLD6_SQUARES_Y/layoutFold6Squares in main.js. -->
+      <div class="fold6-squares-overlay" id="fold6SquaresOverlay" aria-hidden="true"></div>
+    </div>
+    <div class="text-col" id="textCol">
+      <section class="text-section" data-page="0" id="page-0">
+        <div class="page0-overlay">
+          <div class="page0-logo">
+            <img class="page0-logo-img" src="images/skuff-wordmark.png" alt="שקוף" />
+          </div>
+          <div class="page0-text">
+            <h2 class="page0-title">קיצוניים משני הצדדים</h2>
+            <p class="page0-subtitle">השוואה בין אופי הפעילות של הקצוות הפוליטיים בישראל</p>
+          </div>
+          <div class="page0-scroll">
+            <svg class="page0-scroll-arrow" width="13.5" height="11.0459" viewBox="0 0 13.5 11.0459" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0.75 4.77297H0V6.27297H0.75V5.52297V4.77297ZM13.2803 6.0533C13.5732 5.76041 13.5732 5.28553 13.2803 4.99264L8.50736 0.21967C8.21447 -0.0732236 7.73959 -0.0732236 7.4467 0.21967C7.15381 0.512563 7.15381 0.987437 7.4467 1.28033L11.6893 5.52297L7.4467 9.76561C7.15381 10.0585 7.15381 10.5334 7.4467 10.8263C7.73959 11.1192 8.21447 11.1192 8.50736 10.8263L13.2803 6.0533ZM0.75 5.52297V6.27297H12.75V5.52297V4.77297H0.75V5.52297Z" fill="black" fill-opacity="0.43"/>
+            </svg>
+            <p class="page0-scroll-text">גללו למטה<br />בשביל לצפות<br />בפרויקט</p>
+          </div>
+        </div>
+      </section>
+      <section class="text-section page2-panel" data-page="1" id="page-1">
+        <div class="page2-sticky">
+          <div class="section-text text-card">
+            <h2 class="section-title text-card-frame">בישראל פועלות קבוצות פוליטיות רבות, כל אחת עם מטרות ורצונות שונים, ולעיתים מנוגדים</h2>
+          </div>
+        </div>
+      </section>
+      <section class="text-section page3-panel" data-page="2" id="page-2">
+        <div class="page3-sticky">
+          <div class="section-text text-card">
+            <h2 class="section-title text-card-frame">הזירה הפוליטית אינה מתחלקת תמיד לשני צדדים ברורים</h2>
+          </div>
+        </div>
+      </section>
+      <section class="text-section page4-panel" data-page="3" id="page-3">
+        <div class="page4-sticky">
+          <div class="section-text text-card">
+            <h2 class="section-title text-card-frame">אבל, בשנים האחרונות מתחדדת חלוקה בין מספר קבוצות לשני מחנות פוליטיים מנוגדים</h2>
+          </div>
+        </div>
+      </section>
+      <section class="text-section" data-page="4" id="page-4">
+        <div class="section-text text-card">
+          <h2 class="section-title text-card-frame">חלק מהקבוצות לא משתייכות לחלוקה המחנאית שנוצרה, אנחנו נתמקד באלו שכן</h2>
+        </div>
+      </section>
+      <section class="text-section" data-page="5" id="page-5">
+        <div class="section-text text-card">
+          <h2 class="section-title text-card-frame">אספנו נתונים על אירועים פוליטיים שהתקיימו במרחב הפיזי, מתחילת שנת 2023 עד היום</h2>
+        </div>
+      </section>
+      <section class="text-section" data-page="6" id="page-6">
+        <div class="section-text text-card">
+          <h2 class="section-title text-card-frame">כל ריבוע מייצג פעולה פוליטית שהתקיימה במרחב הפיזי</h2>
+        </div>
+      </section>
+      <section class="text-section" data-page="7" id="page-7">
+        <div class="section-text text-card">
+          <h2 class="section-title text-card-frame">צבע הריבוע מציין את הקבוצה שביצעה אותה</h2>
+        </div>
+      </section>
+      <section class="text-section page7-scrub" data-page="8" id="page-8"></section>
+      <section class="text-section" data-page="9" id="page-9">
+        <div class="section-text text-card">
+          <h2 class="section-title text-card-frame">פעולות פוליטיות שונות זו מזו באופי, במטרה ובאופן הביצוע. חלקן נתפסות כחלק מהמשחק הדמוקרטי, אחרות כחציית גבול.</h2>
+        </div>
+      </section>
+      <section class="text-section page9-panel" data-page="10" id="page-10">
+        <div class="page9-title-row">
+          <div class="section-text text-card">
+            <h2 class="section-title text-card-frame">איפה עובר הגבול בעיניכם</h2>
+          </div>
+        </div>
+        <div class="page9-sticky">
+          <div class="page9-axis-label page9-axis-extreme">פעולות קיצוניות</div>
+          <div class="page9-axis-label page9-axis-legit">פעולות לגיטימיות</div>
+
+          <div class="page9-zone-wrap-extreme">
+            <div class="page9-zone" id="page9ZoneAbove" data-zone="above"></div>
+          </div>
+          <div class="page9-tray">
+            <div class="page9-zone" id="page9ZoneBelow" data-zone="below"></div>
+            <p class="page9-tray-hint">גררו את סוגי הפעולות שאתם מחשיבים קיצוניות</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  <script src="squareboundingbox.js"></script>
+  <script src="page1.js"></script>
+  <script src="page2.js"></script>
+  <script src="page3.js"></script>
+  <script src="page4.js"></script>
+  <script src="page5.js"></script>
+  <script src="page7.js"></script>
+  <script src="page8.js"></script>
+  <script src="page9.js"></script>
+  <script src="main.js"></script>
+  <script src="reload.js"></script>
+</body>
+</html>

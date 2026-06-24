@@ -14,7 +14,14 @@ const P9_CATEGORIES = [
 const P9_SQ      = 3;
 const P9_GAP  = 1;
 const P9_CELL = P9_SQ + P9_GAP;
-const P9_MID  = 0.75; // divider position as fraction of H (Figma: y=859/1117 of full frame, ~82% of viewport)
+const P9_MID  = 0.65; // divider position as fraction of H — raised from Figma's measured 719/982 (~73.22vh) per explicit request to move the extreme/legit dividing line higher up the screen
+
+// Gap reserved at center between the extreme grid's two column-blocks — wide
+// enough for the floating dropped-category labels (.page9-zone-wrap-extreme,
+// centered at W/2) to sit without overlapping the squares, matching Figma's own
+// reference (node 136:418305), whose two blocks sit ~415px apart on a 1512-wide
+// frame to leave room for exactly this.
+const P9_EXTREME_GAP = 320;
 
 // Maps English category names (from events.json) to P9_CATEGORIES index
 const CATEGORY_EN_TO_IDX = {
@@ -53,13 +60,13 @@ function p9LineRunLoop() {
   if (p9LinePhaseStart === null) return;
   const raw = p9LineCurrentRaw();
   page9LineT = p9Ease(raw);
-  if (currentPage === 7) draw();
+  if (currentPage === 10) draw();
   if (raw !== p9LineToT) {
     requestAnimationFrame(p9LineRunLoop);
   } else {
     p9LineFromT      = p9LineToT;
     p9LinePhaseStart = null;
-    if (currentPage === 7) draw();
+    if (currentPage === 10) draw();
   }
 }
 
@@ -114,12 +121,12 @@ function p9Ease(t) {
 function p9RunAnimLoop() {
   if (!p9.anim) return;
   const t = (performance.now() - p9.anim.start) / p9.anim.duration;
-  if (currentPage === 7) draw();
+  if (currentPage === 10) draw();
   if (t < 1) {
     requestAnimationFrame(p9RunAnimLoop);
   } else {
     p9.anim = null;
-    if (currentPage === 7) draw();
+    if (currentPage === 10) draw();
   }
 }
 
@@ -277,7 +284,7 @@ function drawPage9(ctx, W, H) {
   const midY   = Math.round(H * P9_MID);
   const botY   = Math.round(H * SBB.bottom);
   const leftX0  = W * SBB.left;
-  const rightX0 = W / 2 + 4;
+  const rightX0 = W / 2 + P9_EXTREME_GAP / 2;
   const SQ = P9_SQ, CELL = P9_CELL;
 
   // Every event gets one permanent slot the first time this runs — keyed by its
@@ -292,12 +299,12 @@ function drawPage9(ctx, W, H) {
   // per-side event counts shown above each block.
   const leftTop = [], leftBot = [], rightTop = [], rightBot = [];
   for (const e of p7.leftEvents) {
-    const idx  = CATEGORY_EN_TO_IDX[e.cat];
+    const idx  = CATEGORY_EN_TO_IDX[e.category];
     const side = (idx !== undefined && p9.sides[idx] === "below") ? "bot" : "top";
     (side === "top" ? leftTop : leftBot).push(e);
   }
   for (const e of p7.rightEvents) {
-    const idx  = CATEGORY_EN_TO_IDX[e.cat];
+    const idx  = CATEGORY_EN_TO_IDX[e.category];
     const side = (idx !== undefined && p9.sides[idx] === "below") ? "bot" : "top";
     (side === "top" ? rightTop : rightBot).push(e);
   }
@@ -305,7 +312,7 @@ function drawPage9(ctx, W, H) {
   p9SyncTopOrder(p9.leftTopOrder,  new Set(leftTop));
   p9SyncTopOrder(p9.rightTopOrder, new Set(rightTop));
 
-  const centerX = W / 2 - 4;
+  const centerX = W / 2 - P9_EXTREME_GAP / 2;
 
   // Records each event's *target* placement for next time (so a future transition
   // has a "from" to blend out of), and — while p9.anim is active — actually draws
@@ -331,10 +338,8 @@ function drawPage9(ctx, W, H) {
   }
 
   // The extreme dot grid is anchored at midY itself (touching the horizontal
-  // divider, no gap) and sized to reach all the way up to where the dashed guide
-  // line starts (14vh) — matching .page9-divider-line-top's top edge, but using
-  // the actual horizontal line as the bottom anchor instead of that dashed line's
-  // own (slightly short of midY) bottom edge.
+  // divider, no gap) and sized to reach all the way up to 14vh, matching
+  // .page9-zone-wrap-extreme's own top edge.
   const dividerTopY = Math.round(H * 0.14);
   const dashBotY    = H - 16;
   const extremeRows = Math.max(1, Math.floor((midY - dividerTopY) / CELL));
@@ -426,8 +431,6 @@ function drawPage9(ctx, W, H) {
   }
 
 
-  drawGroupLegend(ctx, W, H);
-
   // Dividing line between the "extreme" and "legitimate" dot-grid halves — drawn
   // growing in from the left as the user scrolls (see page9LineT, driven by
   // page9UpdateFromScroll in main.js), reaching full width exactly when the title
@@ -449,89 +452,15 @@ function drawPage9(ctx, W, H) {
 // ── Category panel — real DOM/HTML in the text column. Drag a pill between the
 // "extreme" and "legitimate" zones to reclassify it; p9.sides drives which half of
 // the canvas dot-grid (drawn above) each category's events land in. ──
-// The legitimate-zone divider line tracks the pills' actual rendered height (how
-// many rows wrapped), instead of a fixed guess — called after the pill set changes
-// and on resize, since vh-based positions above it shift with viewport height too.
-function p9SyncBottomDivider() {
-  const line      = document.querySelector(".page9-divider-line-bottom");
-  const panel     = document.querySelector(".page9-sticky");
-  const zoneBelow = document.getElementById("page9ZoneBelow");
-  if (!line || !panel || !zoneBelow) return;
-  const panelRect = panel.getBoundingClientRect();
-  const zoneRect  = zoneBelow.getBoundingClientRect();
-  // scrollHeight, not the rect height: the zone-wrap's fixed top+bottom range gives
-  // it a constrained height, so when the pills' natural content is taller than that
-  // (more rows than the range was sized for), flex shrinks the zone's own box while
-  // its rows still render at full height past that box — rect.height would report
-  // the shrunk box, undershooting how tall the pills actually render.
-  line.style.top    = `${zoneRect.top - panelRect.top}px`;
-  line.style.height = `${zoneBelow.scrollHeight}px`;
-}
-
-// Spaces dropped categories so that 6 of them exactly fill the divider line's full
-// height (14vh-72vh) — fewer than 6 stay centered with that same wide gap rather
-// than clumping tightly, and the gap itself is solved from the pills' actual
-// rendered height rather than guessed, since that depends on font/line-height.
-const P9_EXTREME_FULL_SPAN_COUNT = 6;
-
-function p9SyncExtremeGap() {
-  const zoneAbove   = document.getElementById("page9ZoneAbove");
-  const dividerLine = document.querySelector(".page9-divider-line-top");
-  if (!zoneAbove || !dividerLine || !zoneAbove.firstElementChild) return;
-  const pillHeight   = zoneAbove.firstElementChild.getBoundingClientRect().height;
-  const dividerHeight = dividerLine.getBoundingClientRect().height;
-  // Past 6, solve for the actual count instead of the fixed target — that keeps the
-  // stack's total height pinned to the divider's span (gaps shrink to make room)
-  // rather than growing past it, which fixing the count at 6 would otherwise do.
-  const count = Math.max(P9_EXTREME_FULL_SPAN_COUNT, zoneAbove.childElementCount);
-  const gap = (dividerHeight - count * pillHeight) / (count - 1);
-  zoneAbove.style.gap = `${Math.max(8, gap)}px`;
-}
-
-// Same tracking as p9SyncBottomDivider, but for the dashed segment marking whatever
-// has actually been dropped into the extreme zone (see .page9-divider-highlight).
-function p9SyncTopDividerHighlight() {
-  const highlight   = document.querySelector(".page9-divider-highlight");
-  const dividerLine  = document.querySelector(".page9-divider-line-top");
-  const panel        = document.querySelector(".page9-sticky");
-  const zoneAbove     = document.getElementById("page9ZoneAbove");
-  if (!highlight || !dividerLine || !panel || !zoneAbove) return;
-  const pills = [...zoneAbove.children];
-  if (!pills.length) { highlight.style.height = "0px"; return; }
-
-  // Bound to the pills' own boxes, not the zone container's (min-height/padding
-  // would otherwise make the highlight taller than what's actually been dropped).
-  const panelRect  = panel.getBoundingClientRect();
-  const top        = Math.min(...pills.map(p => p.getBoundingClientRect().top));
-  const bottom      = Math.max(...pills.map(p => p.getBoundingClientRect().bottom));
-  highlight.style.top    = `${top - panelRect.top}px`;
-  highlight.style.height = `${bottom - top}px`;
-
-  // The base line's dashes repeat from its own top (14vh); the highlight's repeat
-  // from wherever the pills happen to start, which is a different phase in the same
-  // 8px (4 on/4 off) cycle — shift the highlight's pattern back by that phase
-  // difference so its dark dashes land exactly on top of the base line's dashes.
-  const dividerTop = dividerLine.getBoundingClientRect().top;
-  const phase = ((top - dividerTop) % 8 + 8) % 8;
-  highlight.style.backgroundPositionY = `-${phase}px`;
-}
-
 function p9BuildPanel() {
   const zoneAbove   = document.getElementById("page9ZoneAbove");
   const zoneBelow   = document.getElementById("page9ZoneBelow");
   const panel       = document.querySelector(".page9-sticky");
-  const dropZoneTop = document.querySelector(".page9-divider-line-top");
   if (!zoneAbove || !zoneBelow || !panel || zoneAbove.childElementCount || zoneBelow.childElementCount) return;
 
-  // Drops are accepted both on the small zone div and on its drop-target hit area —
-  // for the extreme side, that hit area is the big dashed box (.page9-divider-line-top)
-  // shown during dragging, since that's what the "גרור פעילות לכאן" hint points at and
-  // visually most of what a user actually drags onto (the zone div itself only ever
-  // grows to fit its pills, far smaller than the highlighted box around it).
   const dropTargets = [
-    { el: zoneAbove,   targetZone: zoneAbove, overClass: "dragover" },
-    { el: zoneBelow,   targetZone: zoneBelow, overClass: "dragover" },
-    { el: dropZoneTop, targetZone: zoneAbove, overClass: "over" },
+    { el: zoneAbove, targetZone: zoneAbove, overClass: "dragover" },
+    { el: zoneBelow, targetZone: zoneBelow, overClass: "dragover" },
   ];
 
   function resolveDropTarget(x, y) {
@@ -543,26 +472,22 @@ function p9BuildPanel() {
   function commitDrop(pill, targetZone) {
     targetZone.appendChild(pill);
     p9.sides[Number(pill.dataset.idx)] = targetZone.dataset.zone;
-    p9SyncBottomDivider();
-    p9SyncExtremeGap();
-    p9SyncTopDividerHighlight();
     // Reclassifying a category moves its dots between the extreme/legit grids —
     // animate that move (from wherever they were last drawn) instead of having
     // them snap straight to their new spot.
     p9.anim = { from: new Map(p9.lastPositions), start: performance.now(), duration: 3000 };
-    if (currentPage === 7) p9RunAnimLoop();
+    if (currentPage === 10) p9RunAnimLoop();
   }
-
-  window.addEventListener("resize", () => { p9SyncBottomDivider(); p9SyncExtremeGap(); p9SyncTopDividerHighlight(); });
 
   P9_CATEGORIES.forEach((label, idx) => {
     const pill = document.createElement("div");
     pill.className = "page9-pill";
     pill.dataset.idx = idx;
 
-    // Handle first, label second: in this RTL flex row the first child renders at
-    // the right edge, so the dots land there with the label filling the rest —
-    // both centered on the same flex line via align-items (see CSS), no manual
+    // Handle first, label second: per explicit request, the grip dots sit on
+    // the right edge of the pill — in this RTL flex row that means the handle
+    // is the first DOM child, with the label trailing off to the left. Both
+    // centered on the same flex line via align-items (see CSS), no manual
     // vertical-offset math needed.
     const handle = document.createElement("span");
     handle.className = "page9-handle";
@@ -644,15 +569,6 @@ function p9BuildPanel() {
 
     zoneBelow.appendChild(pill); // every category starts out "legitimate"
   });
-
-  p9SyncBottomDivider();
-  p9SyncExtremeGap();
-  p9SyncTopDividerHighlight();
 }
 
 p9BuildPanel();
-
-// The 'Assistant' webfont can still be loading when p9BuildPanel first measures
-// the zone — once it swaps in, pill widths (and therefore how many wrap per row)
-// can change, leaving the divider locked to a stale, pre-font-load height.
-document.fonts.ready.then(() => { p9SyncBottomDivider(); p9SyncExtremeGap(); p9SyncTopDividerHighlight(); });
