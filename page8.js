@@ -32,14 +32,14 @@ function p8CurrentT() {
 
 function p8RunAnimLoop() {
   if (p8PhaseStart === null) return;
-  if (currentPage === 6) draw();
+  if (currentPage === 9) draw();
   if (p8CurrentT() !== p8PhaseToT) {
     requestAnimationFrame(p8RunAnimLoop);
   } else {
     p8PhaseFromT = p8PhaseToT; // settle here — p8CurrentT() reads this once phaseStart is null
     p8PhaseStart = null;
     if (p8PhaseToT === 0) p8Engaged = false; // back at rest — forward can fire again later
-    if (currentPage === 6) draw(); // final frame, locked at rest
+    if (currentPage === 9) draw(); // final frame, locked at rest
   }
 }
 
@@ -72,9 +72,9 @@ function drawPage8(ctx, W, H) {
     return;
   }
 
-  // Deliberately no fallback trigger here: currentPage flips to 6 (via the -50%
+  // Deliberately no fallback trigger here: currentPage flips to 9 (via the -50%
   // IntersectionObserver in main.js) well before the title visually reaches
-  // center, since page-6 already overlaps the screen-center line earlier than
+  // center, since page-9 already overlaps the screen-center line earlier than
   // that. Triggering on that flip would fire too early — page8CheckScroll
   // (main.js) is the only thing that calls p8Trigger/p8TriggerReverse, exactly
   // when the title crosses center (or scroll retreats back past that point).
@@ -90,26 +90,17 @@ function drawPage8(ctx, W, H) {
   const ease = p9Ease(t);
 
   drawBackground(ctx, W, H);
-  // These 6 squares are page6's "headline" anchors, carried statically through
-  // page7 — they have no equivalent slot in page9's grid, so rather than leave
-  // them stranded on screen for the whole glide, they fade out over just its
-  // first fraction (ANCHOR_FADE_FRACTION) instead of tracking the full-length
-  // dot migration — a quick exit, not a slow lingering one.
-  const ANCHOR_FADE_FRACTION = 0.25;
-  const anchorFadeT = Math.min(1, t / ANCHOR_FADE_FRACTION);
-  drawAnchorActions(ctx, W, H, 1 - p9Ease(anchorFadeT));
 
   p7UpdateLayout(W, H);
   p9EnsureIndex();
   const legitGeom = p9LegitGeometry(W, H);
 
   const { CELL, SQ, cols, leftX0 } = p7;
-  const topY    = Math.round(H * SBB.top);
+  const topY    = Math.round(H * SBB_TIMELINE.top);
   const rightX0 = W / 2 + CENTER_GAP / 2;
 
   function blendAndDraw(events, indexOf, offset, positions, x0) {
     events.forEach((e, i) => {
-      if (i < ANCHOR_COUNT_PER_SIDE) return; // these fade out via drawAnchorActions above, not blended
       const cell = positions[i];
       const col  = cell % cols;
       const row  = Math.floor(cell / cols);
@@ -132,6 +123,4 @@ function drawPage8(ctx, W, H) {
 
   blendAndDraw(p7.leftEvents,  p9.leftIndexOf,  0,                     p7.leftPos,  leftX0);
   blendAndDraw(p7.rightEvents, p9.rightIndexOf, p7.leftEvents.length,  p7.rightPos, rightX0);
-
-  drawGroupLegend(ctx, W, H);
 }

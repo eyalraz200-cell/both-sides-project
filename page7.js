@@ -9,15 +9,12 @@ const P7_GAP = 1;  // gap between squares in px
 const P7_CELL = P7_SQ + P7_GAP; // grid cell size (do not edit)
 // ─────────────────────────────────────────
 
-// Shared left-grid geometry — leftX0 is rounded (not raw W*SBB.left) because that raw
+// Shared left-grid geometry — leftX0 is rounded (not raw W*SBB_TIMELINE.left) because that raw
 // float can land just under a whole px (e.g. 392.00000000000006 on some widths), which
 // previously made Math.floor(sideW/CELL) silently drop a whole column and leave the
-// grid's near-center edge a few px further from center than intended. drawAnchorActions
-// (squareboundingbox.js) calls this too, so the anchor squares always land exactly on
-// the real grid's near-center column edge instead of using an independent formula that
-// can drift out of sync with it.
+// grid's near-center edge a few px further from center than intended.
 function p7GridGeometry(W, H) {
-  const leftX0 = Math.round(W * SBB.left);
+  const leftX0 = Math.round(W * SBB_TIMELINE.left);
   const sideW  = W / 2 - CENTER_GAP / 2 - leftX0;
   const cols   = Math.floor(sideW / P7_CELL);
   return { leftX0, cols, CELL: P7_CELL };
@@ -30,17 +27,6 @@ const P7_COLORS = {
   "Right-wing activists":               "#69DB12",
   "left wing activists":                "#EF3890",
 };
-
-const P7_LEGEND = [
-  { label: "פעילי ימין",           color: "#69DB12" },
-  { label: "מתיישבים",             color: "#F9880D" },
-  { label: "חרדים",                color: "#16181D" },
-  { label: "מתנגדי הרפורמה המשפטית",   color: "#0C7AE0" },
-  { label: "פעילי שמאל",           color: "#EF3890" },
-];
-
-const P7_MONTHS = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני",
-                   "יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
 
 const p7 = {
   ready: false,
@@ -177,14 +163,15 @@ const p7MonthReverseStart = {}; // monthKey -> performance.now() timestamp (retr
 let p7MonthMaxReached = -1;     // highest monthKey ever reached, forward
 let p7AnimRunning = false;
 
-// True once the page-5 section (page7's scrub section — fused with what used to
-// be a standalone page6 intro title, see index.html's .page6-intro) has actually
-// been scrolled to (not just intersected from below — see the IntersectionObserver
-// rootMargin in main.js, which flips currentPage to page7 well before the section's
-// top reaches the viewport top). Gates the very first month's cascade so it doesn't
-// fire while page7 is merely scrolling into view from below, before the user has
-// engaged with it at all.
-const p7SectionEl = document.getElementById("page-5");
+// True once the page-8 section (page7's scrub section — its intro title used to
+// be fused in here too, see CLAUDE.md's fold-7 note; it's now its own earlier
+// fold, #page-6, so the real per-event reveal doesn't engage until #page-8 is
+// actually reached) has actually been scrolled to (not just intersected from
+// below — see the IntersectionObserver rootMargin in main.js, which flips
+// currentPage to page7 well before the section's top reaches the viewport top).
+// Gates the very first month's cascade so it doesn't fire while page7 is merely
+// scrolling into view from below, before the user has engaged with it at all.
+const p7SectionEl = document.getElementById("page-8");
 let p7HasEngaged = false;
 
 function p7AnyAnimActive() {
@@ -198,11 +185,13 @@ function p7AnyAnimActive() {
   return false;
 }
 
-// page8 (index 6) renders by calling drawPage7 directly with currentDate forced to
+// page8 (index 9) renders by calling drawPage7 directly with currentDate forced to
 // maxDate (see page8.js) — it's a continuation of page7's view, not a separate one, so
 // the cascade must keep redrawing there too, or it freezes the instant the user
 // scrolls into page8 mid-flight instead of finishing "off screen" as page7 intended.
-function p7ShouldRedrawForAnim() { return currentPage === 5 || currentPage === 6; }
+// Folds 7/9 (#page-6/#page-7, before the real timeline) render drawFold7/drawFold9
+// instead — no page7 content on screen there, so they're deliberately excluded.
+function p7ShouldRedrawForAnim() { return currentPage === 8 || currentPage === 9; }
 
 function p7StartAnimLoop() {
   if (p7AnimRunning) return;
@@ -233,7 +222,7 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
   const stagger = Math.max(0, P7_ANIM_TOTAL_DURATION - P7_POP_DURATION);
   let groupMonthKey = null, groupStart = 0, groupEnd = 0, groupStartTime = 0, groupReverse = false;
 
-  for (let i = ANCHOR_COUNT_PER_SIDE; i < monthEnd; i++) {
+  for (let i = 0; i < monthEnd; i++) {
     const cell = positions[i];
     const col  = cell % cols;
     const row  = Math.floor(cell / cols);
@@ -295,8 +284,8 @@ async function initPage7() {
 function p7UpdateLayout(W, H) {
   if (W === p7.lastW && H === p7.lastH) return;
 
-  const topY   = Math.round(H * SBB.top);
-  const botY   = Math.round(H * SBB.bottom);
+  const topY   = Math.round(H * SBB_TIMELINE.top);
+  const botY   = Math.round(H * SBB_TIMELINE.bottom);
   const sideH  = botY - topY;
   const { leftX0, cols, CELL } = p7GridGeometry(W, H);
   p7.leftX0 = leftX0;
@@ -315,7 +304,6 @@ function p7UpdateLayout(W, H) {
 
 function drawPage7(ctx, W, H) {
   drawBackground(ctx, W, H);
-  drawAnchorActions(ctx, W, H);
 
   if (!p7.ready) {
     ctx.fillStyle = "#111";
@@ -329,7 +317,7 @@ function drawPage7(ctx, W, H) {
   p7UpdateLayout(W, H);
 
   const { CELL, SQ, cols, leftX0 } = p7;
-  const topY    = Math.round(H * SBB.top);
+  const topY    = Math.round(H * SBB_TIMELINE.top);
   const centerX = W / 2;
   const rightX0 = W / 2 + CENTER_GAP / 2;
 
@@ -409,181 +397,99 @@ function drawPage7(ctx, W, H) {
   const monthEndL = p7BisectBefore(p7.leftEvents,  nextMonthStartStr);
   const monthEndR = p7BisectBefore(p7.rightEvents, nextMonthStartStr);
 
-  // Draw left events — the first ANCHOR_COUNT_PER_SIDE are already on screen as the
-  // static anchor squares drawn above, so the shuffled grid reveal starts past them.
+  // Draw left events.
   p7DrawSideSquares(ctx, p7.leftEvents, p7.leftPos, leftX0, topY, cols, CELL, SQ, monthEndL, settledL, curMonthKey);
 
-  // Draw right events — same anchor-square offset as the left side.
+  // Draw right events.
   p7DrawSideSquares(ctx, p7.rightEvents, p7.rightPos, rightX0, topY, cols, CELL, SQ, monthEndR, settledR, curMonthKey);
 
-  drawGroupLegend(ctx, W, H);
+  p7DrawYearAxis(ctx, W, H);
 }
 
-// ── Date timeline — a continuous month strip that scrolls past a fixed center,
-// rendered as real DOM/HTML inside the text column, not on canvas ──
-const P7_ENTRY_H      = 36; // month row height
-const P7_YEAR_ENTRY_H = 56; // year row height — taller, to fit its bigger text without overlap
-const p7TimelineEl = document.getElementById("page7Timeline");
-let p7TimelineTrackEl   = null;
-let p7TimelineEntryEls  = null;   // flat list of row elements: month entries with a year row spliced in before each new year
-let p7TimelineEntryTops = null;   // px top, parallel to p7TimelineEntryEls
-let p7TimelineEntryHs   = null;   // px height, parallel to p7TimelineEntryEls
-let p7TimelineMonthTop  = null;   // calendar idx -> px top, for month rows only
-let p7TimelineMonthSpan = null;   // calendar idx -> px span to interpolate dayFrac across
-let p7TimelineBaseIndex = 0;      // baseYear*12 + baseMonth, index 0 of the strip
-let p7TimelineCurrent   = -1;
+// ── Date axis — a horizontal year strip drawn along the bottom of the canvas,
+// growing from right to left as the user scrolls deeper into the dataset. Unlike
+// the square cascade beside it, this has no animation state of its own: every
+// frame it's recomputed straight from p7.currentDate, so scrolling backward
+// just naturally shrinks it back — no separate reverse bookkeeping needed.
+const P7_AXIS_MARGIN          = 48;   // px inset from each edge
+const P7_AXIS_Y_FRAC          = 0.965; // fraction of H — shared vertical center for the dashed line and year labels (Figma: both sit on one row, not stacked)
+const P7_AXIS_LINE_THICKNESS  = 6;     // px — Figma's dash is a ~7px-tall band, not a hairline
+const P7_AXIS_LABEL_PAD       = 6;     // px breathing room around a label's measured width
 
-function p7BuildTimeline() {
-  if (p7TimelineTrackEl || !p7.ready || !p7TimelineEl) return;
+// Maps a date string to an x position along the axis: p7.minDate anchors the
+// right edge, p7.maxDate the left edge, linear in elapsed days — the same
+// fraction page7UpdateFromScroll derives currentDate from, just recomputed
+// here from the date string so the axis has a single source of truth.
+function p7AxisX(dateStr, W) {
+  const minMs = new Date(p7.minDate + "T00:00:00Z").getTime();
+  const maxMs = new Date(p7.maxDate + "T00:00:00Z").getTime();
+  const rightX = W - P7_AXIS_MARGIN;
+  const leftX  = P7_AXIS_MARGIN;
+  if (maxMs === minMs) return rightX;
+  const frac = (new Date(dateStr + "T00:00:00Z").getTime() - minMs) / (maxMs - minMs);
+  return rightX - frac * (rightX - leftX);
+}
 
+// One tick per calendar year spanned by the data: the first is always p7.minDate
+// itself (the start anchor, shown from the very first frame), the rest are each
+// subsequent year's January 1st.
+function p7AxisYearTicks() {
   const minD = new Date(p7.minDate + "T00:00:00Z");
-  const maxD = new Date(p7.maxDate + "T00:00:00Z");
-  const baseIdx = minD.getUTCFullYear() * 12 + minD.getUTCMonth();
-  const maxIdx  = maxD.getUTCFullYear() * 12 + maxD.getUTCMonth();
-  p7TimelineBaseIndex = baseIdx;
-
-  const track = document.createElement("div");
-  track.className = "page7-timeline-track";
-
-  p7TimelineEntryEls  = [];
-  p7TimelineEntryTops = [];
-  p7TimelineEntryHs   = [];
-  p7TimelineMonthTop  = {};
-  p7TimelineMonthSpan = {};
-  let yPx = 0;
-  let lastYear = null;
-
-  for (let idx = baseIdx; idx <= maxIdx; idx++) {
-    const y = Math.floor(idx / 12), m = idx % 12;
-    // December rolls into a new year right after, so stretch its interpolation span across
-    // the upcoming year row's height too — otherwise the date->pixel mapping would jump
-    // straight from December to January, skipping over the year row's pixel range entirely
-    // (and making it "current" prematurely, since nothing ever scrolls smoothly into it).
-    const span = (m === 11 && idx < maxIdx) ? P7_ENTRY_H + P7_YEAR_ENTRY_H : P7_ENTRY_H;
-
-    if (y !== lastYear) {
-      const yearEntry = document.createElement("div");
-      yearEntry.className = "entry entry-year";
-      yearEntry.style.top = `${yPx}px`;
-
-      const year = document.createElement("span");
-      year.className = "year";
-      year.textContent = String(y);
-      yearEntry.appendChild(year);
-
-      track.appendChild(yearEntry);
-      p7TimelineEntryEls.push(yearEntry);
-      p7TimelineEntryTops.push(yPx);
-      p7TimelineEntryHs.push(P7_YEAR_ENTRY_H);
-      yPx += P7_YEAR_ENTRY_H;
-      lastYear = y;
-    }
-
-    const entry = document.createElement("div");
-    entry.className = "entry";
-    entry.style.top = `${yPx}px`;
-
-    const month = document.createElement("span");
-    month.className = "month";
-    month.textContent = P7_MONTHS[m];
-    entry.appendChild(month);
-
-    if (idx === baseIdx) {
-      const note = document.createElement("span");
-      note.className = "note";
-      note.textContent = "תחילת איסוף הנתונים";
-      entry.appendChild(note);
-    }
-
-    track.appendChild(entry);
-    p7TimelineEntryEls.push(entry);
-    p7TimelineEntryTops.push(yPx);
-    p7TimelineEntryHs.push(P7_ENTRY_H);
-    p7TimelineMonthTop[idx]  = yPx;
-    p7TimelineMonthSpan[idx] = span;
-    yPx += P7_ENTRY_H;
+  const maxYear = new Date(p7.maxDate + "T00:00:00Z").getUTCFullYear();
+  const minYear = minD.getUTCFullYear();
+  const ticks = [{ year: minYear, dateStr: p7.minDate }];
+  for (let y = minYear + 1; y <= maxYear; y++) {
+    ticks.push({ year: y, dateStr: `${y}-01-01` });
   }
-
-  p7TimelineEl.appendChild(track);
-  p7TimelineTrackEl = track;
+  return ticks;
 }
 
-function p7UpdateTimelinePosition() {
-  if (!p7TimelineTrackEl) return;
+function p7DrawYearAxis(ctx, W, H) {
+  const ticks = p7AxisYearTicks();
+  const curX  = p7AxisX(p7.currentDate, W);
 
-  const { y, m, dayFrac } = p7DateDayFrac(p7.currentDate);
-  // currentDate (and the events it bisects against) is wholly unaffected by row layout —
-  // this only converts it to a pixel position so the taller year rows fit inline in the strip.
-  const calIdx  = y * 12 + m;
-  const indexPx = p7TimelineMonthTop[calIdx] + dayFrac * p7TimelineMonthSpan[calIdx];
+  // A tick is "reached" once the growing edge has caught up to (or passed) its
+  // x position — the start tick is always reached by definition.
+  const visible = ticks.filter((tick, i) => i === 0 || p7AxisX(tick.dateStr, W) >= curX);
 
-  const centerPx = window.innerHeight / 2;
-  const offsetPx = centerPx - (indexPx + P7_ENTRY_H / 2);
-  p7TimelineTrackEl.style.transform = `translateY(${offsetPx}px)`;
+  const axisY = H * P7_AXIS_Y_FRAC;
+  ctx.save();
+  ctx.font = "18px 'Assistant', sans-serif"; // set before measuring so widths below are accurate
+  // Labels are textAlign "right" — each one sits entirely to the *left* of its own
+  // tick x, never to the right — so only that side needs clearance, sized to the
+  // label's actual measured width rather than a guessed constant (a fixed 28px gap
+  // here used to be narrower than a real 4-digit year at 18px, so the dashes ran
+  // straight under the digits).
+  const labelClearance = (tick) => ctx.measureText(String(tick.year)).width + P7_AXIS_LABEL_PAD;
 
-  // Once currentDate is clamped at maxDate, indexPx (and the transform above) freezes —
-  // but the sticky container keeps scrolling during its release slack. Fold that extra
-  // movement into the position so the last entry passes through the exact same "nearest"
-  // logic as every other row, instead of being treated as a permanent special case.
-  const containerTop  = p7TimelineEl.getBoundingClientRect().top;
-  const visualPx       = indexPx - containerTop;
-  // Bias the "current" pick toward the row below: without this, an entry only gets
-  // highlighted once it's scrolled exactly to center (the midpoint between it and the
-  // previous entry), which reads as laggy. Shifting the comparison point down by a few
-  // px makes the switch happen a bit before that exact midpoint.
-  const P7_CURRENT_BIAS_PX = 14;
-  let nearestIdx = 0, bestDist = Infinity;
-  for (let i = 0; i < p7TimelineEntryEls.length; i++) {
-    const center = p7TimelineEntryTops[i] + p7TimelineEntryHs[i] / 2;
-    const dist   = Math.abs(center - (visualPx + P7_CURRENT_BIAS_PX));
-    if (dist < bestDist) { bestDist = dist; nearestIdx = i; }
+  ctx.strokeStyle = "rgba(0, 0, 0, 0.3)";
+  ctx.lineWidth   = P7_AXIS_LINE_THICKNESS;
+  ctx.setLineDash([4, 4]);
+  for (let i = 1; i < visible.length; i++) {
+    const fromX = p7AxisX(visible[i - 1].dateStr, W) - labelClearance(visible[i - 1]);
+    const toX   = p7AxisX(visible[i].dateStr, W) + P7_AXIS_LABEL_PAD;
+    if (fromX <= toX) continue;
+    ctx.beginPath();
+    ctx.moveTo(fromX, axisY);
+    ctx.lineTo(toX, axisY);
+    ctx.stroke();
   }
-
-  // There's no entry after the last one to hand the highlight to, so the loop above
-  // would otherwise keep picking it as "nearest" forever during the trailing release
-  // slack. Once scroll has carried us past its own center by more than half its
-  // height — the same margin any other entry would have lost "current" at — treat it
-  // as passed too, via a one-past-the-end sentinel index, so it fades out exactly
-  // like every other month instead of staying highlighted indefinitely.
-  const lastIdx    = p7TimelineEntryEls.length - 1;
-  const lastCenter = p7TimelineEntryTops[lastIdx] + p7TimelineEntryHs[lastIdx] / 2;
-  if (nearestIdx === lastIdx && (visualPx + P7_CURRENT_BIAS_PX) - lastCenter > p7TimelineEntryHs[lastIdx] / 2) {
-    nearestIdx = p7TimelineEntryEls.length;
+  // The segment still growing into an unreached year.
+  const lastTick = visible[visible.length - 1];
+  const lastVisibleX = p7AxisX(lastTick.dateStr, W) - labelClearance(lastTick);
+  if (lastVisibleX > curX) {
+    ctx.beginPath();
+    ctx.moveTo(lastVisibleX, axisY);
+    ctx.lineTo(curX, axisY);
+    ctx.stroke();
   }
+  ctx.setLineDash([]);
 
-  if (nearestIdx !== p7TimelineCurrent) {
-    if (p7TimelineCurrent >= 0 && p7TimelineCurrent < p7TimelineEntryEls.length) {
-      p7TimelineEntryEls[p7TimelineCurrent].classList.remove("current");
-    }
-    if (nearestIdx < p7TimelineEntryEls.length) {
-      p7TimelineEntryEls[nearestIdx].classList.add("current");
-    }
-    p7TimelineCurrent = nearestIdx;
+  ctx.fillStyle = "rgba(0, 0, 0, 0.46)";
+  ctx.textAlign    = "right";
+  ctx.textBaseline = "middle";
+  for (const tick of visible) {
+    ctx.fillText(String(tick.year), p7AxisX(tick.dateStr, W), axisY);
   }
-
-  // Rows already scrolled past sit at a flat, strongly transparent opacity; rows not yet
-  // reached stay at the (less transparent) default — year rows start out dimmer than month
-  // rows, but fade to the exact same transparency once passed, like any other row. The "note"
-  // (data-start label) stays fully black until it passes center too, then fades the same way.
-  p7TimelineEntryEls.forEach((el, idx) => {
-    const target = el.querySelector(".month, .year");
-    const note   = el.querySelector(".note");
-    if (idx === nearestIdx) {
-      if (target) target.style.opacity = "";
-      if (note)   note.style.opacity   = "";
-      return;
-    }
-    const passed = idx < nearestIdx;
-    if (passed) {
-      if (target) target.style.opacity = "0.06";
-      if (note)   note.style.opacity   = "0.06";
-      return;
-    }
-    if (target) target.style.opacity = el.classList.contains("entry-year") ? "0.08" : "0.25";
-  });
-}
-
-function p7RenderTimeline() {
-  p7BuildTimeline();
-  p7UpdateTimelinePosition();
+  ctx.restore();
 }

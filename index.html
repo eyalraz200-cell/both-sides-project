@@ -1,112 +1,117 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Radical Events</title>
-  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <title>להבים ומגנים: כך התדרדרה הפגנת המחאה מול הכנסת לעימותים עם המשטרה | שקוף</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;900&family=Noto+Sans+Hebrew:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="trigger.css" />
 </head>
 <body>
-  <div class="vignette" aria-hidden="true"></div>
-  <div class="layout">
-    <div class="graphic-col">
-      <canvas id="canvas"></canvas>
-      <div class="groups-overlay" id="groupsOverlay" aria-hidden="true"></div>
-    </div>
-    <div class="text-col" id="textCol">
-      <section class="text-section" data-page="0" id="page-0">
-        <div class="section-text">
-          <h2 class="section-title">קיצוניים משני הצדדים</h2>
-          <p class="section-subtitle">השוואה בין אופי הפעילות של הקצוות הפוליטיים בישראל</p>
-        </div>
-      </section>
-      <section class="text-section page2-panel" data-page="1" id="page-1">
-        <div class="page2-sticky">
-          <div class="section-text">
-            <h2 class="section-title">בישראל פועלות קבוצות פוליטיות רבות, כל אחת עם מטרות ורצונות שונים, ולעיתים מנוגדים</h2>
-            <div class="page2-legend">
-              <span class="page2-legend-item" data-group="מתיישבים"><span class="page2-legend-swatch" style="background:#F9880D"></span>מתיישבים</span>
-              <span class="page2-legend-item" data-group="מתנגדי הרפורמה המשפטית"><span class="page2-legend-swatch" style="background:#0C7AE0"></span>מתנגדי הרפורמה המשפטית</span>
-              <span class="page2-legend-item" data-group="חרדים"><span class="page2-legend-swatch" style="background:#16181D"></span>חרדים</span>
-              <span class="page2-legend-item" data-group="פעילי ימין"><span class="page2-legend-swatch" style="background:#69DB12"></span>פעילי ימין</span>
-              <span class="page2-legend-item" data-group="יוצאי אתיופיה"><span class="page2-legend-swatch" style="background:#9B30D9"></span>יוצאי אתיופיה</span>
-              <span class="page2-legend-item" data-group="פעילי שמאל"><span class="page2-legend-swatch" style="background:#EF3890"></span>פעילי שמאל</span>
-              <span class="page2-legend-item" data-group="ערבים ישראלים"><span class="page2-legend-swatch" style="background:#0E7A14"></span>ערבים ישראלים</span>
-            </div>
-          </div>
-        </div>
-      </section>
-      <section class="text-section page3-panel" data-page="2" id="page-2">
-        <div class="page3-sticky">
-          <div class="section-text">
-            <h2 class="section-title">הזירה הפוליטית אינה מתחלקת תמיד לשני צדדים ברורים</h2>
-          </div>
-        </div>
-      </section>
-      <section class="text-section page4-panel" data-page="3" id="page-3">
-        <div class="page4-sticky">
-          <div class="section-text">
-            <h2 class="section-title">אבל, בשנים האחרונות מתחדדת חלוקה בין שני מחנות פוליטיים מנוגדים</h2>
-          </div>
-        </div>
-      </section>
-      <section class="text-section" data-page="4" id="page-4">
-        <div class="section-text">
-          <h2 class="section-title">אספנו נתונים על פעולות פוליטיות מתועדות משני המחנות מתחילת שנת 2023 עד היום</h2>
-        </div>
-      </section>
-      <section class="text-section page7-scrub" data-page="5" id="page-5">
-        <div class="page7-timeline" id="page7Timeline">
-          <div class="page6-intro">
-            <h2 class="section-title">כל ריבוע מייצג פעולה פוליטית מתועדת</h2>
-            <h2 class="section-title">הצבע מציין את הקבוצה שביצעה אותה</h2>
-          </div>
-        </div>
-      </section>
-      <section class="text-section" data-page="6" id="page-6">
-        <div class="section-text">
-          <h2 class="section-title">פעולות פוליטיות שונות זו מזו באופי, במטרה ובאופן הביצוע. חלקן נתפסות כחלק מהמשחק הדמוקרטי, אחרות כחציית גבול.</h2>
-        </div>
-      </section>
-      <section class="text-section page9-panel" data-page="7" id="page-7">
-        <div class="page9-sticky">
-          <div class="section-text">
-            <h2 class="section-title">איפה עובר הגבול?</h2>
-            <p class="section-subtitle">גררו את סוגי הפעולות שאתם מחשיבים קיצוניות</p>
-          </div>
-          <div class="page9-divider-line page9-divider-line-top">
-            <span class="page9-drop-hint">גרור פעילות לכאן</span>
-          </div>
-          <div class="page9-divider-line page9-divider-line-bottom"></div>
-          <div class="page9-divider-highlight"></div>
 
-          <div class="page9-axis-label page9-axis-extreme">פעולות קיצוניות</div>
-          <div class="page9-axis-label page9-axis-legit">פעולות לגיטימיות</div>
-
-          <div class="page9-zone-wrap page9-zone-wrap-extreme">
-            <div class="page9-zone" id="page9ZoneAbove" data-zone="above"></div>
-          </div>
-          <div class="page9-zone-wrap page9-zone-wrap-legit">
-            <div class="page9-zone" id="page9ZoneBelow" data-zone="below"></div>
-          </div>
-        </div>
-      </section>
+  <header class="shk-header">
+    <div class="shk-header-inner">
+      <div class="shk-logo">שקוף</div>
+      <nav class="shk-nav">
+        <a href="#">כל הכתבות</a>
+        <a href="#">נושאים חמים</a>
+        <a href="#">אודות</a>
+        <a href="#">צרו קשר</a>
+      </nav>
     </div>
-  </div>
-  <script src="squareboundingbox.js"></script>
-  <script src="page1.js"></script>
-  <script src="page2.js"></script>
-  <script src="page3.js"></script>
-  <script src="page4.js"></script>
-  <script src="page5.js"></script>
-  <script src="page7.js"></script>
-  <script src="page8.js"></script>
-  <script src="page9.js"></script>
-  <script src="main.js"></script>
-  <script src="reload.js"></script>
+  </header>
+
+  <main class="shk-article">
+
+    <div class="shk-tag">הפגנות</div>
+
+    <h1 class="shk-headline">להבים ומגנים: כך התדרדרה הפגנת המחאה מול הכנסת לעימותים עם המשטרה</h1>
+
+    <div class="shk-byline">
+      <div class="shk-avatar">ת.א</div>
+      <div class="shk-byline-text">
+        <div class="shk-byline-name">טל אביבי</div>
+        <div class="shk-byline-date">23 ביוני 2026</div>
+      </div>
+      <div class="shk-share">
+        <span>שיתוף</span>
+      </div>
+    </div>
+
+    <img class="shk-hero" src="images/protest.webp" alt="שוטרים מתעמתים עם מפגינים נושאי דגלי ישראל" />
+    <p class="shk-caption">מהפגנת המחאה מול הכנסת, אמש (אילוסטרציה)</p>
+
+    <div class="shk-body">
+      <p>אלפי מפגינים התקהלו אמש מול הכנסת במה שהיה צפוי להיות עוד הפגנה שגרתית בשורה הארוכה של מחאות החודשים האחרונים. ההפגנה, ה-34 ברציפות מאז תחילת הקמפיין, נפתחה כשגרה: נאומים מהבמה, שירה, ודגלי ישראל לאורך כל הרחוב. אך לפנות ערב, כשקבוצה קטנה מתוך המפגינים פרצה את המתרס שהציבה המשטרה והחלה לצעוד לעבר כביש איילון, המצב השתנה במהירות.</p>
+
+      <p>שוטרי משמר הגבול שניסו לעצור את הפורצים נתקלו בהתנגדות פיזית, ותוך דקות נורו מכלי גז מדמיע לעבר הקהל. עדי ראייה מספרים על בלבול ובהלה, בעוד אחרים טוענים שהשוטרים פעלו באלימות מופרזת נגד מפגינים שלא נטלו חלק בפריצה. "פתאום היה עשן בכל מקום, אנשים צרחו וניסו לברוח, ולא היה ברור מאיפה זה בא", סיפרה מפגינה בת 28 שהשתתפה בהפגנה.</p>
+
+      <p>תוך דקות התמלא הכביש בעשן, ומפגינים נראו רצים לכל הכיוונים בעוד שוטרים על גבי סוסים וניידות דחפו את הקהל לאחור. צוותי מד"א שהוזעקו למקום טיפלו ב-12 פצועים, רובם מפגיעות גז מדמיע ומעיכה, ושניים מהם הובהלו לבית החולים במצב קל-בינוני. דובר מד"א מסר כי גם שני שוטרים פונו לבדיקה לאחר שנחבטו באבנים שהושלכו מתוך הקהל.</p>
+
+      <p>בסביבות השעה 22:00 הצליחה המשטרה לפתוח את הכביש לתנועה, אך עשרות מפגינים נותרו במקום עוד שעות, חלקם ישבו על הכביש בשקט במה שתואר על ידי המשטרה כ"סיום הדרגתי ומבוקר" של האירוע.</p>
+    </div>
+
+    <div class="shk-cta">
+      <div class="shk-cta-inner">
+        <h2>איפה עובר הגבול בין מחאה לגיטימית לפעולה קיצונית?</h2>
+        <p>בדקנו מאות פעולות פוליטיות מתועדות משני קצוות המפה הפוליטית בישראל — והנגשנו אותן בכלי אינטראקטיבי אחד.</p>
+        <a href="project.html" class="shk-cta-button">לכתבה האינטראקטיבית</a>
+      </div>
+    </div>
+
+    <div class="shk-body">
+      <p>בשעות הלילה המוקדמות פונה השטח, ולפי דיווחים ראשוניים נעצרו תשעה מפגינים, שלושה מהם בחשד לתקיפת שוטר. מוקדם יותר הבוקר שוחררו שישה מהם ללא תנאים, בעוד שלושה הנותרים יובאו להארכת מעצר בבית המשפט בתל אביב. סך הכל נערכו במקום כ-400 שוטרים וכ-60 רכבי ניידת, לפי הערכת דובר המשטרה, מספרים שמבטאים לדבריו "היערכות חריגה לאירוע שהוגדר מראש בסיכון גבוה".</p>
+
+      <h3 class="shk-subhead">תגובות מהזירה הפוליטית</h3>
+
+      <p>משטרת ישראל הודיעה כי תפתח בתחקיר מבצעי על האירוע, ובמשרדי ראש הממשלה נמסר כי "הזכות להפגין אינה זכות לפגוע בשלום הציבור ובסדר הציבורי, ומי שפורץ מתרסים ותוקף שוטרים יישא באחריות המלאה למעשיו". גורם בכיר בליכוד הוסיף כי "אלימות מצד מיעוט קיצוני לא תכתיב את הסדר היומי".</p>
+
+      <p>בצד השני, ארגוני המחאה שיזמו את ההפגנה מיהרו להתנער מהאירועים והדגישו שהפריצה בוצעה על ידי "קבוצה שולית שלא פעלה בתיאום עם הנהגת המחאה". יו"ר ועד ההפגנות אמרה ל"שקוף" כי "אלפי המפגינים שהגיעו אמש הפגינו בשקט ובסדר מוחלט, ואי אפשר להכפיש מחאה לגיטימית שלמה בגלל מעשיהם של בודדים".</p>
+
+      <p>חברי כנסת מהאופוזיציה תבעו הקמת ועדת חקירה לבדיקת התנהלות המשטרה, וטענו כי השימוש בגז מדמיע נגד הקהל הרחב היה "בלתי פרופורציונלי ומסוכן". מנגד, חברי קואליציה קראו להחמיר את האכיפה בהפגנות הבאות ולהגביר את הענישה על "הפרת הסדר הציבורי".</p>
+
+      <p>גם ארגוני זכויות אדם הצטרפו לדיון: בארגון "סיירת השקיפות" נמסר כי הם "פנו למשטרה בבקשה למסור את הנחיות הפתיחה באש ובגז מדמיע מאותו ערב", ואילו מבקר המשטרה הודיע כי יבדוק את ההתנהלות באופן עצמאי, במקביל לתחקיר הפנימי.</p>
+
+      <h3 class="shk-subhead">לא המקרה הראשון</h3>
+
+      <p>זהו לא העימות החריף הראשון מסוג זה בחודשים האחרונים. בפברואר האחרון דווח על תקרית דומה, קטנה בהיקפה, בצומת הקריה בתל אביב, ובחודש מרץ נפתחה חקירה משטרתית שנסגרה בלא כתב אישום נגד מפגין שנחבט על ידי שוטר במהלך הפגנה. גורמים במשטרה מציינים כי ככל שמתקרב המועד לדיון הקריטי בכנסת, כך גוברת המתיחות בשטח משבוע לשבוע.</p>
+
+      <h3 class="shk-subhead">מה הלאה</h3>
+
+      <p>ועד ההפגנות הודיע כי בכוונתו לקיים את ההפגנה השבועית הבאה כמתוכנן, ואף הביע כוונה לפנות לבג"ץ אם המשטרה תנסה להגביל את מסלול הצעדה. בינתיים, התיקים נגד שלושת המפגינים שנותרו במעצר צפויים להמשיך להתברר בימים הקרובים, וברשתות החברתיות התפתח דיון נרחב סביב סרטונים מהאירוע שמציגים זוויות שונות ולעיתים סותרות של אותם רגעים.</p>
+    </div>
+
+    <section class="shk-more">
+      <h4>עוד בשקוף</h4>
+      <div class="shk-more-grid">
+        <a href="#" class="shk-more-card">
+          <img class="shk-more-thumb" src="images/related-march.jpg" alt="צעדת מפגינים" />
+          <div class="shk-more-title">מי מממן את ארגוני המחאה משני הצדדים?</div>
+        </a>
+        <a href="#" class="shk-more-card">
+          <img class="shk-more-thumb" src="images/related-knesset.jpg" alt="בניין הכנסת" />
+          <div class="shk-more-title">בין חוק לפוליטיקה: סמכויות המשטרה בהפגנות</div>
+        </a>
+        <a href="#" class="shk-more-card">
+          <img class="shk-more-thumb" src="images/protest.webp" alt="הפגנה והמשטרה" />
+          <div class="shk-more-title">שנה של מחאה: ציר זמן של האירועים המרכזיים</div>
+        </a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="shk-footer">
+    <span>שקוף © 2026</span>
+    <a href="#">תנאי שימוש</a>
+    <a href="#">נגישות</a>
+  </footer>
+
+  <p class="shk-photo-credits">
+    תמונות: Fibonacci Blue (CC BY 4.0) · Beny Shlevich (CC BY-SA 3.0), Wikimedia Commons
+  </p>
+
 </body>
 </html>

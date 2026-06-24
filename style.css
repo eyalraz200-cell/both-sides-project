@@ -11,40 +11,19 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-:root {
-  --side-col-width: 480px;
-}
-
 body {
-  background: #FFFFFC;
+  background: #FDFCFF;
 }
 
-/* No longer a flex row: .graphic-col is taken out of flow entirely (position: fixed),
-   so it doesn't share width with .text-col — it's always the full viewport, genuinely
-   centered. .text-col stays in normal flow (it alone drives the page's scroll height)
-   and is just pushed to the right edge via margin instead of flex sizing. */
+/* .graphic-col is taken out of flow entirely (position: fixed), so it doesn't
+   share width with .text-col — it's always the full viewport, genuinely
+   centered. .text-col stays in normal flow (it alone drives the page's scroll
+   height) and now spans the full viewport too — each page's .text-card centers
+   itself within that full width (see .text-card), rather than .text-col itself
+   being a narrow right-pinned sidebar (the old layout this project moved away
+   from when text became a centered dashed card instead of a sidebar). */
 .layout {
   position: relative;
-}
-
-/* Elliptical radial vignette matching Figma design (node 64:44943) — one layer
-   spanning the full viewport so canvas and text column share the same backdrop
-   with no seam at the column boundary. */
-.vignette {
-  position: fixed;
-  inset: 0;
-  z-index: 5;
-  pointer-events: none;
-  background: radial-gradient(
-    ellipse 63% 63% at 50% 50%,
-    rgba(0,0,0,0)     0%,
-    rgba(0,0,0,0.05)  25%,
-    rgba(0,0,0,0.10)  50%,
-    rgba(0,0,0,0.125) 62.5%,
-    rgba(0,0,0,0.15)  75%,
-    rgba(0,0,0,0.175) 87.5%,
-    rgba(0,0,0,0.20)  100%
-  );
 }
 
 .graphic-col {
@@ -62,11 +41,11 @@ body {
 .text-col {
   position: relative;
   z-index: 1;
-  width: var(--side-col-width);
-  margin-inline-start: auto;
+  width: 100%;
 }
 
 .text-section {
+  position: relative;
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -75,117 +54,54 @@ body {
   text-align: right;
 }
 
+/* Dev-only @foldN tag (see CLAUDE.md's fold reference table) — physical
+   top-left regardless of the section's own RTL direction, since this is a
+   debug label, not page content. */
+.fold-marker {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 11px;
+  font-family: monospace;
+  color: rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  z-index: 10;
+}
+
 .text-section > .section-text {
-  /* Without this, the page-2 legend's unshrinkable (nowrap) items push their min-content
-     size up into this flex item, widening it past the column and stopping the title
-     from wrapping at its normal width. */
+  /* Without min-width:0, the page-2 legend's unshrinkable (nowrap) items would push
+     their min-content size up into this flex item, growing it past .text-card's own
+     explicit width (set on the .text-card class itself) instead of letting that
+     fixed width win. */
   min-width: 0;
-  width: 100%;
 }
 
 .text-section.page7-scrub {
-  /* 600vh of actual scrub range + 100vh of slack so the sticky timeline below
-     can stay pinned through the whole scrub range before releasing — without
-     this slack it starts drifting off-center during the final viewport-height
-     of scrolling (see page7UpdateFromScroll in main.js, which excludes this
-     slack from its t calculation). Scrub range controls how much scrolling it
-     takes to cross the whole dataset — bigger means slower movement through
-     the months. */
+  /* 600vh of actual scrub range + 100vh of slack so the date axis (drawn on
+     canvas, see p7DrawYearAxis in page7.js) finishes growing before the section
+     releases — without this slack it would still be mid-growth during the final
+     viewport-height of scrolling (see page7UpdateFromScroll in main.js, which
+     excludes this slack from its t calculation). Scrub range controls how much
+     scrolling it takes to cross the whole dataset — bigger means slower
+     movement through the months. */
   min-height: 700vh;
   display: block;
   padding: 0;
 }
 
-.page7-timeline {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  overflow: hidden;
-  padding: 0 48px;
-  direction: rtl;
-  text-align: right;
-  pointer-events: none;
-}
-
-/* What used to be page6's own standalone title section — fused in here as a
-   static header sitting above the timeline's month list (.page7-timeline-track,
-   which is absolutely positioned and unaffected by this normal-flow sibling).
-   Always visible while the timeline is pinned, no scroll-driven animation. */
-.page6-intro {
-  padding-top: 64px;
-}
-
-.page7-timeline-track {
-  position: absolute;
-  right: 48px;
-  left: 48px;
-  top: 0;
-  will-change: transform;
-}
-
-.page7-timeline .entry {
-  position: absolute;
-  right: 0;
-  left: 0;
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  height: 36px;
-  font: 400 20px 'Assistant', sans-serif;
-  color: #111;
-}
-
-.page7-timeline .entry .month,
-.page7-timeline .entry .year {
-  opacity: 0.25;
-  transition: opacity 0.15s;
-}
-
-.page7-timeline .entry.current .month,
-.page7-timeline .entry.current .year {
-  opacity: 1;
-}
-
-.page7-timeline .entry.current {
-  font-weight: 700;
-  color: #000;
-}
-
-.page7-timeline .entry-year {
-  height: 56px;
-  align-items: center;
-}
-
-.page7-timeline .entry-year .year {
-  font-size: 34px;
-  font-weight: 800;
-}
-
-.page7-timeline .entry .note {
-  font: 700 12px 'Assistant', sans-serif;
-  color: #000;
-  opacity: 1;
-  transition: opacity 0.15s;
-}
-
 .text-section.page2-panel {
-  /* Extra scroll slack beyond one viewport: page2UpdateFromScroll (main.js) spends it
-     gliding the title up into its centered, pinned spot, then on revealing the legend
-     items one by one, then on a deliberate pause (PAGE2_GLIDE_HOLD) before the cascade
-     to page 3 starts — same slack-for-JS-scrub pattern as .page9-panel below, just with
-     three scroll-driven phases instead of one. Sized so .page2-sticky stays pinned
-     through all of that (reveal + hold) — if it starts releasing first, the "hold" stops
-     looking like a still frame, since the whole row drifts up the screen as part of the
-     section's normal release, even though nothing in the cascade has started yet. */
-  min-height: 270vh;
+  /* No longer a pin-and-hold budget — the title/legend card scrolls through this
+     section at the normal 1:1 rate (see .text-card in this file). The extra height
+     beyond one viewport just gives the legend→canvas morph (page2to3UpdateFromScroll,
+     main.js) room to play out as the card approaches/crosses the top of the viewport,
+     while the next section's card is already scrolling into view from below. */
+  min-height: 160vh;
   display: block;
   padding: 0;
 }
 
 .page2-sticky {
-  position: sticky;
-  top: 0;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   align-items: center;
   padding: 0 48px;
@@ -195,25 +111,20 @@ body {
 
 .page2-sticky .section-text {
   min-width: 0;
-  width: 100%;
 }
 
 .text-section.page3-panel {
-  /* Extra scroll slack: the title locks into its centered spot the moment the sticky
-     wrapper engages (no glide-up needed here — this section's title is already
-     centered the instant it scrolls into view, unlike page 2's), then a short hold
-     (PAGE3_MORPH_HOLD in main.js) before the centered list of groups rearranges into
-     page 4's scattered layout (PAGE3_MORPH_RUNWAY) — all while still pinned, same
-     slack-for-JS-scrub pattern as .page2-panel above. */
-  min-height: 200vh;
+  /* No pin here either — extra height gives page3to4UpdateFromScroll (main.js) room
+     to rearrange the centered list of groups into page 4's scattered layout as this
+     section's card crosses the top of the viewport, same continuous-scroll model as
+     .page2-panel above. */
+  min-height: 130vh;
   display: block;
   padding: 0;
 }
 
 .page3-sticky {
-  position: sticky;
-  top: 0;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   align-items: center;
   padding: 0 48px;
@@ -223,23 +134,20 @@ body {
 
 .page3-sticky .section-text {
   min-width: 0;
-  width: 100%;
 }
 
 .text-section.page4-panel {
-  /* Extra scroll slack: the title locks into its centered spot the moment the sticky
-     wrapper engages, then a short hold before the two leftover groups (page4UpdateFromScroll
-     in main.js) slide out of view past the left edge — same slack-for-JS-scrub pattern
-     as .page3-panel above. */
-  min-height: 200vh;
+  /* No pin here either — extra height gives page4UpdateFromScroll (main.js) room
+     to slide the two leftover groups out past the left edge as this section's card
+     crosses the top of the viewport, same continuous-scroll model as .page3-panel
+     above. */
+  min-height: 130vh;
   display: block;
   padding: 0;
 }
 
 .page4-sticky {
-  position: sticky;
-  top: 0;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   align-items: center;
   padding: 0 48px;
@@ -249,184 +157,115 @@ body {
 
 .page4-sticky .section-text {
   min-width: 0;
-  width: 100%;
 }
 
 .text-section.page9-panel {
-  /* Extra height beyond one viewport — pure scroll slack that page9UpdateFromScroll
-     (main.js) consumes to glide .section-text up into its docked position over a
-     real distance, instead of it snapping there the instant the section appears
-     (a plain 100vh section leaves no room for that transition, same issue as
-     .page7-scrub — sticky alone has nothing to release from when the element is
-     already flush with its container's edge). */
-  min-height: 130vh;
+  /* .page9-title-row's own 100vh + .page9-sticky's own 100vh, plus 30vh slack
+     so the sticky panel actually stays pinned for a while once engaged instead
+     of releasing the instant it sticks (same reasoning as .page7-scrub — sticky
+     alone has nothing to release from when the element is already flush with
+     its container's edge). */
+  min-height: 230vh;
   display: block;
   padding: 0;
 }
 
+/* The title's own normal-flow "page" — scrolls up and away like every other
+   fold's title block, no JS positioning of its own (see main.js's
+   page9UpdateFromScroll, which only watches .page9-sticky now, not this).
+   Centered via inset:0 + margin:auto — deliberately NOT percentage-left +
+   transform (tried that first; measured centered in every automated test but
+   was reported off-center in a real browser) and NOT flex/auto-margins
+   (tried that even earlier, same story) — inset+margin:auto is the oldest,
+   most universally-reliable centering technique and doesn't involve
+   `transform` or percentage math at all, so it can't be tripped up by
+   whatever direction/transform-related quirk those other two hit. */
+.page9-title-row {
+  position: relative;
+  min-height: 100vh;
+}
+
+.page9-title-row .text-card {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  /* Without this, height:auto + top:0/bottom:0 both set makes the box stretch
+     to fill the row's full height (so margin:auto has no vertical gap left to
+     center with) instead of shrink-wrapping the title's actual content height. */
+  height: max-content;
+}
+
 .page9-sticky {
   /* The zones lock in place (extreme near the top, legitimate pinned near the
-     bottom) the moment this wrapper reaches the top; the title's own glide is
-     layered on top via a JS-driven transform (see page9UpdateFromScroll). */
+     bottom) the moment this wrapper reaches the top — no title inside it
+     anymore, so nothing here needs its own travel/glide. */
   position: sticky;
   top: 0;
   height: 100vh;
 }
 
-.page9-sticky .section-text {
-  position: absolute;
-  top: 4.5vh;
-  right: 48px;
-  left: 48px;
-  direction: rtl;
-  text-align: right;
-}
-
-/* Dashed vertical guide line at the panel's left edge — the canvas version had this
-   running from just under the title down to the horizontal divider (drawn on canvas
-   at midY = H * P9_MID = 75vh), with a small gap on either side of that line.
-   A repeating-gradient fill instead of border-style:dashed — at 1px wide, dashed
-   borders get anti-aliased into a near-solid line in most browsers; a gradient
-   background renders crisp dashes regardless of width. */
-.page9-divider-line {
-  position: absolute;
-  left: 48px;
-  width: 1px;
-  background-image: repeating-linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0.5) 0,
-    rgba(0, 0, 0, 0.5) 4px,
-    transparent 4px,
-    transparent 8px
-  );
-  /* Hidden until the title finishes gliding up into its docked spot (see
-     page9UpdateFromScroll in main.js, which adds .docked to .page9-sticky) —
-     these lines belong to the resting layout, not the title's travel. */
-  opacity: 0;
-  transition: opacity 0.3s ease-out;
-}
-
-.page9-sticky.docked .page9-divider-line {
-  opacity: 0.4;
-}
-
-.page9-divider-line-bottom {
-  /* top/height are set inline by p9SyncBottomDivider() (page9.js) to track the
-     legitimate-zone pills' actual rendered extent — it grows/shrinks with however
-     many rows wrap, instead of a fixed guess at how tall that'll be. */
-  top: 78vh;
-  height: 0;
-}
-
-/* The segment of the dashed line next to whatever's actually been dropped into the
-   extreme zone — top/height are set inline by p9SyncTopDividerHighlight() (page9.js)
-   to track #page9ZoneAbove's real rendered extent, same mechanism as the bottom
-   divider's height tracking. Denser/darker dashes than the base line, since this is
-   marking placed content rather than just guiding the eye. */
-.page9-divider-highlight {
-  position: absolute;
-  left: 48px;
-  top: 0;
-  width: 1px;
-  height: 0;
-  background-image: repeating-linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0.9) 0,
-    rgba(0, 0, 0, 0.9) 4px,
-    transparent 4px,
-    transparent 8px
-  );
-}
-
-/* The extreme-zone guide line is also the drop zone: it's a plain dashed line at
-   rest (left:48px + width:0, inherited above — deliberately NOT setting `right`
-   here too, since left+right+width all set at once is an over-constrained box
-   that browsers resolve by ignoring `left` under RTL, which pins it to the wrong
-   edge), and while a pill is being dragged it expands sideways into a filled,
-   rounded rectangle spanning the panel — same affordance as the canvas version,
-   where this exact line literally morphed into the drop-zone rect. */
-.page9-divider-line-top {
-  top: 14vh;
-  height: 58vh; /* ends ~2vh above the 75vh divider */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  transition: right 0.2s, width 0.2s, background 0.2s, border-color 0.2s;
-}
-
-.page9-sticky.dragging .page9-divider-line-top {
-  right: 48px;
-  width: auto;
-  border: 1px dashed rgba(0, 0, 0, 0.2);
-  background: rgba(0, 0, 0, 0.04);
-  opacity: 1;
-}
-
-.page9-sticky.dragging .page9-divider-line-top.over {
-  background: rgba(0, 0, 0, 0.10);
-  border-color: rgba(0, 0, 0, 0.35);
-}
-
-/* Axis labels sit right beside the canvas-drawn horizontal divider, like the
-   original ctx.fillText calls at (rightX, midY ± 10). */
+/* Axis labels sit centered on the canvas-drawn horizontal divider (midY = H *
+   P9_MID, page9.js), matching Figma's two small labels flanking that line —
+   "קיצוני" clearly weighted, "לגיטימי" left almost invisible, both static
+   regardless of drag state (Figma's before/after frames show the same weights). */
 .page9-axis-label {
   position: absolute;
-  right: 48px;
-  left: 48px;
-  font: 400 11px 'Assistant', sans-serif;
-  color: #111;
+  font: 800 18px 'Assistant', sans-serif;
+  white-space: nowrap;
   text-align: right;
 }
 
 .page9-axis-extreme {
-  top: calc(75vh - 18px);
-  opacity: 0.8;
+  right: calc(50% - 19px);
+  top: calc(65vh - 23px);
+  color: rgba(134, 134, 135, 0.78);
 }
 
 .page9-axis-legit {
-  top: calc(75vh + 6px);
-  opacity: 0.25;
+  right: calc(50% - 25px);
+  top: calc(65vh + 7px);
+  color: rgba(0, 0, 0, 0.42);
 }
 
-.page9-zone-wrap {
-  position: absolute;
-  right: 48px;
-  /* Wider than the divider line's left:48px so pills wrap to a new row before
-     reaching it, instead of touching/overlapping the dashed line. */
-  left: 68px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.page9-zone-wrap-extreme {
-  /* Spans the same range as .page9-divider-line-top (14vh-72vh) and centers its
-     single .page9-zone child within it, so a lone dropped category starts at the
-     middle of that range and the stack grows outward from there as more arrive,
-     instead of being pinned to the top. */
-  top: 14vh;
-  bottom: 28vh;
-  justify-content: center;
-  /* This box now covers the same area as the dashed drop target beneath it —
-     without this, the wrap's own (mostly empty) area would swallow drags meant
-     for .page9-divider-line-top everywhere except the small slice the pills
-     actually occupy. Re-enabled on the zone itself so the placed pills stay
-     interactive (hover, drag-out). */
+/* Nothing in the panel — labels, the dragcards tray, the dropped-pill stack —
+   is visible/interactive until @fold11's own title card has crossed the
+   viewport's vertical center (see page9UpdateFromScroll in main.js, which
+   toggles .engaged on .page9-sticky off the same titlePastCenter condition
+   that already drives the canvas-drawn line's own grow-in). One shared
+   trigger, same pattern every other fold's title card uses for its content. */
+.page9-axis-label,
+.page9-zone-wrap-extreme,
+.page9-tray {
+  opacity: 0;
   pointer-events: none;
+  transition: opacity 0.5s ease-out;
 }
 
-.page9-zone-wrap-extreme .page9-zone {
+.page9-sticky.engaged .page9-axis-label,
+.page9-sticky.engaged .page9-zone-wrap-extreme,
+.page9-sticky.engaged .page9-tray {
+  opacity: 1;
   pointer-events: auto;
 }
 
-.page9-zone-wrap-legit {
-  /* top is a guaranteed-gap boundary below the "פעילות לגיטימית" label, not a fixed
-     position — bottom anchors the pills and justify-content packs them upward from
-     there, so they never grow flush against the label regardless of row count. */
-  top: calc(75vh + 36px);
-  bottom: 8vh;
-  justify-content: flex-end;
+.page9-sticky.engaged .page9-axis-label.page9-axis-legit {
+  opacity: 0.19;
+}
+
+/* Stack of dropped-into-"extreme" pills, centered directly on the canvas's
+   horizontal middle (Figma's floating label chips all share one x-center,
+   756 of a 1512-wide frame) rather than anchored to the page margin. */
+.page9-zone-wrap-extreme {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 14vh;
+  bottom: 37vh; /* ends ~2vh above the 65vh divider */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .page9-zone {
@@ -439,23 +278,51 @@ body {
   transition: background 0.15s;
 }
 
-/* Once dropped into the extreme zone, pills sit flush against the dashed line
-   (justify-content: flex-end is "left" in this RTL row) rather than wherever
-   they happened to land — and lose the legit-zone's pill chrome since they're
-   no longer being browsed/dragged from a shared pool, just placed markers. */
-#page9ZoneAbove {
-  /* Dropped categories stack one-per-row down the line rather than wrapping into
-     a horizontal pill flow — flex-end on the cross axis keeps them flush against
-     the divider (same "left" edge as before) instead of column layout's default
-     full-width stretch. */
-  flex-direction: column;
-  flex-wrap: nowrap;
-  align-items: flex-end;
+#page9ZoneBelow {
+  gap: 18px 10px;
+  justify-content: center;
 }
 
-#page9ZoneAbove .page9-pill {
-  border: none;
-  padding: 5px 0;
+/* The pill tray — every category's drag origin, dashed and bottom-centered like
+   Figma's frame (top:749px/982 ≈ 76.3vh, bottom-anchored instead since the box's
+   own height can shift a px or two with font metrics). */
+.page9-tray {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 2.95vh;
+  width: 731px;
+  max-width: calc(100vw - 96px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 27px 29px 16px;
+  border: 4px dashed rgba(0, 0, 0, 0.13);
+  border-radius: 8px;
+  background: rgba(253, 252, 255, 0.74);
+}
+
+.page9-tray-hint {
+  font: 700 16px 'Assistant', sans-serif;
+  color: rgba(0, 0, 0, 0.29);
+  text-align: center;
+  margin: 0;
+}
+
+/* Once dropped into the extreme zone, pills stack centered on the divider's
+   midpoint (see .page9-zone-wrap-extreme) rather than wherever they happened
+   to land — and drop their drag handle since they're no longer being browsed
+   from a shared pool, just placed markers (matching Figma's floating chips,
+   which keep the same pill chrome as the tray, just without the grip dots). */
+#page9ZoneAbove {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: center;
+  /* Without an explicit width, an empty column flex item collapses to 0 width
+     (no content to size against) — leaving nothing for a drop to actually land
+     on. A generous min-width keeps it a real, hittable drop target at rest. */
+  min-width: 220px;
 }
 
 #page9ZoneAbove .page9-pill .page9-handle {
@@ -469,31 +336,31 @@ body {
   background: rgba(0, 0, 0, 0.06);
 }
 
-.page9-drop-hint {
-  font: 400 13px 'Assistant', sans-serif;
-  color: #111;
-  opacity: 0;
-  transition: opacity 0.2s;
-  pointer-events: none;
-}
-
-.page9-sticky.dragging .page9-drop-hint {
-  opacity: 0.35;
-}
-
 .page9-pill {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font: 100 16px 'Assistant', sans-serif;
-  color: rgba(0, 0, 0, 0.7);
-  border: 1px solid #888;
+  gap: 6px;
+  font: 600 22px 'Assistant', sans-serif;
+  color: rgba(0, 0, 0, 0.2);
+  background: #fff;
+  border: 1px solid rgba(130, 130, 130, 0.3);
   border-radius: 2px;
-  padding: 5px 10px;
+  padding: 10px;
+  opacity: 0.67;
   cursor: grab;
-  background: transparent;
   user-select: none;
   transition: box-shadow 0.15s;
+}
+
+/* Matches Figma's text-box-trim:trim-both/text-box-edge:cap_alphabetic on this
+   label — trims the line box down to the font's cap-height/alphabetic baseline
+   instead of the browser's default leading, so the 10px padding above/below
+   reads as tight as Figma's own measurement assumes. No fallback needed where
+   unsupported (older Safari) — it's just ignored, leaving the old (slightly
+   more generous) default leading. */
+.page9-pill-label {
+  text-box-trim: trim-both;
+  text-box-edge: cap alphabetic;
 }
 
 .page9-pill:hover {
@@ -522,56 +389,119 @@ body {
   cursor: grabbing;
 }
 
-/* 6-dot grip handle (2 cols x 3 rows), mirroring the canvas-drawn drag handle.
-   A normal flex item now (not absolutely positioned) so it shares the same
-   vertical-centering line as the label — no font-metric guesswork needed. */
+/* 6-dot grip handle (2 cols x 3 rows) — exact match to Figma's Frame 3186 icon
+   (viewBox 8x15: 3px dots, 2px column gap, 3px row gap, #959595 @ 38%). A normal
+   flex item (not absolutely positioned) so it shares the same vertical-centering
+   line as the label — no font-metric guesswork needed. */
 .page9-pill .page9-handle {
   flex-shrink: 0;
   display: grid;
-  grid-template-columns: repeat(2, 2px);
-  grid-template-rows: repeat(3, 2px);
-  gap: 2px;
+  grid-template-columns: repeat(2, 3px);
+  grid-template-rows: repeat(3, 3px);
+  gap: 3px 2px;
 }
 
 .page9-pill .page9-handle span {
-  width: 2px;
-  height: 2px;
+  width: 3px;
+  height: 3px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.38);
+  background: rgba(149, 149, 149, 0.38);
 }
 
+/* Figma specs every title card at 20px Medium (verified across nodes
+   119:997, 117:788, 117:818, 120:1279) — faked as font-weight:600 on the
+   Regular HadassahFriedlaender face since no true Medium OTF exists in
+   fonts/. This is the shared base for ALL title cards; no page should
+   override font-size/weight here individually. */
 .section-title {
-  font: 400 24px 'HadassahFriedlaender', serif;
+  font: 600 20px 'HadassahFriedlaender', serif;
   color: #111;
   margin: 0 0 8px;
 }
 
-/* Page 6 only — block-level h2s default to filling the column's full width
-   (CSS's "width: auto" for block elements means "stretch to fill", not
-   "shrink to content"). max-content (not fit-content) because each line's
-   natural width is actually wider than the 384px column — fit-content would
-   just clamp back to that same available space and wrap, right where we
-   started; max-content sizes to the text's real width and lets it overflow
-   a bit into the open canvas to the column's left instead of wrapping. */
-#page-5 .section-title {
-  width: max-content;
+/* Normal-flow, horizontally-centered text block for every page's scrolled
+   text, replacing both the old right-aligned sidebar AND the later
+   position:fixed/pinned-center treatment — text now scrolls continuously
+   with the page instead of snapping visible/invisible at a fixed screen
+   position. Centering comes from the parent (.text-section/.pageN-sticky
+   are flex containers with align-items:center) plus margin:auto here so it
+   stays centered without taking over layout. No fade — the card is always
+   visible and simply scrolls with the page. The dashed-box visual treatment
+   lives on .text-card-frame below, since per Figma (node 119:997 vs 119:969)
+   the box wraps only the title, not e.g. page-1's legend. */
+.text-card {
+  /* A definite width (not just max-width) matters here: as a flex item this
+     box would otherwise shrink-to-fit its widest child, and .page2-legend's
+     own width:100% would then resolve against that ambiguous auto width —
+     inconsistently per row, since each row's own max-content size differs.
+     A fixed width gives every descendant (the legend's swatch/label center
+     anchors included) the same definite box to measure against. */
+  width: 480px;
+  margin: 0 auto;
+  direction: rtl;
+  text-align: right;
 }
 
-.page2-legend {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 24px;
-  margin-top: 24px;
-  transform-origin: right center;
+/* The actual dashed-border white card chrome (Figma node 119:997: 4px dashed
+   black border, white fill, 8px radius, 21px/29px padding) — applied only to
+   the title, not to sibling content like page-1's legend.
+
+   Native `border: 4px dashed` renders the browser's own loose dash spacing
+   (dash/gap noticeably longer than 4px), not Figma's exact 2px-dash/2px-gap
+   repeat (measured by pixel-sampling the Figma export). A `border-image`
+   9-slice was tried first but proved unreliable across `repeat`/`round`
+   combinations — these cards are much wider than they are tall, and the
+   short top/bottom-vs-left/right edges scaled (and in some engines visibly
+   squashed) very differently from each other regardless of which repeat
+   mode was used on the short axis. The dash is drawn instead via a plain
+   transparent border (preserves the box-model spacing) plus an absolutely
+   positioned inline `<svg>` child (`.text-card-frame-dash`, inserted/sized by
+   updateTextCardFrameDashes() in main.js) whose viewBox is set to the frame's
+   own actual pixel size every time it's (re)measured — a true 1:1
+   viewBox-to-CSS-px mapping on both axes, so the dash/radius can't be
+   scaled or distorted no matter the box's aspect ratio. */
+.text-card-frame {
+  --frame-border-w: 4px;
+  position: relative;
+  /* display:block + width:fit-content + margin:0 auto centers the box itself
+     within .text-card regardless of content width — display:inline-block
+     instead let the parent's text-align:right (set for the RTL text inside)
+     also flush the box itself to the right edge, which is invisible for
+     titles long enough to wrap near the card's full 480px width but visibly
+     off-center for short, single-line titles (e.g. @fold11's "איפה עובר
+     הגבול בעיניכם"). Inner text stays right-aligned since text-align is
+     inherited independent of the box's own display/positioning. */
+  display: block;
+  width: fit-content;
+  margin: 0 auto;
+  background: #fff;
+  border: var(--frame-border-w) solid transparent;
+  border-radius: 8px;
+  padding: 21px 29px;
 }
 
-/* Duplicates the legend's swatches over the canvas and morphs them (via JS-driven
-   transform, see page2to3UpdateFromScroll in main.js) from the legend's dock
-   position into page 3's centered list position as that section approaches —
-   the real legend items are hidden for the duration so there's only one visible
-   copy at a time. Fixed + left/top set once per item, then animated purely via
-   transform so the motion stays off the layout/paint path. */
+/* An abs-pos element's containing block is its nearest positioned ancestor's
+   PADDING box, not its border box — plain `inset: 0` would size this 4px
+   (the frame's own border-width) smaller than the frame's actual visible
+   border-box on every side, leaving a ring of bare white fill between the
+   dash and the frame's true edge. Expanding by --frame-border-w on all
+   sides corrects for that, so this overlay's rendered CSS size (which
+   updateTextCardFrameDashes() in main.js reads via offsetWidth/offsetHeight
+   to set its viewBox) actually matches the frame's real border-box. */
+.text-card-frame-dash {
+  position: absolute;
+  top: calc(-1 * var(--frame-border-w));
+  left: calc(-1 * var(--frame-border-w));
+  width: calc(100% + 2 * var(--frame-border-w));
+  height: calc(100% + 2 * var(--frame-border-w));
+  pointer-events: none;
+}
+
+/* The single overlay holding all 9 groups across the legend (fold 2) through
+   fold 5 — one persistent set of .group-item nodes, continuously
+   repositioned/restyled rather than separate per-fold overlays crossfading
+   into each other (see GROUPS/updateGroups in main.js). Visibility is
+   t-gated by that same code, not page-gated. */
 .groups-overlay {
   position: fixed;
   inset: 0;
@@ -585,57 +515,245 @@ body {
   opacity: 1;
 }
 
-.group-item {
+/* 10 static squares (Figma node 120:1279) that fade in at the center as the
+   cluster moves into fold6's left mini-legend — opacity is set directly
+   inline (e6, the same progress driving the legend's own move), no CSS
+   transition needed since the JS value is already continuous. Each square
+   gains an action-type label once fold 8's timeline-intro is reached (node
+   120:1299), then loses it again — and 5 of them gain a group color — in
+   fold 9 (node 162:63876) — .fold6-square-wrap is the zero-size anchor
+   (same convention as .group-item: its left/top IS the square's own
+   position), so the label can be positioned relative to it without
+   re-measuring anything. Both label opacity and square color are driven
+   continuously from JS (updateGroups in main.js), so neither gets a CSS
+   transition here — same reasoning as the overlay's own opacity above. */
+.fold6-squares-overlay {
   position: fixed;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.fold6-square-wrap {
+  position: absolute;
+}
+
+.fold6-square {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 5px;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.9);
+}
+
+/* right: 8px — the anchor IS the square's left edge, so this offset is the
+   real gap directly (same anchor-is-left-edge convention as .group-item). */
+.fold6-square-label {
+  position: absolute;
+  top: 2.5px;
+  right: 8px;
+  transform: translateY(-50%);
   white-space: nowrap;
-  font: 16px 'Assistant', sans-serif;
-  color: #111;
-  direction: rtl;
+  font: 14px 'Assistant', sans-serif;
+  color: rgba(0, 0, 0, 0.9);
   opacity: 0;
-  /* Only opacity transitions — transform is set every scroll frame in
-     main.js, so transitioning it would fight that and lag behind the scroll. */
-  transition: opacity 150ms ease-out;
+}
+
+/* Figma's intro screen (revised, node 167:90164 — was 146:105164) is a centered
+   full-width cover, not the right-aligned 480px sidebar that pages 1-7 use — so
+   #page-0's content scrolls in normal flow like every other fold's title
+   block, rather than a fixed full-viewport overlay faded by currentPage —
+   .page0-overlay is just #page-0's own content box now, sized to exactly one
+   viewport height so the center-anchored math below (left/top or
+   bottom: calc(50% ± Npx), matching how Figma's own frame positions
+   everything relative to its vertical center) still lands the same way it
+   did when that box was the live viewport. */
+.page0-overlay {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  pointer-events: none;
+}
+
+/* The dot column itself — see buildPage0Dots in page1.js, which sets each
+   one's top/left inline. */
+.page0-dot {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+}
+
+/* Overrides .text-section's default 0 48px padding — the center-anchored
+   math above needs .page0-overlay's box to be the *true* full viewport
+   width, same as when it was position: fixed; inset: 0. */
+#page-0 {
+  padding: 0;
+}
+
+/* Revised logo (node 167:90243) is a flat wordmark screenshot, not the old
+   2048x2048 sprite — no cropping or invert-filter needed, just place it.
+   Figma's own node box (81x47, ratio 1.72:1) non-uniformly stretches the
+   source asset (246x94, ratio 2.62:1) — a distortion from resizing a pasted
+   screenshot without locking its aspect ratio, not something to copy. Width
+   81px matches Figma; height is derived from the asset's true ratio instead
+   of the squished 47px, with the same center point preserved via the
+   translate(-50%, -50%) below. */
+.page0-logo {
+  position: absolute;
+  left: calc(50% - 0.5px);
+  top: calc(50% - 445.5px);
+  width: 81px;
+  transform: translate(-50%, -50%);
+}
+
+.page0-logo-img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Title bottom edge sits 129px above the frame's vertical center (was 57px in
+   the old node — the revised design moved the title up to make room for the
+   taller dot column + scroll prompt below). Dot column (page1.js,
+   drawPage0Dots) and .page0-scroll below share this same H/2-relative
+   reference so everything stays in sync at any viewport height. */
+.page0-text {
+  position: absolute;
+  left: 50%;
+  bottom: calc(50% + 129px);
+  transform: translateX(calc(-50% + 25.5px));
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 11px;
+  direction: rtl;
+}
+
+/* HadassahFriedlaender's normal line-height leaves a bigger gap below the
+   last line's glyphs than Assistant's does at the subtitle's size, so even
+   though both boxes bottom-align at the same y (align-items: flex-end on
+   .page0-text), the rendered ink doesn't — measured an 8px gap between the
+   two, hence the nudge to bring the title's actual text flush with the
+   subtitle's, matching Figma's single shared bottom line. */
+.page0-title {
+  font: 600 42px 'HadassahFriedlaender', serif;
+  color: #000;
+  text-align: left;
+  width: 209px;
+  margin: 0;
+  transform: translateY(8px);
+}
+
+.page0-subtitle {
+  font: 300 18px 'Assistant', sans-serif;
+  color: #000;
+  text-align: right;
+  width: 155px;
+  margin: 0;
+}
+
+/* New in the revised node: a scroll-down arrow + caption at the bottom of the
+   dot column. Bounding box of both children together (128x62), anchored as
+   one unit at the frame's own position for it — children are positioned
+   relative to this box's own top-left, not the viewport center, since that's
+   the local frame they share in Figma. */
+.page0-scroll {
+  position: absolute;
+  left: calc(50% + 65px);
+  top: calc(50% + 446px);
+  transform: translate(-50%, -50%);
+  width: 128px;
+  height: 62px;
+}
+
+.page0-scroll-arrow {
+  position: absolute;
+  left: 6px;
+  top: 23px;
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.page0-scroll-text {
+  position: absolute;
+  left: 20px;
+  top: 0;
+  width: 108px;
+  font: 600 18px 'Assistant', sans-serif;
+  color: rgba(0, 0, 0, 0.44);
+  text-align: left;
+  line-height: 1.3;
+  margin: 0;
+}
+
+#page-0 .section-text {
+  visibility: hidden;
+}
+
+/* One persistent .group-item per group, used across every stage (legend
+   through fold 5) — see GROUPS/updateGroups in main.js. left/top (set every
+   scroll tick) is the SWATCH's own anchor point, not the item box, since the
+   item itself has no size: .group-swatch sits at that exact point and
+   .group-label's own left (also set every tick, continuously lerped rather
+   than flipped between two fixed values) is offset from it by however far
+   the swatch/label side-swap has progressed. */
+.group-item {
+  position: absolute;
 }
 
 .group-swatch {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  flex-shrink: 0;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 13px;
+  height: 13px;
 }
 
-.page2-legend-item {
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
+.group-label {
+  position: absolute;
+  transform: translateY(-50%);
   white-space: nowrap;
-  gap: 8px;
-  font: 16px 'Assistant', sans-serif;
-  color: #111;
-  opacity: 0;
-  transform: translateY(6px);
-  transition: opacity 220ms cubic-bezier(0.23, 1, 0.32, 1), transform 220ms cubic-bezier(0.23, 1, 0.32, 1);
+  font: 18px 'Assistant', sans-serif;
+  color: rgba(0, 0, 0, 0.81);
 }
 
-.page2-legend-item.is-visible {
-  opacity: 1;
-  transform: translateY(0);
+/* Fold 4/5 distinguish the 5 groups that fall into the two opposing camps
+   (full black, .is-emphasized) from the 4 that don't (56%-opacity black,
+   .is-dimmed) — the legend/fold-3 default (81%-opacity) is untouched. */
+.group-item.is-emphasized .group-label {
+  color: #000;
 }
 
-.page2-legend-swatch {
+.group-item.is-dimmed .group-label {
+  color: rgba(0, 0, 0, 0.56);
+}
+
+/* Hidden measurement-only scaffold for fold 5's row layout — never painted
+   (visibility:hidden), just laid out via real flexbox so its children's
+   rendered positions (read via getBoundingClientRect in main.js) can be used
+   as the persistent items' flight targets, without needing to re-implement
+   flex's own label-width math by hand. */
+.fold5-top-row {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 45px;
+  visibility: hidden;
+  transform-origin: left top;
+}
+
+.fold5-row-ghost-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+  font: 18px 'Assistant', sans-serif;
+}
+
+.fold5-row-ghost-swatch {
   display: inline-block;
-  width: 6px;
-  height: 6px;
+  width: 13px;
+  height: 13px;
   flex-shrink: 0;
-}
-
-.section-subtitle {
-  font: 400 14px 'HadassahFriedlaender', serif;
-  color: #111;
-  opacity: 0.5;
-  margin: 0;
 }
 
