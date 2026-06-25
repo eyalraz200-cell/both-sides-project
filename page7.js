@@ -20,13 +20,17 @@ function p7GridGeometry(W, H) {
   return { leftX0, cols, CELL: P7_CELL };
 }
 
-const P7_COLORS = {
-  "settlers":                           "#F9880D",
-  "Protesters against the government":  "#0C7AE0",
-  "Haredi Jews":                        "#16181D",
-  "Right-wing activists":               "#69DB12",
-  "left wing activists":                "#EF3890",
-};
+// Looks up an event's color via GROUPS (main.js) rather than a separate
+// hardcoded palette, by events.json's actor string — the same join key
+// stored on GROUPS' 5 camp entries as `actor` — so every real per-event
+// square (here, page8.js's transition glide, and page9.js's grids) always
+// matches the legend's current color, including after a future edit to
+// GROUPS. main.js loads after this file, but GROUPS only needs to exist by
+// the time a square is actually drawn, long after all scripts have run.
+function p7ActorColor(actor) {
+  const group = GROUPS.find(g => g.actor === actor);
+  return (group && group.color) || "#888";
+}
 
 const p7 = {
   ready: false,
@@ -182,6 +186,7 @@ function p7AnyAnimActive() {
   for (const k in p7MonthReverseStart) {
     if (now - p7MonthReverseStart[k] < P7_ANIM_TOTAL_DURATION) return true;
   }
+  if (p7AxisEventsAnimActive()) return true;
   return false;
 }
 
@@ -258,7 +263,7 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     const size = SQ * scale;
     const off  = (SQ - size) / 2; // keep the shrink/grow centered on the cell
     ctx.globalAlpha = alpha;
-    ctx.fillStyle = P7_COLORS[events[i].actor] || "#888";
+    ctx.fillStyle = p7ActorColor(events[i].actor);
     ctx.fillRect(destX + off, destY + off, size, size);
   }
   ctx.globalAlpha = 1;
@@ -266,7 +271,7 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
 
 async function initPage7() {
   try {
-    const res  = await fetch("/events.json");
+    const res  = await fetch("events.json");
     const data = await res.json();
     data.sort((a, b) => a.date.localeCompare(b.date));
 
@@ -412,7 +417,7 @@ function drawPage7(ctx, W, H) {
 // frame it's recomputed straight from p7.currentDate, so scrolling backward
 // just naturally shrinks it back — no separate reverse bookkeeping needed.
 const P7_AXIS_MARGIN          = 48;   // px inset from each edge
-const P7_AXIS_Y_FRAC          = 0.965; // fraction of H — shared vertical center for the dashed line and year labels (Figma: both sit on one row, not stacked)
+const P7_AXIS_Y_FRAC          = 0.93;  // fraction of H — shared vertical center for the dashed line and year labels (Figma: both sit on one row, not stacked)
 const P7_AXIS_LINE_THICKNESS  = 6;     // px — Figma's dash is a ~7px-tall band, not a hairline
 const P7_AXIS_LABEL_PAD       = 6;     // px breathing room around a label's measured width
 
@@ -442,6 +447,97 @@ function p7AxisYearTicks() {
     ticks.push({ year: y, dateStr: `${y}-01-01` });
   }
   return ticks;
+}
+
+// Headline events called out along the axis — title only, no date (the axis's own
+// year ticks already carry that). Each one appears right as the growing edge
+// reaches its date and fades back out some time later, rather than staying pinned
+// once reached like the year ticks — so only one is ever on screen.
+const P7_AXIS_EVENTS = [
+  { date: "2023-01-01", label: "הצגת הרפורמה המשפטית" },
+  { date: "2023-07-01", label: "אישור ביטול עילת הסבירות" },
+  { date: "2023-10-07", label: "מתקפת 7 באוקטובר" },
+  { date: "2024-06-01", label: "פסיקת בג\"ץ על גיוס חרדים" },
+  { date: "2025-06-01", label: "מבצע עם כלביא" },
+  { date: "2025-10-01", label: "הסכם הפסקת אש ושחרור חטופים בעזה" },
+];
+
+// Fixed real-time (wall-clock) durations, the same for every event regardless of
+// how close together their dates are — this is a one-shot animation *triggered*
+// the moment the growing edge reaches an event's date, not a value continuously
+// recomputed from scroll position. Once triggered it plays out on its own clock
+// (via p7StartAnimLoop/p7AnyAnimActive below) even if the user stops scrolling
+// entirely, and resets only if they scroll back up above the event's date (so
+// scrolling forward across it again replays the same animation from scratch).
+const P7_AXIS_EVENT_FADE_IN_MS  = 400;
+const P7_AXIS_EVENT_HOLD_MS     = 1200;
+const P7_AXIS_EVENT_FADE_OUT_MS = 1000;
+const P7_AXIS_EVENT_TOTAL_MS    = P7_AXIS_EVENT_FADE_IN_MS + P7_AXIS_EVENT_HOLD_MS + P7_AXIS_EVENT_FADE_OUT_MS;
+const P7_AXIS_EVENT_LABEL_OFFSET = 18; // px above the axis line
+const P7_AXIS_EVENT_FONT         = "14px 'Assistant', sans-serif";
+
+// triggeredAt is a performance.now() timestamp, set once when the event is first
+// reached and cleared if the user scrolls back above its date — null means "not
+// currently triggered" (either never reached yet, or reached-then-reversed).
+const P7_AXIS_EVENT_STATE = P7_AXIS_EVENTS.map(() => ({ triggeredAt: null }));
+
+// Checked every draw (see p7AnyAnimActive) so the animation loop keeps running —
+// and labels keep fading — purely on elapsed time, with no further scrolling
+// required.
+function p7AxisEventsAnimActive() {
+  const now = performance.now();
+  return P7_AXIS_EVENT_STATE.some(s => s.triggeredAt !== null && now - s.triggeredAt < P7_AXIS_EVENT_TOTAL_MS);
+}
+
+// Fires each event's one-shot animation the instant p7.currentDate reaches its
+// date, regardless of how the user got there (slow scroll, fast flick, or a
+// direct jump) — and un-fires it if they scroll back above that date.
+function p7UpdateAxisEventTriggers() {
+  const curMs = new Date(p7.currentDate + "T00:00:00Z").getTime();
+  P7_AXIS_EVENTS.forEach((ev, i) => {
+    const state = P7_AXIS_EVENT_STATE[i];
+    const reached = curMs >= new Date(ev.date + "T00:00:00Z").getTime();
+    if (reached && state.triggeredAt === null) {
+      state.triggeredAt = performance.now();
+      p7StartAnimLoop();
+    } else if (!reached && state.triggeredAt !== null) {
+      state.triggeredAt = null;
+    }
+  });
+}
+
+function p7AxisEventOpacity(elapsedMs) {
+  if (elapsedMs < P7_AXIS_EVENT_FADE_IN_MS) return elapsedMs / P7_AXIS_EVENT_FADE_IN_MS;
+  const holdEnd = P7_AXIS_EVENT_FADE_IN_MS + P7_AXIS_EVENT_HOLD_MS;
+  if (elapsedMs < holdEnd) return 1;
+  if (elapsedMs < P7_AXIS_EVENT_TOTAL_MS) return 1 - (elapsedMs - holdEnd) / P7_AXIS_EVENT_FADE_OUT_MS;
+  return 0;
+}
+
+function p7DrawAxisEvents(ctx, W, axisY) {
+  p7UpdateAxisEventTriggers();
+  const now = performance.now();
+  ctx.save();
+  ctx.font = P7_AXIS_EVENT_FONT;
+  ctx.textBaseline = "alphabetic";
+  P7_AXIS_EVENTS.forEach((ev, i) => {
+    const state = P7_AXIS_EVENT_STATE[i];
+    if (state.triggeredAt === null) return;
+    const opacity = p7AxisEventOpacity(now - state.triggeredAt);
+    if (opacity <= 0) return;
+    const x = p7AxisX(ev.date, W);
+    // Centered text would push past the canvas edge for an event anchored right
+    // at it — the very first one sits at p7.minDate, the axis's own right anchor
+    // — so fall back to right/left alignment (extending only inward) near either
+    // edge instead of going out of frame.
+    const textWidth = ctx.measureText(ev.label).width;
+    if (x + textWidth / 2 > W) ctx.textAlign = "right";
+    else if (x - textWidth / 2 < 0) ctx.textAlign = "left";
+    else ctx.textAlign = "center";
+    ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
+    ctx.fillText(ev.label, x, axisY - P7_AXIS_EVENT_LABEL_OFFSET);
+  });
+  ctx.restore();
 }
 
 function p7DrawYearAxis(ctx, W, H) {
@@ -492,4 +588,6 @@ function p7DrawYearAxis(ctx, W, H) {
     ctx.fillText(String(tick.year), p7AxisX(tick.dateStr, W), axisY);
   }
   ctx.restore();
+
+  p7DrawAxisEvents(ctx, W, axisY);
 }
