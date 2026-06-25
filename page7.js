@@ -167,15 +167,15 @@ const p7MonthReverseStart = {}; // monthKey -> performance.now() timestamp (retr
 let p7MonthMaxReached = -1;     // highest monthKey ever reached, forward
 let p7AnimRunning = false;
 
-// True once the page-8 section (page7's scrub section — its intro title used to
-// be fused in here too, see CLAUDE.md's fold-7 note; it's now its own earlier
-// fold, #page-6, so the real per-event reveal doesn't engage until #page-8 is
-// actually reached) has actually been scrolled to (not just intersected from
-// below — see the IntersectionObserver rootMargin in main.js, which flips
-// currentPage to page7 well before the section's top reaches the viewport top).
-// Gates the very first month's cascade so it doesn't fire while page7 is merely
-// scrolling into view from below, before the user has engaged with it at all.
-const p7SectionEl = document.getElementById("page-8");
+// True once fold 9's own title card (#page-7 .text-card, page7TitleCardEl in
+// main.js) has scrolled all the way past the top of the viewport — not once
+// #page-8 itself reaches the top, which (since #page-7's card sits vertically
+// centered in its own 100vh-tall section) only happens half a viewport-height
+// *after* the card is already gone, leaving a stretch of scrolling where
+// nothing visibly happens before the real per-event reveal kicks in. Tying
+// engagement directly to the card's own exit instead means the timeline
+// starts exactly when the title that introduces it leaves the screen, no
+// matter how main.js ends up sizing #page-7's section.
 let p7HasEngaged = false;
 
 function p7AnyAnimActive() {
@@ -343,11 +343,11 @@ function drawPage7(ctx, W, H) {
   // settled, not fire off a brand new entrance while the user is scrolling the other way.
   //
   // The very first month (minDate's month) starts out "current" before the user has
-  // scrolled into page7 at all — p7HasEngaged only flips true once the section has
-  // actually been scrolled to (its top reaching the viewport top), so that first
-  // month's cascade doesn't fire prematurely while the page is merely scrolling past
-  // page7 on its way in from above.
-  if (!p7HasEngaged && p7SectionEl && p7SectionEl.getBoundingClientRect().top <= 0) {
+  // scrolled into page7 at all — p7HasEngaged only flips true once fold 9's title
+  // card has scrolled past the top of the viewport, so that first month's cascade
+  // doesn't fire prematurely while the page is merely scrolling past page7 on its
+  // way in from above.
+  if (!p7HasEngaged && page7TitleCardEl && page7TitleCardEl.getBoundingClientRect().top <= 0) {
     p7HasEngaged = true;
   }
   const isNewTerritory = p7HasEngaged && curMonthKey > p7MonthMaxReached;
@@ -475,6 +475,8 @@ const P7_AXIS_EVENT_FADE_OUT_MS = 1000;
 const P7_AXIS_EVENT_TOTAL_MS    = P7_AXIS_EVENT_FADE_IN_MS + P7_AXIS_EVENT_HOLD_MS + P7_AXIS_EVENT_FADE_OUT_MS;
 const P7_AXIS_EVENT_LABEL_OFFSET = 18; // px above the axis line
 const P7_AXIS_EVENT_FONT         = "14px 'Assistant', sans-serif";
+const P7_AXIS_EVENT_LINE_GAP     = 4;   // px of clearance below the label's baseline before the tick starts
+const P7_AXIS_EVENT_LINE_END_GAP = 8;   // px of clearance above the axis line — tick stops short, doesn't touch it
 
 // triggeredAt is a performance.now() timestamp, set once when the event is first
 // reached and cleared if the user scrolls back above its date — null means "not
@@ -531,11 +533,24 @@ function p7DrawAxisEvents(ctx, W, axisY) {
     // — so fall back to right/left alignment (extending only inward) near either
     // edge instead of going out of frame.
     const textWidth = ctx.measureText(ev.label).width;
+    let lineX = x; // the tick always marks the label's horizontal center...
     if (x + textWidth / 2 > W) ctx.textAlign = "right";
     else if (x - textWidth / 2 < 0) ctx.textAlign = "left";
     else ctx.textAlign = "center";
+    // ...even when the edge cases above push the text itself off-center from `x`
+    // (textAlign extends the label only inward from `x`, so its true center sits
+    // half a text-width away from `x` on the side it grew toward).
+    if (ctx.textAlign === "right") lineX = x - textWidth / 2;
+    else if (ctx.textAlign === "left") lineX = x + textWidth / 2;
     ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
     ctx.fillText(ev.label, x, axisY - P7_AXIS_EVENT_LABEL_OFFSET);
+
+    ctx.strokeStyle = `rgba(0, 0, 0, ${opacity})`; // matches the label's own fade
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(lineX, axisY - P7_AXIS_EVENT_LABEL_OFFSET + P7_AXIS_EVENT_LINE_GAP);
+    ctx.lineTo(lineX, axisY - P7_AXIS_EVENT_LINE_END_GAP);
+    ctx.stroke();
   });
   ctx.restore();
 }

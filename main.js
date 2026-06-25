@@ -100,16 +100,6 @@ function updateTextCardFrameDashes() {
 // ── Scrollytelling: which text section is active drives the pinned canvas ──
 const sections = Array.from(document.querySelectorAll(".text-section"));
 
-// Dev-only @foldN tag (see CLAUDE.md's fold reference table) — sections are
-// already in page-0..page-10 DOM order, which is exactly @foldN's own
-// 1-indexed order, so the array index needs no further mapping.
-sections.forEach((sec, i) => {
-  const marker = document.createElement("span");
-  marker.className = "fold-marker";
-  marker.textContent = String(i + 1);
-  sec.appendChild(marker);
-});
-
 function setActivePage(page) {
   if (page === currentPage) return;
   currentPage = page;
@@ -450,13 +440,15 @@ function makeTrigger(duration, onTick) {
   return { currentRaw, currentT: () => p9Ease(currentRaw()), trigger, set };
 }
 
-// Fold 3/4/6/9 each fire once, at their card's center crossing. Fold 5 fires
-// twice — see FOLD5_ROW_ORDER above and watchCardThreshold below — once as
-// its card enters the viewport (the row-enter glide) and again at center
-// (that row's fade-out), since CLAUDE.md's fold 5 already specs those as two
-// sequential, non-overlapping phases.
+// Fold 3/4/6/9 each fire once, at their card's center crossing (fold 9's
+// nudged earlier, see checkFold9 below). Fold 5 fires twice — see
+// FOLD5_ROW_ORDER above and watchCardThreshold below — once as its card
+// enters the viewport (the row-enter glide) and again at center (that row's
+// fade-out), since CLAUDE.md's fold 5 already specs those as two sequential,
+// non-overlapping phases. Fold 9 also fires twice — see checkFold9/
+// checkFold9SquaresFade below.
 //
-// All 8 share one duration so the whole legend system reads as a single
+// All 9 share one duration so the whole legend system reads as a single
 // consistent tempo rather than each fold having its own slightly different
 // feel — they used to range from 600ms to 1600ms.
 const GROUP_TRANSITION_MS = 1900;
@@ -467,22 +459,8 @@ const fold5EnterTrigger = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
 const fold5FadeTrigger  = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
 const fold6Trigger      = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
 const fold7LabelTrigger = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
-
-// Fold 9's own two beats are real triggers too (same makeTrigger/
-// watchCardThreshold machinery as every fold above), but deliberately don't
-// share GROUP_TRANSITION_MS — that 1900ms is tuned for beats that only need
-// to *start* at the right scroll position and can keep animating loosely
-// after that. Fold 9's beats are pinned to a specific screen position
-// ("before the midpoint", "as the card leaves the screen"), and at any
-// realistic scroll speed 1900ms is long enough that the user scrolls well
-// past that position before the tween finishes — confirmed by scrolling
-// through it: the color was still barely-tinted black by the time the card
-// reached center. A short, dedicated duration plus firing with a real buffer
-// before the target position is what actually gets the tween to *finish*
-// where it's supposed to, not just start there.
-const FOLD9_TRANSITION_MS = 120;
-const fold9Trigger            = makeTrigger(FOLD9_TRANSITION_MS, updateGroups);
-const fold9SquaresFadeTrigger = makeTrigger(FOLD9_TRANSITION_MS, updateGroups);
+const fold9Trigger            = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
+const fold9SquaresFadeTrigger = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
 
 // Watches one title card's top edge for crossing H*frac, firing trigger
 // forward (1) on a downward crossing and reverse (0) on scrolling back up
@@ -515,18 +493,16 @@ const checkFold5Enter = watchCardThreshold(page5TitleCardEl, 1.0, fold5EnterTrig
 const checkFold5Fade  = watchCardThreshold(page5TitleCardEl, 0.5, fold5FadeTrigger);
 const checkFold6      = watchCardThreshold(page6TitleCardEl, 0.5, fold6Trigger);
 const checkFold7Label = watchCardThreshold(fold7LabelCardEl, 0.5, fold7LabelTrigger);
-// Fires while the card is still well below center (frac=0.7, vs. every
-// other fold's 0.5) — FOLD9_TRANSITION_MS is very short (120ms) specifically
-// so it can actually finish in the time it takes to scroll the rest of the
-// way to the midpoint, but that only works if it's given enough of a head
-// start; firing right at/just-before center (like the first version of this
-// did) leaves no runway and the tween visibly finishes well past it.
-const checkFold9 = watchCardThreshold(page7TitleCardEl, 0.7, fold9Trigger);
-// Mirrors checkFold9's reasoning for the squares' disappearance: fires with
-// real margin before the card is fully gone (frac=0.2, not frac≈0 like the
-// very first version), so the short tween has room to land by the time the
-// card actually crosses the top of the screen.
-const checkFold9SquaresFade = watchCardThreshold(page7TitleCardEl, 0.2, fold9SquaresFadeTrigger);
+// Fires a little before the card's actual center crossing (frac > 0.5, since
+// the card's top is still further down the viewport — i.e. earlier in the
+// scroll — when it crosses a larger fraction of viewport height) — per
+// explicit spec, the squares should color in (and lose their labels) before
+// the title reaches center, not exactly at it.
+const checkFold9 = watchCardThreshold(page7TitleCardEl, 0.6, fold9Trigger);
+// Fires once the card has scrolled 3/4 of the way up the screen (top at 1/4
+// of viewport height) — well past center, a distinct, later beat from the
+// color-in above, not the same moment.
+const checkFold9SquaresFade = watchCardThreshold(page7TitleCardEl, 0.25, fold9SquaresFadeTrigger);
 
 function checkGroupTriggers() {
   checkFold2(); checkFold3(); checkFold4(); checkFold5Enter(); checkFold5Fade(); checkFold6(); checkFold7Label(); checkFold9(); checkFold9SquaresFade();
@@ -711,28 +687,36 @@ window.addEventListener("scroll", () => {
 }, { passive: true });
 
 // ── Page 9's title (.page9-title-row) is a normal-flow, continuously-scrolling
-// card like every other fold's — no JS positioning of its own. It still drives
-// the panel's reveal though, same as every other title card triggers its own
-// fold's content (e.g. page8TitleEl/p8Trigger above): once *this* title's own
-// center crosses the viewport's vertical center, the canvas-drawn horizontal
-// divider (page9.js) plays its fixed-duration grow-in (reverses if scrolled
-// back up past that point before settling), and the rest of the panel (axis
-// labels, the dragcards tray, the dropped-pill stack) fades in with it — even
-// though by then the title itself has already scrolled most of the way past. ──
-const page9TitleEl  = document.querySelector("#page-10 .page9-title-row .section-title");
+// card like every other fold's — no JS positioning of its own. It drives two
+// *separate* things, deliberately on two different conditions, not one shared
+// trigger:
+//  - The canvas-drawn divider line (p9TriggerLine) starts growing in once the
+//    title card's own top crosses viewport-center — same frac-0.5 convention
+//    every other fold's title-driven animation uses. Safe to fire this early:
+//    the canvas is a full-viewport fixed overlay, not a scrolling DOM node, so
+//    there's no "still scrolling" artifact to worry about.
+//  - The DOM panel itself (.engaged on .page9-sticky — axis labels, dragcards
+//    tray, dropped-pill stack) stays gated on .page9-sticky actually being
+//    pinned (rect.top <= 0), not on the title card. .page9-title-row's
+//    text-card is centered via inset:0/margin:auto within a row exactly 100vh
+//    tall, so the title crosses center the instant the row is entered — long
+//    before .page9-sticky itself starts sticking. Revealing real DOM content
+//    that early sits fully visible-but-still-in-normal-flow (not yet pinned),
+//    reading as the dragcards scrolling up the page instead of being revealed
+//    in a fixed position — tried it, reverted it. Pinning is a hard
+//    requirement for this one, the title-card threshold is not. ──
+const page9TitleCardEl = document.querySelector("#page-10 .text-card");
 const page9StickyEl = document.querySelector("#page-10 .page9-sticky");
 let page9Ticking = false;
-let page9LinePast = false; // previous "title past center" state, so the trigger only fires on the transition
+let page9LinePast = false; // previous "title past center" state, so the line trigger only fires on the transition
 
 function page9UpdateFromScroll() {
-  const rect = page9TitleEl.getBoundingClientRect();
-  const titleCenter = rect.top + rect.height / 2;
-  const titlePastCenter = titleCenter <= window.innerHeight / 2;
+  const titlePastCenter = page9TitleCardEl.getBoundingClientRect().top <= window.innerHeight * 0.5;
   if (titlePastCenter !== page9LinePast) {
     page9LinePast = titlePastCenter;
     p9TriggerLine(titlePastCenter ? 1 : 0);
   }
-  page9StickyEl.classList.toggle("engaged", titlePastCenter);
+  page9StickyEl.classList.toggle("engaged", page9StickyEl.getBoundingClientRect().top <= 0);
 }
 
 window.addEventListener("scroll", () => {
@@ -773,5 +757,6 @@ Promise.all([
     init();
     layoutGroups();
     updateTextCardFrameDashes();
+    buildPage0DotsExtra();
   });
 });

@@ -1,3 +1,9 @@
+@font-face {
+  font-family: 'HadassahFriedlaender';
+  font-weight: 400;
+  src: url('fonts/HadassahFriedlaender-Regular-TRIAL.otf') format('opentype');
+}
+
 :root {
   --shk-primary: #004194;
   --shk-secondary: #002555;
@@ -8,6 +14,11 @@
   --shk-headline-color: #292929;
   --shk-divider: #0E578A0D;
   --shk-tint: #E6F0EF;
+  --shk-topbar-bg: #8AEFE0;
+  --shk-yellow: #F6C90E;
+  --shk-yellow-text: #1B2A4A;
+  --shk-banner-dark: #241D4A;
+  --shk-link-muted: #6B7280;
 }
 
 * {
@@ -26,44 +37,208 @@ a {
   color: inherit;
 }
 
-/* Header */
+/* Header — four stacked bars mirroring shakuf.co.il's real masthead:
+   1) thin teal utility-bar dropdown, 2) support+social / "all articles"
+   ribbon, 3) nav links either side of the centered wordmark, 4) section
+   tabs + search. All nav targets are decorative placeholders ("#"), same
+   convention as the rest of this mockup. */
 
-.shk-header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: #FBFBFB;
+.shk-topbar {
+  background: var(--shk-topbar-bg);
+  text-align: center;
+  padding: 7px 24px;
+}
+
+.shk-topbar-text {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--shk-secondary);
+}
+
+.shk-chevron,
+.shk-chevron-sm {
+  display: inline-block;
+  font-size: 11px;
+  margin-right: 2px;
+}
+
+.shk-utility {
+  position: relative;
+  min-height: 46px;
+  background: #fff;
   border-bottom: 1px solid var(--shk-divider);
 }
 
-.shk-header-inner {
-  max-width: 880px;
+/* Anchored to the page's physical left edge (absolute, not centered) to
+   mirror the ribbon's absolute right:0 anchor on the opposite side — the
+   real masthead's button+social cluster and "all articles" ribbon sit at
+   the two outer edges with open space between, not in a centered column. */
+.shk-utility-inner {
+  position: absolute;
+  left: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.shk-support-btn {
+  display: inline-block;
+  background: var(--shk-yellow);
+  color: var(--shk-yellow-text);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.shk-social-icons {
+  display: flex;
+  gap: 6px;
+}
+
+.shk-social-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 100%;
+  border: 1px solid var(--shk-divider);
+  color: var(--shk-text-muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.shk-social-icon:hover {
+  border-color: var(--shk-primary);
+  color: var(--shk-primary);
+}
+
+.shk-ribbon {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 46px;
+  background: var(--shk-secondary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+  padding: 8px 30px 8px 38px;
+  clip-path: polygon(14% 0, 100% 0, 100% 100%, 0 100%);
+}
+
+.shk-brand-row {
+  background: #fff;
+  border-bottom: 1px solid var(--shk-divider);
+}
+
+.shk-brand-inner {
+  max-width: 1280px;
   margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 24px;
+  gap: 16px;
+  padding: 16px 24px;
 }
 
-.shk-logo {
-  font-family: 'Rubik', sans-serif;
-  font-weight: 900;
-  font-size: 24px;
+.shk-links {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: nowrap;
+}
+
+.shk-links a {
+  font-size: 12.5px;
+  color: var(--shk-link-muted);
+  white-space: nowrap;
+}
+
+.shk-links a:hover {
   color: var(--shk-primary);
 }
 
-.shk-nav {
-  display: flex;
-  gap: 18px;
+.shk-logo-link {
+  flex-shrink: 0;
 }
 
-.shk-nav a {
+.shk-logo-img {
+  display: block;
+  height: 30px;
+  width: auto;
+}
+
+.shk-navbar {
+  background: #fff;
+  border-bottom: 1px solid var(--shk-divider);
+}
+
+.shk-navbar-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 24px;
+}
+
+.shk-tabs {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.shk-tab {
+  font-size: 13px;
+  color: var(--shk-link-muted);
+  white-space: nowrap;
+}
+
+.shk-tab:hover {
+  color: var(--shk-primary);
+}
+
+.shk-tab.is-active {
+  color: var(--shk-text);
+  font-weight: 700;
+}
+
+.shk-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #F1F2F4;
+  border-radius: 999px;
+  padding: 7px 14px;
+  flex-shrink: 0;
+}
+
+.shk-search-icon {
   font-size: 14px;
   color: var(--shk-text-muted);
 }
 
-.shk-nav a:hover {
-  color: var(--shk-primary);
+.shk-search input {
+  border: none;
+  background: none;
+  outline: none;
+  font: 13px 'Noto Sans Hebrew', sans-serif;
+  color: var(--shk-text);
+  width: 110px;
+  text-align: right;
 }
 
 /* Article */
@@ -99,6 +274,7 @@ a {
 .shk-byline {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   padding: 14px 0;
   border-top: 1px solid var(--shk-divider);
@@ -106,37 +282,51 @@ a {
   margin-bottom: 24px;
 }
 
+.shk-byline-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.shk-byline-date {
+  color: var(--shk-text-muted);
+}
+
+.shk-byline-sep {
+  color: var(--shk-divider);
+}
+
+.shk-byline-name {
+  font-weight: 700;
+  color: var(--shk-text);
+}
+
+.shk-byline-brand {
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shk-byline-brand-logo {
+  display: block;
+  height: 14px;
+  width: auto;
+}
+
 .shk-avatar {
-  width: 40px;
-  height: 40px;
+  width: 28px;
+  height: 28px;
   border-radius: 100%;
   background: var(--shk-tint);
   color: var(--shk-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
   flex-shrink: 0;
-}
-
-.shk-byline-name {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--shk-text);
-}
-
-.shk-byline-date {
-  font-size: 13px;
-  color: var(--shk-text-muted);
-}
-
-.shk-share {
-  margin-right: auto;
-  font-size: 13px;
-  color: var(--shk-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .shk-hero {
@@ -149,10 +339,23 @@ a {
 }
 
 .shk-caption {
-  font-size: 14px;
+  font-size: 13px;
   font-style: italic;
   color: var(--shk-text-muted);
-  margin: 8px 0 28px;
+  margin: 8px 0 0;
+}
+
+/* Media row — just the hero photo, kept inside .shk-article's own column
+   width (no breakout) so it lines up with the headline/body text above
+   and below it instead of bleeding past their edges. */
+.shk-media-row {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0 28px;
+}
+
+.shk-media-hero {
+  width: 100%;
 }
 
 .shk-body p {
@@ -170,13 +373,30 @@ a {
   margin: 8px 0 16px;
 }
 
-/* CTA */
+/* CTA — styled to match project.html's dashed-card chrome (see style.css's
+   .text-card-frame): white fill, black dashed border drawn via an injected
+   SVG outline rather than a native dashed border (same reasoning as
+   project.html — the browser's own dash spacing is looser than the site's
+   exact 2px-dash/2px-gap repeat), 8px radius, HadassahFriedlaender heading.
+   See the inline script at the bottom of index.html for the dash overlay. */
 
 .shk-cta {
-  background: linear-gradient(120deg, var(--shk-secondary), var(--shk-primary));
-  border-radius: 6px;
+  --frame-border-w: 4px;
+  position: relative;
+  background: #fdfcff;
+  border: var(--frame-border-w) solid transparent;
+  border-radius: 8px;
   margin: 12px 0 32px;
   padding: 32px;
+}
+
+.shk-cta-frame-dash {
+  position: absolute;
+  top: calc(-1 * var(--frame-border-w));
+  left: calc(-1 * var(--frame-border-w));
+  width: calc(100% + 2 * var(--frame-border-w));
+  height: calc(100% + 2 * var(--frame-border-w));
+  pointer-events: none;
 }
 
 .shk-cta-inner {
@@ -184,33 +404,29 @@ a {
 }
 
 .shk-cta h2 {
-  font-family: 'Rubik', sans-serif;
-  font-weight: 700;
-  font-size: 24px;
-  color: #ffffff;
+  font: 600 24px 'HadassahFriedlaender', serif;
+  color: #000;
   margin: 0 0 10px;
 }
 
 .shk-cta p {
-  font-size: 16px;
+  font: 400 16px 'Assistant', sans-serif;
   line-height: 1.5em;
-  color: #D5EAE7;
+  color: rgba(0, 0, 0, 0.6);
   margin: 0 0 20px;
 }
 
 .shk-cta-button {
   display: inline-block;
-  background: var(--shk-accent-light);
-  color: var(--shk-secondary);
-  font-family: 'Rubik', sans-serif;
-  font-weight: 700;
-  font-size: 16px;
+  background: #000;
+  color: #fff;
+  font: 700 16px 'Assistant', sans-serif;
   padding: 12px 26px;
   border-radius: 4px;
 }
 
 .shk-cta-button:hover {
-  background: #ffffff;
+  background: #333;
 }
 
 /* Related */
@@ -262,7 +478,7 @@ a {
 .shk-footer {
   max-width: 880px;
   margin: 0 auto;
-  padding: 20px 24px 40px;
+  padding: 20px 24px 16px;
   display: flex;
   gap: 16px;
   font-size: 13px;
@@ -273,13 +489,79 @@ a {
 .shk-photo-credits {
   max-width: 880px;
   margin: 0 auto;
-  padding: 0 24px 24px;
+  padding: 0 24px 64px;
   font-size: 11px;
   color: #9aa0a6;
   direction: rtl;
 }
 
+/* Bottom support banner + accessibility button — fixed UI chrome lifted
+   from the real site's footer, decorative only (no real a11y widget). */
+
+.shk-support-banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  background: var(--shk-banner-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px 24px;
+  direction: rtl;
+}
+
+.shk-support-banner-text {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.shk-support-banner-btn {
+  display: inline-block;
+  background: var(--shk-yellow);
+  color: var(--shk-yellow-text);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.shk-a11y-btn {
+  position: fixed;
+  left: 16px;
+  bottom: 56px;
+  z-index: 21;
+  width: 36px;
+  height: 36px;
+  border-radius: 100%;
+  border: none;
+  background: var(--shk-primary);
+  color: #fff;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
 /* Responsive */
+
+@media (max-width: 900px) {
+  .shk-links,
+  .shk-ribbon {
+    display: none;
+  }
+  .shk-utility-inner {
+    padding: 10px 24px;
+  }
+  .shk-brand-inner {
+    justify-content: center;
+  }
+}
 
 @media (max-width: 600px) {
   .shk-headline {
@@ -288,10 +570,22 @@ a {
   .shk-more-grid {
     grid-template-columns: 1fr;
   }
-  .shk-nav {
+  .shk-tabs {
     gap: 10px;
+    overflow-x: auto;
   }
-  .shk-nav a {
+  .shk-tab {
+    font-size: 12px;
+  }
+  .shk-navbar-inner {
+    flex-wrap: wrap;
+  }
+  .shk-support-banner {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+  .shk-support-banner-text {
     font-size: 12px;
   }
 }
