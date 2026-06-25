@@ -17,8 +17,8 @@ const SBB = {
 const SBB_TIMELINE = {
   left:   0.18,   // fraction of W
   right:  0.82,   // fraction of W (unused — the right edge mirrors left automatically, see p7GridGeometry)
-  top:    0.16,   // fraction of H
-  bottom: 0.84,   // fraction of H
+  top:    0.13,   // fraction of H
+  bottom: 0.81,   // fraction of H
 };
 
 // Standard horizontal gap (px) left empty at the canvas's center, between any
