@@ -56,20 +56,28 @@ function appendPage0DotPair(container, top) {
 const PAGE0_DOT_EXTRA_COUNT = Math.round(982 / 17 / 3);
 const PAGE0_DOT_EXTRA_STEP = 17;
 
-// The visible column's dot centers are at vh/2 + (-94.5 + i*17) — viewport-
-// relative, so where the *last* one (i = PAGE0_DOT_COUNT - 1) actually lands
-// depends on vh, while .page0-dots-extra always starts exactly at vh (right
-// after .page0-overlay's own height: 100vh). Phase-locking the extra column's
-// first dot to "17px after wherever the last visible one actually landed"
-// (rather than just resetting to a fixed 0) keeps the two columns reading as
-// one continuous line instead of overlapping/gapping at the seam — re-run on
+// The visible column's dot centers are CSS percentages of vh (see the
+// calc(50% + N% - ...) in appendPage0DotPair's caller below) — they scale
+// with viewport height, they are NOT literal 17px steps. An earlier version
+// of this reconstructed the last dot's position using the literal Figma
+// pixel values (-94.5, 17px steps) as if vh were always exactly 982 (the
+// Figma reference frame height), which only lines up when vh actually is
+//982 — at any other vh the two columns drift apart by the time they reach
+// dot 36, since 35 accumulated steps of (literal vs vh-scaled) error compound
+// fast. Re-deriving the same vh/2 + N% formula the CSS itself uses keeps
+// this exact for any vh. .page0-dots-extra always starts exactly at vh
+// (right after .page0-overlay's own height: 100vh); phase-locking its first
+// dot to "17px after wherever the last visible one actually landed" (rather
+// than just resetting to a fixed 0) keeps the two columns reading as one
+// continuous line instead of overlapping/gapping at the seam — re-run on
 // resize (see main.js) since vh can change after load.
 function buildPage0DotsExtra() {
   const container = document.querySelector("#page-0 .page0-dots-extra");
   container.innerHTML = "";
 
   const vh = window.innerHeight;
-  const lastVisibleCenter = vh / 2 + PAGE0_DOT_START_PCT / 100 * 982 + (PAGE0_DOT_COUNT - 1) * 17;
+  const lastVisiblePct = PAGE0_DOT_START_PCT + (PAGE0_DOT_COUNT - 1) * PAGE0_DOT_STEP_PCT;
+  const lastVisibleCenter = vh / 2 + (lastVisiblePct / 100) * vh;
   const firstExtraCenter = (lastVisibleCenter - vh) + PAGE0_DOT_EXTRA_STEP;
 
   for (let i = 0; i < PAGE0_DOT_EXTRA_COUNT; i++) {
