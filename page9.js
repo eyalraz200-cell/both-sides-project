@@ -55,7 +55,7 @@ const P9_EXTREME_GAP = 320;
 // (style.css) — needed below because the page-wide `* { box-sizing:
 // border-box }` reset means a `height` set on that element is the *total*
 // box height, border and padding included, not just the content area.
-const P9_ZONE_DRAG_BORDER = 4;
+const P9_ZONE_DRAG_BORDER = 2;
 
 // Padding added on top of the widest pill's own rendered width (see
 // p9.maxPillWidth, set once in p9BuildPanel) to get the real gap width —
@@ -77,10 +77,13 @@ const CATEGORY_EN_TO_IDX = {
 };
 
 // 0..1 eased progress of the horizontal divider line growing in from the left —
-// not scroll-driven: a fixed-duration animation triggered once the title docks
-// above it (see p9TriggerLine, called from page9UpdateFromScroll in main.js),
-// playing on its own clock the same way page8's dot-grid transition does. The
-// reverse plays if the title un-docks (scrolled back below it) before settling.
+// not scroll-driven: a fixed-duration animation triggered once the title card
+// crosses the viewport's vertical center (see p9TriggerLine, called from
+// page9UpdateFromScroll in main.js — same frac-0.5 convention as every other
+// fold's title-driven animation, deliberately NOT tied to .page9-sticky's own
+// pin state, see that function's comment), playing on its own clock the same
+// way page8's dot-grid transition does. The reverse plays if the title
+// scrolls back above center before settling.
 let page9LineT       = 0;     // current eased value, read directly by drawPage9
 let p9LineFromT       = 0;    // raw (un-eased) progress the current phase started from
 let p9LineToT         = 0;    // raw progress the current phase is heading toward (1 or 0)
@@ -109,9 +112,9 @@ function p9LineRunLoop() {
   }
 }
 
-// toT: 1 to grow in (title just docked above the line), 0 to retract (title
-// scrolled back below it). Idempotent — calling with the value already at rest
-// is a no-op.
+// toT: 1 to grow in (title card just crossed viewport center), 0 to retract
+// (title scrolled back above center). Idempotent — calling with the value
+// already at rest is a no-op.
 function p9TriggerLine(toT) {
   if (p9LinePhaseStart === null && p9LineCurrentRaw() === toT) return;
   p9LineFromT      = p9LineCurrentRaw();
@@ -605,7 +608,10 @@ function p9BuildPanel() {
     if (targetZone === zoneBelow) {
       trayRows[P9_TRAY_GRID[Number(pill.dataset.idx)].row - 1].appendChild(pill);
     } else {
-      targetZone.appendChild(pill);
+      // prepend, not append: the newest drop becomes the first child, which
+      // a column flex container renders at the top of the stack — so each
+      // new card pushes the previously-topmost one down below it.
+      targetZone.prepend(pill);
     }
     p9.sides[Number(pill.dataset.idx)] = targetZone.dataset.zone;
     // Reclassifying a category moves its dots between the extreme/legit grids —
@@ -663,6 +669,12 @@ function p9BuildPanel() {
       const offsetX = e.clientX - rect.left;
       const offsetY = e.clientY - rect.top;
 
+      // Where the pill is coming from, captured before the drag moves it
+      // anywhere — used below to only show the tray's dragover highlight
+      // when this is actually a reclassification (extreme -> legit), not a
+      // pill already in the tray just being dragged around within it.
+      const draggingFromAbove = zoneAbove.contains(pill);
+
       // A free-floating clone is the actual visual being dragged — the original
       // stays exactly where it is in the DOM (just hidden via .dragging) so the
       // layout doesn't reflow mid-drag, and only actually moves on a successful drop.
@@ -693,7 +705,11 @@ function p9BuildPanel() {
 
         if (dt !== activeDropTarget) {
           if (activeDropTarget) activeDropTarget.el.classList.remove(activeDropTarget.overClass);
-          if (dt) dt.el.classList.add(dt.overClass);
+          // Suppress the highlight specifically for legit -> legit (a tray
+          // pill dragged over the tray it's already in) — the drop itself
+          // still commits normally either way, only the visual is skipped.
+          const suppressHighlight = dt && dt.targetZone === zoneBelow && !draggingFromAbove;
+          if (dt && !suppressHighlight) dt.el.classList.add(dt.overClass);
           activeDropTarget = dt;
         }
       }
