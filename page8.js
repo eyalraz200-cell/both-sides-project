@@ -115,7 +115,7 @@ function drawPage8(ctx, W, H) {
       // Fades to 0.12 alongside the move — matching drawPage9's fixed opacity for
       // the legit grid, so there's no opacity "pop" the instant currentPage flips.
       ctx.globalAlpha = 1 + (0.12 - 1) * ease;
-      ctx.fillStyle = P7_COLORS[e.actor] || "#888";
+      ctx.fillStyle = p7ActorColor(e.actor);
       ctx.fillRect(x, y, SQ, SQ);
       ctx.globalAlpha = 1;
     });

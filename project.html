@@ -24,6 +24,12 @@
            taking the cluster's place once it settles into fold6's left
            mini-legend — see FOLD6_SQUARES_Y/layoutFold6Squares in main.js. -->
       <div class="fold6-squares-overlay" id="fold6SquaresOverlay" aria-hidden="true"></div>
+      <!-- Hover tooltip for page-10's drag-and-drop event dots (date + Hebrew
+           description) — positioned/shown by p9HoverInit in page9.js. -->
+      <div class="page9-tooltip" id="page9Tooltip" aria-hidden="true">
+        <div class="page9-tooltip-date"></div>
+        <div class="page9-tooltip-desc"></div>
+      </div>
     </div>
     <div class="text-col" id="textCol">
       <section class="text-section" data-page="0" id="page-0">
@@ -53,14 +59,14 @@
       <section class="text-section page3-panel" data-page="2" id="page-2">
         <div class="page3-sticky">
           <div class="section-text text-card">
-            <h2 class="section-title text-card-frame">הזירה הפוליטית אינה מתחלקת תמיד לשני צדדים ברורים</h2>
+            <h2 class="section-title text-card-frame">הזירה הפוליטית אינה מתחלקת תמיד לצדדים ברורים</h2>
           </div>
         </div>
       </section>
       <section class="text-section page4-panel" data-page="3" id="page-3">
         <div class="page4-sticky">
           <div class="section-text text-card">
-            <h2 class="section-title text-card-frame">אבל, בשנים האחרונות מתחדדת חלוקה בין מספר קבוצות לשני מחנות פוליטיים מנוגדים</h2>
+            <h2 class="section-title text-card-frame">אבל, בשנים האחרונות מתחדדת חלוקה של מספר קבוצות לשני מחנות פוליטיים מנוגדים</h2>
           </div>
         </div>
       </section>
@@ -79,9 +85,11 @@
           <h2 class="section-title text-card-frame">כל ריבוע מייצג פעולה פוליטית שהתקיימה במרחב הפיזי</h2>
         </div>
       </section>
-      <section class="text-section" data-page="7" id="page-7">
-        <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">צבע הריבוע מציין את הקבוצה שביצעה אותה</h2>
+      <section class="text-section page7-panel" data-page="7" id="page-7">
+        <div class="page7-sticky">
+          <div class="section-text text-card">
+            <h2 class="section-title text-card-frame">צבע הריבוע מציין את הקבוצה שביצעה אותה</h2>
+          </div>
         </div>
       </section>
       <section class="text-section page7-scrub" data-page="8" id="page-8"></section>
@@ -93,7 +101,7 @@
       <section class="text-section page9-panel" data-page="10" id="page-10">
         <div class="page9-title-row">
           <div class="section-text text-card">
-            <h2 class="section-title text-card-frame">איפה עובר הגבול בעיניכם</h2>
+            <h2 class="section-title text-card-frame">איפה עובר הגבול בעיניכם?</h2>
           </div>
         </div>
         <div class="page9-sticky">

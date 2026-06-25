@@ -159,6 +159,35 @@ body {
   min-width: 0;
 }
 
+.text-section.page7-panel {
+  /* Fold 9's two beats (squares' color-in, then their labels' fade-out — see
+     fold9ColorTrigger/fold9FadeTrigger in main.js) need real scroll distance
+     between them to read as sequential rather than simultaneous. With this
+     section at the bare default 100vh, #page-8 (the real timeline) starts
+     entering from the bottom at almost the exact same scroll position as
+     this card crossing center, so fold8To9FadeTrigger's overlay-wide fade
+     was washing both beats out together right around center before the
+     second beat ever got room to play. The extra 100vh of slack here pushes
+     that #page-8 handoff later, giving fold9FadeTrigger's threshold (well
+     past center) a real window to fire and finish before it. */
+  min-height: 200vh;
+  display: block;
+  padding: 0;
+}
+
+.page7-sticky {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding: 0 48px;
+  direction: rtl;
+  text-align: right;
+}
+
+.page7-sticky .section-text {
+  min-width: 0;
+}
+
 .text-section.page9-panel {
   /* .page9-title-row's own 100vh + .page9-sticky's own 100vh, plus 30vh slack
      so the sticky panel actually stays pinned for a while once engaged instead
@@ -209,22 +238,37 @@ body {
    "קיצוני" clearly weighted, "לגיטימי" left almost invisible, both static
    regardless of drag state (Figma's before/after frames show the same weights). */
 .page9-axis-label {
+  /* left:50% + translateX(-50%) centers the box itself on viewport-center
+     regardless of the text's own rendered width — a right:calc(50% - Npx)
+     anchor (the previous approach) only happens to look centered for
+     whatever specific text width it was tuned against; it visibly drifts
+     off-center the moment the copy changes length (as it did here, from a
+     short "קיצוני"/"לגיטימי" to the longer "פעולות קיצוניות"/"פעולות
+     לגיטימיות"). */
   position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   font: 800 18px 'Assistant', sans-serif;
   white-space: nowrap;
-  text-align: right;
 }
 
 .page9-axis-extreme {
-  right: calc(50% - 19px);
-  top: calc(65vh - 23px);
-  color: rgba(134, 134, 135, 0.78);
+  top: calc(65vh - 33px);
+  color: rgba(134, 134, 135, 0.9);
 }
 
 .page9-axis-legit {
-  right: calc(50% - 25px);
   top: calc(65vh + 7px);
-  color: rgba(0, 0, 0, 0.42);
+  /* Opaque grey, not alpha-blended black — over a plain background this read
+     identically to the old rgba(0,0,0,0.42), but once the legit grid's dots
+     started drawing straight through this area (no more clearance carved out
+     for it), that alpha let the dots underneath show through and wash the
+     label out instead of sitting visibly on top of them. The element's own
+     `opacity` used to be knocked down further still (0.19, matching Figma's
+     "almost invisible" weighting for this label specifically) by a rule
+     below — removed for the same reason: per explicit request, this label
+     should read clearly over the dots now, not blend into them. */
+  color: #c0c0c0;
 }
 
 /* Nothing in the panel — labels, the dragcards tray, the dropped-pill stack —
@@ -246,10 +290,6 @@ body {
 .page9-sticky.engaged .page9-tray {
   opacity: 1;
   pointer-events: auto;
-}
-
-.page9-sticky.engaged .page9-axis-label.page9-axis-legit {
-  opacity: 0.19;
 }
 
 /* Stack of dropped-into-"extreme" pills, centered directly on the canvas's
@@ -278,20 +318,46 @@ body {
   transition: background 0.15s;
 }
 
+/* A fixed stack of 3 row wrappers (.page9-tray-row, created in p9BuildPanel),
+   not flex-wrap directly: each row is its own independent grid so a long
+   pill in one row never inflates another row's column width (see
+   P9_TRAY_GRID/page9.js) — sharing one grid across all 3 rows would force
+   every column wide enough for whichever row's occupant in that column is
+   widest, leaving shorter pills centered in leftover space with an uneven
+   gap to their neighbor instead of the row's own, consistent `gap`. */
 #page9ZoneBelow {
-  gap: 18px 10px;
-  justify-content: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+/* Track sizes are assigned once in p9BuildPanel from each row's own real
+   measured pill widths/heights, not from which categories happen to
+   currently be in it — dragging a pill out to #page9ZoneAbove just empties
+   its cell; the others never reflow to fill the gap, and the row's own
+   height never changes. Both grid-template-columns and the per-pill
+   grid-column are set inline by JS, not here, so this rule only needs the
+   parts that don't vary. */
+.page9-tray-row {
+  display: grid;
+  gap: 0 10px;
+  justify-items: center;
+  align-items: center;
 }
 
 /* The pill tray — every category's drag origin, dashed and bottom-centered like
    Figma's frame (top:749px/982 ≈ 76.3vh, bottom-anchored instead since the box's
-   own height can shift a px or two with font metrics). */
+   own height can shift a px or two with font metrics). Sized from its content
+   (the fixed-track grid above, plus the hint text) rather than a hardcoded
+   width, so it always exactly fits the grid p9BuildPanel computed — no gap
+   between the dashed border and the grid, no clipping either. */
 .page9-tray {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 2.95vh;
-  width: 731px;
+  bottom: 5vh;
+  width: max-content;
   max-width: calc(100vw - 96px);
   display: flex;
   flex-direction: column;
@@ -313,8 +379,9 @@ body {
 /* Once dropped into the extreme zone, pills stack centered on the divider's
    midpoint (see .page9-zone-wrap-extreme) rather than wherever they happened
    to land — and drop their drag handle since they're no longer being browsed
-   from a shared pool, just placed markers (matching Figma's floating chips,
-   which keep the same pill chrome as the tray, just without the grip dots). */
+   from a shared pool, just placed markers. Figma's floating chips (node
+   136:433215) use different chrome from the tray's pill (136:410819), not the
+   same chrome minus the grip dots — see the override below. */
 #page9ZoneAbove {
   flex-direction: column;
   flex-wrap: nowrap;
@@ -323,10 +390,45 @@ body {
      (no content to size against) — leaving nothing for a drop to actually land
      on. A generous min-width keeps it a real, hittable drop target at rest. */
   min-width: 220px;
+  /* Overrides .page9-zone's `padding: 6px 0` to add horizontal breathing room
+     too — needed so the longest pill (the dragging-state width is sized to
+     it exactly, see --page9-zone-stack-width below) isn't flush against the
+     dashed border. */
+  padding: 6px 12px;
+}
+
+/* The extreme zone has no chrome of its own at rest (the tray below it is
+   already a visible dashed box at all times, so it doesn't need this) — show
+   its own dashed boundary only once a pill is actually being dragged, so the
+   target is visible while the cursor is still travelling toward it rather
+   than only once it's already directly overhead (.dragover, below). Sized to
+   --page9-zone-stack-height/-width (set in p9MeasureTrayLayout, page9.js) —
+   the height of all 10 categories stacked at once and the width of the
+   single longest one, not just whatever's actually dropped in it right now,
+   so the box never resizes mid-drag. */
+.page9-sticky.dragging #page9ZoneAbove {
+  border: 4px dashed rgba(0, 0, 0, 0.13);
+  border-radius: 8px;
+  background: rgba(253, 252, 255, 0.74);
+  height: var(--page9-zone-stack-height);
+  width: var(--page9-zone-stack-width);
 }
 
 #page9ZoneAbove .page9-pill .page9-handle {
   display: none;
+}
+
+/* Figma's dropped-chip chrome differs from the tray pill's, not just by
+   dropping the handle: top/bottom rules only (no left/right), thicker but
+   fainter (2px @ 14% vs the tray's 1px @ 30%), full opacity instead of the
+   tray's 0.78, and darker label text (27% vs the tray's 20% black) — together
+   why a dropped pill reads visibly darker than it did sitting in the tray. */
+#page9ZoneAbove .page9-pill {
+  border: none;
+  border-top: 2px solid rgba(130, 130, 130, 0.14);
+  border-bottom: 2px solid rgba(130, 130, 130, 0.14);
+  opacity: 1;
+  color: rgba(0, 0, 0, 0.27);
 }
 
 /* Extreme zone only — the legit zone below stays a valid drop target (you can
@@ -346,7 +448,7 @@ body {
   border: 1px solid rgba(130, 130, 130, 0.3);
   border-radius: 2px;
   padding: 10px;
-  opacity: 0.67;
+  opacity: 0.78;
   cursor: grab;
   user-select: none;
   transition: box-shadow 0.15s;
@@ -406,6 +508,56 @@ body {
   height: 3px;
   border-radius: 50%;
   background: rgba(149, 149, 149, 0.38);
+}
+
+/* Hover tooltip for a single event dot in page-10's extreme/legit grid (Figma
+   node 158:41181) — date + short Hebrew description. Border color is set
+   per-hover in JS (p9HoverInit, page9.js) to match the hovered dot's own
+   group color, so the value here is just a fallback/default. The bottom-left
+   corner is deliberately square (not rounded like the other three) — that's
+   the design's anchor point, positioned right at the hovered dot. */
+.page9-tooltip {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  display: none;
+  direction: rtl;
+  background: #fff;
+  border: 2px dashed #ea580c;
+  border-radius: 8px 8px 8px 0;
+  padding: 7px 10px;
+  width: 222px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.page9-tooltip.is-visible {
+  display: flex;
+}
+
+/* Mirrored variant for events on the left-side block of the extreme/legit
+   grid (event.side === "left") — the tooltip should open toward the left of
+   the dot, not the right, so it doesn't reach across the canvas's center gap
+   toward the opposite side's column. Swaps the anchor ("pointer") corner from
+   bottom-left to bottom-right; positioning (which edge of the box sits at the
+   dot) is computed in JS, see p9HoverInit in page9.js. */
+.page9-tooltip.is-mirrored {
+  border-radius: 8px 8px 0 8px;
+}
+
+.page9-tooltip-date {
+  font: 700 12px 'Assistant', sans-serif;
+  color: #000;
+  text-align: right;
+  width: 100%;
+}
+
+.page9-tooltip-desc {
+  font: 400 12px 'Assistant', sans-serif;
+  color: #000;
+  text-align: right;
+  width: 100%;
 }
 
 /* Figma specs every title card at 20px Medium (verified across nodes
@@ -603,7 +755,7 @@ body {
   position: absolute;
   left: calc(50% - 0.5px);
   top: calc(50% - 445.5px);
-  width: 81px;
+  width: 100px;
   transform: translate(-50%, -50%);
 }
 
@@ -611,6 +763,7 @@ body {
   display: block;
   width: 100%;
   height: auto;
+  mix-blend-mode: overlay;
 }
 
 /* Title bottom edge sits 129px above the frame's vertical center (was 57px in
@@ -670,14 +823,37 @@ body {
 .page0-scroll-arrow {
   position: absolute;
   left: 6px;
-  top: 23px;
+  top: 36px;
   transform: translate(-50%, -50%) rotate(90deg);
+  animation: page0ScrollArrowMove 1.8s ease-in-out infinite;
+}
+
+/* Travels between the caption's own top and bottom edges (.page0-scroll-text:
+   top 20px, height ~70px for its 3 lines at 18px/1.3 line-height) — offset by
+   the icon's own half-height after its 90deg rotation (the SVG is 13.5px wide
+   pre-rotation, so ~6.75px) so its rendered edges land on the text bounds,
+   not its center. */
+@keyframes page0ScrollArrowMove {
+  0% {
+    top: 36px;
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    top: 84.5px;
+    opacity: 0;
+  }
 }
 
 .page0-scroll-text {
   position: absolute;
   left: 20px;
-  top: 0;
+  top: 20px;
   width: 108px;
   font: 600 18px 'Assistant', sans-serif;
   color: rgba(0, 0, 0, 0.44);

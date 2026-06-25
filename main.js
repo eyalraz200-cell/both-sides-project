@@ -217,15 +217,23 @@ const GROUPS = [
     fold4: { x: 1088, y: 786, dimmed: true,  swatchFirst: true }, row: true },
   { color: "#7c3aed", label: "יוצאי אתיופיה",         fold3: { x: 1225, y: 167 },
     fold4: { x: 1225, y: 167, dimmed: true,  swatchFirst: true }, row: true },
-  { color: "#65a30d", label: "פעילי ימין",            fold3: { x: 936,  y: 602 },
+  // `actor` (the 5 camp groups only) is the events.json/P7_COLORS join key —
+  // see p7ActorColor in page7.js, which reads this group's `color` directly
+  // so the real per-event canvas dots always match this legend, including
+  // after a future color edit here.
+  { color: "#65a30d", label: "פעילי ימין",            actor: "Right-wing activists", fold3: { x: 936,  y: 602 },
     fold4: { x: 773,  y: 483, dimmed: false, swatchFirst: false }, fold6: { x: 31, y: 488 } },
-  { color: "#6b4f3a", label: "חרדים",                 fold3: { x: 352,  y: 469 },
+  { color: "#6b4f3a", label: "חרדים",                 actor: "Haredi Jews", fold3: { x: 352,  y: 469 },
     fold4: { x: 773,  y: 523, dimmed: false, swatchFirst: false }, fold6: { x: 31, y: 440 } },
-  { color: "#2563eb", label: "מתנגדי הרפורמה המשפטית", fold3: { x: 462,  y: 555 },
-    fold4: { x: 709,  y: 464, dimmed: false, swatchFirst: true, label: "מתנגדי הרפורמה" }, fold6: { x: 31, y: 464 } },
-  { color: "#d946ef", label: "פעילי שמאל",            fold3: { x: 699,  y: 710 },
+  { color: "#2563eb", label: "מתנגדי הרפורמה המשפטית", actor: "Protesters against the government", fold3: { x: 462,  y: 555 },
+    // fold4.x nudged from Figma's measured 709 to 713 (matching פעילי שמאל,
+    // the other label-leading camp item) — Figma's own frame really does
+    // place this swatch ~4-64px left of its neighbors, but per explicit
+    // instruction this one diverges from spec to sit flush with its peer.
+    fold4: { x: 713,  y: 464, dimmed: false, swatchFirst: true, label: "מתנגדי הרפורמה" }, fold6: { x: 31, y: 464 } },
+  { color: "#d946ef", label: "פעילי שמאל",            actor: "left wing activists", fold3: { x: 699,  y: 710 },
     fold4: { x: 713,  y: 502, dimmed: false, swatchFirst: true }, fold6: { x: 31, y: 512 } },
-  { color: "#ea580c", label: "מתיישבים",              fold3: { x: 908,  y: 321 },
+  { color: "#ea580c", label: "מתיישבים",              actor: "settlers", fold3: { x: 908,  y: 321 },
     fold4: { x: 773,  y: 443, dimmed: false, swatchFirst: false }, fold6: { x: 31, y: 536 } },
   { color: "#1b0cea", label: "יוצאי ברית המועצות",     fold3: { x: 197,  y: 236 },
     fold4: { x: 197,  y: 236, dimmed: true,  swatchFirst: true }, row: true },
@@ -304,10 +312,11 @@ function updateFold5RowTargets(W, H) {
 // the real gaps vary by half a pixel here and there). Each one is
 // unlabeled through fold 6, gains its action-type label once fold 7
 // (#page-6, the timeline's intro title) is actually reached, then loses
-// that label again and (the first 5) gains a group color in fold 9 (Figma
-// node 162:63876 — see FOLD6_SQUARE_COLORS/fold9Trigger) — same
-// "secondary attribute can snap, position never does" rule as everywhere
-// else, since nothing here needs to move for any of it.
+// that label again and gains a group color in fold 9 (Figma node 162:63876
+// only assigns colors to the first 5 — see FOLD6_SQUARE_COLORS/fold9Trigger
+// for why all 10 get one anyway) — same "secondary attribute can snap,
+// position never does" rule as everywhere else, since nothing here needs to
+// move for any of it.
 // The 10th (פוגרום/Pogrom) has no entry in fold 7's own Figma frame — it was
 // initially dropped as a stray duplicate node, but the real events dataset
 // (events.json, "event category") confirmed it as a genuine 10th category,
@@ -326,17 +335,24 @@ const FOLD6_SQUARE_LABELS = [
   "תקיפה חמושה של בלתי מעורב",
   "פוגרום",
 ];
-// Only the first 5 (Figma node 162:63876) are explicitly colored — the
-// other 5 have no entry there either, so per spec they just stay however
-// fold 8 left them (black, unlabeled-once-faded), same as the dropped label.
-const FOLD6_SQUARE_COLORS = [
-  "#6b4f3a", // חרדים
-  "#65a30d", // פעילי ימין
-  "#ea580c", // מתיישבים
-  "#2563eb", // מתנגדי הרפורמה
-  "#d946ef", // פעילי שמאל
-  null, null, null, null, null,
+// Figma (node 162:63876) only explicitly colors the first 5 — the other 5
+// have no entry there. Per explicit instruction all 10 still get a group
+// color rather than staying black, so squares 5-9 just cycle back through
+// the same 5 colors (index i+5 mirrors index i) — a deviation from Figma,
+// not a gap in it. Reads GROUPS' own `color` (by `actor`, the same join key
+// p7ActorColor in page7.js uses) rather than a second hardcoded hex list, so
+// a future color edit on GROUPS updates these squares too.
+function groupColorByActor(actor) {
+  return GROUPS.find(g => g.actor === actor).color;
+}
+const FOLD6_SQUARE_COLORS_5 = [
+  groupColorByActor("Haredi Jews"),               // חרדים
+  groupColorByActor("Right-wing activists"),      // פעילי ימין
+  groupColorByActor("settlers"),                  // מתיישבים
+  groupColorByActor("Protesters against the government"), // מתנגדי הרפורמה
+  groupColorByActor("left wing activists"),       // פעילי שמאל
 ];
+const FOLD6_SQUARE_COLORS = [...FOLD6_SQUARE_COLORS_5, ...FOLD6_SQUARE_COLORS_5];
 
 const fold6SquaresOverlayEl = document.getElementById("fold6SquaresOverlay");
 const fold6SquareEls = FOLD6_SQUARES_Y.map((_, i) => {
@@ -439,14 +455,34 @@ function makeTrigger(duration, onTick) {
 // its card enters the viewport (the row-enter glide) and again at center
 // (that row's fade-out), since CLAUDE.md's fold 5 already specs those as two
 // sequential, non-overlapping phases.
-const fold2Trigger      = makeTrigger(900,  updateGroups);
-const fold3Trigger      = makeTrigger(1000, updateGroups);
-const fold4Trigger      = makeTrigger(1000, updateGroups);
-const fold5EnterTrigger = makeTrigger(900,  updateGroups);
-const fold5FadeTrigger  = makeTrigger(900,  updateGroups);
-const fold6Trigger      = makeTrigger(1600, updateGroups);
-const fold7LabelTrigger = makeTrigger(700,  updateGroups);
-const fold9Trigger      = makeTrigger(600,  updateGroups);
+//
+// All 8 share one duration so the whole legend system reads as a single
+// consistent tempo rather than each fold having its own slightly different
+// feel — they used to range from 600ms to 1600ms.
+const GROUP_TRANSITION_MS = 1900;
+const fold2Trigger      = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
+const fold3Trigger      = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
+const fold4Trigger      = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
+const fold5EnterTrigger = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
+const fold5FadeTrigger  = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
+const fold6Trigger      = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
+const fold7LabelTrigger = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
+
+// Fold 9's own two beats are real triggers too (same makeTrigger/
+// watchCardThreshold machinery as every fold above), but deliberately don't
+// share GROUP_TRANSITION_MS — that 1900ms is tuned for beats that only need
+// to *start* at the right scroll position and can keep animating loosely
+// after that. Fold 9's beats are pinned to a specific screen position
+// ("before the midpoint", "as the card leaves the screen"), and at any
+// realistic scroll speed 1900ms is long enough that the user scrolls well
+// past that position before the tween finishes — confirmed by scrolling
+// through it: the color was still barely-tinted black by the time the card
+// reached center. A short, dedicated duration plus firing with a real buffer
+// before the target position is what actually gets the tween to *finish*
+// where it's supposed to, not just start there.
+const FOLD9_TRANSITION_MS = 120;
+const fold9Trigger            = makeTrigger(FOLD9_TRANSITION_MS, updateGroups);
+const fold9SquaresFadeTrigger = makeTrigger(FOLD9_TRANSITION_MS, updateGroups);
 
 // Watches one title card's top edge for crossing H*frac, firing trigger
 // forward (1) on a downward crossing and reverse (0) on scrolling back up
@@ -479,10 +515,21 @@ const checkFold5Enter = watchCardThreshold(page5TitleCardEl, 1.0, fold5EnterTrig
 const checkFold5Fade  = watchCardThreshold(page5TitleCardEl, 0.5, fold5FadeTrigger);
 const checkFold6      = watchCardThreshold(page6TitleCardEl, 0.5, fold6Trigger);
 const checkFold7Label = watchCardThreshold(fold7LabelCardEl, 0.5, fold7LabelTrigger);
-const checkFold9      = watchCardThreshold(page7TitleCardEl, 0.5, fold9Trigger);
+// Fires while the card is still well below center (frac=0.7, vs. every
+// other fold's 0.5) — FOLD9_TRANSITION_MS is very short (120ms) specifically
+// so it can actually finish in the time it takes to scroll the rest of the
+// way to the midpoint, but that only works if it's given enough of a head
+// start; firing right at/just-before center (like the first version of this
+// did) leaves no runway and the tween visibly finishes well past it.
+const checkFold9 = watchCardThreshold(page7TitleCardEl, 0.7, fold9Trigger);
+// Mirrors checkFold9's reasoning for the squares' disappearance: fires with
+// real margin before the card is fully gone (frac=0.2, not frac≈0 like the
+// very first version), so the short tween has room to land by the time the
+// card actually crosses the top of the screen.
+const checkFold9SquaresFade = watchCardThreshold(page7TitleCardEl, 0.2, fold9SquaresFadeTrigger);
 
 function checkGroupTriggers() {
-  checkFold2(); checkFold3(); checkFold4(); checkFold5Enter(); checkFold5Fade(); checkFold6(); checkFold7Label(); checkFold9();
+  checkFold2(); checkFold3(); checkFold4(); checkFold5Enter(); checkFold5Fade(); checkFold6(); checkFold7Label(); checkFold9(); checkFold9SquaresFade();
 }
 
 // Default (legend/fold3/fold4/fold5) swatch size + the swatch-to-label gap
@@ -495,14 +542,15 @@ const LEFT_LEGEND_SWATCH_SIZE = 6, LEFT_LEGEND_LABEL_GAP = 6;
 const LEGEND_TOP_FRAC = 267 / 982; // Figma node 119:969's top, in the 982px-tall fold-2 frame
 const LEGEND_ROW_GAP = 59; // 13px swatch + 46px gap, matches the legend's old static layout
 
-// Fold 2's entrance staggers the 9 rows top-to-bottom rather than fading the
+// Fold 2's entrance staggers the 9 rows bottom-to-top rather than fading the
 // whole legend in as one block — each row's own fade window is offset from
 // the previous by FOLD2_STAGGER along fold2Trigger's shared 0..1 timeline, so
-// row i starts at i*FOLD2_STAGGER and (like every row) takes up FOLD2_SPAN of
-// that timeline to reach full opacity. FOLD2_SPAN is whatever's left once all
-// 8 gaps between 9 rows are accounted for, so the last row still finishes
-// exactly at t=1, same "reaches its target exactly at t=1" rule every other
-// stage's lerps already follow.
+// row i (0 = top row) starts at (GROUPS.length-1-i)*FOLD2_STAGGER — the
+// bottom row (highest index) starts first — and (like every row) takes up
+// FOLD2_SPAN of that timeline to reach full opacity. FOLD2_SPAN is whatever's
+// left once all 8 gaps between 9 rows are accounted for, so the top row still
+// finishes exactly at t=1, same "reaches its target exactly at t=1" rule
+// every other stage's lerps already follow.
 const FOLD2_STAGGER = 0.08;
 const FOLD2_SPAN = 1 - FOLD2_STAGGER * (GROUPS.length - 1);
 
@@ -545,7 +593,7 @@ function updateGroups() {
     // top row first. Once that's resolved, only the 4 no-camp row groups fade
     // back out at fold 5 — the cluster of 5 stays visible into the mini-legend
     // and beyond — so the two fades multiply rather than override each other.
-    const entranceT = Math.max(0, Math.min(1, (e2 - i * FOLD2_STAGGER) / FOLD2_SPAN));
+    const entranceT = Math.max(0, Math.min(1, (e2 - (GROUPS.length - 1 - i) * FOLD2_STAGGER) / FOLD2_SPAN));
     item.el.style.opacity = String(entranceT * (g.row ? 1 - e5Fade : 1));
 
     item.swatch.style.width  = `${swatchSize}px`;
@@ -598,14 +646,20 @@ function updateGroups() {
   });
 
   groupsOverlayEl.classList.toggle("is-active", fold2Trigger.currentRaw() > 0);
-  // Hides once #page-8 (the real, data-driven timeline) is reached — these
-  // curated squares have nothing further to do by then, and leaving them up
-  // would clash with the real per-event squares appearing in the same spot.
-  fold6SquaresOverlayEl.style.opacity = currentPage >= 8 ? "0" : String(e6);
+  // Fades the whole curated-squares overlay out as fold 9's own card finally
+  // scrolls past (fold9SquaresFadeTrigger, see its comment above), rather
+  // than snapping to 0 — these curated squares have nothing further to do by
+  // then, and leaving them up would clash with the real per-event squares
+  // appearing in the same spot, but the handoff itself should still glide.
+  const e9SquaresFade = fold9SquaresFadeTrigger.currentT();
+  fold6SquaresOverlayEl.style.opacity = String(e6 * (1 - e9SquaresFade));
 
   // Labels fade in via their own trigger (fold7LabelTrigger, fold 7's own
-  // card) once that title is reached, then fade back out as fold 9's color
-  // transition (e9) takes over — both proper eased tweens now, no snap.
+  // card) once that title is reached, then fade back out as fold 9's
+  // color-in (e9) takes over — both happen together, one beat: the square
+  // gains its color exactly as its label disappears. The squares'
+  // *complete* disappearance is a separate, later beat — see
+  // fold9SquaresFadeTrigger/e9SquaresFade above, not this one.
   const e7Label = fold7LabelTrigger.currentT();
   const e9 = fold9Trigger.currentT();
   fold6SquareEls.forEach(({ sq, label }, i) => {
