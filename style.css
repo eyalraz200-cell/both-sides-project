@@ -787,13 +787,16 @@ body {
    frame's vertical center (matches every other page0 element's H/2-relative
    vertical anchor). The new asset is a real 72x85 export that already
    matches the Figma node's box 1:1, so unlike the old wordmark there's no
-   stretch/crop math or blend-mode correction needed — just place it. */
+   stretch/crop math or blend-mode correction needed — just place it.
+   Width knocked down from the Figma-literal 72px to 48px per explicit
+   request (read too big on screen) — a deliberate deviation from the node's
+   measured size, not a mistake. */
 .page0-logo {
   position: absolute;
   right: 30px;
   top: calc(50% - 428.5px);
   transform: translateY(-50%);
-  width: 72px;
+  width: 48px;
 }
 
 .page0-logo-img {
