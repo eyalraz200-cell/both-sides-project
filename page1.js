@@ -2,89 +2,173 @@ function drawPage1(ctx, W, H) {
   drawBackground(ctx, W, H);
 }
 
-// Intro screen's vertical dot column (revised again per node 181:168) — 5px
-// squares on a 17px step, stepping down from just below the title block
-// toward the scroll prompt at the bottom. Both columns now run the full
-// length paired together (the older design's blue-only taper near the bottom
-// is gone — node 181:168 pairs orange with blue all the way down). Both
-// columns are offset from the viewport's horizontal center (not the page's
-// 480px text column) so they stay centered at any width. Reference frame was
-// 982px tall.
-// DOM elements (not canvas-drawn) appended into #page-0's own .page0-overlay
-// — that box scrolls in normal flow with the rest of fold 1's content (see
-// style.css), so these dots need to scroll away with it too, rather than
-// staying pinned to the fixed canvas the way every other fold's graphics do.
-const PAGE0_DOT_SQ = 5;
-const PAGE0_DOT_COUNT = 36;
-const PAGE0_DOT_STEP_PCT = (17 / 982) * 100;
-const PAGE0_DOT_START_PCT = -(94.5 / 982) * 100;
+// @fold1's two dot columns — two independent single-file columns, 7x7px
+// squares on a 10px gap (17px step). Col. 1's square-centers sit 13.5px
+// right of the frame's horizontal center, col. 2's 13.5px left of it (27px
+// apart) — derived from Figma's literal left edges (766px / 739px in the
+// 1512-wide reference frame) plus half the square. Vertically, col. 1's
+// first square-center sits 97.77px above the frame's vertical center; col.
+// 2 starts 34px (2 steps) lower. Each column stops at the bottom of the
+// first viewport.
+//
+// Per explicit instruction, none of these dots scroll away with the rest of
+// @fold1's content (unlike the title/subtitle/logo/scroll-cue, which do) —
+// they're built into #page0DotsOverlay, a position:fixed layer (see
+// style.css), with left/top expressed the same vh/2-relative way .page0-dot
+// always has been, so the exact same numbers that used to describe a
+// position *within the scrolling page* now describe a fixed point *in the
+// viewport* instead. main.js shrinks each decorative dot down to nothing in
+// place (PAGE0_DECORATIVE_DOT_ELS below) once @fold2's title card reaches
+// center, since those dots have nothing further to do at that point — the
+// group-colored ones (PAGE0_GROUP_DOT_ANCHORS) fly to the legend instead.
+const PAGE0_DOT_SQ = 7;
+const PAGE0_DOT_STEP = 17;
 
-// Shared by both the visible column (buildPage0Dots) and its off-screen
-// continuation (buildPage0DotsExtra) below — same horizontal offsets, same
-// square size, just a different `top` value/unit from each caller.
-function appendPage0DotPair(container, top) {
-  const blue = document.createElement("div");
-  blue.className = "page0-dot";
-  blue.style.top = top;
-  blue.style.left = `calc(50% - 12px - ${PAGE0_DOT_SQ / 2}px)`;
-  blue.style.background = "#2563eb";
-  container.appendChild(blue);
+const PAGE0_DOT_COLS = [
+  { centerX: "calc(50% + 13.5px)", offsetX: 13.5, startOffsetY: 0 },
+  { centerX: "calc(50% - 13.5px)", offsetX: -13.5, startOffsetY: 2 * PAGE0_DOT_STEP },
+];
+const PAGE0_DOT_BASE_OFFSET_Y = 97.77; // px above viewport center, col. 1
 
-  const orange = document.createElement("div");
-  orange.className = "page0-dot";
-  orange.style.top = top;
-  orange.style.left = `calc(50% + 4px - ${PAGE0_DOT_SQ / 2}px)`;
-  orange.style.background = "#ea580c";
-  container.appendChild(orange);
+// Where each of GROUPS' 9 colors landed among @fold1's dots, keyed by color —
+// left/top match .group-item's own anchor convention (top-left corner, left
+// relative to viewport center), not the dot's center, so main.js's
+// updateGroups() can lerp a legend swatch directly from this anchor to its
+// resting spot with no extra conversion. syncedRow (see buildPage0AllDots)
+// is which "step down the screen" this dot sits at, counting both columns
+// together — col. 2's own row i sits at the same height as col. 1's row
+// i+2 (col. 2 starts 2 steps lower), so syncedRow lets main.js's page0
+// entrance animation (playPage0Entrance) pop both columns in row-by-row in
+// sync, rather than column-by-column. Rebuilt every buildPage0AllDots() call
+// (initial load + resize), since which dot a color lands on depends on
+// vh-dependent dot counts.
+let PAGE0_GROUP_DOT_ANCHORS = {};
+
+// Every decorative (non-group) dot, paired with its syncedRow (see above) —
+// main.js's updateGroups() uses just the element to scale each one down
+// individually at @fold2 (transform-origin defaults to each dot's own
+// center, so it shrinks in place rather than toward some shared point);
+// playPage0Entrance uses syncedRow to pop them in row-by-row on page load.
+// Rebuilt alongside PAGE0_GROUP_DOT_ANCHORS above.
+let PAGE0_DECORATIVE_DOT_ELS = [];
+
+// Fixed palette for decorative (non-group) dots — assigned in order, cycling
+// if the viewport is tall enough to need more than 40 slots. Any color that
+// also appears in GROUPS is skipped so it never lands on a decorative dot.
+// Full-saturation hues interleaved; ~10 darker anchors keep it from feeling
+// neon-flat. Each hue family (R, B, G, P, O, T, M, YG…) alternates.
+const PAGE0_PALETTE = [
+  "#DD1111", "#0044EE", "#00AA22", "#9900CC", "#FF6600",
+  "#00AAAA", "#CC0088", "#88CC00", "#6611CC", "#EE4411",
+  "#00BB33", "#4422DD", "#BB0055", "#009988", "#DDAA00",
+  "#0077CC", "#FF2244", "#006622", "#AA00BB", "#FF8800",
+  "#44BB00", "#EE1166", "#1133BB", "#007755", "#DD0066",
+  "#0055DD", "#EE8800", "#009900", "#7722BB", "#CC2200",
+  "#00BBCC", "#DD3300", "#2244AA", "#BB00AA", "#00AA55",
+  "#3311CC", "#EE3311", "#006688", "#FF3377", "#880000",
+];
+
+// Builds dot colors for both columns. Group colors occupy evenly-spaced slots
+// across the full sequence. Decorative slots in each column draw from their
+// own non-overlapping half of PAGE0_PALETTE, so no color ever appears in both
+// columns. Cycling within a half only if a column needs more than ~20 slots.
+// Deterministic: same viewport height → same colors every load.
+//
+// Only ever called from main.js's buildPage0AllDots(), never from this file
+// directly — GROUPS doesn't exist yet when page1.js itself runs.
+function buildPage0DotColorSet(counts) {
+  const total = counts[0] + counts[1];
+  const groupCount = Math.min(GROUPS.length, total);
+  const groupSlots = new Set();
+  for (let i = 0; i < groupCount; i++) {
+    groupSlots.add(Math.round((i * (total - 1)) / (groupCount - 1)));
+  }
+
+  const groupColors = new Set(GROUPS.map((g) => g.color.toLowerCase()));
+  const half = Math.ceil(PAGE0_PALETTE.length / 2);
+  const colPools = [
+    PAGE0_PALETTE.slice(0, half).filter((c) => !groupColors.has(c.toLowerCase())),
+    PAGE0_PALETTE.slice(half).filter((c) => !groupColors.has(c.toLowerCase())),
+  ];
+
+  const colors = new Array(total);
+  let gi = 0;
+  const pi = [0, 0];
+  for (let i = 0; i < total; i++) {
+    if (groupSlots.has(i)) {
+      colors[i] = GROUPS[gi++].color;
+    } else {
+      const col = i < counts[0] ? 0 : 1;
+      const pool = colPools[col];
+      colors[i] = pool[pi[col]++ % pool.length];
+    }
+  }
+  return colors;
 }
 
-(function buildPage0Dots() {
-  const container = document.querySelector("#page-0 .page0-overlay");
-  for (let i = 0; i < PAGE0_DOT_COUNT; i++) {
-    const top = `calc(50% + ${(PAGE0_DOT_START_PCT + i * PAGE0_DOT_STEP_PCT).toFixed(4)}% - ${PAGE0_DOT_SQ / 2}px)`;
-    appendPage0DotPair(container, top);
-  }
-})();
-
-// Continues the same two columns past the bottom of the first viewport —
-// .page0-dots-extra is a normal block-flow element (see style.css), so unlike
-// the viewport-relative column above, this one actually adds scroll height to
-// #page-0 and pushes fold2 down, rather than just drawing more dots in space
-// that was already there. Count is a third of a reference-frame's worth of
-// scrolling (982px / 17px step / 3), just enough of a pause before fold2
-// arrives without the long gap a full extra viewport gave.
-const PAGE0_DOT_EXTRA_COUNT = Math.round(982 / 17 / 3);
-const PAGE0_DOT_EXTRA_STEP = 17;
-
-// The visible column's dot centers are CSS percentages of vh (see the
-// calc(50% + N% - ...) in appendPage0DotPair's caller below) — they scale
-// with viewport height, they are NOT literal 17px steps. An earlier version
-// of this reconstructed the last dot's position using the literal Figma
-// pixel values (-94.5, 17px steps) as if vh were always exactly 982 (the
-// Figma reference frame height), which only lines up when vh actually is
-//982 — at any other vh the two columns drift apart by the time they reach
-// dot 36, since 35 accumulated steps of (literal vs vh-scaled) error compound
-// fast. Re-deriving the same vh/2 + N% formula the CSS itself uses keeps
-// this exact for any vh. .page0-dots-extra always starts exactly at vh
-// (right after .page0-overlay's own height: 100vh); phase-locking its first
-// dot to "17px after wherever the last visible one actually landed" (rather
-// than just resetting to a fixed 0) keeps the two columns reading as one
-// continuous line instead of overlapping/gapping at the seam — re-run on
-// resize (see main.js) since vh can change after load.
-function buildPage0DotsExtra() {
-  const container = document.querySelector("#page-0 .page0-dots-extra");
-  container.innerHTML = "";
-
+// Rebuilds the dot columns (in #page0DotsOverlay, a fixed one-viewport-tall
+// layer — see the comment above) from the current window.innerHeight —
+// re-run on resize (see main.js) since how many dots fit depends on vh.
+function buildPage0AllDots() {
   const vh = window.innerHeight;
-  const lastVisiblePct = PAGE0_DOT_START_PCT + (PAGE0_DOT_COUNT - 1) * PAGE0_DOT_STEP_PCT;
-  const lastVisibleCenter = vh / 2 + (lastVisiblePct / 100) * vh;
-  const firstExtraCenter = (lastVisibleCenter - vh) + PAGE0_DOT_EXTRA_STEP;
+  const overlay = document.getElementById("page0DotsOverlay");
 
-  for (let i = 0; i < PAGE0_DOT_EXTRA_COUNT; i++) {
-    const center = firstExtraCenter + i * PAGE0_DOT_EXTRA_STEP;
-    const top = `${(center - PAGE0_DOT_SQ / 2).toFixed(4)}px`;
-    appendPage0DotPair(container, top);
-  }
-  container.style.height = `${PAGE0_DOT_EXTRA_COUNT * PAGE0_DOT_EXTRA_STEP}px`;
+  overlay.querySelectorAll(".page0-dot").forEach((el) => el.remove());
+  PAGE0_GROUP_DOT_ANCHORS = {};
+  PAGE0_DECORATIVE_DOT_ELS = [];
+
+  const counts = PAGE0_DOT_COLS.map(({ startOffsetY }) => {
+    const firstCenterY = vh / 2 - PAGE0_DOT_BASE_OFFSET_Y + startOffsetY;
+    return Math.max(0, Math.ceil((vh - firstCenterY) / PAGE0_DOT_STEP));
+  });
+  const total = counts.reduce((a, b) => a + b, 0);
+  const allColors = buildPage0DotColorSet(counts);
+
+  let consumed = 0;
+  PAGE0_DOT_COLS.forEach(({ centerX, offsetX, startOffsetY }, colIndex) => {
+    const firstCenterY = vh / 2 - PAGE0_DOT_BASE_OFFSET_Y + startOffsetY;
+    const count = counts[colIndex];
+    const colors = allColors.slice(consumed, consumed + count);
+    consumed += count;
+
+    colors.forEach((color, i) => {
+      const centerY = firstCenterY + i * PAGE0_DOT_STEP;
+      const syncedRow = startOffsetY / PAGE0_DOT_STEP + i;
+
+      // A group-colored slot isn't rendered as a real (scrolling) .page0-dot
+      // at all — main.js's persistent .group-item overlay (fixed position,
+      // see groupsOverlayEl) renders it instead, sitting at this exact spot
+      // from page load so it reads as part of the column, but staying put
+      // on screen (not scrolling away) until fold2Trigger flies it into the
+      // legend. Only record the anchor here; only non-group (decorative,
+      // randomly-colored) dots get an actual scrolling element below.
+      const matched = GROUPS.find((g) => g.color.toLowerCase() === color.toLowerCase());
+      if (matched) {
+        PAGE0_GROUP_DOT_ANCHORS[matched.color] = {
+          left: offsetX - PAGE0_DOT_SQ / 2,
+          top: centerY - PAGE0_DOT_SQ / 2,
+          syncedRow,
+        };
+        return;
+      }
+
+      const dot = document.createElement("div");
+      dot.className = "page0-dot";
+      dot.style.left = `calc(${centerX} - ${PAGE0_DOT_SQ / 2}px)`;
+      dot.style.top = `${(centerY - PAGE0_DOT_SQ / 2).toFixed(2)}px`;
+      dot.style.background = color;
+      // Hidden/shrunk until playPage0Entrance (main.js) pops it in on page
+      // load, row by row — see syncedRow above.
+      dot.style.opacity = "0";
+      dot.style.transform = "scale(0)";
+      overlay.appendChild(dot);
+      // popped (flipped by playPage0Entrance, main.js) guards updateGroups()'s
+      // @fold2 shrink line below from touching this dot's transform before
+      // its entrance pop has happened — without it, updateGroups() already
+      // runs once during init (well before the entrance's first setTimeout
+      // fires) and would unconditionally overwrite this hidden scale(0) with
+      // scale(1) (decorScale's own at-rest value), defeating the pop-in.
+      PAGE0_DECORATIVE_DOT_ELS.push({ el: dot, syncedRow, popped: false });
+    });
+  });
 }
-buildPage0DotsExtra();

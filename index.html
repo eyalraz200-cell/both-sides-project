@@ -108,20 +108,19 @@
       <p>בסביבות השעה 22:00 הצליחה המשטרה לפתוח את הכביש לתנועה, אך עשרות מפגינים נותרו במקום עוד שעות, חלקם ישבו על הכביש בשקט במה שתואר על ידי המשטרה כ"סיום הדרגתי ומבוקר" של האירוע.</p>
     </div>
 
-    <div class="shk-cta">
-      <div class="shk-cta-inner">
-        <h2>איפה עובר הגבול בין מחאה לגיטימית לפעולה קיצונית?</h2>
-        <p>בדקנו אלפי פעולות פוליטיות מתועדות משני קצוות המפה הפוליטית בישראל - והפכנו אותן לכלי אינטראקטיבי שמאפשר לראות מה באמת קורה בשטח.</p>
-        <a href="project.html" class="shk-cta-button">לפרויקט האינטרקטיבי</a>
-      </div>
-    </div>
-
     <div class="shk-body">
       <p>בשעות הלילה המוקדמות פונה השטח, ולפי דיווחים ראשוניים נעצרו תשעה מפגינים, שלושה מהם בחשד לתקיפת שוטר. מוקדם יותר הבוקר שוחררו שישה מהם ללא תנאים, בעוד שלושה הנותרים יובאו להארכת מעצר בבית המשפט בתל אביב. סך הכל נערכו במקום כ-400 שוטרים וכ-60 רכבי ניידת, לפי הערכת דובר המשטרה, מספרים שמבטאים לדבריו "היערכות חריגה לאירוע שהוגדר מראש בסיכון גבוה".</p>
 
       <h3 class="shk-subhead">תגובות מהזירה הפוליטית</h3>
 
       <p>משטרת ישראל הודיעה כי תפתח בתחקיר מבצעי על האירוע, ובמשרדי ראש הממשלה נמסר כי "הזכות להפגין אינה זכות לפגוע בשלום הציבור ובסדר הציבורי, ומי שפורץ מתרסים ותוקף שוטרים יישא באחריות המלאה למעשיו". גורם בכיר בליכוד הוסיף כי "אלימות מצד מיעוט קיצוני לא תכתיב את הסדר היומי".</p>
+
+      <div class="shk-cta">
+        <img class="shk-cta-logo" src="images/שקוף-לוגו-2020.svg" alt="שקוף" />
+        <h2>קיצוניים משני הצדדים - פרויקט מיוחד של שקוף</h2>
+        <p>בדקנו אלפי פעולות פוליטיות מתועדות משני קצוות המפה הפוליטית בישראל - והפכנו אותן לכלי אינטראקטיבי שמאפשר לראות מה באמת קורה בשטח.</p>
+        <a href="project.html" class="shk-cta-button">לפרויקט האינטרקטיבי</a>
+      </div>
 
       <p>בצד השני, ארגוני המחאה שיזמו את ההפגנה מיהרו להתנער מהאירועים והדגישו שהפריצה בוצעה על ידי "קבוצה שולית שלא פעלה בתיאום עם הנהגת המחאה". יו"ר ועד ההפגנות אמרה ל"שקוף" כי "אלפי המפגינים שהגיעו אמש הפגינו בשקט ובסדר מוחלט, ואי אפשר להכפיש מחאה לגיטימית שלמה בגלל מעשיהם של בודדים".</p>
 
@@ -174,50 +173,6 @@
   </div>
   <button type="button" class="shk-a11y-btn" aria-label="נגישות">♿</button>
 
-  <script>
-    // Draws the .shk-cta dashed outline the same way project.html's
-    // .text-card-frame does (updateTextCardFrameDashes in main.js) — a 4px
-    // stroke, 2px-dash/2px-gap, exactly matching the site's signature card
-    // chrome instead of the browser's own looser native dashed border.
-    function updateCtaFrameDash() {
-      const frame = document.querySelector(".shk-cta");
-      if (!frame) return;
-      const w = frame.offsetWidth, h = frame.offsetHeight;
-      if (w === 0 || h === 0) return;
-      let svg = frame.querySelector(":scope > svg.shk-cta-frame-dash");
-      let rect;
-      if (!svg) {
-        svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        svg.setAttribute("class", "shk-cta-frame-dash");
-        rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        rect.setAttribute("fill", "none");
-        rect.setAttribute("stroke", "#000");
-        rect.setAttribute("stroke-width", "4");
-        rect.setAttribute("stroke-dasharray", "2 2");
-        rect.setAttribute("rx", "6");
-        rect.setAttribute("ry", "6");
-        svg.appendChild(rect);
-        frame.insertBefore(svg, frame.firstChild);
-      } else {
-        rect = svg.firstElementChild;
-      }
-      svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
-      rect.setAttribute("x", 2);
-      rect.setAttribute("y", 2);
-      rect.setAttribute("width", Math.max(0, w - 4));
-      rect.setAttribute("height", Math.max(0, h - 4));
-    }
-
-    Promise.all([
-      document.fonts.load("600 24px 'HadassahFriedlaender'"),
-      document.fonts.load("400 16px 'Assistant'"),
-      document.fonts.load("700 16px 'Assistant'"),
-    ]).then(() => {
-      updateCtaFrameDash();
-      document.fonts.ready.then(updateCtaFrameDash);
-    });
-    window.addEventListener("resize", updateCtaFrameDash);
-  </script>
 
 </body>
 </html>

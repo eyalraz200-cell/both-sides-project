@@ -99,7 +99,7 @@ function drawPage8(ctx, W, H) {
   const topY    = Math.round(H * SBB_TIMELINE.top);
   const rightX0 = W / 2 + CENTER_GAP / 2;
 
-  function blendAndDraw(events, indexOf, offset, positions, x0) {
+  function blendAndDraw(events, indexOf, side, positions, x0) {
     events.forEach((e, i) => {
       const cell = positions[i];
       const col  = cell % cols;
@@ -107,20 +107,21 @@ function drawPage8(ctx, W, H) {
       const fromX = x0 + col * CELL;
       const fromY = topY + row * CELL;
 
-      const target = p9LegitPosOf(e, indexOf, offset, legitGeom);
+      const target = p9LegitPosOf(e, indexOf, side, legitGeom);
       if (!target) return;
 
       const x = fromX + (target.x - fromX) * ease;
       const y = fromY + (target.y - fromY) * ease;
-      // Fades to 0.12 alongside the move — matching drawPage9's fixed opacity for
-      // the legit grid, so there's no opacity "pop" the instant currentPage flips.
-      ctx.globalAlpha = 1 + (0.12 - 1) * ease;
+      // No opacity fade — drawPage9 draws the legit grid at full opacity (see the
+      // comment above its own drawBandedCols/drawJumbledBot calls; it used to be a
+      // deliberate 0.12 de-emphasis, which this glide matched, but Figma's actual
+      // reference doesn't show that dimming, so it was dropped). Glide only moves
+      // position now, so there's no fade-to-faint here for fold11's draw to "pop" out of.
       ctx.fillStyle = p7ActorColor(e.actor);
       ctx.fillRect(x, y, SQ, SQ);
-      ctx.globalAlpha = 1;
     });
   }
 
-  blendAndDraw(p7.leftEvents,  p9.leftIndexOf,  0,                     p7.leftPos,  leftX0);
-  blendAndDraw(p7.rightEvents, p9.rightIndexOf, p7.leftEvents.length,  p7.rightPos, rightX0);
+  blendAndDraw(p7.leftEvents,  p9.leftIndexOf,  "left",  p7.leftPos,  leftX0);
+  blendAndDraw(p7.rightEvents, p9.rightIndexOf, "right", p7.rightPos, rightX0);
 }

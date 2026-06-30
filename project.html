@@ -20,6 +20,11 @@
            per-fold overlays crossfading into each other (see GROUPS/
            updateGroups in main.js). -->
       <div class="groups-overlay" id="groupsOverlay" aria-hidden="true"></div>
+      <!-- @fold1's dot columns — fixed to the viewport so they don't scroll
+           away with the rest of @fold1's content (see buildPage0AllDots in
+           page1.js); faded out via main.js's updateGroups once @fold2's
+           title card reaches center. -->
+      <div class="page0-dots-overlay" id="page0DotsOverlay" aria-hidden="true"></div>
       <!-- 10 small squares (Figma node 120:1279) that fade in at the center,
            taking the cluster's place once it settles into fold6's left
            mini-legend — see FOLD6_SQUARES_Y/layoutFold6Squares in main.js. -->
@@ -30,45 +35,38 @@
         <div class="page9-tooltip-date"></div>
         <div class="page9-tooltip-desc"></div>
       </div>
+      <!-- Dev-only indicator of the current @foldN (see CLAUDE.md's fold
+           reference table) — fixed to the viewport, updated in setActivePage. -->
+      <div class="fold-number-badge" id="foldNumberBadge" aria-hidden="true"></div>
     </div>
     <div class="text-col" id="textCol">
       <section class="text-section" data-page="0" id="page-0">
         <div class="page0-overlay">
           <div class="page0-logo">
-            <img class="page0-logo-img" src="images/שקוף_לוגו_shakoof_logo 1.png" alt="שקוף" />
+            <img class="page0-logo-img" src="images/שקוף-לוגו-2020.svg" alt="שקוף" />
           </div>
-          <div class="page0-text">
-            <h2 class="page0-title">קיצוניים משני הצדדים</h2>
-            <p class="page0-subtitle">השוואה בין אופי הפעילות של הקצוות הפוליטיים בישראל</p>
-          </div>
+          <h2 class="page0-title">קיצוניים משני הצדדים</h2>
+          <p class="page0-subtitle">השוואה בין אופי הפעילות של הקצוות הפוליטיים בישראל</p>
           <div class="page0-scroll">
             <svg class="page0-scroll-arrow" width="13.5" height="11.0459" viewBox="0 0 13.5 11.0459" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M0.75 4.77297H0V6.27297H0.75V5.52297V4.77297ZM13.2803 6.0533C13.5732 5.76041 13.5732 5.28553 13.2803 4.99264L8.50736 0.21967C8.21447 -0.0732236 7.73959 -0.0732236 7.4467 0.21967C7.15381 0.512563 7.15381 0.987437 7.4467 1.28033L11.6893 5.52297L7.4467 9.76561C7.15381 10.0585 7.15381 10.5334 7.4467 10.8263C7.73959 11.1192 8.21447 11.1192 8.50736 10.8263L13.2803 6.0533ZM0.75 5.52297V6.27297H12.75V5.52297V4.77297H0.75V5.52297Z" fill="black" fill-opacity="0.43"/>
             </svg>
-            <p class="page0-scroll-text">גללו מטה כדי להתחיל</p>
-          </div>
-        </div>
-        <div class="page0-dots-extra"></div>
-      </section>
-      <section class="text-section page2-panel" data-page="1" id="page-1">
-        <div class="page2-sticky">
-          <div class="section-text text-card">
-            <h2 class="section-title text-card-frame">בישראל פועלות קבוצות פוליטיות רבות, עם מטרות שונות ולעיתים מנוגדות</h2>
           </div>
         </div>
       </section>
-      <section class="text-section page3-panel" data-page="2" id="page-2">
-        <div class="page3-sticky">
-          <div class="section-text text-card">
-            <h2 class="section-title text-card-frame">הזירה הפוליטית לא תמיד מתחלקת למחנות ברורים</h2>
-          </div>
+      <section class="text-section" data-page="1" id="page-1">
+        <div class="section-text text-card">
+          <h2 class="section-title text-card-frame">בישראל פועלות קבוצות פוליטיות רבות, המתגבשות סביב זהות, אינטרסים או עמדות פוליטיות משותפות</h2>
         </div>
       </section>
-      <section class="text-section page4-panel" data-page="3" id="page-3">
-        <div class="page4-sticky">
-          <div class="section-text text-card">
-            <h2 class="section-title text-card-frame">אבל, בשנים האחרונות מתחדדת חלוקה בין קבוצות שונות לשני מחנות פוליטיים מנוגדים</h2>
-          </div>
+      <section class="text-section" data-page="2" id="page-2">
+        <div class="section-text text-card">
+          <h2 class="section-title text-card-frame">הזירה הפוליטית לא תמיד מתחלקת למחנות ברורים</h2>
+        </div>
+      </section>
+      <section class="text-section" data-page="3" id="page-3">
+        <div class="section-text text-card">
+          <h2 class="section-title text-card-frame">אבל, בשנים האחרונות מתחדדת חלוקה בין קבוצות שונות לשני מחנות פוליטיים מנוגדים</h2>
         </div>
       </section>
       <section class="text-section" data-page="4" id="page-4">
@@ -78,12 +76,12 @@
       </section>
       <section class="text-section" data-page="5" id="page-5">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">אספנו תיעודים של פעולות פוליטיות בשטח, משני צדי המפה, מתחילת 2023 ועד היום</h2>
+          <h2 class="section-title text-card-frame">אספנו תיעודים של פעולות פוליטיות משני צדי המפה, מתחילת 2023 ועד היום</h2>
         </div>
       </section>
       <section class="text-section" data-page="6" id="page-6">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">כל ריבוע מייצג פעולה פוליטית מתועדת שהתרחשה במרחב הפיזי</h2>
+          <h2 class="section-title text-card-frame">כל ריבוע מייצג פעולה פוליטית בשטח - כזו שהתרחשה ותועדה במרחב הציבורי</h2>
         </div>
       </section>
       <section class="text-section" data-page="7" id="page-7">
@@ -104,15 +102,17 @@
           </div>
         </div>
         <div class="page9-sticky">
-          <div class="page9-axis-label page9-axis-extreme">פעולות קיצוניות</div>
-          <div class="page9-axis-label page9-axis-legit">פעולות לגיטימיות</div>
-
+          <div class="page9-header">
+            <h3 class="page9-header-title">השוו בין הקיצוניים משני הצדדים</h3>
+            <p class="page9-header-subtitle">גררו את סוגי הפעולות שנחשבות בעיניכם לקיצוניות</p>
+          </div>
           <div class="page9-zone-wrap-extreme">
             <div class="page9-zone" id="page9ZoneAbove" data-zone="above"></div>
           </div>
           <div class="page9-tray">
-            <div class="page9-zone" id="page9ZoneBelow" data-zone="below"></div>
-            <p class="page9-tray-hint">גררו את סוגי הפעולות שאתם מחשיבים קיצוניות</p>
+            <p class="page9-tray-title">סוגי פעולות</p>
+            <div class="page9-tray-divider"></div>
+<div class="page9-zone" id="page9ZoneBelow" data-zone="below"></div>
           </div>
         </div>
       </section>
