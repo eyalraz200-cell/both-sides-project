@@ -33,12 +33,13 @@ This table is the source of truth for `@foldN` going forward — note `@foldN` i
 
 ## `@nosidegroups`
 
-`@nosidegroups` = the 4 of the 9 political groups (`GROUPS` in `main.js`) that don't belong to either of the two opposing camps introduced at `@fold4`/`@fold5` — flagged `row: true` (and `dimmed: true` in their `fold4` entry):
+`@nosidegroups` = the 3 of the 8 political groups (`GROUPS` in `main.js`) that don't belong to either of the two opposing camps introduced at `@fold4`/`@fold5` — flagged `row: true` (and `dimmed: true` in their `fold4` entry):
 
 - ערבים ישראלים (Israeli Arabs)
 - יוצאי אתיופיה (Ethiopian immigrants)
-- יוצאי ברית המועצות (Soviet Union immigrants)
 - דרוזים (Druze)
+
+(יוצאי ברית המועצות / Soviet Union immigrants was removed from `GROUPS` entirely per explicit instruction — no longer one of the 9 groups this doc otherwise still describes in a few places below.)
 
 These render dimmed/scattered at `@fold4`, glide into a row and fade out by the end of `@fold5`, and never reappear after that (see Fold 4/Fold 5 below). The other 5 groups (מתיישבים, פעילי ימין, חרדים, מתנגדי הרפורמה המשפטית, פעילי שמאל) are the camp groups — everything else `GROUPS` defines.
 
@@ -65,30 +66,31 @@ The dashed-border white box itself (Figma node `119:997`: 4px dashed black borde
 ## Page 1 — "title block" + legend (Figma node `119:968`)
 
 - Title: `#page-1 .section-title`, wrapped in `.text-card-frame` (the dashed box) — uses the shared base `.section-title` size/weight (20px Medium), no per-page override (a stray 22px override here was removed, see "Title block architecture" above).
-- Legend (`.page2-legend`): 9 groups, vertical list, **not** inside the dashed box — sits below it as plain centered text. Order and colors must match Figma exactly: ערבים ישראלים `#0f766e`, יוצאי אתיופיה `#7c3aed`, פעילי ימין `#65a30d`, חרדים `#6b4f3a`, מתנגדי הרפורמה המשפטית `#2563eb`, פעילי שמאל `#d946ef`, מתיישבים `#ea580c`, יוצאי ברית המועצות `#1b0cea`, דרוזים `#eacc0c`.
+- Legend (`.page2-legend`): 8 groups, vertical list, **not** inside the dashed box — sits below it as plain centered text. Order and colors must match Figma exactly: ערבים ישראלים `#008C99`, יוצאי אתיופיה `#7c3aed`, פעילי ימין `#65a30d`, חרדים `#57534c`, מתנגדי הרפורמה המשפטית `#2563eb`, פעילי שמאל `#d946ef`, מתיישבים `#ea580c`, דרוזים `#eacc0c`.
 - Each `.page2-legend-item` is `position: relative`, with `.page2-legend-swatch` and `.page2-legend-label` both `position: absolute`, anchored off the row's own 50% mark (`right: 50%` for the swatch, `right: calc(50% + 13px + 12px)` for the label). Since each row spans the full width of the centered `.text-card`, every row's 50% mark coincides with the viewport's horizontal center — this is what pins all 9 swatches to one vertical line at center, with labels of varying length trailing left from it, **without** centering the label+swatch pair's combined bounding box as a whole (which would shift the swatch off-center depending on label length).
 - There is no animated transition from page 1's legend into fold 3's canvas content — see below.
 
 ## Fold 3 — id `#page-2` (Figma node `117:757`)
 
 - Title: same `.text-card`/`.text-card-frame` treatment as other folds, no per-page override.
-- The 9 groups render as a **static scatter** of colored dots directly on the canvas overlay (`FOLD3_GROUPS` in `main.js`, `.group-item`/`.group-swatch` in `style.css`) — coordinates are copied straight from the Figma frame (1512×982) and rescaled to the canvas's actual size in `layoutFold3Groups()`. No animation: `groupsOverlayEl` just fades in/out via `setActivePage` when `currentPage === 2`, same mechanism as `.page0-overlay`.
+- The 8 groups render as a **static scatter** of colored dots directly on the canvas overlay (`FOLD3_GROUPS` in `main.js`, `.group-item`/`.group-swatch` in `style.css`) — coordinates are copied straight from the Figma frame (1512×982) and rescaled to the canvas's actual size in `layoutFold3Groups()`. No animation: `groupsOverlayEl` just fades in/out via `setActivePage` when `currentPage === 2`, same mechanism as `.page0-overlay`.
 - There used to be a scroll-driven "legend swatches fly from page 1 into a centered list, then rearrange into page 4's scattered layout" animation (`page2to3UpdateFromScroll`/`page3to4UpdateFromScroll`/`page4UpdateFromScroll`) — **removed entirely** per explicit instruction, since Figma's fold 3 has no such transition (the dots are just there, no morph). Don't reintroduce it.
 
 ## Fold 4 — id `#page-3` (Figma node `117:788`)
 
 - Title text updated to match Figma exactly: "אבל, בשנים האחרונות מתחדדת חלוקה בין מספר קבוצות לשני מחנות פוליטיים מנוגדים" (previously missing "בין מספר קבוצות"). Uses the shared base `.section-title` (20px Medium-faked-600, see "Title block architecture" above) — no per-page override needed.
-- The same 9 groups split into two static tiers, rendered into a separate overlay (`#fold4Overlay`, `FOLD4_CLUSTER`/`FOLD4_DIMMED`/`layoutFold4Groups()` in `main.js`): 5 groups that fall into the two opposing camps (מתיישבים, פעילי ימין, חרדים, מתנגדי הרפורמה, פעילי שמאל) render as a tight, full-black cluster aligned at one vertical line; the other 4 (יוצאי אתיופיה, ערבים ישראלים, יוצאי ברית המועצות, דרוזים) render scattered and dimmed (`.group-item.is-dimmed`, 56%-opacity black) further from the cluster. No animation, same static-overlay pattern as fold 3 — fades in/out via `setActivePage` when `currentPage === 3`.
-- Each item's swatch-vs-label DOM order is per-item (`swatchFirst` flag) to match Figma's own left/right order exactly — not all 9 groups use the same order, this isn't a typo.
+- The same 8 groups split into two static tiers, rendered into a separate overlay (`#fold4Overlay`, `FOLD4_CLUSTER`/`FOLD4_DIMMED`/`layoutFold4Groups()` in `main.js`): 5 groups that fall into the two opposing camps (מתיישבים, פעילי ימין, חרדים, מתנגדי הרפורמה, פעילי שמאל) render as a tight, full-black cluster aligned at one vertical line; the other 3 (יוצאי אתיופיה, ערבים ישראלים, דרוזים) render scattered and dimmed (`.group-item.is-dimmed`, 56%-opacity black) further from the cluster. No animation, same static-overlay pattern as fold 3 — fades in/out via `setActivePage` when `currentPage === 3`.
+- Each item's swatch-vs-label DOM order is per-item (`swatchFirst` flag) to match Figma's own left/right order exactly — not all 8 groups use the same order, this isn't a typo.
 
 ## Fold 5 — id `#page-4` (Figma node `117:818`)
 
 - This is a **newly inserted section** — it didn't exist before; everything from the old `#page-4` onward was renumbered up by one to make room. A *second* insertion (fold 9, below) later shifted everything from the timeline onward up by one more — see that section for the current id table. If you're hunting for "page-N" or `currentPage === N` logic for the timeline/bridge/drag-and-drop folds and the numbers look off by one or two, this is why — check git history for the old numbers if they show up unexpectedly in a diff or an old note.
 - Title: "חלק מהקבוצות לא משתייכות לחלוקה המחנאית שנוצרה, אנחנו נתמקד באלו שכן", same shared base `.section-title` styling as every other fold.
-- All 9 groups are one persistent set of DOM nodes shared across folds 2-5 (`GROUPS`/`groupItems` in `main.js` — see the comment block above `GROUPS`), not a per-fold overlay. The 5 camp groups (fold 4's cluster) just stay frozen at their fold-4 position for fold 5 — `fold5Pos` falls back to `fold4Pos` for any non-`row` group, so lerping toward it is a no-op.
-- The other 4 ("ערבים ישראלים", "יוצאי אתיופיה", "יוצאי ברית המועצות", "דרוזים" — `row: true` in `GROUPS`) are NOT static here: they run a two-phase animation, both driven by fold 5's own title card (Figma node 117:818/Frame 3169 — a row near the **bottom** of the frame, y=896 of 982, not under the title):
-  - **Part 1 (move)** — `fold5RowEnterT()`: as the title card scrolls up from entering the viewport (top at H) to reaching the screen's vertical center (top at H/2), these 4 dots glide from fold 4's scattered/dimmed position into one horizontal row near the bottom, landing exactly on Figma's row layout. Finishes *before* the title reaches center, not after — the opposite window from every other fold's transition.
-  - **Part 2 (fade)** — reuses `fold5MorphT()` (the normal center → near-top window every other fold transition uses): once the row has settled, continuing to scroll fades just these 4 items' opacity to 0, leaving only the 5 camp groups on screen — matching the title's own point ("we'll focus on the ones that do [belong]").
+- All 8 groups are one persistent set of DOM nodes shared across folds 2-5 (`GROUPS`/`groupItems` in `main.js` — see the comment block above `GROUPS`), not a per-fold overlay. The 5 camp groups (fold 4's cluster) just stay frozen at their fold-4 position for fold 5 — `fold5Pos` falls back to `fold4Pos` for any non-`row` group, so lerping toward it is a no-op.
+- The other 3 ("ערבים ישראלים", "יוצאי אתיופיה", "דרוזים" — `row: true` in `GROUPS`) are NOT static here: they run a single fixed-duration animation (`fold5Trigger`, `FOLD5_TRANSITION_MS`), fired once by fold 5's own title card crossing the screen's vertical center (the normal center → near-top window every other fold transition uses — same convention as fold 3/4/6, not an enter-viewport window) — see `updateGroups` in `main.js`:
+  - **Beat 1 (move)** — these 3 dots glide from fold 4's scattered/dimmed position into one horizontal row near the **bottom** of the frame (Figma node 117:818/Frame 3169, y=896 of 982, not under the title), landing exactly on Figma's row layout.
+  - **Beat 2 (exit)** — once the row has settled, the swatch shrinks (width/height → 0) while the label fades out via opacity — mirroring fold 2's entrance grow/fade-in technique (swatch `PAGE0_DOT_SQ`→`CLUSTER_SWATCH_SIZE`, then label opacity 0→1) in reverse, not a whole-item opacity fade. Leaves only the 5 camp groups on screen, matching the title's own point ("we'll focus on the ones that do [belong]").
+  - Both beats are sequential sub-spans of `fold5Trigger`'s one 0..1 timeline (re-eased independently via `p9Ease`, same `raw`/`SPAN`-slicing convention as fold 2's 3-beat entrance), not simultaneous.
   - The row's exact spacing/position is resolved by a hidden flexbox measurement scaffold (`.fold5-top-row` — name is legacy, it's no longer at the top — `fold5RowGhosts`/`updateFold5RowTargets` in `main.js`), not hand-computed, since label widths vary.
 - The 5-camp cluster doesn't disappear after fold 5 — it moves on to fold 6/7's mini-legend, see below.
 
@@ -96,9 +98,9 @@ The dashed-border white box itself (Figma node `119:997`: 4px dashed black borde
 
 - Title updated to match Figma exactly: "אספנו נתונים על אירועים פוליטיים שהתקיימו במרחב הפיזי, מתחילת שנת 2023 עד היום" (previously a different, non-Figma sentence).
 - Driven by `fold6MorphT()` (`page6TitleCardEl` — named for this section's place in an older internal numbering, predates the fold-5 insertion; it's still exactly this section's own `.text-card`) — the same crosses-center-to-near-top window every other fold uses, but for two different things at once, both continuous (no snapping), and **neither one undoes itself on further scroll** — this is the legend's final resting state for the rest of the page:
-  - The 5 camp groups (only they have a `fold6: {x,y}` in `GROUPS`) glide from the cluster into a persistent mini-legend at the screen's left edge (Figma Frame `3219`), shrinking from 13px to 6px swatches with a 12px→6px swatch-label gap, and snapping (at `t6 >= 0.5`, same secondary-attribute-snap convention as `postFold3`) to 14px/weight-300/`rgba(0,0,0,0.46)` label styling — all of it computed in `updateGroups()`, no separate overlay.
+  - The 5 camp groups (only they have a `fold6: {x,y}` in `GROUPS`) glide from the cluster into a persistent mini-legend at the screen's left edge (Figma Frame `3219`), shrinking from 13px to 6px swatches with a 12px→6px swatch-label gap, with the label continuously lerping (over `e6`, no snap) to 16px/`rgba(0,0,0,0.46)` — weight stays regular (400) throughout — all of it computed in `updateGroups()`, no separate overlay.
   - Simultaneously, 10 small static squares (Figma's own sample column, `FOLD6_SQUARES_X/Y` in `main.js`, `#fold6SquaresOverlay`) fade in (opacity = `e6`) at the screen's center — visually replacing the cluster in the spot it just vacated. Unlabeled here; they're plain divs, not tied to any group/color — they gain labels in fold 7 below. Unrelated to the *timeline's* (fold 7/`#page-6`) own dynamic, data-driven canvas squares.
-- The 4 no-camp groups stay invisible (faded out at the end of fold 5) — they have no `fold6` target and are never revisited.
+- The 3 no-camp groups stay invisible (faded out at the end of fold 5) — they have no `fold6` target and are never revisited.
 
 ## Fold 7 — id `#page-6` ("fold 8" in Figma/the user-facing numbering; Figma node `120:1299`)
 

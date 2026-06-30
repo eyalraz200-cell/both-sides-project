@@ -41,7 +41,7 @@ const P9_TRAY_GRID = [
 const P9_SQ      = 3;
 const P9_GAP  = 1;
 const P9_CELL = P9_SQ + P9_GAP;
-const P9_MID  = 0.65; // divider position as fraction of H — raised from Figma's measured 719/982 (~73.22vh) per explicit request to move the extreme/legit dividing line higher up the screen
+const P9_MID  = 719 / 982; // divider position as fraction of H (~73.22vh) — Figma's own measured position; previously raised to 0.65 per an earlier explicit request to move it higher, now lowered back per a later one. Every grid (extreme above, legit below) derives its own geometry from H * P9_MID fresh each frame, so moving this one constant reflows both sides automatically — no other layout code needs to change.
 
 // Fallback gap (before the real, text-derived gap below is measured) reserved
 // at center between the extreme grid's two column-blocks — wide enough for the
@@ -152,6 +152,17 @@ const p9 = {
   // onMove), or null — read by p9PlaceDot to dim every other dot while one is
   // hovered.
   hoveredEvent: null,
+  // Category index (P9_CATEGORIES) whose dropped pill is currently hovered in
+  // #page9ZoneAbove, or null — all dots of that category stay full opacity,
+  // the rest dim by the same 0.35 factor as dot-hover. Takes effect only when
+  // hoveredEvent is null (dot-hover takes priority).
+  hoveredCategoryIdx: null,
+  // 0 = no dim, 1 = fully dimmed — animated by p9HoverDimAnimate in p9HoverInit
+  // so the dimming fades in/out rather than snapping.
+  hoverDimT: 0,
+  // Keeps the last-highlighted category index alive during fade-out so dots
+  // that were at full opacity don't jump dim the instant hoveredCategoryIdx clears.
+  hoverDimCategoryIdx: null,
 };
 
 // Gentle sine-based ease-in-out — a soft, slow ramp up and down rather than the
@@ -174,6 +185,18 @@ function p9RunAnimLoop() {
     p9.anim = null;
     if (currentPage === 10) draw();
   }
+}
+
+// Count-up animation for the extreme-zone labels — separate from p9.anim (dot
+// movement). commitDrop sets start = drop time + dot-anim duration, so the
+// labels stay frozen at the pre-drop count while dots travel, then count up
+// once they've arrived. fromLeft/toLeft (and right) are the integer endpoints.
+let p9CountAnim = null; // { fromLeft, toLeft, fromRight, toRight, start, duration }
+
+function p9CountRunLoop() {
+  if (!p9CountAnim) return;
+  if (currentPage === 10) draw(); // draw() self-clears p9CountAnim via p9GetDisplayedCounts
+  if (p9CountAnim) requestAnimationFrame(p9CountRunLoop);
 }
 
 // Bottom-to-top stacking order for the extreme grid: settlers (orange) lowest,
@@ -301,7 +324,11 @@ const LEGIT_LINE_PAD = 2;
 function p9LegitGeometry(W, H) {
   const midY     = Math.round(H * P9_MID);
   const gridTopY = midY + LEGIT_LINE_PAD;
-  const dashBotY = H - 16;
+  // Reaches all the way to the viewport's own bottom edge — unlike the
+  // extreme grid above (which stops short for its own count-label/axis
+  // clearance), the legit grid has nothing below it to clear, so per
+  // explicit request it spreads all the way down instead of stopping short.
+  const dashBotY = H;
   const visibleRows = Math.max(1, Math.floor((dashBotY - gridTopY) / LEGIT_CELL));
 
   const leftBoundX     = LEGIT_MARGIN;
@@ -309,53 +336,72 @@ function p9LegitGeometry(W, H) {
   const midX           = W / 2;
   const legitColsTotal = Math.max(2, Math.floor((rightBoundX - leftBoundX) / LEGIT_CELL));
   const legitLeftCols  = Math.floor(legitColsTotal / 2);
+  const legitRightCols = legitColsTotal - legitLeftCols;
 
   // legitRows is purely physical (however many rows of real pixels are
   // available, period) — exactly how p7UpdateLayout sizes the real timeline's
   // own grid (page7.js: total = cols*rows from the available area, oblivious
   // to event count). At this pitch, across the full frame width, that's
   // already comfortably more cells than there are events in practice — the
-  // Math.max fallback only kicks in as a safety net on very small viewports,
-  // so dots still get *somewhere* to go rather than being dropped outright.
-  const combinedCap = p7.leftEvents.length + p7.rightEvents.length;
-  const legitRows   = Math.max(visibleRows, Math.ceil(combinedCap / legitColsTotal));
+  // Math.max fallback (now per side, see below) only kicks in as a safety net
+  // on very small viewports, so dots still get *somewhere* to go rather than
+  // being dropped outright. Both sides share whichever row count is taller,
+  // not each their own, so the grid's row pitch stays aligned across the
+  // center line even when one side has noticeably more events than the other.
+  const leftRowsNeeded  = Math.ceil(p7.leftEvents.length  / legitLeftCols);
+  const rightRowsNeeded = Math.ceil(p7.rightEvents.length / legitRightCols);
+  const legitRows = Math.max(visibleRows, leftRowsNeeded, rightRowsNeeded);
 
-  const geom = { gridTopY, legitRows, legitColsTotal, legitLeftCols, midX };
+  const geom = { gridTopY, legitRows, legitLeftCols, legitRightCols, midX };
 
-  // The cell budget naturally exceeds the event count (see above), so the
-  // shuffle below — same "more cells than events" mechanism p7OrderFromCenter
-  // (page7.js) uses for the real timeline — only ever uses a random subset of
-  // it, leaving gaps scattered throughout rather than every cell filled.
-  // Lazily (re)built only when the budget actually changes (i.e. on resize) —
-  // a fresh shuffle every frame would make dots jump cell to cell constantly.
-  const totalCells = legitRows * legitColsTotal;
-  if (!p9.legitShuffle || p9.legitShuffleSize !== totalCells) {
-    p9.legitShuffle = p7Shuffle(Array.from({ length: totalCells }, (_, i) => i), 25555);
-    p9.legitShuffleSize = totalCells;
+  // Two independent cell pools, one per side — left events only ever land in
+  // left-half columns, right events only in right-half columns, so the two
+  // sides stay visually separated by screen side (same as the extreme grid
+  // above) instead of mixing across the center line. Each pool still has more
+  // cells than events (see above), so the per-side shuffle below — same
+  // "more cells than events" mechanism p7OrderFromCenter (page7.js) uses for
+  // the real timeline — leaves gaps scattered throughout that side rather
+  // than filling every cell, while never crossing into the other side's
+  // columns. Lazily (re)built only when a pool's own budget actually changes
+  // (i.e. on resize) — a fresh shuffle every frame would make dots jump cell
+  // to cell constantly.
+  const leftTotalCells  = legitLeftCols  * legitRows;
+  const rightTotalCells = legitRightCols * legitRows;
+  if (!p9.legitShuffleLeft || p9.legitShuffleSizeLeft !== leftTotalCells) {
+    p9.legitShuffleLeft     = p7Shuffle(Array.from({ length: leftTotalCells }, (_, i) => i), 25555);
+    p9.legitShuffleSizeLeft = leftTotalCells;
+  }
+  if (!p9.legitShuffleRight || p9.legitShuffleSizeRight !== rightTotalCells) {
+    p9.legitShuffleRight     = p7Shuffle(Array.from({ length: rightTotalCells }, (_, i) => i), 22222);
+    p9.legitShuffleSizeRight = rightTotalCells;
   }
 
   return geom;
 }
 
-// A cell index's exact grid position (no jitter) — shared by the pool-building
-// filter above and the real per-event lookup below.
-function p9LegitCellXY(cell, geom) {
+// A cell index's exact grid position (no jitter) within one side's own
+// sub-grid — shared by the pool-building filter above and the real per-event
+// lookup below. `side` picks which column count/growth-direction to use;
+// the row pitch (gridTopY/legitRows) is shared by both sides.
+function p9LegitCellXY(cell, geom, side) {
   const r = cell % geom.legitRows;
   const c = Math.floor(cell / geom.legitRows);
-  const x = c < geom.legitLeftCols
+  const x = side === "left"
     ? geom.midX - (geom.legitLeftCols - c) * LEGIT_CELL
-    : geom.midX + (c - geom.legitLeftCols) * LEGIT_CELL;
+    : geom.midX + c * LEGIT_CELL;
   const y = geom.gridTopY + r * LEGIT_CELL;
   return { x, y };
 }
 
 // An event's target {x,y} in the legit grid — its shuffled cell's exact grid
-// position, but that cell is one of many more than there are events (see
-// p9LegitGeometry above), so the result reads as gapped/free-form rather
-// than a solid filled block, while every dot still sits on the grid.
-function p9LegitPosOf(e, indexOf, offset, geom) {
-  const cell = p9.legitShuffle[offset + indexOf.get(e)];
-  return p9LegitCellXY(cell, geom);
+// position within its own side's pool (see p9LegitGeometry above), so the
+// result reads as gapped/free-form within that side, while every dot still
+// sits on the grid and never crosses into the other side's columns.
+function p9LegitPosOf(e, indexOf, side, geom) {
+  const shuffle = side === "left" ? p9.legitShuffleLeft : p9.legitShuffleRight;
+  const cell = shuffle[indexOf.get(e)];
+  if (cell === undefined) return null;
+  return p9LegitCellXY(cell, geom, side);
 }
 
 function drawPage9(ctx, W, H) {
@@ -465,19 +511,54 @@ function drawPage9(ctx, W, H) {
   function p9PlaceDot(e, targetX, targetY, targetAlpha) {
     let drawX = targetX, drawY = targetY, drawAlpha = targetAlpha;
     if (p9.anim) {
-      const t    = p9Ease(Math.min(1, (performance.now() - p9.anim.start) / p9.anim.duration));
       const from = p9.anim.from.get(e);
       if (from) {
+        let t;
+        if (p9.anim.newEventStagger && p9.anim.newEventStagger.has(e)) {
+          // New extreme dot — departs once the reposition phase finishes.
+          const dotArrival  = p9.anim.newEventStagger.get(e);
+          const phase2Start = p9.anim.start + (p9.anim.repositionMs || 0);
+          const dotDur      = dotArrival - phase2Start;
+          t = p9Ease(Math.min(1, Math.max(0, (performance.now() - phase2Start) / dotDur)));
+        } else {
+          // Existing dot repositioning.
+          // Dots whose actor rank is above "settlers" in the column (Right-wing
+          // activists, Haredi Jews) get pushed upward by incoming new events —
+          // they glide to their new spot arriving at the same moment the new
+          // dots land (topDotArrivesAt), so it looks like the column grows as
+          // one motion. Lower-rank dots (settlers and below) finish phase 1
+          // on their own faster clock.
+          const repoMs = p9.anim.repositionMs || p9.anim.duration;
+          const now = performance.now();
+          if (p9.anim.topDotArrivesAt !== undefined &&
+              P9_ACTOR_ORDER.indexOf(e.actor) > P9_ACTOR_ORDER.indexOf("settlers")) {
+            const dur = p9.anim.topDotArrivesAt - p9.anim.start;
+            t = p9Ease(Math.min(1, (now - p9.anim.start) / dur));
+          } else {
+            t = p9Ease(Math.min(1, (now - p9.anim.start) / repoMs));
+          }
+        }
         drawX     = from.x     + (targetX     - from.x)     * t;
         drawY     = from.y     + (targetY     - from.y)     * t;
         drawAlpha = from.alpha + (targetAlpha - from.alpha) * t;
       }
     }
-    // While one dot is hovered (p9.hoveredEvent, set by p9HoverInit — only
-    // ever an above-the-line/"extreme" event, see there), it's drawn fully
-    // opaque and every other dot is dimmed, so it reads as isolated against
-    // the grid.
-    if (p9.hoveredEvent) drawAlpha = (e === p9.hoveredEvent) ? 1 : drawAlpha * 0.35;
+    // While one dot is hovered (p9.hoveredEvent), it's drawn fully opaque and
+    // every other dot is dimmed. While a dropped pill is hovered instead
+    // (p9.hoveredCategoryIdx, set by p9HoverInit's pill listener), ALL dots
+    // of that category stay full opacity and the rest dim by the same factor.
+    // Dot-hover takes priority so both states are never active simultaneously.
+    if (p9.hoveredEvent) {
+      drawAlpha = (e === p9.hoveredEvent) ? 1 : drawAlpha * 0.35;
+    } else if (p9.hoveredCategoryIdx !== null) {
+      const dimFactor = 1 - 0.65 * p9.hoverDimT;
+      drawAlpha = (CATEGORY_EN_TO_IDX[e.category] === p9.hoveredCategoryIdx) ? 1 : drawAlpha * dimFactor;
+    } else if (p9.hoverDimT > 0) {
+      const dimFactor = 1 - 0.65 * p9.hoverDimT;
+      drawAlpha = (p9.hoverDimCategoryIdx !== null && CATEGORY_EN_TO_IDX[e.category] === p9.hoverDimCategoryIdx)
+        ? 1
+        : drawAlpha * dimFactor;
+    }
 
     ctx.globalAlpha = drawAlpha;
     ctx.fillStyle   = p7ActorColor(e.actor);
@@ -487,7 +568,15 @@ function drawPage9(ctx, W, H) {
   }
 
   function drawBandedCols(orderArr, rightAlign, colsTotal) {
-    const targetAlpha = ctx.globalAlpha;
+    // Always full opacity by design (see the comment above where this and
+    // drawJumbledBot are first invoked) — a literal 1, not a read of
+    // ctx.globalAlpha: p9PlaceDot never restores that after dimming a dot
+    // while one is hovered, so reading it here would pick up whatever dimmed
+    // value the *previous* batch's last dot left behind and compound on top
+    // of it, dimming each successive batch (right side, then both legit
+    // sides) more than the last instead of every batch dimming by the same
+    // flat amount.
+    const targetAlpha = 1;
     orderArr.forEach((e, i) => {
       const r = Math.floor(i / colsTotal);
       const c = i % colsTotal;
@@ -499,36 +588,51 @@ function drawPage9(ctx, W, H) {
     return Math.ceil(orderArr.length / colsTotal) || 1;
   }
 
-  // The legitimate (below-the-line) grid drops the left/right narrative split
-  // entirely — actors mix freely instead of clustering in same-color blocks —
-  // and is built outward from the center, capped to a width budget (mirrored
-  // from the gap kept against the floating text column's dashed divider line,
-  // TEXT_COL_WIDTH in squareboundingbox.js) so it can never grow into it. Sized
-  // from the *total* combined pool, same fixed-slot reasoning as the extreme
-  // grid above — reclassifying a category never reflows anyone else's dot.
-  // no CENTER_GAP in the legit grid — the two sides butt up against each other with
-  // no gap, since they're one shuffled pool split only for width-balance.
+  // The legitimate (below-the-line) grid keeps the same left/right screen-side
+  // split the extreme grid above uses — left events only ever land left of
+  // center, right events only right of center — but drops the *narrative*
+  // clustering: within its own side, actors mix freely instead of grouping
+  // into same-color blocks, built outward from the center, capped to a width
+  // budget (mirrored from the gap kept against the floating text column's
+  // dashed divider line, TEXT_COL_WIDTH in squareboundingbox.js) so it can
+  // never grow into it. Sized per side, same fixed-slot reasoning as the
+  // extreme grid above — reclassifying a category never reflows anyone
+  // else's dot. The two sides butt up against each other with no gap.
   const legitGeom = p9LegitGeometry(W, H);
 
-  function drawJumbledBot(poolEvents, indexOf, offset, botSet) {
-    const targetAlpha = ctx.globalAlpha;
+  function drawJumbledBot(poolEvents, indexOf, side, botSet) {
+    // Same fix as drawBandedCols above, same reason — literal 1, not a read
+    // of the (possibly already-dimmed-by-a-prior-batch) ctx.globalAlpha.
+    const targetAlpha = 1;
     poolEvents.forEach(e => {
       if (!botSet.has(e)) return;
-      const pos = p9LegitPosOf(e, indexOf, offset, legitGeom);
+      const pos = p9LegitPosOf(e, indexOf, side, legitGeom);
       if (!pos) return; // guards a stale cache
-      if (pos.y < topY || pos.y >= H - 16) return;
+      if (pos.y < topY || pos.y >= H) return;
       p9PlaceDot(e, pos.x, pos.y, targetAlpha);
     });
   }
 
   const leftBotSet = new Set(leftBot), rightBotSet = new Set(rightBot);
 
+  // Both grids draw at full opacity — pixel-sampling Figma's flattened legit-
+  // grid image (node 201:49243's image15/16) against the pure actor colors
+  // gave ~0.93-0.95 (e.g. orange measured (235,99,28) vs pure #ea580c
+  // (234,88,12)), the same ballpark as the extreme grid's own exact-color
+  // match — the residual gap is screenshot/compression noise, not an
+  // intentional dim. Previously drawn at 0.12 as a deliberate de-emphasis
+  // that Figma's actual reference doesn't show.
   ctx.globalAlpha = 1;
   const leftTopRows  = drawBandedCols(p9.leftTopOrder,  true,  extremeColsTotal);
   const rightTopRows = drawBandedCols(p9.rightTopOrder, false, extremeColsTotal);
-  ctx.globalAlpha = 0.12;
-  drawJumbledBot(p7.leftEvents,  p9.leftIndexOf,  0,                     leftBotSet);
-  drawJumbledBot(p7.rightEvents, p9.rightIndexOf, p7.leftEvents.length,  rightBotSet);
+  drawJumbledBot(p7.leftEvents,  p9.leftIndexOf,  "left",  leftBotSet);
+  drawJumbledBot(p7.rightEvents, p9.rightIndexOf, "right", rightBotSet);
+
+  // p9PlaceDot leaves ctx.globalAlpha at whichever dimmed value (e.g. 0.35)
+  // the last-drawn dot used while one dot is hovered — reset before anything
+  // else below, or the count/label/divider line all inherit that same dim,
+  // and (more importantly) it leaks into the next frame's drawBackground
+  // clear too (see that function's own comment).
   ctx.globalAlpha = 1;
 
   // Event count above each side's block — centered over its own *actually
@@ -541,36 +645,117 @@ function drawPage9(ctx, W, H) {
   // dropped into the extreme zone — but once that's happened, both sides
   // show a count, "0" included, rather than only labeling whichever side
   // happens to have events.
-  if (leftTop.length > 0 || rightTop.length > 0) {
-    ctx.font         = "400 12px 'Assistant', sans-serif";
-    ctx.textAlign    = "center";
-    ctx.textBaseline = "alphabetic";
-    ctx.fillStyle    = "#111";
-    ctx.fillText(String(leftTop.length),
-      centerX - leftRealCols * CELL / 2,
-      midY - leftTopRows * CELL - 16);
-    ctx.fillText(String(rightTop.length),
-      rightX0 + rightRealCols * CELL / 2,
-      midY - rightTopRows * CELL - 16);
+  {
+    let leftCount, rightCount;
+    if (p9.hoveredCategoryIdx !== null) {
+      // Pill hovered — show only that category's dot count, no animation.
+      const catFilter = e => CATEGORY_EN_TO_IDX[e.category] === p9.hoveredCategoryIdx;
+      leftCount  = leftTop.filter(catFilter).length;
+      rightCount = rightTop.filter(catFilter).length;
+    } else if (p9.anim && p9.anim.newEventStagger) {
+      // Staggered extreme drop — count increments as each new dot arrives.
+      const now = performance.now();
+      let arrivedLeft = 0, arrivedRight = 0;
+      for (const e of p7.leftEvents) {
+        const dotArrival = p9.anim.newEventStagger.get(e);
+        if (dotArrival !== undefined && now >= dotArrival) arrivedLeft++;
+      }
+      for (const e of p7.rightEvents) {
+        const dotArrival = p9.anim.newEventStagger.get(e);
+        if (dotArrival !== undefined && now >= dotArrival) arrivedRight++;
+      }
+      leftCount  = p9.anim.baseLeft  + arrivedLeft;
+      rightCount = p9.anim.baseRight + arrivedRight;
+    } else {
+      // Legit drop (p9CountAnim ticking) or steady state.
+      const displayed = p9GetDisplayedCounts();
+      leftCount  = displayed ? displayed.left  : leftTop.length;
+      rightCount = displayed ? displayed.right : rightTop.length;
+    }
+
+    // Suppress "0 / 0" while no dot has arrived yet (first drop, mid-flight).
+    if (leftCount > 0 || rightCount > 0) {
+      ctx.font         = "400 12px 'Assistant', sans-serif";
+      ctx.textAlign    = "center";
+      ctx.textBaseline = "alphabetic";
+      ctx.fillStyle    = "#111";
+      ctx.fillText(String(leftCount),
+        centerX - leftRealCols * CELL / 2,
+        midY - leftTopRows * CELL - 16);
+      ctx.fillText(String(rightCount),
+        rightX0 + rightRealCols * CELL / 2,
+        midY - rightTopRows * CELL - 16);
+    }
   }
 
-
-  // Dividing line between the "extreme" and "legitimate" dot-grid halves — drawn
-  // growing in from the left as the user scrolls (see page9LineT, driven by
-  // page9UpdateFromScroll in main.js), reaching full width exactly when the title
-  // finishes docking at the top. The category panel that classifies events into
-  // these halves lives as real DOM/HTML in the text column (see p9BuildPanel
-  // below), not drawn here on canvas.
-  ctx.strokeStyle = "#000";
+  // Dividing line between the "extreme" and "legitimate" dot-grid halves —
+  // spans the full screen width edge-to-edge, growing in from the *right*
+  // edge toward the left as the user scrolls (page9LineT, driven by
+  // page9UpdateFromScroll in main.js — per explicit request, reversed from
+  // the left-to-right direction every other fold's own grow-in uses),
+  // reaching full width exactly when the title finishes docking at the top.
+  // The category panel that classifies events into these halves lives as
+  // real DOM/HTML in the text column (see p9BuildPanel below), not drawn
+  // here on canvas.
+  // Tapered via a linear gradient used as strokeStyle (canvas gradients paint
+  // along the stroke directly, unlike CSS border-image — no cross-browser
+  // ambiguity there) spanning the line's own *current* endpoints, so the
+  // fade-in/fade-out stays proportional to however much has grown in so far
+  // rather than fading relative to the final, fully-grown length.
+  const dividerStartX = W * (1 - page9LineT);
+  const dividerGrad  = ctx.createLinearGradient(dividerStartX, midY, W, midY);
+  // Tapers down to a still-visible floor (0.15), not all the way to fully
+  // transparent — per explicit request, the ends should read as thinner/
+  // fainter, not vanish outright.
+  dividerGrad.addColorStop(0,    "rgba(0, 0, 0, 0.15)");
+  dividerGrad.addColorStop(0.2,  "rgba(0, 0, 0, 0.55)");
+  dividerGrad.addColorStop(0.8,  "rgba(0, 0, 0, 0.55)");
+  dividerGrad.addColorStop(1,    "rgba(0, 0, 0, 0.15)");
+  ctx.strokeStyle = dividerGrad;
   ctx.lineWidth   = 1;
-  ctx.globalAlpha = 0.12;
   ctx.beginPath();
-  ctx.moveTo(0,  midY);
-  ctx.lineTo(W * page9LineT, midY);
+  ctx.moveTo(dividerStartX, midY);
+  ctx.lineTo(W, midY);
   ctx.stroke();
-  ctx.globalAlpha = 1;
 
   p9.lastPositions = posMap;
+}
+
+// Current extreme event counts derived directly from p9.sides — used by
+// commitDrop to capture before/after counts around a sides update.
+function p9ExtremeCountsNow() {
+  let left = 0, right = 0;
+  if (p7.ready) {
+    for (const e of p7.leftEvents) {
+      const idx = CATEGORY_EN_TO_IDX[e.category];
+      if (idx !== undefined && p9.sides[idx] === "above") left++;
+    }
+    for (const e of p7.rightEvents) {
+      const idx = CATEGORY_EN_TO_IDX[e.category];
+      if (idx !== undefined && p9.sides[idx] === "above") right++;
+    }
+  }
+  return { left, right };
+}
+
+// What the extreme-zone count labels should display right now — frozen at the
+// pre-drop count while dots are migrating, then counting toward the new totals.
+// Returns null once the animation finishes (or was never started), so callers
+// fall back to the actual leftTop.length/rightTop.length.
+function p9GetDisplayedCounts() {
+  if (!p9CountAnim) return null;
+  const now = performance.now();
+  if (now < p9CountAnim.start) {
+    // Dot animation still running — freeze at the old count.
+    return { left: p9CountAnim.fromLeft, right: p9CountAnim.fromRight };
+  }
+  const t = Math.min(1, (now - p9CountAnim.start) / p9CountAnim.duration);
+  if (t >= 1) { p9CountAnim = null; return null; } // done — use actual counts
+  const ease = p9Ease(t);
+  return {
+    left:  Math.round(p9CountAnim.fromLeft  + (p9CountAnim.toLeft  - p9CountAnim.fromLeft)  * ease),
+    right: Math.round(p9CountAnim.fromRight + (p9CountAnim.toRight - p9CountAnim.fromRight) * ease),
+  };
 }
 
 // ── Category panel — real DOM/HTML in the text column. Drag a pill between the
@@ -605,20 +790,92 @@ function p9BuildPanel() {
   });
 
   function commitDrop(pill, targetZone) {
-    if (targetZone === zoneBelow) {
-      trayRows[P9_TRAY_GRID[Number(pill.dataset.idx)].row - 1].appendChild(pill);
-    } else {
-      // prepend, not append: the newest drop becomes the first child, which
-      // a column flex container renders at the top of the stack — so each
-      // new card pushes the previously-topmost one down below it.
+    const newCatIdx = Number(pill.dataset.idx);
+    const nowMs     = performance.now();
+
+    if (targetZone === zoneAbove) {
+      // ── Dropping into extreme ──────────────────────────────────────────────
+      // Dots arrive one by one in column order; the count increments as each lands.
+
+      const { left: baseLeft, right: baseRight } = p9ExtremeCountsNow();
+
+      // prepend so the newest card becomes the top of the stacked column.
       targetZone.prepend(pill);
+      p9.sides[newCatIdx] = "above";
+
+      // Sync the order arrays now (before the draw loop does it) so stagger
+      // ranks already reflect the new events' final column positions.
+      const makeSet = (pool) => new Set(pool.filter(e => {
+        const i = CATEGORY_EN_TO_IDX[e.category];
+        return i !== undefined && p9.sides[i] === "above";
+      }));
+      p9SyncTopOrder(p9.leftTopOrder,  makeSet(p7.leftEvents));
+      p9SyncTopOrder(p9.rightTopOrder, makeSet(p7.rightEvents));
+
+      // Phase 1: existing extreme dots reposition (settlers-rank and below settle
+      // quickly; high-rank dots glide up over the full phase-1+phase-2 window).
+      // Phase 2: new dots travel in once phase 1 ends.
+      // Skip phase 1 entirely on the first drop (nothing to reposition).
+      const REPOSITION_MS   = (baseLeft > 0 || baseRight > 0) ? 1200 : 0;
+      const BASE_TRAVEL_MS     = 600;
+      const ARRIVAL_STAGGER_MS = 4;    // ms/dot at the anchor count
+      const ANCHOR_COUNT       = 1880; // "Physical assault" right-side count — calibration reference
+
+      const newInLeft  = p9.leftTopOrder.filter(e => CATEGORY_EN_TO_IDX[e.category] === newCatIdx);
+      const newInRight = p9.rightTopOrder.filter(e => CATEGORY_EN_TO_IDX[e.category] === newCatIdx);
+      const maxNew     = Math.max(newInLeft.length, newInRight.length, 1);
+
+      // sqrt scale: anchor and larger stay at 4ms/dot; smaller counts get proportionally
+      // slower stagger so they don't feel too fast relative to the anchor.
+      const effectiveStagger = ARRIVAL_STAGGER_MS * Math.max(1, Math.sqrt(ANCHOR_COUNT / maxNew));
+
+      // Map stores each new dot's *arrival* timestamp (already offset by REPOSITION_MS).
+      const stagger     = new WeakMap();
+      const phase2Start = nowMs + REPOSITION_MS;
+      newInLeft.forEach( (e, i) => stagger.set(e, phase2Start + BASE_TRAVEL_MS + effectiveStagger * i));
+      newInRight.forEach((e, i) => stagger.set(e, phase2Start + BASE_TRAVEL_MS + effectiveStagger * i));
+
+      const totalDur = REPOSITION_MS + BASE_TRAVEL_MS + effectiveStagger * (maxNew - 1);
+
+      p9.anim = {
+        from: new Map(p9.lastPositions),
+        start: nowMs,
+        duration: totalDur,
+        repositionMs: REPOSITION_MS,
+        topDotArrivesAt: REPOSITION_MS > 0 ? nowMs + totalDur : undefined,
+        newCategoryIdx: newCatIdx,
+        newEventStagger: stagger,
+        baseLeft,
+        baseRight,
+      };
+      p9CountAnim = null; // stagger drives the count directly — no separate count-up
+      if (currentPage === 10) p9RunAnimLoop();
+
+    } else {
+      // ── Dropping back into legit ───────────────────────────────────────────
+      // Dots migrate over 3 s; count ticks down once they've left.
+
+      const prevDisplayed = p9GetDisplayedCounts();
+      const prevActual    = p9ExtremeCountsNow();
+      const fromLeft  = prevDisplayed ? prevDisplayed.left  : prevActual.left;
+      const fromRight = prevDisplayed ? prevDisplayed.right : prevActual.right;
+
+      trayRows[P9_TRAY_GRID[newCatIdx].row - 1].appendChild(pill);
+      p9.sides[newCatIdx] = "below";
+
+      const DOT_DURATION = 3000;
+      p9.anim = { from: new Map(p9.lastPositions), start: nowMs, duration: DOT_DURATION };
+      if (currentPage === 10) p9RunAnimLoop();
+
+      const newCounts  = p9ExtremeCountsNow();
+      const thisAnim   = p9CountAnim = {
+        fromLeft, toLeft: newCounts.left,
+        fromRight, toRight: newCounts.right,
+        start: nowMs + DOT_DURATION,
+        duration: 800,
+      };
+      setTimeout(() => { if (p9CountAnim === thisAnim) p9CountRunLoop(); }, DOT_DURATION);
     }
-    p9.sides[Number(pill.dataset.idx)] = targetZone.dataset.zone;
-    // Reclassifying a category moves its dots between the extreme/legit grids —
-    // animate that move (from wherever they were last drawn) instead of having
-    // them snap straight to their new spot.
-    p9.anim = { from: new Map(p9.lastPositions), start: performance.now(), duration: 3000 };
-    if (currentPage === 10) p9RunAnimLoop();
   }
 
   P9_CATEGORIES.forEach((label, idx) => {
@@ -680,9 +937,13 @@ function p9BuildPanel() {
       // layout doesn't reflow mid-drag, and only actually moves on a successful drop.
       const ghost = pill.cloneNode(true);
       ghost.classList.add("page9-pill-ghost");
-      ghost.style.left  = `${rect.left}px`;
-      ghost.style.top   = `${rect.top}px`;
-      ghost.style.width = `${rect.width}px`;
+      ghost.style.left = `${rect.left}px`;
+      ghost.style.top  = `${rect.top}px`;
+      // Zone-above pills have a different computed width (no border, less padding,
+      // hidden handle) than a tray pill — constraining the ghost to that width makes
+      // it look pinched once it gets base .page9-pill styles in body context.
+      // Let it auto-size naturally so it looks identical to a tray pill drag.
+      if (!draggingFromAbove) ghost.style.width = `${rect.width}px`;
       document.body.appendChild(ghost);
 
       pill.classList.add("dragging");
@@ -813,10 +1074,92 @@ function p9HoverInit() {
 
   const HIT_PAD = 3; // px of extra hit area around each SQ=3 dot, in every direction
   const TOOLTIP_GAP = 5; // px of breathing room between the dot and the tooltip box, both axes
+  const HOVER_DIM_MS = 80; // total fade-in or fade-out duration for the dim
 
+  let hoverDimRaf = null;
+  let hoverDimTarget = 0;
+  function p9HoverDimAnimate(target) {
+    hoverDimTarget = target;
+    if (hoverDimRaf !== null) return;
+    let lastTime = performance.now();
+    function step(now) {
+      const dt = now - lastTime;
+      lastTime = now;
+      const delta = dt / HOVER_DIM_MS;
+      p9.hoverDimT = hoverDimTarget > p9.hoverDimT
+        ? Math.min(hoverDimTarget, p9.hoverDimT + delta)
+        : Math.max(hoverDimTarget, p9.hoverDimT - delta);
+      if (currentPage === 10) draw();
+      if (p9.hoverDimT !== hoverDimTarget) {
+        hoverDimRaf = requestAnimationFrame(step);
+      } else {
+        hoverDimRaf = null;
+        if (p9.hoverDimT === 0) {
+          p9.hoverDimCategoryIdx = null;
+          if (currentPage === 10) draw();
+        }
+      }
+    }
+    hoverDimRaf = requestAnimationFrame(step);
+  }
+
+  // The dropped pill (in #page9ZoneAbove) currently highlighted black to
+  // call out the hovered dot's category — tracked so it can be un-highlighted
+  // even if the hovered dot changes category or hover ends outright.
+  const zoneAboveEl = document.getElementById("page9ZoneAbove");
+  let highlightedPill = null;
+  function setHighlightedPill(catIdx) {
+    const next = catIdx !== undefined
+      ? document.querySelector(`#page9ZoneAbove .page9-pill[data-idx="${catIdx}"]`)
+      : null;
+    if (next === highlightedPill) return;
+    if (highlightedPill) highlightedPill.classList.remove("is-hover-highlighted");
+    if (next) next.classList.add("is-hover-highlighted");
+    highlightedPill = next;
+    zoneAboveEl.classList.toggle("has-hover-highlight", !!next);
+  }
+
+  // Pill hover: when the pointer rests on a dropped pill in #page9ZoneAbove,
+  // highlight all canvas dots of that category and dim the rest — same 0.35
+  // dimming mechanic as dot-hover but applied category-wide. Dot-hover takes
+  // priority (see p9PlaceDot); these listeners only engage when hoveredEvent
+  // is null (pointer is over DOM, not a canvas dot).
+  let hoveredCatPill = null;
+  function setPillHover(pill) {
+    if (pill === hoveredCatPill) return;
+    if (hoveredCatPill) hoveredCatPill.classList.remove("is-hover-highlighted");
+    hoveredCatPill = pill;
+    if (pill) {
+      pill.classList.add("is-hover-highlighted");
+      p9.hoveredCategoryIdx = Number(pill.dataset.idx);
+      p9.hoverDimCategoryIdx = p9.hoveredCategoryIdx;
+      p9HoverDimAnimate(1);
+    } else {
+      // Keep hoverDimCategoryIdx alive so highlighted dots stay bright during fade-out.
+      p9.hoveredCategoryIdx = null;
+      p9HoverDimAnimate(0);
+    }
+    zoneAboveEl.classList.toggle("has-hover-highlight", !!pill);
+  }
+
+  zoneAboveEl.addEventListener("pointerover", e => {
+    if (p9.hoveredEvent) return; // dot-hover takes priority
+    const pill = e.target.closest(".page9-pill");
+    setPillHover(pill && zoneAboveEl.contains(pill) ? pill : null);
+  });
+  zoneAboveEl.addEventListener("pointerleave", () => setPillHover(null));
+
+  // #page9Tooltip is shared with page7.js's own hover (same element, see
+  // p7HoverInit) — only clear it when this handler is the one that actually
+  // showed it (p9.hoveredEvent set), or a stray pointermove/scroll on
+  // whichever page page7's hover owns would stomp its tooltip right back
+  // off the instant it appears, since both listen on window unconditionally.
   function hide() {
+    if (!p9.hoveredEvent) return;
     tooltipEl.classList.remove("is-visible");
-    if (p9.hoveredEvent) { p9.hoveredEvent = null; draw(); }
+    p9.hoveredEvent = null;
+    setHighlightedPill(undefined);
+    draw();
   }
 
   function onMove(e) {
@@ -849,6 +1192,9 @@ function p9HoverInit() {
     // over the same dot, which would redraw the whole canvas needlessly.
     if (p9.hoveredEvent !== bestEvent) {
       p9.hoveredEvent = bestEvent;
+      // Cancel any running pill-hover dim animation so hoverDimT is reset clean.
+      hoverDimTarget = 0; p9.hoverDimT = 0;
+      setHighlightedPill(CATEGORY_EN_TO_IDX[bestEvent.category]);
       draw();
       // draw() just rebuilt p9.lastPositions — bestPos (read below for
       // tooltip placement) still points at the same {x,y}, since dimming

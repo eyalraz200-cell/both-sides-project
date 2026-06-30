@@ -251,6 +251,12 @@ a {
   text-align: right;
 }
 
+.shk-article::after {
+  content: '';
+  display: block;
+  clear: both;
+}
+
 .shk-tag {
   display: inline-block;
   font-size: 13px;
@@ -373,60 +379,50 @@ a {
   margin: 8px 0 16px;
 }
 
-/* CTA — styled to match project.html's dashed-card chrome (see style.css's
-   .text-card-frame): white fill, black dashed border drawn via an injected
-   SVG outline rather than a native dashed border (same reasoning as
-   project.html — the browser's own dash spacing is looser than the site's
-   exact 2px-dash/2px-gap repeat), 8px radius, HadassahFriedlaender heading.
-   See the inline script at the bottom of index.html for the dash overlay. */
-
 .shk-cta {
-  --frame-border-w: 4px;
-  position: relative;
-  background: #fdfcff;
-  border: var(--frame-border-w) solid transparent;
-  border-radius: 8px;
-  margin: 12px 0 32px;
-  padding: 32px;
+  float: left;
+  width: 330px;
+  background: #0e578a;
+  border-radius: 4px;
+  padding: 28px 16px 28px 26px;
+  margin: 0 24px 24px -24px;
 }
 
-.shk-cta-frame-dash {
-  position: absolute;
-  top: calc(-1 * var(--frame-border-w));
-  left: calc(-1 * var(--frame-border-w));
-  width: calc(100% + 2 * var(--frame-border-w));
-  height: calc(100% + 2 * var(--frame-border-w));
-  pointer-events: none;
-}
-
-.shk-cta-inner {
-  max-width: 560px;
+.shk-cta-logo {
+  display: block;
+  width: 58px;
+  height: 22px;
+  filter: brightness(0) invert(1);
+  margin-left: auto;
+  margin-bottom: 22px;
 }
 
 .shk-cta h2 {
-  font: 600 24px 'HadassahFriedlaender', serif;
-  color: #000;
-  margin: 0 0 10px;
+  font: 700 16px/1.35 'Assistant', sans-serif;
+  color: #fff;
+  margin: 0 0 16px;
 }
 
 .shk-cta p {
-  font: 400 16px 'Assistant', sans-serif;
-  line-height: 1.5em;
-  color: rgba(0, 0, 0, 0.6);
-  margin: 0 0 20px;
+  font: 400 16px/24px 'Assistant', sans-serif;
+  color: #fff;
+  margin: 0 0 22px;
 }
 
 .shk-cta-button {
-  display: inline-block;
-  background: #000;
-  color: #fff;
+  display: block;
+  width: 190px;
+  margin-left: auto;
+  background: #fff;
+  color: #000;
   font: 700 16px 'Assistant', sans-serif;
-  padding: 12px 26px;
+  text-align: center;
+  padding: 12px 0;
   border-radius: 4px;
 }
 
 .shk-cta-button:hover {
-  background: #333;
+  background: #f0f0f0;
 }
 
 /* Related */

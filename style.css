@@ -44,6 +44,22 @@ body {
   width: 100%;
 }
 
+/* Dev-only @foldN indicator (see project.html) — fixed to the viewport
+   (not the scrolling .text-col), so it stays put in the upper-left
+   regardless of scroll position. */
+.fold-number-badge {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 10;
+  font: 600 13px 'Assistant', sans-serif;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 4px 8px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
 .text-section {
   position: relative;
   min-height: 100vh;
@@ -75,75 +91,7 @@ body {
   padding: 0;
 }
 
-.text-section.page2-panel {
-  /* No longer a pin-and-hold budget — the title/legend card scrolls through this
-     section at the normal 1:1 rate (see .text-card in this file). The extra height
-     beyond one viewport just gives the legend→canvas morph (page2to3UpdateFromScroll,
-     main.js) room to play out as the card approaches/crosses the top of the viewport,
-     while the next section's card is already scrolling into view from below. */
-  min-height: 160vh;
-  display: block;
-  padding: 0;
-}
 
-.page2-sticky {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  padding: 0 48px;
-  direction: rtl;
-  text-align: right;
-}
-
-.page2-sticky .section-text {
-  min-width: 0;
-}
-
-.text-section.page3-panel {
-  /* No pin here either — extra height gives page3to4UpdateFromScroll (main.js) room
-     to rearrange the centered list of groups into page 4's scattered layout as this
-     section's card crosses the top of the viewport, same continuous-scroll model as
-     .page2-panel above. */
-  min-height: 130vh;
-  display: block;
-  padding: 0;
-}
-
-.page3-sticky {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  padding: 0 48px;
-  direction: rtl;
-  text-align: right;
-}
-
-.page3-sticky .section-text {
-  min-width: 0;
-}
-
-.text-section.page4-panel {
-  /* No pin here either — extra height gives page4UpdateFromScroll (main.js) room
-     to slide the two leftover groups out past the left edge as this section's card
-     crosses the top of the viewport, same continuous-scroll model as .page3-panel
-     above. */
-  min-height: 130vh;
-  display: block;
-  padding: 0;
-}
-
-.page4-sticky {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  padding: 0 48px;
-  direction: rtl;
-  text-align: right;
-}
-
-.page4-sticky .section-text {
-  min-width: 0;
-}
 
 .text-section.page9-panel {
   /* .page9-title-row's own 100vh + .page9-sticky's own 100vh, plus 30vh slack
@@ -190,64 +138,55 @@ body {
   height: 100vh;
 }
 
-/* Axis labels sit centered on the canvas-drawn horizontal divider (midY = H *
-   P9_MID, page9.js), matching Figma's two small labels flanking that line —
-   "קיצוני" clearly weighted, "לגיטימי" left almost invisible, both static
-   regardless of drag state (Figma's before/after frames show the same weights). */
-.page9-axis-label {
-  /* Left-aligned at the same screen-edge offset as the persistent mini-legend
-     (groups-overlay, fold6.x ≈ 31/1512 of the canvas width) so both read as
-     part of one left-edge column instead of the labels floating centered
-     over the divider line. */
-  position: absolute;
-  left: 2.05%;
-  font: 700 14px 'Assistant', sans-serif;
-  white-space: nowrap;
-}
-
-.page9-axis-extreme {
-  /* translateY(-100%) anchors the label's bottom edge (not an arbitrary
-     hand-picked top offset) 7px above the line — the exact mirror of
-     .page9-axis-legit's top edge sitting 7px below it, so both read the
-     same gap regardless of the label's own rendered height/font-size. */
-  top: calc(65vh - 7px);
-  transform: translateY(-100%);
-  color: rgba(134, 134, 135, 0.9);
-}
-
-.page9-axis-legit {
-  top: calc(65vh + 7px);
-  /* Opaque grey, not alpha-blended black — over a plain background this read
-     identically to the old rgba(0,0,0,0.42), but once the legit grid's dots
-     started drawing straight through this area (no more clearance carved out
-     for it), that alpha let the dots underneath show through and wash the
-     label out instead of sitting visibly on top of them. The element's own
-     `opacity` used to be knocked down further still (0.19, matching Figma's
-     "almost invisible" weighting for this label specifically) by a rule
-     below — removed for the same reason: per explicit request, this label
-     should read clearly over the dots now, not blend into them. */
-  color: #c0c0c0;
-}
-
-/* Nothing in the panel — labels, the dragcards tray, the dropped-pill stack —
-   is visible/interactive until .page9-sticky is actually pinned (see
+/* Nothing in the panel — the dragcards tray, the dropped-pill stack — is
+   visible/interactive until .page9-sticky is actually pinned (see
    page9UpdateFromScroll in main.js's "engaged" toggle) — a deliberately later,
    separate condition from the canvas-drawn divider line's own grow-in, which
    starts at the title card crossing viewport-center instead (see that same
    function's comment for why these two can't share one trigger here). The
-   axis labels and the (at-rest empty) dropped-pill stack just fade; the
-   tray gets its own rule below since it also slides up, not just fades. */
-.page9-axis-label,
-.page9-zone-wrap-extreme {
+   (at-rest empty) dropped-pill stack just fades; the tray gets its own rule
+   below since it also slides up, not just fades. */
+.page9-zone-wrap-extreme,
+.page9-header {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.5s ease-out;
 }
 
-.page9-sticky.engaged .page9-axis-label,
-.page9-sticky.engaged .page9-zone-wrap-extreme {
+.page9-sticky.engaged .page9-zone-wrap-extreme,
+.page9-sticky.engaged .page9-header {
   opacity: 1;
   pointer-events: auto;
+}
+
+/* New pinned header (Figma node 201:49243) added alongside, not instead of,
+   .page9-title-row's own full-screen scrolling card above — that one keeps
+   scrolling away as always; this is a second, separate title+subtitle that
+   stays on screen for as long as the panel itself is engaged. Horizontally
+   centered on the viewport (per explicit request) — Figma's own frame
+   measured this off-center, but that read wrong rendered live, so centered
+   wins over the literal Figma offset here. */
+.page9-header {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 4.4vh;
+  text-align: center;
+  direction: rtl;
+}
+
+.page9-header-title {
+  font: 600 20px 'Assistant', sans-serif;
+  color: #000;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.page9-header-subtitle {
+  font: 600 16px 'Assistant', sans-serif;
+  color: rgba(0, 0, 0, 0.3);
+  margin: 4px 0 0;
+  white-space: nowrap;
 }
 
 /* Stack of dropped-into-"extreme" pills, centered directly on the canvas's
@@ -258,7 +197,7 @@ body {
   left: 50%;
   transform: translateX(-50%);
   top: 14vh;
-  bottom: 37vh; /* ends ~2vh above the 65vh divider */
+  bottom: 28.78vh; /* ends ~2vh above the divider — P9_MID (page9.js) is now 719/982 ≈ 73.22vh, unlike the canvas grids this box's own vh value isn't derived from that constant at render time, so it has to be hand-kept in sync whenever P9_MID moves */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -308,57 +247,101 @@ body {
   align-items: center;
 }
 
-/* The pill tray — every category's drag origin, dashed and bottom-centered like
-   Figma's frame (top:749px/982 ≈ 76.3vh, bottom-anchored instead since the box's
-   own height can shift a px or two with font metrics). Sized from its content
-   (the fixed-track grid above, plus the hint text) rather than a hardcoded
-   width, so it always exactly fits the grid p9BuildPanel computed — no gap
-   between the dashed border and the grid, no clipping either. */
+/* The pill tray — every category's drag origin, bottom-centered and flush
+   with the viewport's bottom edge, like Figma's frame (node 201:49246 — y=761
+   to 982 of a 982-tall frame, i.e. its bottom edge IS the frame's bottom edge,
+   no gap). That's also why only the top two corners are rounded — a 0-radius
+   bottom flush against the edge reads as part of the screen's own boundary,
+   not a floating card. A plain filled card, not a dashed box (Figma dropped
+   that treatment for this component specifically) — solid fill + soft
+   ambient shadow. Sized from its content (the fixed-track grid above, plus
+   the hint text) rather than a hardcoded width, so it always exactly fits the
+   grid p9BuildPanel computed. padding-top is wider than the other 3 sides
+   (50px vs the others' 15/29px) to leave room for the floating "פעולות"
+   label (.page9-tray-title, absolutely positioned, see below) and its own
+   divider (.page9-tray-divider) above the pill rows. The three gaps this
+   creates — above the title, title-to-divider, divider-to-first-row — are
+   all the same 10px (G in the comments below), assuming the title's own
+   rendered line-box is ~19px tall (16px/700 Assistant); previous px picks
+   here left those three gaps visibly uneven (12/7/5). */
 .page9-tray {
   position: absolute;
   left: 50%;
-  /* At rest, offset down so engaging looks like the card scrolling up into
-     place rather than just materializing — paired with the opacity fade
-     below, same trigger as the rest of the panel (.engaged on
-     .page9-sticky) but its own transform, not just opacity. */
-  transform: translate(-50%, 32px);
-  bottom: 5vh;
+  /* Slides up continuously with scroll position (--page9-tray-t, a 0..1
+     progress value set every frame in main.js's page9UpdateFromScroll) —
+     shifted down by its own full height at t=0, fully in place at t=1 — per
+     explicit request, this one tracks scroll directly like normal-flow
+     content rather than revealing on the same discrete .engaged trigger the
+     rest of the panel uses. No CSS transition: the JS-driven variable
+     already updates every scroll frame, a transition would just add lag. */
+  transform: translate(-50%, calc((1 - var(--page9-tray-t, 0)) * 100%));
+  bottom: 0;
   width: max-content;
   max-width: calc(100vw - 96px);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 18px;
-  padding: 27px 29px 16px;
-  border: 4px dashed rgba(0, 0, 0, 0.13);
-  border-radius: 8px;
-  background: rgba(253, 252, 255, 0.74);
-  opacity: 0;
+  padding: 50px 29px 15px;
+  border-radius: 20px 20px 0 0;
+  background: #fdfcff;
+  box-shadow: 0 0 3.85px rgba(0, 0, 0, 0.7);
   pointer-events: none;
-  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
 }
 
 .page9-sticky.engaged .page9-tray {
-  transform: translate(-50%, 0);
-  opacity: 1;
   pointer-events: auto;
 }
 
 /* A pill dragged back down gets a dragover class on #page9ZoneBelow itself
    (see dropTargets in p9BuildPanel, page9.js) — but that element has no fill
    of its own, the visible box is its parent .page9-tray, so :has() is needed
-   to actually darken something on screen. Same subtle shift as the extreme
-   zone's own dragover rule below, just on the tray's own base colors. */
+   to actually darken something on screen. Figma's mockup doesn't show a
+   drag-over state for this component, so this just darkens the existing fill
+   rather than inventing border chrome that has no ground truth. */
 .page9-tray:has(#page9ZoneBelow.dragover) {
-  background: rgba(239, 238, 244, 0.78);
-  border-color: rgba(0, 0, 0, 0.2);
+  background: rgb(247, 246, 251);
 }
 
-.page9-tray-hint {
+/* New tray header (Figma node 201:49246) — a floating overlay, not a flex
+   child: Figma positions it absolute (top:16px, right edge at the card's own
+   horizontal center + 23px) so it never participates in the flex column's
+   gap/layout and doesn't push the pill rows down. The card's own padding-top
+   above is widened specifically to leave room for it. */
+.page9-tray-title {
+  position: absolute;
+  top: 10px; /* G */
+  right: calc(50% - 23px);
   font: 700 16px 'Assistant', sans-serif;
-  color: rgba(0, 0, 0, 0.29);
-  text-align: center;
+  color: rgba(0, 0, 0, 0.37);
+  white-space: nowrap;
   margin: 0;
+}
+
+/* Separates the "פעולות" title from the dragcards below it — light (not very
+   dark) and tapered at both ends like the canvas divider line, but with a
+   floor (0.04) rather than fading all the way to fully transparent.
+   Positioned absolute (left:0/right:0 resolve against .page9-tray's padding
+   edges, not its content box) rather than a flex child sized via width:100%
+   — .page9-tray is `width: max-content`, sized to fit the pill rows alone,
+   so a flex child's own width:100% (+ negative margins to bleed past it)
+   never actually reliably reached the card's true outer edges. Anchored at
+   a fixed `top` instead of sitting in-flow — G(10) + titleH(~19) + G(10) =
+   39px down, leaving an equal G(10) gap below it before the first pill row
+   starts at .page9-tray's own 50px padding-top. */
+.page9-tray-divider {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 39px;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.08),
+    rgba(0, 0, 0, 0.16) 20%,
+    rgba(0, 0, 0, 0.16) 80%,
+    rgba(0, 0, 0, 0.08)
+  );
 }
 
 /* Once dropped into the extreme zone, pills stack centered on the divider's
@@ -393,35 +376,53 @@ body {
   margin-bottom: 20px;
 }
 
-/* The extreme zone has no chrome of its own at rest (the tray below it is
-   already a visible dashed box at all times, so it doesn't need this) — show
-   its own dashed boundary only once a pill is actually being dragged, so the
-   target is visible while the cursor is still travelling toward it rather
-   than only once it's already directly overhead (.dragover, below). Sized to
-   --page9-zone-stack-height/-width (set in p9MeasureTrayLayout, page9.js) —
-   the height of all 10 categories stacked at once and the width of the
-   single longest one, not just whatever's actually dropped in it right now,
-   so the box never resizes mid-drag. */
+/* The extreme zone shows its own boundary up front, before the first drop,
+   as an invitation — not just once a pill is actually being dragged
+   (:empty alone covers that initial state; .dragging is still listed too so
+   the box stays visible as a drop target on every *later* drag as well,
+   once the zone already has something in it and :empty no longer matches —
+   this part of the box, the outline/size, is meant to keep showing). Sized
+   to --page9-zone-stack-height/-width (set in p9MeasureTrayLayout,
+   page9.js) — the height of all 10 categories stacked at once and the width
+   of the single longest one, not just whatever's actually dropped in it
+   right now, so the box never resizes mid-drag. */
+#page9ZoneAbove:empty,
 .page9-sticky.dragging #page9ZoneAbove {
   position: relative;
-  border: 2px dashed rgba(0, 0, 0, 0.13);
+  border: 2px solid rgba(0, 0, 0, 0.07);
   border-radius: 8px;
-  background: rgba(247, 246, 250, 0.74);
   height: var(--page9-zone-stack-height);
   width: var(--page9-zone-stack-width);
 }
 
-/* :empty, not just .dragging — once a pill actually lands here this hint
-   would just sit underneath/behind the dropped pills, so it only shows
-   while the zone is still waiting for its first drop. */
-.page9-sticky.dragging #page9ZoneAbove:empty::after {
-  content: "גרור סוגי פעולות קיצוניות לכאן";
+/* Dashed only once actively dragging (any drag, not just into this zone). */
+.page9-sticky.dragging #page9ZoneAbove {
+  border-style: dashed;
+}
+
+/* Idle (:empty, not dragging) fill matches the page background exactly. */
+#page9ZoneAbove:empty {
+  background: #fdfcff;
+}
+
+/* Tinted fill once actively dragging — restored for the non-empty case too
+   (higher specificity than the :empty rule above, so it correctly wins over
+   the page-bg fill on the empty+dragging overlap as well). */
+.page9-sticky.dragging #page9ZoneAbove {
+  background: rgba(247, 246, 250, 0.74);
+}
+
+/* :empty alone (not gated on .dragging) — shows from the very start, before
+   any drop, and disappears the moment the first pill actually lands here
+   (since it'd otherwise sit underneath/behind the dropped pills). */
+#page9ZoneAbove:empty::after {
+  content: "גררו סוגי פעולות קיצוניות לכאן";
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font: 500 16px 'Assistant', sans-serif;
-  color: rgba(0, 0, 0, 0.18);
+  font: 500 18px 'Assistant', sans-serif;
+  color: rgba(0, 0, 0, 0.35);
   white-space: nowrap;
   pointer-events: none;
 }
@@ -430,18 +431,73 @@ body {
   display: none;
 }
 
-/* Figma's dropped-chip chrome differs from the tray pill's, not just by
-   dropping the handle: top/bottom rules only (no left/right), thicker but
-   fainter (2px @ 14% vs the tray's 1px @ 30%), full opacity instead of the
-   tray's 0.78, and darker label text (27% vs the tray's 20% black) — together
-   why a dropped pill reads visibly darker than it did sitting in the tray. */
+/* Dropped-chip chrome, per a series of explicit requests that moved it away
+   from Figma's own dropped-chip node (136:433215) and toward matching the
+   tray pill (187:15505/201:49246) instead:
+   - Text (font-size, color) is no longer overridden — inherits the base
+     .page9-pill rule, same 20px/rgba(0,0,0,0.4) as the tray.
+   - The top/bottom stroke's darkness now matches the tray's own border
+     exactly (rgba(130,130,130,0.3) — see ::before/::after below), not
+     Figma's fainter 0.14.
+   - white-space:nowrap is still needed: --page9-zone-stack-width (set in
+     p9MeasureTrayLayout, page9.js) is measured against the tray pill's own
+     width, and this rule's padding (10px) still differs from the tray's
+     (12px), so a dropped label can still be wider than that budget.
+   What's still genuinely different from the tray pill: top/bottom-only
+   stroke (no left/right, no corner radius — the tray's 4px rounding is a
+   base-class inherit that doesn't apply once there's no boxed border to
+   round), no drop-shadow, and a transparent fill instead of the tray's
+   white (a fixed opaque fill would visibly clash once the zone's own
+   background tints during a drag — see .page9-sticky.dragging
+   #page9ZoneAbove above).
+   The stroke itself is drawn via ::before/::after (a 1px gradient bar), not
+   `border`/`border-image` — tried border-image with a gradient source
+   first, but border-image rendering a gradient with asymmetric per-side
+   widths (nonzero top/bottom, 0 left/right) is a known cross-browser weak
+   spot (notably Safari, the only browser available in this dev environment)
+   and rendered wrong. A plain background-gradient bar has no such ambiguity. */
 #page9ZoneAbove .page9-pill {
+  position: relative;
   border: none;
-  border-top: 2px solid rgba(130, 130, 130, 0.14);
-  border-bottom: 2px solid rgba(130, 130, 130, 0.14);
+  border-radius: 0;
+  white-space: nowrap;
+  padding: 10px;
   background: transparent;
-  opacity: 1;
-  color: rgba(0, 0, 0, 0.27);
+  box-shadow: none;
+}
+
+#page9ZoneAbove .page9-pill::before,
+#page9ZoneAbove .page9-pill::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    rgba(130, 130, 130, 0.08),
+    rgba(130, 130, 130, 0.3) 30%,
+    rgba(130, 130, 130, 0.3) 70%,
+    rgba(130, 130, 130, 0.08)
+  );
+  pointer-events: none;
+}
+
+#page9ZoneAbove .page9-pill::before { top: 0; }
+#page9ZoneAbove .page9-pill::after  { bottom: 0; }
+
+/* Toggled by p9HoverInit (page9.js) on whichever dropped pill matches the
+   currently-hovered dot's category — text goes fully black, calling out
+   which category the hovered dot belongs to. */
+#page9ZoneAbove .page9-pill.is-hover-highlighted {
+  color: #000;
+}
+
+/* .has-hover-highlight (also toggled by p9HoverInit, on the zone itself) dims
+   every OTHER dropped pill's text a touch below its normal rgba(0,0,0,0.4)
+   while one is singled out above, for a bit more contrast against it. */
+#page9ZoneAbove.has-hover-highlight .page9-pill:not(.is-hover-highlighted) {
+  color: rgba(0, 0, 0, 0.25);
 }
 
 /* Extreme zone only — the legit zone below stays a valid drop target (you can
@@ -455,24 +511,23 @@ body {
   border-color: rgba(0, 0, 0, 0.2);
 }
 
-.page9-sticky.dragging #page9ZoneAbove.dragover:empty::after {
-  color: rgba(0, 0, 0, 0.26);
-}
+/* The hint text's own color/size stays exactly as-is on dragover — per
+   explicit request, hovering shouldn't make it look different — so no
+   override here (there used to be one, dimming it to 0.26). */
 
 .page9-pill {
   display: flex;
   align-items: center;
   gap: 6px;
-  font: 600 22px 'Assistant', sans-serif;
-  color: rgba(0, 0, 0, 0.2);
+  font: 600 20px 'Assistant', sans-serif;
+  color: rgba(0, 0, 0, 0.4);
   background: #fff;
   border: 1px solid rgba(130, 130, 130, 0.3);
-  border-radius: 2px;
-  padding: 10px;
-  opacity: 0.78;
+  border-radius: 4px;
+  padding: 12px;
+  box-shadow: 0 1px 1.1px rgba(0, 0, 0, 0.07);
   cursor: grab;
   user-select: none;
-  transition: box-shadow 0.15s;
 }
 
 /* Matches Figma's text-box-trim:trim-both/text-box-edge:cap_alphabetic on this
@@ -486,8 +541,8 @@ body {
   text-box-edge: cap alphabetic;
 }
 
-.page9-pill:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
+.page9-tray .page9-pill:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .page9-pill:active {
@@ -508,7 +563,7 @@ body {
   z-index: 1000;
   pointer-events: none;
   direction: rtl;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.19);
   cursor: grabbing;
 }
 
@@ -528,7 +583,10 @@ body {
   width: 3px;
   height: 3px;
   border-radius: 50%;
-  background: rgba(149, 149, 149, 0.38);
+  /* Close to the pill's own label text color (.page9-pill, rgba(0,0,0,0.4))
+     but a touch lighter, per explicit request — still darker than the
+     original rgba(149,149,149,0.38) it replaced. */
+  background: rgba(0, 0, 0, 0.3);
 }
 
 /* Hover tooltip for a single event dot in page-10's extreme/legit grid (Figma
@@ -728,12 +786,12 @@ body {
   right: 8px;
   transform: translateY(-50%);
   white-space: nowrap;
-  font: 14px 'Assistant', sans-serif;
+  font: 16px 'Assistant', sans-serif;
   color: rgba(0, 0, 0, 0.9);
   opacity: 0;
 }
 
-/* Figma's intro screen (revised, node 167:90164 — was 146:105164) is a centered
+/* Figma's intro screen (revised, node 217:9176 — was 167:90164, 146:105164) is a centered
    full-width cover, not the right-aligned 480px sidebar that pages 1-7 use — so
    #page-0's content scrolls in normal flow like every other fold's title
    block, rather than a fixed full-viewport overlay faded by currentPage —
@@ -749,54 +807,58 @@ body {
   pointer-events: none;
 }
 
-/* The dot column itself — see buildPage0Dots in page1.js, which sets each
-   one's top/left inline. */
-.page0-dot {
-  position: absolute;
-  width: 5px;
-  height: 5px;
-}
-
-/* Continuation of the same two dot columns below the first viewport's worth
-   (see buildPage0DotsExtra in page1.js) — a real block-flow element, not
-   another absolutely-positioned overlay, so it actually adds scrollable
-   height to #page-0 and pushes fold2 down rather than just drawing more dots
-   on top of existing space. Height is set inline by page1.js (dot count *
-   step), not hardcoded here, so the two stay in sync from one source. */
-.page0-dots-extra {
-  position: relative;
-  width: 100%;
+/* The dot columns' fixed-to-viewport layer (see the comment above
+   buildPage0AllDots in page1.js for why this isn't normal-flow content) —
+   same position:fixed/inset:0/z-index:0/pointer-events:none convention as
+   .groups-overlay. Opacity is set every frame from main.js's updateGroups
+   (1 - fold2Trigger's progress), not a CSS transition, same reasoning as
+   every other continuously-JS-driven opacity in this file. */
+.page0-dots-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
   pointer-events: none;
 }
 
-/* Overrides .text-section's default 0 48px padding — the center-anchored
-   math above needs .page0-overlay's box to be the *true* full viewport
-   width, same as when it was position: fixed; inset: 0. Also overrides its
-   default flex-direction: row — #page-0 now has two stacked children
-   (.page0-overlay, .page0-dots-extra below), and row direction was placing
-   them side by side instead of stacking, capping the section's height at
-   the taller of the two instead of their sum. */
-#page-0 {
-  padding: 0;
-  flex-direction: column;
+/* Each dot itself — see buildPage0AllDots in page1.js, which sets every
+   one's top/left/background inline. position:absolute resolves against
+   .page0-dots-overlay (its nearest positioned — fixed counts — ancestor). */
+.page0-dot {
+  position: absolute;
+  width: 7px;
+  height: 7px;
 }
 
-/* Logo swapped again (node 181:83, "שקוף_לוגו_shakoof_logo 1") and moved from
-   top-center to the frame's top-right corner — 30px in from the right edge
-   (1512 frame width − 1482 right edge of the node), 428.5px above the
-   frame's vertical center (matches every other page0 element's H/2-relative
-   vertical anchor). The new asset is a real 72x85 export that already
-   matches the Figma node's box 1:1, so unlike the old wordmark there's no
-   stretch/crop math or blend-mode correction needed — just place it.
-   Width knocked down from the Figma-literal 72px to 48px per explicit
-   request (read too big on screen) — a deliberate deviation from the node's
-   measured size, not a mistake. */
+/* Overrides .text-section's default 0 48px padding — the center-anchored
+   math the page0-* rules below use needs .page0-overlay's box to be the
+   *true* full viewport width, same as when it was position: fixed; inset: 0. */
+#page-0 {
+  padding: 0;
+}
+
+/* Logo recropped per node 217:9176 — swapped to the wordmark-only asset
+   (images/skuff-wordmark.png, the same pre-cropped "שקוף" glyphs already used
+   by index.html's .shk-logo-img) instead of the full elephant+tagline export,
+   since Figma's box (91x34, 2.68:1) only ever showed the bare wordmark. Still
+   anchored top-right, 30px in from the right edge, but the vertical anchor
+   needed recomputing for the new box: Figma's box top is 32px from the frame
+   top (459px above the frame's vertical center); top is expressed as the
+   box's center (compensating for the translateY(-50%) below) by subtracting
+   half this box's own rendered height (91px wide / 2.617 aspect ≈ 34.8px
+   tall, so 17.4px half-height) from that 459px.
+   position: fixed (not absolute, unlike .page0-title/.page0-subtitle, which
+   stay normal-flow and scroll away) — per explicit instruction the logo
+   doesn't scroll up with the rest of @fold1, it fades out in place instead
+   (page0UpdateFromScroll in main.js sets its opacity directly). The
+   calc(50% - ...) math is unchanged since .page0-overlay's box already
+   matched the viewport exactly at scroll 0 — fixed just keeps that same
+   computed position glued to the viewport at any scroll position. */
 .page0-logo {
-  position: absolute;
+  position: fixed;
   right: 30px;
-  top: calc(50% - 428.5px);
+  top: calc(50% - 441.6px);
   transform: translateY(-50%);
-  width: 48px;
+  width: 91px;
 }
 
 .page0-logo-img {
@@ -805,67 +867,68 @@ body {
   height: auto;
 }
 
-/* Title bottom edge sits 129px above the frame's vertical center (was 57px in
-   the old node — the revised design moved the title up to make room for the
-   taller dot column + scroll prompt below). Dot column (page1.js,
-   drawPage0Dots) and .page0-scroll below share this same H/2-relative
-   reference so everything stays in sync at any viewport height. */
-.page0-text {
-  position: absolute;
-  left: 50%;
-  bottom: calc(50% + 129px);
-  transform: translateX(calc(-50% + 25.5px));
-  display: flex;
-  flex-direction: row;
-  align-items: flex-end;
-  gap: 11px;
-  direction: rtl;
-}
-
-/* HadassahFriedlaender's normal line-height leaves a bigger gap below the
-   last line's glyphs than Assistant's does at the subtitle's size, so even
-   though both boxes bottom-align at the same y (align-items: flex-end on
-   .page0-text), the rendered ink doesn't — measured an 8px gap between the
-   two, hence the nudge to bring the title's actual text flush with the
-   subtitle's, matching Figma's single shared bottom line. */
+/* Title/subtitle no longer share a bottom edge (node 217:9176 drops the old
+   node's flush-bottom pairing) — each is independently top-anchored,
+   matching Figma's own absolute top values converted to the project's
+   H/2-relative convention (982px reference frame, center at 491px):
+   title top 233px → 258px above center; subtitle top 312px → 179px above
+   center. Horizontal: title's left edge sits 8px right of center; subtitle's
+   right edge sits 10px left of center (an 18px gap between them, not the old
+   11px) — subtitle uses the same left + translateX(-100%) right-edge-anchor
+   trick Figma's own node uses, rather than a literal `right` value, to stay
+   center-relative. */
 .page0-title {
+  position: absolute;
+  left: calc(50% + 8px);
+  /* Nudged up an extra 28px (286 vs the Figma-literal 258) so the gap below
+     the title to its dot column matches the gap below the subtitle to its
+     own dot column (both ~19.7px) — title and subtitle render at different
+     heights (3 lines @42px vs 4 @18px), so their Figma-literal top values
+     alone left the title's dot column overlapping its text by ~8px while
+     the subtitle's sat a real ~20px clear. Per explicit user request. */
+  top: calc(50% - 286px);
+  width: 185px;
   font: 600 42px 'HadassahFriedlaender', serif;
   color: #000;
   text-align: left;
-  width: 209px;
   margin: 0;
-  transform: translateY(8px);
 }
 
+/* @fold1's page-load entrance (playPage0Entrance, main.js) sets this
+   element's own transform directly every animation frame (translateY from
+   100vh down to 0, p9Ease'd) — deliberately no CSS transition here, since
+   one would just re-ease motion that's already eased in JS, the same
+   "double-easing" this file avoids everywhere else continuously-JS-driven
+   values are set (see .page0-dot, .group-swatch, etc.). */
 .page0-subtitle {
+  position: absolute;
+  left: calc(50% - 10px);
+  transform: translateX(-100%);
+  top: calc(50% - 179px);
+  width: 125px;
   font: 300 18px 'Assistant', sans-serif;
   color: #000;
   text-align: right;
-  width: 155px;
   margin: 0;
 }
 
-/* Scroll-down cue (node 181:168) moved from the dot column's center column to
-   the frame's top-right-aligned right edge — same 30px right margin as
-   .page0-logo above, so the logo and this caption sit on one shared right
-   column, matching Figma. Bounding box of arrow + caption together (78x72),
-   anchored as one unit at the frame's own position for it — children are
-   positioned relative to this box's own top-left, same local-frame
-   convention as before. Copy also changed (now one phrase, "גללו מטה כדי
-   להתחיל", wrapping naturally across 3 lines at the 63px caption width
-   instead of the old hand-broken 3-phrase copy) and the arrow now sits beside
-   the wrapped copy's last line rather than below a separate caption block. */
-/* Anchored from the viewport's bottom edge (not the H/2-relative scheme every
-   other page0-overlay element uses) so the scroll prompt — the one thing on
-   this fold a user actually needs to see to know to keep scrolling — never
-   gets pushed off-screen on short viewports the way calc(50% + Npx) would
-   (at 982px-tall reference frame the two are equivalent: top 904px = bottom
-   6px). */
+/* Scroll-down cue — just the bouncing arrow now (the "גללו מטה כדי להתחיל"
+   caption was dropped per explicit request), repositioned from the frame's
+   right margin to sit just right of col. 1, the rightmost dot column
+   (centerX calc(50% + 13.5px), right edge at +17px) — a 10px gap puts the
+   arrow's own rendered center (wrapper left + the arrow's own 6px inset) at
+   +27px. Anchored from the viewport's bottom edge (not the H/2-relative
+   scheme every other page0-overlay element uses) so the cue never gets
+   pushed off-screen on short viewports.
+   position: fixed, same reasoning/mechanism as .page0-logo above — fades
+   out in place (page0UpdateFromScroll, main.js) rather than scrolling away,
+   since its whole job (telling the user to scroll) is done the moment they
+   actually start scrolling. */
 .page0-scroll {
-  position: absolute;
-  right: 30px;
+  position: fixed;
+  left: calc(50% + 31px);
   bottom: 6px;
-  width: 78px;
+  width: 14px;
   height: 72px;
 }
 
@@ -877,16 +940,12 @@ body {
   animation: page0ScrollArrowMove 1.8s ease-in-out infinite;
 }
 
-/* Travels between the caption's own top and bottom edges (.page0-scroll-text:
-   top 0, height ~70px for its 3 lines at 18px/1.3 line-height) — offset by
-   the icon's own half-height after its 90deg rotation (the SVG is 13.5px wide
-   pre-rotation, so ~6.75px) so its rendered edges land on the text bounds,
-   not its center. Same travel distance (48.5px) and timing as before this
-   fold's reposition — only the start/end points shifted to match the
-   caption's new top (0 instead of 20). */
+/* Travels top 28px to 52.5px within .page0-scroll's 72px-tall box (a 24.5px
+   bounce, shorter than the original 48.5px per explicit request — same
+   midpoint, same 1.8s duration, just a shorter throw). */
 @keyframes page0ScrollArrowMove {
   0% {
-    top: 16px;
+    top: 28px;
     opacity: 0;
   }
   20% {
@@ -896,21 +955,9 @@ body {
     opacity: 1;
   }
   100% {
-    top: 64.5px;
+    top: 52.5px;
     opacity: 0;
   }
-}
-
-.page0-scroll-text {
-  position: absolute;
-  right: 0;
-  top: 0;
-  width: 63px;
-  font: 600 18px 'Assistant', sans-serif;
-  color: rgba(0, 0, 0, 0.44);
-  text-align: right;
-  line-height: 1.3;
-  margin: 0;
 }
 
 #page-0 .section-text {
@@ -952,7 +999,7 @@ body {
 }
 
 .group-item.is-dimmed .group-label {
-  color: rgba(0, 0, 0, 0.56);
+  color: #000;
 }
 
 /* Hidden measurement-only scaffold for fold 5's row layout — never painted
