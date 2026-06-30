@@ -102,13 +102,13 @@ function p9LineRunLoop() {
   if (p9LinePhaseStart === null) return;
   const raw = p9LineCurrentRaw();
   page9LineT = p9Ease(raw);
-  if (currentPage === 10) draw();
+  if (currentPage === 11) draw();
   if (raw !== p9LineToT) {
     requestAnimationFrame(p9LineRunLoop);
   } else {
     p9LineFromT      = p9LineToT;
     p9LinePhaseStart = null;
-    if (currentPage === 10) draw();
+    if (currentPage === 11) draw();
   }
 }
 
@@ -178,12 +178,12 @@ function p9Ease(t) {
 function p9RunAnimLoop() {
   if (!p9.anim) return;
   const t = (performance.now() - p9.anim.start) / p9.anim.duration;
-  if (currentPage === 10) draw();
+  if (currentPage === 11) draw();
   if (t < 1) {
     requestAnimationFrame(p9RunAnimLoop);
   } else {
     p9.anim = null;
-    if (currentPage === 10) draw();
+    if (currentPage === 11) draw();
   }
 }
 
@@ -195,7 +195,7 @@ let p9CountAnim = null; // { fromLeft, toLeft, fromRight, toRight, start, durati
 
 function p9CountRunLoop() {
   if (!p9CountAnim) return;
-  if (currentPage === 10) draw(); // draw() self-clears p9CountAnim via p9GetDisplayedCounts
+  if (currentPage === 11) draw(); // draw() self-clears p9CountAnim via p9GetDisplayedCounts
   if (p9CountAnim) requestAnimationFrame(p9CountRunLoop);
 }
 
@@ -849,7 +849,7 @@ function p9BuildPanel() {
         baseRight,
       };
       p9CountAnim = null; // stagger drives the count directly — no separate count-up
-      if (currentPage === 10) p9RunAnimLoop();
+      if (currentPage === 11) p9RunAnimLoop();
 
     } else {
       // ── Dropping back into legit ───────────────────────────────────────────
@@ -865,7 +865,7 @@ function p9BuildPanel() {
 
       const DOT_DURATION = 3000;
       p9.anim = { from: new Map(p9.lastPositions), start: nowMs, duration: DOT_DURATION };
-      if (currentPage === 10) p9RunAnimLoop();
+      if (currentPage === 11) p9RunAnimLoop();
 
       const newCounts  = p9ExtremeCountsNow();
       const thisAnim   = p9CountAnim = {
@@ -1089,14 +1089,14 @@ function p9HoverInit() {
       p9.hoverDimT = hoverDimTarget > p9.hoverDimT
         ? Math.min(hoverDimTarget, p9.hoverDimT + delta)
         : Math.max(hoverDimTarget, p9.hoverDimT - delta);
-      if (currentPage === 10) draw();
+      if (currentPage === 11) draw();
       if (p9.hoverDimT !== hoverDimTarget) {
         hoverDimRaf = requestAnimationFrame(step);
       } else {
         hoverDimRaf = null;
         if (p9.hoverDimT === 0) {
           p9.hoverDimCategoryIdx = null;
-          if (currentPage === 10) draw();
+          if (currentPage === 11) draw();
         }
       }
     }
@@ -1163,7 +1163,7 @@ function p9HoverInit() {
   }
 
   function onMove(e) {
-    if (currentPage !== 10 || p9.anim) { hide(); return; }
+    if (currentPage !== 11 || p9.anim) { hide(); return; }
 
     const rect = canvasEl.getBoundingClientRect();
     const mx = e.clientX - rect.left;
@@ -1239,7 +1239,7 @@ function p9HoverInit() {
   // already hides the tooltip whenever nothing's under the cursor — so a
   // separate pointerleave handler isn't needed either.
   window.addEventListener("pointermove", onMove);
-  window.addEventListener("scroll", () => { if (currentPage !== 10) hide(); }, { passive: true });
+  window.addEventListener("scroll", () => { if (currentPage !== 11) hide(); }, { passive: true });
 }
 
 p9HoverInit();
