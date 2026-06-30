@@ -68,6 +68,7 @@ function init() {
   canvas.height = rect.height * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   draw();
+  updateFoldNumberBadge();
 }
 
 // .text-card-frame's dashed border (see style.css for why this isn't plain
@@ -117,11 +118,19 @@ function updateTextCardFrameDashes() {
 // ── Scrollytelling: which text section is active drives the pinned canvas ──
 const sections = Array.from(document.querySelectorAll(".text-section"));
 
+const foldNumberBadge = document.getElementById("foldNumberBadge");
+
+function updateFoldNumberBadge() {
+  // @foldN is this project's own canonical fold numbering (see CLAUDE.md's
+  // fold reference table) — 1-indexed, always currentPage's id + 1.
+  if (foldNumberBadge) foldNumberBadge.textContent = `@fold${currentPage + 1}`;
+}
 
 function setActivePage(page) {
   if (page === currentPage) return;
   currentPage = page;
   updateGroups();
+  updateFoldNumberBadge();
   draw();
 }
 
