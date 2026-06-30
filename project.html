@@ -14,7 +14,7 @@
   <div class="layout">
     <div class="graphic-col">
       <canvas id="canvas"></canvas>
-      <!-- Single persistent overlay for all 9 groups across the legend (fold 2)
+      <!-- Single persistent overlay for all 12 groups across the legend (fold 2)
            through fold 5 — one set of DOM nodes that's continuously
            repositioned/restyled as the user scrolls, rather than separate
            per-fold overlays crossfading into each other (see GROUPS/
@@ -29,7 +29,7 @@
            taking the cluster's place once it settles into fold6's left
            mini-legend — see FOLD6_SQUARES_Y/layoutFold6Squares in main.js. -->
       <div class="fold6-squares-overlay" id="fold6SquaresOverlay" aria-hidden="true"></div>
-      <!-- Hover tooltip for page-10's drag-and-drop event dots (date + Hebrew
+      <!-- Hover tooltip for page-11's drag-and-drop event dots (date + Hebrew
            description) — positioned/shown by p9HoverInit in page9.js. -->
       <div class="page9-tooltip" id="page9Tooltip" aria-hidden="true">
         <div class="page9-tooltip-date"></div>
@@ -56,46 +56,51 @@
       </section>
       <section class="text-section" data-page="1" id="page-1">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">בישראל פועלות קבוצות פוליטיות רבות, המתגבשות סביב זהות, אינטרסים או עמדות פוליטיות משותפות</h2>
+          <h2 class="section-title text-card-frame">בישראל פועלות קבוצות פוליטיות רבות, המתגבשות סביב זהות, אינטרסים או עמדות פוליטיות משותפות. כאן מוצגות כמה מהן</h2>
         </div>
       </section>
       <section class="text-section" data-page="2" id="page-2">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">הזירה הפוליטית לא תמיד מתחלקת למחנות ברורים</h2>
+          <h2 class="section-title text-card-frame">כל קבוצה כוללת מגוון של אנשים, זרמים ודעות. לצורך ההשוואה, נתייחס לכל קבוצה כאל יחידה אחת.</h2>
         </div>
       </section>
       <section class="text-section" data-page="3" id="page-3">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">אבל, בשנים האחרונות מתחדדת חלוקה בין קבוצות שונות לשני מחנות פוליטיים מנוגדים</h2>
+          <h2 class="section-title text-card-frame">הזירה הפוליטית לא תמיד מתחלקת למחנות ברורים</h2>
         </div>
       </section>
       <section class="text-section" data-page="4" id="page-4">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">לא כל הקבוצות משתייכות לחלוקה הזו, כאן נתמקד באלו שכן</h2>
+          <h2 class="section-title text-card-frame">אבל, בשנים האחרונות מתחדדת חלוקה של קבוצות שונות לשני מחנות פוליטיים מנוגדים</h2>
         </div>
       </section>
       <section class="text-section" data-page="5" id="page-5">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">אספנו תיעודים של פעולות פוליטיות משני צדי המפה, מתחילת 2023 ועד היום</h2>
+          <h2 class="section-title text-card-frame">לא כל הקבוצות משתייכות לחלוקה הזו, כאן נתמקד באלו שכן</h2>
         </div>
       </section>
       <section class="text-section" data-page="6" id="page-6">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">כל ריבוע מייצג פעולה פוליטית בשטח - כזו שהתרחשה ותועדה במרחב הציבורי</h2>
+          <h2 class="section-title text-card-frame">אספנו תיעודים של פעולות פוליטיות משני צדי המפה, מתחילת 2023 ועד היום</h2>
         </div>
       </section>
       <section class="text-section" data-page="7" id="page-7">
         <div class="section-text text-card">
+          <h2 class="section-title text-card-frame">כל ריבוע מייצג פעולה פוליטית בשטח - כזו שהתרחשה ותועדה במרחב הציבורי</h2>
+        </div>
+      </section>
+      <section class="text-section" data-page="8" id="page-8">
+        <div class="section-text text-card">
           <h2 class="section-title text-card-frame">צבע הריבוע מציין את הקבוצה שביצעה אותה</h2>
         </div>
       </section>
-      <section class="text-section page7-scrub" data-page="8" id="page-8"></section>
-      <section class="text-section" data-page="9" id="page-9">
+      <section class="text-section page7-scrub" data-page="9" id="page-9"></section>
+      <section class="text-section" data-page="10" id="page-10">
         <div class="section-text text-card">
           <h2 class="section-title text-card-frame">פעולות פוליטיות נבדלות זו מזו במטרה, באמצעים ובאופן הפעולה.<br>אבל הגבול בין מחאה לגיטימית לפעולה קיצונית לא תמיד מוסכם</h2>
         </div>
       </section>
-      <section class="text-section page9-panel" data-page="10" id="page-10">
+      <section class="text-section page9-panel" data-page="11" id="page-11">
         <div class="page9-title-row">
           <div class="section-text text-card">
             <h2 class="section-title text-card-frame">איפה עובר הגבול בעיניכם?</h2>

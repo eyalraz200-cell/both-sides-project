@@ -32,14 +32,14 @@ function p8CurrentT() {
 
 function p8RunAnimLoop() {
   if (p8PhaseStart === null) return;
-  if (currentPage === 9) draw();
+  if (currentPage === 10) draw();
   if (p8CurrentT() !== p8PhaseToT) {
     requestAnimationFrame(p8RunAnimLoop);
   } else {
     p8PhaseFromT = p8PhaseToT; // settle here — p8CurrentT() reads this once phaseStart is null
     p8PhaseStart = null;
     if (p8PhaseToT === 0) p8Engaged = false; // back at rest — forward can fire again later
-    if (currentPage === 9) draw(); // final frame, locked at rest
+    if (currentPage === 10) draw(); // final frame, locked at rest
   }
 }
 

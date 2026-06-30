@@ -203,14 +203,14 @@ let p7AxisReadyScrollY = null;
 const P7_ENGAGE_EXTRA_PUSH_PX = 100; // small extra scroll past axis-ready before squares engage
 
 // Updates p7AxisReadyScrollY and p7HasEngaged — called from drawPage7
-// (currentPage 8) and drawFold9 (main.js, currentPage 7) alike, since the
-// title card this depends on belongs to fold 8/#page-7. p7HasEngaged is
+// (currentPage 9) and drawFold9 (main.js, currentPage 8) alike, since the
+// title card this depends on belongs to fold 9/#page-8. p7HasEngaged is
 // recomputed fresh every call, not a one-way latch, so scrolling back up
 // un-engages it again and scrolling forward replays the same
 // axis-then-squares sequence — calling this from both draw functions (rather
 // than only drawPage7) is what makes that reversal actually take effect
-// immediately while currentPage is 7, instead of freezing at whatever it last
-// was the moment currentPage left 8.
+// immediately while currentPage is 8, instead of freezing at whatever it last
+// was the moment currentPage left 9.
 function p7UpdateEngagement() {
   if (fold9SquaresFadeTrigger.currentRaw() === 1) {
     if (p7AxisReadyScrollY === null) p7AxisReadyScrollY = window.scrollY;
@@ -235,15 +235,15 @@ function p7AnyAnimActive() {
   return false;
 }
 
-// page8 (index 9) renders by calling drawPage7 directly with currentDate forced to
+// page8 (index 10) renders by calling drawPage7 directly with currentDate forced to
 // maxDate (see page8.js) — it's a continuation of page7's view, not a separate one, so
 // the cascade must keep redrawing there too, or it freezes the instant the user
 // scrolls into page8 mid-flight instead of finishing "off screen" as page7 intended.
-// Fold 9 (#page-7, currentPage 7 — drawFold9 in main.js, just before the real
+// Fold 9 (#page-8, currentPage 8 — drawFold9 in main.js, just before the real
 // timeline) is included too, now that its own axis build-in (p7AxisIntroT
-// above) can be playing while it's on screen. Fold 7 (#page-6, drawFold7) has
+// above) can be playing while it's on screen. Fold 7 (#page-7, drawFold7) has
 // no page7 content on screen at all, so it's still deliberately excluded.
-function p7ShouldRedrawForAnim() { return currentPage === 7 || currentPage === 8 || currentPage === 9; }
+function p7ShouldRedrawForAnim() { return currentPage === 8 || currentPage === 9 || currentPage === 10; }
 
 function p7StartAnimLoop() {
   if (p7AnimRunning) return;
@@ -401,7 +401,7 @@ function drawPage7(ctx, W, H) {
   // The very first month (minDate's month) starts out "current" before the user has
   // scrolled into page7 at all — p7HasEngaged (updated by p7UpdateEngagement,
   // called from both here and drawFold9 in main.js so it stays accurate even
-  // while currentPage is 7) only flips true once fold 9's title card has
+  // while currentPage is 8) only flips true once fold 9's title card has
   // scrolled P7_ENGAGE_EXTRA_PUSH_PX past the top of the viewport, AND
   // fold9SquaresFadeTrigger (the same gate the axis itself waits for) has settled.
   p7UpdateEngagement();
@@ -878,7 +878,7 @@ function p7HoverInit() {
   // position. Called both from onMove (pointer moved) and from p7RecheckHover
   // (canvas just redrew — new dots may have appeared under a stationary cursor).
   function doHitTest() {
-    if (lastCX === null || currentPage !== 8) { hide(); return; }
+    if (lastCX === null || currentPage !== 9) { hide(); return; }
 
     const rect = canvasEl.getBoundingClientRect();
     const mx = lastCX - rect.left;
@@ -946,7 +946,7 @@ function p7HoverInit() {
   // DOM overlays can sit on top of the canvas depending on scroll position.
   window.addEventListener("pointermove", onMove);
   window.addEventListener("scroll", () => {
-    if (currentPage !== 8) hide();
+    if (currentPage !== 9) hide();
   }, { passive: true });
 }
 

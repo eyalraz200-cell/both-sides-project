@@ -4,10 +4,10 @@ window.scrollTo(0, 0);
 const canvas = document.getElementById("canvas");
 const ctx    = canvas.getContext("2d");
 
-// drawFold5/drawFold7/drawFold9 are tiny inline background-only functions
-// (see below) — these folds' only visual content is the DOM overlay, like
-// drawPage2/drawPage3/drawPage4.
-const PAGES = [drawPage1, drawPage2, drawPage3, drawPage4, drawFold5, drawPage5, drawFold7, drawFold9, drawPage7, drawPage8, drawPage9];
+// drawFoldNew3/drawFold5/drawFold7/drawFold9 are tiny inline background-only
+// functions (see below) — these folds' only visual content is the DOM overlay,
+// like drawPage2/drawPage3/drawPage4.
+const PAGES = [drawPage1, drawPage2, drawFoldNew3, drawPage3, drawPage4, drawFold5, drawPage5, drawFold7, drawFold9, drawPage7, drawPage8, drawPage9];
 let currentPage = 0;
 
 function drawBackground(ctx, W, H) {
@@ -23,7 +23,13 @@ function drawBackground(ctx, W, H) {
   // viewport — canvas + text column together — so there's no seam at the column edge.
 }
 
-// Fold 5 (id #page-4) — see GROUPS/updateGroups below for its actual content,
+// New fold (id #page-2) — just the split-dot animation, which runs entirely in
+// DOM via updateGroups. Plain background only here.
+function drawFoldNew3(ctx, W, H) {
+  drawBackground(ctx, W, H);
+}
+
+// Fold 5 (id #page-5) — see GROUPS/updateGroups below for its actual content,
 // all DOM overlay, nothing canvas-drawn.
 function drawFold5(ctx, W, H) {
   drawBackground(ctx, W, H);
@@ -273,13 +279,13 @@ function playPage0Entrance() {
   requestAnimationFrame(frame);
 }
 
-// ── Page 7's tall section (#page-8) is a pure scroll-driver: scroll position
+// ── Page 7's tall section (#page-9) is a pure scroll-driver: scroll position
 // -> date. Its own intro title used to be fused in here as a static header
-// above the timeline's month list — it's now its own earlier fold (#page-6,
-// "כל ריבוע..."), with fold 9 ("צבע הריבוע...", #page-7) after it, so the
+// above the timeline's month list — it's now its own earlier fold (#page-7,
+// "כל ריבוע..."), with fold 9 ("צבע הריבוע...", #page-8) after it, so the
 // real per-event reveal below doesn't engage until both have been scrolled
 // past. ──
-const page7Section = document.getElementById("page-8");
+const page7Section = document.getElementById("page-9");
 let page7Ticking = false;
 
 function page7UpdateFromScroll() {
@@ -300,7 +306,7 @@ function page7UpdateFromScroll() {
   cur.setUTCDate(cur.getUTCDate() + Math.round(t * totalDays));
   p7.currentDate = cur.toISOString().slice(0, 10);
 
-  if (currentPage === 8) { draw(); p7RecheckHover(); }
+  if (currentPage === 9) { draw(); p7RecheckHover(); }
 }
 
 window.addEventListener("scroll", () => {
@@ -361,10 +367,18 @@ const GROUPS_FRAME_W = 1512, GROUPS_FRAME_H = 982;
 // set of 8 dots, no clumps" (fold3) at once, since one pair of coordinates
 // now has to serve both frames.
 const GROUPS = [
-  { color: "#008C99", label: "ערבים ישראלים",         fold3: { x: 1088, y: 786 },
+  { color: "#008C99", label: "ערבים ישראלים",            fold3: { x: 1088, y: 786 },
     fold4: { x: 1088, y: 786, dimmed: true,  swatchFirst: true }, row: true },
-  { color: "#7c3aed", label: "יוצאי אתיופיה",         fold3: { x: 1225, y: 167 },
+  { color: "#7c3aed", label: "יוצאי אתיופיה",            fold3: { x: 1225, y: 167 },
     fold4: { x: 1225, y: 167, dimmed: true,  swatchFirst: true }, row: true },
+  { color: "#DD1111", label: "יוצאי ברית המועצות",       fold3: { x: 280,  y: 210 },
+    fold4: { x: 280,  y: 210, dimmed: true,  swatchFirst: true }, row: true },
+  { color: "#EE8800", label: "בדואים בנגב",              fold3: { x: 1370, y: 560 },
+    fold4: { x: 1370, y: 560, dimmed: true,  swatchFirst: true }, row: true },
+  { color: "#00AAAA", label: "מבקשי מקלט",               fold3: { x: 770,  y: 900 },
+    fold4: { x: 770,  y: 900, dimmed: true,  swatchFirst: true }, row: true },
+  { color: "#BB0055", label: "תושבי מזרח ירושלים",       fold3: { x: 380,  y: 370 },
+    fold4: { x: 380,  y: 370, dimmed: true,  swatchFirst: true }, row: true },
   // `actor` (the 5 camp groups only) is the events.json/P7_COLORS join key —
   // see p7ActorColor in page7.js, which reads this group's `color` directly
   // so the real per-event canvas dots always match this legend, including
@@ -387,7 +401,7 @@ const GROUPS = [
     fold4: { x: 242,  y: 825, dimmed: true,  swatchFirst: true }, row: true },
 ];
 
-// @fold1's dot columns (buildPage0AllDots, page1.js) read 8 of their 200 dot
+// @fold1's dot columns (buildPage0AllDots, page1.js) read 12 of their 200 dot
 // colors live from GROUPS above — called from here, not from page1.js
 // itself, since page1.js's <script> tag loads before this one and GROUPS
 // doesn't exist yet at that point.
@@ -424,10 +438,21 @@ const groupItems = GROUPS.map(({ color }) => {
   swatch.style.background = color;
   const label = document.createElement("span");
   label.className = "group-label";
+  // Two satellite swatches for the new-fold split animation — sit at top=0,
+  // size=0 at rest; expand outward (above + below) as foldNew3SplitTrigger
+  // fires. Same color as the main swatch.
+  const satTop = document.createElement("span");
+  satTop.className = "group-swatch-split";
+  satTop.style.cssText = `background:${color};width:0;height:0;position:absolute;left:0;top:0`;
+  const satBot = document.createElement("span");
+  satBot.className = "group-swatch-split";
+  satBot.style.cssText = `background:${color};width:0;height:0;position:absolute;left:0;top:0`;
   el.appendChild(swatch);
   el.appendChild(label);
+  el.appendChild(satTop);
+  el.appendChild(satBot);
   groupsOverlayEl.appendChild(el);
-  return { el, label, swatch };
+  return { el, label, swatch, satTop, satBot };
 });
 
 // Fold 5's row order (FOLD5_ROW_X/Y, the Figma anchor for #fold5-top-row,
@@ -438,7 +463,7 @@ const groupItems = GROUPS.map(({ color }) => {
 // label-width-dependent spacing) is resolved by an actual flexbox on a
 // hidden measurement scaffold (.fold5-top-row, never painted — see
 // updateFold5RowTargets), not hand-computed.
-const FOLD5_ROW_ORDER = ["#eacc0c", "#7c3aed", "#008C99"];
+const FOLD5_ROW_ORDER = ["#eacc0c", "#DD1111", "#7c3aed", "#00AAAA", "#008C99", "#BB0055", "#EE8800"];
 const FOLD5_ROW_X = 417, FOLD5_ROW_Y = 896;
 
 const fold5RowEl = document.createElement("div");
@@ -577,20 +602,21 @@ function layoutFold6Squares(W, H) {
   });
 }
 
-const page2TitleCardEl = document.querySelector("#page-1 .text-card");
-const page3TitleCardEl = document.querySelector("#page-2 .text-card");
-const page4TitleCardEl = document.querySelector("#page-3 .text-card");
-const page5TitleCardEl = document.querySelector("#page-4 .text-card");
-const page6TitleCardEl = document.querySelector("#page-5 .text-card");
-const page7TitleCardEl = document.querySelector("#page-7 .text-card");
-// Fold 7's own card (#page-6, "כל ריבוע מייצג..." — the timeline-intro title,
-// not to be confused with page7TitleCardEl above, which is fold 9's #page-7
+const page2TitleCardEl  = document.querySelector("#page-1 .text-card");
+const pageNew3TitleCardEl = document.querySelector("#page-2 .text-card");
+const page3TitleCardEl  = document.querySelector("#page-3 .text-card");
+const page4TitleCardEl  = document.querySelector("#page-4 .text-card");
+const page5TitleCardEl  = document.querySelector("#page-5 .text-card");
+const page6TitleCardEl  = document.querySelector("#page-6 .text-card");
+const page7TitleCardEl  = document.querySelector("#page-8 .text-card");
+// Fold 7's own card (#page-7, "כל ריבוע מייצג..." — the timeline-intro title,
+// not to be confused with page7TitleCardEl above, which is fold 9's #page-8
 // card) drives the fold-6 squares' labels fading IN, mirroring fold9Trigger
 // fading them back out below — previously this had no card of its own and
 // just snapped on the instant fold6Trigger settled, which (now that that's a
 // fixed ~1s tween instead of a scroll-coupled one) finishes long before the
 // user actually reaches fold 7.
-const fold7LabelCardEl = document.querySelector("#page-6 .text-card");
+const fold7LabelCardEl  = document.querySelector("#page-7 .text-card");
 
 // Generic discrete trigger: a fixed-duration 0<->1 phase fired once by
 // crossing a scroll threshold (see watchCardThreshold below), exactly like
@@ -673,7 +699,7 @@ const fold9Trigger            = makeTrigger(FOLD9_COLOR_MS, updateGroups);
 // appear if the user stops scrolling exactly as the fade finishes.
 const fold9SquaresFadeTrigger = makeTrigger(GROUP_TRANSITION_MS, () => {
   updateGroups();
-  if (currentPage === 7) draw();
+  if (currentPage === 8) draw();
 });
 
 // Watches one title card's top edge for crossing H*frac, firing trigger
@@ -691,6 +717,19 @@ function watchCardThreshold(cardEl, frac, trigger) {
     if (nowPast !== isPast) { isPast = nowPast; trigger.trigger(nowPast ? 1 : 0); }
   };
 }
+
+// New fold (@fold3, #page-2): dots split when the card crosses the lower 1/6
+// of the screen (card entering from the bottom), and merge back when it crosses
+// the upper 1/6 (card leaving toward the top). Two independent threshold
+// triggers combined in updateGroups: splitEased = splitT * (1 - revertT).
+const FOLD_NEW3_SPLIT_MS  = 700;
+const SPLIT_DOT_SIZE      = 7;   // px — each of the 3 dots while split
+const SPLIT_DOT_GAP       = 5;   // px — gap between stacked dots
+const SPLIT_OFFSET        = SPLIT_DOT_SIZE + SPLIT_DOT_GAP; // center-to-center spacing
+const foldNew3SplitTrigger  = makeTrigger(FOLD_NEW3_SPLIT_MS, updateGroups);
+const foldNew3RevertTrigger = makeTrigger(FOLD_NEW3_SPLIT_MS, updateGroups);
+const checkFoldNew3Split  = watchCardThreshold(pageNew3TitleCardEl, 5 / 6, foldNew3SplitTrigger);
+const checkFoldNew3Revert = watchCardThreshold(pageNew3TitleCardEl, 1 / 6, foldNew3RevertTrigger);
 
 // Fold 2's legend (the groups overlay's first appearance) is tied to the title
 // card directly — same 0.5 convention and makeTrigger/watchCardThreshold
@@ -713,7 +752,7 @@ const checkFold9 = watchCardThreshold(page7TitleCardEl, 0.5, fold9Trigger);
 const checkFold9SquaresFade = watchCardThreshold(page7TitleCardEl, 1 / 12, fold9SquaresFadeTrigger);
 
 function checkGroupTriggers() {
-  checkFold2(); checkFold3(); checkFold4(); checkFold5(); checkFold6(); checkFold7Label(); checkFold9(); checkFold9SquaresFade();
+  checkFoldNew3Split(); checkFoldNew3Revert(); checkFold2(); checkFold3(); checkFold4(); checkFold5(); checkFold6(); checkFold7Label(); checkFold9(); checkFold9SquaresFade();
 }
 
 // Default (legend/fold3/fold4/fold5) swatch size + the swatch-to-label gap
@@ -723,8 +762,8 @@ function checkGroupTriggers() {
 const CLUSTER_SWATCH_SIZE = 13, CLUSTER_LABEL_GAP = 12;
 const LEFT_LEGEND_SWATCH_SIZE = 6, LEFT_LEGEND_LABEL_GAP = 6;
 
-const LEGEND_TOP_FRAC = 267 / 982; // Figma node 119:969's top, in the 982px-tall fold-2 frame
-const LEGEND_ROW_GAP = 59; // 13px swatch + 46px gap, matches the legend's old static layout
+const LEGEND_ROW_GAP = 78; // vertical gap between legend rows
+const LEGEND_PER_COL = Math.ceil(GROUPS.length / 2); // groups per legend column (two columns)
 
 // Every group's position is one continuous chain of lerps — legend → fold3 →
 // fold4 → fold5 — driven by each stage's own t. Once a given t reaches 1 the
@@ -734,7 +773,8 @@ const LEGEND_ROW_GAP = 59; // 13px swatch + 46px gap, matches the legend's old s
 function updateGroups() {
   const W = canvas.clientWidth, H = canvas.clientHeight;
   const e3 = fold3Trigger.currentT(), e4 = fold4Trigger.currentT(), e6 = fold6Trigger.currentT();
-  const legendX = W / 2 - 13, legendTop = LEGEND_TOP_FRAC * H;
+  const splitEased = foldNew3SplitTrigger.currentT() * (1 - foldNew3RevertTrigger.currentT());
+  const legendTop = H / 2 - ((LEGEND_PER_COL - 1) * LEGEND_ROW_GAP) / 2;
 
   // @fold2's whole entrance is 3 sequential beats sharing fold2Trigger's one
   // timeline, not 3 things happening at once — per explicit spec:
@@ -773,12 +813,16 @@ function updateGroups() {
   // third of the timeline, same makeTrigger-style "reaches target exactly at
   // local t=1" convention as every other staggered stage in this file.
   const ROW_STAGGER = 0.05;
-  const ROW_SPAN = 1 - ROW_STAGGER * (GROUPS.length - 1);
+  const ROW_SPAN = 1 - ROW_STAGGER * (LEGEND_PER_COL - 1);
 
   GROUPS.forEach((g, i) => {
     const item = groupItems[i];
-    const moveT  = p9Ease(Math.max(0, Math.min(1, (moveBaseRaw  - i * ROW_STAGGER) / ROW_SPAN)));
-    const labelT = p9Ease(Math.max(0, Math.min(1, (labelBaseRaw - i * ROW_STAGGER) / ROW_SPAN)));
+    // Column/row within the two-column legend — stagger by row so both
+    // columns fill top-to-bottom in sync rather than one column after the other.
+    const legendCol = Math.floor(i / LEGEND_PER_COL);
+    const legendRow = i % LEGEND_PER_COL;
+    const moveT  = p9Ease(Math.max(0, Math.min(1, (moveBaseRaw  - legendRow * ROW_STAGGER) / ROW_SPAN)));
+    const labelT = p9Ease(Math.max(0, Math.min(1, (labelBaseRaw - legendRow * ROW_STAGGER) / ROW_SPAN)));
 
     // Legend entrance originates from wherever this group's own dot landed
     // in @fold1's dot columns (PAGE0_GROUP_DOT_ANCHORS, page1.js), flying in
@@ -786,7 +830,9 @@ function updateGroups() {
     // legend spot itself (a no-op lerp) if this group had no matching dot
     // this load (very short viewports can run out of dots before all
     // groups get one).
-    const legendTargetX = legendX, legendTargetY = legendTop + i * LEGEND_ROW_GAP;
+    const legendColOffset = W * 0.09;
+    const legendTargetX = W / 2 - 13 + (legendCol * 2 - 1) * legendColOffset;
+    const legendTargetY = legendTop + legendRow * LEGEND_ROW_GAP;
     const anchor = PAGE0_GROUP_DOT_ANCHORS[g.color] || { left: legendTargetX - W / 2, top: legendTargetY };
     const fold1X = W / 2 + anchor.left, fold1Y = anchor.top;
 
@@ -839,10 +885,26 @@ function updateGroups() {
     // multiplier, and only for the 3 row groups.
     const fold5FadeMul = page0PopT[i];
     item.swatch.style.opacity = String(fold5FadeMul);
-    item.label.style.opacity = String(labelT * fold5FadeMul * (g.row ? 1 - fold5ExitT : 1));
+    item.label.style.opacity = String(labelT * fold5FadeMul * (g.row ? 1 - fold5ExitT : 1) * (1 - splitEased));
 
-    item.swatch.style.width  = `${swatchSize}px`;
-    item.swatch.style.height = `${swatchSize}px`;
+    // During the split the main swatch shrinks to SPLIT_DOT_SIZE while two
+    // satellite dots grow outward — main swatch stays at its computed position
+    // (used by label left/top below), only the rendered size changes.
+    const visualSwatchSize = swatchSize + (SPLIT_DOT_SIZE - swatchSize) * splitEased;
+    item.swatch.style.width  = `${visualSwatchSize}px`;
+    item.swatch.style.height = `${visualSwatchSize}px`;
+
+    // Satellites: grow from 0 to SPLIT_DOT_SIZE and move ±SPLIT_OFFSET from center.
+    const satPx = SPLIT_DOT_SIZE * splitEased;
+    const satOffPx = SPLIT_OFFSET * splitEased;
+    item.satTop.style.width  = `${satPx}px`;
+    item.satTop.style.height = `${satPx}px`;
+    item.satTop.style.top    = `${-satOffPx}px`;
+    item.satTop.style.opacity = String(fold5FadeMul);
+    item.satBot.style.width  = `${satPx}px`;
+    item.satBot.style.height = `${satPx}px`;
+    item.satBot.style.top    = `${satOffPx}px`;
+    item.satBot.style.opacity = String(fold5FadeMul);
     // Label's vertical anchor must track the swatch's own shrinking center
     // (13px cluster -> 6px mini-legend, same e6 lerp as swatchSize above) —
     // a fixed CSS top would stay centered on the swatch's *original* size
@@ -909,16 +971,14 @@ function updateGroups() {
   const e9SquaresFade = fold9SquaresFadeTrigger.currentT();
   fold6SquaresOverlayEl.style.opacity = String(e6 * (1 - e9SquaresFade));
 
-  // Labels fade in via their own trigger (fold7LabelTrigger, fold 7's own
-  // card) once that title is reached, and just stay put through fold 9's
-  // color-in (e9) — the square gains its color while the label stays fully
-  // visible alongside it. Labels only disappear later, together with the
-  // squares, via the overlay-level fade (e9SquaresFade above) — there's no
-  // separate per-label fade-out tied to e9 anymore.
+  // Labels fade in via their own trigger (fold7LabelTrigger) then fade back
+  // out as trigger 1's color-in (e9) progresses — label disappears exactly
+  // as the square gains its color. The squares' complete disappearance is a
+  // separate, later beat via the overlay-level e9SquaresFade above.
   const e7Label = fold7LabelTrigger.currentT();
   const e9 = fold9Trigger.currentT();
   fold6SquareEls.forEach(({ sq, label }, i) => {
-    label.style.opacity = String(e7Label);
+    label.style.opacity = String(e7Label * (1 - e9));
     sq.style.background = lerpFold6SquareColor(FOLD6_SQUARE_COLORS[i], e9);
   });
 }
@@ -937,17 +997,17 @@ window.addEventListener("scroll", () => {
   requestAnimationFrame(() => { checkGroupTriggers(); groupsTicking = false; });
 }, { passive: true });
 
-// drawFold9 (currentPage 7, #page-7) used to be static background-only, so
+// drawFold9 (currentPage 8, #page-8) used to be static background-only, so
 // nothing redrew the canvas while scrolling within it. Now that it also draws
 // the year axis preview (gated on p7AxisShouldShow, page7.js) once that title
 // crosses center, it needs its own scroll-driven redraw to actually pick that
-// crossing up while currentPage stays 7 the whole time it's happening.
+// crossing up while currentPage stays 8 the whole time it's happening.
 let fold9AxisTicking = false;
 window.addEventListener("scroll", () => {
   if (fold9AxisTicking) return;
   fold9AxisTicking = true;
   requestAnimationFrame(() => {
-    if (currentPage === 7) draw();
+    if (currentPage === 8) draw();
     fold9AxisTicking = false;
   });
 }, { passive: true });
@@ -961,7 +1021,7 @@ window.addEventListener("scroll", () => {
 // past while the glide plays in the background. Scrolling back up past that same
 // point (recorded as p8TriggerScrollY) plays the glide back in reverse via
 // p8TriggerReverse, once currentPage has made it back to 9. ──
-const page8TitleEl = document.querySelector("#page-9 .section-title");
+const page8TitleEl = document.querySelector("#page-10 .section-title");
 let page8Ticking = false;
 
 function page8CheckScroll() {
@@ -969,7 +1029,7 @@ function page8CheckScroll() {
     const rect = page8TitleEl.getBoundingClientRect();
     const titleCenter = rect.top + rect.height / 2;
     if (titleCenter <= window.innerHeight / 2) p8Trigger();
-  } else if (currentPage === 9 && p8TriggerScrollY !== null && window.scrollY < p8TriggerScrollY) {
+  } else if (currentPage === 10 && p8TriggerScrollY !== null && window.scrollY < p8TriggerScrollY) {
     p8TriggerReverse();
   }
 }
@@ -1001,9 +1061,9 @@ window.addEventListener("scroll", () => {
 //    reading as the dragcards scrolling up the page instead of being revealed
 //    in a fixed position — tried it, reverted it. Pinning is a hard
 //    requirement for this one, the title-card threshold is not. ──
-const page9TitleCardEl = document.querySelector("#page-10 .text-card");
-const page9StickyEl = document.querySelector("#page-10 .page9-sticky");
-const page9TrayEl = document.querySelector("#page-10 .page9-tray");
+const page9TitleCardEl = document.querySelector("#page-11 .text-card");
+const page9StickyEl = document.querySelector("#page-11 .page9-sticky");
+const page9TrayEl = document.querySelector("#page-11 .page9-tray");
 let page9Ticking = false;
 let page9LinePast = false; // previous "title past center" state, so the line trigger only fires on the transition
 

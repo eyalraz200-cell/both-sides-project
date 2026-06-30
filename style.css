@@ -990,6 +990,16 @@ body {
   color: rgba(0, 0, 0, 0.81);
 }
 
+/* Satellite dots for the new-fold (@fold3) split animation — each starts at
+   size 0, positioned at the main swatch's origin; JS expands them outward as
+   foldNew3SplitTrigger fires. Inheriting position:absolute from .group-swatch
+   is not needed since the inline style sets it; this class exists purely as a
+   semantic hook and to ensure left:0 default matches the main swatch. */
+.group-swatch-split {
+  position: absolute;
+  left: 0;
+}
+
 /* Fold 4/5 distinguish the 5 groups that fall into the two opposing camps
    (full black, .is-emphasized) from the 4 that don't (56%-opacity black,
    .is-dimmed) — the legend/fold-3 default (81%-opacity) is untouched. */
