@@ -7,7 +7,7 @@ const ctx    = canvas.getContext("2d");
 // drawFoldNew3/drawFold5/drawFold7/drawFold9 are tiny inline background-only
 // functions (see below) — these folds' only visual content is the DOM overlay,
 // like drawPage2/drawPage3/drawPage4.
-const PAGES = [drawPage1, drawPage2, drawFoldNew3, drawPage3, drawPage4, drawFold5, drawPage5, drawFold7, drawFold9, drawPage7, drawPage8, drawPage9];
+const PAGES = [drawPage1, drawPage2, drawFoldNew3, drawPage3, drawPage4, drawFold5, drawPage5, drawFold7, drawFold9, drawPage7, drawPage8, drawPage9, drawPage12];
 let currentPage = 0;
 
 function drawBackground(ctx, W, H) {
@@ -64,7 +64,16 @@ function drawFold9(ctx, W, H) {
 
 function draw() {
   const W = canvas.clientWidth, H = canvas.clientHeight;
-  PAGES[currentPage](ctx, W, H);
+  // While the fold13 dot morph is active (forward or reverse), keep calling
+  // drawPage12 regardless of currentPage — drawPage9 suppresses the extreme
+  // dots when morphT > 0 (to avoid ghosting under the overdraw), so if
+  // currentPage has already flipped back to 11, those dots would vanish until
+  // morphT hits 0 and snap back instead of animating.
+  if ((p9?.fold13ExtremeMorphT ?? 0) > 0) {
+    drawPage12(ctx, W, H);
+  } else {
+    PAGES[currentPage](ctx, W, H);
+  }
 }
 
 function init() {
@@ -74,7 +83,6 @@ function init() {
   canvas.height = rect.height * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   draw();
-  updateFoldNumberBadge();
 }
 
 // .text-card-frame's dashed border (see style.css for why this isn't plain
@@ -124,19 +132,14 @@ function updateTextCardFrameDashes() {
 // ── Scrollytelling: which text section is active drives the pinned canvas ──
 const sections = Array.from(document.querySelectorAll(".text-section"));
 
-const foldNumberBadge = document.getElementById("foldNumberBadge");
-
-function updateFoldNumberBadge() {
-  // @foldN is this project's own canonical fold numbering (see CLAUDE.md's
-  // fold reference table) — 1-indexed, always currentPage's id + 1.
-  if (foldNumberBadge) foldNumberBadge.textContent = `@fold${currentPage + 1}`;
-}
-
 function setActivePage(page) {
   if (page === currentPage) return;
+  // Scrolling back out of the timeline toward an earlier fold — wipe all
+  // per-month animation state so the next entry replays from scratch instead
+  // of showing the previously-settled dots still hanging around.
+  if (currentPage === 9 && page < 9) p7ResetForReplay();
   currentPage = page;
   updateGroups();
-  updateFoldNumberBadge();
   draw();
 }
 
@@ -292,13 +295,27 @@ function page7UpdateFromScroll() {
   const rect = page7Section.getBoundingClientRect();
 
   // t=0 when the section's top reaches the viewport top, t=1 one scrub-range of scrolling
-  // later. The scrub range is the section height minus one viewport height — that trailing
-  // viewport height is slack reserved so the date axis (p7DrawYearAxis in page7.js) finishes
-  // growing before the section releases (see .page7-scrub in style.css).
+  // later. The scrub range is the section height minus one viewport height (see
+  // .page7-scrub in style.css).
   const scrubRange = rect.height - window.innerHeight;
   const t = scrubRange > 0 ? Math.max(0, Math.min(1, -rect.top / scrubRange)) : 0;
 
   if (!p7.ready) return;
+
+  // Refresh engagement state before checking it — without this, the check below
+  // would use whatever the last draw call left, which can be one scroll event stale.
+  p7UpdateEngagement();
+
+  // Hold currentDate at minDate until engagement actually fires — otherwise
+  // scroll position advances curMonthKey silently while !p7HasEngaged, so the
+  // first months have no animStart and appear settled (instantly filled) the
+  // moment the first draw call with p7HasEngaged===true hits them.
+  if (!p7HasEngaged) {
+    p7.currentDate = p7.minDate;
+    if (currentPage === 9) { draw(); p7RecheckHover(); }
+    return;
+  }
+
   const minD = new Date(p7.minDate + "T00:00:00Z");
   const maxD = new Date(p7.maxDate + "T00:00:00Z");
   const totalDays = Math.round((maxD - minD) / 86400000);
@@ -366,39 +383,39 @@ const GROUPS_FRAME_W = 1512, GROUPS_FRAME_H = 982;
 // dimmed, away from the cluster" (fold4) and "reads as one naturally spread
 // set of 8 dots, no clumps" (fold3) at once, since one pair of coordinates
 // now has to serve both frames.
+// `actor` (the 5 camp groups only) is the events.json/P7_COLORS join key —
+// see p7ActorColor in page7.js, which reads this group's `color` directly
+// so the real per-event canvas dots always match this legend, including
+// after a future color edit here.
+// Array order sets the two-column legend layout: indices 0-5 → right column,
+// indices 6-11 → left column (LEGEND_PER_COL = ceil(12/2) = 6).
 const GROUPS = [
+  // — right column —
   { color: "#008C99", label: "ערבים ישראלים",            fold3: { x: 1088, y: 786 },
     fold4: { x: 1088, y: 786, dimmed: true,  swatchFirst: true }, row: true },
-  { color: "#7c3aed", label: "יוצאי אתיופיה",            fold3: { x: 1225, y: 167 },
-    fold4: { x: 1225, y: 167, dimmed: true,  swatchFirst: true }, row: true },
-  { color: "#DD1111", label: "יוצאי ברית המועצות",       fold3: { x: 280,  y: 210 },
-    fold4: { x: 280,  y: 210, dimmed: true,  swatchFirst: true }, row: true },
-  { color: "#EE8800", label: "בדואים בנגב",              fold3: { x: 1370, y: 560 },
-    fold4: { x: 1370, y: 560, dimmed: true,  swatchFirst: true }, row: true },
-  { color: "#00AAAA", label: "מבקשי מקלט",               fold3: { x: 770,  y: 900 },
-    fold4: { x: 770,  y: 900, dimmed: true,  swatchFirst: true }, row: true },
-  { color: "#BB0055", label: "תושבי מזרח ירושלים",       fold3: { x: 380,  y: 370 },
-    fold4: { x: 380,  y: 370, dimmed: true,  swatchFirst: true }, row: true },
-  // `actor` (the 5 camp groups only) is the events.json/P7_COLORS join key —
-  // see p7ActorColor in page7.js, which reads this group's `color` directly
-  // so the real per-event canvas dots always match this legend, including
-  // after a future color edit here.
-  { color: "#65a30d", label: "פעילי ימין",            actor: "Right-wing activists", fold3: { x: 936,  y: 602 },
-    fold4: { x: 773,  y: 483, dimmed: false, swatchFirst: false }, fold6: { x: 31, y: 464 } },
-  { color: "#57534c", label: "חרדים",                 actor: "Haredi Jews", fold3: { x: 352,  y: 469 },
-    fold4: { x: 773,  y: 523, dimmed: false, swatchFirst: false }, fold6: { x: 31, y: 488 } },
-  { color: "#2563eb", label: "מתנגדי הרפורמה המשפטית", actor: "Protesters against the government", fold3: { x: 462,  y: 555 },
-    // fold4.x nudged from Figma's measured 709 to 713 (matching פעילי שמאל,
-    // the other label-leading camp item) — Figma's own frame really does
-    // place this swatch ~4-64px left of its neighbors, but per explicit
-    // instruction this one diverges from spec to sit flush with its peer.
-    fold4: { x: 713,  y: 464, dimmed: false, swatchFirst: true, label: "מתנגדי הרפורמה" }, fold6: { x: 31, y: 512 } },
-  { color: "#d946ef", label: "פעילי שמאל",            actor: "left wing activists", fold3: { x: 699,  y: 710 },
-    fold4: { x: 713,  y: 502, dimmed: false, swatchFirst: true }, fold6: { x: 31, y: 536 } },
   { color: "#ea580c", label: "מתיישבים",              actor: "settlers", fold3: { x: 908,  y: 321 },
     fold4: { x: 773,  y: 443, dimmed: false, swatchFirst: false }, fold6: { x: 31, y: 440 } },
-  { color: "#eacc0c", label: "דרוזים",                fold3: { x: 242,  y: 825 },
+  { color: "#FF00A6", label: "יוצאי ברית המועצות",       fold3: { x: 280,  y: 210 },
+    fold4: { x: 280,  y: 210, dimmed: true,  swatchFirst: true }, row: true },
+  { color: "#7c3aed", label: "יוצאי אתיופיה",            fold3: { x: 1225, y: 167 },
+    fold4: { x: 1225, y: 167, dimmed: true,  swatchFirst: true }, row: true },
+  { color: "#65a30d", label: "פעילי ימין",            actor: "Right-wing activists", fold3: { x: 936,  y: 602 },
+    fold4: { x: 773,  y: 483, dimmed: false, swatchFirst: false }, fold6: { x: 31, y: 464 } },
+  { color: "#2563eb", label: "מתנגדי הרפורמה המשפטית", actor: "Protesters against the government", fold3: { x: 462,  y: 555 },
+    fold4: { x: 713,  y: 464, dimmed: false, swatchFirst: true, label: "מתנגדי הרפורמה" }, fold6: { x: 31, y: 512 } },
+  // — left column —
+  { color: "#d946ef", label: "פעילי שמאל",            actor: "left wing activists", fold3: { x: 699,  y: 710 },
+    fold4: { x: 713,  y: 502, dimmed: false, swatchFirst: true }, fold6: { x: 31, y: 536 } },
+  { color: "#BB0055", label: "תושבי מזרח ירושלים",       fold3: { x: 380,  y: 370 },
+    fold4: { x: 380,  y: 370, dimmed: true,  swatchFirst: true }, row: true },
+  { color: "#EED600", label: "בדואים בנגב",              fold3: { x: 1370, y: 560 },
+    fold4: { x: 1370, y: 560, dimmed: true,  swatchFirst: true }, row: true },
+  { color: "#595151", label: "חרדים",                 actor: "Haredi Jews", fold3: { x: 352,  y: 469 },
+    fold4: { x: 773,  y: 523, dimmed: false, swatchFirst: false }, fold6: { x: 31, y: 488 } },
+  { color: "#27BCD3", label: "דרוזים",                fold3: { x: 242,  y: 825 },
     fold4: { x: 242,  y: 825, dimmed: true,  swatchFirst: true }, row: true },
+  { color: "#AB740D", label: "מבקשי מקלט",               fold3: { x: 770,  y: 900 },
+    fold4: { x: 770,  y: 900, dimmed: true,  swatchFirst: true }, row: true },
 ];
 
 // @fold1's dot columns (buildPage0AllDots, page1.js) read 12 of their 200 dot
@@ -463,7 +480,7 @@ const groupItems = GROUPS.map(({ color }) => {
 // label-width-dependent spacing) is resolved by an actual flexbox on a
 // hidden measurement scaffold (.fold5-top-row, never painted — see
 // updateFold5RowTargets), not hand-computed.
-const FOLD5_ROW_ORDER = ["#eacc0c", "#DD1111", "#7c3aed", "#00AAAA", "#008C99", "#BB0055", "#EE8800"];
+const FOLD5_ROW_ORDER = ["#27BCD3", "#FF00A6", "#7c3aed", "#AB740D", "#008C99", "#BB0055", "#EED600"];
 const FOLD5_ROW_X = 417, FOLD5_ROW_Y = 896;
 
 const fold5RowEl = document.createElement("div");
@@ -617,6 +634,8 @@ const page7TitleCardEl  = document.querySelector("#page-8 .text-card");
 // fixed ~1s tween instead of a scroll-coupled one) finishes long before the
 // user actually reaches fold 7.
 const fold7LabelCardEl  = document.querySelector("#page-7 .text-card");
+const page12TitleCardEl = document.querySelector("#page-12 .text-card");
+const page12FrameEl     = document.querySelector("#page-12 .text-card-frame");
 
 // Generic discrete trigger: a fixed-duration 0<->1 phase fired once by
 // crossing a scroll threshold (see watchCardThreshold below), exactly like
@@ -692,12 +711,15 @@ const fold7LabelTrigger = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
 // as sluggish for a plain background-color swap, per explicit feedback.
 const FOLD9_COLOR_MS = 500;
 const fold9Trigger            = makeTrigger(FOLD9_COLOR_MS, updateGroups);
+const fold13Trigger           = makeTrigger(GROUP_TRANSITION_MS, updateFold13);
+let   fold13MorphStarted      = false;
 // p7AxisShouldShow (page7.js) gates the year-axis build-in on this trigger
 // having fully settled at raw 1, not on scroll position directly — so unlike
 // every other group trigger, settling has to also force a canvas redraw
 // itself (not just rely on the next scroll event), or the axis would never
 // appear if the user stops scrolling exactly as the fade finishes.
-const fold9SquaresFadeTrigger = makeTrigger(GROUP_TRANSITION_MS, () => {
+const FOLD9_SQUARES_FADE_MS = 600;
+const fold9SquaresFadeTrigger = makeTrigger(FOLD9_SQUARES_FADE_MS, () => {
   updateGroups();
   if (currentPage === 8) draw();
 });
@@ -728,8 +750,8 @@ const SPLIT_DOT_GAP       = 5;   // px — gap between stacked dots
 const SPLIT_OFFSET        = SPLIT_DOT_SIZE + SPLIT_DOT_GAP; // center-to-center spacing
 const foldNew3SplitTrigger  = makeTrigger(FOLD_NEW3_SPLIT_MS, updateGroups);
 const foldNew3RevertTrigger = makeTrigger(FOLD_NEW3_SPLIT_MS, updateGroups);
-const checkFoldNew3Split  = watchCardThreshold(pageNew3TitleCardEl, 5 / 6, foldNew3SplitTrigger);
-const checkFoldNew3Revert = watchCardThreshold(pageNew3TitleCardEl, 1 / 6, foldNew3RevertTrigger);
+const checkFoldNew3Split  = watchCardThreshold(pageNew3TitleCardEl, 3 / 4, foldNew3SplitTrigger);
+const checkFoldNew3Revert = watchCardThreshold(pageNew3TitleCardEl, 1 / 4, foldNew3RevertTrigger);
 
 // Fold 2's legend (the groups overlay's first appearance) is tied to the title
 // card directly — same 0.5 convention and makeTrigger/watchCardThreshold
@@ -750,9 +772,10 @@ const checkFold9 = watchCardThreshold(page7TitleCardEl, 0.5, fold9Trigger);
 // (p7AxisShouldShow, page7.js) only starts once this fade-out tween has fully
 // settled, so the two effects play in sequence, not at once.
 const checkFold9SquaresFade = watchCardThreshold(page7TitleCardEl, 1 / 12, fold9SquaresFadeTrigger);
+const checkFold13           = watchCardThreshold(page12TitleCardEl, 0.5, fold13Trigger);
 
 function checkGroupTriggers() {
-  checkFoldNew3Split(); checkFoldNew3Revert(); checkFold2(); checkFold3(); checkFold4(); checkFold5(); checkFold6(); checkFold7Label(); checkFold9(); checkFold9SquaresFade();
+  checkFoldNew3Split(); checkFoldNew3Revert(); checkFold2(); checkFold3(); checkFold4(); checkFold5(); checkFold6(); checkFold7Label(); checkFold9(); checkFold9SquaresFade(); checkFold13();
 }
 
 // Default (legend/fold3/fold4/fold5) swatch size + the swatch-to-label gap
@@ -885,25 +908,32 @@ function updateGroups() {
     // multiplier, and only for the 3 row groups.
     const fold5FadeMul = page0PopT[i];
     item.swatch.style.opacity = String(fold5FadeMul);
-    item.label.style.opacity = String(labelT * fold5FadeMul * (g.row ? 1 - fold5ExitT : 1) * (1 - splitEased));
+    item.label.style.opacity = String(labelT * fold5FadeMul * (g.row ? 1 - fold5ExitT : 1));
 
-    // During the split the main swatch shrinks to SPLIT_DOT_SIZE while two
-    // satellite dots grow outward — main swatch stays at its computed position
-    // (used by label left/top below), only the rendered size changes.
+    // During the split the main swatch shrinks to SPLIT_DOT_SIZE. Offset its
+    // top so its center stays at swatchSize/2 (= label center) rather than
+    // drifting up toward 0 as it shrinks.
     const visualSwatchSize = swatchSize + (SPLIT_DOT_SIZE - swatchSize) * splitEased;
     item.swatch.style.width  = `${visualSwatchSize}px`;
     item.swatch.style.height = `${visualSwatchSize}px`;
+    item.swatch.style.top    = `${(swatchSize - visualSwatchSize) / 2}px`;
 
-    // Satellites: grow from 0 to SPLIT_DOT_SIZE and move ±SPLIT_OFFSET from center.
+    // Satellites: horizontal center on the swatch (left:0, width:visualSwatchSize),
+    // vertical center on swatchSize/2 (= label center, = swatch center after the
+    // top-offset above).
     const satPx = SPLIT_DOT_SIZE * splitEased;
     const satOffPx = SPLIT_OFFSET * splitEased;
+    const swatchCy = swatchSize / 2;
+    const satL = (visualSwatchSize - satPx) / 2;
     item.satTop.style.width  = `${satPx}px`;
     item.satTop.style.height = `${satPx}px`;
-    item.satTop.style.top    = `${-satOffPx}px`;
+    item.satTop.style.left   = `${satL}px`;
+    item.satTop.style.top    = `${swatchCy - satOffPx - satPx / 2}px`;
     item.satTop.style.opacity = String(fold5FadeMul);
     item.satBot.style.width  = `${satPx}px`;
     item.satBot.style.height = `${satPx}px`;
-    item.satBot.style.top    = `${satOffPx}px`;
+    item.satBot.style.left   = `${satL}px`;
+    item.satBot.style.top    = `${swatchCy + satOffPx - satPx / 2}px`;
     item.satBot.style.opacity = String(fold5FadeMul);
     // Label's vertical anchor must track the swatch's own shrinking center
     // (13px cluster -> 6px mini-legend, same e6 lerp as swatchSize above) —
@@ -1051,47 +1081,168 @@ window.addEventListener("scroll", () => {
 //    this early: the canvas is a full-viewport fixed overlay, not a
 //    scrolling DOM node, so there's no "still scrolling" artifact to worry
 //    about.
-//  - The DOM panel itself (.engaged on .page9-sticky — axis labels, dragcards
-//    tray, dropped-pill stack) stays gated on .page9-sticky actually being
-//    pinned (rect.top <= 0), not on the title card. .page9-title-row's
-//    text-card is centered via inset:0/margin:auto within a row exactly 100vh
-//    tall, so the title crosses center the instant the row is entered — long
-//    before .page9-sticky itself starts sticking. Revealing real DOM content
-//    that early sits fully visible-but-still-in-normal-flow (not yet pinned),
-//    reading as the dragcards scrolling up the page instead of being revealed
-//    in a fixed position — tried it, reverted it. Pinning is a hard
-//    requirement for this one, the title-card threshold is not. ──
-const page9TitleCardEl = document.querySelector("#page-11 .text-card");
-const page9StickyEl = document.querySelector("#page-11 .page9-sticky");
-const page9TrayEl = document.querySelector("#page-11 .page9-tray");
+const page9TitleCardEl  = document.querySelector("#page-11 .text-card");
+const page9TitleRowEl   = document.querySelector("#page-11 .page9-title-row");
+const page9StickyEl     = document.querySelector("#page-11 .page9-sticky");
+const page9TrayEl       = document.querySelector("#page-11 .page9-tray");
+const page9HeaderEl     = document.querySelector("#page-11 .page9-header");
+const page9ZoneWrapEl   = document.querySelector("#page-11 .page9-zone-wrap-extreme");
 let page9Ticking = false;
 let page9LinePast = false; // previous "title past center" state, so the line trigger only fires on the transition
-
-// How many px of scroll, just before .page9-sticky actually pins, the tray's
-// own slide-up tracks across — per explicit request, this one should scroll
-// up continuously with the page like normal-flow content, not reveal on a
-// discrete .engaged trigger the way the axis/header/zone-wrap do.
-const PAGE9_TRAY_RANGE = 900;
+let page9WasStuck = false; // tracks isStuck across frames to detect the stuck→unstuck transition
 
 function page9UpdateFromScroll() {
-  const titlePastCenter = page9TitleCardEl.getBoundingClientRect().top <= window.innerHeight * 0.5;
+  // Use the title *row* container's position rather than the card's own
+  // getBoundingClientRect() — once the card switches to position:fixed its
+  // top is permanently the fixed value and can never signal a scroll-back.
+  const titleRowTop = page9TitleRowEl.getBoundingClientRect().top;
+
+  // Card's natural center = titleRowTop + 50vh; crosses viewport center when
+  // titleRowTop <= 0.
+  const titlePastCenter = titleRowTop <= 0;
   if (titlePastCenter !== page9LinePast) {
     page9LinePast = titlePastCenter;
     p9TriggerLine(titlePastCenter ? 1 : 0);
   }
-  const stickyTop = page9StickyEl.getBoundingClientRect().top;
-  page9StickyEl.classList.toggle("engaged", stickyTop <= 0);
-  // 0 while .page9-sticky is still PAGE9_TRAY_RANGE+ px from pinning, ramping
-  // continuously to 1 exactly as it pins (stickyTop hits 0) — read directly
-  // by .page9-tray's transform (style.css), no CSS transition involved.
-  const trayT = Math.max(0, Math.min(1, 1 - stickyTop / PAGE9_TRAY_RANGE));
-  page9TrayEl.style.setProperty("--page9-tray-t", trayT);
+
+  // Card's natural sticky top = titleRowTop + 50vh - cardH/2 ≈ titleRowTop + 50vh.
+  // Sticks when that value <= 4.4vh → titleRowTop <= (0.044 - 0.5) * H.
+  const isStuck = titleRowTop <= window.innerHeight * (0.044 - 0.5);
+  page9TitleCardEl.classList.toggle("is-stuck", isStuck);
+  // Both tray and zone-wrap are position:fixed — always at their final viewport
+  // position — so both can fire together the moment the title card sticks.
+  page9StickyEl.classList.toggle("engaged", isStuck);
+
+  // Scrolling back up past the stick threshold: animate all extreme dots back
+  // down to the legit zone and return pills to the tray.
+  if (page9WasStuck && !isStuck && typeof p9ResetDrops === "function") {
+    p9ResetDrops(true);
+  }
+  page9WasStuck = isStuck;
 }
 
 window.addEventListener("scroll", () => {
   if (page9Ticking) return;
   page9Ticking = true;
   requestAnimationFrame(() => { page9UpdateFromScroll(); page9Ticking = false; });
+}, { passive: true });
+
+// ── @fold13 animations ───────────────────────────────────────────────────────
+// Fired when the @fold13 title card crosses the viewport midpoint (= when the
+// card arrives at its centered sticky position). Drives:
+//   - tray slides down (inline style.transform, transition:none so it tracks scroll)
+//   - header title + subtitle fade out (page9HeaderEl opacity)
+//   - extreme zone + dropped pill labels fade out (page9ZoneWrapEl opacity)
+//   - canvas count numbers + dividing line fade out (p9.fold13OutT in drawPage9)
+//   - legend fades out (groupsOverlayEl opacity)
+//   - legit dots fade out (drawJumbledBot targetAlpha in page9.js)
+//   - title frame fill + stroke dissolve (page12FrameEl background + svg opacity)
+function updateFold13() {
+  const t = fold13Trigger.currentT();
+  const e = 1 - Math.pow(1 - t, 3); // ease-out cubic
+
+  // Capture starting dot positions on the first morph frame — p9.lastPositions
+  // holds the clustered positions from the previous (non-morphed) frame.
+  if (e > 0 && !fold13MorphStarted) {
+    fold13MorphStarted = true;
+    p9.fold13StartPos  = new Map(p9.lastPositions);
+    p12FreeformTargets = null; // force recompute with current W/H
+  }
+  if (e <= 0) {
+    fold13MorphStarted = false;
+    p9.fold13StartPos  = null;
+  }
+
+  p9.fold13OutT          = e; // fades legit dots / dividing line / counts in drawPage9
+  p9.fold13ExtremeMorphT = e; // lerps extreme dots to freeform in drawPage12
+
+  if (e > 0) {
+    page9TrayEl.style.transition = "none";
+    page9TrayEl.style.transform  = `translate(-50%, ${e * 100}%)`;
+  } else {
+    page9TrayEl.style.transition = "";
+    page9TrayEl.style.transform  = "";
+  }
+  // When fully reversed (e=0) clear inline opacity so CSS class rules
+  // (engaged, is-active, etc.) take over — inline "1" would otherwise
+  // override them and freeze elements in their @fold13 state.
+  const opacityVal = e > 0 ? String(1 - e) : '';
+  if (page9HeaderEl)    page9HeaderEl.style.opacity    = opacityVal;
+  if (page9TitleCardEl) page9TitleCardEl.style.opacity = opacityVal;
+  if (page9ZoneWrapEl)  page9ZoneWrapEl.style.opacity  = opacityVal;
+  groupsOverlayEl.style.opacity = opacityVal;
+  // page12TitleCardEl (the fold13 card) stays visible throughout.
+  draw();
+}
+
+// ── @fold13 scroll gate ──────────────────────────────────────────────────────
+// #page-12 is locked until at least one @dragcard has been dropped into the
+// extreme zone. p9.sides (page9.js) is the source of truth — no changes to
+// page9.js needed; it's a global read here.
+function p13GateLocked() {
+  return !p9.sides.some(s => s === "above");
+}
+
+// The gate position: keep #page-12's top at the viewport bottom (scrollY max =
+// gateEl.offsetTop - innerHeight). Beyond this, #page-12 enters the viewport.
+function p13GateMax() {
+  const gateEl = document.getElementById("page-12");
+  return gateEl ? gateEl.offsetTop - window.innerHeight : Infinity;
+}
+
+// Desktop: block downward mouse-wheel past the gate
+window.addEventListener("wheel", (e) => {
+  if (!p13GateLocked() || e.deltaY <= 0) return;
+  if (window.scrollY >= p13GateMax()) e.preventDefault();
+}, { passive: false });
+
+// Keyboard: block arrow-down / page-down / space / End at the gate
+window.addEventListener("keydown", (e) => {
+  if (!p13GateLocked()) return;
+  if (["ArrowDown", "PageDown", "End", " "].includes(e.key) &&
+      window.scrollY >= p13GateMax() - 1) {
+    e.preventDefault();
+  }
+});
+
+// Mobile: block downward touch-swipe past the gate
+let p13TouchStartY = 0;
+window.addEventListener("touchstart", (e) => {
+  p13TouchStartY = e.touches[0].clientY;
+}, { passive: true });
+window.addEventListener("touchmove", (e) => {
+  if (!p13GateLocked()) return;
+  if (e.touches[0].clientY < p13TouchStartY &&
+      window.scrollY >= p13GateMax() - 10) {
+    e.preventDefault();
+  }
+}, { passive: false });
+
+// Safety net: snap back if scroll somehow lands past the gate (momentum, etc.)
+let p13SnapTicking = false;
+window.addEventListener("scroll", () => {
+  if (p13SnapTicking) return;
+  p13SnapTicking = true;
+  requestAnimationFrame(() => {
+    p13SnapTicking = false;
+    if (!p13GateLocked()) return;
+    const max = p13GateMax();
+    if (window.scrollY > max) {
+      window.scrollTo({ top: max, behavior: "instant" });
+    }
+  });
+}, { passive: true });
+
+// Freeze the page9 sticky panel in place while scrolled into @fold13 — once
+// the user passes #page-11's scroll context, position:sticky releases and the
+// panel would drift off. Switching to position:fixed keeps it locked at top:0.
+// The sticky element unpins at scrollY = #page-12.offsetTop - window.innerHeight
+// (one full viewport before #page-12 starts), so freeze at that same threshold,
+// not at #page-12.offsetTop itself (that would be too late by a full vh).
+const p13GateEl = document.getElementById("page-12");
+window.addEventListener("scroll", () => {
+  if (!p13GateEl) return;
+  page9StickyEl.classList.toggle("frozen", window.scrollY >= p13GateEl.offsetTop - window.innerHeight);
 }, { passive: true });
 
 // Explicitly load both weights so canvas gets the real font on first draw

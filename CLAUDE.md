@@ -13,27 +13,29 @@ Figma source: file `QASHSt1u7b6m6ASgrUPswf` ("Design"). We're revising `project.
 
 ## Fold reference (`@foldN`)
 
-This doc's section headings below use a "Fold" numbering that doesn't match `project.html`'s actual ids (two folds were inserted later — see Fold 5/Fold 9's own notes — and a couple of headings carry a parenthetical "fold N in Figma/user-facing numbering" that's *yet another*, third numbering). To kill that ambiguity for good, `@foldN` is its own **fourth, canonical** numbering — 1-indexed by on-screen order (`@fold1` is the very first section, the intro/cover) — defined once and for all by this table:
+This doc's section headings below use a "Fold" numbering that doesn't match `project.html`'s actual ids (three folds were inserted at various points — see Fold 5/Fold 9's own notes for two of them; @fold3 was inserted between @fold2 and old @fold3 later — and a couple of headings carry a parenthetical "fold N in Figma/user-facing numbering" that's *yet another*, third numbering). To kill that ambiguity for good, `@foldN` is its own **fourth, canonical** numbering — 1-indexed by on-screen order (`@fold1` is the very first section, the intro/cover) — defined once and for all by this table:
 
 | `@foldN` | id | Title (Hebrew, may be truncated) | This doc's heading |
 |---|---|---|---|
 | `@fold1` | `page-0` | קיצוניים משני הצדדים (intro/cover) | Page 0 |
 | `@fold2` | `page-1` | בישראל פועלות קבוצות פוליטיות רבות... | Page 1 |
-| `@fold3` | `page-2` | הזירה הפוליטית אינה מתחלקת תמיד... | Fold 3 |
-| `@fold4` | `page-3` | אבל, בשנים האחרונות מתחדדת חלוקה... | Fold 4 |
-| `@fold5` | `page-4` | חלק מהקבוצות לא משתייכות לחלוקה... | Fold 5 |
-| `@fold6` | `page-5` | אספנו נתונים על אירועים פוליטיים... | Fold 6 |
-| `@fold7` | `page-6` | כל ריבוע מייצג פעולה פוליטית... | Fold 7 |
-| `@fold8` | `page-7` | צבע הריבוע מציין את הקבוצה... | Fold 9 |
-| `@fold9` | `page-8` | (no title — `page7-scrub`, the real pinned timeline) | "Explicitly out of scope" |
-| `@fold10` | `page-9` | פעולות פוליטיות שונות זו מזו באופי... | "Explicitly out of scope" |
-| `@fold11` | `page-10` | איפה עובר הגבול? (drag-and-drop) | "Explicitly out of scope" |
+| `@fold3` | `page-2` | כל קבוצה כוללת מגוון של אנשים... | (no section heading yet) |
+| `@fold4` | `page-3` | הזירה הפוליטית אינה מתחלקת תמיד... | Fold 3 |
+| `@fold5` | `page-4` | אבל, בשנים האחרונות מתחדדת חלוקה... | Fold 4 |
+| `@fold6` | `page-5` | חלק מהקבוצות לא משתייכות לחלוקה... | Fold 5 |
+| `@fold7` | `page-6` | אספנו נתונים על אירועים פוליטיים... | Fold 6 |
+| `@fold8` | `page-7` | כל ריבוע מייצג פעולה פוליטית... | Fold 7 |
+| `@fold9` | `page-8` | צבע הריבוע מציין את הקבוצה... | Fold 9 |
+| `@fold10` | `page-9` | (no title — `page7-scrub`, the real pinned timeline) | "Explicitly out of scope" |
+| `@fold11` | `page-10` | פעולות פוליטיות שונות זו מזו באופי... | "Explicitly out of scope" |
+| `@fold12` | `page-11` | איפה עובר הגבול? (drag-and-drop) | "Explicitly out of scope" |
+| `@fold13` | `page-12` | קיצוניים משני הצדדים (scroll-gated outro) | Page 12 |
 
 This table is the source of truth for `@foldN` going forward — note `@foldN` is **off by one** from the HTML id (`@foldN` = `id="page-(N-1)"`) and from this doc's own heading numbers, on purpose, so don't shortcut it by eyeballing either of those. The headings below are kept as-is (renumbering them would just create a fifth numbering to track against git history) — always resolve `@foldN` here first, then jump to whichever heading the right column names.
 
 ## `@nosidegroups`
 
-`@nosidegroups` = the 3 of the 8 political groups (`GROUPS` in `main.js`) that don't belong to either of the two opposing camps introduced at `@fold4`/`@fold5` — flagged `row: true` (and `dimmed: true` in their `fold4` entry):
+`@nosidegroups` = the 3 of the 8 political groups (`GROUPS` in `main.js`) that don't belong to either of the two opposing camps introduced at `@fold5`/`@fold6` — flagged `row: true` (and `dimmed: true` in their `fold5` entry):
 
 - ערבים ישראלים (Israeli Arabs)
 - יוצאי אתיופיה (Ethiopian immigrants)
@@ -41,7 +43,7 @@ This table is the source of truth for `@foldN` going forward — note `@foldN` i
 
 (יוצאי ברית המועצות / Soviet Union immigrants was removed from `GROUPS` entirely per explicit instruction — no longer one of the 9 groups this doc otherwise still describes in a few places below.)
 
-These render dimmed/scattered at `@fold4`, glide into a row and fade out by the end of `@fold5`, and never reappear after that (see Fold 4/Fold 5 below). The other 5 groups (מתיישבים, פעילי ימין, חרדים, מתנגדי הרפורמה המשפטית, פעילי שמאל) are the camp groups — everything else `GROUPS` defines.
+These render dimmed/scattered at `@fold5`, glide into a row and fade out by the end of `@fold6`, and never reappear after that (see Fold 4/Fold 5 below). The other 5 groups (מתיישבים, פעילי ימין, חרדים, מתנגדי הרפורמה המשפטית, פעילי שמאל) are the camp groups — everything else `GROUPS` defines.
 
 ## Naming convention
 

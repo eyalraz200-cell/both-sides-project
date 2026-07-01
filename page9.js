@@ -421,6 +421,7 @@ function drawPage9(ctx, W, H) {
   const leftX0  = W * SBB.left;
   const SQ = P9_SQ, CELL = P9_CELL;
 
+
   // Read by p9HoverInit (outside this function) to exclude below-the-line
   // ("legitimate") dots from the hover interaction entirely — only the
   // above-the-line ("extreme") block gets a tooltip/dim effect.
@@ -454,7 +455,7 @@ function drawPage9(ctx, W, H) {
   // The extreme dot grid is anchored at midY itself (touching the horizontal
   // divider, no gap) and sized to reach all the way up to 14vh, matching
   // .page9-zone-wrap-extreme's own top edge.
-  const dividerTopY = Math.round(H * 0.14);
+  const dividerTopY = Math.round(H * 0.18);
   const dashBotY    = H - 16;
   const extremeRows = Math.max(1, Math.floor((midY - dividerTopY) / CELL));
 
@@ -576,6 +577,10 @@ function drawPage9(ctx, W, H) {
     // of it, dimming each successive batch (right side, then both legit
     // sides) more than the last instead of every batch dimming by the same
     // flat amount.
+    // During @fold13 morph, drawPage12 overdraws at freeform positions.
+    if ((p9.fold13ExtremeMorphT ?? 0) > 0) {
+      return Math.ceil(orderArr.length / colsTotal) || 1;
+    }
     const targetAlpha = 1;
     orderArr.forEach((e, i) => {
       const r = Math.floor(i / colsTotal);
@@ -601,9 +606,9 @@ function drawPage9(ctx, W, H) {
   const legitGeom = p9LegitGeometry(W, H);
 
   function drawJumbledBot(poolEvents, indexOf, side, botSet) {
-    // Same fix as drawBandedCols above, same reason — literal 1, not a read
-    // of the (possibly already-dimmed-by-a-prior-batch) ctx.globalAlpha.
-    const targetAlpha = 1;
+    // Same fix as drawBandedCols above, same reason — literal 1 (or its
+    // fold13 fade equivalent), not a read of ctx.globalAlpha.
+    const targetAlpha = 1 - (p9.fold13OutT ?? 0);
     poolEvents.forEach(e => {
       if (!botSet.has(e)) return;
       const pos = p9LegitPosOf(e, indexOf, side, legitGeom);
@@ -678,7 +683,7 @@ function drawPage9(ctx, W, H) {
       ctx.font         = "400 12px 'Assistant', sans-serif";
       ctx.textAlign    = "center";
       ctx.textBaseline = "alphabetic";
-      ctx.fillStyle    = "#111";
+      ctx.fillStyle    = `rgba(17,17,17,${1 - (p9.fold13OutT ?? 0)})`;
       ctx.fillText(String(leftCount),
         centerX - leftRealCols * CELL / 2,
         midY - leftTopRows * CELL - 16);
@@ -707,10 +712,11 @@ function drawPage9(ctx, W, H) {
   // Tapers down to a still-visible floor (0.15), not all the way to fully
   // transparent — per explicit request, the ends should read as thinner/
   // fainter, not vanish outright.
-  dividerGrad.addColorStop(0,    "rgba(0, 0, 0, 0.15)");
-  dividerGrad.addColorStop(0.2,  "rgba(0, 0, 0, 0.55)");
-  dividerGrad.addColorStop(0.8,  "rgba(0, 0, 0, 0.55)");
-  dividerGrad.addColorStop(1,    "rgba(0, 0, 0, 0.15)");
+  const lineAlpha = 1 - (p9.fold13OutT ?? 0);
+  dividerGrad.addColorStop(0,   `rgba(0,0,0,${0.15 * lineAlpha})`);
+  dividerGrad.addColorStop(0.2, `rgba(0,0,0,${0.55 * lineAlpha})`);
+  dividerGrad.addColorStop(0.8, `rgba(0,0,0,${0.55 * lineAlpha})`);
+  dividerGrad.addColorStop(1,   `rgba(0,0,0,${0.15 * lineAlpha})`);
   ctx.strokeStyle = dividerGrad;
   ctx.lineWidth   = 1;
   ctx.beginPath();
@@ -756,6 +762,34 @@ function p9GetDisplayedCounts() {
     left:  Math.round(p9CountAnim.fromLeft  + (p9CountAnim.toLeft  - p9CountAnim.fromLeft)  * ease),
     right: Math.round(p9CountAnim.fromRight + (p9CountAnim.toRight - p9CountAnim.fromRight) * ease),
   };
+}
+
+// Moves all extreme-zone pills back to their tray rows and resets p9.sides.
+// Called by main.js when the @fold13 reverse animation fully completes so the
+// drag-and-drop state reverts to the @fold12 starting point.
+// animate=true  → 3s dot migration (scroll-back from @fold12)
+// animate=false → instant reset    (@fold13 reverse completion)
+function p9ResetDrops(animate = false) {
+  const zoneAbove = document.getElementById("page9ZoneAbove");
+  if (!zoneAbove) return;
+  const pills = Array.from(zoneAbove.querySelectorAll(".page9-pill"));
+  if (!pills.length) return;
+  const trayRows = Array.from(document.querySelectorAll("#page9ZoneBelow .page9-tray-row"));
+  const nowMs = performance.now();
+  pills.forEach(pill => {
+    const idx = Number(pill.dataset.idx);
+    const rowCfg = P9_TRAY_GRID[idx];
+    if (!rowCfg || !trayRows[rowCfg.row - 1]) return;
+    trayRows[rowCfg.row - 1].appendChild(pill);
+    p9.sides[idx] = "below";
+  });
+  p9CountAnim = null;
+  if (animate && p9.lastPositions && p9.lastPositions.size > 0) {
+    p9.anim = { from: new Map(p9.lastPositions), start: nowMs, duration: 3000 };
+    if (currentPage === 11) p9RunAnimLoop();
+  } else {
+    p9.anim = null;
+  }
 }
 
 // ── Category panel — real DOM/HTML in the text column. Drag a pill between the

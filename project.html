@@ -35,9 +35,6 @@
         <div class="page9-tooltip-date"></div>
         <div class="page9-tooltip-desc"></div>
       </div>
-      <!-- Dev-only indicator of the current @foldN (see CLAUDE.md's fold
-           reference table) — fixed to the viewport, updated in setActivePage. -->
-      <div class="fold-number-badge" id="foldNumberBadge" aria-hidden="true"></div>
     </div>
     <div class="text-col" id="textCol">
       <section class="text-section" data-page="0" id="page-0">
@@ -61,7 +58,7 @@
       </section>
       <section class="text-section" data-page="2" id="page-2">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">כל קבוצה כוללת מגוון של אנשים, זרמים ודעות. לצורך ההשוואה, נתייחס לכל קבוצה כאל יחידה אחת.</h2>
+          <h2 class="section-title text-card-frame">כל אחת מהקבוצות כוללת בתוכה מגוון של אנשים, זרמים ודעות. לצורך ההשוואה, נתייחס לכל קבוצה כאל יחידה אחת.</h2>
         </div>
       </section>
       <section class="text-section" data-page="3" id="page-3">
@@ -104,13 +101,11 @@
         <div class="page9-title-row">
           <div class="section-text text-card">
             <h2 class="section-title text-card-frame">איפה עובר הגבול בעיניכם?</h2>
+            <p class="page9-header-subtitle">גררו את סוגי הפעולות שנחשבות בעיניכם לקיצוניות</p>
           </div>
         </div>
         <div class="page9-sticky">
-          <div class="page9-header">
-            <h3 class="page9-header-title">השוו בין הקיצוניים משני הצדדים</h3>
-            <p class="page9-header-subtitle">גררו את סוגי הפעולות שנחשבות בעיניכם לקיצוניות</p>
-          </div>
+          <div class="page9-header"></div>
           <div class="page9-zone-wrap-extreme">
             <div class="page9-zone" id="page9ZoneAbove" data-zone="above"></div>
           </div>
@@ -118,6 +113,22 @@
             <p class="page9-tray-title">סוגי פעולות</p>
             <div class="page9-tray-divider"></div>
 <div class="page9-zone" id="page9ZoneBelow" data-zone="below"></div>
+          </div>
+        </div>
+      </section>
+      <section class="text-section" data-page="12" id="page-12">
+        <div class="page12-sticky-center">
+          <div class="section-text text-card">
+            <div class="text-card-frame page12-card">
+              <h2 class="section-title page12-title">קיצוניים משני הצדדים</h2>
+              <div class="page12-body" dir="rtl">
+                <p class="page12-body-heading">נתונים ושיטת עבודה</p>
+                <p>המאגר שמאחורי הפרויקט נבנה מתוך אירועים פוליטיים מתועדים שהתרחשו בישראל ובשטחים מאז תחילת 2023. נכללו בו רק פעולות שהתרחשו במרחב הציבורי או בשטח: הפגנות, חסימות כבישים, עימותים, תקיפות, הטרדות, פגיעה ברכוש, השתלטות על קרקע ואירועים דומים. אמירות, פוסטים, הצהרות או עמדות פוליטיות שלא לוו בפעולה ממשית לא נכללו בניתוח.</p>
+                <p>כל אירוע נקרא וסווג לפי כמה משתנים מרכזיים: הקבוצה שפעלה, סוג הפעולה, מי או מה היה היעד, האם נעשה שימוש באלימות או באמצעים מסוכנים, האם נגרמו פגיעות בגוף, האם נגרם נזק לרכוש, והאם הייתה מעורבות של כוחות מדינה. כאשר תיאור האירוע כלל כמה שחקנים או כמה פעולות שונות, הסיווג נעשה לפי הפעולה המרכזית שביצע השחקן המרכזי באירוע.</p>
+                <p>כדי לאפשר השוואה עקבית בין קבוצות שונות, כל האירועים הותאמו למערכת קטגוריות אחידה - ממחאה שקטה וחסימת כבישים, דרך הפרות סדר, איומים ופגיעה ברכוש, ועד תקיפות פיזיות, פוגרומים וחטיפות. במקרים שבהם אירוע כלל כמה סוגי פעולה, הוא סווג לפי הפעולה החמורה ביותר שבוצעה בו.</p>
+                <p>חשוב לציין: סיווג של אירועים פוליטיים אינו תמיד חד־משמעי. אותו אירוע יכול לכלול כמה גורמים, כמה מטרות וכמה רמות חומרה. לכן הסיווגים נבדקו ידנית ונועדו ליצור בסיס השוואה ברור ככל האפשר - לא לתאר כל אירוע על כל מורכבותו, אלא לזהות את דפוסי הפעולה הרחבים שמופיעים לאורך זמן.</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -132,6 +143,7 @@
   <script src="page7.js"></script>
   <script src="page8.js"></script>
   <script src="page9.js"></script>
+  <script src="page12.js"></script>
   <script src="main.js"></script>
   <script src="reload.js"></script>
 </body>
