@@ -47,18 +47,6 @@ body {
 /* Dev-only @foldN indicator (see project.html) — fixed to the viewport
    (not the scrolling .text-col), so it stays put in the upper-left
    regardless of scroll position. */
-.fold-number-badge {
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  z-index: 10;
-  font: 600 13px 'Assistant', sans-serif;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.6);
-  padding: 4px 8px;
-  border-radius: 4px;
-  pointer-events: none;
-}
 
 .text-section {
   position: relative;
@@ -79,27 +67,33 @@ body {
 }
 
 .text-section.page7-scrub {
-  /* 600vh of actual scrub range + 100vh of slack so the date axis (drawn on
-     canvas, see p7DrawYearAxis in page7.js) finishes growing before the section
-     releases — without this slack it would still be mid-growth during the final
-     viewport-height of scrolling (see page7UpdateFromScroll in main.js, which
-     excludes this slack from its t calculation). Scrub range controls how much
-     scrolling it takes to cross the whole dataset — bigger means slower
-     movement through the months. */
-  min-height: 700vh;
+  /* The scrub range is this height minus one viewport height (see
+     page7UpdateFromScroll in main.js). Scrub range controls how much scrolling
+     it takes to cross the whole dataset — bigger means slower movement through
+     the months. */
+  min-height: 600vh;
   display: block;
   padding: 0;
+}
+
+/* The bridge fold right after the scrub section — default align-items:center
+   would place the card at 50vh inside the section, requiring ~50vh of extra
+   scrolling after the timeline fills before any text appears. Aligning to the
+   top means the card enters the viewport the instant the scrub section ends. */
+#page-10 {
+  align-items: flex-start;
+  padding-top: 48px;
 }
 
 
 
 .text-section.page9-panel {
-  /* .page9-title-row's own 100vh + .page9-sticky's own 100vh, plus 30vh slack
-     so the sticky panel actually stays pinned for a while once engaged instead
-     of releasing the instant it sticks (same reasoning as .page7-scrub — sticky
-     alone has nothing to release from when the element is already flush with
-     its container's edge). */
-  min-height: 230vh;
+  /* 100vh title-row + 100vh sticky = 200vh content. min-height must be ≥ 200vh
+     so that when .page9-sticky.frozen switches sticky→fixed (removing it from
+     flow), min-height still dominates and the section height stays at 200vh.
+     If min-height < 200vh, the section shrinks when frozen fires, shifting
+     #page-12 up into the viewport and bypassing the gate. */
+  min-height: 200vh;
   display: block;
   padding: 0;
 }
@@ -117,16 +111,67 @@ body {
 .page9-title-row {
   position: relative;
   min-height: 100vh;
+  /* Flex so the card starts centered while it's still scrolling in, then
+     position:sticky on the card takes over once it reaches the top. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .page9-title-row .text-card {
-  position: absolute;
-  inset: 0;
-  margin: auto;
-  /* Without this, height:auto + top:0/bottom:0 both set makes the box stretch
-     to fill the row's full height (so margin:auto has no vertical gap left to
-     center with) instead of shrink-wrapping the title's actual content height. */
+  position: sticky;
+  top: 4.4vh;
   height: max-content;
+}
+
+/* Once the card has reached its sticky position, switch to fixed so it stays
+   pinned for the entire @fold11 scroll range — not just while .page9-title-row
+   is in view. Width/centering must be re-stated since fixed is viewport-relative. */
+.page9-title-row .text-card.is-stuck {
+  position: fixed;
+  top: 4.4vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 480px;
+}
+
+/* Subtitle sits below the title heading (normal flow), hidden while the card
+   is still scrolling, revealed once it sticks at the top. */
+.page9-title-row .section-title {
+  margin-bottom: 0;
+}
+
+.page9-title-row .page9-header-subtitle {
+  opacity: 0;
+  pointer-events: none;
+  text-align: center;
+  transition: opacity 0.35s ease-out;
+  margin-top: -21px;
+}
+
+.page9-title-row .text-card.is-stuck .page9-header-subtitle {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Frame fade-out: dashed SVG border + white fill dissolve once the card
+   sticks at the top, leaving only the bare title text.
+   Transitions are on the base selectors so they apply in both directions
+   (stuck → unstuck reverts smoothly, not a snap). */
+.page9-title-row .text-card .text-card-frame-dash {
+  transition: opacity 0.35s ease-out;
+}
+
+.page9-title-row .text-card .text-card-frame {
+  transition: background 0.35s ease-out;
+}
+
+.page9-title-row .text-card.is-stuck .text-card-frame-dash {
+  opacity: 0;
+}
+
+.page9-title-row .text-card.is-stuck .text-card-frame {
+  background: transparent;
 }
 
 .page9-sticky {
@@ -138,22 +183,41 @@ body {
   height: 100vh;
 }
 
+/* Switched to fixed once the user scrolls into @fold13 (#page-12), keeping
+   the tray/zones visually frozen in place even though #page-11 has ended.
+   Width must be explicit — fixed elements size relative to the viewport, not
+   their DOM parent, so the implicit 100% no longer covers the full width. */
+.page9-sticky.frozen {
+  position: fixed;
+  top: 0;
+  width: 100%;
+}
+
 /* Nothing in the panel — the dragcards tray, the dropped-pill stack — is
-   visible/interactive until .page9-sticky is actually pinned (see
-   page9UpdateFromScroll in main.js's "engaged" toggle) — a deliberately later,
-   separate condition from the canvas-drawn divider line's own grow-in, which
-   starts at the title card crossing viewport-center instead (see that same
-   function's comment for why these two can't share one trigger here). The
-   (at-rest empty) dropped-pill stack just fades; the tray gets its own rule
-   below since it also slides up, not just fades. */
-.page9-zone-wrap-extreme,
+   visible/interactive until the title card sticks at the top (see
+   page9UpdateFromScroll in main.js's "engaged" toggle). The tray slides in
+   first (CSS transition on .page9-tray); the zone-wrap and header fade in
+   0.4 s later so the sequence is tray → zone. The (at-rest empty)
+   dropped-pill stack just fades; the tray gets its own rule below since it
+   also slides up, not just fades. */
 .page9-header {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.5s ease-out;
 }
 
-.page9-sticky.engaged .page9-zone-wrap-extreme,
+.page9-zone-wrap-extreme {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease-out;
+}
+
+/* position:fixed — never scrolls, always at the same viewport position. */
+.page9-sticky.engaged .page9-zone-wrap-extreme {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .page9-sticky.engaged .page9-header {
   opacity: 1;
   pointer-events: auto;
@@ -193,7 +257,7 @@ body {
    horizontal middle (Figma's floating label chips all share one x-center,
    756 of a 1512-wide frame) rather than anchored to the page margin. */
 .page9-zone-wrap-extreme {
-  position: absolute;
+  position: fixed;
   left: 50%;
   transform: translateX(-50%);
   top: 14vh;
@@ -265,17 +329,19 @@ body {
    rendered line-box is ~19px tall (16px/700 Assistant); previous px picks
    here left those three gaps visibly uneven (12/7/5). */
 .page9-tray {
-  position: absolute;
+  /* Fixed to the viewport bottom so its CSS slide-in is visible the instant
+     .engaged fires — position:absolute would put it off-screen below the
+     sticky panel until the panel actually pins, so the animation would be
+     invisible. When the sticky panel IS pinned (top:0, height:100vh) this
+     is the same visual position as absolute;bottom:0 would give.
+     fold13's slide-out overrides transform via an inline style (see
+     updateFold13 in main.js) and sets transition:none so it tracks scroll
+     frame-by-frame without lag from the CSS transition. */
+  position: fixed;
   left: 50%;
-  /* Slides up continuously with scroll position (--page9-tray-t, a 0..1
-     progress value set every frame in main.js's page9UpdateFromScroll) —
-     shifted down by its own full height at t=0, fully in place at t=1 — per
-     explicit request, this one tracks scroll directly like normal-flow
-     content rather than revealing on the same discrete .engaged trigger the
-     rest of the panel uses. No CSS transition: the JS-driven variable
-     already updates every scroll frame, a transition would just add lag. */
-  transform: translate(-50%, calc((1 - var(--page9-tray-t, 0)) * 100%));
   bottom: 0;
+  transform: translate(-50%, 100%); /* off-screen below until .engaged */
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
   width: max-content;
   max-width: calc(100vw - 96px);
   display: flex;
@@ -287,9 +353,11 @@ body {
   background: #fdfcff;
   box-shadow: 0 0 3.85px rgba(0, 0, 0, 0.7);
   pointer-events: none;
+  z-index: 10;
 }
 
 .page9-sticky.engaged .page9-tray {
+  transform: translate(-50%, 0); /* slides in */
   pointer-events: auto;
 }
 
@@ -836,6 +904,61 @@ body {
   padding: 0;
 }
 
+/* @fold13's outro section — tall enough that the sticky wrapper has room to
+   hold the card centered for a full viewport of scroll before releasing. */
+#page-12 {
+  min-height: 200vh;
+  display: block;
+  padding: 0;
+}
+
+/* Sticky full-viewport centering wrapper — pins at top:0 so the card inside
+   stays visually centered (via flex) for the entire scroll through the section. */
+.page12-sticky-center {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  direction: rtl;
+}
+
+#page-12 .text-card-frame {
+  width: 450px;
+  padding: 40px 40px 48px;
+  box-sizing: border-box;
+  direction: rtl;
+}
+
+#page-12 .section-title {
+  font-size: 40px;
+  text-align: center;
+  line-height: 1.2;
+  margin-bottom: 32px;
+}
+
+.page12-body {
+  font-family: 'Assistant', sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #111;
+  text-align: right;
+}
+
+.page12-body-heading {
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.page12-body p {
+  margin-bottom: 12px;
+}
+
+.page12-body p:last-child {
+  margin-bottom: 0;
+}
+
 /* Logo recropped per node 217:9176 — swapped to the wordmark-only asset
    (images/skuff-wordmark.png, the same pre-cropped "שקוף" glyphs already used
    by index.html's .shk-logo-img) instead of the full elephant+tagline export,
@@ -858,6 +981,7 @@ body {
   right: 30px;
   top: 32px;
   width: 91px;
+  visibility: hidden;
 }
 
 .page0-logo-img {

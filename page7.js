@@ -179,6 +179,16 @@ const p7MonthReverseStart = {}; // monthKey -> performance.now() timestamp (retr
 let p7MonthMaxReached = -1;     // highest monthKey ever reached, forward
 let p7AnimRunning = false;
 
+// Wipes all per-month animation state so the next entry into the timeline
+// replays the cascade from scratch instead of showing settled dots.
+// Called from setActivePage (main.js) when the user scrolls back out of
+// @fold10 toward an earlier fold.
+function p7ResetForReplay() {
+  for (const k in p7MonthAnimStart)    delete p7MonthAnimStart[k];
+  for (const k in p7MonthReverseStart) delete p7MonthReverseStart[k];
+  p7MonthMaxReached = -1;
+}
+
 // True once fold 9's own title card (#page-7 .text-card, page7TitleCardEl in
 // main.js) has scrolled all the way past the top of the viewport — not once
 // #page-8 itself reaches the top, which (since #page-7's card sits vertically
@@ -579,7 +589,7 @@ function p7AxisYearTicks() {
 // So only one is ever on screen, but which one is showing tracks scroll position
 // directly rather than a wall-clock timer.
 const P7_AXIS_EVENTS = [
-  { date: "2023-01-01", label: "הצגת הרפורמה המשפטית" },
+  { date: "2023-01-11", label: "הצגת הרפורמה המשפטית" },
   { date: "2023-07-01", label: "אישור ביטול עילת הסבירות" },
   { date: "2023-10-07", label: "מתקפת 7 באוקטובר" },
   { date: "2024-06-01", label: "פסיקת בג\"ץ על גיוס חרדים" },
@@ -611,6 +621,14 @@ const P7_AXIS_DATE_OPACITY_SCALE = 0.5; // date is dimmer than its label
 // and brings it back to full opacity — no separate reverse bookkeeping needed.
 const P7_AXIS_EVENT_STATE = P7_AXIS_EVENTS.map(() => ({ triggeredAt: null }));
 
+// Updated each frame by p7DrawYearAxis — pixel x of the LEFT edge of the "2023"
+// year label, at the W used for that frame. The first axis event waits until
+// curX passes this point rather than firing at its raw date, because the 2023
+// label visually occupies space to the LEFT of minDate's axis position and the
+// event appearing before the fill has cleared that label looks wrong.
+let p7AxisCurrentW       = 0;
+let p7FirstYearLabelLeftX = null;
+
 // Checked every draw (see p7AnyAnimActive) so the animation loop keeps running —
 // and labels keep fading — purely on elapsed time, with no further scrolling
 // required.
@@ -639,7 +657,16 @@ function p7UpdateAxisEventTriggers() {
   const hasScrolled = curMs > minMs;
   P7_AXIS_EVENTS.forEach((ev, i) => {
     const state = P7_AXIS_EVENT_STATE[i];
-    const reached = hasScrolled && curMs >= new Date(ev.date + "T00:00:00Z").getTime();
+    let reached;
+    if (i === 0 && p7FirstYearLabelLeftX !== null && p7AxisCurrentW > 0) {
+      // Wait until the scroll-driven fill has visually passed the left edge of
+      // the "2023" label — which sits to the left of minDate's axis position —
+      // rather than firing the instant currentDate ticks past the event's date.
+      const curX = p7AxisX(p7.currentDate, p7AxisCurrentW);
+      reached = hasScrolled && curX <= p7FirstYearLabelLeftX;
+    } else {
+      reached = hasScrolled && curMs >= new Date(ev.date + "T00:00:00Z").getTime();
+    }
     if (reached && state.triggeredAt === null) {
       state.triggeredAt = performance.now();
       p7StartAnimLoop();
@@ -724,8 +751,9 @@ function p7DrawAxisEvents(ctx, W, axisY) {
     const [y, m, d] = ev.date.split('-');
     const dateLabel = `${d}.${m}.${y}`;
     ctx.font = P7_AXIS_DATE_FONT;
+    ctx.textAlign = "center";
     ctx.fillStyle = `rgba(0, 0, 0, ${opacity * P7_AXIS_DATE_OPACITY_SCALE})`;
-    ctx.fillText(dateLabel, x, axisY - yOff + P7_AXIS_DATE_OFFSET);
+    ctx.fillText(dateLabel, lineX, axisY - yOff + P7_AXIS_DATE_OFFSET);
 
     ctx.strokeStyle = `rgba(0, 0, 0, ${opacity * P7_AXIS_EVENT_LINE_OPACITY_SCALE})`;
     ctx.lineWidth = 1;
@@ -799,6 +827,10 @@ function p7DrawYearAxis(ctx, W, H) {
   }
 
   ctx.font = "18px 'Assistant', sans-serif"; // set before measuring so widths below are accurate
+  // Record the left edge of the "2023" (first year) label for use by
+  // p7UpdateAxisEventTriggers — must happen here, while the 18px font is active.
+  p7AxisCurrentW        = W;
+  p7FirstYearLabelLeftX = p7AxisX(ticks[0].dateStr, W) - ctx.measureText(String(ticks[0].year)).width;
   // Labels are textAlign "right" — each one sits entirely to the *left* of its own
   // tick x, never to the right — so only that side needs clearance, sized to the
   // label's actual measured width rather than a guessed constant (a fixed 28px gap
