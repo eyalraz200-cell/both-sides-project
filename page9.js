@@ -2,13 +2,29 @@ const P9_CATEGORIES = [
   "הפגנה לא אלימה",
   "פוגרום",
   "הטרדה ואיומים",
-  "חטיפה",
-  "תקיפה חמושה של בלתי מעורב",
-  "תקיפה פיזית של בלתי מעורב",
+  "החזקה בכפייה",
+  "תקיפה חמושה",
+  "תקיפה פיזית",
   "הפרות סדר",
-  "השתלטות על שטח",
+  "ניכוס שטח",
   "פגיעה ברכוש",
   "חסימת כביש",
+];
+
+// Short category descriptions shown by the tray's hover tooltip (p9CategoryTooltipInit
+// below) — index-aligned with P9_CATEGORIES, not with the (slightly differently
+// worded) category headings they were sourced from.
+const P9_CATEGORY_DESC = [
+  "הפגנה, עצרת, צעדה או נוכחות מחאתית ללא אלימות מצד המפגינים.",
+  "התקפה המונית על קהילה, שכונה או אזור מגורים, הכוללת פגיעה באנשים, ברכוש או במרחב האזרחי.",
+  "הפחדה, איומים, מעקב, או נוכחות מאיימת.",
+  "לקיחה או החזקה של אדם בלתי מעורב בניגוד לרצונו.",
+  "שימוש בנשק חם, אבנים, חומרי נפץ, הצתה או אמצעי תקיפה מסוכנים נגד בלתי מעורבים.",
+  "פגיעה ישירה בבלתי מעורב, בידיים חשופות או באמצעות חפצים.",
+  "עימותים, התפרעויות, או פעולות שמפרות את הסדר הציבורי.",
+  "ביסוס שליטה בשטח שאינו שייך לקבוצה הפועלת, באמצעות גידור, עיבוד, בנייה, הצבת מבנים או הקמת מאחז.",
+  "גרימת נזק למבנים, כלי רכב, תשתיות, שטחים חקלאיים או רכוש אחר.",
+  "חסימה של כבישים, צמתים או דרכי גישה כחלק ממחאה או עימות.",
 ];
 
 // Each category's permanent (row, column) slot in the tray's #page9ZoneBelow
@@ -60,7 +76,7 @@ const P9_ZONE_DRAG_BORDER = 2;
 // Padding added on top of the widest pill's own rendered width (see
 // p9.maxPillWidth, set once in p9BuildPanel) to get the real gap width —
 // breathing room on each side so the label isn't flush against the squares.
-const P9_GAP_PADDING = 48;
+const P9_GAP_PADDING = 190;
 
 // Maps English category names (from events.json) to P9_CATEGORIES index
 const CATEGORY_EN_TO_IDX = {
@@ -681,13 +697,29 @@ function drawPage9(ctx, W, H) {
     // Suppress "0 / 0" while no dot has arrived yet (first drop, mid-flight).
     if (leftCount > 0 || rightCount > 0) {
       ctx.font         = "400 12px 'Assistant', sans-serif";
-      ctx.textAlign    = "center";
       ctx.textBaseline = "alphabetic";
       ctx.fillStyle    = `rgba(17,17,17,${1 - (p9.fold13OutT ?? 0)})`;
-      ctx.fillText(String(leftCount),
+
+      // Mixed Hebrew+digit text in one fillText call left the visual order up
+      // to each browser's own bidi heuristics (ctx.direction="ltr" didn't even
+      // pin it down consistently) — drawing the word and the number as two
+      // separately-positioned calls sidesteps bidi entirely, so "word left of
+      // number" is guaranteed regardless of engine.
+      const P9_EVENTS_WORD = "אירועים";
+      const P9_EVENTS_GAP  = 4; // px between the word and the number
+      function drawEventsCount(count, targetCenterX, y) {
+        const numStr      = String(count);
+        const wordWidth   = ctx.measureText(P9_EVENTS_WORD).width;
+        const numWidth    = ctx.measureText(numStr).width;
+        const leftX       = targetCenterX - (wordWidth + P9_EVENTS_GAP + numWidth) / 2;
+        ctx.textAlign = "left";
+        ctx.fillText(P9_EVENTS_WORD, leftX, y);
+        ctx.fillText(numStr, leftX + wordWidth + P9_EVENTS_GAP, y);
+      }
+      drawEventsCount(leftCount,
         centerX - leftRealCols * CELL / 2,
         midY - leftTopRows * CELL - 16);
-      ctx.fillText(String(rightCount),
+      drawEventsCount(rightCount,
         rightX0 + rightRealCols * CELL / 2,
         midY - rightTopRows * CELL - 16);
     }
@@ -783,12 +815,39 @@ function p9ResetDrops(animate = false) {
     trayRows[rowCfg.row - 1].appendChild(pill);
     p9.sides[idx] = "below";
   });
+  p13SyncGateVisibility?.();
   p9CountAnim = null;
   if (animate && p9.lastPositions && p9.lastPositions.size > 0) {
     p9.anim = { from: new Map(p9.lastPositions), start: nowMs, duration: 3000 };
     if (currentPage === 11) p9RunAnimLoop();
   } else {
     p9.anim = null;
+  }
+}
+
+// Reverses the *visual* effect of p9ResetDrops(true) — moves the given
+// categories' pills from the tray back into the extreme zone and restores
+// p9.sides, so scrolling back into @fold12 (main.js's page9UpdateFromScroll)
+// puts the dots/pills right back where the user left them, rather than
+// requiring them to be re-dropped by hand. `idxs` must be in the DOM order
+// #page9ZoneAbove had right before p9ResetDrops ran (most-recently-dropped
+// pill first) — processed oldest-first here, re-prepending each one, so the
+// stack rebuilds in that same visual order.
+function p9RestoreDrops(idxs) {
+  if (!idxs || !idxs.length) return;
+  const zoneAbove = document.getElementById("page9ZoneAbove");
+  if (!zoneAbove) return;
+  const nowMs = performance.now();
+  [...idxs].reverse().forEach(idx => {
+    const pill = document.querySelector(`#page9ZoneBelow .page9-pill[data-idx="${idx}"]`);
+    if (!pill) return;
+    zoneAbove.prepend(pill);
+    p9.sides[idx] = "above";
+  });
+  p13SyncGateVisibility?.();
+  if (p9.lastPositions && p9.lastPositions.size > 0) {
+    p9.anim = { from: new Map(p9.lastPositions), start: nowMs, duration: 3000 };
+    if (currentPage === 11) p9RunAnimLoop();
   }
 }
 
@@ -836,6 +895,7 @@ function p9BuildPanel() {
       // prepend so the newest card becomes the top of the stacked column.
       targetZone.prepend(pill);
       p9.sides[newCatIdx] = "above";
+      p13SyncGateVisibility?.();
 
       // Sync the order arrays now (before the draw loop does it) so stagger
       // ranks already reflect the new events' final column positions.
@@ -896,6 +956,7 @@ function p9BuildPanel() {
 
       trayRows[P9_TRAY_GRID[newCatIdx].row - 1].appendChild(pill);
       p9.sides[newCatIdx] = "below";
+      p13SyncGateVisibility?.();
 
       const DOT_DURATION = 3000;
       p9.anim = { from: new Map(p9.lastPositions), start: nowMs, duration: DOT_DURATION };
@@ -984,6 +1045,11 @@ function p9BuildPanel() {
       panel.classList.add("dragging");
       document.body.style.cursor = "grabbing";
       pill.setPointerCapture(e.pointerId);
+      // Starting the drag can re-fire a synthetic pointerover on this same
+      // pill (see p9CategoryTooltipInit's own "dragging" guard) instead of
+      // ever reaching #page9ZoneBelow's pointerleave — hide the category
+      // tooltip explicitly rather than leaving it stuck visible mid-drag.
+      document.getElementById("page9CatTooltip")?.classList.remove("is-visible");
 
       let activeDropTarget = null;
 
@@ -1097,9 +1163,8 @@ function p9BuildPanel() {
 p9BuildPanel();
 
 // Hover tooltip for a single event dot — date + Hebrew description. Every
-// event has a `descHeMedium` by now (events.json/server.py borrow-backfills
-// one from the same (actor, category) group for events with no real
-// description of their own), so every dot is hoverable.
+// event has its own real `descHeMedium` (events.json/server.py, sourced from
+// Events_with_description_he_medium.xlsx), so every dot is hoverable.
 function p9HoverInit() {
   const canvasEl  = document.getElementById("canvas");
   const tooltipEl = document.getElementById("page9Tooltip");
@@ -1277,3 +1342,48 @@ function p9HoverInit() {
 }
 
 p9HoverInit();
+
+// Hover tooltip for a category pill in the tray (#page9ZoneBelow) — a short
+// description of what the category covers. Deliberately scoped to the tray
+// only, per explicit request: dropped pills in #page9ZoneAbove (the extreme
+// zone) already have their own hover behavior (setPillHover, p9HoverInit
+// above) and don't get this description tooltip.
+function p9CategoryTooltipInit() {
+  const tooltipEl = document.getElementById("page9CatTooltip");
+  const descEl    = tooltipEl.querySelector(".page9-cat-tooltip-desc");
+  const zoneBelow = document.getElementById("page9ZoneBelow");
+  const panel     = document.querySelector(".page9-sticky");
+
+  const GAP = 10; // px between the pill's top edge and the tooltip's arrow tip
+
+  function show(pill) {
+    // Starting a drag (panel.classList "dragging", set in p9BuildPanel's
+    // pointerdown handler) re-fires a synthetic pointerover on the same pill
+    // as a side effect of the DOM mutations it makes (ghost insertion,
+    // .dragging's opacity:0) — even though the pointer itself hasn't moved.
+    // Ignore it, or the tooltip would pop back up mid-drag right after this
+    // same gesture is what should dismiss it.
+    if (panel.classList.contains("dragging")) return;
+    descEl.textContent = P9_CATEGORY_DESC[Number(pill.dataset.idx)];
+    tooltipEl.classList.add("is-visible");
+
+    const rect     = pill.getBoundingClientRect();
+    const rawLeft  = rect.left + rect.width / 2 - tooltipEl.offsetWidth / 2;
+    const left     = Math.max(8, Math.min(rawLeft, window.innerWidth - tooltipEl.offsetWidth - 8));
+    const top      = rect.top - tooltipEl.offsetHeight - GAP;
+    tooltipEl.style.left = `${left}px`;
+    tooltipEl.style.top  = `${top}px`;
+  }
+  function hide() {
+    tooltipEl.classList.remove("is-visible");
+  }
+
+  zoneBelow.addEventListener("pointerover", e => {
+    const pill = e.target.closest(".page9-pill");
+    if (pill && zoneBelow.contains(pill)) show(pill); else hide();
+  });
+  zoneBelow.addEventListener("pointerleave", hide);
+  window.addEventListener("scroll", () => { if (currentPage !== 11) hide(); }, { passive: true });
+}
+
+p9CategoryTooltipInit();

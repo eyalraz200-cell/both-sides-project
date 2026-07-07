@@ -47,6 +47,26 @@ body {
 /* Dev-only @foldN indicator (see project.html) — fixed to the viewport
    (not the scrolling .text-col), so it stays put in the upper-left
    regardless of scroll position. */
+.fold-number-badge {
+  /* Dev tool, hidden by default — flip to "block" to bring it back. */
+  display: none;
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1000;
+  font: 600 13px 'Assistant', sans-serif;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+}
+
+.fold-number-badge option {
+  color: #000;
+  font-weight: 600;
+}
 
 .text-section {
   position: relative;
@@ -432,7 +452,7 @@ body {
   /* Without an explicit width, an empty column flex item collapses to 0 width
      (no content to size against) — leaving nothing for a drop to actually land
      on. A generous min-width keeps it a real, hittable drop target at rest. */
-  min-width: 220px;
+  min-width: 260px;
   /* Overrides .page9-zone's `padding: 6px 0` to add horizontal breathing room
      too — needed so the longest pill (the dragging-state width is sized to
      it exactly, see --page9-zone-stack-width below) isn't flush against the
@@ -503,7 +523,7 @@ body {
    from Figma's own dropped-chip node (136:433215) and toward matching the
    tray pill (187:15505/201:49246) instead:
    - Text (font-size, color) is no longer overridden — inherits the base
-     .page9-pill rule, same 20px/rgba(0,0,0,0.4) as the tray.
+     .page9-pill rule, same 20px/rgba(0,0,0,0.5) as the tray.
    - The top/bottom stroke's darkness now matches the tray's own border
      exactly (rgba(130,130,130,0.3) — see ::before/::after below), not
      Figma's fainter 0.14.
@@ -588,7 +608,7 @@ body {
   align-items: center;
   gap: 6px;
   font: 600 20px 'Assistant', sans-serif;
-  color: rgba(0, 0, 0, 0.4);
+  color: rgba(0, 0, 0, 0.5);
   background: #fff;
   border: 1px solid rgba(130, 130, 130, 0.3);
   border-radius: 4px;
@@ -651,10 +671,10 @@ body {
   width: 3px;
   height: 3px;
   border-radius: 50%;
-  /* Close to the pill's own label text color (.page9-pill, rgba(0,0,0,0.4))
+  /* Close to the pill's own label text color (.page9-pill, rgba(0,0,0,0.5))
      but a touch lighter, per explicit request — still darker than the
      original rgba(149,149,149,0.38) it replaced. */
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.4);
 }
 
 /* Hover tooltip for a single event dot in page-10's extreme/legit grid (Figma
@@ -705,6 +725,52 @@ body {
   color: #000;
   text-align: right;
   width: 100%;
+}
+
+/* Hover tooltip for a category pill in page-10's tray (#page9ZoneBelow only —
+   dropped pills in the extreme zone get a different hover treatment, see
+   .page9-pill.is-hover-highlighted above) — a short description of what the
+   category covers. The arrow (.page9-cat-tooltip-arrow) is a separate element
+   from the box, but both sit under this one positioned wrapper so a single
+   `filter: drop-shadow` renders as one shadow around their combined
+   silhouette — two independent box-shadows would leave a visible seam/double
+   shadow right where the triangle meets the box. */
+.page9-cat-tooltip {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  display: none;
+  width: 200px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 10px 14px;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.1));
+}
+
+.page9-cat-tooltip.is-visible {
+  display: block;
+}
+
+.page9-cat-tooltip-desc {
+  font: 400 15px 'Assistant', sans-serif;
+  color: #000;
+  text-align: center;
+  direction: rtl;
+}
+
+/* A square rotated 45deg, half-tucked behind the box's bottom edge (same
+   fill, so the tucked half is invisible) — only the exposed bottom half pokes
+   out as the pointer triangle. .page9-cat-tooltip's own position:fixed makes
+   it the containing block for this absolutely-positioned child, no extra
+   position:relative needed. */
+.page9-cat-tooltip-arrow {
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  transform: translateX(-50%) rotate(45deg);
 }
 
 /* Figma specs every title card at 20px Medium (verified across nodes
@@ -924,6 +990,18 @@ body {
   direction: rtl;
 }
 
+/* Forced invisible while @fold13's scroll gate (main.js, p13GateLocked) is
+   locked — momentum-phase wheel events are non-cancelable in some browsers,
+   so the page can genuinely scroll past the gate for a paint or two before
+   the safety net corrects scrollY back. Since this wrapper is position:sticky,
+   a real (if brief) overscroll is enough to pin it into view on its own —
+   toggled the instant p9.sides changes (page9.js), not on a scroll/rAF tick,
+   so there's no lag window for it to peek through regardless of scroll timing. */
+.page12-sticky-center.gate-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
 #page-12 .text-card-frame {
   width: 450px;
   padding: 40px 40px 48px;
@@ -981,7 +1059,6 @@ body {
   right: 30px;
   top: 32px;
   width: 91px;
-  visibility: hidden;
 }
 
 .page0-logo-img {
@@ -1133,6 +1210,32 @@ body {
 
 .group-item.is-dimmed .group-label {
   color: #000;
+}
+
+/* Source-credit line under fold6's mini-legend (main.js: fold6NoteEl) — no
+   Figma node, new content. Fixed px width so it wraps consistently
+   regardless of viewport (same convention as .text-card's fixed 480px);
+   left/top are the note's own position (not an anchor offset from a
+   sibling, unlike .group-swatch/.group-label), so no position:relative
+   parent is needed. Opacity-only fade, set inline in JS (e6) — no CSS
+   transition, same reasoning as .fold6-square-label above. */
+.fold6-note {
+  position: absolute;
+  direction: rtl;
+  text-align: left;
+  font: 14px 'Assistant', sans-serif;
+  line-height: 1.4;
+  color: rgba(0, 0, 0, 0.85);
+  opacity: 0;
+}
+
+/* Faint hairline separating the note from the group rows above it — same
+   opacity-only fade (e6) as .fold6-note itself. */
+.fold6-note-divider {
+  position: absolute;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.12);
+  opacity: 0;
 }
 
 /* Hidden measurement-only scaffold for fold 5's row layout — never painted

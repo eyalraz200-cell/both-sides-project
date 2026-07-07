@@ -83,6 +83,7 @@ function init() {
   canvas.height = rect.height * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   draw();
+  updateFoldNumberBadge();
 }
 
 // .text-card-frame's dashed border (see style.css for why this isn't plain
@@ -132,6 +133,30 @@ function updateTextCardFrameDashes() {
 // ── Scrollytelling: which text section is active drives the pinned canvas ──
 const sections = Array.from(document.querySelectorAll(".text-section"));
 
+const foldNumberBadge = document.getElementById("foldNumberBadge");
+
+// Populate once with one <option> per section (@foldN is this project's own
+// canonical fold numbering — see CLAUDE.md's fold reference table — always
+// currentPage's id + 1). Picking an option scrolls its section into view;
+// the resulting scroll re-triggers the existing IntersectionObserver, which
+// calls setActivePage/updateFoldNumberBadge on its own, so no extra state
+// sync is needed here.
+if (foldNumberBadge) {
+  sections.forEach((sec, i) => {
+    const opt = document.createElement("option");
+    opt.value = String(i);
+    opt.textContent = `@fold${i + 1}`;
+    foldNumberBadge.appendChild(opt);
+  });
+  foldNumberBadge.addEventListener("change", () => {
+    sections[Number(foldNumberBadge.value)].scrollIntoView({ behavior: "smooth" });
+  });
+}
+
+function updateFoldNumberBadge() {
+  if (foldNumberBadge) foldNumberBadge.value = String(currentPage);
+}
+
 function setActivePage(page) {
   if (page === currentPage) return;
   // Scrolling back out of the timeline toward an earlier fold — wipe all
@@ -140,6 +165,7 @@ function setActivePage(page) {
   if (currentPage === 9 && page < 9) p7ResetForReplay();
   currentPage = page;
   updateGroups();
+  updateFoldNumberBadge();
   draw();
 }
 
@@ -546,12 +572,12 @@ function updateFold5RowTargets(W, H) {
 const FOLD6_SQUARES_X = 754;
 const FOLD6_SQUARES_Y = [386.5, 415.5, 444.5, 473.5, 502.5, 531.5, 560.5, 589.5, 618.5, 648];
 const FOLD6_SQUARE_LABELS = [
-  "הפגנה בלתי אלימה",
-  "חטיפה",
+  "הפגנה לא אלימה",
+  "החזקה בכפייה",
   "הפרות סדר",
   "הטרדה ואיומים",
   "תקיפה פיזית של בלתי מעורב",
-  "השתלטות על שטח",
+  "ניכוס שטח",
   "פגיעה ברכוש",
   "חסימת כביש",
   "תקיפה חמושה של בלתי מעורב",
@@ -701,8 +727,13 @@ const FOLD2_ENTRANCE_MS = 3400;
 // out — see updateGroups) into one trigger, same reasoning as
 // FOLD2_ENTRANCE_MS above — own duration instead of GROUP_TRANSITION_MS.
 const FOLD5_TRANSITION_MS = 3600;
+// fold3Trigger (bound to page3TitleCardEl, i.e. @fold4's own card — see the
+// selector above) now also packs 2 sequential beats: the @fold3 split
+// merging back into one dot, THEN the spread-across-the-screen move — same
+// reasoning as FOLD2_ENTRANCE_MS/FOLD5_TRANSITION_MS above.
+const FOLD4_ENTRANCE_MS = 3000;
 const fold2Trigger      = makeTrigger(FOLD2_ENTRANCE_MS, updateGroups);
-const fold3Trigger      = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
+const fold3Trigger      = makeTrigger(FOLD4_ENTRANCE_MS, updateGroups);
 const fold4Trigger      = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
 const fold5Trigger      = makeTrigger(FOLD5_TRANSITION_MS, updateGroups);
 const fold6Trigger      = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
@@ -740,18 +771,18 @@ function watchCardThreshold(cardEl, frac, trigger) {
   };
 }
 
-// New fold (@fold3, #page-2): dots split when the card crosses the lower 1/6
-// of the screen (card entering from the bottom), and merge back when it crosses
-// the upper 1/6 (card leaving toward the top). Two independent threshold
-// triggers combined in updateGroups: splitEased = splitT * (1 - revertT).
+// New fold (@fold3, #page-2): dots split into 3 once, at the card's ordinary
+// center crossing — same convention as every other fold trigger, instead of
+// this fold's own bespoke pair of thresholds. The split no longer reverts on
+// its own; it stays split for the rest of @fold3 and is merged back by
+// @fold4's own entrance instead (fold3Trigger's first beat below), so the
+// dots read as "divide, then re-form right before spreading out."
 const FOLD_NEW3_SPLIT_MS  = 700;
 const SPLIT_DOT_SIZE      = 7;   // px — each of the 3 dots while split
 const SPLIT_DOT_GAP       = 5;   // px — gap between stacked dots
 const SPLIT_OFFSET        = SPLIT_DOT_SIZE + SPLIT_DOT_GAP; // center-to-center spacing
 const foldNew3SplitTrigger  = makeTrigger(FOLD_NEW3_SPLIT_MS, updateGroups);
-const foldNew3RevertTrigger = makeTrigger(FOLD_NEW3_SPLIT_MS, updateGroups);
-const checkFoldNew3Split  = watchCardThreshold(pageNew3TitleCardEl, 3 / 4, foldNew3SplitTrigger);
-const checkFoldNew3Revert = watchCardThreshold(pageNew3TitleCardEl, 1 / 4, foldNew3RevertTrigger);
+const checkFoldNew3Split  = watchCardThreshold(pageNew3TitleCardEl, 0.5, foldNew3SplitTrigger);
 
 // Fold 2's legend (the groups overlay's first appearance) is tied to the title
 // card directly — same 0.5 convention and makeTrigger/watchCardThreshold
@@ -775,7 +806,7 @@ const checkFold9SquaresFade = watchCardThreshold(page7TitleCardEl, 1 / 12, fold9
 const checkFold13           = watchCardThreshold(page12TitleCardEl, 0.5, fold13Trigger);
 
 function checkGroupTriggers() {
-  checkFoldNew3Split(); checkFoldNew3Revert(); checkFold2(); checkFold3(); checkFold4(); checkFold5(); checkFold6(); checkFold7Label(); checkFold9(); checkFold9SquaresFade(); checkFold13();
+  checkFoldNew3Split(); checkFold2(); checkFold3(); checkFold4(); checkFold5(); checkFold6(); checkFold7Label(); checkFold9(); checkFold9SquaresFade(); checkFold13();
 }
 
 // Default (legend/fold3/fold4/fold5) swatch size + the swatch-to-label gap
@@ -784,6 +815,41 @@ function checkGroupTriggers() {
 // than snapped, same "seamless, no popping" rule as every other transition.
 const CLUSTER_SWATCH_SIZE = 13, CLUSTER_LABEL_GAP = 12;
 const LEFT_LEGEND_SWATCH_SIZE = 6, LEFT_LEGEND_LABEL_GAP = 6;
+
+// Source-credit line under fold6's mini-legend (no Figma node — new content,
+// not part of the original design). Fixed px width/font, same "position
+// anchors are frame-scaled, sizing isn't" convention as .group-label's own
+// hardcoded font sizes above. FOLD6_BOTTOM_ROW is the mini-legend's
+// bottom-most row (highest fold6.y = פעילי שמאל) — the note hangs off it.
+const FOLD6_NOTE_TEXT = "הפעולות נאספו ממאגר ACLED, האוסף מידע מדיווחים פומביים, ארגוני תיעוד וכלי תקשורת.";
+const FOLD6_NOTE_WIDTH = 150;
+// Divider (faint hairline) sits between the last row and the note, its own
+// height folded into the gap math below like the note's own height is.
+const FOLD6_DIVIDER_GAP_TOP = 10, FOLD6_DIVIDER_GAP_BOTTOM = 10, FOLD6_DIVIDER_HEIGHT = 1;
+const FOLD6_BOTTOM_ROW_INDEX = GROUPS.findIndex(g => g.color === "#d946ef");
+const FOLD6_BOTTOM_ROW = GROUPS[FOLD6_BOTTOM_ROW_INDEX];
+const fold6NoteEl = document.createElement("div");
+fold6NoteEl.className = "fold6-note";
+fold6NoteEl.style.width = `${FOLD6_NOTE_WIDTH}px`;
+fold6NoteEl.textContent = FOLD6_NOTE_TEXT;
+groupsOverlayEl.appendChild(fold6NoteEl);
+// Hidden, permanently off-screen clone of the bottom row's *settled* label
+// (fixed 16px/400, matching fold6's post-lerp end state) — measuring this
+// instead of the live groupItems[FOLD6_BOTTOM_ROW_INDEX].label lets the
+// note/divider below compute their target position from where that row
+// ENDS UP, not wherever it currently is mid-flight. Reading the live label's
+// getBoundingClientRect() instead (an earlier version of this code did)
+// made the note visibly trail the row in from its fold5 position instead of
+// staying put and just fading in.
+const fold6RowMeasureEl = document.createElement("span");
+fold6RowMeasureEl.className = "group-label";
+fold6RowMeasureEl.style.cssText = "visibility:hidden; left:-9999px; top:-9999px; font-size:16px; font-weight:400;";
+fold6RowMeasureEl.textContent = FOLD6_BOTTOM_ROW.label;
+groupsOverlayEl.appendChild(fold6RowMeasureEl);
+const fold6NoteDividerEl = document.createElement("div");
+fold6NoteDividerEl.className = "fold6-note-divider";
+fold6NoteDividerEl.style.width = `${FOLD6_NOTE_WIDTH}px`;
+groupsOverlayEl.appendChild(fold6NoteDividerEl);
 
 const LEGEND_ROW_GAP = 78; // vertical gap between legend rows
 const LEGEND_PER_COL = Math.ceil(GROUPS.length / 2); // groups per legend column (two columns)
@@ -795,8 +861,19 @@ const LEGEND_PER_COL = Math.ceil(GROUPS.length / 2); // groups per legend column
 // between two different DOM nodes to get there.
 function updateGroups() {
   const W = canvas.clientWidth, H = canvas.clientHeight;
-  const e3 = fold3Trigger.currentT(), e4 = fold4Trigger.currentT(), e6 = fold6Trigger.currentT();
-  const splitEased = foldNew3SplitTrigger.currentT() * (1 - foldNew3RevertTrigger.currentT());
+  // @fold4's entrance (fold3Trigger, its card's ordinary center crossing)
+  // packs 2 sequential beats into one timeline, same raw/span-slicing
+  // convention as @fold2's entrance/@fold5's exit above: (1) the @fold3 split
+  // merges back into one dot, THEN (2) the dot spreads across the screen to
+  // its fold3Pos target below. Reversing (scrolling back up) runs both beats
+  // in reverse, last-to-first — the dot re-splits only once it's back near
+  // its @fold3 spot, not immediately on scrolling up.
+  const raw3 = fold3Trigger.currentRaw();
+  const FOLD4_MERGE_SPAN = 0.35, FOLD4_GAP_SPAN = 0.1, FOLD4_SPREAD_SPAN = 0.55; // sums to 1
+  const fold4MergeT = p9Ease(Math.max(0, Math.min(1, raw3 / FOLD4_MERGE_SPAN)));
+  const e3 = p9Ease(Math.max(0, Math.min(1, (raw3 - FOLD4_MERGE_SPAN - FOLD4_GAP_SPAN) / FOLD4_SPREAD_SPAN)));
+  const e4 = fold4Trigger.currentT(), e6 = fold6Trigger.currentT();
+  const splitEased = foldNew3SplitTrigger.currentT() * (1 - fold4MergeT);
   const legendTop = H / 2 - ((LEGEND_PER_COL - 1) * LEGEND_ROW_GAP) / 2;
 
   // @fold2's whole entrance is 3 sequential beats sharing fold2Trigger's one
@@ -831,6 +908,14 @@ function updateGroups() {
   // decorScale's at-rest value (1) before the user ever sees the pop-in.
   const decorScale = 1 - shrinkT;
   PAGE0_DECORATIVE_DOT_ELS.forEach(({ el, popped }) => { if (popped) el.style.transform = `scale(${decorScale})`; });
+
+  // Measured live off the real (fixed-width) note element rather than a
+  // hidden scaffold — its height only ever changes on a font swap/width
+  // edit, both already covered by layoutGroups() re-running this function,
+  // so re-reading it every tick costs nothing and can never go stale.
+  const fold6NoteHeightPx = fold6NoteEl.offsetHeight;
+  const fold6NoteBlockGapPx = FOLD6_DIVIDER_GAP_TOP + FOLD6_DIVIDER_HEIGHT + FOLD6_DIVIDER_GAP_BOTTOM;
+  const fold6NoteShiftPx = (fold6NoteBlockGapPx + fold6NoteHeightPx) / 2;
 
   // Beats 2 and 3 each stagger the rows top-to-bottom within their own
   // third of the timeline, same makeTrigger-style "reaches target exactly at
@@ -886,7 +971,13 @@ function updateGroups() {
     let swatchSize = PAGE0_DOT_SQ + (CLUSTER_SWATCH_SIZE - PAGE0_DOT_SQ) * moveT, labelGap = CLUSTER_LABEL_GAP;
     if (g.row) swatchSize *= 1 - fold5ExitT;
     if (g.fold6) {
-      const fold6Pos = { x: (g.fold6.x / GROUPS_FRAME_W) * W, y: (g.fold6.y / GROUPS_FRAME_H) * H };
+      // Shifted up by half the note's own (gap + height) so the rows+note
+      // block stays centered on the same vertical anchor the 5 rows alone
+      // used to occupy, instead of the note just tacking on below them and
+      // reading off-center. Baked into the lerp target itself (not applied
+      // as a separate post-hoc offset) so it eases in with the same e6 as
+      // everything else, rather than popping once the rows finish settling.
+      const fold6Pos = { x: (g.fold6.x / GROUPS_FRAME_W) * W, y: (g.fold6.y / GROUPS_FRAME_H) * H - fold6NoteShiftPx };
       x += (fold6Pos.x - x) * e6; y += (fold6Pos.y - y) * e6;
       swatchSize += (LEFT_LEGEND_SWATCH_SIZE - CLUSTER_SWATCH_SIZE) * e6;
       labelGap   += (LEFT_LEGEND_LABEL_GAP - CLUSTER_LABEL_GAP) * e6;
@@ -991,6 +1082,32 @@ function updateGroups() {
     item.el.classList.toggle("is-emphasized", postFold3 && !g.fold4.dimmed && !postFold6);
   });
 
+  // The note and its divider just fade in at their final resting spot (same
+  // e6 as the rows) rather than lerping in from anywhere — unlike the rows,
+  // neither has an earlier fold to fly in from, so animating opacity alone
+  // reads as part of the same settle instead of a second, separate motion.
+  // Anchored off FOLD6_BOTTOM_ROW's own fold6 TARGET (already shifted up by
+  // fold6NoteShiftPx above), same x as every mini-legend swatch — deliberately
+  // NOT the live groupItems[FOLD6_BOTTOM_ROW_INDEX] position, which is still
+  // mid-lerp for most of e6's range and would drag the note in from wherever
+  // that row currently is instead of holding it still and just fading it in.
+  //
+  // dividerY is built from fold6RowMeasureEl's *settled* label height (not a
+  // swatch-height estimate) — the label (16px text) is taller than the 6px
+  // swatch it's centered on, so a swatch-based estimate undershoots the row's
+  // real bottom edge and makes the top gap look smaller than the bottom one.
+  const fold6X = (FOLD6_BOTTOM_ROW.fold6.x / GROUPS_FRAME_W) * W;
+  const fold6TargetAnchorY = (FOLD6_BOTTOM_ROW.fold6.y / GROUPS_FRAME_H) * H - fold6NoteShiftPx;
+  const lastRowLabelBottomTarget = fold6TargetAnchorY + LEFT_LEGEND_SWATCH_SIZE / 2 + fold6RowMeasureEl.offsetHeight / 2;
+  const dividerY = lastRowLabelBottomTarget + FOLD6_DIVIDER_GAP_TOP;
+  const noteY = dividerY + FOLD6_DIVIDER_HEIGHT + FOLD6_DIVIDER_GAP_BOTTOM;
+  fold6NoteDividerEl.style.left = `${fold6X}px`;
+  fold6NoteDividerEl.style.top = `${dividerY}px`;
+  fold6NoteDividerEl.style.opacity = String(e6);
+  fold6NoteEl.style.left = `${fold6X}px`;
+  fold6NoteEl.style.top = `${noteY}px`;
+  fold6NoteEl.style.opacity = String(e6);
+
   // (groupsOverlayEl's own "is-active" is set once at init, not toggled here
   // — see the comment by its declaration above.)
   // Fades the whole curated-squares overlay out as fold 9's own card finally
@@ -1090,6 +1207,13 @@ const page9ZoneWrapEl   = document.querySelector("#page-11 .page9-zone-wrap-extr
 let page9Ticking = false;
 let page9LinePast = false; // previous "title past center" state, so the line trigger only fires on the transition
 let page9WasStuck = false; // tracks isStuck across frames to detect the stuck→unstuck transition
+// Categories dropped into the extreme zone at the moment the user last
+// scrolled up out of @fold12 — captured in #page9ZoneAbove's own DOM order
+// (most-recently-dropped first) right before p9ResetDrops clears it, so
+// p9RestoreDrops can put the exact same pills/dots back if they scroll back
+// down into @fold12, rather than that choice being lost for the rest of the
+// session the instant they scroll away.
+let page9SavedAboveIdxs = null;
 
 function page9UpdateFromScroll() {
   // Use the title *row* container's position rather than the card's own
@@ -1114,9 +1238,20 @@ function page9UpdateFromScroll() {
   page9StickyEl.classList.toggle("engaged", isStuck);
 
   // Scrolling back up past the stick threshold: animate all extreme dots back
-  // down to the legit zone and return pills to the tray.
+  // down to the legit zone and return pills to the tray — but remember which
+  // categories were dropped first, so scrolling back down can restore them
+  // (see page9SavedAboveIdxs above) instead of this being a permanent reset.
   if (page9WasStuck && !isStuck && typeof p9ResetDrops === "function") {
+    const zoneAboveEl = document.getElementById("page9ZoneAbove");
+    const droppedIdxs = zoneAboveEl
+      ? Array.from(zoneAboveEl.querySelectorAll(".page9-pill")).map(p => Number(p.dataset.idx))
+      : [];
+    page9SavedAboveIdxs = droppedIdxs.length ? droppedIdxs : null;
     p9ResetDrops(true);
+  } else if (!page9WasStuck && isStuck && page9SavedAboveIdxs && typeof p9RestoreDrops === "function") {
+    // Scrolling back down into @fold12 — replay the saved drops.
+    p9RestoreDrops(page9SavedAboveIdxs);
+    page9SavedAboveIdxs = null;
   }
   page9WasStuck = isStuck;
 }
@@ -1177,8 +1312,7 @@ function updateFold13() {
 
 // ── @fold13 scroll gate ──────────────────────────────────────────────────────
 // #page-12 is locked until at least one @dragcard has been dropped into the
-// extreme zone. p9.sides (page9.js) is the source of truth — no changes to
-// page9.js needed; it's a global read here.
+// extreme zone. p9.sides (page9.js) is the source of truth.
 function p13GateLocked() {
   return !p9.sides.some(s => s === "above");
 }
@@ -1190,10 +1324,37 @@ function p13GateMax() {
   return gateEl ? gateEl.offsetTop - window.innerHeight : Infinity;
 }
 
-// Desktop: block downward mouse-wheel past the gate
+// #page-12's title sits in a position:sticky wrapper, so the *instant* real
+// scrollY crosses the gate — even for a single momentum-phase wheel tick that
+// ignores preventDefault (some browsers mark those non-cancelable, so the
+// wheel handler below can't stop them) — it genuinely pins into view for at
+// least one paint, before any scrollY-snapback JS gets a chance to run. An
+// opacity toggle doesn't have that race: it isn't driven by scroll position at
+// all, only by p9.sides actually changing (called from page9.js's commitDrop/
+// p9ResetDrops, the only two places that happens), so the title stays fully
+// invisible for the whole locked duration regardless of any transient
+// overscroll — no per-frame lag window for it to peek through.
+const page12StickyEl = document.querySelector("#page-12 .page12-sticky-center");
+function p13SyncGateVisibility() {
+  if (page12StickyEl) page12StickyEl.classList.toggle("gate-hidden", p13GateLocked());
+}
+p13SyncGateVisibility();
+
+// Desktop: block downward mouse-wheel past the gate. Must also catch the
+// single wheel tick that *crosses* the gate, not just ticks that land on/past
+// it — checking only `scrollY >= max` let one large-delta tick scroll clean
+// past the threshold (revealing #page-12's title for a frame until the
+// scroll-event safety net below caught up), instead of ever actually stopping
+// right at the line.
 window.addEventListener("wheel", (e) => {
   if (!p13GateLocked() || e.deltaY <= 0) return;
-  if (window.scrollY >= p13GateMax()) e.preventDefault();
+  const max = p13GateMax();
+  if (window.scrollY >= max) {
+    e.preventDefault();
+  } else if (window.scrollY + e.deltaY > max) {
+    e.preventDefault();
+    window.scrollTo({ top: max, behavior: "instant" });
+  }
 }, { passive: false });
 
 // Keyboard: block arrow-down / page-down / space / End at the gate
@@ -1218,19 +1379,17 @@ window.addEventListener("touchmove", (e) => {
   }
 }, { passive: false });
 
-// Safety net: snap back if scroll somehow lands past the gate (momentum, etc.)
-let p13SnapTicking = false;
+// Safety net: snap back if scroll somehow lands past the gate (momentum-phase
+// wheel events that ignore preventDefault, scrollbar drags, etc). Corrects
+// synchronously in the scroll handler itself rather than deferring to the next
+// requestAnimationFrame — that extra frame of delay is exactly the window
+// during which #page-12's title was visibly peeking up before snapping back.
 window.addEventListener("scroll", () => {
-  if (p13SnapTicking) return;
-  p13SnapTicking = true;
-  requestAnimationFrame(() => {
-    p13SnapTicking = false;
-    if (!p13GateLocked()) return;
-    const max = p13GateMax();
-    if (window.scrollY > max) {
-      window.scrollTo({ top: max, behavior: "instant" });
-    }
-  });
+  if (!p13GateLocked()) return;
+  const max = p13GateMax();
+  if (window.scrollY > max) {
+    window.scrollTo({ top: max, behavior: "instant" });
+  }
 }, { passive: true });
 
 // Freeze the page9 sticky panel in place while scrolled into @fold13 — once
