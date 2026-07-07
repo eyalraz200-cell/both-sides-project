@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import http.server, os, json, time, threading, openpyxl
-from collections import defaultdict
 from pathlib import Path
 
 PORT = 8080
@@ -26,11 +25,11 @@ def watch():
             last_modified = t
 
 def load_events():
-    wb = openpyxl.load_workbook(WATCH_DIR / "combined_V1_hebrew_summaries.xlsx", read_only=True, data_only=True)
+    wb = openpyxl.load_workbook(WATCH_DIR / "Events_with_description_he_medium.xlsx", read_only=True, data_only=True)
     ws = wb.active
     events = []
     for row in ws.iter_rows(min_row=2, values_only=True):
-        side, actor, cat, desc, date, fatal, crowd, desc_he_med, desc_he_short = row
+        side, actor, cat, desc, date, fatal, crowd, desc_he_med = row
         if date is None or side is None:
             continue
         date_str = date.strftime("%Y-%m-%d") if hasattr(date, "strftime") else str(date)[:10]
@@ -42,24 +41,6 @@ def load_events():
             "descHeMedium": desc_he_med or None,
         })
     wb.close()
-
-    # Borrow-backfill: most events have no real Hebrew description (only
-    # ~1,800 of 13,523 do). Every (actor, category) combo has at least one
-    # real description though, so an event missing its own borrows one from
-    # its own (actor, category) group instead of going without — round-robin
-    # per group so repeated borrows within a group aren't all the same
-    # sentence.
-    by_group = defaultdict(list)
-    for e in events:
-        if e["descHeMedium"]:
-            by_group[(e["actor"], e["category"])].append(e["descHeMedium"])
-    borrow_idx = defaultdict(int)
-    for e in events:
-        if not e["descHeMedium"]:
-            group = (e["actor"], e["category"])
-            pool = by_group[group]
-            e["descHeMedium"] = pool[borrow_idx[group] % len(pool)]
-            borrow_idx[group] += 1
 
     return events
 

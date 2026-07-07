@@ -36,6 +36,28 @@
         <div class="page9-tooltip-desc"></div>
       </div>
     </div>
+    <!-- Dev-only indicator of the current @foldN (see CLAUDE.md's fold
+         reference table) — fixed to the viewport, updated in setActivePage.
+         A real <select> (not a div) so clicking it pops a native dropdown of
+         every fold and jumping to one is just picking an option — see the
+         option-population/change-listener code in main.js. Lives as a direct
+         .layout child (not inside .graphic-col) so it stacks above .text-col
+         (z-index 1) — .graphic-col itself is only z-index 0, so nesting it
+         there left .text-col's transparent overlap area swallowing clicks. -->
+    <select class="fold-number-badge" id="foldNumberBadge" aria-label="Jump to fold"></select>
+    <!-- Hover tooltip for a category pill in page-11's tray (#page9ZoneBelow
+         only — see p9CategoryTooltipInit in page9.js). Same reasoning as
+         #foldNumberBadge above: a direct .layout child, not nested in
+         .graphic-col, so its z-index actually stacks above .text-col's tray/
+         dashed box instead of losing to them regardless of its own z-index
+         (.graphic-col's own stacking context traps any z-index inside it).
+         The arrow is a separate element from the box but shares the parent's
+         single drop-shadow (style.css), so the two read as one shape instead
+         of two overlapping shadows. -->
+    <div class="page9-cat-tooltip" id="page9CatTooltip" aria-hidden="true">
+      <div class="page9-cat-tooltip-desc"></div>
+      <div class="page9-cat-tooltip-arrow"></div>
+    </div>
     <div class="text-col" id="textCol">
       <section class="text-section" data-page="0" id="page-0">
         <div class="page0-overlay">
@@ -68,17 +90,17 @@
       </section>
       <section class="text-section" data-page="4" id="page-4">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">אבל, בשנים האחרונות מתחדדת חלוקה של קבוצות שונות לשני מחנות פוליטיים מנוגדים</h2>
+          <h2 class="section-title text-card-frame">אבל, בשנים האחרונות מתחדדת חלוקה של מספר קבוצות לשני מחנות פוליטיים מנוגדים</h2>
         </div>
       </section>
       <section class="text-section" data-page="5" id="page-5">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">לא כל הקבוצות משתייכות לחלוקה הזו, כאן נתמקד באלו שכן</h2>
+          <h2 class="section-title text-card-frame">לא כל הקבוצות משתייכות לחלוקה זו, כאן נתמקד באלו שכן</h2>
         </div>
       </section>
       <section class="text-section" data-page="6" id="page-6">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">אספנו תיעודים של פעולות פוליטיות משני צדי המפה, מתחילת 2023 ועד היום</h2>
+          <h2 class="section-title text-card-frame">אספנו תיעודים של פעולות פוליטיות משני צדי המפה, מתחילת 2023 ועד היום. הפעולות נאספו ממאגר ACLED, האוסף מידע מדיווחים פומביים, ארגוני תיעוד וכלי תקשורת.</h2>
         </div>
       </section>
       <section class="text-section" data-page="7" id="page-7">
