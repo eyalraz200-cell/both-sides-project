@@ -177,6 +177,19 @@ if (foldNumberBadge) {
   foldNumberBadge.addEventListener("change", () => {
     sections[Number(foldNumberBadge.value)].scrollIntoView({ behavior: "smooth" });
   });
+  // Hidden by default (see style.css); Ctrl+Shift+F toggles it and persists
+  // the choice in localStorage so it stays put across reloads.
+  const FOLD_BADGE_VISIBLE_KEY = "foldNumberBadgeVisible";
+  if (localStorage.getItem(FOLD_BADGE_VISIBLE_KEY) === "1") {
+    foldNumberBadge.classList.add("is-visible");
+  }
+  window.addEventListener("keydown", (e) => {
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "f") {
+      e.preventDefault();
+      const visible = foldNumberBadge.classList.toggle("is-visible");
+      localStorage.setItem(FOLD_BADGE_VISIBLE_KEY, visible ? "1" : "0");
+    }
+  });
 }
 
 function updateFoldNumberBadge() {
