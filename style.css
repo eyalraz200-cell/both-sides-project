@@ -48,8 +48,6 @@ body {
    (not the scrolling .text-col), so it stays put in the upper-left
    regardless of scroll position. */
 .fold-number-badge {
-  /* Dev tool, hidden by default — flip to "block" to bring it back. */
-  display: none;
   position: fixed;
   top: 12px;
   left: 12px;
@@ -223,13 +221,17 @@ body {
 .page9-header {
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.5s ease-out;
+  /* Slowed from 0.5s per explicit feedback — the engage fade read a touch
+     quick right when @fold12's title hits the top and the interaction state
+     kicks in. Kept matched with .page9-zone-wrap-extreme below, same as before. */
+  transition: opacity 0.7s ease-out;
 }
 
 .page9-zone-wrap-extreme {
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.5s ease-out;
+  /* See .page9-header above — same slowdown, same reasoning, kept matched. */
+  transition: opacity 0.7s ease-out;
 }
 
 /* position:fixed — never scrolls, always at the same viewport position. */
@@ -303,10 +305,10 @@ body {
   transition: background 0.15s;
 }
 
-/* A fixed stack of 3 row wrappers (.page9-tray-row, created in p9BuildPanel),
+/* A fixed stack of 2 row wrappers (.page9-tray-row, created in p9BuildPanel),
    not flex-wrap directly: each row is its own independent grid so a long
    pill in one row never inflates another row's column width (see
-   P9_TRAY_GRID/page9.js) — sharing one grid across all 3 rows would force
+   P9_TRAY_GRID/page9.js) — sharing one grid across all 2 rows would force
    every column wide enough for whichever row's occupant in that column is
    widest, leaving shorter pills centered in leftover space with an uneven
    gap to their neighbor instead of the row's own, consistent `gap`. */
@@ -361,7 +363,9 @@ body {
   left: 50%;
   bottom: 0;
   transform: translate(-50%, 100%); /* off-screen below until .engaged */
-  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  /* Slowed from 0.6s per explicit feedback, same reasoning as .page9-header's
+     own slowdown above — the engage slide-in read a touch quick. */
+  transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
   width: max-content;
   max-width: calc(100vw - 96px);
   display: flex;
@@ -690,7 +694,7 @@ body {
   display: none;
   direction: rtl;
   background: #fff;
-  border: 2px dashed #ea580c;
+  border: 2px dashed #ea6c15;
   border-radius: 8px 8px 8px 0;
   padding: 7px 10px;
   width: 222px;
@@ -782,6 +786,15 @@ body {
   font: 600 20px 'HadassahFriedlaender', serif;
   color: #111;
   margin: 0 0 8px;
+}
+
+/* The synthetic bold browsers use for .section-title's faked 600 weight (see
+   above — no true Medium OTF) fills in the sharp apex of a capital "A" into a
+   solid wedge, distorting it in a way lowercase/rounder letters don't show.
+   Only ever needed for the ACLED acronym so far — normal-weight Latin next to
+   bold Hebrew reads fine and avoids the artifact. */
+.latin-acronym {
+  font-weight: 400;
 }
 
 /* Normal-flow, horizontally-centered text block for every page's scrolled
@@ -907,9 +920,10 @@ body {
   position: absolute;
   left: 0;
   top: 0;
-  width: 5px;
-  height: 5px;
-  background: rgba(0, 0, 0, 0.9);
+  width: 8px;
+  height: 8px;
+  background: #767676;
+  transform-origin: center;
 }
 
 /* right: 8px — the anchor IS the square's left edge, so this offset is the
@@ -970,10 +984,16 @@ body {
   padding: 0;
 }
 
-/* @fold13's outro section — tall enough that the sticky wrapper has room to
-   hold the card centered for a full viewport of scroll before releasing. */
+/* @fold13's outro section — exactly one viewport, matching the sticky
+   wrapper's own height (below): the wrapper pins the instant it arrives (see
+   checkFold13/main.js, which fires right at that same moment) and there's no
+   extra section height left over past that point for the page to keep
+   scrolling through with nothing happening — it's also the last section, so
+   this is where the document ends. Previously 200vh (an extra full viewport
+   of "hold the card centered" room past the pin point) — per explicit
+   feedback that read as dead/null scroll once the title had already arrived. */
 #page-12 {
-  min-height: 200vh;
+  min-height: 100vh;
   display: block;
   padding: 0;
 }
@@ -1047,13 +1067,17 @@ body {
    box's center (compensating for the translateY(-50%) below) by subtracting
    half this box's own rendered height (91px wide / 2.617 aspect ≈ 34.8px
    tall, so 17.4px half-height) from that 459px.
-   position: fixed (not absolute, unlike .page0-title/.page0-subtitle, which
-   stay normal-flow and scroll away) — per explicit instruction the logo
-   doesn't scroll up with the rest of @fold1, it fades out in place instead
-   (page0UpdateFromScroll in main.js sets its opacity directly). The
-   calc(50% - ...) math is unchanged since .page0-overlay's box already
-   matched the viewport exactly at scroll 0 — fixed just keeps that same
-   computed position glued to the viewport at any scroll position. */
+   position: fixed — per explicit instruction the logo doesn't scroll up with
+   the rest of @fold1 like the title/subtitle do, it fades out in place
+   instead (page0LagLoopTick in main.js sets its opacity directly, no
+   transform). .page0-title/.page0-subtitle are also position: fixed now
+   (see their own comments below) but, unlike the logo, still get a JS
+   transform each frame to reproduce their own scroll-up motion — just
+   computed as a direct function of a lagged scroll value rather than as a
+   byproduct of native document flow. The calc(50% - ...) math here is
+   unchanged since .page0-overlay's box already matched the viewport exactly
+   at scroll 0 — fixed just keeps that same computed position glued to the
+   viewport at any scroll position. */
 .page0-logo {
   position: fixed;
   right: 30px;
@@ -1078,7 +1102,20 @@ body {
    trick Figma's own node uses, rather than a literal `right` value, to stay
    center-relative. */
 .page0-title {
-  position: absolute;
+  /* position: fixed (not absolute, despite the general note above about
+     .page0-title/.page0-subtitle staying normal-flow) — same reasoning and
+     same math as .page0-logo just above: .page0-overlay's box already
+     matches the viewport exactly at scroll 0, so this calc(50% - Npx) value
+     renders identically either way, and fixed just keeps it glued to the
+     viewport instead of scrolling away by document flow. Switched from
+     absolute per explicit instruction: the scroll-driven lag effect in
+     main.js (page0LagLoopTick) needs to be the *only* thing moving this
+     element — layering a JS transform on top of native scroll-driven flow
+     movement (the old absolute behavior) meant two separate browser
+     pipelines (layout/paint for the flow position, compositing for the
+     transform) were fighting over the same element's position every frame,
+     which read as jitter no amount of lerp/clamp tuning fixed. */
+  position: fixed;
   left: calc(50% + 8px);
   /* Nudged up an extra 28px (286 vs the Figma-literal 258) so the gap below
      the title to its dot column matches the gap below the subtitle to its
@@ -1101,7 +1138,8 @@ body {
    "double-easing" this file avoids everywhere else continuously-JS-driven
    values are set (see .page0-dot, .group-swatch, etc.). */
 .page0-subtitle {
-  position: absolute;
+  /* position: fixed — same reasoning as .page0-title above. */
+  position: fixed;
   left: calc(50% - 10px);
   transform: translateX(-100%);
   top: calc(50% - 179px);

@@ -125,3 +125,49 @@ function drawPage8(ctx, W, H) {
   blendAndDraw(p7.leftEvents,  p9.leftIndexOf,  "left",  p7.leftPos,  leftX0);
   blendAndDraw(p7.rightEvents, p9.rightIndexOf, "right", p7.rightPos, rightX0);
 }
+
+// Called once, right when currentPage flips from 10 to 11 while this glide is
+// still mid-flight (see setActivePage in main.js) — the section-level
+// IntersectionObserver driving currentPage can cross into page9's slot before
+// p8CurrentT() actually reaches 1, and drawPage9 has no notion of this
+// glide's progress on its own, so without capturing it here the dots would
+// otherwise jump straight to their final legit-grid position the instant
+// page9 starts drawing instead of this section. Reuses page9's own p9.anim
+// entrance mechanism (the same shape p9.js seeds for its other "animate from
+// wherever these dots currently are" entrances) — just seeded once here with
+// this glide's current on-screen (blended) position as the "from", identical
+// math to blendAndDraw above.
+function p8CaptureBlendedPositions(W, H) {
+  const ease = p9Ease(p8CurrentT());
+
+  p7UpdateLayout(W, H);
+  p9EnsureIndex();
+  const legitGeom = p9LegitGeometry(W, H);
+
+  const { CELL, cols, leftX0 } = p7;
+  const topY    = Math.round(H * SBB_TIMELINE.top);
+  const rightX0 = W / 2 + CENTER_GAP / 2;
+
+  const out = new Map();
+  function capture(events, indexOf, side, positions, x0) {
+    events.forEach((e, i) => {
+      const cell = positions[i];
+      const col  = cell % cols;
+      const row  = Math.floor(cell / cols);
+      const fromX = x0 + col * CELL;
+      const fromY = topY + row * CELL;
+
+      const target = p9LegitPosOf(e, indexOf, side, legitGeom);
+      if (!target) return;
+
+      out.set(e, {
+        x: fromX + (target.x - fromX) * ease,
+        y: fromY + (target.y - fromY) * ease,
+        alpha: 1,
+      });
+    });
+  }
+  capture(p7.leftEvents,  p9.leftIndexOf,  "left",  p7.leftPos,  leftX0);
+  capture(p7.rightEvents, p9.rightIndexOf, "right", p7.rightPos, rightX0);
+  return out;
+}
