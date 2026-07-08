@@ -51,16 +51,18 @@ function p8StartPhase(toT) {
 }
 
 // Called once, the instant the title crosses the viewport's vertical center
-// (see page8CheckScroll in main.js). Idempotent — safe to call again.
+// (see page8CheckScroll in main.js — tracks the crossing itself, not just a
+// static position check, so this can't refire while already engaged).
+// Idempotent — safe to call again.
 function p8Trigger() {
   if (p8Engaged) return;
   p8Engaged        = true;
-  p8TriggerScrollY = window.scrollY;
+  p8TriggerScrollY = window.scrollY; // no longer read anywhere — page8CheckScroll's reverse trigger is now itself crossing-based rather than scrollY-delta-based — kept only as a harmless breadcrumb of the moment engagement started.
   p8StartPhase(1);
 }
 
-// Called once scrolling back up has carried scrollY above p8TriggerScrollY again
-// (see page8CheckScroll in main.js) — plays the glide back toward page7's layout.
+// Called once the title's crossing (see page8CheckScroll in main.js) reverses
+// back below the threshold — plays the glide back toward page7's layout.
 function p8TriggerReverse() {
   if (!p8Engaged) return;
   p8StartPhase(0);

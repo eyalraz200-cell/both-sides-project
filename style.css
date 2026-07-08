@@ -410,7 +410,7 @@ body {
   position: absolute;
   top: 10px; /* G */
   right: calc(50% - 23px);
-  font: 700 16px 'Assistant', sans-serif;
+  font: 600 16px 'Assistant', sans-serif;
   color: rgba(0, 0, 0, 0.37);
   white-space: nowrap;
   margin: 0;
@@ -700,7 +700,7 @@ body {
   display: none;
   direction: rtl;
   background: #fff;
-  border: 2px dashed #ea6c15;
+  border: 2px dashed #f16f16;
   border-radius: 8px 8px 8px 0;
   padding: 7px 10px;
   width: 222px;
@@ -1072,6 +1072,12 @@ body {
 
 .page12-body p {
   margin-bottom: 12px;
+  /* Rebalances line breaks across the whole paragraph instead of greedy-
+     filling each line — fixes single-word orphan last lines (e.g. "ביותר"
+     stranded alone) by reflowing earlier lines rather than forcing a
+     no-break on just the last two words (which would just push the whole
+     pair down instead of pulling the orphan up). */
+  text-wrap: pretty;
 }
 
 .page12-body p:last-child {

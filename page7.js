@@ -200,6 +200,18 @@ const p7MonthReverseStart = {}; // monthKey -> performance.now() timestamp (retr
 let p7MonthMaxReached = -1;     // highest monthKey ever reached, forward
 let p7AnimRunning = false;
 
+// Set once, the instant currentPage flips from 10 to 9 (leaving page8's
+// bridge) while page8's own timeline<->legit-grid glide (p8CurrentT,
+// page8.js) hasn't reached 0 yet — see setActivePage, main.js. Without this,
+// p7DrawSideSquares below has no notion of that glide's progress and would
+// draw every square straight at its resting timeline cell the instant this
+// section starts drawing instead of page8, i.e. an instant teleport back to
+// the @fold9/10 layout mid-reverse-glide. { from: Map<event,{x,y}>, start,
+// duration } — same shape/plain-glide convention as p9.anim's plainGlide
+// flag (page9.js), just for this one entry point instead of a persistent
+// per-frame system.
+let p7EntryAnim = null;
+
 // Wipes all per-month animation state so the next entry into the timeline
 // replays the cascade from scratch instead of showing settled dots.
 // Called from setActivePage (main.js) when the user scrolls back out of
@@ -251,8 +263,23 @@ let p7RealTimelineReached = false;
 // independent right-to-left color change on the same dots — two continuous,
 // same-direction reveals composing under one clip, not a hard cut between
 // two states.
+// Small hysteresis gap so a decelerating/momentum scroll settling right at
+// (or bouncing a couple px around) the exact top<=0 boundary can't flicker
+// p7HasEngaged true/false frame-to-frame. That flicker used to be visible:
+// p7DrawTimelineSquares' `if (p7HasEngaged) delete p7MonthReverseStart[curMonthKey]`
+// runs unconditionally every frame p7HasEngaged reads true, even for a single
+// stray frame — wiping the current month's in-progress retreat entry, which
+// then read as "not yet started" and got re-armed from scratch the very next
+// frame (if p7HasEngaged flipped back false) — one blank frame (nothing to
+// draw, since groupStartTime was momentarily undefined) followed by the
+// group popping back to full opacity and restarting its retreat, repeating
+// with every further flicker. Once engaged, disengaging now requires the
+// title to clear this small buffer past 0, not just barely cross it.
+const P7_ENGAGE_HYSTERESIS_PX = 24;
 function p7UpdateEngagement() {
-  p7HasEngaged = !!(page7TitleCardEl && page7TitleCardEl.getBoundingClientRect().top <= 0);
+  if (!page7TitleCardEl) { p7HasEngaged = false; return; }
+  const top = page7TitleCardEl.getBoundingClientRect().top;
+  p7HasEngaged = p7HasEngaged ? top <= P7_ENGAGE_HYSTERESIS_PX : top <= 0;
 }
 
 // The year axis's own scroll-driven fill (curX, p7DrawYearAxis) trails its raw
@@ -304,6 +331,7 @@ function p7AnyAnimActive() {
   if (p7AxisEventsAnimActive()) return true;
   if (p7AxisIntroStart !== null && p7AxisIntroT() < 1) return true;
   if (p7AxisFillLagActive()) return true;
+  if (p7EntryAnim && now - p7EntryAnim.start < p7EntryAnim.duration) return true;
   return false;
 }
 
@@ -358,6 +386,21 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     const destX = x0 + col * CELL;
     const destY = topY + row * CELL;
 
+    // Continuing page8's reverse glide into its resting timeline cell (see
+    // p7EntryAnim's own comment above) — blended position only, layered
+    // underneath this loop's existing scale/alpha cascade below, which is
+    // otherwise untouched (squares never move once placed here outside of
+    // this one entry blend).
+    let drawX = destX, drawY = destY;
+    if (p7EntryAnim) {
+      const from = p7EntryAnim.from.get(events[i]);
+      if (from) {
+        const glideT = p9Ease(Math.min(1, Math.max(0, (performance.now() - p7EntryAnim.start) / p7EntryAnim.duration)));
+        drawX = from.x + (destX - from.x) * glideT;
+        drawY = from.y + (destY - from.y) * glideT;
+      }
+    }
+
     // Claimed events (FOLD6_SQUARE_ACTORS/OCCURRENCE, main.js) are never
     // drawn here at all — the fold-9 flying square *is* this dot, permanently,
     // not a stand-in for a separate real one. Still recorded in posMap (full
@@ -396,7 +439,7 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
       alpha = presence;
     }
 
-    posMap.set(events[i], { x: destX, y: destY, alpha });
+    posMap.set(events[i], { x: drawX, y: drawY, alpha });
 
     // While one square is hovered (p7.hoveredEvent, set by p7HoverInit — see
     // below), it's drawn fully opaque and every other square is dimmed, so it
@@ -409,7 +452,7 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     const off  = (SQ - size) / 2; // keep the shrink/grow centered on the cell
     ctx.globalAlpha = drawAlpha;
     ctx.fillStyle = p7ActorColor(events[i].actor);
-    ctx.fillRect(destX + off, destY + off, size, size);
+    ctx.fillRect(drawX + off, drawY + off, size, size);
   }
   ctx.globalAlpha = 1;
 }
@@ -447,6 +490,17 @@ function p7UpdateLayout(W, H) {
   const total = p7.cols * rows;
   p7.leftPos  = p7OrderFromCenter(total, p7.cols, 11111, "left",  p7.leftEvents.length);
   p7.rightPos = p7OrderFromCenter(total, p7.cols, 99999, "right", p7.rightEvents.length);
+
+  // p7ResolveActorOccurrenceCell's own cache (p7TargetCellCache) maps an
+  // event to a *cell number* within p7.leftPos/p7.rightPos — meaningless on
+  // its own, since the same cell number means a different row/col (or even
+  // references a differently-sized grid entirely) once cols/rows/total
+  // change here, e.g. on a resize or a different viewport at load time.
+  // Clearing it whenever leftPos/rightPos are recomputed forces every
+  // actor+occurrence lookup to re-resolve against the grid that's actually
+  // current, instead of handing back a stale cell number sized for whatever
+  // viewport was active the first time it was ever resolved.
+  p7TargetCellCache.clear();
 
   p7.lastW = W;
   p7.lastH = H;
@@ -561,6 +615,12 @@ function p7GetClaimedEvents() {
 function p7DrawTimelineSquares(ctx, W, H) {
   p7UpdateLayout(W, H);
 
+  // Cleared once finished rather than left to just clamp at t=1 forever —
+  // matches every other one-shot anim object's own null-when-done convention
+  // (p9.anim, page9.js) instead of silently doing pointless per-event lookups
+  // every frame for the rest of the session.
+  if (p7EntryAnim && performance.now() - p7EntryAnim.start >= p7EntryAnim.duration) p7EntryAnim = null;
+
   const { CELL, SQ, cols, leftX0 } = p7;
   const topY    = Math.round(H * SBB_TIMELINE.top);
   const rightX0 = W / 2 + CENTER_GAP / 2;
@@ -633,20 +693,17 @@ function p7DrawTimelineSquares(ctx, W, H) {
     delete p7MonthAnimStart[p7MonthMaxReached];
     p7MonthMaxReached--;
   }
-  // Once disengaged and the current month's own retreat (started above) has
-  // also fully finished, drop it too — otherwise p7MonthMaxReached would get
-  // stuck one month above curMonthKey forever (the loop above only ever pops
-  // months *strictly ahead* of curMonthKey).
-  if (
-    !p7HasEngaged &&
-    p7MonthMaxReached === curMonthKey &&
-    p7MonthReverseStart[curMonthKey] !== undefined &&
-    now - p7MonthReverseStart[curMonthKey] >= P7_ANIM_TOTAL_DURATION
-  ) {
-    delete p7MonthReverseStart[curMonthKey];
-    delete p7MonthAnimStart[curMonthKey];
-    p7MonthMaxReached--;
-  }
+  // Deliberately NOT cleaning up curMonthKey's own p7MonthReverseStart entry
+  // once its retreat finishes (unlike the loop above, which does clean up
+  // months strictly ahead of curMonthKey): deleting it here would make it
+  // read as undefined again, which re-arms the "start the current month's
+  // retreat" branch above on the very next frame — the current month's
+  // events would pop back in at full presence and shrink out a second time,
+  // repeating forever. Leaving the stale (fully-elapsed) entry in place is
+  // harmless — p7DrawSideSquares' own elapsed check just keeps reading it as
+  // "long past P7_ANIM_TOTAL_DURATION" (t clamped to 1, nothing drawn) — and
+  // p7MonthMaxReached simply stays resting at curMonthKey, which is a valid
+  // final state, not something that needs further cleanup.
 
   // Walk backward from the centered month while previous months are still mid-cascade,
   // to find the earliest month that must still be drawn with animation applied. Once
@@ -957,8 +1014,21 @@ function p7AxisEventOpacity(i, now) {
   }
   const next = P7_AXIS_EVENT_STATE[i + 1];
   if (next && next.triggeredAt !== null) {
-    const fadeOut = 1 - (now - next.triggeredAt) / P7_AXIS_EVENT_FADE_OUT_MS;
-    opacity = Math.min(opacity, Math.max(0, fadeOut));
+    let cap;
+    if (next.leavingAt !== null) {
+      // The next event is itself now reversing out (scrolled back above its
+      // own date) — let this (earlier) event fade back IN in lockstep with
+      // next's own leavingAt fade-out, over the same P7_AXIS_EVENT_FADE_OUT_MS
+      // clock, instead of staying suppressed by next's old triggeredAt-based
+      // timer (irrelevant now — that was from whenever next was first
+      // reached, possibly long ago) which previously kept this event pinned
+      // at opacity 0 for the entire time next was fading out, then made it
+      // pop in at full opacity the instant next's fade finished.
+      cap = Math.min(1, (now - next.leavingAt) / P7_AXIS_EVENT_FADE_OUT_MS);
+    } else {
+      cap = 1 - (now - next.triggeredAt) / P7_AXIS_EVENT_FADE_OUT_MS;
+    }
+    opacity = Math.min(opacity, Math.max(0, cap));
   }
   return opacity;
 }
@@ -977,34 +1047,53 @@ function p7DrawAxisEvents(ctx, W, axisY, curX) {
     if (P7_AXIS_EVENT_STATE[i].triggeredAt === null) return;
     const opacity = p7AxisEventOpacity(i, now);
     if (opacity <= 0) return;
-    const { x, left, right, align, lineX } = p7AxisEventBounds(ctx, ev, i, W);
-    visible.push({ ev, i, x, lineX, align, left, right, opacity });
+    const { x, left, right, lineX } = p7AxisEventBounds(ctx, ev, i, W);
+    visible.push({ ev, i, x, lineX, left, right, opacity, textWidth: right - left });
   });
 
-  // Assign y offsets — when two labels' horizontal extents collide, push the
-  // lower-indexed one (the outgoing event, fading out during a crossfade) to a
-  // second tier so they don't overlap on screen. The higher-indexed (incoming)
-  // event stays at the natural base position.
+  // When two labels' horizontal extents collide, shift the older one
+  // sideways — away from the newer one — rather than stacking it to a second
+  // vertical tier above. A fast flick-scroll can cross several event dates
+  // within a single frame (p7UpdateAxisEventTriggers gives them all the same
+  // triggeredAt), so more than 2 labels can be visible at once — resolved
+  // newest-first: the most recently triggered label keeps its natural
+  // position, and each older label is pushed away from *every*
+  // already-placed (newer) label it collides with, chained rather than
+  // pairwise, so two older labels shifted toward the same side don't just
+  // land on top of each other instead.
   const OVERLAP_PAD = 8; // minimum horizontal clearance between labels
-  const BASE_Y = P7_AXIS_EVENT_LABEL_OFFSET;
-  const BUMP_Y = BASE_Y + 22; // ~14px font height + 8px gap clears BASE_Y tier
-  const yOffsets = visible.map(() => BASE_Y);
-  for (let a = 0; a < visible.length; a++) {
-    for (let b = a + 1; b < visible.length; b++) {
-      const A = visible[a], B = visible[b];
-      if (A.right + OVERLAP_PAD < B.left || B.right + OVERLAP_PAD < A.left) continue;
-      yOffsets[a] = BUMP_Y; // a is the older (outgoing) event — bump it up
+  for (let idx = visible.length - 1; idx >= 0; idx--) {
+    const entry = visible[idx];
+    let { left, right } = entry;
+    let moved = true, guard = 0;
+    while (moved && guard++ < visible.length) {
+      moved = false;
+      for (let j = idx + 1; j < visible.length; j++) {
+        const p = visible[j];
+        if (right + OVERLAP_PAD < p.left || p.right + OVERLAP_PAD < left) continue;
+        if (entry.x >= p.x) { left = p.right + OVERLAP_PAD; right = left + entry.textWidth; }
+        else                { right = p.left - OVERLAP_PAD; left = right - entry.textWidth; }
+        moved = true;
+      }
     }
+    entry.left = left; entry.right = right;
+    entry.lineX = (left + right) / 2;
   }
 
-  visible.forEach((entry, idx) => {
-    const { ev, x, lineX, align, opacity } = entry;
-    const yOff = yOffsets[idx];
-    ctx.textAlign = align;
+  visible.forEach((entry) => {
+    const { ev, left, lineX, opacity } = entry;
+    const yOff = P7_AXIS_EVENT_LABEL_OFFSET;
+    // Always anchored at its own left edge (== the true dot position when
+    // nothing collided, since p7AxisEventBounds already returns `left` as
+    // the label's true left-most pixel for every one of its own align cases)
+    // rather than switching ctx.textAlign per entry — a plain left-edge
+    // anchor is the one thing that stays correct however far a collision
+    // above has pushed `left` from the event's real anchor x.
+    ctx.textAlign = "left";
 
     ctx.font = P7_AXIS_EVENT_FONT;
     ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
-    ctx.fillText(ev.label, x, axisY - yOff);
+    ctx.fillText(ev.label, left, axisY - yOff);
 
     // Date below the label — same color as the axis's own filled dots/tick
     // (P7_AXIS_FILLED_COLOR, via globalAlpha rather than string-parsing its

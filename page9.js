@@ -594,6 +594,16 @@ function drawPage9(ctx, W, H) {
           const phase2Start = p9.anim.phase2Start;
           const dotDur      = dotArrival - phase2Start;
           t = p9Ease(Math.min(1, Math.max(0, (performance.now() - phase2Start) / dotDur)));
+        } else if (p9.anim.plainGlide) {
+          // Plain, unstaggered glide over the animation's full duration — used
+          // when picking up page8's timeline->legit-grid glide mid-flight (see
+          // setActivePage, main.js) to continue at the same visual speed it
+          // was already moving at. The tier-staggered branch below compresses
+          // actual travel into only 40% of its given duration (by design, for
+          // the extreme-zone reposition case it's built for) — reusing it here
+          // made the glide visibly speed up ~2.5x the instant this section's
+          // title card appeared and this continuation kicked in.
+          t = p9Ease(Math.min(1, Math.max(0, (performance.now() - p9.anim.start) / p9.anim.duration)));
         } else {
           // Existing dot repositioning.
           // Dots whose actor rank is above "settlers" in the column (Right-wing
@@ -1107,8 +1117,21 @@ function p9BuildPanel() {
       const REPOSITION_MS = (baseLeft > 0 || baseRight > 0)
         ? (wasInterrupting ? STATE2_REPOSITION_MS : STATE1_REPOSITION_MS)
         : 0;
-      const BASE_TRAVEL_MS     = 600;
-      const ARRIVAL_STAGGER_MS = 4;    // ms/dot at the anchor count
+      // The 4 categories with by far the most events dataset-wide (Peaceful
+      // protest idx0/4329, Armed attack against uninvolved person idx4/2690,
+      // Property damage idx8/2558, Physical assault of uninvolved person
+      // idx5/1882 — see CATEGORY_EN_TO_IDX) fly in a bit faster than every
+      // other category's drop, per explicit feedback. Scales both the
+      // per-dot travel time and the stagger interval, so the whole cascade
+      // finishes proportionally sooner rather than just compressing the
+      // stagger (which would bunch the dots up instead of reading as an
+      // across-the-board faster version of the same motion).
+      const FAST_ARRIVAL_CATEGORIES = new Set([0, 4, 5, 8]);
+      const FAST_ARRIVAL_FACTOR     = 0.75;
+      const arrivalSpeedFactor = FAST_ARRIVAL_CATEGORIES.has(newCatIdx) ? FAST_ARRIVAL_FACTOR : 1;
+
+      const BASE_TRAVEL_MS     = 600 * arrivalSpeedFactor;
+      const ARRIVAL_STAGGER_MS = 4 * arrivalSpeedFactor;    // ms/dot at the anchor count
       const ANCHOR_COUNT       = 1880; // "Physical assault" right-side count — calibration reference
 
       const newInLeft  = p9.leftTopOrder.filter(e => CATEGORY_EN_TO_IDX[e.category] === newCatIdx);

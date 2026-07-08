@@ -217,6 +217,23 @@ function setActivePage(page) {
       from: p8CaptureBlendedPositions(W, H),
       start: performance.now(),
       duration: Math.max(1, P8_TRANSITION_DURATION * (1 - p8CurrentT())),
+      plainGlide: true, // see p9PlaceDot (page9.js) — keeps this at page8's own pace, no tier stagger
+    };
+  }
+
+  // Mirror of the above, the other direction: leaving page8's bridge back
+  // toward the real timeline (#page-9, drawPage7) while page8's reverse glide
+  // (p8CurrentT decreasing toward 0) hasn't finished yet. drawPage7 has no
+  // notion of that glide's progress on its own — every square would
+  // otherwise teleport straight to its resting timeline cell the instant
+  // this section starts drawing instead of page8. See p7EntryAnim's own
+  // comment (page7.js) for the full rationale.
+  if (currentPage === 10 && page === 9 && typeof p8CurrentT === "function" && p8CurrentT() > 0) {
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    p7EntryAnim = {
+      from: p8CaptureBlendedPositions(W, H),
+      start: performance.now(),
+      duration: Math.max(1, P8_TRANSITION_DURATION * p8CurrentT()),
     };
   }
 
@@ -224,6 +241,17 @@ function setActivePage(page) {
   updateGroups();
   updateFoldNumberBadge();
   draw();
+
+  // p9.anim (if just seeded above) only advances when something drives a
+  // continuous per-frame loop — every other call site that sets p9.anim
+  // follows it with this same call. Without it, the glide only progressed on
+  // whatever incidental draw() calls scroll/hover happened to trigger, i.e.
+  // it would stall the instant the user stopped scrolling and lurch forward
+  // again on the next unrelated redraw, instead of playing smoothly.
+  if (currentPage === 11 && p9.anim) p9RunAnimLoop();
+
+  // Same reasoning, for p7EntryAnim's own continuous loop.
+  if (currentPage === 9 && p7EntryAnim) p7StartAnimLoop();
 }
 
 const sectionObserver = new IntersectionObserver(entries => {
@@ -557,7 +585,7 @@ const GROUPS = [
   // — right column —
   { color: "#008C99", label: "ערבים ישראלים",            fold3: { x: 1088, y: 786 },
     fold4: { x: 1088, y: 786, dimmed: true,  swatchFirst: true }, row: true },
-  { color: "#ea6c15", label: "מתיישבים",              actor: "settlers", fold3: { x: 908,  y: 321 },
+  { color: "#f16f16", label: "מתיישבים",              actor: "settlers", fold3: { x: 908,  y: 321 },
     fold4: { x: 773,  y: 443, dimmed: false, swatchFirst: false }, fold6: { x: 31, y: 440 } },
   { color: "#7c3aed", label: "יוצאי אתיופיה",            fold3: { x: 1225, y: 167 },
     fold4: { x: 1225, y: 167, dimmed: true,  swatchFirst: true }, row: true },
@@ -1258,11 +1286,12 @@ const checkFold7Label = watchCardThreshold(fold7LabelCardEl, 0.5, fold7LabelTrig
 const checkFold8SquareDim = watchCardThreshold(fold7LabelCardEl, 0.5, fold8SquareDimTrigger);
 const checkFold9 = watchCardThreshold(page7TitleCardEl, 0.5, fold9Trigger);
 // Same crossing as p7AxisShouldShow (page7.js) — title card fully offscreen,
-// top <= 0. instantReverse: true, same reasoning as before removal — the fly
-// covers real on-screen distance, so a fast scroll-past-then-back should
-// snap the squares straight back to rest rather than being catchable
-// mid-flight.
-const checkFold9Fly = watchCardThreshold(page7TitleCardEl, 0, fold9FlyTrigger, true);
+// top <= 0. Used to instant-reverse (snap straight back to rest on scroll-up
+// rather than being catchable mid-flight) — per explicit instruction, this is
+// now a normal reversible trigger like every other fold's, so scrolling back
+// up from @fold10 into @fold9 plays the same fly-out/color-in animation in
+// reverse, covering only the remaining distance, instead of snapping.
+const checkFold9Fly = watchCardThreshold(page7TitleCardEl, 0, fold9FlyTrigger);
 // Unlike every other fold trigger above, watches the *sticky wrapper*
 // (.page12-sticky-center) at frac 0 (top <= 0) rather than the title card at
 // its ordinary 0.5 — this fires exactly when the wrapper finishes sliding up
@@ -1338,7 +1367,7 @@ function updateGroups() {
   // in reverse, last-to-first — the dot re-splits only once it's back near
   // its @fold3 spot, not immediately on scrolling up.
   const raw3 = fold3Trigger.currentRaw();
-  const FOLD4_MERGE_SPAN = 0.22, FOLD4_GAP_SPAN = 0.1, FOLD4_SPREAD_SPAN = 0.68; // sums to 1
+  const FOLD4_MERGE_SPAN = 0.14, FOLD4_GAP_SPAN = 0.18, FOLD4_SPREAD_SPAN = 0.68; // sums to 1
   const fold4MergeT = p9Ease(Math.max(0, Math.min(1, raw3 / FOLD4_MERGE_SPAN)));
   const e3 = p9Ease(Math.max(0, Math.min(1, (raw3 - FOLD4_MERGE_SPAN - FOLD4_GAP_SPAN) / FOLD4_SPREAD_SPAN)));
   const e4 = fold4Trigger.currentT(), e6 = fold6Trigger.currentT();
@@ -1425,7 +1454,7 @@ function updateGroups() {
     // with no per-row stagger (only 3 dots, moving as one unit reads fine
     // without it).
     const raw5 = fold5Trigger.currentRaw();
-    const FOLD5_MOVE_SPAN = 0.45, FOLD5_GAP_SPAN = 0.14, FOLD5_EXIT_SPAN = 0.41; // sums to 1
+    const FOLD5_MOVE_SPAN = 0.45, FOLD5_GAP_SPAN = 0.14, FOLD5_EXIT_SPAN = 0.28; // sums to 0.87
     const fold5MoveT = p9Ease(Math.max(0, Math.min(1, raw5 / FOLD5_MOVE_SPAN)));
     const fold5ExitT = p9Ease(Math.max(0, Math.min(1, (raw5 - FOLD5_MOVE_SPAN - FOLD5_GAP_SPAN) / FOLD5_EXIT_SPAN)));
 
@@ -1873,13 +1902,30 @@ window.addEventListener("scroll", () => {
 const page8TitleEl = document.querySelector("#page-10 .section-title");
 let page8Ticking = false;
 
+// Tracks the title's own crossing state (same isPast pattern as
+// watchCardThreshold above) instead of re-checking "is the title currently
+// past the threshold" on every tick. That static re-check was the bug: once a
+// reverse glide finished (p8Engaged flips back to false, p8RunAnimLoop in
+// page8.js), the very next scroll tick would see the title still sitting past
+// the threshold (scrolling up doesn't un-cross it instantly) and immediately
+// re-fire p8Trigger — which a following tick's scrollY-based reverse check
+// would then immediately undo again, thrashing forward/reverse every couple
+// of scroll events for as long as the title lingered near the threshold.
+// Crossing-based detection only fires once per actual direction change.
+let page8TitleWasPast = null;
+
 function page8CheckScroll() {
-  if (!p8Engaged) {
-    const rect = page8TitleEl.getBoundingClientRect();
-    const titleCenter = rect.top + rect.height / 2;
-    if (titleCenter <= window.innerHeight / 2) p8Trigger();
-  } else if (currentPage === 10 && p8TriggerScrollY !== null && window.scrollY < p8TriggerScrollY) {
-    p8TriggerReverse();
+  const rect = page8TitleEl.getBoundingClientRect();
+  const nowPast = rect.top + rect.height / 2 <= window.innerHeight / 2;
+  if (page8TitleWasPast === null) {
+    page8TitleWasPast = nowPast;
+    if (nowPast) p8Trigger();
+    return;
+  }
+  if (nowPast !== page8TitleWasPast) {
+    page8TitleWasPast = nowPast;
+    if (nowPast) p8Trigger();
+    else p8TriggerReverse();
   }
 }
 
