@@ -46,8 +46,10 @@ body {
 
 /* Dev-only @foldN indicator (see project.html) — fixed to the viewport
    (not the scrolling .text-col), so it stays put in the upper-left
-   regardless of scroll position. */
+   regardless of scroll position. Hidden by default; toggled with
+   Ctrl+Shift+F (see main.js), which persists the choice in localStorage. */
 .fold-number-badge {
+  display: none;
   position: fixed;
   top: 12px;
   left: 12px;
@@ -59,6 +61,10 @@ body {
   border-radius: 4px;
   border: none;
   cursor: pointer;
+}
+
+.fold-number-badge.is-visible {
+  display: block;
 }
 
 .fold-number-badge option {
@@ -1027,6 +1033,21 @@ body {
   padding: 40px 40px 48px;
   box-sizing: border-box;
   direction: rtl;
+}
+
+/* On shorter laptop viewports the card's height (title + body copy) leaves
+   almost no gap from the screen's top/bottom edges — the sticky wrapper is a
+   fixed 100vh with no scroll room of its own to compensate (see #page-12's
+   min-height comment above), so trim the card's own padding here instead. */
+@media (max-height: 920px) {
+  #page-12 .text-card-frame {
+    padding: 24px 28px 28px;
+  }
+}
+@media (max-height: 820px) {
+  #page-12 .text-card-frame {
+    padding: 18px 22px 22px;
+  }
 }
 
 #page-12 .section-title {
