@@ -178,16 +178,23 @@ if (foldNumberBadge) {
     sections[Number(foldNumberBadge.value)].scrollIntoView({ behavior: "smooth" });
   });
   // Hidden by default (see style.css); Ctrl+Shift+F toggles it and persists
-  // the choice in localStorage so it stays put across reloads.
+  // the choice in localStorage so it stays put across reloads. localStorage
+  // access is wrapped in try/catch — browsers with storage blocked (Safari's
+  // "Block all cookies", strict private-browsing modes, some corporate
+  // policies) throw a SecurityError on access rather than failing quietly,
+  // which would otherwise kill this whole (unrelated) script and blank the
+  // entire page for anyone with those settings.
   const FOLD_BADGE_VISIBLE_KEY = "foldNumberBadgeVisible";
-  if (localStorage.getItem(FOLD_BADGE_VISIBLE_KEY) === "1") {
+  let foldBadgeVisiblePref = null;
+  try { foldBadgeVisiblePref = localStorage.getItem(FOLD_BADGE_VISIBLE_KEY); } catch {}
+  if (foldBadgeVisiblePref === "1") {
     foldNumberBadge.classList.add("is-visible");
   }
   window.addEventListener("keydown", (e) => {
     if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "f") {
       e.preventDefault();
       const visible = foldNumberBadge.classList.toggle("is-visible");
-      localStorage.setItem(FOLD_BADGE_VISIBLE_KEY, visible ? "1" : "0");
+      try { localStorage.setItem(FOLD_BADGE_VISIBLE_KEY, visible ? "1" : "0"); } catch {}
     }
   });
 }
