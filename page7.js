@@ -32,6 +32,14 @@ function p7ActorColor(actor) {
   return (group && group.color) || "#888";
 }
 
+// events.json stores dates as YYYY-MM-DD; both the per-event hover tooltip
+// (page7.js/page9.js) and the axis event labels below display them as
+// DD.MM.YYYY instead.
+function p7FormatDateDMY(dateStr, sep = "-") {
+  const [y, m, d] = dateStr.split('-');
+  return `${d}${sep}${m}${sep}${y}`;
+}
+
 const p7 = {
   ready: false,
   leftEvents:  [],
@@ -157,6 +165,19 @@ function p7MonthKeyToStartStr(monthKey) {
   return `${y}-${String(m + 1).padStart(2, "0")}-01`;
 }
 
+// True once the given date's whole month has fully finished its own
+// staggered cascade (p7MonthAnimStart, P7_ANIM_TOTAL_DURATION below) — i.e.
+// its real per-event square is guaranteed to already be drawn, not just
+// "the month has started." Currently unused — @fold9's fold-6 squares no
+// longer hand off to a separate real dot at all (p7GetClaimedEvents above
+// excludes their events from the cascade permanently), but kept since it may
+// be useful again for other month-cascade-timing needs.
+function p7IsMonthSettled(dateStr) {
+  const mk = p7MonthKeyOf(dateStr);
+  const start = p7MonthAnimStart[mk];
+  return start !== undefined && performance.now() - start >= P7_ANIM_TOTAL_DURATION;
+}
+
 // A month's squares fly in one after another (not all at once), in a slow cascade,
 // the moment that month becomes the centered/highlighted one — a real elapsed-time
 // animation, independent of further scrolling (unlike the rest of page7, which is
@@ -200,36 +221,76 @@ function p7ResetForReplay() {
 // matter how main.js ends up sizing #page-7's section.
 let p7HasEngaged = false;
 
-// window.scrollY snapshot of the moment the year axis itself became ready
-// (fold9SquaresFadeTrigger settled, see p7AxisShouldShow) — null whenever it
-// isn't ready right now. A *fixed* extra scroll distance past the axis's own
-// position threshold doesn't work here: that threshold is a 1900ms tween, not
-// an instant position check, so for any normal continuous scroll the position
-// requirement alone is satisfied well before the tween itself settles —
-// making the tween the only real bottleneck either way, with no actual gap
-// between axis and squares. Anchoring the push to wherever the tween actually
-// finished avoids that.
-let p7AxisReadyScrollY = null;
-const P7_ENGAGE_EXTRA_PUSH_PX = 100; // small extra scroll past axis-ready before squares engage
+// True once the real timeline (drawPage7, #page-9) has actually been reached
+// at least once this "visit" — set by drawPage7 itself, cleared by drawFold9
+// (main.js) once fully retreated back out (p7HasEngaged false again and
+// nothing left animating). Lets drawFold9 keep drawing/animating the
+// per-event squares (p7DrawTimelineSquares below) for as long as there's
+// still something to retreat when the user scrolls back up from #page-9 into
+// #page-8, without changing when the *forward* reveal itself first starts —
+// that still only ever happens via drawPage7, i.e. once #page-9 is actually
+// reached, same as before this flag existed.
+let p7RealTimelineReached = false;
 
-// Updates p7AxisReadyScrollY and p7HasEngaged — called from drawPage7
-// (currentPage 9) and drawFold9 (main.js, currentPage 8) alike, since the
-// title card this depends on belongs to fold 9/#page-8. p7HasEngaged is
-// recomputed fresh every call, not a one-way latch, so scrolling back up
-// un-engages it again and scrolling forward replays the same
-// axis-then-squares sequence — calling this from both draw functions (rather
-// than only drawPage7) is what makes that reversal actually take effect
-// immediately while currentPage is 8, instead of freezing at whatever it last
-// was the moment currentPage left 9.
+// Updates p7HasEngaged — called from drawPage7 (currentPage 9) and drawFold9
+// (main.js, currentPage 8) alike, since the title card this depends on
+// belongs to fold 9/#page-8. p7HasEngaged is recomputed fresh every call, not
+// a one-way latch, so scrolling back up un-engages it again and scrolling
+// forward replays the same axis-then-squares sequence — calling this from
+// both draw functions (rather than only drawPage7) is what makes that
+// reversal actually take effect immediately while currentPage is 8, instead
+// of freezing at whatever it last was the moment currentPage left 9.
+//
+// Engagement (the real per-event squares + the axis's own scroll-driven fill,
+// both of which read p7HasEngaged/p7.currentDate) no longer waits for the
+// axis's build-in wipe (p7AxisIntroT) to finish — per explicit instruction,
+// if the real timeline starts filling in while the wipe is still playing,
+// both just play at once rather than forcing the fill to wait. That's safe
+// to let overlap: the wipe is a pure right-to-left reveal *clip* over
+// whatever p7DrawYearAxis would otherwise draw, and the fill is an
+// independent right-to-left color change on the same dots — two continuous,
+// same-direction reveals composing under one clip, not a hard cut between
+// two states.
 function p7UpdateEngagement() {
-  if (fold9SquaresFadeTrigger.currentRaw() === 1) {
-    if (p7AxisReadyScrollY === null) p7AxisReadyScrollY = window.scrollY;
-  } else {
-    p7AxisReadyScrollY = null;
-  }
-  p7HasEngaged = !!(page7TitleCardEl && page7TitleCardEl.getBoundingClientRect().top <= 0 &&
-      p7AxisReadyScrollY !== null &&
-      Math.abs(window.scrollY - p7AxisReadyScrollY) >= P7_ENGAGE_EXTRA_PUSH_PX);
+  p7HasEngaged = !!(page7TitleCardEl && page7TitleCardEl.getBoundingClientRect().top <= 0);
+}
+
+// The year axis's own scroll-driven fill (curX, p7DrawYearAxis) trails its raw
+// scroll-derived target via a per-frame lerp instead of snapping to it every
+// scroll event — same "after-action" trailing feel, and the same damping
+// tempo, as @fold1's logo/title scroll-lag (PAGE0_SCROLL_LAG_DAMPING/
+// PAGE0_OPACITY_DAMPING, main.js), just applied to this fold's own fill
+// fraction instead of a scroll-derived pixel offset. p7.currentDate itself
+// (which drives the real per-event cascade's month timing) is untouched —
+// only the axis's own visual fill lags, not the timeline's actual engagement.
+const P7_AXIS_FILL_LAG_DAMPING = 0.12;
+let p7AxisLaggedFillFrac = null;
+
+function p7AxisFillFracTarget() {
+  const minMs = new Date(p7.minDate + "T00:00:00Z").getTime();
+  const maxMs = new Date(p7.maxDate + "T00:00:00Z").getTime();
+  const curMs = new Date(p7.currentDate + "T00:00:00Z").getTime();
+  return maxMs === minMs ? 0 : (curMs - minMs) / (maxMs - minMs);
+}
+
+// True while the lag still has meaningfully further to go — checked by
+// p7AnyAnimActive so the redraw loop (p7StartAnimLoop) keeps running until it
+// settles, even if the user has stopped scrolling.
+function p7AxisFillLagActive() {
+  return p7AxisLaggedFillFrac !== null && Math.abs(p7AxisFillFracTarget() - p7AxisLaggedFillFrac) > 0.0005;
+}
+
+// Advances the lag by one frame's worth and returns its current value — called
+// once per p7DrawYearAxis call, which is what actually drives it forward
+// (there's no independent per-frame ticker; drawing and lag-advancing are the
+// same event here, same as every other per-frame value in this file).
+function p7AxisUpdateFillLag() {
+  const target = p7AxisFillFracTarget();
+  p7AxisLaggedFillFrac = p7AxisLaggedFillFrac === null
+    ? target
+    : p7AxisLaggedFillFrac + (target - p7AxisLaggedFillFrac) * P7_AXIS_FILL_LAG_DAMPING;
+  if (p7AxisFillLagActive()) p7StartAnimLoop();
+  return p7AxisLaggedFillFrac;
 }
 
 function p7AnyAnimActive() {
@@ -242,6 +303,7 @@ function p7AnyAnimActive() {
   }
   if (p7AxisEventsAnimActive()) return true;
   if (p7AxisIntroStart !== null && p7AxisIntroT() < 1) return true;
+  if (p7AxisFillLagActive()) return true;
   return false;
 }
 
@@ -251,9 +313,13 @@ function p7AnyAnimActive() {
 // scrolls into page8 mid-flight instead of finishing "off screen" as page7 intended.
 // Fold 9 (#page-8, currentPage 8 — drawFold9 in main.js, just before the real
 // timeline) is included too, now that its own axis build-in (p7AxisIntroT
-// above) can be playing while it's on screen. Fold 7 (#page-7, drawFold7) has
-// no page7 content on screen at all, so it's still deliberately excluded.
-function p7ShouldRedrawForAnim() { return currentPage === 8 || currentPage === 9 || currentPage === 10; }
+// above) can be playing while it's on screen. Fold 7 (#page-7, currentPage 7 —
+// drawFold7 in main.js) is included too, now that it also keeps drawing
+// p7DrawTimelineSquares for as long as p7RealTimelineReached is true (see that
+// flag's own comment) — a fast enough scroll-up can carry the user past
+// #page-8 into this fold within a single continuous motion while squares are
+// still mid-retreat.
+function p7ShouldRedrawForAnim() { return currentPage === 7 || currentPage === 8 || currentPage === 9 || currentPage === 10; }
 
 function p7StartAnimLoop() {
   if (p7AnimRunning) return;
@@ -283,6 +349,7 @@ function p7StartAnimLoop() {
 function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, monthEnd, settledCount, curMonthKey, posMap) {
   const stagger = Math.max(0, P7_ANIM_TOTAL_DURATION - P7_POP_DURATION);
   let groupMonthKey = null, groupStart = 0, groupEnd = 0, groupStartTime = 0, groupReverse = false;
+  const claimedEvents = p7GetClaimedEvents();
 
   for (let i = 0; i < monthEnd; i++) {
     const cell = positions[i];
@@ -290,6 +357,18 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     const row  = Math.floor(cell / cols);
     const destX = x0 + col * CELL;
     const destY = topY + row * CELL;
+
+    // Claimed events (FOLD6_SQUARE_ACTORS/OCCURRENCE, main.js) are never
+    // drawn here at all — the fold-9 flying square *is* this dot, permanently,
+    // not a stand-in for a separate real one. Still recorded in posMap (full
+    // alpha, no animation) so downstream consumers that look up an event's
+    // on-screen position (page8's grid blend, page9's drag-and-drop, fold13's
+    // morph) still find one — just skips this loop's own drawing/stagger
+    // bookkeeping for it.
+    if (claimedEvents && claimedEvents.has(events[i])) {
+      posMap.set(events[i], { x: destX, y: destY, alpha: 1 });
+      continue;
+    }
 
     let scale = 1, alpha = 1;
     if (i >= settledCount) {
@@ -373,23 +452,117 @@ function p7UpdateLayout(W, H) {
   p7.lastH = H;
 }
 
-function drawPage7(ctx, W, H) {
-  drawBackground(ctx, W, H);
-
-  if (!p7.ready) {
-    ctx.fillStyle = "#111";
-    ctx.font = "16px 'Assistant', sans-serif";
-    ctx.textAlign    = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("טוען נתונים...", W / 2, H / 2);
-    return;
+// Index (into `events`, chronologically sorted) of the nth (0-based)
+// occurrence of `actor` — used below to find which real event a fold-9
+// curated square (main.js) should stand in for. A plain linear scan, not a
+// precomputed per-actor index, because it only ever runs once per
+// actor/occurrence pair (see p7TargetCellCache) rather than every frame.
+function p7NthIndexOfActor(events, actor, n) {
+  let seen = 0;
+  for (let i = 0; i < events.length; i++) {
+    if (events[i].actor === actor) {
+      if (seen === n) return i;
+      seen++;
+    }
   }
+  return -1;
+}
 
+// Caches the (expensive: scans up to several thousand events) actor+occurrence
+// -> {side, cell} lookup below, keyed by "actor|n" — the lookup itself never
+// changes once events.json is loaded, only the cell's on-screen pixel
+// position does (as W/H change), so the frame-by-frame path
+// (p7TargetForActorOccurrence, called every animation frame while fold 9's
+// squares are flying out) only ever needs to redo the cheap pixel math.
+const p7TargetCellCache = new Map();
+
+function p7ResolveActorOccurrenceCell(actor, n) {
+  const key = actor + "|" + n;
+  if (p7TargetCellCache.has(key)) return p7TargetCellCache.get(key);
+
+  let side = "left", idx = p7NthIndexOfActor(p7.leftEvents, actor, n);
+  if (idx === -1) {
+    side = "right";
+    idx = p7NthIndexOfActor(p7.rightEvents, actor, n);
+  }
+  const positions = side === "left" ? p7.leftPos : p7.rightPos;
+  const result = (idx === -1 || positions[idx] === undefined) ? null : { side, cell: positions[idx] };
+  p7TargetCellCache.set(key, result);
+  return result;
+}
+
+// Returns the top-left {x, y, size} (viewport-pixel space, same coordinate
+// system every other page7 square uses) of the grid cell where the nth
+// chronological event by `actor` will eventually settle, or null if there is
+// no such event — used by main.js's fold-9 squares fly-out to send each
+// curated square to the exact real dot it's standing in for, rather than
+// just fading away in place.
+function p7TargetForActorOccurrence(actor, n, W, H) {
+  if (!p7.ready) return null;
+  // Must run before resolving/caching below — p7.leftPos/rightPos (which the
+  // resolve step reads to build its cached result) are empty until this has
+  // run at least once, and a premature resolve would cache a false "no such
+  // event" null forever.
+  p7UpdateLayout(W, H);
+  const resolved = p7ResolveActorOccurrenceCell(actor, n);
+  if (!resolved) return null;
+
+  const topY = Math.round(H * SBB_TIMELINE.top);
+  const x0  = resolved.side === "left" ? p7.leftX0 : W / 2 + CENTER_GAP / 2;
+  const col = resolved.cell % p7.cols;
+  const row = Math.floor(resolved.cell / p7.cols);
+  return { x: x0 + col * p7.CELL, y: topY + row * p7.CELL, size: p7.SQ };
+}
+
+// Returns the real event object (date/descHeMedium/actor/...) for the nth
+// chronological event by `actor`, or null if there is no such event / data
+// isn't loaded yet — same actor+occurrence join key as
+// p7TargetForActorOccurrence above, but returns the event itself rather than
+// its eventual on-screen cell, for main.js's fold-8 square tooltip (shows a
+// real event's own date+description instead of a static label).
+function p7EventForActorOccurrence(actor, n) {
+  if (!p7.ready) return null;
+  let idx = p7NthIndexOfActor(p7.leftEvents, actor, n);
+  if (idx !== -1) return p7.leftEvents[idx];
+  idx = p7NthIndexOfActor(p7.rightEvents, actor, n);
+  if (idx !== -1) return p7.rightEvents[idx];
+  return null;
+}
+
+// The 8 real events @fold9's fold-6 squares fly to/become (FOLD6_SQUARE_ACTORS/
+// FOLD6_SQUARE_OCCURRENCE, main.js — referenced here only inside this function
+// body, never at load time, since page7.js loads before main.js in
+// project.html) are never drawn by the real per-event cascade below — the
+// flying DOM square *is* that dot permanently, not a stand-in that hands off
+// to a separately-popping-in real one once it arrives. Resolved once
+// (event objects are stable references once events.json is loaded) and
+// cached, same pattern as p7TargetCellCache above.
+let p7ClaimedEvents = null;
+function p7GetClaimedEvents() {
+  if (p7ClaimedEvents) return p7ClaimedEvents;
+  if (!p7.ready || typeof FOLD6_SQUARE_ACTORS === "undefined") return null;
+  p7ClaimedEvents = new Set();
+  FOLD6_SQUARE_ACTORS.forEach((actor, i) => {
+    const event = p7EventForActorOccurrence(actor, FOLD6_SQUARE_OCCURRENCE[i]);
+    if (event) p7ClaimedEvents.add(event);
+  });
+  return p7ClaimedEvents;
+}
+
+// Extracted from drawPage7 below so drawFold9 (main.js, #page-8, currentPage
+// 8) can keep this running too — see p7RealTimelineReached's own comment
+// above for why: without this, scrolling back up from #page-9 into #page-8
+// (crossing back over @fold9's own title) made every still-retreating square
+// (and the year axis's own headline events, p7DrawAxisEvents) vanish in a
+// single frame the instant currentPage dropped, instead of finishing their
+// reverse cascade like they do while scrolling backward *within* #page-9
+// itself. Callers must call p7UpdateEngagement() themselves first (drawPage7/
+// drawFold9 both already do, since the axis needs a fresh p7HasEngaged too).
+function p7DrawTimelineSquares(ctx, W, H) {
   p7UpdateLayout(W, H);
 
   const { CELL, SQ, cols, leftX0 } = p7;
   const topY    = Math.round(H * SBB_TIMELINE.top);
-  const centerX = W / 2;
   const rightX0 = W / 2 + CENTER_GAP / 2;
 
   // Events from months whose cascade has already fully finished are settled (drawn
@@ -412,22 +585,37 @@ function drawPage7(ctx, W, H) {
   // scrolled into page7 at all — p7HasEngaged (updated by p7UpdateEngagement,
   // called from both here and drawFold9 in main.js so it stays accurate even
   // while currentPage is 8) only flips true once fold 9's title card has
-  // scrolled P7_ENGAGE_EXTRA_PUSH_PX past the top of the viewport, AND
-  // fold9SquaresFadeTrigger (the same gate the axis itself waits for) has settled.
-  p7UpdateEngagement();
+  // scrolled past the top of the viewport, AND the year axis's own build-in
+  // wipe (p7AxisIntroT) has fully finished.
   const isNewTerritory = p7HasEngaged && curMonthKey > p7MonthMaxReached;
   if (p7HasEngaged && p7MonthAnimStart[curMonthKey] === undefined) {
     p7MonthAnimStart[curMonthKey] = isNewTerritory ? now : now - P7_ANIM_TOTAL_DURATION;
   }
   if (isNewTerritory) p7StartAnimLoop();
-  // Scrolling back onto a month cancels any retreat it had started — it just resumes
-  // showing at rest (its original forward cascade, started long ago, is already done).
-  delete p7MonthReverseStart[curMonthKey];
+
+  if (p7HasEngaged) {
+    // Scrolling back onto a month cancels any retreat it had started — it just
+    // resumes showing at rest (its original forward cascade, started long ago,
+    // is already done).
+    delete p7MonthReverseStart[curMonthKey];
+  } else if (p7MonthMaxReached > -1 && p7MonthReverseStart[curMonthKey] === undefined) {
+    // Disengaged (scrolled back up past this fold's own title — see
+    // p7UpdateEngagement): the "current" month itself now needs to retreat
+    // too, not just months ahead of it (the loop below already handles those
+    // unconditionally) — otherwise it just sits at rest until
+    // nextMonthStartStr's clamp further down cuts it away in a single frame
+    // instead of playing the same reverse cascade every other month gets.
+    p7MonthReverseStart[curMonthKey] = now;
+    p7StartAnimLoop();
+  }
 
   if (p7HasEngaged && curMonthKey > p7MonthMaxReached) p7MonthMaxReached = curMonthKey;
 
   // Scrolled backward past months that were previously reached: start their retreat
   // (each flies back out the same way it flew in) unless it's already retreating.
+  // Unconditional on p7HasEngaged (always was) — once disengaged, curMonthKey is
+  // pinned at the first month (p7.currentDate = p7.minDate, page7UpdateFromScroll),
+  // so this still correctly covers every later month up through p7MonthMaxReached.
   for (let k = curMonthKey + 1; k <= p7MonthMaxReached; k++) {
     if (p7MonthReverseStart[k] === undefined) {
       p7MonthReverseStart[k] = now;
@@ -445,29 +633,48 @@ function drawPage7(ctx, W, H) {
     delete p7MonthAnimStart[p7MonthMaxReached];
     p7MonthMaxReached--;
   }
+  // Once disengaged and the current month's own retreat (started above) has
+  // also fully finished, drop it too — otherwise p7MonthMaxReached would get
+  // stuck one month above curMonthKey forever (the loop above only ever pops
+  // months *strictly ahead* of curMonthKey).
+  if (
+    !p7HasEngaged &&
+    p7MonthMaxReached === curMonthKey &&
+    p7MonthReverseStart[curMonthKey] !== undefined &&
+    now - p7MonthReverseStart[curMonthKey] >= P7_ANIM_TOTAL_DURATION
+  ) {
+    delete p7MonthReverseStart[curMonthKey];
+    delete p7MonthAnimStart[curMonthKey];
+    p7MonthMaxReached--;
+  }
 
   // Walk backward from the centered month while previous months are still mid-cascade,
-  // to find the earliest month that must still be drawn with animation applied.
-  let earliestActiveMonthKey = curMonthKey;
-  for (let k = curMonthKey - 1; p7MonthAnimStart[k] !== undefined && now - p7MonthAnimStart[k] < P7_ANIM_TOTAL_DURATION; k--) {
-    earliestActiveMonthKey = k;
+  // to find the earliest month that must still be drawn with animation applied. Once
+  // disengaged, everything still in flight (including the current month, see above) is
+  // retreating, so there's no "settled, at-rest" range at all — clamp straight to
+  // minDate instead.
+  let settledStr = p7.minDate;
+  if (p7HasEngaged) {
+    let earliestActiveMonthKey = curMonthKey;
+    for (let k = curMonthKey - 1; p7MonthAnimStart[k] !== undefined && now - p7MonthAnimStart[k] < P7_ANIM_TOTAL_DURATION; k--) {
+      earliestActiveMonthKey = k;
+    }
+    settledStr = p7MonthKeyToStartStr(earliestActiveMonthKey);
   }
-  const settledStr = p7MonthKeyToStartStr(earliestActiveMonthKey);
 
   // The draw range's upper bound covers through whichever is further out: the
   // centered month, or a later month still retreating back toward the origin.
-  // Before the section has actually engaged, clamp to p7.minDate itself — not
-  // curMonthKey's own start — so nothing draws at all regardless of how far
-  // curMonthKey has already raced ahead: p7.currentDate is driven straight off
-  // raw scroll position (page7UpdateFromScroll, main.js) with no engagement
-  // gating of its own, so curMonthKey can be well past the first month before
-  // p7HasEngaged ever flips (see its own definition above — it's now
-  // deliberately delayed past the year axis's own appearance). Clamping to
-  // curMonthKey's start instead of p7.minDate used to work only because
-  // engagement used to flip almost immediately, keeping curMonthKey pinned at
-  // (or near) the first month for the entire time it was false.
+  // Before anything has ever been reached this visit (p7MonthMaxReached still
+  // -1), clamp to p7.minDate itself so nothing draws regardless of how far
+  // curMonthKey has silently raced ahead pre-engagement (p7.currentDate is
+  // driven straight off raw scroll position with no engagement gating of its
+  // own — see p7HasEngaged's own definition, gated on the title card's exit,
+  // not on the axis). But once something HAS been reached, keep drawing
+  // through p7MonthMaxReached even after disengaging, so the current month's
+  // own retreat (started above) can actually finish playing out instead of
+  // being hard-cut the instant engagement ends.
   const drawThroughMonthKey = Math.max(curMonthKey, p7MonthMaxReached);
-  const nextMonthStartStr = p7HasEngaged
+  const nextMonthStartStr = (p7HasEngaged || p7MonthMaxReached > -1)
     ? p7MonthKeyToStartStr(drawThroughMonthKey + 1)
     : p7.minDate;
   const settledL  = p7BisectBefore(p7.leftEvents,  settledStr);
@@ -477,30 +684,54 @@ function drawPage7(ctx, W, H) {
 
   const posMap = new Map();
 
+  // groupReverse (p7DrawSideSquares) is decided by comparing a group's own
+  // month key against the value passed here — while disengaged, the current
+  // month's own group must also read as "reverse" (it's retreating too, see
+  // above), which plain curMonthKey can't express since a month is never
+  // "ahead of itself." -1 always sorts below every real month key
+  // (curY*12+curM, always a large positive number), so passing it here
+  // instead makes every real month — including the current one — compare as
+  // reverse. Only ever used for this numeric comparison, never fed into
+  // p7MonthKeyToStartStr.
+  const drawCurMonthKey = p7HasEngaged ? curMonthKey : -1;
+
   // Draw left events.
-  p7DrawSideSquares(ctx, p7.leftEvents, p7.leftPos, leftX0, topY, cols, CELL, SQ, monthEndL, settledL, curMonthKey, posMap);
+  p7DrawSideSquares(ctx, p7.leftEvents, p7.leftPos, leftX0, topY, cols, CELL, SQ, monthEndL, settledL, drawCurMonthKey, posMap);
 
   // Draw right events.
-  p7DrawSideSquares(ctx, p7.rightEvents, p7.rightPos, rightX0, topY, cols, CELL, SQ, monthEndR, settledR, curMonthKey, posMap);
+  p7DrawSideSquares(ctx, p7.rightEvents, p7.rightPos, rightX0, topY, cols, CELL, SQ, monthEndR, settledR, drawCurMonthKey, posMap);
 
   p7.lastPositions = posMap;
+}
+
+function drawPage7(ctx, W, H) {
+  drawBackground(ctx, W, H);
+
+  if (!p7.ready) {
+    ctx.fillStyle = "#111";
+    ctx.font = "16px 'Assistant', sans-serif";
+    ctx.textAlign    = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("טוען נתונים...", W / 2, H / 2);
+    return;
+  }
+
+  p7UpdateEngagement();
+  p7RealTimelineReached = true;
+  p7DrawTimelineSquares(ctx, W, H);
 
   if (p7AxisTriggerIfNeeded()) p7DrawYearAxis(ctx, W, H);
 }
 
-// The year axis (dotted line, year labels, headline events — everything
-// p7DrawYearAxis draws) is sequenced *after* the fold-6 squares' fade-out, not
-// driven by its own independent scroll point: fold9SquaresFadeTrigger
-// (main.js) fades the squares+labels out once @fold8's own title card reaches
-// the upper quarter of the viewport, and only once that fade tween has fully
-// settled at its target (currentRaw() === 1 — exact, not an epsilon check,
-// since makeTrigger's targets are always exactly 0 or 1) does the axis start
-// its build-in. Recomputed fresh every frame — scrolling back up before the
-// fade settles (or after, restarting the reverse) hides the axis again with
-// no extra reverse bookkeeping needed (see p7AxisTriggerIfNeeded below for
-// the one-shot build-in animation this gates).
+// The year axis's build-in (p7AxisIntroT, via p7AxisTriggerIfNeeded below)
+// just piggybacks on p7HasEngaged (the real timeline's own engagement flag,
+// also gated on fold 9's title card passing fully offscreen — see
+// p7UpdateEngagement above) rather than recomputing the same geometry itself.
+// @fold9's own speculative color-in/fly-out triggers (main.js) were removed
+// this session — this axis gate is intentionally the simple, original
+// version, not tied to any of that.
 function p7AxisShouldShow() {
-  return fold9SquaresFadeTrigger.currentRaw() === 1;
+  return p7HasEngaged;
 }
 
 // Latches p7AxisIntroStart the instant p7AxisShouldShow() first goes true,
@@ -607,27 +838,27 @@ const P7_AXIS_EVENT_FADE_OUT_MS = 1000;
 const P7_AXIS_EVENT_LABEL_OFFSET = 44; // px above the axis line (lifted to give date room below)
 const P7_AXIS_EVENT_FONT         = "14px 'Assistant', sans-serif";
 const P7_AXIS_EVENT_LINE_GAP     = 8;   // px of clearance below the label's baseline before the tick starts
-const P7_AXIS_EVENT_LINE_END_GAP = 8;   // px of clearance above the axis line — tick stops short, doesn't touch it
-const P7_AXIS_EVENT_LINE_OPACITY_SCALE = 0.35; // tick is fainter than its own label, not an equal match
-const P7_AXIS_DATE_FONT          = "14px 'Assistant', sans-serif";
+const P7_AXIS_EVENT_LINE_END_GAP = 8;   // px short of the dot's dead center the tick stops at
+const P7_AXIS_DATE_FONT          = "600 14px 'Assistant', sans-serif";
 const P7_AXIS_DATE_OFFSET        = 18;  // px above the label baseline
-const P7_AXIS_DATE_OPACITY_SCALE = 0.5; // date is dimmer than its label
 
 // triggeredAt is a performance.now() timestamp, set once when the event is first
-// reached and cleared if the user scrolls back above its date — null means "not
-// currently triggered" (either never reached yet, or reached-then-reversed).
-// Scrolling back above the *next* event's date clears that next one's own
-// triggeredAt, which is what un-does this event's fade-out (see p7AxisEventOpacity)
-// and brings it back to full opacity — no separate reverse bookkeeping needed.
-const P7_AXIS_EVENT_STATE = P7_AXIS_EVENTS.map(() => ({ triggeredAt: null }));
-
-// Updated each frame by p7DrawYearAxis — pixel x of the LEFT edge of the "2023"
-// year label, at the W used for that frame. The first axis event waits until
-// curX passes this point rather than firing at its raw date, because the 2023
-// label visually occupies space to the LEFT of minDate's axis position and the
-// event appearing before the fill has cleared that label looks wrong.
-let p7AxisCurrentW       = 0;
-let p7FirstYearLabelLeftX = null;
+// reached, and cleared only once its own reverse fade-out (leavingAt below) has
+// fully finished — null means "not currently triggered or shown" (either never
+// reached yet, or reached-then-reversed-then-fully-faded). Scrolling back above
+// the *next* event's date clears that next one's own triggeredAt/leavingAt,
+// which is what un-does this event's forward-triggered fade-out (see
+// p7AxisEventOpacity) and brings it back to full opacity — no separate reverse
+// bookkeeping needed for that particular case.
+//
+// leavingAt is a separate timestamp, set the instant *this* event itself is
+// scrolled back above its own date — driving its own reverse fade-out
+// (P7_AXIS_EVENT_FADE_OUT_MS) symmetrically with the forward crossfade,
+// instead of just snapping triggeredAt to null and disappearing in one frame.
+// Re-reaching the event before that fade finishes cancels it (leavingAt reset
+// to null), same "reversible mid-flight" convention as p7DrawSideSquares' own
+// month cascade.
+const P7_AXIS_EVENT_STATE = P7_AXIS_EVENTS.map(() => ({ triggeredAt: null, leavingAt: null }));
 
 // Checked every draw (see p7AnyAnimActive) so the animation loop keeps running —
 // and labels keep fading — purely on elapsed time, with no further scrolling
@@ -637,9 +868,32 @@ function p7AxisEventsAnimActive() {
   return P7_AXIS_EVENT_STATE.some((state, i) => {
     if (state.triggeredAt === null) return false;
     if (now - state.triggeredAt < P7_AXIS_EVENT_FADE_IN_MS) return true;
+    if (state.leavingAt !== null && now - state.leavingAt < P7_AXIS_EVENT_FADE_OUT_MS) return true;
     const next = P7_AXIS_EVENT_STATE[i + 1];
     return !!next && next.triggeredAt !== null && now - next.triggeredAt < P7_AXIS_EVENT_FADE_OUT_MS;
   });
+}
+
+// Computes where event `ev`'s label actually renders — its tick's own x
+// (snapped to the nearest real dot, p7AxisEventSnappedX, so the tick lands
+// exactly on a dot's center rather than in the gap between two — falls back
+// to the raw date position if this event hasn't been matched to a segment
+// yet, e.g. the very first frame) — and the label's rendered left/right
+// extent given a near-edge alignment fallback (centered text would push past
+// the canvas edge for an event anchored right at it, so it falls back to
+// right/left alignment, extending only inward). Requires ctx.font already
+// set to P7_AXIS_EVENT_FONT.
+function p7AxisEventBounds(ctx, ev, i, W) {
+  const x = p7AxisEventSnappedX[i] !== undefined ? p7AxisEventSnappedX[i] : p7AxisX(ev.date, W);
+  const textWidth = ctx.measureText(ev.label).width;
+  let align = "center", left, right;
+  if (x + textWidth / 2 > W)      { align = "right"; left = x - textWidth; right = x; }
+  else if (x - textWidth / 2 < 0) { align = "left";  left = x; right = x + textWidth; }
+  else                             { left = x - textWidth / 2; right = x + textWidth / 2; }
+  const lineX = align === "right" ? x - textWidth / 2
+              : align === "left"  ? x + textWidth / 2
+              : x;
+  return { x, left, right, align, lineX };
 }
 
 // Fires each event's one-shot animation the instant p7.currentDate reaches its
@@ -650,39 +904,57 @@ function p7AxisEventsAnimActive() {
 // t=0 → currentDate=minDate, before the user has scrolled within it at all, and
 // the first event's own date (2023-01-01) sits *before* the dataset's actual
 // minDate (2023-01-10) — so without this, "reached" would already be true on
-// arrival and the event would show before any scrolling happened.
+// arrival and the event would show before any scrolling happened. Every event,
+// including the first, uses this same plain date-based rule (and renders at
+// this same date's axis position, p7AxisEventBounds below) — per explicit
+// instruction, no special-cased extra delay for the first one.
 function p7UpdateAxisEventTriggers() {
   const curMs = new Date(p7.currentDate + "T00:00:00Z").getTime();
   const minMs = new Date(p7.minDate + "T00:00:00Z").getTime();
   const hasScrolled = curMs > minMs;
+  const now = performance.now();
   P7_AXIS_EVENTS.forEach((ev, i) => {
     const state = P7_AXIS_EVENT_STATE[i];
-    let reached;
-    if (i === 0 && p7FirstYearLabelLeftX !== null && p7AxisCurrentW > 0) {
-      // Wait until the scroll-driven fill has visually passed the left edge of
-      // the "2023" label — which sits to the left of minDate's axis position —
-      // rather than firing the instant currentDate ticks past the event's date.
-      const curX = p7AxisX(p7.currentDate, p7AxisCurrentW);
-      reached = hasScrolled && curX <= p7FirstYearLabelLeftX;
-    } else {
-      reached = hasScrolled && curMs >= new Date(ev.date + "T00:00:00Z").getTime();
-    }
-    if (reached && state.triggeredAt === null) {
-      state.triggeredAt = performance.now();
+    const reached = hasScrolled && curMs >= new Date(ev.date + "T00:00:00Z").getTime();
+    if (reached) {
+      if (state.triggeredAt === null) {
+        state.triggeredAt = now;
+        state.leavingAt = null;
+        p7StartAnimLoop();
+      } else if (state.leavingAt !== null) {
+        // Scrolled forward again before this event's own reverse fade-out
+        // finished — cancel it, same reversible-mid-flight convention as
+        // everywhere else in the project.
+        state.leavingAt = null;
+      }
+    } else if (state.triggeredAt !== null && state.leavingAt === null) {
+      state.leavingAt = now;
       p7StartAnimLoop();
-    } else if (!reached && state.triggeredAt !== null) {
+    }
+  });
+  // Once a leaving event's own reverse fade-out has fully played out, forget
+  // it entirely — otherwise it would linger in P7_AXIS_EVENT_STATE forever at
+  // opacity 0 instead of being eligible to fade back in cleanly next time.
+  P7_AXIS_EVENT_STATE.forEach((state) => {
+    if (state.leavingAt !== null && now - state.leavingAt >= P7_AXIS_EVENT_FADE_OUT_MS) {
       state.triggeredAt = null;
+      state.leavingAt = null;
     }
   });
 }
 
 // Fades in on its own trigger, then holds at full opacity indefinitely — until
-// the next event triggers, at which point it fades out on *that* event's clock
-// (a crossfade, not a fixed-duration toast).
+// either the next event triggers (fading this one out on *that* event's clock,
+// a crossfade) or the user scrolls back above this event's own date (fading it
+// out on its own clock instead, via leavingAt).
 function p7AxisEventOpacity(i, now) {
   const state = P7_AXIS_EVENT_STATE[i];
   if (state.triggeredAt === null) return 0;
   let opacity = Math.min(1, (now - state.triggeredAt) / P7_AXIS_EVENT_FADE_IN_MS);
+  if (state.leavingAt !== null) {
+    const fadeOut = 1 - (now - state.leavingAt) / P7_AXIS_EVENT_FADE_OUT_MS;
+    opacity = Math.min(opacity, Math.max(0, fadeOut));
+  }
   const next = P7_AXIS_EVENT_STATE[i + 1];
   if (next && next.triggeredAt !== null) {
     const fadeOut = 1 - (now - next.triggeredAt) / P7_AXIS_EVENT_FADE_OUT_MS;
@@ -691,7 +963,7 @@ function p7AxisEventOpacity(i, now) {
   return opacity;
 }
 
-function p7DrawAxisEvents(ctx, W, axisY) {
+function p7DrawAxisEvents(ctx, W, axisY, curX) {
   p7UpdateAxisEventTriggers();
   const now = performance.now();
   ctx.save();
@@ -705,20 +977,7 @@ function p7DrawAxisEvents(ctx, W, axisY) {
     if (P7_AXIS_EVENT_STATE[i].triggeredAt === null) return;
     const opacity = p7AxisEventOpacity(i, now);
     if (opacity <= 0) return;
-    const x = p7AxisX(ev.date, W);
-    const textWidth = ctx.measureText(ev.label).width;
-    // Centered text would push past the canvas edge for an event anchored right
-    // at it — fall back to right/left alignment (extending only inward) near
-    // either edge instead of going out of frame.
-    let align = "center", left, right;
-    if (x + textWidth / 2 > W)      { align = "right"; left = x - textWidth; right = x; }
-    else if (x - textWidth / 2 < 0) { align = "left";  left = x; right = x + textWidth; }
-    else                             { left = x - textWidth / 2; right = x + textWidth / 2; }
-    // Tick always marks the label's horizontal center, even when textAlign shifts
-    // the glyphs off-center from x near the canvas edges.
-    const lineX = align === "right" ? x - textWidth / 2
-                : align === "left"  ? x + textWidth / 2
-                : x;
+    const { x, left, right, align, lineX } = p7AxisEventBounds(ctx, ev, i, W);
     visible.push({ ev, i, x, lineX, align, left, right, opacity });
   });
 
@@ -747,23 +1006,73 @@ function p7DrawAxisEvents(ctx, W, axisY) {
     ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
     ctx.fillText(ev.label, x, axisY - yOff);
 
-    // Date below the label, lower opacity
-    const [y, m, d] = ev.date.split('-');
-    const dateLabel = `${d}.${m}.${y}`;
+    // Date below the label — same color as the axis's own filled dots/tick
+    // (P7_AXIS_FILLED_COLOR, via globalAlpha rather than string-parsing its
+    // own alpha, same pattern as the tick line below), bold, rather than a
+    // dimmer black — ties it visually to the dot it belongs to instead of
+    // reading as a de-emphasized caption under the label.
+    const dateLabel = p7FormatDateDMY(ev.date, ".");
     ctx.font = P7_AXIS_DATE_FONT;
     ctx.textAlign = "center";
-    ctx.fillStyle = `rgba(0, 0, 0, ${opacity * P7_AXIS_DATE_OPACITY_SCALE})`;
+    ctx.fillStyle = P7_AXIS_FILLED_COLOR;
+    ctx.globalAlpha = opacity;
     ctx.fillText(dateLabel, lineX, axisY - yOff + P7_AXIS_DATE_OFFSET);
+    ctx.globalAlpha = 1;
 
-    ctx.strokeStyle = `rgba(0, 0, 0, ${opacity * P7_AXIS_EVENT_LINE_OPACITY_SCALE})`;
-    ctx.lineWidth = 1;
+    // Runs down to just shy of axisY — the exact vertical center of the dot
+    // lineX is snapped to (p7AxisEventSnappedX/p7AxisEventBounds) — a small
+    // trim (P7_AXIS_EVENT_LINE_END_GAP) short of dead center rather than
+    // reaching it exactly, so it still reads as plugging into the dot
+    // without the line's own end poking out past the far side of the
+    // repainted dot patch below. Same color as the axis's own filled dots
+    // (P7_AXIS_FILLED_COLOR, via globalAlpha rather than string-parsing its
+    // own alpha) so a future edit to that color updates this tick too —
+    // modulated by this event's own crossfade opacity on top, same as the
+    // label/date above it.
+    ctx.strokeStyle = P7_AXIS_FILLED_COLOR;
+    ctx.globalAlpha = opacity;
+    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(lineX, axisY - yOff + P7_AXIS_DATE_OFFSET + P7_AXIS_EVENT_LINE_GAP);
     ctx.lineTo(lineX, axisY - P7_AXIS_EVENT_LINE_END_GAP);
     ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // The line's own semi-transparent stroke and the dot's own semi-transparent
+    // fill would otherwise double up right where they overlap (both drawn with
+    // alpha < 1, so the overlap composites darker than either alone) — wipe
+    // that one dot's own small patch back to the plain frame background first
+    // (same solid color drawBackground, main.js, fills the whole canvas with
+    // at the start of every frame) before repainting it, so the repaint is a
+    // single normal blend against a clean base rather than a third layer
+    // stacked on top of the other two (which would only compound the problem).
+    ctx.fillStyle = "#FDFCFF";
+    ctx.beginPath();
+    ctx.arc(lineX, axisY, P7_AXIS_LINE_THICKNESS / 2 + 1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = lineX >= curX ? P7_AXIS_FILLED_COLOR : P7_AXIS_BG_COLOR;
+    ctx.beginPath();
+    ctx.arc(lineX, axisY, P7_AXIS_LINE_THICKNESS / 2, 0, Math.PI * 2);
+    ctx.fill();
   });
 
   ctx.restore();
+}
+
+// Same spacing math p7DrawAxisDots uses to actually place dots (nudged so a
+// dot lands exactly on *both* fromX and toX) — factored out so a headline
+// event's tick can be snapped to whichever of these exact x's is nearest,
+// rather than drawn at its own free-running date-interpolated x, which
+// almost never lands exactly on a real dot.
+function p7AxisDotPositions(fromX, toX) {
+  const length = Math.abs(toX - fromX);
+  if (length <= 0) return [];
+  const count = Math.max(2, Math.round(length / P7_AXIS_DOT_GAP) + 1);
+  const step  = length / (count - 1);
+  const dir   = toX > fromX ? 1 : -1;
+  const positions = [];
+  for (let i = 0; i < count; i++) positions.push(fromX + dir * i * step);
+  return positions;
 }
 
 // Draws filled circles roughly every P7_AXIS_DOT_GAP px between fromX and toX
@@ -785,13 +1094,7 @@ function p7DrawAxisEvents(ctx, W, axisY) {
 // on this axis's line lengths, so plain per-dot fills it is.
 function p7DrawAxisDots(ctx, fromX, toX, axisY, curX) {
   const radius = P7_AXIS_LINE_THICKNESS / 2;
-  const length = Math.abs(toX - fromX);
-  if (length <= 0) return;
-  const count = Math.max(2, Math.round(length / P7_AXIS_DOT_GAP) + 1);
-  const step  = length / (count - 1);
-  const dir   = toX > fromX ? 1 : -1;
-  for (let i = 0; i < count; i++) {
-    const x = fromX + dir * i * step;
+  for (const x of p7AxisDotPositions(fromX, toX)) {
     ctx.fillStyle = x >= curX ? P7_AXIS_FILLED_COLOR : P7_AXIS_BG_COLOR;
     ctx.beginPath();
     ctx.arc(x, axisY, radius, 0, Math.PI * 2);
@@ -799,13 +1102,32 @@ function p7DrawAxisDots(ctx, fromX, toX, axisY, curX) {
   }
 }
 
+// Snaps `x` to whichever actual dot (see p7AxisDotPositions) between fromX
+// and toX sits closest to it.
+function p7AxisNearestDotX(fromX, toX, x) {
+  let best = null, bestDist = Infinity;
+  for (const dx of p7AxisDotPositions(fromX, toX)) {
+    const dist = Math.abs(dx - x);
+    if (dist < bestDist) { bestDist = dist; best = dx; }
+  }
+  return best;
+}
+
+// A headline event's tick/label position (see p7AxisEventBounds), snapped to
+// the nearest real dot — filled in below by p7DrawYearAxis's own dot-segment
+// loop, the only place that has each segment's exact fromX/toX (and the 18px
+// tick font active, needed for labelClearance) on hand. Keyed by index into
+// P7_AXIS_EVENTS; rebuilt fresh every frame, so a resize or date-range change
+// can't leave a stale snap behind.
+let p7AxisEventSnappedX = [];
+
 function p7DrawYearAxis(ctx, W, H) {
   const ticks = p7AxisYearTicks();
-  const curX  = p7AxisX(p7.currentDate, W);
+  const rawCurX = p7AxisX(p7.currentDate, W);
 
   // A tick is "reached" once the growing edge has caught up to (or passed) its
   // x position — the start tick is always reached by definition.
-  const visible = ticks.filter((tick, i) => i === 0 || p7AxisX(tick.dateStr, W) >= curX);
+  const visible = ticks.filter((tick, i) => i === 0 || p7AxisX(tick.dateStr, W) >= rawCurX);
 
   const axisY = H * P7_AXIS_Y_FRAC;
   ctx.save();
@@ -827,16 +1149,54 @@ function p7DrawYearAxis(ctx, W, H) {
   }
 
   ctx.font = "18px 'Assistant', sans-serif"; // set before measuring so widths below are accurate
-  // Record the left edge of the "2023" (first year) label for use by
-  // p7UpdateAxisEventTriggers — must happen here, while the 18px font is active.
-  p7AxisCurrentW        = W;
-  p7FirstYearLabelLeftX = p7AxisX(ticks[0].dateStr, W) - ctx.measureText(String(ticks[0].year)).width;
   // Labels are textAlign "right" — each one sits entirely to the *left* of its own
   // tick x, never to the right — so only that side needs clearance, sized to the
   // label's actual measured width rather than a guessed constant (a fixed 28px gap
   // here used to be narrower than a real 4-digit year at 18px, so the dashes ran
   // straight under the digits).
   const labelClearance = (tick) => ctx.measureText(String(tick.year)).width + P7_AXIS_LABEL_PAD;
+
+  // The "2023" text itself isn't part of the fillable timeline — the first
+  // actual dot sits to its left, past labelClearance. Rather than clamping
+  // rawCurX to that dot's position (which would pin the fill there for the
+  // whole span of real progress it takes rawCurX to close that small label
+  // gap on its own — reading as fake/stuck, not actually filling), the fill's
+  // own x-mapping is rescaled to run from the first dot's position down to
+  // the left edge, instead of from the label's own position — the exact same
+  // frac (0 at p7.minDate, 1 at p7.maxDate) p7AxisX uses, just applied to a
+  // shorter span that starts where the dots actually start. So curX begins
+  // exactly at that first dot and moves continuously from there with every
+  // bit of real forward progress, rather than sitting artificially pinned.
+  // fillFrac itself is lagged (p7AxisUpdateFillLag), not the raw scroll-driven
+  // value, so the fill trails a beat behind rather than snapping to scroll 1:1.
+  const axisStartX = p7AxisX(ticks[0].dateStr, W) - labelClearance(ticks[0]);
+  const leftX = P7_AXIS_MARGIN;
+  const fillFrac = p7AxisUpdateFillLag();
+  const curX = axisStartX - fillFrac * (axisStartX - leftX);
+
+  // Snaps each headline event to its nearest real dot across *all* segments
+  // (see p7AxisNearestDotX), not just whichever segment strictly contains its
+  // raw date — an event whose date sits inside a year label's own reserved
+  // clearance gap (no dots there at all, e.g. the very first event, only ~10
+  // days into the dataset and still within the "2023" label's own space)
+  // would otherwise never match any segment and never get snapped. Must
+  // happen here, segment by segment, since only here do we have each
+  // segment's exact fromX/toX (and the 18px tick font active, needed by
+  // labelClearance) on hand. Read by p7AxisEventBounds below.
+  p7AxisEventSnappedX = [];
+  const snapDist = [];
+  function snapEventsInSegment(fromX, toX) {
+    P7_AXIS_EVENTS.forEach((ev, ei) => {
+      const evX = p7AxisX(ev.date, W);
+      const nearest = p7AxisNearestDotX(fromX, toX, evX);
+      if (nearest === null) return;
+      const dist = Math.abs(nearest - evX);
+      if (snapDist[ei] === undefined || dist < snapDist[ei]) {
+        snapDist[ei] = dist;
+        p7AxisEventSnappedX[ei] = nearest;
+      }
+    });
+  }
 
   // One continuous dotted line spanning the full p7.minDate-to-p7.maxDate span,
   // present from the very first frame — each dot picks its own filled/faint
@@ -847,6 +1207,7 @@ function p7DrawYearAxis(ctx, W, H) {
     const toX   = p7AxisX(ticks[i].dateStr, W) + P7_AXIS_LABEL_PAD;
     if (fromX <= toX) continue;
     p7DrawAxisDots(ctx, fromX, toX, axisY, curX);
+    snapEventsInSegment(fromX, toX);
   }
   // The remainder past the last whole-year tick, out to the axis's true left edge
   // (p7.maxDate itself rarely falls exactly on a January 1st).
@@ -855,6 +1216,7 @@ function p7DrawYearAxis(ctx, W, H) {
   const axisLeftX  = P7_AXIS_MARGIN;
   if (finalTickX > axisLeftX) {
     p7DrawAxisDots(ctx, finalTickX, axisLeftX, axisY, curX);
+    snapEventsInSegment(finalTickX, axisLeftX);
   }
 
   // Every year label shows from the start now that the full axis is always
@@ -869,7 +1231,7 @@ function p7DrawYearAxis(ctx, W, H) {
   }
   ctx.restore();
 
-  p7DrawAxisEvents(ctx, W, axisY);
+  p7DrawAxisEvents(ctx, W, axisY, curX);
 }
 
 // Exposed so scroll and animation-loop redraws can re-test the cursor against
@@ -904,6 +1266,10 @@ function p7HoverInit() {
     tooltipEl.classList.remove("is-visible");
     p7.hoveredEvent = null;
     draw();
+    // The 8 @fold9 squares' own opacity (a DOM style, not part of the canvas
+    // draw() above) also dims/undims with hover — see updateGroups' own
+    // p7.hoveredEvent check — so it needs its own refresh here too.
+    if (typeof updateGroups === "function") updateGroups();
   }
 
   // Runs the hit-test against p7.lastPositions using the cached cursor
@@ -936,13 +1302,15 @@ function p7HoverInit() {
     if (p7.hoveredEvent !== bestEvent) {
       p7.hoveredEvent = bestEvent;
       draw();
+      // Same DOM-opacity refresh as hide() above — see that comment.
+      if (typeof updateGroups === "function") updateGroups();
       // draw() just rebuilt p7.lastPositions — bestPos (read below for
       // tooltip placement) still points at the same {x,y}, since dimming
       // only changes alpha, but refresh the reference for clarity/safety.
       bestPos = p7.lastPositions.get(bestEvent);
     }
 
-    dateEl.textContent = bestEvent.date;
+    dateEl.textContent = p7FormatDateDMY(bestEvent.date);
     descEl.textContent = bestEvent.descHeMedium;
     tooltipEl.style.borderColor = p7ActorColor(bestEvent.actor);
     tooltipEl.classList.add("is-visible");

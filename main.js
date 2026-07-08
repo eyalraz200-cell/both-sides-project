@@ -44,21 +44,47 @@ function drawFold5(ctx, W, H) {
 // entire ~7-viewport scrub range. Plain background only here.
 function drawFold7(ctx, W, H) {
   drawBackground(ctx, W, H);
+  // Same reasoning as drawFold9 below (see p7RealTimelineReached's own
+  // comment, page7.js): if a fast scroll-up carries the user all the way
+  // past #page-8 (@fold9) and into this fold within a single continuous
+  // motion, any per-event squares still mid-retreat should keep animating
+  // out here too, instead of freezing the instant currentPage drops below 8.
+  // No axis here (p7AxisTriggerIfNeeded isn't called) — the axis has never
+  // shown this far back and shouldn't start now.
+  if (p7.ready && p7RealTimelineReached) {
+    p7DrawTimelineSquares(ctx, W, H);
+    if (!p7HasEngaged && !p7AnyAnimActive()) p7RealTimelineReached = false;
+  }
 }
 
 // Fold 9 (id #page-7, Figma node 162:63876) — see GROUPS/updateGroups below
 // for its actual DOM-overlay content (the fold-6 squares losing their
 // labels and gaining group colors). Background only, except the year axis
 // (page7.js) — that one starts appearing here already, gated by
-// p7AxisTriggerIfNeeded (its trigger is this very fold's own title card
-// reaching viewport center, which also kicks off the axis's one-shot build-in
-// wipe), rather than waiting until currentPage actually flips to fold 9/#page-8.
-// p7DrawYearAxis itself is still also called from drawPage7, since the axis
-// needs to keep drawing for the whole rest of the timeline.
+// p7AxisTriggerIfNeeded (its trigger is p7HasEngaged, i.e. this very fold's
+// own title card passing fully offscreen, which also kicks off the axis's
+// one-shot build-in wipe), rather than waiting until currentPage actually
+// flips to fold 9/#page-8. p7DrawYearAxis itself is still also called from
+// drawPage7, since the axis needs to keep drawing for the whole rest of the
+// timeline.
 function drawFold9(ctx, W, H) {
   drawBackground(ctx, W, H);
   if (!p7.ready) return;
   p7UpdateEngagement(); // keeps p7HasEngaged live while scrolling back through this fold too (page7.js)
+  // Once the real timeline (drawPage7, #page-9) has actually been reached at
+  // least once, keep drawing/animating its per-event squares here too — see
+  // p7RealTimelineReached's own comment (page7.js) for why: without this, the
+  // instant the user scrolls back up far enough for currentPage to drop from
+  // 9 to 8, every still-retreating dot (and the year axis's own headline
+  // events) just vanished in a single frame instead of finishing its reverse
+  // cascade. Gated on p7RealTimelineReached rather than p7HasEngaged alone
+  // (which flips true earlier, while still on this very fold) so the
+  // *forward* reveal still only ever starts once #page-9 is actually reached
+  // — this only smooths out the reverse crossing.
+  if (p7RealTimelineReached) {
+    p7DrawTimelineSquares(ctx, W, H);
+    if (!p7HasEngaged && !p7AnyAnimActive()) p7RealTimelineReached = false;
+  }
   if (p7AxisTriggerIfNeeded()) p7DrawYearAxis(ctx, W, H);
 }
 
@@ -163,6 +189,24 @@ function setActivePage(page) {
   // per-month animation state so the next entry replays from scratch instead
   // of showing the previously-settled dots still hanging around.
   if (currentPage === 9 && page < 9) p7ResetForReplay();
+
+  // Continuing into page9 (fold12) while page8's own timeline->legit-grid
+  // glide (p8CurrentT, page8.js) hasn't actually finished yet — the
+  // IntersectionObserver driving this can cross into page9's slot before
+  // that glide reaches t=1. drawPage9 has no notion of that glide's
+  // progress on its own, so without seeding p9.anim here the dots would
+  // snap straight to their final legit position the instant page9 takes
+  // over drawing instead of page8 — see p8CaptureBlendedPositions' own
+  // comment (page8.js) for the full rationale.
+  if (currentPage === 10 && page === 11 && typeof p8CurrentT === "function" && p8Engaged && p8CurrentT() < 1) {
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    p9.anim = {
+      from: p8CaptureBlendedPositions(W, H),
+      start: performance.now(),
+      duration: Math.max(1, P8_TRANSITION_DURATION * (1 - p8CurrentT())),
+    };
+  }
+
   currentPage = page;
   updateGroups();
   updateFoldNumberBadge();
@@ -194,7 +238,42 @@ const page0ScrollEl = document.querySelector(".page0-scroll");
 const page0TitleEl = document.querySelector(".page0-title");
 const page0SubtitleEl = document.querySelector(".page0-subtitle");
 const PAGE0_FADE_VH = 0.4; // fraction of one viewport height
-let page0Ticking = false;
+// Logo/scroll-cue opacity lags its raw scroll-derived target via a per-frame
+// lerp instead of snapping to it every scroll event — gives the fade a bit
+// of trailing "after-action" momentum rather than tracking scroll 1:1.
+//
+// .page0-title/.page0-subtitle get a lagged, scroll-driven version of their
+// own "scroll up and off" motion, once they're not being driven by the
+// page-load entrance below (see page0TitleTakenOver there). Both are
+// position: fixed (see their own comments in style.css) specifically so this
+// motion is 100% JS-driven, not a JS transform layered on top of native
+// scroll-driven document flow — an earlier version kept them position:
+// absolute (scrolling away by normal flow) and tried to *compensate* on top
+// of that with a JS transform, which meant two separate browser pipelines
+// (layout/paint for the flow position, compositing for the transform) were
+// fighting over the same element's position every frame; no amount of
+// lerp/clamp tuning on the compensation math fixed the resulting jitter,
+// because the mismatch was architectural, not a tuning problem. With a
+// single pipeline in charge, the math is just: track a lagged copy of the
+// scroll fraction (0..1 across one viewport, same normalized domain the
+// opacity fade above uses) and translate by -laggedFraction * innerHeight,
+// i.e. the element's entire position is a direct function of the smoothed
+// value, nothing else moves it. The lagged fraction is capped at
+// PAGE0_SCROLL_LAG_MAX_PX (in fraction terms) behind the live target so a
+// big scroll jump can't leave the title lingering on-screen far longer than
+// intended. parallaxPx (the small ±60px depth accent, title down / subtitle
+// up) is layered on top, driven off the same lagged fraction so both terms
+// move in phase.
+//
+// One-off pattern, not the project's usual fixed-duration trigger
+// convention — meant to read as this fold's own weight, not a general
+// scroll-smoothing effect applied project-wide.
+const PAGE0_OPACITY_DAMPING = 0.12;
+const PAGE0_SCROLL_LAG_DAMPING = 0.12; // same tempo as the opacity lag, so both read as one motion
+const PAGE0_SCROLL_LAG_MAX_PX = 150; // caps how far the lag can trail behind the live scroll position
+let page0LogoOpacity = null; // null until first driven, either by entrance or scroll fade
+let page0LaggedScrollFrac = null;
+let page0TitleTakenOver = false; // see playPage0Entrance below
 let page0EntranceDone = false;
 page0LogoEl.style.opacity = "0";
 page0ScrollEl.style.opacity = "0";
@@ -205,34 +284,64 @@ page0ScrollEl.style.opacity = "0";
 page0TitleEl.style.transform = "translateY(100vh)";
 page0SubtitleEl.style.transform = "translateX(-100%) translateY(100vh)";
 
-function page0UpdateFromScroll() {
-  if (!page0EntranceDone) return;
+function page0OpacityTarget() {
   const raw = Math.max(0, Math.min(1, window.scrollY / (window.innerHeight * PAGE0_FADE_VH)));
-  const opacity = String(1 - p9Ease(raw));
-  page0LogoEl.style.opacity = opacity;
-  page0ScrollEl.style.opacity = opacity;
-  const scrollFrac = Math.max(0, Math.min(1, window.scrollY / window.innerHeight));
-  const parallaxPx = scrollFrac * 60;
-  page0TitleEl.style.transform = `translateY(${parallaxPx}px)`;
-  page0SubtitleEl.style.transform = `translateX(-100%) translateY(${-parallaxPx}px)`;
+  return 1 - p9Ease(raw);
 }
 
-window.addEventListener("scroll", () => {
-  if (page0Ticking) return;
-  page0Ticking = true;
-  requestAnimationFrame(() => { page0UpdateFromScroll(); page0Ticking = false; });
-}, { passive: true });
+function page0ScrollFracTarget() {
+  return Math.max(0, Math.min(1, window.scrollY / window.innerHeight));
+}
+
+function page0ApplyTitleScrollLag() {
+  const fracTarget = page0ScrollFracTarget();
+  if (page0LaggedScrollFrac === null) {
+    page0LaggedScrollFrac = fracTarget;
+  } else {
+    page0LaggedScrollFrac += (fracTarget - page0LaggedScrollFrac) * PAGE0_SCROLL_LAG_DAMPING;
+    const maxFracGap = PAGE0_SCROLL_LAG_MAX_PX / window.innerHeight;
+    page0LaggedScrollFrac = Math.max(fracTarget - maxFracGap, Math.min(fracTarget + maxFracGap, page0LaggedScrollFrac));
+  }
+  const scrollDrivenPx = page0LaggedScrollFrac * window.innerHeight;
+  const parallaxPx = page0LaggedScrollFrac * 60;
+  page0TitleEl.style.transform = `translateY(${-scrollDrivenPx + parallaxPx}px)`;
+  page0SubtitleEl.style.transform = `translateX(-100%) translateY(${-scrollDrivenPx - parallaxPx}px)`;
+}
+
+function page0ApplyLogoScrollFade() {
+  const opacityTarget = page0OpacityTarget();
+  page0LogoOpacity = page0LogoOpacity === null
+    ? opacityTarget
+    : page0LogoOpacity + (opacityTarget - page0LogoOpacity) * PAGE0_OPACITY_DAMPING;
+  page0LogoEl.style.opacity = String(page0LogoOpacity);
+  page0ScrollEl.style.opacity = String(page0LogoOpacity);
+}
 
 // ── @fold1's page-load entrance, per explicit spec: title/subtitle slide up
 // from off-screen first; once they're in place, the dot columns pop in one
 // row at a time (both columns synced by syncedRow, see page1.js — the right
 // column has 2 more rows than the left, so it starts popping 2 beats
 // earlier); once every dot/group-swatch has popped, the logo and scroll cue
-// fade in last. All one-shot, page-load-only — has nothing to do with
-// scrolling (that's page0UpdateFromScroll above, which stays off until this
-// finishes, via page0EntranceDone).
+// fade in last.
 //
-// Driven by one requestAnimationFrame loop with p9Ease applied fresh to each
+// Scrolling can interrupt this early, but only the title/subtitle beat — per
+// explicit instruction, scrolling during the entrance should let the user
+// drag the title away immediately with their own scroll (via
+// page0ApplyTitleScrollLag above) rather than waiting for the slide-in to
+// finish first. The moment window.scrollY > 0 is seen, page0TitleTakenOver
+// flips true (permanently — the entrance never reclaims the title once
+// scroll has taken it) and this loop stops touching page0TitleEl/
+// page0SubtitleEl at all, handing them over entirely. The dots and the
+// logo/scroll-cue fade-in are untouched by this — they keep playing out on
+// their own elapsed-time schedule regardless of an early title takeover,
+// i.e. the rest of the entrance catches up on its own even if the title has
+// already scrolled off. The logo/scroll-cue only switch over to their own
+// scroll-driven fade (page0ApplyLogoScrollFade above) once *their* beat
+// actually finishes (page0EntranceDone), independent of the title.
+//
+// Driven by one requestAnimationFrame loop, running forever (it becomes the
+// permanent per-frame driver for whichever of title/subtitle and logo/
+// scroll-cue have been handed to scroll), with p9Ease applied fresh to each
 // beat's own local 0..1 progress — same style as every other animation in
 // this file (makeTrigger/updateGroups) — rather than CSS transitions, so the
 // easing curve and "continuous, recompute every frame" feel actually match
@@ -262,11 +371,17 @@ function playPage0Entrance() {
   function frame() {
     const elapsed = performance.now() - start;
 
-    const titleT = p9Ease(Math.max(0, Math.min(1, elapsed / PAGE0_TITLE_MS)));
-    const titleOffsetVh = (1 - titleT) * 100;
-    page0TitleEl.style.transform = `translateY(${titleOffsetVh}vh)`;
-    const subtitleAlignPx = (107 * (1 - titleT)).toFixed(2);
-    page0SubtitleEl.style.transform = `translateX(-100%) translateY(calc(${titleOffsetVh}vh - ${subtitleAlignPx}px))`;
+    if (!page0TitleTakenOver && window.scrollY > 0) page0TitleTakenOver = true;
+
+    if (!page0TitleTakenOver) {
+      const titleT = p9Ease(Math.max(0, Math.min(1, elapsed / PAGE0_TITLE_MS)));
+      const titleOffsetVh = (1 - titleT) * 100;
+      page0TitleEl.style.transform = `translateY(${titleOffsetVh}vh)`;
+      const subtitleAlignPx = (107 * (1 - titleT)).toFixed(2);
+      page0SubtitleEl.style.transform = `translateX(-100%) translateY(calc(${titleOffsetVh}vh - ${subtitleAlignPx}px))`;
+    } else {
+      page0ApplyTitleScrollLag();
+    }
 
     PAGE0_DECORATIVE_DOT_ELS.forEach((d) => {
       const rowRaw = Math.max(0, Math.min(1, (elapsed - PAGE0_TITLE_MS - d.syncedRow * PAGE0_ROW_STAGGER_MS) / PAGE0_POP_MS));
@@ -290,19 +405,17 @@ function playPage0Entrance() {
     });
     updateGroups();
 
-    const logoT = p9Ease(Math.max(0, Math.min(1, (elapsed - dotsDoneMs) / PAGE0_LOGO_FADE_MS)));
-    page0LogoEl.style.opacity = String(logoT);
-    page0ScrollEl.style.opacity = String(logoT);
-
-    if (elapsed < totalMs) {
-      requestAnimationFrame(frame);
+    if (!page0EntranceDone) {
+      const logoT = p9Ease(Math.max(0, Math.min(1, (elapsed - dotsDoneMs) / PAGE0_LOGO_FADE_MS)));
+      page0LogoOpacity = logoT;
+      page0LogoEl.style.opacity = String(logoT);
+      page0ScrollEl.style.opacity = String(logoT);
+      if (elapsed >= totalMs) page0EntranceDone = true;
     } else {
-      // Handoff to the scroll-driven fade above — harmless even if the user
-      // has already scrolled during the entrance, since this just syncs
-      // opacity to wherever scroll actually is right now.
-      page0EntranceDone = true;
-      page0UpdateFromScroll();
+      page0ApplyLogoScrollFade();
     }
+
+    requestAnimationFrame(frame);
   }
 
   requestAnimationFrame(frame);
@@ -320,11 +433,23 @@ let page7Ticking = false;
 function page7UpdateFromScroll() {
   const rect = page7Section.getBoundingClientRect();
 
-  // t=0 when the section's top reaches the viewport top, t=1 one scrub-range of scrolling
-  // later. The scrub range is the section height minus one viewport height (see
-  // .page7-scrub in style.css).
-  const scrubRange = rect.height - window.innerHeight;
-  const t = scrubRange > 0 ? Math.max(0, Math.min(1, -rect.top / scrubRange)) : 0;
+  // t=0 the instant fold 9's own title card clears the top of the viewport
+  // (the same instant p7HasEngaged flips true below) rather than when
+  // #page-9's own top reaches the viewport top — #page-8 (fold 9) keeps
+  // scrolling for a while after its title clears before #page-9 actually
+  // begins, and anchoring t=0 to #page-9's own top left that whole stretch as
+  // dead scroll space where engagement had already fired but the axis never
+  // moved off 0%. `gap` (page7TitleCardEl's top minus #page-9's own top, at
+  // this same instant) is a pure document-layout constant regardless of
+  // current scroll position, so recomputing it fresh here — instead of
+  // caching it — keeps this correct across a resize too. t=1 stays anchored
+  // to the exact same endpoint as before (#page-9's bottom reaching the
+  // viewport bottom); starting earlier just means that same endpoint is now
+  // reached over a correspondingly longer scroll distance.
+  const titleTop = page7TitleCardEl ? page7TitleCardEl.getBoundingClientRect().top : rect.top;
+  const gap = rect.top - titleTop;
+  const scrubRange = rect.height - window.innerHeight + gap;
+  const t = scrubRange > 0 ? Math.max(0, Math.min(1, -titleTop / scrubRange)) : 0;
 
   if (!p7.ready) return;
 
@@ -419,15 +544,15 @@ const GROUPS = [
   // — right column —
   { color: "#008C99", label: "ערבים ישראלים",            fold3: { x: 1088, y: 786 },
     fold4: { x: 1088, y: 786, dimmed: true,  swatchFirst: true }, row: true },
-  { color: "#ea580c", label: "מתיישבים",              actor: "settlers", fold3: { x: 908,  y: 321 },
+  { color: "#ea6c15", label: "מתיישבים",              actor: "settlers", fold3: { x: 908,  y: 321 },
     fold4: { x: 773,  y: 443, dimmed: false, swatchFirst: false }, fold6: { x: 31, y: 440 } },
-  { color: "#FF00A6", label: "יוצאי ברית המועצות",       fold3: { x: 280,  y: 210 },
-    fold4: { x: 280,  y: 210, dimmed: true,  swatchFirst: true }, row: true },
   { color: "#7c3aed", label: "יוצאי אתיופיה",            fold3: { x: 1225, y: 167 },
     fold4: { x: 1225, y: 167, dimmed: true,  swatchFirst: true }, row: true },
+  { color: "#FF00A6", label: "יוצאי ברית המועצות",       fold3: { x: 280,  y: 210 },
+    fold4: { x: 280,  y: 210, dimmed: true,  swatchFirst: true }, row: true },
   { color: "#65a30d", label: "פעילי ימין",            actor: "Right-wing activists", fold3: { x: 936,  y: 602 },
     fold4: { x: 773,  y: 483, dimmed: false, swatchFirst: false }, fold6: { x: 31, y: 464 } },
-  { color: "#2563eb", label: "מתנגדי הרפורמה המשפטית", actor: "Protesters against the government", fold3: { x: 462,  y: 555 },
+  { color: "#3f76ed", label: "מתנגדי הרפורמה המשפטית", actor: "Protesters against the government", fold3: { x: 462,  y: 555 },
     fold4: { x: 713,  y: 464, dimmed: false, swatchFirst: true, label: "מתנגדי הרפורמה" }, fold6: { x: 31, y: 512 } },
   // — left column —
   { color: "#d946ef", label: "פעילי שמאל",            actor: "left wing activists", fold3: { x: 699,  y: 710 },
@@ -553,66 +678,291 @@ function updateFold5RowTargets(W, H) {
   for (const k of Object.keys(fold5RowTargets)) fold5RowTargets[k].x += shift;
 }
 
-// 10 small static squares (Figma node 120:1279, fold 6; labeled in node
-// 120:1299, fold 7) that fade in at the center, taking the cluster's vacated
-// spot as it moves into fold6's left mini-legend. One fixed column, x
-// constant, y values copied straight off Figma (not a uniform formula —
-// the real gaps vary by half a pixel here and there). Each one is
-// unlabeled through fold 6, gains its action-type label once fold 7
-// (#page-6, the timeline's intro title) is actually reached, then loses
-// that label again and gains a group color in fold 9 (Figma node 162:63876
-// only assigns colors to the first 5 — see FOLD6_SQUARE_COLORS/fold9Trigger
-// for why all 10 get one anyway) — same "secondary attribute can snap,
-// position never does" rule as everywhere else, since nothing here needs to
-// move for any of it.
-// The 10th (פוגרום/Pogrom) has no entry in fold 7's own Figma frame — it was
-// initially dropped as a stray duplicate node, but the real events dataset
-// (events.json, "event category") confirmed it as a genuine 10th category,
-// so it's kept at Figma's original last-row position.
-const FOLD6_SQUARES_X = 754;
-const FOLD6_SQUARES_Y = [386.5, 415.5, 444.5, 473.5, 502.5, 531.5, 560.5, 589.5, 618.5, 648];
+// 8 small static squares (Figma node 258:2206, a 2-column x 4-row grid,
+// all `#2d2d2d`) that fade in at the center, taking the cluster's vacated
+// spot as it moves into fold6's left mini-legend. Positions below are each
+// square's own {dx, dy} offset from the 8-square group's own bounding-box
+// center (computed from Figma's absolute coords: columns x=741/766, rows
+// y=470/486/502/518, each square 8px — group center at x=757.5, y=498) —
+// offsets, not absolute coords, so layoutFold6Squares can re-center the
+// whole group at the canvas's own center regardless of viewport size,
+// rather than reproducing Figma's absolute frame position. Reading order is
+// row-by-row, left-to-right (Figma assigns no meaningful order of its own).
+// Offsets below are scaled ~1.3x from Figma's raw column/row deltas (kept
+// relative to the same group center) to open up the gap between squares a
+// bit more than Figma's own tight 258:2206 spacing reads on screen.
+const FOLD6_SQUARES_OFFSET = [
+  { dx: -21.5, dy: -36.4 },
+  { dx:  11.0, dy: -36.4 },
+  { dx: -21.5, dy: -15.6 },
+  { dx:  11.0, dy: -15.6 },
+  { dx: -21.5, dy:   5.2 },
+  { dx:  11.0, dy:   5.2 },
+  { dx: -21.5, dy:  26.0 },
+  { dx:  11.0, dy:  26.0 },
+];
+// Not shown in Figma node 258:2206 (no label layers next to the squares) —
+// kept only as inert element text content (fold6-square-label stays
+// opacity:0, see the removed fold7Label-driven reveal in updateGroups
+// below); harmless if never revealed.
 const FOLD6_SQUARE_LABELS = [
   "הפגנה לא אלימה",
   "החזקה בכפייה",
   "הפרות סדר",
   "הטרדה ואיומים",
-  "תקיפה פיזית של בלתי מעורב",
+  "תקיפה פיזית",
   "ניכוס שטח",
   "פגיעה ברכוש",
   "חסימת כביש",
-  "תקיפה חמושה של בלתי מעורב",
-  "פוגרום",
 ];
-// Figma (node 162:63876) only explicitly colors the first 5 — the other 5
-// have no entry there. Per explicit instruction all 10 still get a group
-// color rather than staying black, so squares 5-9 just cycle back through
-// the same 5 colors (index i+5 mirrors index i) — a deviation from Figma,
-// not a gap in it. Reads GROUPS' own `color` (by `actor`, the same join key
-// p7ActorColor in page7.js uses) rather than a second hardcoded hex list, so
-// a future color edit on GROUPS updates these squares too.
+// Not shown in Figma node 258:2206 either (all 8 squares render flat
+// #2d2d2d there — see lerpFold6SquareColor's own null-target case, same
+// value) — these actor assignments only matter once fold 9 recolors/flies
+// the squares out to their real per-event dots, a later beat this specific
+// Figma frame doesn't depict. Reads GROUPS' own `color` (by `actor`, the
+// same join key p7ActorColor in page7.js uses) rather than a second
+// hardcoded hex list, so a future color edit on GROUPS updates these
+// squares too.
 function groupColorByActor(actor) {
   return GROUPS.find(g => g.actor === actor).color;
 }
-// Each of the 5 camp-group colors appears exactly twice across the 10 squares.
-// Order is manually shuffled so no two adjacent squares share a color and
-// the sequence doesn't read as two identical runs.
+// Kept for the next @fold9 trigger to reuse: each square's actor is chosen to
+// match its own column's political side — left column (even indices, dx
+// -16.5) gets left-camp actors, right column (odd indices, dx +8.5, see
+// FOLD6_SQUARES_OFFSET) gets right-camp actors. Only 2 left-camp actors exist
+// vs 3 right-camp ones, so left alternates P/L twice each and right cycles
+// H/R/S/H (uneven, but there's no 4th right-camp actor to reach for). Index 0
+// is unchanged ("Protesters against the government") since @fold8's tooltip
+// (below) targets that specific square/event, and it's already a left-camp
+// actor in the left column.
 // S=מתיישבים L=פעילי שמאל H=חרדים P=מתנגדי הרפורמה R=פעילי ימין
-// Each color appears twice; pair gaps are 7,5,3,6,4 — no mirror, no pattern.
-const FOLD6_SQUARE_COLORS = [
-  groupColorByActor("Protesters against the government"),   // P - blue
-  groupColorByActor("Haredi Jews"),                         // H - grey
-  groupColorByActor("Right-wing activists"),                // R - green
-  groupColorByActor("settlers"),                            // S - orange
-  groupColorByActor("left wing activists"),                 // L - pink
-  groupColorByActor("Right-wing activists"),                // R - green
-  groupColorByActor("Haredi Jews"),                         // H - grey
-  groupColorByActor("Protesters against the government"),   // P - blue
-  groupColorByActor("left wing activists"),                 // L - pink
-  groupColorByActor("settlers"),                            // S - orange
+const FOLD6_SQUARE_ACTORS = [
+  "Protesters against the government",   // 0 (L col) - P - blue
+  "Haredi Jews",                         // 1 (R col) - H - grey
+  "left wing activists",                 // 2 (L col) - L - pink
+  "Right-wing activists",                // 3 (R col) - R - green
+  "Protesters against the government",   // 4 (L col) - P - blue
+  "settlers",                            // 5 (R col) - S - orange
+  "left wing activists",                 // 6 (L col) - L - pink
+  "Haredi Jews",                         // 7 (R col) - H - grey
 ];
+const FOLD6_SQUARE_COLORS = FOLD6_SQUARE_ACTORS.map(groupColorByActor);
+// Which occurrence (0 = first chronologically, 1 = second, ...) of its own
+// actor each square stands in for, among left-side events sorted by date
+// (p7.leftEvents' own order — see p7NthIndexOfActor/p7EventForActorOccurrence,
+// page7.js) — auto-derived from FOLD6_SQUARE_ACTORS' own position (count of
+// the same actor appearing earlier in the list), same as the original
+// 10-square design, except index 0: overridden to 8 so @fold8's tooltip
+// keeps pointing at its specific chosen event (the left-side "מחאה מחוץ
+// לביתו של שר המשפטים יריב לוין במודיעין" protest dated 2023-01-14).
+const FOLD6_SQUARE_OCCURRENCE = FOLD6_SQUARE_ACTORS.map((actor, i) =>
+  FOLD6_SQUARE_ACTORS.slice(0, i).filter(a => a === actor).length
+);
+FOLD6_SQUARE_OCCURRENCE[0] = 8;
+
+// @fold8's square shows the shared #page9Tooltip (page7.js/page9.js's own
+// hover tooltip element) with a real event's date+description instead of a
+// static action-type label — see the fold7LabelTrigger-driven block in
+// updateGroups below. Kept visible unconditionally for the duration of that
+// fold (not gated on hover), per explicit instruction.
+const fold8TooltipEl     = document.getElementById("page9Tooltip");
+const fold8TooltipDateEl = fold8TooltipEl.querySelector(".page9-tooltip-date");
+const fold8TooltipDescEl = fold8TooltipEl.querySelector(".page9-tooltip-desc");
+// Ownership flag, same pattern p7HoverInit/p9HoverInit use for the same
+// shared element (hoveredEvent) — only hide/reset the tooltip below if this
+// fold is the one that showed it, or updateGroups (which runs every frame on
+// every page) would stomp an unrelated hover-driven tooltip on page-8/-11.
+let fold8TooltipOwnsIt = false;
+
+// The fold-8 tooltip's grow-then-type reveal is sequenced on wall-clock time,
+// not on tooltipT (e7Label, see updateGroups below) directly — tying
+// both the box's grow-in AND the typewriter to the same scroll-linked value
+// meant they finished in the same instant regardless of scroll speed, so the
+// box was never visibly "done growing" before text started. Instead:
+// FOLD8_GROW_MS of wall-clock time grows the box to full scale and holds it
+// there, THEN the typewriter (FOLD8_TYPE_MS_PER_CHAR/char) begins — a clean,
+// guaranteed-visible beat between the two regardless of how fast the trigger
+// itself ran.
+//
+// Bidirectional per explicit instruction — scrolling back up mid-sequence
+// (even mid-typing) must reverse this exact same wall-clock animation
+// (untype, then shrink) rather than freezing until the forward sequence
+// finishes or hard-snapping to hidden. fold8SeqElapsed (0..total) is the
+// single source of truth; fold8SeqDirection (+1/-1) flips the instant
+// fold7LabelTrigger's own raw progress changes direction (sensed each tick
+// by comparing to its previous value, fold8PrevTooltipRaw) — not tied to
+// tooltipT's eased value, so the grow/type rate itself never speeds up or
+// slows down with scroll speed, same "guaranteed rate regardless of scroll"
+// reasoning as the original one-directional version. Reaching elapsed 0
+// while reversing is what actually hides/resets the tooltip (fold8ResetTooltip),
+// not a raw tooltipT threshold snap.
+let fold8SequenceEvent      = null;
+let fold8SeqElapsed         = 0;
+let fold8SeqDirection       = 1;
+let fold8PrevTooltipRaw     = 0;
+let fold8SeqLastFrameTime   = null;
+let fold8SequenceLoopRunning = false;
+const FOLD8_GROW_MS          = 350; // wall-clock time to reach full scale and hold
+const FOLD8_TYPE_MS_PER_CHAR = 15;  // typewriter speed — tuned snappy, not sluggish
+
+// Repositions the tooltip against its anchor square each frame — pulled out
+// so both updateGroups' own per-frame call (below) and the standalone
+// sequence loop (fold8SequenceTick, needed because makeTrigger's runLoop
+// stops firing once a trigger phase settles — see its own comment — leaving
+// nothing to drive the grow/type sequence during the "resting" window after
+// fold7LabelTrigger's own animation has already finished) can call it. Box
+// size no longer changes once grown (see fold8SetupTypewriter's own comment
+// on why), so in practice this only needs to run once the grow-in finishes —
+// still called every frame regardless, it's cheap.
+function fold8PositionTooltip(sq) {
+  const sqRect = sq.getBoundingClientRect();
+  const dotClientX = sqRect.left + sqRect.width / 2;
+  const dotClientY = sqRect.top + sqRect.height / 2;
+  const TOOLTIP_GAP = 5;
+  const rawLeft = dotClientX - TOOLTIP_GAP - fold8TooltipEl.offsetWidth;
+  const left = Math.max(8, Math.min(rawLeft, window.innerWidth - fold8TooltipEl.offsetWidth - 8));
+  const top  = Math.max(dotClientY - TOOLTIP_GAP - fold8TooltipEl.offsetHeight, 8);
+  fold8TooltipEl.style.left = `${left}px`;
+  fold8TooltipEl.style.top  = `${top}px`;
+}
+
+// The typewriter reveal must not change the tooltip box's size while it
+// plays — the box should already be at its final, max size once the grow-in
+// finishes, with characters just appearing inside it (per explicit
+// instruction), not the box growing further as more characters are added.
+// Achieved by rendering the FULL text from the very start (so the box is
+// laid out at its true final size immediately), split across two sibling
+// spans: `revealed` (normal opacity, the typed-so-far prefix) and `hidden`
+// (opacity 0 but still occupying its own layout space, the not-yet-typed
+// remainder) — moving characters between them only changes color/opacity,
+// never the total text or box size. dir="rtl" (inherited from .page9-tooltip)
+// keeps the two spans' logical (DOM) order — revealed prefix first, hidden
+// suffix second — rendering as one continuous right-to-left string, so it
+// reads as typing in from the right exactly like plain text would.
+function fold8SetupTypewriter(el, fullText) {
+  el.textContent = "";
+  const revealed = document.createElement("span");
+  const hidden = document.createElement("span");
+  hidden.style.opacity = "0";
+  hidden.textContent = fullText;
+  el.appendChild(revealed);
+  el.appendChild(hidden);
+  return { revealed, hidden, fullText };
+}
+
+function fold8UpdateTypewriter(spans, revealedCount) {
+  spans.revealed.textContent = spans.fullText.slice(0, revealedCount);
+  spans.hidden.textContent = spans.fullText.slice(revealedCount);
+}
+
+let fold8DateSpans = null;
+let fold8DescSpans = null;
+
+// Advances (or reverses) the grow-then-type sequence by one frame — shared by
+// updateGroups' own per-frame call and this function's own self-rescheduling
+// (see fold8PositionTooltip's comment on why the latter is needed at all).
+// Direction is resolved fresh every call from fold7LabelTrigger's raw scroll
+// progress (see fold8SeqDirection's own comment above), so a scroll reversal
+// mid-grow or mid-typing takes effect on the very next frame, not just once
+// the forward sequence happens to finish. shrinkT/shrinkRaw (fold 9's own,
+// later, one-way "square arrived at its real dot" collapse) are read fresh
+// here too and layered multiplicatively on top — unrelated to this reversal,
+// untouched from the original implementation.
+function fold8AdvanceSequence() {
+  if (!fold8SequenceEvent) return;
+  const event = fold8SequenceEvent;
+  const now = performance.now();
+  const dt = fold8SeqLastFrameTime === null ? 0 : now - fold8SeqLastFrameTime;
+  fold8SeqLastFrameTime = now;
+
+  const raw = fold7LabelTrigger.currentRaw();
+  if (raw !== fold8PrevTooltipRaw) fold8SeqDirection = raw > fold8PrevTooltipRaw ? 1 : -1;
+  fold8PrevTooltipRaw = raw;
+
+  const totalChars = event.date.length + event.descHeMedium.length;
+  const total = FOLD8_GROW_MS + totalChars * FOLD8_TYPE_MS_PER_CHAR;
+  fold8SeqElapsed = Math.max(0, Math.min(total, fold8SeqElapsed + fold8SeqDirection * dt));
+
+  const shrinkT = fold9TooltipShrinkTrigger.currentT();
+  const growT = Math.min(1, fold8SeqElapsed / FOLD8_GROW_MS);
+  fold8TooltipEl.style.transform = `scale(${fold8TooltipGrowEase(growT) * (1 - shrinkT)})`;
+
+  if (growT < 1) {
+    fold8TooltipDateEl.style.opacity = "0";
+    fold8TooltipDescEl.style.opacity = "0";
+  } else {
+    const shown = Math.min(totalChars, Math.floor((fold8SeqElapsed - FOLD8_GROW_MS) / FOLD8_TYPE_MS_PER_CHAR));
+    if (fold8DateSpans) fold8UpdateTypewriter(fold8DateSpans, Math.min(event.date.length, shown));
+    if (fold8DescSpans) fold8UpdateTypewriter(fold8DescSpans, Math.max(0, shown - event.date.length));
+    const FOLD9_TOOLTIP_TEXT_FADE_SPAN = 0.15;
+    const shrinkRaw = fold9TooltipShrinkTrigger.currentRaw();
+    const textOpacity = 1 - p9Ease(Math.max(0, Math.min(1, shrinkRaw / FOLD9_TOOLTIP_TEXT_FADE_SPAN)));
+    fold8TooltipDateEl.style.opacity = String(textOpacity);
+    fold8TooltipDescEl.style.opacity = String(textOpacity);
+  }
+
+  if (fold8AnchorSquareEl) fold8PositionTooltip(fold8AnchorSquareEl);
+}
+
+// Fully hides/resets the tooltip — called once the reversible sequence above
+// has actually unwound all the way back to elapsed 0 (a real mirrored
+// shrink-to-nothing), not on a raw tooltipT threshold snap.
+function fold8ResetTooltip() {
+  fold8TooltipOwnsIt = false;
+  fold8TooltipEl.classList.remove("is-visible");
+  fold8TooltipEl.classList.remove("is-mirrored");
+  fold8TooltipEl.style.opacity = "";
+  fold8TooltipEl.style.borderColor = "";
+  fold8TooltipEl.style.transform = "";
+  fold8TooltipEl.style.transformOrigin = "";
+  fold8TooltipDateEl.style.opacity = "";
+  fold8TooltipDescEl.style.opacity = "";
+  fold8SequenceEvent = null;
+  fold8SeqElapsed = 0;
+  fold8SeqLastFrameTime = null;
+  fold8AnchorSquareEl = null;
+  fold8DateSpans = null;
+  fold8DescSpans = null;
+}
+
+function fold8SequenceTick() {
+  fold8SequenceLoopRunning = false;
+  if (!fold8SequenceEvent) return;
+  fold8AdvanceSequence();
+  if (fold8SeqElapsed <= 0 && fold8SeqDirection === -1) {
+    fold8ResetTooltip();
+    return;
+  }
+  fold8SequenceLoopRunning = true;
+  requestAnimationFrame(fold8SequenceTick);
+}
+
+function fold8EnsureSequenceRunning() {
+  if (!fold8SequenceLoopRunning) {
+    fold8SequenceLoopRunning = true;
+    if (fold8SeqLastFrameTime === null) fold8SeqLastFrameTime = performance.now();
+    requestAnimationFrame(fold8SequenceTick);
+  }
+}
+
+let fold8AnchorSquareEl = null;
+
+// Bespoke back-out curve for the fold-8 tooltip's grow-in (main.js
+// only — page7.js/page9.js's own p7Ease/p9Ease are both monotonic and gentler),
+// applied on top of tooltipT (itself already p9Ease'd via fold7LabelTrigger)
+// for a punchier, more dynamic "pop" than a plain scale-from-0
+// tween — cubic back-ease-out formula, but c1 is turned way down from its
+// standard 1.70158 (which overshoots ~10%) to just a few percent, a subtle
+// settle rather than a pronounced bounce.
+function fold8TooltipGrowEase(t) {
+  const c1 = 0.4;
+  const c3 = c1 + 1;
+  const x = t - 1;
+  return 1 + c3 * x * x * x + c1 * x * x;
+}
 
 const fold6SquaresOverlayEl = document.getElementById("fold6SquaresOverlay");
-const fold6SquareEls = FOLD6_SQUARES_Y.map((_, i) => {
+const fold6SquareEls = FOLD6_SQUARES_OFFSET.map((_, i) => {
   const wrap = document.createElement("div");
   wrap.className = "fold6-square-wrap";
   const sq = document.createElement("div");
@@ -626,22 +976,33 @@ const fold6SquareEls = FOLD6_SQUARES_Y.map((_, i) => {
   return { wrap, sq, label };
 });
 
-// Lerps a fold-6 square's background from its fold-8 black (.9 alpha) toward
-// a target group color (full opacity) as t goes 0->1 — null targetHex (the 5
-// squares with no Figma-assigned color) just stays at that same black.
+// Lerps a fold-6 square's background from its fold-8 resting color (#767676,
+// lightened from Figma node 258:2206's original #2d2d2d fill per explicit
+// instruction) toward a target group color as t goes 0->1 — null targetHex
+// (the squares with no Figma-assigned color) just stays at that same
+// #767676. Also the tooltip border's own gray-state color (see its
+// borderColor assignment below), so both share one constant.
+const FOLD6_SQUARE_REST_COLOR = [0x76, 0x76, 0x76];
 function lerpFold6SquareColor(targetHex, t) {
-  if (!targetHex) return "rgba(0, 0, 0, 0.9)";
+  const [r0, g0, b0] = FOLD6_SQUARE_REST_COLOR;
+  if (!targetHex) return `rgb(${r0}, ${g0}, ${b0})`;
   const n = parseInt(targetHex.slice(1), 16);
   const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
-  const a = 0.9 + (1 - 0.9) * t;
-  return `rgba(${Math.round(r * t)}, ${Math.round(g * t)}, ${Math.round(b * t)}, ${a})`;
+  const rr = Math.round(r0 + (r - r0) * t);
+  const gg = Math.round(g0 + (g - g0) * t);
+  const bb = Math.round(b0 + (b - b0) * t);
+  return `rgb(${rr}, ${gg}, ${bb})`;
 }
 
 function layoutFold6Squares(W, H) {
-  const x = (FOLD6_SQUARES_X / GROUPS_FRAME_W) * W;
+  // Each square sits at its own {dx, dy} offset (FOLD6_SQUARES_OFFSET) from
+  // the whole 8-square group's center, which itself is pinned to the
+  // canvas's own center — so the group is centered as a unit rather than
+  // reproducing Figma's absolute frame position.
   fold6SquareEls.forEach(({ wrap }, i) => {
-    wrap.style.left = `${x}px`;
-    wrap.style.top  = `${(FOLD6_SQUARES_Y[i] / GROUPS_FRAME_H) * H}px`;
+    const { dx, dy } = FOLD6_SQUARES_OFFSET[i];
+    wrap.style.left = `${W / 2 + dx}px`;
+    wrap.style.top  = `${H / 2 + dy}px`;
   });
 }
 
@@ -654,14 +1015,15 @@ const page6TitleCardEl  = document.querySelector("#page-6 .text-card");
 const page7TitleCardEl  = document.querySelector("#page-8 .text-card");
 // Fold 7's own card (#page-7, "כל ריבוע מייצג..." — the timeline-intro title,
 // not to be confused with page7TitleCardEl above, which is fold 9's #page-8
-// card) drives the fold-6 squares' labels fading IN, mirroring fold9Trigger
-// fading them back out below — previously this had no card of its own and
-// just snapped on the instant fold6Trigger settled, which (now that that's a
-// fixed ~1s tween instead of a scroll-coupled one) finishes long before the
-// user actually reaches fold 7.
+// card) drives the fold-6 squares' labels fading IN — previously this had no
+// card of its own and just snapped on the instant fold6Trigger settled,
+// which (now that that's a fixed ~1s tween instead of a scroll-coupled one)
+// finishes long before the user actually reaches fold 7.
 const fold7LabelCardEl  = document.querySelector("#page-7 .text-card");
-const page12TitleCardEl = document.querySelector("#page-12 .text-card");
 const page12FrameEl     = document.querySelector("#page-12 .text-card-frame");
+// Hoisted above checkFold13 (below), which needs it already resolved at
+// definition time — also reused by p13SyncGateVisibility further down.
+const page12StickyEl    = document.querySelector("#page-12 .page12-sticky-center");
 
 // Generic discrete trigger: a fixed-duration 0<->1 phase fired once by
 // crossing a scroll threshold (see watchCardThreshold below), exactly like
@@ -701,27 +1063,32 @@ function makeTrigger(duration, onTick) {
 
   // Instant, no animation — for priming initial state from the page's
   // starting scroll position (e.g. a reload mid-scroll), not a real trigger.
+  // Calls onTick() itself (trigger()/runLoop do too, via requestAnimationFrame)
+  // so the jump is actually reflected immediately rather than leaving
+  // whatever was last painted on screen stale until some other trigger
+  // happens to repaint — harmless at page-init time (nothing's painted yet)
+  // but load-bearing for any later instant reset (e.g. watchCardThreshold's
+  // instantReverse).
   function set(target) {
     fromT = target;
     toT = target;
     phaseStart = null;
+    onTick();
   }
 
   return { currentRaw, currentT: () => p9Ease(currentRaw()), trigger, set };
 }
 
-// Fold 3/4/5/6/9 each fire once, at their card's center crossing. Fold 9 also
-// fires a second time — see checkFold9/checkFold9SquaresFade below.
+// Fold 3/4/5/6 each fire once, at their card's center crossing.
 //
-// All of these but fold9Trigger/fold5Trigger share one duration so the whole
-// legend system reads as a single consistent tempo rather than each fold
-// having its own slightly different feel — they used to range from 600ms to
-// 1600ms.
+// All of these but fold5Trigger share one duration so the whole legend
+// system reads as a single consistent tempo rather than each fold having its
+// own slightly different feel — they used to range from 600ms to 1600ms.
 const GROUP_TRANSITION_MS = 1900;
 // fold2's entrance packs 3 sequential beats (shrink/move/label, see
 // updateGroups) into one trigger instead of one — sharing GROUP_TRANSITION_MS
 // like every single-beat fold made each beat read as a quick blip. Own
-// duration instead, same precedent as FOLD9_COLOR_MS below.
+// duration instead, same precedent as FOLD5_TRANSITION_MS below.
 const FOLD2_ENTRANCE_MS = 3400;
 // fold5's exit packs 2 sequential beats (move-into-row, then shrink+fade
 // out — see updateGroups) into one trigger, same reasoning as
@@ -738,22 +1105,94 @@ const fold4Trigger      = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
 const fold5Trigger      = makeTrigger(FOLD5_TRANSITION_MS, updateGroups);
 const fold6Trigger      = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
 const fold7LabelTrigger = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
-// Square color-in is its own, much quicker beat — the shared tempo above read
-// as sluggish for a plain background-color swap, per explicit feedback.
+// Matches FOLD8_GROW_MS (the tooltip's own wall-clock grow-to-full-scale
+// time, see its comment above) — not the typewriter that follows it — so the
+// non-tooltip squares' dim-to-color fade finishes exactly as the tooltip
+// reaches max scale, instead of tracking the shared GROUP_TRANSITION_MS tempo.
+const FOLD8_SQUARE_DIM_MS = FOLD8_GROW_MS;
+const fold8SquareDimTrigger = makeTrigger(FOLD8_SQUARE_DIM_MS, updateGroups);
+// @fold9 trigger #1 — its title card's ordinary midpoint crossing. Colors in
+// only the highlighted square (index 0) and its tooltip's border; the other
+// 7 squares are untouched by this trigger.
 const FOLD9_COLOR_MS = 500;
-const fold9Trigger            = makeTrigger(FOLD9_COLOR_MS, updateGroups);
-const fold13Trigger           = makeTrigger(GROUP_TRANSITION_MS, updateFold13);
-let   fold13MorphStarted      = false;
-// p7AxisShouldShow (page7.js) gates the year-axis build-in on this trigger
-// having fully settled at raw 1, not on scroll position directly — so unlike
-// every other group trigger, settling has to also force a canvas redraw
-// itself (not just rely on the next scroll event), or the axis would never
-// appear if the user stops scrolling exactly as the fade finishes.
-const FOLD9_SQUARES_FADE_MS = 600;
-const fold9SquaresFadeTrigger = makeTrigger(FOLD9_SQUARES_FADE_MS, () => {
+const fold9Trigger = makeTrigger(FOLD9_COLOR_MS, updateGroups);
+// @fold9 trigger #2 — the same crossing that makes the year axis appear
+// (its title card passing fully offscreen, top <= 0 — see p7AxisShouldShow/
+// p7HasEngaged, page7.js). Colors in all 8 fold-6 squares (in their own
+// actor's group color) and flies each one to the real per-event dot it's
+// standing in for (FOLD6_SQUARE_ACTORS/FOLD6_SQUARE_OCCURRENCE below,
+// p7TargetForActorOccurrence, page7.js) — permanently; the real per-event
+// cascade never draws its own dot for these 8 events at all
+// (p7GetClaimedEvents, page7.js), so this DOM square just stays visible once
+// it arrives, no handoff to a separate real dot.
+const FOLD9_FLY_MS = 1500;
+const fold9FlyTrigger = makeTrigger(FOLD9_FLY_MS, () => {
   updateGroups();
   if (currentPage === 8) draw();
+  checkFold9TooltipShrink();
 });
+
+// Keeps the fold-6 squares' blend toward page9's legit grid (see the
+// p9LegitPosOf-based lerp in updateGroups) moving in lockstep with page8's
+// own real-dot glide (p8CurrentT, page8.js) even once the user stops
+// scrolling mid-glide — page8's own animation loop (p8RunAnimLoop) is a pure
+// wall-clock requestAnimationFrame loop, not tied to further scroll events,
+// but nothing besides a fresh "scroll" event otherwise re-runs updateGroups()
+// for these squares, so without this they'd freeze wherever they were at the
+// last scroll event while the real dots kept animating on to completion.
+// Self-terminating: stops rescheduling once p8CurrentT() reaches 1, and is
+// re-armed (see updateGroups above) the next time it's needed.
+let fold9P8SyncLoopRunning = false;
+function fold9EnsureP8SyncLoop() {
+  if (fold9P8SyncLoopRunning) return;
+  fold9P8SyncLoopRunning = true;
+  (function tick() {
+    updateGroups();
+    if (typeof p8CurrentT === "function" && p8CurrentT() < 1) {
+      requestAnimationFrame(tick);
+    } else {
+      fold9P8SyncLoopRunning = false;
+    }
+  })();
+}
+
+// Once square 0 (the tooltip's own square) actually arrives at its real dot
+// (fold9FlyTrigger's raw progress reaching 1 — every square, including 0,
+// finishes exactly at raw 1 regardless of its own stagger delay, see
+// FOLD9_SQUARES_FLY_STAGGER's comment below), the tooltip holds fully shown
+// for another FOLD9_TOOLTIP_SHRINK_DELAY_MS before it starts shrinking away
+// on its own short trigger, so it doesn't feel like it vanishes the instant
+// the dot lands. Un-latches (and reverses immediately, no delay) if
+// fold9FlyTrigger ever drops back below raw 1 before the delay/shrink has
+// finished — e.g. the user scrolls back up before this trigger has even
+// fully settled from its own instant reverse — canceling any still-pending
+// delay timer so it can't fire late into a reversed state.
+const FOLD9_TOOLTIP_SHRINK_MS = 400;
+const FOLD9_TOOLTIP_SHRINK_DELAY_MS = 500;
+const fold9TooltipShrinkTrigger = makeTrigger(FOLD9_TOOLTIP_SHRINK_MS, updateGroups);
+let fold9FlyReachedPast = null;
+let fold9TooltipShrinkDelayTimer = null;
+function checkFold9TooltipShrink() {
+  const nowReached = fold9FlyTrigger.currentRaw() >= 1;
+  if (fold9FlyReachedPast === null) { fold9FlyReachedPast = nowReached; fold9TooltipShrinkTrigger.set(nowReached ? 1 : 0); return; }
+  if (nowReached !== fold9FlyReachedPast) {
+    fold9FlyReachedPast = nowReached;
+    if (fold9TooltipShrinkDelayTimer !== null) {
+      clearTimeout(fold9TooltipShrinkDelayTimer);
+      fold9TooltipShrinkDelayTimer = null;
+    }
+    if (nowReached) {
+      fold9TooltipShrinkDelayTimer = setTimeout(() => {
+        fold9TooltipShrinkDelayTimer = null;
+        fold9TooltipShrinkTrigger.trigger(1);
+      }, FOLD9_TOOLTIP_SHRINK_DELAY_MS);
+    } else {
+      fold9TooltipShrinkTrigger.trigger(0);
+    }
+  }
+}
+const fold13Trigger           = makeTrigger(GROUP_TRANSITION_MS, updateFold13);
+let   fold13MorphStarted      = false;
 
 // Watches one title card's top edge for crossing H*frac, firing trigger
 // forward (1) on a downward crossing and reverse (0) on scrolling back up
@@ -761,13 +1200,22 @@ const fold9SquaresFadeTrigger = makeTrigger(FOLD9_SQUARES_FADE_MS, () => {
 // whatever the starting scroll position already is (via trigger.set, no
 // animation) — otherwise a page load/refresh mid-scroll would play every
 // already-passed fold's animation from scratch on the first scroll tick.
-function watchCardThreshold(cardEl, frac, trigger) {
+//
+// instantReverse (default false, every other caller keeps the normal
+// animated-both-ways behavior): when true, scrolling back up snaps the
+// reverse (0) straight to its end state via trigger.set instead of
+// trigger.trigger.
+function watchCardThreshold(cardEl, frac, trigger, instantReverse = false) {
   let isPast = null;
   return function check() {
     if (!cardEl) return;
     const nowPast = cardEl.getBoundingClientRect().top <= window.innerHeight * frac;
     if (isPast === null) { isPast = nowPast; trigger.set(nowPast ? 1 : 0); return; }
-    if (nowPast !== isPast) { isPast = nowPast; trigger.trigger(nowPast ? 1 : 0); }
+    if (nowPast !== isPast) {
+      isPast = nowPast;
+      if (!nowPast && instantReverse) trigger.set(0);
+      else trigger.trigger(nowPast ? 1 : 0);
+    }
   };
 }
 
@@ -794,19 +1242,27 @@ const checkFold4      = watchCardThreshold(page4TitleCardEl, 0.5, fold4Trigger);
 const checkFold5      = watchCardThreshold(page5TitleCardEl, 0.5, fold5Trigger);
 const checkFold6      = watchCardThreshold(page6TitleCardEl, 0.5, fold6Trigger);
 const checkFold7Label = watchCardThreshold(fold7LabelCardEl, 0.5, fold7LabelTrigger);
-// Fires at the title card's ordinary center crossing — same convention as
-// fold3/4/6. Colors the squares in; does not touch the labels (see e9 below).
+const checkFold8SquareDim = watchCardThreshold(fold7LabelCardEl, 0.5, fold8SquareDimTrigger);
 const checkFold9 = watchCardThreshold(page7TitleCardEl, 0.5, fold9Trigger);
-// Fires once the card's top reaches 1/12 of viewport height — well past
-// center, a distinct, later beat from the color-in above, not the same
-// moment. Fades the squares and labels out together; the year axis build-in
-// (p7AxisShouldShow, page7.js) only starts once this fade-out tween has fully
-// settled, so the two effects play in sequence, not at once.
-const checkFold9SquaresFade = watchCardThreshold(page7TitleCardEl, 1 / 12, fold9SquaresFadeTrigger);
-const checkFold13           = watchCardThreshold(page12TitleCardEl, 0.5, fold13Trigger);
+// Same crossing as p7AxisShouldShow (page7.js) — title card fully offscreen,
+// top <= 0. instantReverse: true, same reasoning as before removal — the fly
+// covers real on-screen distance, so a fast scroll-past-then-back should
+// snap the squares straight back to rest rather than being catchable
+// mid-flight.
+const checkFold9Fly = watchCardThreshold(page7TitleCardEl, 0, fold9FlyTrigger, true);
+// Unlike every other fold trigger above, watches the *sticky wrapper*
+// (.page12-sticky-center) at frac 0 (top <= 0) rather than the title card at
+// its ordinary 0.5 — this fires exactly when the wrapper finishes sliding up
+// and pins in place (title block stops moving, having reached its maximum
+// point), not while it's still in transit and not late after it's already
+// been sitting there a while. The gate physically can't be crossed while
+// locked (scrollY is capped well short of this point until a pill's been
+// dropped — see p13GateMax/p13GateLocked below), so no extra lock check is
+// needed here.
+const checkFold13 = watchCardThreshold(page12StickyEl, 0, fold13Trigger);
 
 function checkGroupTriggers() {
-  checkFoldNew3Split(); checkFold2(); checkFold3(); checkFold4(); checkFold5(); checkFold6(); checkFold7Label(); checkFold9(); checkFold9SquaresFade(); checkFold13();
+  checkFoldNew3Split(); checkFold2(); checkFold3(); checkFold4(); checkFold5(); checkFold6(); checkFold7Label(); checkFold8SquareDim(); checkFold9(); checkFold9Fly(); checkFold13();
 }
 
 // Default (legend/fold3/fold4/fold5) swatch size + the swatch-to-label gap
@@ -834,7 +1290,7 @@ fold6NoteEl.style.width = `${FOLD6_NOTE_WIDTH}px`;
 fold6NoteEl.textContent = FOLD6_NOTE_TEXT;
 groupsOverlayEl.appendChild(fold6NoteEl);
 // Hidden, permanently off-screen clone of the bottom row's *settled* label
-// (fixed 16px/400, matching fold6's post-lerp end state) — measuring this
+// (fixed 14px/400, matching fold6's post-lerp end state) — measuring this
 // instead of the live groupItems[FOLD6_BOTTOM_ROW_INDEX].label lets the
 // note/divider below compute their target position from where that row
 // ENDS UP, not wherever it currently is mid-flight. Reading the live label's
@@ -843,7 +1299,7 @@ groupsOverlayEl.appendChild(fold6NoteEl);
 // staying put and just fading in.
 const fold6RowMeasureEl = document.createElement("span");
 fold6RowMeasureEl.className = "group-label";
-fold6RowMeasureEl.style.cssText = "visibility:hidden; left:-9999px; top:-9999px; font-size:16px; font-weight:400;";
+fold6RowMeasureEl.style.cssText = "visibility:hidden; left:-9999px; top:-9999px; font-size:14px; font-weight:400;";
 fold6RowMeasureEl.textContent = FOLD6_BOTTOM_ROW.label;
 groupsOverlayEl.appendChild(fold6RowMeasureEl);
 const fold6NoteDividerEl = document.createElement("div");
@@ -869,7 +1325,7 @@ function updateGroups() {
   // in reverse, last-to-first — the dot re-splits only once it's back near
   // its @fold3 spot, not immediately on scrolling up.
   const raw3 = fold3Trigger.currentRaw();
-  const FOLD4_MERGE_SPAN = 0.35, FOLD4_GAP_SPAN = 0.1, FOLD4_SPREAD_SPAN = 0.55; // sums to 1
+  const FOLD4_MERGE_SPAN = 0.22, FOLD4_GAP_SPAN = 0.1, FOLD4_SPREAD_SPAN = 0.68; // sums to 1
   const fold4MergeT = p9Ease(Math.max(0, Math.min(1, raw3 / FOLD4_MERGE_SPAN)));
   const e3 = p9Ease(Math.max(0, Math.min(1, (raw3 - FOLD4_MERGE_SPAN - FOLD4_GAP_SPAN) / FOLD4_SPREAD_SPAN)));
   const e4 = fold4Trigger.currentT(), e6 = fold6Trigger.currentT();
@@ -1051,9 +1507,9 @@ function updateGroups() {
       item.label.textContent = g.label;
     }
     if (g.fold6 && postFold3) {
-      item.label.style.fontSize   = `${18 + (16 - 18) * e6}px`;
+      item.label.style.fontSize   = `${18 + (14 - 18) * e6}px`;
       item.label.style.fontWeight = "400";
-      item.label.style.color      = `rgba(0, 0, 0, ${1 + (0.46 - 1) * e6})`;
+      item.label.style.color      = `rgba(0, 0, 0, ${1 + (0.85 - 1) * e6})`;
     } else {
       item.label.style.fontSize   = "";
       item.label.style.fontWeight = "";
@@ -1093,7 +1549,7 @@ function updateGroups() {
   // that row currently is instead of holding it still and just fading it in.
   //
   // dividerY is built from fold6RowMeasureEl's *settled* label height (not a
-  // swatch-height estimate) — the label (16px text) is taller than the 6px
+  // swatch-height estimate) — the label (14px text) is taller than the 6px
   // swatch it's centered on, so a swatch-based estimate undershoots the row's
   // real bottom edge and makes the top gap look smaller than the bottom one.
   const fold6X = (FOLD6_BOTTOM_ROW.fold6.x / GROUPS_FRAME_W) * W;
@@ -1110,23 +1566,240 @@ function updateGroups() {
 
   // (groupsOverlayEl's own "is-active" is set once at init, not toggled here
   // — see the comment by its declaration above.)
-  // Fades the whole curated-squares overlay out as fold 9's own card finally
-  // scrolls past (fold9SquaresFadeTrigger, see its comment above), rather
-  // than snapping to 0 — these curated squares have nothing further to do by
-  // then, and leaving them up would clash with the real per-event squares
-  // appearing in the same spot, but the handoff itself should still glide.
-  const e9SquaresFade = fold9SquaresFadeTrigger.currentT();
-  fold6SquaresOverlayEl.style.opacity = String(e6 * (1 - e9SquaresFade));
+  fold6SquaresOverlayEl.style.opacity = "1";
 
-  // Labels fade in via their own trigger (fold7LabelTrigger) then fade back
-  // out as trigger 1's color-in (e9) progresses — label disappears exactly
-  // as the square gains its color. The squares' complete disappearance is a
-  // separate, later beat via the overlay-level e9SquaresFade above.
   const e7Label = fold7LabelTrigger.currentT();
-  const e9 = fold9Trigger.currentT();
-  fold6SquareEls.forEach(({ sq, label }, i) => {
-    label.style.opacity = String(e7Label * (1 - e9));
-    sq.style.background = lerpFold6SquareColor(FOLD6_SQUARE_COLORS[i], e9);
+  // @fold9 trigger #1 (its title card's ordinary midpoint crossing, see
+  // checkFold9 above) colors in only the highlighted square (index 0) and
+  // its tooltip's border below — the other 7 squares stay base gray until a
+  // later trigger is added.
+  const fold9Phase1T = fold9Trigger.currentT();
+  // @fold9 trigger #2 (title card fully offscreen, same crossing as the year
+  // axis appearing — see checkFold9Fly above) colors in the other 7 squares
+  // and flies all 8 to their real per-event dot.
+  const fold9FlyT = fold9FlyTrigger.currentT();
+  // Color-in reads faster than the fly itself — "secondary attribute can
+  // snap, position never does" (see CLAUDE.md's animation-conventions note):
+  // eased over just the first COLOR_SPAN of the trigger's raw timeline (own
+  // re-eased span, same GROW_SPAN-style convention as growScale below), so
+  // every square is already its real group color well before it finishes
+  // traveling to its real dot, instead of the two finishing together.
+  const FOLD9_COLOR_SPAN = 0.4;
+  const fold9FlyColorT = p9Ease(Math.max(0, Math.min(1, fold9FlyTrigger.currentRaw() / FOLD9_COLOR_SPAN)));
+  // Read raw (linear, un-eased) rather than fold9FlyTrigger's own currentT()
+  // — that bakes in p9Ease, the gentle default, but a square arriving at (and
+  // visually becoming) a real per-event dot is exactly the "materializing
+  // dot" case the animation-conventions doc calls out for p7Ease (punchy
+  // cubic ease-out) instead, same curve p7DrawSideSquares uses for the real
+  // timeline's own per-event pop-in.
+  const fold9FlyRaw = fold9FlyTrigger.currentRaw();
+  // Squares arrive staggered rather than in lockstep, the same "many small
+  // squares popping in as a batch" convention as p7DrawSideSquares' own
+  // cascade (and page0's row stagger, page9's arrival stagger). Expressed as
+  // a fraction of fold9FlyTrigger's own fixed raw span, so every square still
+  // finishes exactly at raw 1 regardless of this internal stagger.
+  const FOLD9_SQUARES_FLY_STAGGER = 0.4;
+  // Scale from 0 -> 1 as e6 (fold 6's own trigger progress) advances, so the
+  // square grows from nothing rather than fading in. Eased over just the
+  // first GROW_SPAN of the trigger's raw timeline (own re-eased span, "position
+  // never does" convention) so the pop finishes well before the mini-legend
+  // glide (also driven by e6) settles, instead of taking the full duration.
+  const GROW_SPAN = 0.55;
+  const growScale = p9Ease(Math.max(0, Math.min(1, fold6Trigger.currentRaw() / GROW_SPAN)));
+
+  // page8CheckScroll (the only thing that ever calls p8Trigger) is its own
+  // separate window "scroll" listener, registered well after this one —
+  // relying on it having already run for *this* scroll position, before the
+  // squares below read p8CurrentT(), is a listener-ordering assumption a
+  // fast/synthetic scroll can violate. Calling it directly here first removes
+  // that dependency — idempotent (guarded by p8Engaged itself).
+  if (typeof page8CheckScroll === "function") page8CheckScroll();
+  // page8's own glide (p8CurrentT, page8.js) runs on a pure wall-clock
+  // requestAnimationFrame loop (p8RunAnimLoop) independent of scrolling — it
+  // calls draw() every frame to keep the real canvas dots animating, but
+  // nothing else re-runs updateGroups() (what actually moves these DOM
+  // squares) unless a fresh "scroll" event happens to fire too. If the user
+  // stops scrolling before the 3000ms glide finishes (an entirely normal
+  // pause-to-read), the real dots keep gliding to their final position while
+  // these squares silently freeze wherever they were at the last scroll
+  // event — exactly the "stuck" bug. fold9SyncWithP8Glide (own
+  // self-scheduling rAF loop, started below) keeps calling updateGroups()
+  // every frame for as long as the glide is still mid-flight, independent of
+  // further scrolling, so the two always stay in lockstep.
+  if (typeof p8Engaged !== "undefined" && p8Engaged && typeof p8CurrentT === "function" && p8CurrentT() < 1) {
+    fold9EnsureP8SyncLoop();
+  }
+
+  fold6SquareEls.forEach(({ wrap, sq, label }, i) => {
+    const colorT = i === 0 ? fold9Phase1T : fold9FlyColorT;
+    sq.style.background = lerpFold6SquareColor(FOLD6_SQUARE_COLORS[i], colorT);
+    // Figma node 258:2159: every square except the one with a tooltip (index
+    // 0, kept at full opacity) renders at ~46% opacity while still gray —
+    // only within @fold8's own trigger window (tooltipT, same value gating
+    // the tooltip below): before that window starts, all 8 squares are still
+    // uniform (as in fold 6's own Figma frame, 258:2206, where none of this
+    // dimming shows).
+    const tooltipT = e7Label; // tooltip stays once shown — see fold8TooltipEl's own comment below
+    // Dim opacity lowered (0.46 -> 0.3) and driven by its own trigger
+    // (fold8SquareDimTrigger, FOLD8_SQUARE_DIM_MS = FOLD8_GROW_MS) timed to
+    // finish exactly as the tooltip reaches max scale, not the shared
+    // GROUP_TRANSITION_MS tempo. Reads raw (linear), not currentT() (p9Ease's
+    // sine ramp reads oddly over a short, plain opacity fade) — same
+    // "opacity fades don't need easing" convention as HOVER_DIM_MS elsewhere.
+    const FOLD6_SQUARE_DIM_OPACITY = 0.3;
+    const dimT = fold8SquareDimTrigger.currentRaw();
+    const dimFromFold8 = 1 - (1 - FOLD6_SQUARE_DIM_OPACITY) * dimT;
+    // Restored to full opacity in step with @fold9 trigger #2 (fold9FlyT) —
+    // once a square is colored in and flying to its real dot, the dimmed
+    // ~30% opacity (which only ever fit its gray, pre-color state) no longer
+    // applies; a real timeline dot is always full opacity.
+    let opacity = i === 0 ? 1 : dimFromFold8 + (1 - dimFromFold8) * fold9FlyT;
+    // Once this square IS a real timeline dot (fold9FlyT ~ 1), it must dim
+    // the same way every other canvas dot does while a different dot is
+    // hovered (p7.hoveredEvent, p7DrawSideSquares' own snap-to-0.35 dim) —
+    // otherwise these 8 squares read as permanently full-opacity while the
+    // rest of the grid dims around the hovered dot.
+    if (typeof p7 !== "undefined" && p7.hoveredEvent && typeof p7EventForActorOccurrence === "function") {
+      const hoverEvent = p7EventForActorOccurrence(FOLD6_SQUARE_ACTORS[i], FOLD6_SQUARE_OCCURRENCE[i]);
+      if (hoverEvent && hoverEvent !== p7.hoveredEvent) opacity *= 0.35;
+    }
+    sq.style.opacity = String(opacity);
+
+    // Real-event tooltip (shared #page9Tooltip, see fold8TooltipEl above),
+    // shown unconditionally once @fold8's own window starts (e7Label ramping
+    // in) — no hover required — until it shrinks away once its own square
+    // arrives at its real dot (fold9TooltipShrinkTrigger, see above). Only
+    // square 0 currently drives it; if more squares are ever added back,
+    // each would need its own tooltip instance.
+    const shrinkT = fold9TooltipShrinkTrigger.currentT();
+    if (i === 0) {
+      const event = p7EventForActorOccurrence(FOLD6_SQUARE_ACTORS[i], FOLD6_SQUARE_OCCURRENCE[i]);
+      // shrinkT >= 1 (fold 9's own, later, one-way "arrived at its real dot"
+      // collapse) or a missing event forces an immediate hide below —
+      // unrelated to @fold8's own scroll reversal, which is handled entirely
+      // by fold8SeqElapsed/fold8SeqDirection instead (see their own comments
+      // above fold8SequenceEvent).
+      const forceHide = !event || shrinkT >= 1;
+      const wantShow = !forceHide && tooltipT > 0.001;
+
+      if (wantShow && fold8SequenceEvent !== event) {
+        // New event: (re)start the reversible grow-then-type sequence fresh
+        // from elapsed 0 — see FOLD8_GROW_MS's own comment above for why this
+        // isn't driven by tooltipT directly. Build the full-text spans now
+        // (fold8SetupTypewriter), before any scaling happens, so the box is
+        // already laid out at its true final size for the entire grow-in —
+        // see that function's own comment for why.
+        fold8SequenceEvent = event;
+        fold8SeqElapsed = 0;
+        fold8SeqDirection = 1;
+        fold8SeqLastFrameTime = null;
+        fold8PrevTooltipRaw = fold7LabelTrigger.currentRaw();
+        fold8DateSpans = fold8SetupTypewriter(fold8TooltipDateEl, p7FormatDateDMY(event.date));
+        fold8DescSpans = fold8SetupTypewriter(fold8TooltipDescEl, event.descHeMedium);
+      }
+
+      if (forceHide) {
+        if (fold8TooltipOwnsIt) fold8ResetTooltip();
+      } else if (fold8SequenceEvent) {
+        fold8TooltipOwnsIt = true;
+        // Colors in step with the highlighted square itself (both driven by
+        // fold9Phase1T/@fold9 trigger #1) — gray until the title card's
+        // midpoint crossing, then transitions to the actor's real group
+        // color together with the square.
+        fold8TooltipEl.style.borderColor = lerpFold6SquareColor(FOLD6_SQUARE_COLORS[0], colorT);
+        fold8TooltipEl.classList.add("is-visible");
+        // Opens toward the left of the square (mirrored corner, same convention
+        // p9HoverInit/p7HoverInit use for left-side events), not the right —
+        // its pointer corner (bottom-right when mirrored) is also the point
+        // the grow-in below scales from.
+        fold8TooltipEl.classList.add("is-mirrored");
+        fold8TooltipEl.style.opacity = "1";
+        fold8TooltipEl.style.transformOrigin = "bottom right";
+        fold8AnchorSquareEl = sq;
+
+        fold8AdvanceSequence();
+        fold8EnsureSequenceRunning();
+
+        // Reversing all the way back to elapsed 0 is a real mirrored
+        // shrink-to-nothing (fold8AdvanceSequence already scaled the box to
+        // ~0) — safe to fully hide/reset now.
+        if (fold8SeqElapsed <= 0 && fold8SeqDirection === -1) fold8ResetTooltip();
+      }
+    }
+
+    // Rest position (this square's plain fold6/fold9 anchor) -> target real
+    // dot, lerped by flyT so it lands exactly as fold9FlyTrigger settles.
+    // Left as a no-op translate/size if the target can't be resolved yet
+    // (events.json still loading). growScale (0->1, driven by e6) is layered
+    // on top of the translate either way, so the square always grows from
+    // nothing regardless of whether the fly-out target has resolved.
+    //
+    // p7TargetForActorOccurrence is page7's own static grid — this square's
+    // target *while the real timeline is still playing* (i.e. the previous,
+    // correct behavior, reverted here after briefly trying to snap straight
+    // to page9's grid, which showed these squares jumping to the wrong spot
+    // mid-timeline before page8's own glide had even started). Only once the
+    // timeline is actually finished and page8 starts its own real-dot glide
+    // toward page9's legit grid (p8CurrentT(), page8.js) does this square
+    // blend along with it too, via the exact same p9LegitPosOf/p9Ease math
+    // blendAndDraw (page8.js) uses for every other real dot — so it "animates
+    // down just like any other dot" instead of snapping the instant page9 is
+    // reached.
+    const target = p7TargetForActorOccurrence(FOLD6_SQUARE_ACTORS[i], FOLD6_SQUARE_OCCURRENCE[i], W, H);
+    // currentPage reaching 11 (drawPage9, PAGES above) is a *harder* signal
+    // than p8CurrentT() > 0: the section-level IntersectionObserver that
+    // flips currentPage can cross into page9's own slot before page8's own
+    // title-reaches-center trigger (page8CheckScroll, watching a narrower
+    // condition) ever fires — and once currentPage is actually 11, drawPage9
+    // is unconditionally drawing every real dot at its final legit position
+    // already, no blend, full stop. Relying on p8CurrentT() alone left a
+    // window there where the real grid had already jumped to its final
+    // layout but this square hadn't moved at all yet. So: full weight (ease
+    // 1) the instant currentPage reaches 11, otherwise follow page8's own
+    // blend for as long as it's actually driving the real dots (currentPage
+    // === 10). page8CheckScroll/fold9EnsureP8SyncLoop above make sure
+    // p8CurrentT() below is both freshly triggered and kept moving even
+    // without further scroll events.
+    const ease = currentPage >= 11 ? 1 : p9Ease(typeof p8CurrentT === "function" ? p8CurrentT() : 0);
+    if (target && ease > 0) {
+      const targetEvent = p7EventForActorOccurrence(FOLD6_SQUARE_ACTORS[i], FOLD6_SQUARE_OCCURRENCE[i]);
+      if (targetEvent) {
+        p9EnsureIndex();
+        const side = p9.leftIndexOf.has(targetEvent) ? "left" : "right";
+        const indexOf = side === "left" ? p9.leftIndexOf : p9.rightIndexOf;
+        const legitPos = p9LegitPosOf(targetEvent, indexOf, side, p9LegitGeometry(W, H));
+        if (legitPos) {
+          target.x = target.x + (legitPos.x - target.x) * ease;
+          target.y = target.y + (legitPos.y - target.y) * ease;
+        }
+      }
+    }
+    if (target) {
+      const delayFrac = fold6SquareEls.length > 1
+        ? (i / (fold6SquareEls.length - 1)) * FOLD9_SQUARES_FLY_STAGGER
+        : 0;
+      const localRaw = Math.min(1, Math.max(0, (fold9FlyRaw - delayFrac) / (1 - delayFrac)));
+      const flyT = p7Ease(localRaw);
+
+      const restX = W / 2 + FOLD6_SQUARES_OFFSET[i].dx;
+      const restY = H / 2 + FOLD6_SQUARES_OFFSET[i].dy;
+      const dx = (target.x - restX) * flyT;
+      const dy = (target.y - restY) * flyT;
+      sq.style.transform = `translate(${dx}px, ${dy}px) scale(${growScale})`;
+      const size = 8 + (target.size - 8) * flyT;
+      sq.style.width = sq.style.height = `${size}px`;
+
+      // This DOM square *is* the real dot for this event permanently — the
+      // real per-event cascade skips it entirely (p7GetClaimedEvents,
+      // page7.js), so there's no separate canvas dot to ever hand off to.
+      // Stays visible once it arrives and just sits there like any other
+      // timeline dot from then on.
+      wrap.style.display = "";
+    } else {
+      sq.style.transform = `scale(${growScale})`;
+      sq.style.width = sq.style.height = "8px";
+      wrap.style.display = "";
+    }
   });
 }
 
@@ -1144,17 +1817,33 @@ window.addEventListener("scroll", () => {
   requestAnimationFrame(() => { checkGroupTriggers(); groupsTicking = false; });
 }, { passive: true });
 
-// drawFold9 (currentPage 8, #page-8) used to be static background-only, so
-// nothing redrew the canvas while scrolling within it. Now that it also draws
-// the year axis preview (gated on p7AxisShouldShow, page7.js) once that title
-// crosses center, it needs its own scroll-driven redraw to actually pick that
-// crossing up while currentPage stays 8 the whole time it's happening.
+// A programmatic smooth scroll (the dev fold-jump dropdown's own
+// scrollIntoView({behavior:"smooth"}), main.js above) can momentarily
+// overshoot or coalesce its very last frame, letting a card's top transiently
+// cross a watchCardThreshold boundary during the animated transit even though
+// the scroll actually *settles* on the other side of that boundary — with no
+// further "scroll" event firing afterward to correct it, the trigger is left
+// stuck fired even though the true resting position never should have
+// crossed it. "scrollend" (fires once, after any scroll — including animated
+// ones — has fully settled) is a cheap, harmless-if-unsupported safety net:
+// re-check every trigger against the actual final position once scrolling is
+// truly done.
+window.addEventListener("scrollend", checkGroupTriggers, { passive: true });
+
+// drawFold9/drawFold7 (currentPage 8/7, #page-8/#page-7) used to be static
+// background-only, so nothing redrew the canvas while scrolling within them.
+// Now drawFold9 also draws the year axis preview (gated on p7AxisShouldShow,
+// page7.js) once fold 9's title passes offscreen, and both keep drawing the
+// real per-event squares for as long as p7RealTimelineReached is true (see
+// its own comment, page7.js) — each needs its own scroll-driven redraw to
+// actually pick up those changes while currentPage stays 7 or 8 the whole
+// time it's happening.
 let fold9AxisTicking = false;
 window.addEventListener("scroll", () => {
   if (fold9AxisTicking) return;
   fold9AxisTicking = true;
   requestAnimationFrame(() => {
-    if (currentPage === 8) draw();
+    if (currentPage === 7 || currentPage === 8) draw();
     fold9AxisTicking = false;
   });
 }, { passive: true });
@@ -1259,55 +1948,89 @@ function page9UpdateFromScroll() {
 window.addEventListener("scroll", () => {
   if (page9Ticking) return;
   page9Ticking = true;
-  requestAnimationFrame(() => { page9UpdateFromScroll(); page9Ticking = false; });
+  // updateFold13's scroll-linked half (eScroll/fold13ScrollT) needs a fresh
+  // read on every scroll tick, not just once via fold13Trigger's own firing —
+  // see that function's own comment. updateFold13 is a plain function
+  // declaration (hoisted), so it's callable here regardless of textual order.
+  requestAnimationFrame(() => { page9UpdateFromScroll(); updateFold13(); page9Ticking = false; });
 }, { passive: true });
 
 // ── @fold13 animations ───────────────────────────────────────────────────────
-// Fired when the @fold13 title card crosses the viewport midpoint (= when the
-// card arrives at its centered sticky position). Drives:
-//   - tray slides down (inline style.transform, transition:none so it tracks scroll)
-//   - header title + subtitle fade out (page9HeaderEl opacity)
-//   - extreme zone + dropped pill labels fade out (page9ZoneWrapEl opacity)
-//   - canvas count numbers + dividing line fade out (p9.fold13OutT in drawPage9)
-//   - legend fades out (groupsOverlayEl opacity)
-//   - legit dots fade out (drawJumbledBot targetAlpha in page9.js)
-//   - title frame fill + stroke dissolve (page12FrameEl background + svg opacity)
+// Two independently-driven progress values, per explicit feedback: @fold12
+// is "in position" the instant its interaction state is reached (the gate
+// line) — from there, scrolling in *either* direction must visibly move
+// @fold12's own panel/frame and @fold13's title with no dead scroll space,
+// but the *extreme dots'* spread into freeform must still only play once the
+// title fully stops at the top, as a proper animated flourish rather than
+// something scroll-scrubbed.
+//   - eScroll (fold13ScrollT below): a plain scroll-position readout over the
+//     gate-line-to-fully-arrived range, 0..1, moving continuously with every
+//     scroll tick in both directions. Drives:
+//       - tray slides down (inline style.transform, transition:none so it tracks scroll)
+//       - header title + subtitle fade out (page9HeaderEl opacity)
+//       - extreme zone + dropped pill labels fade out (page9ZoneWrapEl opacity)
+//       - canvas count numbers + dividing line + legit dots fade out (p9.fold13OutT)
+//       - legend fades out (groupsOverlayEl opacity)
+//       - fold12's own title card (frame included) fades out (page9TitleCardEl opacity)
+//   - eTrigger (fold13Trigger, unchanged): fires once, only when the title
+//     card's wrapper (.page12-sticky-center) reaches top<=0 (fully stopped),
+//     and plays out over a fixed GROUP_TRANSITION_MS regardless of further
+//     scroll. Drives only the extreme dots' morph to freeform (p9.fold13ExtremeMorphT).
 function updateFold13() {
-  const t = fold13Trigger.currentT();
-  const e = 1 - Math.pow(1 - t, 3); // ease-out cubic
+  const tTrigger = fold13Trigger.currentT();
+  const eTrigger = 1 - Math.pow(1 - tTrigger, 3); // ease-out cubic
 
   // Capture starting dot positions on the first morph frame — p9.lastPositions
   // holds the clustered positions from the previous (non-morphed) frame.
-  if (e > 0 && !fold13MorphStarted) {
+  if (eTrigger > 0 && !fold13MorphStarted) {
     fold13MorphStarted = true;
     p9.fold13StartPos  = new Map(p9.lastPositions);
     p12FreeformTargets = null; // force recompute with current W/H
   }
-  if (e <= 0) {
+  if (eTrigger <= 0) {
     fold13MorphStarted = false;
     p9.fold13StartPos  = null;
   }
+  p9.fold13ExtremeMorphT = eTrigger; // lerps extreme dots to freeform in drawPage12
 
-  p9.fold13OutT          = e; // fades legit dots / dividing line / counts in drawPage9
-  p9.fold13ExtremeMorphT = e; // lerps extreme dots to freeform in drawPage12
+  const tScroll = fold13ScrollT();
+  const eScroll = 1 - Math.pow(1 - tScroll, 3); // same ease-out cubic, scroll-driven
 
-  if (e > 0) {
+  p9.fold13OutT = eScroll; // fades legit dots / dividing line / counts in drawPage9
+
+  if (eScroll > 0) {
     page9TrayEl.style.transition = "none";
-    page9TrayEl.style.transform  = `translate(-50%, ${e * 100}%)`;
+    page9TrayEl.style.transform  = `translate(-50%, ${eScroll * 100}%)`;
   } else {
     page9TrayEl.style.transition = "";
     page9TrayEl.style.transform  = "";
   }
-  // When fully reversed (e=0) clear inline opacity so CSS class rules
+  // When fully reversed (eScroll=0) clear inline opacity so CSS class rules
   // (engaged, is-active, etc.) take over — inline "1" would otherwise
   // override them and freeze elements in their @fold13 state.
-  const opacityVal = e > 0 ? String(1 - e) : '';
+  const opacityVal = eScroll > 0 ? String(1 - eScroll) : '';
   if (page9HeaderEl)    page9HeaderEl.style.opacity    = opacityVal;
   if (page9TitleCardEl) page9TitleCardEl.style.opacity = opacityVal;
   if (page9ZoneWrapEl)  page9ZoneWrapEl.style.opacity  = opacityVal;
   groupsOverlayEl.style.opacity = opacityVal;
   // page12TitleCardEl (the fold13 card) stays visible throughout.
   draw();
+}
+
+// Fraction of the way through @fold12's unavoidable one-viewport hand-off to
+// @fold13 (the gate can't unlock any later than one viewport before #page-12
+// arrives, and the sticky wrapper needs that same one viewport of scroll to
+// finish pinning — see p13GateMax and #page-12's own min-height comment in
+// style.css) — 0 at the gate line, 1 once fully arrived. A plain scroll
+// readout, not a makeTrigger, since this half must move continuously with
+// scroll in both directions rather than play out over fixed real time.
+function fold13ScrollT() {
+  const page12 = document.getElementById("page-12");
+  if (!page12) return 0;
+  const start = p13GateMax();
+  const end   = page12.offsetTop;
+  if (end <= start) return window.scrollY >= end ? 1 : 0;
+  return Math.max(0, Math.min(1, (window.scrollY - start) / (end - start)));
 }
 
 // ── @fold13 scroll gate ──────────────────────────────────────────────────────
@@ -1334,7 +2057,6 @@ function p13GateMax() {
 // p9ResetDrops, the only two places that happens), so the title stays fully
 // invisible for the whole locked duration regardless of any transient
 // overscroll — no per-frame lag window for it to peek through.
-const page12StickyEl = document.querySelector("#page-12 .page12-sticky-center");
 function p13SyncGateVisibility() {
   if (page12StickyEl) page12StickyEl.classList.toggle("gate-hidden", p13GateLocked());
 }
@@ -1430,15 +2152,31 @@ Promise.all([
     layoutGroups();
     updateTextCardFrameDashes();
   });
-  page0UpdateFromScroll();
   page7UpdateFromScroll();
   page8CheckScroll();
   page9UpdateFromScroll();
+  updateFold13();
   window.addEventListener("resize", () => {
     // buildPage0AllDots() must run before layoutGroups() — it repopulates
     // PAGE0_GROUP_DOT_ANCHORS (page1.js), which updateGroups() reads for the
     // fold1->fold2 legend entrance below.
     buildPage0AllDots();
+    // buildPage0AllDots() recreates every decorative dot hidden/shrunk
+    // (opacity 0, scale(0), popped: false) as if playPage0Entrance hadn't
+    // run yet — but playPage0Entrance only ever runs once, at page load, so
+    // without this these dots would stay invisible for the rest of the
+    // session after any resize (mobile browsers fire resize on scroll, from
+    // the address bar showing/hiding, so this could happen mid-scroll). If
+    // the entrance already finished, snap the new dots straight to their
+    // settled/popped state instead of waiting for an entrance that will
+    // never replay.
+    if (page0EntranceDone) {
+      PAGE0_DECORATIVE_DOT_ELS.forEach((d) => {
+        d.el.style.opacity = "1";
+        d.el.style.transform = "scale(1)";
+        d.popped = true;
+      });
+    }
     init();
     layoutGroups();
     updateTextCardFrameDashes();

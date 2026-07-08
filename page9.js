@@ -34,24 +34,24 @@ const P9_CATEGORY_DESC = [
 // (see p9BuildPanel, which assigns these via each pill's own grid-column
 // rather than relying on flex-wrap source order). Each row is its own
 // independent grid (.page9-tray-row, one per `row` value here) rather than
-// one grid shared across all 3 rows — sharing tracks would force every
-// column wide enough to fit whichever row's pill in that column is widest
-// (e.g. row 2's two long labels), leaving every shorter pill stranded with
+// one grid shared across all 2 rows — sharing tracks would force every
+// column wide enough to fit whichever row's pill in that column is widest,
+// leaving every shorter pill stranded with
 // uneven left/right padding instead of an even gap to its neighbor. With
 // independent per-row grids, every column is sized to just that row's own
 // content, so the gap between any two adjacent pills is exactly the row's
 // own `gap` value, never inflated by a different row's longer label.
 const P9_TRAY_GRID = [
-  { row: 1, col: 1 },
+  { row: 1, col: 5 }, // הפגנה לא אלימה — moved to the row's left end, out of the first (rightmost) slot
+  { row: 1, col: 3 }, // פוגרום — swapped with החזקה בכפייה below
   { row: 1, col: 2 },
-  { row: 1, col: 3 },
+  { row: 2, col: 1 }, // החזקה בכפייה — swapped with פוגרום above
   { row: 1, col: 4 },
-  { row: 2, col: 1 },
+  { row: 1, col: 1 }, // תקיפה פיזית — moved to the row's right end (first slot)
   { row: 2, col: 2 },
-  { row: 3, col: 1 },
-  { row: 3, col: 2 },
-  { row: 3, col: 3 },
-  { row: 3, col: 4 },
+  { row: 2, col: 5 }, // ניכוס שטח — swapped with חסימת כביש below to free up the bottom-middle slot
+  { row: 2, col: 4 },
+  { row: 2, col: 3 }, // חסימת כביש — moved to row 2's middle column
 ];
 
 const P9_SQ      = 3;
@@ -215,6 +215,39 @@ function p9CountRunLoop() {
   if (p9CountAnim) requestAnimationFrame(p9CountRunLoop);
 }
 
+// The "X אירועים" labels above each side's extreme column fade in/out at the
+// 0<->nonzero displayed-count boundary (drawPage9 detects the crossing every
+// frame and calls p9CountLabelAnimate) instead of snapping instantly — i.e.
+// when the very first dropped pill's first dot actually arrives, or the last
+// one leaves, per explicit feedback. Same per-frame linear-rate approach as
+// p9HoverDimAnimate (HOVER_DIM_MS) further down, just a much longer duration
+// since this is a rare standalone appear/disappear, not a fast hover response.
+let p9CountLabelAlpha  = 0;
+let p9CountLabelWasOn  = false;
+let p9CountLabelTarget = 0;
+let p9CountLabelRaf    = null;
+const P9_COUNT_LABEL_FADE_MS = 400;
+function p9CountLabelAnimate(target) {
+  p9CountLabelTarget = target;
+  if (p9CountLabelRaf !== null) return;
+  let lastTime = performance.now();
+  function step(now) {
+    const dt    = now - lastTime;
+    lastTime    = now;
+    const delta = dt / P9_COUNT_LABEL_FADE_MS;
+    p9CountLabelAlpha = p9CountLabelTarget > p9CountLabelAlpha
+      ? Math.min(p9CountLabelTarget, p9CountLabelAlpha + delta)
+      : Math.max(p9CountLabelTarget, p9CountLabelAlpha - delta);
+    if (currentPage === 11) draw();
+    if (p9CountLabelAlpha !== p9CountLabelTarget) {
+      p9CountLabelRaf = requestAnimationFrame(step);
+    } else {
+      p9CountLabelRaf = null;
+    }
+  }
+  p9CountLabelRaf = requestAnimationFrame(step);
+}
+
 // Bottom-to-top stacking order for the extreme grid: settlers (orange) lowest,
 // then Right-wing activists (green), then Haredi Jews (black) — and on the
 // other side, Protesters against the government (blue) below left wing
@@ -257,6 +290,17 @@ function p9SyncTopOrder(orderArr, currentSet) {
     const rankDiff = P9_ACTOR_ORDER.indexOf(a.actor) - P9_ACTOR_ORDER.indexOf(b.actor);
     return rankDiff !== 0 ? rankDiff : p9SeqOf(a) - p9SeqOf(b);
   });
+}
+
+// How many rows the extreme dot grid has room for at a given canvas height —
+// shared by drawPage9 (actual layout) and commitDropState (predicting,
+// before any frame renders, whether a drop needs the "existing dot
+// reposition" phase at all — see needsReposition there, state-1-only per
+// user instruction).
+function p9ExtremeRowsFor(H) {
+  const midY        = Math.round(H * P9_MID);
+  const dividerTopY = Math.round(H * 0.18);
+  return Math.max(1, Math.floor((midY - dividerTopY) / P9_CELL));
 }
 
 function p9UpdateLayout(W, H) {
@@ -471,9 +515,8 @@ function drawPage9(ctx, W, H) {
   // The extreme dot grid is anchored at midY itself (touching the horizontal
   // divider, no gap) and sized to reach all the way up to 14vh, matching
   // .page9-zone-wrap-extreme's own top edge.
-  const dividerTopY = Math.round(H * 0.18);
   const dashBotY    = H - 16;
-  const extremeRows = Math.max(1, Math.floor((midY - dividerTopY) / CELL));
+  const extremeRows = p9ExtremeRowsFor(H);
 
   // Unlike the legit grid below, the extreme blocks stay densely packed (built
   // outward from midY) rather than scattered across fixed slots — and both sides
@@ -525,41 +568,80 @@ function drawPage9(ctx, W, H) {
   // straight there. Color is invariant per event (actor-based) so only position
   // and the extreme/legit opacity need to move.
   const posMap = new Map();
-  function p9PlaceDot(e, targetX, targetY, targetAlpha) {
+  // orderIndex/orderCount: this dot's position within the column it's being
+  // drawn into right now (drawBandedCols passes its own forEach index/
+  // orderArr.length; callers that don't care — legit dots, which never hit
+  // the "existing dot repositioning" branch below — just omit them).
+  // lowRankCount: how many of that column's entries rank settlers-or-below
+  // (drawBandedCols precomputes this once, since the array is already
+  // rank-sorted) — used to rescale orderIndex/orderCount down to a position
+  // *within this dot's own rank tier* below, rather than within the whole
+  // (often much larger) column.
+  function p9PlaceDot(e, targetX, targetY, targetAlpha, orderIndex, orderCount, lowRankCount) {
     let drawX = targetX, drawY = targetY, drawAlpha = targetAlpha;
     if (p9.anim) {
       const from = p9.anim.from.get(e);
       if (from) {
         let t;
         if (p9.anim.newEventStagger && p9.anim.newEventStagger.has(e)) {
-          // New extreme dot — departs once the reposition phase finishes.
+          // New extreme dot — departs once the reposition phase finishes
+          // (phase2Start === start+repositionMs), or immediately/concurrently
+          // with it when this drop interrupted a still-running animation
+          // (phase2Start === start). Read directly rather than recomputed —
+          // it no longer has a fixed relationship to start/repositionMs, see
+          // the comment in commitDropState where it's resolved.
           const dotArrival  = p9.anim.newEventStagger.get(e);
-          const phase2Start = p9.anim.start + (p9.anim.repositionMs || 0);
+          const phase2Start = p9.anim.phase2Start;
           const dotDur      = dotArrival - phase2Start;
           t = p9Ease(Math.min(1, Math.max(0, (performance.now() - phase2Start) / dotDur)));
         } else {
           // Existing dot repositioning.
           // Dots whose actor rank is above "settlers" in the column (Right-wing
           // activists, Haredi Jews) get pushed upward by incoming new events —
-          // they glide to their new spot arriving at the same moment the new
-          // dots land (topDotArrivesAt), so it looks like the column grows as
-          // one motion. Lower-rank dots (settlers and below) finish phase 1
-          // on their own faster clock.
-          const repoMs = p9.anim.repositionMs || p9.anim.duration;
-          const now = performance.now();
-          if (p9.anim.topDotArrivesAt !== undefined &&
-              P9_ACTOR_ORDER.indexOf(e.actor) > P9_ACTOR_ORDER.indexOf("settlers")) {
-            const dur = p9.anim.topDotArrivesAt - p9.anim.start;
-            t = p9Ease(Math.min(1, (now - p9.anim.start) / dur));
-          } else {
-            t = p9Ease(Math.min(1, (now - p9.anim.start) / repoMs));
-          }
+          // they glide to their new spot, high-rank dots timed to finish at the
+          // same moment the new dots land (topDotArrivesAt); lower-rank dots
+          // (settlers and below) finish phase 1 on their own faster clock.
+          const isHighRank = P9_ACTOR_ORDER.indexOf(e.actor) > P9_ACTOR_ORDER.indexOf("settlers");
+          const repoMs   = p9.anim.repositionMs || p9.anim.duration;
+          const windowMs = (p9.anim.topDotArrivesAt !== undefined && isHighRank)
+            ? p9.anim.topDotArrivesAt - p9.anim.start
+            : repoMs;
+          const STAGGER_FRACTION = 0.6;
+          const staggerSpan = windowMs * STAGGER_FRACTION;
+          const travelDur   = windowMs - staggerSpan;
+          // Staggered by this dot's position *within its own rank tier*, not
+          // its raw position in the full column — usually only a handful of
+          // dots (typically the whole high-rank tail, pushed up to make room
+          // for a lower-rank insertion elsewhere) actually have a target that
+          // moved at all; anchoring the stagger to the full column instead
+          // left that handful scheduled almost entirely at the tail end of
+          // the window regardless (their raw index was already close to the
+          // column's own length), so they'd barely start moving — well after
+          // the new dots flying in beside them already had — instead of
+          // "leaving space" for them throughout, per explicit feedback.
+          const low         = lowRankCount ?? 0;
+          const tierIndex   = isHighRank ? (orderIndex ?? 0) - low : (orderIndex ?? 0);
+          const tierCount   = isHighRank ? (orderCount ?? 1) - low : (low || (orderCount ?? 1));
+          const denom       = Math.max(1, tierCount - 1);
+          const dotStart    = p9.anim.start + staggerSpan * (tierIndex / denom);
+          t = p9Ease(Math.min(1, Math.max(0, (performance.now() - dotStart) / travelDur)));
         }
         drawX     = from.x     + (targetX     - from.x)     * t;
         drawY     = from.y     + (targetY     - from.y)     * t;
         drawAlpha = from.alpha + (targetAlpha - from.alpha) * t;
       }
     }
+    // Recorded here — the actually-drawn, mid-interpolation position/alpha,
+    // not the target — so a *new* animation starting while this dot is still
+    // mid-flight blends from where it visually is right now instead of from
+    // where the previous animation was heading. Using targetX/Y/Alpha here
+    // (the old behavior) made a dot dropped on top of another still-arriving
+    // one snap to the earlier target for a frame before continuing on to its
+    // real one. Captured before hover-dimming below, which is a transient
+    // display-only effect that shouldn't get baked into the next animation's
+    // starting alpha.
+    posMap.set(e, { x: drawX, y: drawY, alpha: drawAlpha });
+
     // While one dot is hovered (p9.hoveredEvent), it's drawn fully opaque and
     // every other dot is dimmed. While a dropped pill is hovered instead
     // (p9.hoveredCategoryIdx, set by p9HoverInit's pill listener), ALL dots
@@ -580,8 +662,6 @@ function drawPage9(ctx, W, H) {
     ctx.globalAlpha = drawAlpha;
     ctx.fillStyle   = p7ActorColor(e.actor);
     ctx.fillRect(drawX, drawY, SQ, SQ);
-
-    posMap.set(e, { x: targetX, y: targetY, alpha: targetAlpha });
   }
 
   function drawBandedCols(orderArr, rightAlign, colsTotal) {
@@ -598,13 +678,21 @@ function drawPage9(ctx, W, H) {
       return Math.ceil(orderArr.length / colsTotal) || 1;
     }
     const targetAlpha = 1;
+    // orderArr is already sorted rank-ascending (p9SyncTopOrder), so every
+    // settlers-or-below entry sits before every Right-wing/Haredi one — one
+    // findIndex locates that boundary for the whole column, see p9PlaceDot's
+    // tierIndex/tierCount.
+    const lowRankCount = (() => {
+      const i = orderArr.findIndex(e => P9_ACTOR_ORDER.indexOf(e.actor) > P9_ACTOR_ORDER.indexOf("settlers"));
+      return i === -1 ? orderArr.length : i;
+    })();
     orderArr.forEach((e, i) => {
       const r = Math.floor(i / colsTotal);
       const c = i % colsTotal;
       const x = rightAlign ? centerX - (c + 1) * CELL : rightX0 + c * CELL;
       const y = midY - (r + 1) * CELL;
       if (y < topY || y >= H - 16) return;
-      p9PlaceDot(e, x, y, targetAlpha);
+      p9PlaceDot(e, x, y, targetAlpha, i, orderArr.length, lowRankCount);
     });
     return Math.ceil(orderArr.length / colsTotal) || 1;
   }
@@ -673,32 +761,27 @@ function drawPage9(ctx, W, H) {
       const catFilter = e => CATEGORY_EN_TO_IDX[e.category] === p9.hoveredCategoryIdx;
       leftCount  = leftTop.filter(catFilter).length;
       rightCount = rightTop.filter(catFilter).length;
-    } else if (p9.anim && p9.anim.newEventStagger) {
-      // Staggered extreme drop — count increments as each new dot arrives.
-      const now = performance.now();
-      let arrivedLeft = 0, arrivedRight = 0;
-      for (const e of p7.leftEvents) {
-        const dotArrival = p9.anim.newEventStagger.get(e);
-        if (dotArrival !== undefined && now >= dotArrival) arrivedLeft++;
-      }
-      for (const e of p7.rightEvents) {
-        const dotArrival = p9.anim.newEventStagger.get(e);
-        if (dotArrival !== undefined && now >= dotArrival) arrivedRight++;
-      }
-      leftCount  = p9.anim.baseLeft  + arrivedLeft;
-      rightCount = p9.anim.baseRight + arrivedRight;
     } else {
-      // Legit drop (p9CountAnim ticking) or steady state.
-      const displayed = p9GetDisplayedCounts();
-      leftCount  = displayed ? displayed.left  : leftTop.length;
-      rightCount = displayed ? displayed.right : rightTop.length;
+      const c = p9CurrentExtremeDisplayedCounts();
+      leftCount  = c.left;
+      rightCount = c.right;
     }
 
-    // Suppress "0 / 0" while no dot has arrived yet (first drop, mid-flight).
-    if (leftCount > 0 || rightCount > 0) {
+    // Suppress "0 / 0" while no dot has arrived yet (first drop, mid-flight) —
+    // still a hard boundary (what the count *is*), but crossing it now fades
+    // the labels in/out (p9CountLabelAnimate) instead of snapping, per
+    // explicit feedback — the fade itself is p9CountLabelAlpha, updated here
+    // since this is the one place both sides' counts are already resolved.
+    const anyCount = leftCount > 0 || rightCount > 0;
+    if (anyCount !== p9CountLabelWasOn) {
+      p9CountLabelWasOn = anyCount;
+      p9CountLabelAnimate(anyCount ? 1 : 0);
+    }
+
+    if (p9CountLabelAlpha > 0) {
       ctx.font         = "400 12px 'Assistant', sans-serif";
       ctx.textBaseline = "alphabetic";
-      ctx.fillStyle    = `rgba(17,17,17,${1 - (p9.fold13OutT ?? 0)})`;
+      ctx.fillStyle    = `rgba(17,17,17,${p9CountLabelAlpha * (1 - (p9.fold13OutT ?? 0))})`;
 
       // Mixed Hebrew+digit text in one fillText call left the visual order up
       // to each browser's own bidi heuristics (ctx.direction="ltr" didn't even
@@ -757,6 +840,30 @@ function drawPage9(ctx, W, H) {
   ctx.stroke();
 
   p9.lastPositions = posMap;
+}
+
+// The extreme-zone counts as currently *displayed* — mid-stagger this is the
+// partial (arrived-so-far) count, not the full post-drop total. Used both by
+// drawPage9's own label and by commitDropState when a new drop lands while a
+// previous one's dots are still arriving: capturing baseLeft/baseRight from
+// this instead of the raw p9ExtremeCountsNow() means the label continues
+// from what's actually on screen rather than jumping straight to the
+// previous category's full count the instant it's dropped.
+function p9CurrentExtremeDisplayedCounts() {
+  if (p9.anim && p9.anim.newEventStagger) {
+    const now = performance.now();
+    let arrivedLeft = 0, arrivedRight = 0;
+    for (const e of p7.leftEvents) {
+      const dotArrival = p9.anim.newEventStagger.get(e);
+      if (dotArrival !== undefined && now >= dotArrival) arrivedLeft++;
+    }
+    for (const e of p7.rightEvents) {
+      const dotArrival = p9.anim.newEventStagger.get(e);
+      if (dotArrival !== undefined && now >= dotArrival) arrivedRight++;
+    }
+    return { left: p9.anim.baseLeft + arrivedLeft, right: p9.anim.baseRight + arrivedRight };
+  }
+  return p9GetDisplayedCounts() || p9ExtremeCountsNow();
 }
 
 // Current extreme event counts derived directly from p9.sides — used by
@@ -875,27 +982,67 @@ function p9BuildPanel() {
   // dropping a pill back into "legitimate" has to land in *its own* row
   // wrapper, not directly in zoneBelow itself, or it'd never actually
   // re-enter a grid that gives it a fixed column.
-  const trayRows = [1, 2, 3].map(rowNum => {
+  const trayRows = [1, 2].map(rowNum => {
     const rowEl = document.createElement("div");
     rowEl.className = "page9-tray-row";
     zoneBelow.appendChild(rowEl);
     return rowEl;
   });
 
+  // Moves the pill chip itself into its new zone right away, regardless of
+  // whether a previous drop's dot animation is still playing — a drop should
+  // always visibly dock the instant it happens. Only the dot/count state
+  // change below (commitDropState) waits its turn; see commitDrop.
+  function placePillInZone(pill, targetZone) {
+    if (targetZone === zoneAbove) {
+      // prepend so the newest card becomes the top of the stacked column.
+      targetZone.prepend(pill);
+    } else {
+      const idx = Number(pill.dataset.idx);
+      trayRows[P9_TRAY_GRID[idx].row - 1].appendChild(pill);
+    }
+  }
+
+  // Drops that land while a previous drop's dot animation (p9.anim) is still
+  // playing no longer wait their turn — the pill docks immediately
+  // (placePillInZone, above) and its dot/count state change (below) starts
+  // right away too, redirecting whatever's still mid-flight from the
+  // previous drop toward the newly-recomputed layout instead of finishing it
+  // first. p9PlaceDot's "from" is always the *currently drawn* (interpolated)
+  // position, never a stale target, so replacing p9.anim mid-flight retargets
+  // smoothly rather than snapping — see the "from" comment there.
   function commitDrop(pill, targetZone) {
+    placePillInZone(pill, targetZone);
+    commitDropState(pill, targetZone);
+  }
+
+  function commitDropState(pill, targetZone) {
     const newCatIdx = Number(pill.dataset.idx);
     const nowMs     = performance.now();
 
     if (targetZone === zoneAbove) {
       // ── Dropping into extreme ──────────────────────────────────────────────
       // Dots arrive one by one in column order; the count increments as each lands.
+      // Reads the currently *displayed* counts, not the raw p9.sides-derived
+      // total — if a previous drop's dots are still mid-stagger, that total
+      // would already silently include them in full, jumping the label ahead
+      // of what's actually on screen the instant this new drop lands.
 
-      const { left: baseLeft, right: baseRight } = p9ExtremeCountsNow();
+      // Captured before p9.anim is reassigned below — true when this drop
+      // lands while a previous drop's dot animation (either direction) is
+      // still actively running, in which case the new dots fly in
+      // concurrently with the existing-dot reposition instead of waiting for
+      // it (see phase2Start below). A plain drop, landed only after the
+      // previous animation already finished, keeps the normal sequential
+      // "reposition first, then fly in" behavior.
+      const wasInterrupting = !!p9.anim;
 
-      // prepend so the newest card becomes the top of the stacked column.
-      targetZone.prepend(pill);
+      const { left: baseLeft, right: baseRight } = p9CurrentExtremeDisplayedCounts();
+
       p9.sides[newCatIdx] = "above";
       p13SyncGateVisibility?.();
+
+      const prevColsSticky = p9.extremeColsSticky || 1;
 
       // Sync the order arrays now (before the draw loop does it) so stagger
       // ranks already reflect the new events' final column positions.
@@ -906,11 +1053,60 @@ function p9BuildPanel() {
       p9SyncTopOrder(p9.leftTopOrder,  makeSet(p7.leftEvents));
       p9SyncTopOrder(p9.rightTopOrder, makeSet(p7.rightEvents));
 
-      // Phase 1: existing extreme dots reposition (settlers-rank and below settle
-      // quickly; high-rank dots glide up over the full phase-1+phase-2 window).
-      // Phase 2: new dots travel in once phase 1 ends.
-      // Skip phase 1 entirely on the first drop (nothing to reposition).
-      const REPOSITION_MS   = (baseLeft > 0 || baseRight > 0) ? 1200 : 0;
+      // Does this drop actually widen the shared column count? A new
+      // category's actor-rank insertion can nudge a handful of existing
+      // dots' index without widening it at all (e.g. settlers-rank events
+      // inserting just before a small higher-rank tail) — that shift is
+      // small enough to be visually negligible, so it does NOT count here;
+      // only an actual column-count growth (a real, visible reflow) does.
+      // If it doesn't grow, there's nothing worth making the new dots wait
+      // on, so state 1 (see wasInterrupting above) skips the ~2.2s wait
+      // before they start flying in below instead of sitting on a
+      // dead-looking screen for it — per explicit feedback ("if the column
+      // doesn't get wider, nothing should appear to wait"). State 2's
+      // phase2Start is unaffected either way (already always immediate) —
+      // but state 2's totalDur below borrows this same needsReposition read
+      // to stop flooring the *overall* animation length at REPOSITION_MS
+      // when nothing actually needs that ~2.2s window, so p9.anim doesn't
+      // linger alive well past the point everything has visibly settled.
+      // REPOSITION_MS/repositionMs/topDotArrivesAt themselves stay
+      // unconditional in both states (those handful of nudged dots still
+      // reposition via the always-running "existing dot" branch in
+      // p9PlaceDot, just concurrently with the new dots instead of gating
+      // them).
+      const extremeRowsNow = p9ExtremeRowsFor(p9.lastH);
+      const neededColsNow  = Math.max(
+        Math.ceil(p9.leftTopOrder.length  / extremeRowsNow) || 1,
+        Math.ceil(p9.rightTopOrder.length / extremeRowsNow) || 1,
+      );
+      const needsReposition = neededColsNow > prevColsSticky;
+
+      // Existing extreme dots reposition (settlers-rank and below settle
+      // quickly; high-rank dots glide up over the full reposition+arrival
+      // window, see topDotArrivesAt below) to make room for the new dots.
+      // On a plain drop (not interrupting anything), new dots wait for this
+      // to finish first — phase2Start below — same "make room, then fly in"
+      // sequence as always. On a drop that *interrupts* a still-running
+      // animation, new dots instead start flying in immediately, running
+      // concurrently with this reposition instead of waiting for it — see
+      // wasInterrupting above and phase2Start below. Skipped entirely (0ms)
+      // on the very first drop (nothing to reposition). Also the window a
+      // dot interrupted mid-flight by an overlapping drop repositions in
+      // (see p9PlaceDot's "existing dot" branch) — those can still have most
+      // of a long legit-to-extreme journey left to cover, so this needs real
+      // travel time, not just enough to nudge an already-settled column up a
+      // few rows. Raised from 1200 (read as a rushed snap for that case) per
+      // explicit feedback.
+      //
+      // State 2 (interrupting) gets its own, longer value than state 1's
+      // 2200ms — per explicit feedback, the already-placed dots' own
+      // rearrangement read too fast while running concurrently with a new
+      // pill's dots flying in. State 1's 2200ms (below) is untouched.
+      const STATE1_REPOSITION_MS = 2200;
+      const STATE2_REPOSITION_MS = 3400;
+      const REPOSITION_MS = (baseLeft > 0 || baseRight > 0)
+        ? (wasInterrupting ? STATE2_REPOSITION_MS : STATE1_REPOSITION_MS)
+        : 0;
       const BASE_TRAVEL_MS     = 600;
       const ARRIVAL_STAGGER_MS = 4;    // ms/dot at the anchor count
       const ANCHOR_COUNT       = 1880; // "Physical assault" right-side count — calibration reference
@@ -923,22 +1119,87 @@ function p9BuildPanel() {
       // slower stagger so they don't feel too fast relative to the anchor.
       const effectiveStagger = ARRIVAL_STAGGER_MS * Math.max(1, Math.sqrt(ANCHOR_COUNT / maxNew));
 
-      // Map stores each new dot's *arrival* timestamp (already offset by REPOSITION_MS).
-      const stagger     = new WeakMap();
-      const phase2Start = nowMs + REPOSITION_MS;
-      newInLeft.forEach( (e, i) => stagger.set(e, phase2Start + BASE_TRAVEL_MS + effectiveStagger * i));
-      newInRight.forEach((e, i) => stagger.set(e, phase2Start + BASE_TRAVEL_MS + effectiveStagger * i));
+      // Map stores each new dot's *arrival* timestamp (already offset by
+      // phase2Start). phase2Start is nowMs+REPOSITION_MS normally (wait for
+      // reposition to finish), just nowMs when interrupting (start right
+      // away, concurrent with reposition — see wasInterrupting above), OR
+      // also just nowMs on a plain, non-interrupting drop when
+      // needsReposition is false — nothing would be visibly repositioning
+      // for the new dots to wait on in that case, so state 1 skips the wait
+      // instead of sitting on an apparently-dead screen for it.
+      const stagger       = new WeakMap();
+      // Plain-array mirror of stagger's keys — a WeakMap can't be iterated,
+      // but a *later* interrupting drop needs to enumerate "everything
+      // currently mid-flight" to carry it forward (see wasInterrupting below
+      // on the next drop). Recorded for every drop (both states), since a
+      // state-1 drop's own new dots can just as easily still be mid-flight
+      // when a *later* drop interrupts them — this array itself changes
+      // nothing about what state 1 looks like, only what a future state-2
+      // drop can see.
+      const staggerEvents = [];
+      const phase2Start  = wasInterrupting || !needsReposition ? nowMs : nowMs + REPOSITION_MS;
+      newInLeft.forEach( (e, i) => { stagger.set(e, phase2Start + BASE_TRAVEL_MS + effectiveStagger * i); staggerEvents.push(e); });
+      newInRight.forEach((e, i) => { stagger.set(e, phase2Start + BASE_TRAVEL_MS + effectiveStagger * i); staggerEvents.push(e); });
 
-      const totalDur = REPOSITION_MS + BASE_TRAVEL_MS + effectiveStagger * (maxNew - 1);
+      // How long the new dots alone take to finish arriving, from
+      // phase2Start — used both for the overall animation duration below and
+      // to pin topDotArrivesAt (when high-rank existing dots are timed to
+      // finish repositioning).
+      const newArrivalDur = BASE_TRAVEL_MS + effectiveStagger * (maxNew - 1);
+
+      // State 2 only: carry forward any dots from the *interrupted*
+      // animation that were themselves still mid-flight (either a still-
+      // arriving new drop, or dots already carried forward once before by
+      // that animation) — added to *this* drop's own stagger map with their
+      // original arrival time preserved untouched, so they keep gliding
+      // smoothly toward their (possibly retargeted) spot instead of falling
+      // into the "existing dot" bucket below, which assumes a stationary
+      // start and would otherwise freeze them until their tier-local
+      // reposition slot comes up — read as a visible stutter right when the
+      // new pill lands, per explicit feedback. State 1 never has a mid-flight
+      // predecessor to carry forward from (it only ever fires once the
+      // previous animation has fully finished), so this is a no-op there.
+      let maxCarriedArrivalDur = 0;
+      if (wasInterrupting && p9.anim.newEventStagger && p9.anim.staggerEvents) {
+        for (const e of p9.anim.staggerEvents) {
+          const at = p9.anim.newEventStagger.get(e);
+          if (at !== undefined && at > nowMs && !stagger.has(e)) {
+            stagger.set(e, at);
+            staggerEvents.push(e);
+            maxCarriedArrivalDur = Math.max(maxCarriedArrivalDur, at - nowMs);
+          }
+        }
+      }
+
+      // Sequential when not interrupting and something actually needs to
+      // reposition (today's formula, unchanged); when nothing needs
+      // repositioning, there's no separate reposition leg to sum/floor in
+      // (state-1's needsReposition affordance, ported here — see
+      // needsReposition above) — the whole animation is just as long as the
+      // new dots take. Interrupting AND needsReposition still floors on
+      // REPOSITION_MS (whichever of the two finishes last), since the
+      // existing-dot reposition genuinely has its own ~2.2s of real travel
+      // to cover there, same as state 1's needsReposition-true branch. Also
+      // floored against maxCarriedArrivalDur (state 2 only, 0 otherwise) so
+      // a carried-forward dot's own original, untouched arrival time is
+      // never cut off by this drop's own (possibly shorter) duration.
+      const totalDur = wasInterrupting
+        ? Math.max(needsReposition ? Math.max(newArrivalDur, REPOSITION_MS) : newArrivalDur, maxCarriedArrivalDur)
+        : needsReposition ? REPOSITION_MS + newArrivalDur : newArrivalDur;
 
       p9.anim = {
         from: new Map(p9.lastPositions),
         start: nowMs,
         duration: totalDur,
         repositionMs: REPOSITION_MS,
-        topDotArrivesAt: REPOSITION_MS > 0 ? nowMs + totalDur : undefined,
+        // phase2Start resolved once here (not derived from start+repositionMs
+        // elsewhere) since it no longer has a fixed relationship to those —
+        // see p9PlaceDot's "new dot" branch, which reads this directly.
+        phase2Start,
+        topDotArrivesAt: REPOSITION_MS > 0 ? phase2Start + newArrivalDur : undefined,
         newCategoryIdx: newCatIdx,
         newEventStagger: stagger,
+        staggerEvents,
         baseLeft,
         baseRight,
       };
@@ -954,7 +1215,6 @@ function p9BuildPanel() {
       const fromLeft  = prevDisplayed ? prevDisplayed.left  : prevActual.left;
       const fromRight = prevDisplayed ? prevDisplayed.right : prevActual.right;
 
-      trayRows[P9_TRAY_GRID[newCatIdx].row - 1].appendChild(pill);
       p9.sides[newCatIdx] = "below";
       p13SyncGateVisibility?.();
 
@@ -1301,7 +1561,7 @@ function p9HoverInit() {
       bestPos = p9.lastPositions.get(bestEvent);
     }
 
-    dateEl.textContent = bestEvent.date;
+    dateEl.textContent = p7FormatDateDMY(bestEvent.date);
     descEl.textContent = bestEvent.descHeMedium;
     tooltipEl.style.borderColor = p7ActorColor(bestEvent.actor);
     tooltipEl.classList.add("is-visible");
