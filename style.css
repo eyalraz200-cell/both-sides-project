@@ -378,10 +378,11 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 18px;
-  padding: 50px 29px 15px;
+  padding: 50px 29px 35px; /* bottom bumped from 15px — taller frame, more breathing room below the lower pill row */
   border-radius: 20px 20px 0 0;
   background: #fdfcff;
-  box-shadow: 0 0 3.85px rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(90, 90, 90, 0.45);
+  border-bottom: none; /* flush with the viewport's bottom edge — no visible edge to stroke there */
   pointer-events: none;
   z-index: 10;
 }
@@ -416,30 +417,12 @@ body {
   margin: 0;
 }
 
-/* Separates the "פעולות" title from the dragcards below it — light (not very
-   dark) and tapered at both ends like the canvas divider line, but with a
-   floor (0.04) rather than fading all the way to fully transparent.
-   Positioned absolute (left:0/right:0 resolve against .page9-tray's padding
-   edges, not its content box) rather than a flex child sized via width:100%
-   — .page9-tray is `width: max-content`, sized to fit the pill rows alone,
-   so a flex child's own width:100% (+ negative margins to bleed past it)
-   never actually reliably reached the card's true outer edges. Anchored at
-   a fixed `top` instead of sitting in-flow — G(10) + titleH(~19) + G(10) =
-   39px down, leaving an equal G(10) gap below it before the first pill row
-   starts at .page9-tray's own 50px padding-top. */
+/* Used to separate the "פעולות" title from the dragcards below it — removed
+   per explicit request (the tray's own new border, above, was enough
+   definition without this too). Element (project.html) is kept in the DOM
+   rather than removed from markup, just made invisible here. */
 .page9-tray-divider {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 39px;
-  height: 1px;
-  background: linear-gradient(
-    to right,
-    rgba(0, 0, 0, 0.08),
-    rgba(0, 0, 0, 0.16) 20%,
-    rgba(0, 0, 0, 0.16) 80%,
-    rgba(0, 0, 0, 0.08)
-  );
+  display: none;
 }
 
 /* Once dropped into the extreme zone, pills stack centered on the divider's
@@ -468,10 +451,22 @@ body {
      it exactly, see --page9-zone-stack-width below) isn't flush against the
      dashed border. */
   padding: 6px 12px;
+  /* Overrides .page9-zone's `gap: 8px` — dropped pills stack flush against
+     each other (see #page9ZoneAbove .page9-pill::after below, which draws
+     the only line at each seam) rather than leaving a visible gap between
+     each pill's own independent top/bottom stroke. */
+  gap: 0;
   /* Fixed gap from the "פעולות קיצוניות" axis label sitting just below this
      zone's wrap (see justify-content: flex-end above) — independent of the
      box's own height, so it holds even as the dragging-state box grows. */
   margin-bottom: 20px;
+  /* Always the same 2px width, just transparent until :empty/.dragging below
+     gives it a real color — a border that only *appears* (0px -> 2px) right
+     when a drag starts shrinks the content box by that same amount at that
+     exact moment, nudging already-dropped pills up by a couple px. Keeping
+     the width constant at all times means toggling the color never touches
+     the box model, so picking up a pill can't shift its siblings. */
+  border: 2px dashed transparent;
 }
 
 /* The extreme zone shows its own boundary up front, before the first drop,
@@ -479,35 +474,44 @@ body {
    (:empty alone covers that initial state; .dragging is still listed too so
    the box stays visible as a drop target on every *later* drag as well,
    once the zone already has something in it and :empty no longer matches —
-   this part of the box, the outline/size, is meant to keep showing). Sized
-   to --page9-zone-stack-height/-width (set in p9MeasureTrayLayout,
-   page9.js) — the height of all 10 categories stacked at once and the width
-   of the single longest one, not just whatever's actually dropped in it
-   right now, so the box never resizes mid-drag. */
+   this part of the box, the outline/size, is meant to keep showing).
+   .tray-pill-hover (toggled by p9CategoryTooltipInit, page9.js) previews the
+   same box the instant a tray pill is merely hovered, before any drag even
+   starts. Sized to --page9-zone-stack-height/-width (set in
+   p9MeasureTrayLayout, page9.js) — the height of all 10 categories stacked
+   at once and the width of the single longest one, not just whatever's
+   actually dropped in it right now, so the box never resizes mid-drag. */
 #page9ZoneAbove:empty,
+#page9ZoneAbove.tray-pill-hover,
 .page9-sticky.dragging #page9ZoneAbove {
   position: relative;
-  border: 2px solid rgba(0, 0, 0, 0.07);
+  /* Width/style already set (transparent) on the base rule above — only the
+     color actually needs to change here, see that rule's own comment. */
+  border-color: rgba(0, 0, 0, 0.07);
   border-radius: 8px;
   height: var(--page9-zone-stack-height);
   width: var(--page9-zone-stack-width);
 }
 
-/* Dashed only once actively dragging (any drag, not just into this zone). */
-.page9-sticky.dragging #page9ZoneAbove {
-  border-style: dashed;
-}
-
-/* Idle (:empty, not dragging) fill matches the page background exactly. */
-#page9ZoneAbove:empty {
-  background: #fdfcff;
+/* Idle (:empty, not dragging) — a light tint (same hue as the dragging fill
+   below, lower opacity) instead of matching the page background exactly, so
+   the zone reads as a distinct drop target even before a drag starts.
+   .tray-pill-hover shares this fill too — see the box rule above for why —
+   but never the "גררו..." hint text, which stays tied to :empty::after
+   alone (below) so it can't show once the zone actually has pills in it. */
+#page9ZoneAbove:empty,
+#page9ZoneAbove.tray-pill-hover {
+  background: rgba(247, 246, 250, 0.6);
 }
 
 /* Tinted fill once actively dragging — restored for the non-empty case too
    (higher specificity than the :empty rule above, so it correctly wins over
-   the page-bg fill on the empty+dragging overlap as well). */
+   the page-bg fill on the empty+dragging overlap as well). A bit darker
+   (fill and border-color both) than the idle state above, so the zone reads
+   as more emphatically "live" once a drag is actually in progress. */
 .page9-sticky.dragging #page9ZoneAbove {
-  background: rgba(247, 246, 250, 0.74);
+  background: rgba(243, 242, 248, 0.7);
+  border-color: rgba(0, 0, 0, 0.11);
 }
 
 /* :empty alone (not gated on .dragging) — shows from the very start, before
@@ -519,14 +523,10 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font: 500 18px 'Assistant', sans-serif;
-  color: rgba(0, 0, 0, 0.35);
+  font: 500 15px 'Assistant', sans-serif;
+  color: rgba(0, 0, 0, 0.5);
   white-space: nowrap;
   pointer-events: none;
-}
-
-#page9ZoneAbove .page9-pill .page9-handle {
-  display: none;
 }
 
 /* Dropped-chip chrome, per a series of explicit requests that moved it away
@@ -548,12 +548,19 @@ body {
    white (a fixed opaque fill would visibly clash once the zone's own
    background tints during a drag — see .page9-sticky.dragging
    #page9ZoneAbove above).
-   The stroke itself is drawn via ::before/::after (a 1px gradient bar), not
-   `border`/`border-image` — tried border-image with a gradient source
-   first, but border-image rendering a gradient with asymmetric per-side
-   widths (nonzero top/bottom, 0 left/right) is a known cross-browser weak
-   spot (notably Safari, the only browser available in this dev environment)
-   and rendered wrong. A plain background-gradient bar has no such ambiguity. */
+   The stroke itself is drawn via ::before/::after (a 1px solid bar), not
+   `border`/`border-image` — tried border-image first, but border-image
+   rendering with asymmetric per-side widths (nonzero top/bottom, 0
+   left/right) is a known cross-browser weak spot (notably Safari, the only
+   browser available in this dev environment) and rendered wrong. A plain
+   background-color bar has no such ambiguity.
+   Untapered (flat rgba, no gradient) per explicit request. Only the very
+   first pill draws its own ::before (top line) — every other pill only
+   draws ::after (bottom line) — since #page9ZoneAbove now stacks pills with
+   no gap (see its own rule above): each pill's bottom line already sits
+   exactly where the next pill's top line would, so drawing both there would
+   double-composite two translucent lines into a visibly darker seam instead
+   of reading as the one line it should be. */
 #page9ZoneAbove .page9-pill {
   position: relative;
   border: none;
@@ -562,6 +569,25 @@ body {
   padding: 10px;
   background: transparent;
   box-shadow: none;
+  /* Every dropped pill shares one fixed width (the tray's own longest label,
+     הפגנה לא אלימה — --page9-max-pill-width, set once in
+     p9MeasureTrayLayout, page9.js) instead of each sizing to its own
+     shorter text, so the top/bottom lines below (spanning the pill's full
+     width) all line up at one standard width rather than each pill having
+     its own shorter line. */
+  width: var(--page9-max-pill-width);
+  /* Centers the label+handle group within that shared width instead of
+     packing to the base .page9-pill flex-start default, which would leave
+     the extra space (for any pill shorter than הפגנה לא אלימה) trailing to
+     one side only. */
+  justify-content: center;
+}
+
+/* Brighter (lighter) than the tray's own handle dots (.page9-pill
+   .page9-handle span, rgba(0,0,0,0.4)) — lower opacity black reads as
+   brighter/lighter against the page's light background. */
+#page9ZoneAbove .page9-pill .page9-handle span {
+  background: rgba(0, 0, 0, 0.25);
 }
 
 #page9ZoneAbove .page9-pill::before,
@@ -571,24 +597,50 @@ body {
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(
-    to right,
-    rgba(130, 130, 130, 0.08),
-    rgba(130, 130, 130, 0.3) 30%,
-    rgba(130, 130, 130, 0.3) 70%,
-    rgba(130, 130, 130, 0.08)
-  );
+  background: rgba(130, 130, 130, 0.3);
   pointer-events: none;
 }
 
-#page9ZoneAbove .page9-pill::before { top: 0; }
-#page9ZoneAbove .page9-pill::after  { bottom: 0; }
+#page9ZoneAbove .page9-pill::before {
+  top: 0;
+  display: none;
+}
+#page9ZoneAbove .page9-pill:first-child::before { display: block; }
+/* A pill's "top line" is normally the *previous* pill's own ::after (shared
+   seam, no gap between them — see #page9ZoneAbove's own comment above) —
+   but that previous pill goes invisible (opacity:0) the instant it's picked
+   up to drag (.dragging, page9.js), taking its ::after down with it. This
+   pill falls back to showing its own ::before for as long as that's
+   happening, so the line doesn't just vanish out from under it. */
+#page9ZoneAbove .page9-pill.dragging + .page9-pill::before { display: block; }
+#page9ZoneAbove .page9-pill::after { bottom: 0; }
 
 /* Toggled by p9HoverInit (page9.js) on whichever dropped pill matches the
-   currently-hovered dot's category — text goes fully black, calling out
-   which category the hovered dot belongs to. */
+   currently-hovered dot's category (also fires when the pill itself is what
+   triggered the hover, see zoneAboveEl's own pointerover, page9.js) — text
+   goes fully black, calling out which category the hovered dot belongs to.
+   Its own handle dots and top/bottom lines darken along with it, same idea. */
 #page9ZoneAbove .page9-pill.is-hover-highlighted {
   color: #000;
+}
+
+#page9ZoneAbove .page9-pill.is-hover-highlighted .page9-handle span {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+#page9ZoneAbove .page9-pill.is-hover-highlighted::before,
+#page9ZoneAbove .page9-pill.is-hover-highlighted::after {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* The line visually "above" a non-first pill isn't its own ::before (only
+   :first-child draws one, see that rule above) — it's the *previous* pill's
+   own ::after, shared at the seam where they touch with no gap. CSS has no
+   previous-sibling selector, but :has() can look at a *following* sibling —
+   "the pill whose immediately-next sibling is hover-highlighted" is exactly
+   the pill sitting above the hovered one, so darken its ::after too. */
+#page9ZoneAbove .page9-pill:has(+ .page9-pill.is-hover-highlighted)::after {
+  background: rgba(0, 0, 0, 0.5);
 }
 
 /* .has-hover-highlight (also toggled by p9HoverInit, on the zone itself) dims
@@ -609,9 +661,15 @@ body {
   border-color: rgba(0, 0, 0, 0.2);
 }
 
-/* The hint text's own color/size stays exactly as-is on dragover — per
-   explicit request, hovering shouldn't make it look different — so no
-   override here (there used to be one, dimming it to 0.26). */
+/* Hint text turns fully black for the whole time a pill is being dragged
+   (any drag, not just once hovered directly over this zone) — per a later
+   explicit request superseding the note this comment used to carry (the
+   text staying unchanged on hover). Needs the same .dragging specificity
+   bump as the fill/border rules above to beat the base
+   #page9ZoneAbove:empty::after color rule. */
+.page9-sticky.dragging #page9ZoneAbove:empty::after {
+  color: rgba(0, 0, 0, 1);
+}
 
 .page9-pill {
   display: flex;
@@ -827,8 +885,9 @@ body {
 }
 
 /* The actual dashed-border white card chrome (Figma node 119:997: 4px dashed
-   black border, white fill, 8px radius, 21px/29px padding) — applied only to
-   the title, not to sibling content like page-1's legend.
+   black border, white fill, 8px radius, 21px/29px padding — stroke thinned to
+   2px per explicit instruction, overriding the Figma-spec 4px) — applied only
+   to the title, not to sibling content like page-1's legend.
 
    Native `border: 4px dashed` renders the browser's own loose dash spacing
    (dash/gap noticeably longer than 4px), not Figma's exact 2px-dash/2px-gap
@@ -845,7 +904,7 @@ body {
    viewBox-to-CSS-px mapping on both axes, so the dash/radius can't be
    scaled or distorted no matter the box's aspect ratio. */
 .text-card-frame {
-  --frame-border-w: 4px;
+  --frame-border-w: 2px;
   position: relative;
   /* display:block + width:fit-content + margin:0 auto centers the box itself
      within .text-card regardless of content width — display:inline-block
@@ -893,6 +952,20 @@ body {
   pointer-events: none;
   opacity: 0;
   transition: opacity 200ms ease-out;
+}
+
+/* Holds only the fold6 source-credit note + its divider (main.js reparents
+   fold6NoteEl/fold6NoteDividerEl here instead of .groups-overlay) — a direct
+   .layout child, not nested in .graphic-col, so its z-index actually stacks
+   above .text-col (see #foldNumberBadge/#page9CatTooltip for the same
+   pattern). Same fixed/inset/pointer-events convention as .groups-overlay;
+   only .fold6-note-link inside re-enables pointer-events so it's clickable
+   while every other pixel still passes clicks through to .text-col. */
+.fold6-note-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
 }
 
 .groups-overlay.is-active {
@@ -1144,13 +1217,16 @@ body {
      which read as jitter no amount of lerp/clamp tuning fixed. */
   position: fixed;
   left: calc(50% + 8px);
-  /* Nudged up an extra 28px (286 vs the Figma-literal 258) so the gap below
+  /* Nudged up an extra 18px (276 vs the Figma-literal 258) so the gap below
      the title to its dot column matches the gap below the subtitle to its
-     own dot column (both ~19.7px) — title and subtitle render at different
-     heights (3 lines @42px vs 4 @18px), so their Figma-literal top values
-     alone left the title's dot column overlapping its text by ~8px while
-     the subtitle's sat a real ~20px clear. Per explicit user request. */
-  top: calc(50% - 286px);
+     own dot column (both ~21.5px, pixel-measured) — title and subtitle
+     render at different heights and different fonts (3 lines @42px
+     HadassahFriedlaender vs 4 @18px Assistant), whose line-height metrics
+     don't scale the same way, so neither a Figma-literal top value nor a
+     naive assumed-equal offset (the previous 286px, tuned by eye rather
+     than measurement, overshot by ~10px) actually lines the two gaps up —
+     only a pixel-measured comparison does. Per explicit user request. */
+  top: calc(50% - 276px);
   width: 185px;
   font: 600 42px 'HadassahFriedlaender', serif;
   color: #000;
@@ -1277,6 +1353,36 @@ body {
   color: #000;
 }
 
+/* fold 4's two camp-cluster column headers ("מחנה הקואליציה" / "גוש
+   השינוי") — no Figma node, new content per explicit written spec. Same type
+   ramp as .group-label's is-emphasized state (18px/#000) but bold, so it
+   reads as a heading over the rows beneath it. Right-aligned via a static
+   translate(-100%, -50%) rather than JS-measured left math — left/top set in
+   JS is always the header's own untransformed anchor point (colX +
+   swatchSize), and the transform keeps the header's right edge pinned there
+   regardless of the two headers' differing text lengths. */
+.fold4-column-title {
+  position: absolute;
+  transform: translate(-100%, -50%);
+  white-space: nowrap;
+  font: 18px 'Assistant', sans-serif;
+  font-weight: 700;
+  color: #000;
+  opacity: 0;
+}
+
+/* Vertical separator between fold 4's two camp clusters — opacity-only fade
+   (e4*(1-e6)), same convention as .fold6-note-divider. Slightly stronger
+   (.18 vs .12) since this is a primary structural separator between two
+   clusters, not a footnote hairline under a credit line. */
+.fold4-divider {
+  position: absolute;
+  width: 1px;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.18);
+  opacity: 0;
+}
+
 /* Source-credit line under fold6's mini-legend (main.js: fold6NoteEl) — no
    Figma node, new content. Fixed px width so it wraps consistently
    regardless of viewport (same convention as .text-card's fixed 480px);
@@ -1292,6 +1398,12 @@ body {
   line-height: 1.4;
   color: rgba(0, 0, 0, 0.85);
   opacity: 0;
+}
+
+.fold6-note-link {
+  color: inherit;
+  text-decoration: underline;
+  pointer-events: auto;
 }
 
 /* Faint hairline separating the note from the group rows above it — same

@@ -248,6 +248,53 @@ function p9CountLabelAnimate(target) {
   p9CountLabelRaf = requestAnimationFrame(step);
 }
 
+// The count labels' own (x, y) position — shared vertical line (whichever
+// side is currently taller, see drawPage9's own comment on countsY) plus a
+// per-side horizontal center — used to jump instantly whenever a drop
+// changes either side's row count or column span. Glides to a new spot
+// instead, one independent animator per side (a drop landing only on one
+// side shouldn't force the other label to move on the same clock). Fixed-
+// duration elapsed/eased tween — the project's usual trigger shape (see
+// CLAUDE.md's animation-conventions note) — rather than a per-frame linear
+// rate: a rate expressed as "fraction of duration per frame" isn't a valid
+// per-pixel step size once distance enters the picture, so re-deriving x/y
+// fresh from elapsed time each call sidesteps that unit mismatch entirely.
+const P9_COUNT_POS_MS = 500;
+function makeP9CountPosAnimator() {
+  let pos   = null; // current interpolated {x,y}, returned every call
+  let from  = null, to = null, start = null;
+  let raf   = null;
+
+  function currentT() {
+    if (start === null) return 1;
+    return Math.min(1, (performance.now() - start) / P9_COUNT_POS_MS);
+  }
+
+  function ensureLoop() {
+    if (raf !== null) return;
+    function step() {
+      if (currentPage === 11) draw();
+      raf = currentT() < 1 ? requestAnimationFrame(step) : null;
+    }
+    raf = requestAnimationFrame(step);
+  }
+
+  return function animate(targetX, targetY) {
+    if (pos === null) { pos = { x: targetX, y: targetY }; return pos; }
+    if (!to || to.x !== targetX || to.y !== targetY) {
+      from  = pos;
+      to    = { x: targetX, y: targetY };
+      start = performance.now();
+      ensureLoop();
+    }
+    const e = p9Ease(currentT());
+    pos = { x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e };
+    return pos;
+  };
+}
+const p9AnimateLeftCountPos  = makeP9CountPosAnimator();
+const p9AnimateRightCountPos = makeP9CountPosAnimator();
+
 // Bottom-to-top stacking order for the extreme grid: settlers (orange) lowest,
 // then Right-wing activists (green), then Haredi Jews (black) — and on the
 // other side, Protesters against the government (blue) below left wing
@@ -758,12 +805,13 @@ function drawPage9(ctx, W, H) {
   // drawn* column span (leftRealCols/rightRealCols, not the shared sticky
   // extremeColsTotal — that shared width is reserved for layout but a side
   // with few events doesn't visually fill it, so centering over the full
-  // width would float the label away from the squares it's labeling) and
-  // sat just above wherever that side's tallest column actually reaches, not
-  // a fixed shared height. Hidden entirely until something's actually been
-  // dropped into the extreme zone — but once that's happened, both sides
-  // show a count, "0" included, rather than only labeling whichever side
-  // happens to have events.
+  // width would float the label away from the squares it's labeling)
+  // horizontally, but both sides sit on one shared vertical line — whichever
+  // side's column is currently taller decides it — rather than each hovering
+  // just above its own column independently, per explicit request. Hidden
+  // entirely until something's actually been dropped into the extreme zone —
+  // but once that's happened, both sides show a count, "0" included, rather
+  // than only labeling whichever side happens to have events.
   {
     let leftCount, rightCount;
     if (p9.hoveredCategoryIdx !== null) {
@@ -809,12 +857,16 @@ function drawPage9(ctx, W, H) {
         ctx.fillText(P9_EVENTS_WORD, leftX, y);
         ctx.fillText(numStr, leftX + wordWidth + P9_EVENTS_GAP, y);
       }
-      drawEventsCount(leftCount,
-        centerX - leftRealCols * CELL / 2,
-        midY - leftTopRows * CELL - 16);
-      drawEventsCount(rightCount,
-        rightX0 + rightRealCols * CELL / 2,
-        midY - rightTopRows * CELL - 16);
+      // Shared y — the taller of the two sides' column heights decides the
+      // one line both labels sit on (see this block's own opening comment).
+      // Glided to (p9AnimateLeftCountPos/p9AnimateRightCountPos, above) —
+      // this target can jump the instant a drop changes either side's row
+      // count or column span, but the label itself shouldn't.
+      const countsY  = midY - Math.max(leftTopRows, rightTopRows) * CELL - 16;
+      const leftPos  = p9AnimateLeftCountPos(centerX - leftRealCols * CELL / 2, countsY);
+      const rightPos = p9AnimateRightCountPos(rightX0 + rightRealCols * CELL / 2, countsY);
+      drawEventsCount(leftCount,  leftPos.x,  leftPos.y);
+      drawEventsCount(rightCount, rightPos.x, rightPos.y);
     }
   }
 
@@ -827,22 +879,13 @@ function drawPage9(ctx, W, H) {
   // The category panel that classifies events into these halves lives as
   // real DOM/HTML in the text column (see p9BuildPanel below), not drawn
   // here on canvas.
-  // Tapered via a linear gradient used as strokeStyle (canvas gradients paint
-  // along the stroke directly, unlike CSS border-image — no cross-browser
-  // ambiguity there) spanning the line's own *current* endpoints, so the
-  // fade-in/fade-out stays proportional to however much has grown in so far
-  // rather than fading relative to the final, fully-grown length.
+  // Untapered per explicit request — one flat color/alpha along the whole
+  // stroke (previously a linear gradient fading toward each end, still
+  // scaled by lineAlpha below for fold13's fade-out). Color matches the
+  // tray's own border (.page9-tray, style.css) exactly — rgba(90,90,90,0.45).
   const dividerStartX = W * (1 - page9LineT);
-  const dividerGrad  = ctx.createLinearGradient(dividerStartX, midY, W, midY);
-  // Tapers down to a still-visible floor (0.15), not all the way to fully
-  // transparent — per explicit request, the ends should read as thinner/
-  // fainter, not vanish outright.
   const lineAlpha = 1 - (p9.fold13OutT ?? 0);
-  dividerGrad.addColorStop(0,   `rgba(0,0,0,${0.15 * lineAlpha})`);
-  dividerGrad.addColorStop(0.2, `rgba(0,0,0,${0.55 * lineAlpha})`);
-  dividerGrad.addColorStop(0.8, `rgba(0,0,0,${0.55 * lineAlpha})`);
-  dividerGrad.addColorStop(1,   `rgba(0,0,0,${0.15 * lineAlpha})`);
-  ctx.strokeStyle = dividerGrad;
+  ctx.strokeStyle = `rgba(90,90,90,${0.45 * lineAlpha})`;
   ctx.lineWidth   = 1;
   ctx.beginPath();
   ctx.moveTo(dividerStartX, midY);
@@ -1328,6 +1371,12 @@ function p9BuildPanel() {
       panel.classList.add("dragging");
       document.body.style.cursor = "grabbing";
       pill.setPointerCapture(e.pointerId);
+      // Clears any active pill-hover highlight (see setPillHover's own
+      // comment, p9HoverInit) — the pointer was almost certainly resting on
+      // this exact pill just now (that's how it got grabbed), so without
+      // this it stays visually "hovered" while invisible for the rest of
+      // the drag.
+      p9.setPillHover?.(null);
       // Starting the drag can re-fire a synthetic pointerover on this same
       // pill (see p9CategoryTooltipInit's own "dragging" guard) instead of
       // ever reaching #page9ZoneBelow's pointerleave — hide the category
@@ -1437,6 +1486,12 @@ function p9BuildPanel() {
     const stackWidth  = p9.maxPillWidth + zonePaddingX + P9_ZONE_DRAG_BORDER * 2;
     zoneAbove.style.setProperty("--page9-zone-stack-height", `${stackHeight}px`);
     zoneAbove.style.setProperty("--page9-zone-stack-width", `${stackWidth}px`);
+    // Read by #page9ZoneAbove .page9-pill (style.css) — every dropped pill is
+    // forced to this same width (the tray's own longest label, הפגנה לא אלימה)
+    // rather than sizing to its own shorter text, so every dropped pill's
+    // top/bottom line (spanning the full pill width) lines up at one shared
+    // standard width instead of each being only as wide as its own label.
+    zoneAbove.style.setProperty("--page9-max-pill-width", `${p9.maxPillWidth}px`);
   }
 
   p9MeasureTrayLayout();
@@ -1471,14 +1526,17 @@ function p9HoverInit() {
       p9.hoverDimT = hoverDimTarget > p9.hoverDimT
         ? Math.min(hoverDimTarget, p9.hoverDimT + delta)
         : Math.max(hoverDimTarget, p9.hoverDimT - delta);
-      if (currentPage === 11) draw();
+      // updateGroups (main.js) re-reads p9.hoverDimT/hoveredCategoryIdx to dim
+      // the 8 fold6 squares in step with every other canvas dot — they're not
+      // part of drawPage9's own dot loop, so draw() alone doesn't touch them.
+      if (currentPage === 11) { draw(); if (typeof updateGroups === "function") updateGroups(); }
       if (p9.hoverDimT !== hoverDimTarget) {
         hoverDimRaf = requestAnimationFrame(step);
       } else {
         hoverDimRaf = null;
         if (p9.hoverDimT === 0) {
           p9.hoverDimCategoryIdx = null;
-          if (currentPage === 11) draw();
+          if (currentPage === 11) { draw(); if (typeof updateGroups === "function") updateGroups(); }
         }
       }
     }
@@ -1523,10 +1581,28 @@ function p9HoverInit() {
     }
     zoneAboveEl.classList.toggle("has-hover-highlight", !!pill);
   }
+  // Exposed on the shared p9 object so p9BuildPanel's pointerdown handler
+  // (a separate closure — see its own call to this below) can clear the
+  // hover highlight the instant a drag starts. Grabbing a pill almost always
+  // means the pointer was already resting on it (that's how it got hovered
+  // enough to grab), so without this the now-invisible (.dragging,
+  // opacity:0) pill stays "is-hover-highlighted" — which style.css's
+  // sibling-lookahead hover rule then uses to darken a neighboring pill's
+  // own line for a highlight nobody can actually see.
+  p9.setPillHover = setPillHover;
 
   zoneAboveEl.addEventListener("pointerover", e => {
     if (p9.hoveredEvent) return; // dot-hover takes priority
     const pill = e.target.closest(".page9-pill");
+    // A pill being dragged (setPointerCapture at drag-start, page9.js's own
+    // pointerdown handler) can re-fire a synthetic pointerover on itself —
+    // same underlying quirk noted by p9CategoryTooltipInit's own "dragging"
+    // guard elsewhere. Without this, the dragged (opacity:0, per .dragging)
+    // pill still ends up marked .is-hover-highlighted, which style.css's
+    // sibling-lookahead hover rule then uses to darken the *previous*
+    // pill's own line — a highlight nobody can see land on a pill that's
+    // itself invisible.
+    if (pill && pill.classList.contains("dragging")) return;
     setPillHover(pill && zoneAboveEl.contains(pill) ? pill : null);
   });
   zoneAboveEl.addEventListener("pointerleave", () => setPillHover(null));
@@ -1542,6 +1618,7 @@ function p9HoverInit() {
     p9.hoveredEvent = null;
     setHighlightedPill(undefined);
     draw();
+    if (typeof updateGroups === "function") updateGroups(); // see p9HoverDimAnimate's own comment
   }
 
   function onMove(e) {
@@ -1578,6 +1655,7 @@ function p9HoverInit() {
       hoverDimTarget = 0; p9.hoverDimT = 0;
       setHighlightedPill(CATEGORY_EN_TO_IDX[bestEvent.category]);
       draw();
+      if (typeof updateGroups === "function") updateGroups(); // see p9HoverDimAnimate's own comment
       // draw() just rebuilt p9.lastPositions — bestPos (read below for
       // tooltip placement) still points at the same {x,y}, since dimming
       // only changes alpha, but refresh the reference for clarity/safety.
@@ -1635,6 +1713,7 @@ function p9CategoryTooltipInit() {
   const tooltipEl = document.getElementById("page9CatTooltip");
   const descEl    = tooltipEl.querySelector(".page9-cat-tooltip-desc");
   const zoneBelow = document.getElementById("page9ZoneBelow");
+  const zoneAbove = document.getElementById("page9ZoneAbove");
   const panel     = document.querySelector(".page9-sticky");
 
   const GAP = 10; // px between the pill's top edge and the tooltip's arrow tip
@@ -1656,9 +1735,17 @@ function p9CategoryTooltipInit() {
     const top      = rect.top - tooltipEl.offsetHeight - GAP;
     tooltipEl.style.left = `${left}px`;
     tooltipEl.style.top  = `${top}px`;
+
+    // Previews the drop target — same idle (:empty) box treatment (dashed
+    // border, light fill) even though the zone already has pills dropped in
+    // it, minus the "גררו..." hint text (that stays tied to :empty::after
+    // alone, see style.css, so it naturally won't show once non-empty). Just
+    // hovering a tray pill, not yet dragging it.
+    zoneAbove.classList.add("tray-pill-hover");
   }
   function hide() {
     tooltipEl.classList.remove("is-visible");
+    zoneAbove.classList.remove("tray-pill-hover");
   }
 
   zoneBelow.addEventListener("pointerover", e => {
