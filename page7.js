@@ -668,10 +668,30 @@ function p7DrawTimelineSquares(ctx, W, H) {
   // scrolled past the top of the viewport, AND the year axis's own build-in
   // wipe (p7AxisIntroT) has fully finished.
   const isNewTerritory = p7HasEngaged && curMonthKey > p7MonthMaxReached;
-  if (p7HasEngaged && p7MonthAnimStart[curMonthKey] === undefined) {
-    p7MonthAnimStart[curMonthKey] = isNewTerritory ? now : now - P7_ANIM_TOTAL_DURATION;
+  if (isNewTerritory) {
+    // A single engaged tick can jump curMonthKey forward by more than one
+    // month at once — e.g. @fold9's fly-then-engage gate (p7UpdateEngagement,
+    // main.js) lets scroll position race ahead of curMonthKey while
+    // engagement is still pending, so the moment it fires, `t` (and the date
+    // it maps to) can already be several months past minDate. Without
+    // backfilling every skipped month here, each one falls straight into
+    // "settled" below (its own p7MonthAnimStart never set at all) and pops in
+    // instantly, fully-formed, with no cascade — the exact "instant jump"
+    // this loop exists to prevent. All backfilled months start ticking at the
+    // same `now` (simpler than staggering month-to-month, and each month's
+    // own events still cascade individually within it via p7DrawSideSquares'
+    // own per-event delay), rather than one after another.
+    for (let k = Math.max(p7MonthMaxReached + 1, p7MonthKeyOf(p7.minDate)); k <= curMonthKey; k++) {
+      if (p7MonthAnimStart[k] === undefined) p7MonthAnimStart[k] = now;
+    }
+    p7StartAnimLoop();
+  } else if (p7HasEngaged && p7MonthAnimStart[curMonthKey] === undefined) {
+    // Not new territory: curMonthKey was already skipped over earlier while
+    // moving forward, and we're now landing on it while scrolling backward —
+    // it should just appear settled, not fire off a brand new entrance while
+    // the user is scrolling the other way.
+    p7MonthAnimStart[curMonthKey] = now - P7_ANIM_TOTAL_DURATION;
   }
-  if (isNewTerritory) p7StartAnimLoop();
 
   if (p7HasEngaged) {
     // Scrolling back onto a month cancels any retreat it had started — it just
