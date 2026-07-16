@@ -4,10 +4,10 @@ window.scrollTo(0, 0);
 const canvas = document.getElementById("canvas");
 const ctx    = canvas.getContext("2d");
 
-// drawFoldNew3/drawFold5/drawFold7/drawFold9 are tiny inline background-only
+// drawFoldNew3/drawFoldSplit/drawFold7/drawFold9 are tiny inline background-only
 // functions (see below) — these folds' only visual content is the DOM overlay,
 // like drawPage2/drawPage3/drawPage4.
-const PAGES = [drawPage1, drawPage2, drawFoldNew3, drawPage3, drawPage4, drawFold5, drawPage5, drawFold7, drawFold9, drawPage7, drawPage8, drawPage9, drawPage12];
+const PAGES = [drawPage1, drawPage2, drawFoldNew3, drawPage3, drawPage4, drawFoldSplit, drawPage5, drawFold7, drawFold9, drawPage7, drawPage8, drawPage9, drawPage12];
 let currentPage = 0;
 
 function drawBackground(ctx, W, H) {
@@ -29,9 +29,11 @@ function drawFoldNew3(ctx, W, H) {
   drawBackground(ctx, W, H);
 }
 
-// Fold 5 (id #page-5) — see GROUPS/updateGroups below for its actual content,
-// all DOM overlay, nothing canvas-drawn.
-function drawFold5(ctx, W, H) {
+// Split-phase fold (id #page-5) — the groups split into the left/right corner
+// mini-legends (driven by fold6Trigger via updateGroups). The grey squares +
+// ACLED note were moved to the next fold (#page-6, drawPage5). All DOM overlay;
+// plain background only here.
+function drawFoldSplit(ctx, W, H) {
   drawBackground(ctx, W, H);
 }
 
@@ -185,11 +187,10 @@ if (foldNumberBadge) {
   // which would otherwise kill this whole (unrelated) script and blank the
   // entire page for anyone with those settings.
   const FOLD_BADGE_VISIBLE_KEY = "foldNumberBadgeVisible";
-  let foldBadgeVisiblePref = null;
-  try { foldBadgeVisiblePref = localStorage.getItem(FOLD_BADGE_VISIBLE_KEY); } catch {}
-  if (foldBadgeVisiblePref === "1") {
-    foldNumberBadge.classList.add("is-visible");
-  }
+  // Visible on every load — force-shown regardless of any stale saved pref.
+  // Ctrl+Shift+F still hides/shows it within the session.
+  foldNumberBadge.classList.add("is-visible");
+  try { localStorage.setItem(FOLD_BADGE_VISIBLE_KEY, "1"); } catch {}
   window.addEventListener("keydown", (e) => {
     if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "f") {
       e.preventDefault();
@@ -229,7 +230,7 @@ function setActivePage(page) {
   }
 
   // Mirror of the above, the other direction: leaving page8's bridge back
-  // toward the real timeline (#page-9, drawPage7) while page8's reverse glide
+  // toward the real timeline (#page-8, drawPage7) while page8's reverse glide
   // (p8CurrentT decreasing toward 0) hasn't finished yet. drawPage7 has no
   // notion of that glide's progress on its own — every square would
   // otherwise teleport straight to its resting timeline cell the instant
@@ -598,31 +599,33 @@ const GROUPS_FRAME_W = 1512, GROUPS_FRAME_H = 982;
 // indices 6-11 → left column (LEGEND_PER_COL = ceil(12/2) = 6).
 const GROUPS = [
   // — right column —
-  { color: "#008C99", label: "ערבים ישראלים",            fold3: { x: 1088, y: 786 },
-    fold4: { x: 1088, y: 786, dimmed: true,  swatchFirst: true }, row: true },
-  { color: "#f16f16", label: "מתיישבים",              actor: "settlers", fold3: { x: 908,  y: 321 },
-    fold4: { x: 887,  y: 443, dimmed: false, swatchFirst: true }, fold6: { x: 31, y: 440 } },
-  { color: "#7c3aed", label: "יוצאי אתיופיה",            fold3: { x: 1225, y: 167 },
+  // Israeli Arabs — moved into the left/change bloc ("גוש השינוי", with
+  // מתנגדי הרפורמה + פעילי שמאל) per explicit instruction: no longer a
+  // row:true no-camp group. Scatters at fold3, then clusters undimmed in the
+  // left column at fold4 (below פעילי שמאל) and settles into the fold6
+  // mini-legend as the change bloc's bottom row. No `actor` — the dataset has
+  // no Israeli-Arab events, so it never appears on the real timeline.
+  { color: "#008C99", label: "מפגינים ערבים ישראלים",            fold3: { x: 1088, y: 786 },
+    fold4: { x: 725,  y: 523, dimmed: false, swatchFirst: true }, fold6: { x: 31, y: 560 } },
+  { color: "#f16f16", label: "תנועות התיישבות",              actor: "settlers", fold3: { x: 908,  y: 321 },
+    fold4: { x: 887,  y: 443, dimmed: false, swatchFirst: true }, fold6: { x: 31, y: 512 } },
+  { color: "#7c3aed", label: "מפגינים יוצאי אתיופיה",            fold3: { x: 1225, y: 167 },
     fold4: { x: 1225, y: 167, dimmed: true,  swatchFirst: true }, row: true },
-  { color: "#FF00A6", label: "יוצאי ברית המועצות",       fold3: { x: 280,  y: 210 },
+  { color: "#FF00A6", label: "פעילים סביבתיים",       fold3: { x: 280,  y: 210 },
     fold4: { x: 280,  y: 210, dimmed: true,  swatchFirst: true }, row: true },
-  { color: "#65a30d", label: "פעילי ימין",            actor: "Right-wing activists", fold3: { x: 936,  y: 602 },
-    fold4: { x: 887,  y: 483, dimmed: false, swatchFirst: true }, fold6: { x: 31, y: 464 } },
-  { color: "#3f76ed", label: "מתנגדי הרפורמה המשפטית", actor: "Protesters against the government", fold3: { x: 462,  y: 555 },
-    fold4: { x: 725,  y: 443, dimmed: false, swatchFirst: true, label: "מתנגדי הרפורמה" }, fold6: { x: 31, y: 512 } },
+  { color: "#65a30d", label: "קבוצות ימין לאומיות",            actor: "Right-wing activists", fold3: { x: 936,  y: 602 },
+    fold4: { x: 887,  y: 483, dimmed: false, swatchFirst: true }, fold6: { x: 31, y: 536 } },
+  { color: "#3f76ed", label: " ארגוני מחאה נגד הממשלה", actor: "Protesters against the government", fold3: { x: 462,  y: 555 },
+    fold4: { x: 725,  y: 443, dimmed: false, swatchFirst: true }, fold6: { x: 31, y: 512 } },
   // — left column —
-  { color: "#d946ef", label: "פעילי שמאל",            actor: "left wing activists", fold3: { x: 699,  y: 710 },
+  { color: "#d946ef", label: "ארגוני שלום ודו קיום",            actor: "left wing activists", fold3: { x: 699,  y: 710 },
     fold4: { x: 725,  y: 483, dimmed: false, swatchFirst: true }, fold6: { x: 31, y: 536 } },
-  { color: "#BB0055", label: "תושבי מזרח ירושלים",       fold3: { x: 380,  y: 370 },
-    fold4: { x: 380,  y: 370, dimmed: true,  swatchFirst: true }, row: true },
-  { color: "#EED600", label: "בדואים בנגב",              fold3: { x: 1370, y: 560 },
+  { color: "#EED600", label: "פעילי להט״ב",              fold3: { x: 1370, y: 560 },
     fold4: { x: 1370, y: 560, dimmed: true,  swatchFirst: true }, row: true },
-  { color: "#595151", label: "חרדים",                 actor: "Haredi Jews", fold3: { x: 352,  y: 469 },
-    fold4: { x: 887,  y: 523, dimmed: false, swatchFirst: true }, fold6: { x: 31, y: 488 } },
-  { color: "#27BCD3", label: "דרוזים",                fold3: { x: 242,  y: 825 },
+  { color: "#595151", label: "מפגינים חרדים",                 actor: "Haredi Jews", fold3: { x: 352,  y: 469 },
+    fold4: { x: 887,  y: 523, dimmed: false, swatchFirst: true }, fold6: { x: 31, y: 560 } },
+  { color: "#27BCD3", label: "מפגינים דרוזים",                fold3: { x: 242,  y: 825 },
     fold4: { x: 242,  y: 825, dimmed: true,  swatchFirst: true }, row: true },
-  { color: "#AB740D", label: "מבקשי מקלט",               fold3: { x: 770,  y: 900 },
-    fold4: { x: 770,  y: 900, dimmed: true,  swatchFirst: true }, row: true },
 ];
 
 // @fold1's dot columns (buildPage0AllDots, page1.js) read 12 of their 200 dot
@@ -680,14 +683,15 @@ const groupItems = GROUPS.map(({ color }) => {
 });
 
 // Fold 5's row order (FOLD5_ROW_X/Y, the Figma anchor for #fold5-top-row,
-// node 117:818/Frame 3169) — the 3 groups with no camp ("ערבים ישראלים",
-// "יוצאי אתיופיה", "דרוזים") that move from fold 4's scatter into one line
+// node 117:818/Frame 3169) — the row:true no-camp groups (ערבים ישראלים was
+// moved out of this set into the left/change bloc) that move from fold 4's
+// scatter into one line
 // near the BOTTOM of the screen (not under the title — the class name is
 // legacy from an earlier top-of-screen layout). Real layout (the
 // label-width-dependent spacing) is resolved by an actual flexbox on a
 // hidden measurement scaffold (.fold5-top-row, never painted — see
 // updateFold5RowTargets), not hand-computed.
-const FOLD5_ROW_ORDER = ["#27BCD3", "#FF00A6", "#7c3aed", "#AB740D", "#008C99", "#BB0055", "#EED600"];
+const FOLD5_ROW_ORDER = ["#27BCD3", "#FF00A6", "#7c3aed", "#EED600"];
 const FOLD5_ROW_X = 417, FOLD5_ROW_Y = 896;
 
 const fold5RowEl = document.createElement("div");
@@ -1068,16 +1072,21 @@ const page2TitleCardEl  = document.querySelector("#page-1 .text-card");
 const pageNew3TitleCardEl = document.querySelector("#page-2 .text-card");
 const page3TitleCardEl  = document.querySelector("#page-3 .text-card");
 const page4TitleCardEl  = document.querySelector("#page-4 .text-card");
-const page5TitleCardEl  = document.querySelector("#page-5 .text-card");
-const page6TitleCardEl  = document.querySelector("#page-6 .text-card");
+const page6TitleCardEl  = document.querySelector("#page-5 .text-card");
 const page7TitleCardEl  = document.querySelector("#page-8 .text-card");
-// Fold 7's own card (#page-7, "כל ריבוע מייצג..." — the timeline-intro title,
-// not to be confused with page7TitleCardEl above, which is fold 9's #page-8
+// Fold 6's own card (#page-6, "כל ריבוע מייצג..." — the timeline-intro title,
+// not to be confused with page7TitleCardEl above, which is fold 8's #page-8
 // card) drives the fold-6 squares' labels fading IN — previously this had no
 // card of its own and just snapped on the instant fold6Trigger settled,
 // which (now that that's a fixed ~1s tween instead of a scroll-coupled one)
 // finishes long before the user actually reaches fold 7.
 const fold7LabelCardEl  = document.querySelector("#page-7 .text-card");
+// Phase-2 fold: the ACLED "אספנו תיעודים…" fold, now #page-6 after the mini-legend
+// split fold at #page-5. This card drives the grey squares growing in at centre
+// AND the ACLED bottom-legend note fading in — both were previously coupled to
+// fold6Trigger (the split) and are now detached onto their own trigger so the
+// split and the squares+note land on two separate folds.
+const squaresRevealCardEl = document.querySelector("#page-6 .text-card");
 const page12FrameEl     = document.querySelector("#page-12 .text-card-frame");
 // Hoisted above checkFold13 (below), which needs it already resolved at
 // definition time — also reused by p13SyncGateVisibility further down.
@@ -1088,7 +1097,7 @@ const page12StickyEl    = document.querySelector("#page-12 .page12-sticky-center
 // p8Trigger/p8TriggerReverse (page8.js) and p9TriggerLine (page9.js) — never
 // re-derives progress from live scroll position, so reversing mid-flight
 // covers only the remaining distance rather than restarting.
-function makeTrigger(duration, onTick) {
+function makeTrigger(duration, onTick, onSettle) {
   let fromT = 0, toT = 0, phaseStart = null;
 
   function currentRaw() {
@@ -1108,6 +1117,9 @@ function makeTrigger(duration, onTick) {
       fromT = toT;
       phaseStart = null;
       onTick();
+      // Fires once, the instant a phase reaches its target — lets one trigger
+      // chain the next (see fold4Trigger/fold5Trigger: phase 1 → phase 2).
+      if (onSettle) onSettle(toT);
     }
   }
 
@@ -1148,10 +1160,11 @@ const GROUP_TRANSITION_MS = 1900;
 // like every single-beat fold made each beat read as a quick blip. Own
 // duration instead, same precedent as FOLD5_TRANSITION_MS below.
 const FOLD2_ENTRANCE_MS = 3400;
-// fold5's exit packs 2 sequential beats (move-into-row, then shrink+fade
-// out — see updateGroups) into one trigger, same reasoning as
-// FOLD2_ENTRANCE_MS above — own duration instead of GROUP_TRANSITION_MS.
-const FOLD5_TRANSITION_MS = 3600;
+// fold5Trigger is now PHASE 2 only — the shrink+fade exit of the no-camp row
+// groups (the move-into-row beat moved to phase 1 / fold4Trigger — see
+// updateGroups). It's a single short beat, so a snappier duration than the
+// old two-beat 3600ms.
+const FOLD5_TRANSITION_MS = 1100;
 // fold3Trigger (bound to page3TitleCardEl, i.e. @fold4's own card — see the
 // selector above) now also packs 2 sequential beats: the @fold3 split
 // merging back into one dot, THEN the spread-across-the-screen move — same
@@ -1159,9 +1172,32 @@ const FOLD5_TRANSITION_MS = 3600;
 const FOLD4_ENTRANCE_MS = 3000;
 const fold2Trigger      = makeTrigger(FOLD2_ENTRANCE_MS, updateGroups);
 const fold3Trigger      = makeTrigger(FOLD4_ENTRANCE_MS, updateGroups);
-const fold4Trigger      = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
-const fold5Trigger      = makeTrigger(FOLD5_TRANSITION_MS, updateGroups);
+// @fold5 (#page-4) is ONE two-phase fold fired from a SINGLE trigger point
+// (checkFold5, at the card's 0.5 crossing). Phase 1 = the camp split
+// (fold4Trigger). The moment it settles it chains straight into phase 2 = the
+// no-camp groups' fly-into-a-row-then-shrink-out (fold5Trigger, formerly its
+// own fold @fold6/#page-5, now removed) — no second scroll point, phase 2 runs
+// right after phase 1. On scroll-up the chain runs in reverse: phase 2 rewinds
+// first, then (once it's back to rest) phase 1 un-splits.
+// Phase 2 is chained 1s AFTER phase 1 settles (a beat to let the split/row-move
+// read before the bottom groups disappear). Timer is cancellable so a scroll-up
+// during the pause doesn't fire a stale phase 2 (see checkFold5).
+const FOLD5_PHASE2_DELAY_MS = 1000;
+let fold5Phase2Timer = null;
+const fold4Trigger      = makeTrigger(GROUP_TRANSITION_MS, updateGroups, (t) => {
+  if (t === 1) {                          // phase 1 done → start phase 2 after a delay
+    clearTimeout(fold5Phase2Timer);
+    fold5Phase2Timer = setTimeout(() => { fold5Trigger.trigger(1); }, FOLD5_PHASE2_DELAY_MS);
+  }
+});
+const fold5Trigger      = makeTrigger(FOLD5_TRANSITION_MS, updateGroups, (t) => {
+  if (t === 0) fold4Trigger.trigger(0);   // phase 2 rewound → un-split phase 1
+});
 const fold6Trigger      = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
+// Phase 2 (grey squares grow-in + ACLED bottom-legend note fade-in), split off
+// from fold6Trigger onto the inserted ACLED fold (#page-7). See
+// squaresRevealCardEl above.
+const squaresRevealTrigger = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
 const fold7LabelTrigger = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
 // Matches FOLD8_GROW_MS (the tooltip's own wall-clock grow-to-full-scale
 // time, see its comment above) — not the typewriter that follows it — so the
@@ -1186,9 +1222,9 @@ const fold9Trigger = makeTrigger(FOLD9_COLOR_MS, updateGroups);
 // p7HasEngaged (page7.js, gates the real per-event cascade + axis) now waits
 // for this trigger to actually finish landing before it can newly engage —
 // see p7UpdateEngagement's own comment. Since a fast scroll can carry
-// currentPage on to the pinned real-timeline section (#page-9) before this
+// currentPage on to the pinned real-timeline section (#page-8) before this
 // 1500ms fly has finished, draw() below is called unconditionally (not just
-// while currentPage === 8) so whichever page is now active keeps re-running
+// while currentPage === 7) so whichever page is now active keeps re-running
 // p7UpdateEngagement every frame of the fly — otherwise engagement would only
 // get re-checked on the next scroll event, leaving the cascade stuck waiting
 // even after the fly had actually finished.
@@ -1305,9 +1341,34 @@ const checkFoldNew3Split  = watchCardThreshold(pageNew3TitleCardEl, 0.5, foldNew
 // with its own title and gives it a t (below) to stagger the rows' entrance.
 const checkFold2      = watchCardThreshold(page2TitleCardEl, 0.5, fold2Trigger);
 const checkFold3      = watchCardThreshold(page3TitleCardEl, 0.5, fold3Trigger);
-const checkFold4      = watchCardThreshold(page4TitleCardEl, 0.5, fold4Trigger);
-const checkFold5      = watchCardThreshold(page5TitleCardEl, 0.5, fold5Trigger);
+// @fold5 (#page-4): ONE trigger point at the card's 0.5 crossing kicks off the
+// two-phase sequence (see fold4Trigger/fold5Trigger's chaining above) — phase 1
+// (camp split) fires, and settles straight into phase 2 (fly-down). Crossing
+// back up rewinds phase 2 first; if phase 2 never actually started (still at
+// rest), phase 1 is reversed directly here since fold5Trigger's onSettle chain
+// only fires when phase 2 has real distance to rewind.
+let fold5SeqPast = null;
+function checkFold5() {
+  if (!page4TitleCardEl) return;
+  const nowPast = page4TitleCardEl.getBoundingClientRect().top <= window.innerHeight * 0.5;
+  if (fold5SeqPast === null) {
+    fold5SeqPast = nowPast;
+    fold4Trigger.set(nowPast ? 1 : 0);
+    fold5Trigger.set(nowPast ? 1 : 0);
+    return;
+  }
+  if (nowPast === fold5SeqPast) return;
+  fold5SeqPast = nowPast;
+  if (nowPast) {
+    fold4Trigger.trigger(1);          // phase 1 → chains phase 2 on settle
+  } else {
+    clearTimeout(fold5Phase2Timer);   // cancel a phase 2 still waiting out its delay
+    fold5Trigger.trigger(0);          // rewind phase 2 → chains phase 1 on settle
+    if (fold5Trigger.currentRaw() === 0) fold4Trigger.trigger(0); // phase 2 never ran
+  }
+}
 const checkFold6      = watchCardThreshold(page6TitleCardEl, 0.5, fold6Trigger);
+const checkSquaresReveal = watchCardThreshold(squaresRevealCardEl, 0.5, squaresRevealTrigger);
 const checkFold7Label = watchCardThreshold(fold7LabelCardEl, 0.5, fold7LabelTrigger);
 const checkFold8SquareDim = watchCardThreshold(fold7LabelCardEl, 0.5, fold8SquareDimTrigger);
 const checkFold9 = watchCardThreshold(page7TitleCardEl, 0.5, fold9Trigger);
@@ -1330,7 +1391,7 @@ const checkFold9Fly = watchCardThreshold(page7TitleCardEl, 0, fold9FlyTrigger);
 const checkFold13 = watchCardThreshold(page12StickyEl, 0, fold13Trigger);
 
 function checkGroupTriggers() {
-  checkFoldNew3Split(); checkFold2(); checkFold3(); checkFold4(); checkFold5(); checkFold6(); checkFold7Label(); checkFold8SquareDim(); checkFold9(); checkFold9Fly(); checkFold13();
+  checkFoldNew3Split(); checkFold2(); checkFold3(); checkFold5(); checkFold6(); checkSquaresReveal(); checkFold7Label(); checkFold8SquareDim(); checkFold9(); checkFold9Fly(); checkFold13();
 }
 
 // Default (legend/fold3/fold4/fold5) swatch size + the swatch-to-label gap
@@ -1347,7 +1408,7 @@ const LEFT_LEGEND_SWATCH_SIZE = 6, LEFT_LEGEND_LABEL_GAP = 6;
 // the header/divider position can never drift out of sync with the table
 // above if it's ever tweaked.
 const FOLD4_COALITION_ROWS = ["#f16f16", "#65a30d", "#595151"].map(c => GROUPS.find(g => g.color === c));
-const FOLD4_CHANGE_ROWS    = ["#3f76ed", "#d946ef"].map(c => GROUPS.find(g => g.color === c));
+const FOLD4_CHANGE_ROWS    = ["#3f76ed", "#d946ef", "#008C99"].map(c => GROUPS.find(g => g.color === c));
 const FOLD4_HEADER_TITLE_COALITION = "מחנה הימין";
 const FOLD4_HEADER_TITLE_CHANGE    = "גוש השינוי";
 const FOLD4_HEADER_GAP = 40;          // frame units above each column's own top row
@@ -1379,13 +1440,19 @@ groupsOverlayEl.appendChild(fold4DividerEl);
 // not part of the original design). Fixed px width/font, same "position
 // anchors are frame-scaled, sizing isn't" convention as .group-label's own
 // hardcoded font sizes above. FOLD6_BOTTOM_ROW is the mini-legend's
-// bottom-most row (highest fold6.y = פעילי שמאל) — the note hangs off it.
+// bottom-most row (highest fold6.y — now ערבים ישראלים, since it joined the
+// change bloc below פעילי שמאל) — the note hangs off it.
 const FOLD6_NOTE_TEXT = "הפעולות נאספו ממאגר ACLED, האוסף מידע מדיווחים פומביים, ארגוני תיעוד וכלי תקשורת";
 const FOLD6_NOTE_WIDTH = 150;
 // Divider (faint hairline) sits between the last row and the note, its own
 // height folded into the gap math below like the note's own height is.
 const FOLD6_DIVIDER_GAP_TOP = 10, FOLD6_DIVIDER_GAP_BOTTOM = 10, FOLD6_DIVIDER_HEIGHT = 1;
-const FOLD6_BOTTOM_ROW_INDEX = GROUPS.findIndex(g => g.color === "#d946ef");
+// Highest fold6.y among the mini-legend rows — computed rather than hardcoded
+// so adding a row below the change bloc (ערבים ישראלים) re-anchors the note.
+const FOLD6_BOTTOM_ROW_INDEX = GROUPS.reduce(
+  (best, g, i) => (g.fold6 && (best < 0 || g.fold6.y > GROUPS[best].fold6.y)) ? i : best,
+  -1
+);
 const FOLD6_BOTTOM_ROW = GROUPS[FOLD6_BOTTOM_ROW_INDEX];
 const fold6NoteEl = document.createElement("div");
 fold6NoteEl.className = "fold6-note";
@@ -1437,6 +1504,15 @@ function updateGroups() {
   const e4 = fold4Trigger.currentT(), e6 = fold6Trigger.currentT();
   const splitEased = foldNew3SplitTrigger.currentT() * (1 - fold4MergeT);
   const legendTop = H / 2 - ((LEGEND_PER_COL - 1) * LEGEND_ROW_GAP) / 2;
+  // Both legend columns' labels trail LEFT of their swatch, so the right
+  // column's label reaches toward the centre — on a narrow viewport a long
+  // label can cross it and collide with the left column's swatch. Half the
+  // widest label (plus swatch + gap + clearance) is the minimum column offset
+  // that guarantees the two columns never overlap; on wide screens the flat
+  // W*0.09 wins so the settled look is unchanged. Legend label text is stable
+  // (each group's own g.label), so last tick's measured widths are this tick's.
+  const legendMaxLabelW = Math.max(0, ...groupItems.map((it) => it.label.offsetWidth));
+  const legendColOffsetMin = (CLUSTER_SWATCH_SIZE + CLUSTER_LABEL_GAP + legendMaxLabelW) / 2 + 24;
 
   // @fold2's whole entrance is 3 sequential beats sharing fold2Trigger's one
   // timeline, not 3 things happening at once — per explicit spec:
@@ -1515,9 +1591,19 @@ function updateGroups() {
   // size, is what actually sits FOLD4_DIVIDER_GAP_PX from the divider —
   // labels only ever extend further left of it).
   const changeColX = fold4DividerX - FOLD4_DIVIDER_GAP_PX - CLUSTER_SWATCH_SIZE;
-  // Coalition's shared label-left edge (its own nearest-to-divider point,
-  // now that its header+rows are left-aligned to each other — see below).
+  // Coalition's shared label-left edge (its own nearest-to-divider point).
   const coalitionHeaderLeftEdge = fold4DividerX + FOLD4_DIVIDER_GAP_PX;
+  // Coalition's shared SWATCH column: like the change bloc, all three swatches
+  // align in one vertical line (squares flush right, labels trailing left) —
+  // rather than the swatches staggering out to the right of flush-left labels.
+  // Anchored so the widest label's left edge lands at coalitionHeaderLeftEdge;
+  // narrower labels right-align to the same swatch column. Coalition label text
+  // is stable through fold4 (none of the trio has a fold4.label rewrite), so
+  // last tick's measured widths are this tick's — same reasoning as below.
+  const coalitionMaxLabelW = Math.max(
+    0, ...FOLD4_COALITION_ROWS.map((g) => groupItems[GROUPS.indexOf(g)].label.offsetWidth)
+  );
+  const coalitionColX = coalitionHeaderLeftEdge + CLUSTER_LABEL_GAP + coalitionMaxLabelW;
 
   GROUPS.forEach((g, i) => {
     const item = groupItems[i];
@@ -1534,7 +1620,7 @@ function updateGroups() {
     // legend spot itself (a no-op lerp) if this group had no matching dot
     // this load (very short viewports can run out of dots before all
     // groups get one).
-    const legendColOffset = W * 0.09;
+    const legendColOffset = Math.max(W * 0.09, legendColOffsetMin);
     const legendTargetX = W / 2 - 13 + (legendCol * 2 - 1) * legendColOffset;
     const legendTargetY = legendTop + legendRow * LEGEND_ROW_GAP;
     const anchor = PAGE0_GROUP_DOT_ANCHORS[g.color] || { left: legendTargetX - W / 2, top: legendTargetY };
@@ -1547,35 +1633,35 @@ function updateGroups() {
     // fold4's 5 camp groups don't use their own (now-unused) fold4.x as the
     // swatch anchor like every other group — both columns' x is derived
     // from the divider's fixed-gap position above instead, so the gap stays
-    // equal on both sides at any viewport width. The coalition trio
-    // (מתיישבים/פעילי ימין/חרדים) shares one flush-left LABEL edge with its
-    // header — left edge + gap + this row's own (live-measured) label
-    // width, since the header and rows are left-aligned to each other, not
-    // right-aligned like a shared swatch column would give. Reads
-    // item.label.offsetWidth before this tick's text-set below — harmless,
-    // since these labels' text/font never change during fold4's window, so
-    // the previous tick's already-correct width is identical to this tick's.
-    // The change-bloc pair (מתנגדי הרפורמה/פעילי שמאל) keeps the original
-    // shared-swatch-column scheme (fixed x for both rows, matching the
-    // header's own right-edge anchor).
-    const fold4Pos = FOLD4_COALITION_ROWS.includes(g)
-      ? { x: coalitionHeaderLeftEdge + CLUSTER_LABEL_GAP + item.label.offsetWidth, y: fold4Y(g) }
+    // equal on both sides at any viewport width.
+    // The change-bloc pair (מתנגדי הרפורמה/פעילי שמאל, changeColX) uses a
+    // shared swatch column — one fixed x, all swatches in a vertical line,
+    // labels right-aligned to it and trailing left off each (swatchFirst).
+    // The coalition trio (מתיישבים/פעילי ימין/חרדים, the right wing) is instead
+    // LEFT-aligned to its camp header: every label's left edge sits at
+    // coalitionHeaderLeftEdge (the "מחנה הימין" title's own left edge), so the
+    // swatch trails right at a per-row x = label-left + this label's width +
+    // gap — the swatches stagger, but the group labels line up flush-left under
+    // their title. Uses this row's own last-rendered label width (offsetWidth),
+    // same stable-through-fold4 reasoning as coalitionMaxLabelW above.
+    // @fold5 is now a two-phase fold (the @fold6 merge). PHASE 1 (fold4Trigger,
+    // e4): BOTH the camp groups split into their two columns AND the no-camp
+    // `row` groups fly into their bottom row — everything animates to its
+    // destination on the same phase-1 clock. So the `row` groups take the row
+    // target as their phase-1 fold4Pos (going straight there, not bowing through
+    // the scattered fold4 position first); the camp groups take their column.
+    const rowTarget = g.row ? fold5RowTargets[g.color] : null;
+    const fold4Pos = rowTarget
+      ? rowTarget
+      : FOLD4_COALITION_ROWS.includes(g)
+      ? { x: coalitionColX, y: fold4Y(g) }
       : FOLD4_CHANGE_ROWS.includes(g)
       ? { x: changeColX, y: fold4Y(g) }
       : { x: fold4X(g), y: fold4Y(g) };
     x += (fold4Pos.x - x) * e4; y += (fold4Pos.y - y) * e4;
-    // @fold5's exit (the 3 no-camp dots) packs 2 sequential beats into
-    // fold5Trigger's one timeline — move into the row, THEN shrink+fade out
-    // — same raw/span-slicing convention as @fold2's entrance above, just
-    // with no per-row stagger (only 3 dots, moving as one unit reads fine
-    // without it).
-    const raw5 = fold5Trigger.currentRaw();
-    const FOLD5_MOVE_SPAN = 0.45, FOLD5_GAP_SPAN = 0.14, FOLD5_EXIT_SPAN = 0.28; // sums to 0.87
-    const fold5MoveT = p9Ease(Math.max(0, Math.min(1, raw5 / FOLD5_MOVE_SPAN)));
-    const fold5ExitT = p9Ease(Math.max(0, Math.min(1, (raw5 - FOLD5_MOVE_SPAN - FOLD5_GAP_SPAN) / FOLD5_EXIT_SPAN)));
-
-    const fold5Pos = g.row ? fold5RowTargets[g.color] : fold4Pos;
-    if (fold5Pos) { x += (fold5Pos.x - x) * fold5MoveT; y += (fold5Pos.y - y) * fold5MoveT; }
+    // PHASE 2 (fold5Trigger, its whole timeline — chained right after phase 1):
+    // the bottom `row` groups disappear, swatch shrinking to 0 and label fading.
+    const fold5ExitT = fold5Trigger.currentT();
 
     // Only the 5 camp groups have a fold6 target (the mini-legend) — the 4
     // no-camp groups stay wherever fold 5 already faded them out to.
@@ -1584,6 +1670,7 @@ function updateGroups() {
     // as the position fly-in above.
     let swatchSize = PAGE0_DOT_SQ + (CLUSTER_SWATCH_SIZE - PAGE0_DOT_SQ) * moveT, labelGap = CLUSTER_LABEL_GAP;
     if (g.row) swatchSize *= 1 - fold5ExitT;
+    const isRightLegend = g.fold6 && FOLD4_COALITION_ROWS.includes(g);
     if (g.fold6) {
       // Shifted up by half the note's own (gap + height) so the rows+note
       // block stays centered on the same vertical anchor the 5 rows alone
@@ -1591,7 +1678,11 @@ function updateGroups() {
       // reading off-center. Baked into the lerp target itself (not applied
       // as a separate post-hoc offset) so it eases in with the same e6 as
       // everything else, rather than popping once the rows finish settling.
-      const fold6Pos = { x: (g.fold6.x / GROUPS_FRAME_W) * W, y: (g.fold6.y / GROUPS_FRAME_H) * H - fold6NoteShiftPx };
+      // Coalition/right-wing rows mirror to the RIGHT edge; change/left-wing
+      // rows keep the same left inset. Both columns share the same rows (y).
+      const leftInsetPx = (g.fold6.x / GROUPS_FRAME_W) * W;
+      const fold6X = isRightLegend ? (W - leftInsetPx - LEFT_LEGEND_SWATCH_SIZE) : leftInsetPx;
+      const fold6Pos = { x: fold6X, y: (g.fold6.y / GROUPS_FRAME_H) * H - fold6NoteShiftPx };
       x += (fold6Pos.x - x) * e6; y += (fold6Pos.y - y) * e6;
       swatchSize += (LEFT_LEGEND_SWATCH_SIZE - CLUSTER_SWATCH_SIZE) * e6;
       labelGap   += (LEFT_LEGEND_LABEL_GAP - CLUSTER_LABEL_GAP) * e6;
@@ -1685,7 +1776,7 @@ function updateGroups() {
     // glides across the swatch instead of teleporting to the other side.
     let sideT = 0;
     sideT += ((g.fold4.swatchFirst ? 0 : 1) - sideT) * e4;
-    if (g.fold6) sideT += (1 - sideT) * e6;
+    if (g.fold6) sideT += ((isRightLegend ? 0 : 1) - sideT) * e6;
     const labelWidth = item.label.offsetWidth;
     const leftAsSwatchFirst = -(labelGap + labelWidth);
     const leftAsLabelLeads  = swatchSize + labelGap;
@@ -1786,17 +1877,30 @@ function updateGroups() {
   // swatch-height estimate) — the label (14px text) is taller than the 6px
   // swatch it's centered on, so a swatch-based estimate undershoots the row's
   // real bottom edge and makes the top gap look smaller than the bottom one.
-  const fold6X = (FOLD6_BOTTOM_ROW.fold6.x / GROUPS_FRAME_W) * W;
+  // Note lives under the RIGHT legend column (coalition/right-wing rows), NOT
+  // the left one. Mirror the left column's inset the same way the rows do
+  // (isRightLegend uses W - leftInsetPx): noteRightEdge is the mirror of the
+  // left inset, and the note box (RTL, right-aligned text) hugs that edge and
+  // extends leftward — so it can't run off the right screen edge the way a
+  // left-anchored box would here.
+  const noteLeftInsetPx = (FOLD6_BOTTOM_ROW.fold6.x / GROUPS_FRAME_W) * W;
+  const noteRightEdge = W - noteLeftInsetPx;
+  const fold6X = noteRightEdge - FOLD6_NOTE_WIDTH;
   const fold6TargetAnchorY = (FOLD6_BOTTOM_ROW.fold6.y / GROUPS_FRAME_H) * H - fold6NoteShiftPx;
   const lastRowLabelBottomTarget = fold6TargetAnchorY + LEFT_LEGEND_SWATCH_SIZE / 2 + fold6RowMeasureEl.offsetHeight / 2;
   const dividerY = lastRowLabelBottomTarget + FOLD6_DIVIDER_GAP_TOP;
   const noteY = dividerY + FOLD6_DIVIDER_HEIGHT + FOLD6_DIVIDER_GAP_BOTTOM;
-  fold6NoteDividerEl.style.left = `${fold6X}px`;
+  // Note + divider fade in on PHASE 2 (the inserted ACLED fold, #page-7) via
+  // squaresRevealTrigger — NOT e6 (fold6Trigger, phase 1 = the split). The note
+  // POSITION is still anchored to fold6's settled mini-legend target above; only
+  // its reveal is deferred to the second fold.
+  const noteRevealT = squaresRevealTrigger.currentT();
+  fold6NoteDividerEl.style.left = `${noteRightEdge - fold6NoteMaxLineWidth}px`;
   fold6NoteDividerEl.style.top = `${dividerY}px`;
-  fold6NoteDividerEl.style.opacity = String(e6);
+  fold6NoteDividerEl.style.opacity = String(noteRevealT);
   fold6NoteEl.style.left = `${fold6X}px`;
   fold6NoteEl.style.top = `${noteY}px`;
-  fold6NoteEl.style.opacity = String(e6);
+  fold6NoteEl.style.opacity = String(noteRevealT);
 
   // (groupsOverlayEl's own "is-active" is set once at init, not toggled here
   // — see the comment by its declaration above.)
@@ -1847,7 +1951,10 @@ function updateGroups() {
   // never does" convention) so the pop finishes well before the mini-legend
   // glide (also driven by e6) settles, instead of taking the full duration.
   const GROW_SPAN = 0.55;
-  const growScale = p9Ease(Math.max(0, Math.min(1, fold6Trigger.currentRaw() / GROW_SPAN)));
+  // Grow-in is PHASE 2 (inserted ACLED fold, #page-7) via squaresRevealTrigger —
+  // detached from fold6Trigger (phase 1 = the split) so the squares only appear
+  // on the second fold, after the mini-legend split has settled.
+  const growScale = p9Ease(Math.max(0, Math.min(1, squaresRevealTrigger.currentRaw() / GROW_SPAN)));
 
   // page8CheckScroll (the only thing that ever calls p8Trigger) is its own
   // separate window "scroll" listener, registered well after this one —

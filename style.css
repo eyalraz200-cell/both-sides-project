@@ -149,7 +149,7 @@ body {
 }
 
 /* Once the card has reached its sticky position, switch to fixed so it stays
-   pinned for the entire @fold11 scroll range — not just while .page9-title-row
+   pinned for the entire @fold10 scroll range — not just while .page9-title-row
    is in view. Width/centering must be re-stated since fixed is viewport-relative. */
 .page9-title-row .text-card.is-stuck {
   position: fixed;
@@ -228,7 +228,7 @@ body {
   opacity: 0;
   pointer-events: none;
   /* Slowed from 0.5s per explicit feedback — the engage fade read a touch
-     quick right when @fold12's title hits the top and the interaction state
+     quick right when @fold11's title hits the top and the interaction state
      kicks in. Kept matched with .page9-zone-wrap-extreme below, same as before. */
   transition: opacity 0.7s ease-out;
 }
@@ -911,7 +911,7 @@ body {
      instead let the parent's text-align:right (set for the RTL text inside)
      also flush the box itself to the right edge, which is invisible for
      titles long enough to wrap near the card's full 480px width but visibly
-     off-center for short, single-line titles (e.g. @fold11's "איפה עובר
+     off-center for short, single-line titles (e.g. @fold10's "איפה עובר
      הגבול בעיניכם"). Inner text stays right-aligned since text-align is
      inherited independent of the box's own display/positioning. */
   display: block;
@@ -1063,7 +1063,7 @@ body {
   padding: 0;
 }
 
-/* @fold13's outro section — exactly one viewport, matching the sticky
+/* @fold12's outro section — exactly one viewport, matching the sticky
    wrapper's own height (below): the wrapper pins the instant it arrives (see
    checkFold13/main.js, which fires right at that same moment) and there's no
    extra section height left over past that point for the page to keep
@@ -1089,7 +1089,7 @@ body {
   direction: rtl;
 }
 
-/* Forced invisible while @fold13's scroll gate (main.js, p13GateLocked) is
+/* Forced invisible while @fold12's scroll gate (main.js, p13GateLocked) is
    locked — momentum-phase wheel events are non-cancelable in some browsers,
    so the page can genuinely scroll past the gate for a paint or two before
    the safety net corrects scrollY back. Since this wrapper is position:sticky,
@@ -1183,6 +1183,7 @@ body {
   right: 30px;
   top: 32px;
   width: 91px;
+  visibility: hidden;
 }
 
 .page0-logo-img {
@@ -1393,7 +1394,7 @@ body {
 .fold6-note {
   position: absolute;
   direction: rtl;
-  text-align: left;
+  text-align: right; /* right-aligned: the note now sits under the RIGHT legend column and hugs its right edge (see fold6X / noteRightEdge in main.js) */
   font: 14px 'Assistant', sans-serif;
   line-height: 1.4;
   color: rgba(0, 0, 0, 0.85);

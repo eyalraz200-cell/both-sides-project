@@ -1,12 +1,16 @@
 // page7.js — scroll-driven event timeline
 // ── Appearance controls ──────────────────
-// Square size/gap matched to page9.js (P9_SQ/P9_GAP) — page7 and page9 will
-// later be cross-animated, so dot geometry must agree between them. Placement
-// builds outward from the center gap (see p7OrderFromCenter), not page9's
-// column-major grid.
-const P7_SQ  = 3;  // square size in px
-const P7_GAP = 1;  // gap between squares in px
-const P7_CELL = P7_SQ + P7_GAP; // grid cell size (do not edit)
+// Square size/gap were originally matched to page9.js (P9_SQ 3 / P9_GAP 1) since
+// page7 and page9 will later be cross-animated. This revision deliberately makes
+// the timeline dots BIGGER and their GAPS BIGGER — the grid auto-fits the same
+// box (cols/rows = floor(box / P7_CELL) in p7GridGeometry), so the box
+// boundaries (SBB_TIMELINE/leftX0) are unchanged; only the dot count drops.
+// NOTE: page9 still uses 3/1, so the two no longer agree — reconcile before any
+// page7↔page9 cross-animation. Placement builds outward from the center gap
+// (see p7OrderFromCenter), not page9's column-major grid.
+const P7_SQ  = 3.5;  // square size in px (was 3)
+const P7_GAP = 1.5;  // gap between squares in px (was 1)
+const P7_CELL = P7_SQ + P7_GAP; // grid cell size
 // ─────────────────────────────────────────
 
 // Shared left-grid geometry — leftX0 is rounded (not raw W*SBB_TIMELINE.left) because that raw
@@ -64,6 +68,16 @@ const p7 = {
   // onMove), or null — read by p7DrawSideSquares to dim every other square
   // while one is hovered.
   hoveredEvent: null,
+  // Per-axis-event {x,y,radius} (CSS px) of the persistent circle markers drawn
+  // on the year axis this frame — built by p7DrawAxisEvents, read by p7HoverInit
+  // to hit-test the pointer against those circles. Only reached events (whose
+  // circle is actually on the axis) get an entry.
+  axisEventPositions: new Map(),
+  // The axis event (an entry of P7_AXIS_EVENTS) whose persistent circle is under
+  // the pointer, or null — forces that event's headline label + date to re-show
+  // at full opacity even after it has crossfaded away. Distinct from
+  // hoveredEvent above, which tracks the timeline squares, not axis circles.
+  hoveredAxisEvent: null,
 };
 
 // Park-Miller seeded RNG
@@ -120,17 +134,6 @@ function p7OrderFromCenter(total, cols, seed, side, maxEvents) {
   return usable.map(o => o.c);
 }
 
-// Binary search: how many events have date <= target
-function p7Bisect(events, target) {
-  let lo = 0, hi = events.length;
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    if (events[mid].date <= target) lo = mid + 1;
-    else hi = mid;
-  }
-  return lo;
-}
-
 // Binary search: how many events have date < target
 function p7BisectBefore(events, target) {
   let lo = 0, hi = events.length;
@@ -163,19 +166,6 @@ function p7MonthKeyOf(dateStr) {
 function p7MonthKeyToStartStr(monthKey) {
   const y = Math.floor(monthKey / 12), m = monthKey % 12;
   return `${y}-${String(m + 1).padStart(2, "0")}-01`;
-}
-
-// True once the given date's whole month has fully finished its own
-// staggered cascade (p7MonthAnimStart, P7_ANIM_TOTAL_DURATION below) — i.e.
-// its real per-event square is guaranteed to already be drawn, not just
-// "the month has started." Currently unused — @fold9's fold-6 squares no
-// longer hand off to a separate real dot at all (p7GetClaimedEvents above
-// excludes their events from the cascade permanently), but kept since it may
-// be useful again for other month-cascade-timing needs.
-function p7IsMonthSettled(dateStr) {
-  const mk = p7MonthKeyOf(dateStr);
-  const start = p7MonthAnimStart[mk];
-  return start !== undefined && performance.now() - start >= P7_ANIM_TOTAL_DURATION;
 }
 
 // A month's squares fly in one after another (not all at once), in a slow cascade,
@@ -330,10 +320,9 @@ function p7AxisUpdateFillLag() {
     // once within the same epsilon p7AxisFillLagActive uses to decide the lag
     // has "settled," snap the rest of the way there instead of leaving a
     // permanent sub-pixel residual. At fillFrac === 1 (scroll fully reached
-    // p7.maxDate) that residual pushed curX just past the last dash's exact
-    // position (p7AxisDotPositions places it exactly at the axis's left
-    // edge), so the last dash never satisfied x >= curX and stayed unfilled
-    // forever even after scrolling all the way to the end.
+    // p7.maxDate) that residual left curX a sub-pixel short of the axis's left
+    // edge, so the dark line never quite finished filling even after scrolling
+    // all the way to the end.
     p7AxisLaggedFillFrac = Math.abs(target - next) <= 0.0005 ? target : next;
   }
   if (p7AxisFillLagActive()) p7StartAnimLoop();
@@ -858,12 +847,13 @@ function p7AxisTriggerIfNeeded() {
 // layer has animation state of its own: every frame both are recomputed straight
 // from p7.currentDate, so scrolling backward just naturally shrinks the dark
 // overlay back — no separate reverse bookkeeping needed.
-const P7_AXIS_MARGIN          = 48;   // px inset from each edge
-const P7_AXIS_Y_FRAC          = 0.93;  // fraction of H — shared vertical center for the dashed line and year labels (Figma: both sit on one row, not stacked)
-const P7_AXIS_LINE_THICKNESS  = 1;     // px — the dashed line's stroke width
-const P7_AXIS_DASH_LENGTH     = 6;     // px — visible length of each dash segment
-const P7_AXIS_DOT_GAP         = 10;    // px between dash centers (also the dash+gap repeat)
-const P7_AXIS_LABEL_PAD       = 12;    // px breathing room around a label's measured width
+const P7_AXIS_MARGIN          = 120;  // px inset from each edge — widened from 48 to SHORTEN the whole axis (both ends move inward symmetrically). The right anchor (p7.minDate/"2023") now sits far enough from the screen edge that the first axis event's label can center over its own circle with clearance instead of falling back to right-alignment (see p7AxisEventBounds' x+textWidth/2 > W test).
+const P7_AXIS_Y_FRAC          = 0.90;  // fraction of H — vertical center of the solid line; the year labels now sit BELOW it (P7_AXIS_YEAR_LABEL_OFFSET), not on the same row
+const P7_AXIS_LINE_THICKNESS  = 1;     // px — the solid line's stroke height
+const P7_AXIS_MARKER_RADIUS   = 4;     // px — radius of the year-tick ring markers AND the headline-event dots at full size (shared so they read as one system)
+const P7_AXIS_MARKER_RADIUS_FADED = 2; // px — shrunk radius a headline-event dot settles to once its label has crossfaded away (grows back to _RADIUS on hover)
+const P7_AXIS_MARKER_STROKE   = 1;     // px — ring line width for the hollow year markers
+const P7_AXIS_YEAR_LABEL_OFFSET = 12;  // px gap from the marker's bottom edge down to the year label's top
 const P7_AXIS_BG_ALPHA        = 0.22;  // faint full-span line's alpha, under the dark "filled" overlay — also reused to dim the axis event label during state3 (hover elsewhere)
 const P7_AXIS_BG_COLOR        = `rgba(0, 0, 0, ${P7_AXIS_BG_ALPHA})`;
 const P7_AXIS_FILLED_COLOR    = "rgba(0, 0, 0, 1)";    // the portion scroll has already reached
@@ -960,13 +950,25 @@ const P7_AXIS_DATE_OFFSET        = 18;  // px above the label baseline
 // Re-reaching the event before that fade finishes cancels it (leavingAt reset
 // to null), same "reversible mid-flight" convention as p7DrawSideSquares' own
 // month cascade.
-const P7_AXIS_EVENT_STATE = P7_AXIS_EVENTS.map(() => ({ triggeredAt: null, leavingAt: null }));
+// hoverT (0 → 1) is a per-frame-eased hover amount: 1 while this event's axis
+// circle is hovered, decaying back to 0 when it isn't, easing the dot's
+// grow/shrink (and its label's re-show) instead of snapping. Kept on the same
+// state object so the anim loop (p7AxisEventsAnimActive) can see it settle.
+const P7_AXIS_HOVER_ANIM_SPEED = 0.18; // per-frame lerp toward the hover target
+const P7_AXIS_EVENT_STATE = P7_AXIS_EVENTS.map(() => ({ triggeredAt: null, leavingAt: null, hoverT: 0 }));
 
 // Checked every draw (see p7AnyAnimActive) so the animation loop keeps running —
 // and labels keep fading — purely on elapsed time, with no further scrolling
 // required.
 function p7AxisEventsAnimActive() {
   const now = performance.now();
+  // A hover grow/shrink still easing toward its target keeps the loop alive even
+  // for an event whose label has otherwise fully faded (triggeredAt cleared).
+  const hoverAnimating = P7_AXIS_EVENT_STATE.some((state, i) => {
+    const target = P7_AXIS_EVENTS[i] === p7.hoveredAxisEvent ? 1 : 0;
+    return Math.abs(state.hoverT - target) > 0.001;
+  });
+  if (hoverAnimating) return true;
   return P7_AXIS_EVENT_STATE.some((state, i) => {
     if (state.triggeredAt === null) return false;
     if (now - state.triggeredAt < P7_AXIS_EVENT_FADE_IN_MS) return true;
@@ -1085,12 +1087,65 @@ function p7DrawAxisEvents(ctx, W, axisY, curX, hoverActive, highlightX) {
   ctx.font = P7_AXIS_EVENT_FONT;
   ctx.textBaseline = "alphabetic";
 
+  // Persistent circle markers: every event the growing edge has reached keeps a
+  // circle on the axis even after its headline label has crossfaded away (per
+  // the "keep its circle on the axis, upon hover it reappears" requirement).
+  // "Reached" is tied to the current fill edge (event x >= curX), so a circle
+  // appears the moment scroll passes its date and disappears again if the user
+  // scrolls back above it — the same reached/unreached signal the year rings use.
+  // The circles are drawn here (rather than only per-visible-entry below) and
+  // their positions cached for p7HoverInit's hit-test. hoveredAxisEvent's own
+  // circle is highlighted; while a timeline square is hovered elsewhere
+  // (hoverActive) they all dim like the rest of the axis.
+  p7.axisEventPositions = new Map();
+  const hoveredAxisEvent = p7.hoveredAxisEvent;
+  P7_AXIS_EVENTS.forEach((ev, i) => {
+    const x = p7AxisEventSnappedX[i] !== undefined ? p7AxisEventSnappedX[i] : p7AxisX(ev.date, W);
+    const reached = x >= curX;
+    const state = P7_AXIS_EVENT_STATE[i];
+    if (!reached) { state.hoverT = 0; return; }
+    const isAxisHovered = hoveredAxisEvent === ev;
+    // Ease hoverT toward its target (1 hovered, 0 not) once per frame — this is
+    // what makes the hover grow/shrink animate instead of snap.
+    const hoverTarget = isAxisHovered ? 1 : 0;
+    state.hoverT += (hoverTarget - state.hoverT) * P7_AXIS_HOVER_ANIM_SPEED;
+    if (Math.abs(hoverTarget - state.hoverT) < 0.001) state.hoverT = hoverTarget;
+    // The circle shrinks as its label crossfades away, and grows back to full
+    // size when the label is showing (freshly reached / mid-crossfade) or the
+    // circle itself is hovered — so a faded event reads as a smaller dot until
+    // pointed at. "Prominence" (0 faded → 1 full) is the larger of the label's
+    // own opacity and the eased hover amount, interpolating the radius between
+    // P7_AXIS_MARKER_RADIUS_FADED and P7_AXIS_MARKER_RADIUS.
+    const prominence = Math.max(p7AxisEventOpacity(i, now), state.hoverT);
+    const markerRadius = P7_AXIS_MARKER_RADIUS_FADED +
+      (P7_AXIS_MARKER_RADIUS - P7_AXIS_MARKER_RADIUS_FADED) * prominence;
+    p7.axisEventPositions.set(ev, { x, y: axisY, radius: markerRadius });
+    // Wipe the line under the marker back to the frame background (see the
+    // per-visible dot below for why), then fill. The wipe uses the FULL radius
+    // so shrinking never leaves a ring of the previous frame's larger dot behind.
+    ctx.fillStyle = "#FDFCFF";
+    ctx.beginPath();
+    ctx.arc(x, axisY, P7_AXIS_MARKER_RADIUS + 1, 0, Math.PI * 2);
+    ctx.fill();
+    const color = hoverActive
+      ? (highlightX !== null && x === highlightX ? P7_AXIS_HOVER_COLOR : P7_AXIS_BG_COLOR)
+      : (isAxisHovered ? P7_AXIS_HOVER_COLOR : P7_AXIS_FILLED_COLOR);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, axisY, markerRadius, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
   // Collect all currently-visible entries with their horizontal extents so we
-  // can detect overlap and nudge colliding labels before drawing anything.
+  // can detect overlap and nudge colliding labels before drawing anything. An
+  // event whose persistent circle is hovered is forced visible at full opacity
+  // even if its label had already crossfaded away.
   const visible = [];
   P7_AXIS_EVENTS.forEach((ev, i) => {
-    if (P7_AXIS_EVENT_STATE[i].triggeredAt === null) return;
-    const opacity = p7AxisEventOpacity(i, now);
+    // The eased hover amount re-shows a faded label (and holds it while the
+    // hover fades back out), so include any event whose hoverT is still lifting
+    // its opacity — not just currently-triggered ones.
+    const opacity = Math.max(p7AxisEventOpacity(i, now), P7_AXIS_EVENT_STATE[i].hoverT);
     if (opacity <= 0) return;
     const { x, left, right, lineX } = p7AxisEventBounds(ctx, ev, i, W);
     visible.push({ ev, i, x, lineX, left, right, opacity, textWidth: right - left });
@@ -1159,120 +1214,17 @@ function p7DrawAxisEvents(ctx, W, axisY, curX, hoverActive, highlightX) {
     ctx.globalAlpha = opacity;
     ctx.fillText(dateLabel, lineX, axisY - yOff + P7_AXIS_DATE_OFFSET);
     ctx.globalAlpha = 1;
-
-    // No connecting line down to the axis anymore — instead, the plain dash
-    // at lineX (p7AxisEventSnappedX/p7AxisEventBounds already snapped it to
-    // a real dot position) is replaced outright by a circle the same width
-    // as a normal dash (P7_AXIS_DASH_LENGTH), reading as a plain marker on
-    // the axis rather than a separate label-to-axis connector.
-    const markerRadius = P7_AXIS_DASH_LENGTH / 2;
-    // Wipes the dash that would otherwise sit here back to the plain frame
-    // background first (same solid color drawBackground, main.js, fills the
-    // whole canvas with at the start of every frame) so the circle draws
-    // against a clean base instead of layering its own alpha on top of the
-    // dash underneath.
-    ctx.fillStyle = "#FDFCFF";
-    ctx.beginPath();
-    ctx.arc(lineX, axisY, markerRadius + 1, 0, Math.PI * 2);
-    ctx.fill();
-    // Same hover-dim rule as every other dash on the axis (p7DrawAxisDots) —
-    // this marker used to always redraw at the normal curX-based color
-    // regardless of hover, which (now that P7_AXIS_FILLED_COLOR is solid
-    // black, same as the hover highlight) made it look like a second,
-    // unintended highlight sitting next to the real one.
-    const markerColor = hoverActive
-      ? (isHoverHighlighted ? P7_AXIS_HOVER_COLOR : P7_AXIS_BG_COLOR)
-      : (lineX >= curX ? P7_AXIS_FILLED_COLOR : P7_AXIS_BG_COLOR);
-    ctx.globalAlpha = opacity;
-    ctx.fillStyle = markerColor;
-    ctx.beginPath();
-    ctx.arc(lineX, axisY, markerRadius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
+    // The event's own FILLED dot on the line is drawn once, up front, in the
+    // persistent-circle pass above (it stays put whether or not this label is
+    // showing) — nothing to redraw here.
   });
 
   ctx.restore();
 }
 
-// Same spacing math p7DrawAxisDots uses to actually place dots (nudged so a
-// dot lands exactly on *both* fromX and toX) — factored out so a headline
-// event's tick can be snapped to whichever of these exact x's is nearest,
-// rather than drawn at its own free-running date-interpolated x, which
-// almost never lands exactly on a real dot.
-function p7AxisDotPositions(fromX, toX) {
-  const length = Math.abs(toX - fromX);
-  if (length <= 0) return [];
-  const count = Math.max(2, Math.round(length / P7_AXIS_DOT_GAP) + 1);
-  const step  = length / (count - 1);
-  const dir   = toX > fromX ? 1 : -1;
-  const positions = [];
-  for (let i = 0; i < count; i++) positions.push(fromX + dir * i * step);
-  return positions;
-}
-
-// Draws one short horizontal dash segment (P7_AXIS_DASH_LENGTH long,
-// P7_AXIS_LINE_THICKNESS tall) centered at x — the axis's own dash unit,
-// shared by p7DrawAxisDots below and the headline-event tick's erase/redraw
-// patch further down (both need the exact same shape so the patch seam is
-// invisible).
-function p7DrawAxisDash(ctx, x, axisY, color) {
-  ctx.fillStyle = color;
-  ctx.fillRect(x - P7_AXIS_DASH_LENGTH / 2, axisY - P7_AXIS_LINE_THICKNESS / 2, P7_AXIS_DASH_LENGTH, P7_AXIS_LINE_THICKNESS);
-}
-
-// Draws dashes roughly every P7_AXIS_DOT_GAP px between fromX and toX
-// (direction-agnostic — the axis grows right-to-left, but this is called with
-// both orderings) — spacing is nudged so a dash lands exactly on *both* fromX and
-// toX, not just fromX. Every label sits between two independently-called
-// segments, so without this, one side's gap to the label was always a precise
-// P7_AXIS_LABEL_PAD while the other had up to a full P7_AXIS_DOT_GAP of extra
-// slack (whichever end happened to be that segment's free-running far end) —
-// flush endpoints make both sides of every label match.
-// Each dash's own color is decided here (filled vs faint) by comparing its x to
-// curX, rather than the caller drawing two separately-phased dashed lines (a
-// faint one for the whole span, a dark one for the reached portion) layered on
-// top of each other — those two lines didn't share a phase, so the dashes didn't
-// line up and the seam between them was visible. One dash sequence that changes
-// color partway through reads as a single line filling up, not two lines.
-// Drawn manually with fillRect() rather than ctx.setLineDash([dash, gap])
-// (the usual canvas dashed-line trick) — that combination froze/crashed the tab
-// on this axis's line lengths, so plain per-dash fills it is.
-// When hoverActive is true (a dot elsewhere on screen is hovered), the normal
-// curX-based fill coloring is suspended entirely — every dash goes faint
-// except the one at highlightX (its nearest real dot, resolved by the caller
-// across all segments), which pops as a filled circle instead of a plain dash
-// — same size/shape as an axis event's own marker circle (P7_AXIS_DASH_LENGTH
-// diameter, see p7DrawAxisEvents) — rather than just recoloring the dash in
-// place, so state3's highlight reads as the same kind of marker either way.
-function p7DrawAxisDots(ctx, fromX, toX, axisY, curX, hoverActive, highlightX) {
-  for (const x of p7AxisDotPositions(fromX, toX)) {
-    if (hoverActive && highlightX !== null && x === highlightX) {
-      ctx.fillStyle = P7_AXIS_HOVER_COLOR;
-      ctx.beginPath();
-      ctx.arc(x, axisY, P7_AXIS_DASH_LENGTH / 2, 0, Math.PI * 2);
-      ctx.fill();
-      continue;
-    }
-    const color = hoverActive ? P7_AXIS_BG_COLOR : (x >= curX ? P7_AXIS_FILLED_COLOR : P7_AXIS_BG_COLOR);
-    p7DrawAxisDash(ctx, x, axisY, color);
-  }
-}
-
-// Snaps `x` to whichever actual dot (see p7AxisDotPositions) between fromX
-// and toX sits closest to it.
-function p7AxisNearestDotX(fromX, toX, x) {
-  let best = null, bestDist = Infinity;
-  for (const dx of p7AxisDotPositions(fromX, toX)) {
-    const dist = Math.abs(dx - x);
-    if (dist < bestDist) { bestDist = dist; best = dx; }
-  }
-  return best;
-}
-
-// A headline event's tick/label position (see p7AxisEventBounds), snapped to
-// the nearest real dot — filled in below by p7DrawYearAxis's own dot-segment
-// loop, the only place that has each segment's exact fromX/toX (and the 18px
-// tick font active, needed for labelClearance) on hand. Keyed by index into
+// A headline event's tick/label position (see p7AxisEventBounds) — each
+// event's true date x along the continuous line (no dot-snapping now that the
+// line is solid rather than a row of discrete dots). Keyed by index into
 // P7_AXIS_EVENTS; rebuilt fresh every frame, so a resize or date-range change
 // can't leave a stale snap behind.
 let p7AxisEventSnappedX = [];
@@ -1289,7 +1241,7 @@ function p7DrawYearAxis(ctx, W, H) {
   ctx.save();
 
   // Build-in wipe (p7AxisIntroT, triggered by p7AxisTriggerIfNeeded) — clips
-  // everything this function draws (dots, labels, headline events alike) to
+  // everything this function draws (line, markers, labels, headline events alike) to
   // [revealX, right edge] so the whole axis reveals right to left on its own
   // clock the first time it appears, starting from the same right-edge anchor
   // (p7.minDate/"2023") the scroll-driven fill above grows from. A no-op once
@@ -1304,130 +1256,102 @@ function p7DrawYearAxis(ctx, W, H) {
     ctx.clip();
   }
 
-  ctx.font = "18px 'Assistant', sans-serif"; // set before measuring so widths below are accurate
-  // Labels are textAlign "right" — each one sits entirely to the *left* of its own
-  // tick x, never to the right — so only that side needs clearance, sized to the
-  // label's actual measured width rather than a guessed constant (a fixed 28px gap
-  // here used to be narrower than a real 4-digit year at 18px, so the dashes ran
-  // straight under the digits).
-  const labelClearance = (tick) => ctx.measureText(String(tick.year)).width + P7_AXIS_LABEL_PAD;
+  // The axis spans from p7.minDate's anchor (the right edge, "2023") to the
+  // left margin (p7.maxDate). Year labels now sit BELOW the line, so the line
+  // is one uninterrupted span with no label-clearance gaps — the fill can
+  // start right at the right anchor rather than past a "2023" label's width.
+  const rightAnchorX = p7AxisX(ticks[0].dateStr, W); // == W - P7_AXIS_MARGIN, the p7.minDate ("2023") end
+  const leftEdgeX    = P7_AXIS_MARGIN;
 
-  // The "2023" text itself isn't part of the fillable timeline — the first
-  // actual dot sits to its left, past labelClearance. Rather than clamping
-  // rawCurX to that dot's position (which would pin the fill there for the
-  // whole span of real progress it takes rawCurX to close that small label
-  // gap on its own — reading as fake/stuck, not actually filling), the fill's
-  // own x-mapping is rescaled to run from the first dot's position down to
-  // the left edge, instead of from the label's own position — the exact same
-  // frac (0 at p7.minDate, 1 at p7.maxDate) p7AxisX uses, just applied to a
-  // shorter span that starts where the dots actually start. So curX begins
-  // exactly at that first dot and moves continuously from there with every
-  // bit of real forward progress, rather than sitting artificially pinned.
-  // fillFrac itself is lagged (p7AxisUpdateFillLag), not the raw scroll-driven
-  // value, so the fill trails a beat behind rather than snapping to scroll 1:1.
-  const axisStartX = p7AxisX(ticks[0].dateStr, W) - labelClearance(ticks[0]);
-  const leftX = P7_AXIS_MARGIN;
+  // Scroll-driven fill edge — the same lagged frac (0 at p7.minDate, 1 at
+  // p7.maxDate) as before, mapped straight across the full span now that
+  // there's no first-dot offset to rescale past. fillFrac is lagged
+  // (p7AxisUpdateFillLag), not the raw scroll value, so the fill trails a beat
+  // behind rather than snapping to scroll 1:1.
   const fillFrac = p7AxisUpdateFillLag();
-  const curX = axisStartX - fillFrac * (axisStartX - leftX);
+  const curX = rightAnchorX - fillFrac * (rightAnchorX - leftEdgeX);
 
-  // Snaps each headline event to its nearest real dot across *all* segments
-  // (see p7AxisNearestDotX), not just whichever segment strictly contains its
-  // raw date — an event whose date sits inside a year label's own reserved
-  // clearance gap (no dots there at all, e.g. the very first event, only ~10
-  // days into the dataset and still within the "2023" label's own space)
-  // would otherwise never match any segment and never get snapped. Must
-  // happen here, segment by segment, since only here do we have each
-  // segment's exact fromX/toX (and the 18px tick font active, needed by
-  // labelClearance) on hand. Read by p7AxisEventBounds below.
-  p7AxisEventSnappedX = [];
-  const snapDist = [];
-  function snapEventsInSegment(fromX, toX) {
-    P7_AXIS_EVENTS.forEach((ev, ei) => {
-      const evX = p7AxisX(ev.date, W);
-      const nearest = p7AxisNearestDotX(fromX, toX, evX);
-      if (nearest === null) return;
-      const dist = Math.abs(nearest - evX);
-      if (snapDist[ei] === undefined || dist < snapDist[ei]) {
-        snapDist[ei] = dist;
-        p7AxisEventSnappedX[ei] = nearest;
-      }
-    });
-  }
-
-  // The real-timeline square currently hovered (p7.hoveredEvent, page7.js's
-  // own p7HoverInit — the axis only ever draws alongside #page-8/#page-9,
-  // where that's the only hover source live) highlights this one dash on the
-  // axis instead of the normal scroll-fill coloring, same "dim everything but
-  // the relevant thing" pattern as fold9's squares hover-dim. Snapped to its
-  // nearest real dot the same way headline events are, across all segments,
-  // since a hovered event's raw date can fall inside a label's own clearance
-  // gap too.
+  // Events (and the hover highlight) render at their true date x on the
+  // continuous line — no dot-snapping now that the line is solid, not a row of
+  // discrete dots. p7AxisEventSnappedX is read by p7AxisEventBounds below.
+  p7AxisEventSnappedX = P7_AXIS_EVENTS.map((ev) => p7AxisX(ev.date, W));
   const hoveredEvent = p7.hoveredEvent;
   const hoverActive  = !!hoveredEvent;
-  const rawHoverX    = hoverActive ? p7AxisX(hoveredEvent.date, W) : null;
-  let hoverAxisX    = null;
-  let hoverAxisDist = Infinity;
-  function snapHoverInSegment(fromX, toX) {
-    if (rawHoverX === null) return;
-    const nearest = p7AxisNearestDotX(fromX, toX, rawHoverX);
-    if (nearest === null) return;
-    const dist = Math.abs(nearest - rawHoverX);
-    if (dist < hoverAxisDist) { hoverAxisDist = dist; hoverAxisX = nearest; }
+  const hoverAxisX   = hoverActive ? p7AxisX(hoveredEvent.date, W) : null;
+
+  // The line itself: one faint full-span base drawn first, then the dark
+  // "reached" portion grown right-to-left from the right anchor to curX laid
+  // on top — so it reads as a single line filling up, not a faint line with a
+  // separate dark one beside it. While a dot elsewhere is hovered, the fill is
+  // suspended (whole line stays faint) and the hovered event's own marker pops
+  // instead (p7DrawAxisEvents).
+  const lineTop = axisY - P7_AXIS_LINE_THICKNESS / 2;
+  ctx.fillStyle = P7_AXIS_BG_COLOR;
+  ctx.fillRect(leftEdgeX, lineTop, rightAnchorX - leftEdgeX, P7_AXIS_LINE_THICKNESS);
+  if (!hoverActive) {
+    ctx.fillStyle = P7_AXIS_FILLED_COLOR;
+    ctx.fillRect(curX, lineTop, rightAnchorX - curX, P7_AXIS_LINE_THICKNESS);
   }
 
-  // Segments collected up front, not drawn inline, so the hover snap above
-  // can be resolved across *all* of them before any dash is actually drawn —
-  // otherwise the segment containing the hovered event's nearest dot might
-  // not be known yet by the time an earlier segment needs to decide whether
-  // it holds the highlighted dash.
-  const axisSegments = [];
-  for (let i = 1; i < ticks.length; i++) {
-    const fromX = p7AxisX(ticks[i - 1].dateStr, W) - labelClearance(ticks[i - 1]);
-    const toX   = p7AxisX(ticks[i].dateStr, W) + P7_AXIS_LABEL_PAD;
-    if (fromX <= toX) continue;
-    axisSegments.push([fromX, toX]);
-  }
-  // The remainder past the last whole-year tick, out to the axis's true left edge
-  // (p7.maxDate itself rarely falls exactly on a January 1st).
-  const finalTick  = ticks[ticks.length - 1];
-  const finalTickX = p7AxisX(finalTick.dateStr, W) - labelClearance(finalTick);
-  const axisLeftX  = P7_AXIS_MARGIN;
-  if (finalTickX > axisLeftX) axisSegments.push([finalTickX, axisLeftX]);
-
-  for (const [fromX, toX] of axisSegments) {
-    snapEventsInSegment(fromX, toX);
-    snapHoverInSegment(fromX, toX);
-  }
-
-  // One continuous dotted line spanning the full p7.minDate-to-p7.maxDate span,
-  // present from the very first frame — each dot picks its own filled/faint
-  // color (see p7DrawAxisDots) based on curX, so the line itself reads as
-  // filling up rather than as a faint line with a separate dark one laid over it.
-  // While a dot elsewhere is hovered, every dash instead goes faint except the
-  // one nearest the hovered event's own date (hoverAxisX above).
-  for (const [fromX, toX] of axisSegments) {
-    p7DrawAxisDots(ctx, fromX, toX, axisY, curX, hoverActive, hoverAxisX);
-  }
-
-  // Every year label shows from the start now that the full axis is always
-  // visible — but, like the dotted line itself, stays faint until scroll
-  // actually reaches it, then switches to the normal darker color.
-  // In state3, every year label (reached or not) drops to the same faint
-  // alpha as the dimmed axis event label/date — the reached/unreached
-  // distinction is a scroll-progress signal that isn't relevant while
-  // attention's on the hover highlight instead.
+  // Hollow ring marker on the line at each year tick — faint until the growing
+  // edge reaches it, then dark (same reached/unreached signal the labels use).
+  // The line behind each ring is punched back to the frame background first so
+  // the marker reads as a clean hollow O, not a filled disc with the line
+  // showing through. In state3 (hover), every ring goes faint; the hovered
+  // event's own position is drawn as a filled dot by p7DrawAxisEvents instead.
   const reachedTicks = new Set(visible);
-  ctx.textAlign    = "right";
-  ctx.textBaseline = "middle";
+  for (const tick of ticks) {
+    const x = p7AxisX(tick.dateStr, W);
+    const ringColor = hoverActive
+      ? P7_AXIS_BG_COLOR
+      : (reachedTicks.has(tick) ? P7_AXIS_FILLED_COLOR : P7_AXIS_BG_COLOR);
+    ctx.fillStyle = "#FDFCFF";
+    ctx.beginPath();
+    ctx.arc(x, axisY, P7_AXIS_MARKER_RADIUS, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth   = P7_AXIS_MARKER_STROKE;
+    ctx.strokeStyle = ringColor;
+    ctx.beginPath();
+    ctx.arc(x, axisY, P7_AXIS_MARKER_RADIUS, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Year labels centered directly below each ring. Every label shows from the
+  // start — but, like the line, stays faint until scroll actually reaches it,
+  // then switches to the darker color. In state3, every label (reached or not)
+  // drops to the same faint alpha as the dimmed axis event label/date.
+  ctx.font = "18px 'Assistant', sans-serif";
+  ctx.textAlign    = "center";
+  ctx.textBaseline = "top";
+  const labelY = axisY + P7_AXIS_MARKER_RADIUS + P7_AXIS_YEAR_LABEL_OFFSET;
   for (const tick of ticks) {
     ctx.fillStyle = hoverActive
       ? `rgba(0, 0, 0, ${P7_AXIS_BG_ALPHA})`
       : (reachedTicks.has(tick) ? P7_AXIS_LABEL_COLOR : P7_AXIS_LABEL_FAINT_COLOR);
-    ctx.fillText(String(tick.year), p7AxisX(tick.dateStr, W), axisY);
+    ctx.fillText(String(tick.year), p7AxisX(tick.dateStr, W), labelY);
   }
   ctx.restore();
 
   p7DrawAxisEvents(ctx, W, axisY, curX, hoverActive, hoverAxisX);
+
+  // Hovering any timeline square marks that event's own date on the axis with a
+  // filled circle in its group color (p7ActorColor) — a positional read-out of
+  // where the hovered dot falls in time. Drawn last so it sits on top of the
+  // (dimmed, state3) line/rings/event dots. Punch the line back to the frame
+  // background first so the marker reads as a clean disc, same as every other
+  // axis marker.
+  if (hoverActive) {
+    ctx.save();
+    ctx.fillStyle = "#FDFCFF";
+    ctx.beginPath();
+    ctx.arc(hoverAxisX, axisY, P7_AXIS_MARKER_RADIUS + 1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = p7ActorColor(hoveredEvent.actor);
+    ctx.beginPath();
+    ctx.arc(hoverAxisX, axisY, P7_AXIS_MARKER_RADIUS, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
 }
 
 // Exposed so scroll and animation-loop redraws can re-test the cursor against
@@ -1446,6 +1370,7 @@ function p7HoverInit() {
   const descEl    = tooltipEl.querySelector(".page9-tooltip-desc");
 
   const HIT_PAD = 3; // px of extra hit area around each P7_SQ=3 square, in every direction
+  const AXIS_HIT_PAD = 6; // px of extra hit area around each axis event circle (small target, generous pad)
   const TOOLTIP_GAP = 5; // px of breathing room between the square and the tooltip box, both axes
 
   // Last pointer position in client (viewport) coordinates — updated on every
@@ -1457,7 +1382,33 @@ function p7HoverInit() {
   // showed it (p7.hoveredEvent set), or a stray pointermove/scroll on
   // whichever page page9's hover owns would stomp its tooltip right back
   // off the instant it appears, since both listen on window unconditionally.
-  function hide() {
+  // Axis event circles are a separate, independent hover target from the
+  // timeline squares above: hovering a persistent circle re-shows that event's
+  // faded headline label (p7DrawAxisEvents forces its opacity to 1 while
+  // hoveredAxisEvent points at it). Only a redraw is needed — no tooltip DOM,
+  // since the label/date reappear on the canvas itself.
+  function setAxisHover(ev) {
+    if (p7.hoveredAxisEvent === ev) return;
+    p7.hoveredAxisEvent = ev;
+    // Drive the grow/shrink through the anim loop (hoverT eases per frame) rather
+    // than a single snap redraw — p7AxisEventsAnimActive keeps it alive until the
+    // ease settles.
+    p7StartAnimLoop();
+  }
+  function updateAxisHover(mx, my) {
+    let hit = null;
+    for (const [ev, pos] of p7.axisEventPositions) {
+      const dx = mx - pos.x, dy = my - pos.y;
+      const r = pos.radius + AXIS_HIT_PAD;
+      if (dx * dx + dy * dy <= r * r) { hit = ev; break; }
+    }
+    setAxisHover(hit);
+  }
+
+  // Clears only the timeline-square tooltip/hover — leaves any axis-circle hover
+  // untouched, so moving the pointer off a square onto (or still over) an axis
+  // circle doesn't stomp the reappeared label.
+  function hideSquare() {
     if (!p7.hoveredEvent) return;
     tooltipEl.classList.remove("is-visible");
     p7.hoveredEvent = null;
@@ -1466,6 +1417,12 @@ function p7HoverInit() {
     // draw() above) also dims/undims with hover — see updateGroups' own
     // p7.hoveredEvent check — so it needs its own refresh here too.
     if (typeof updateGroups === "function") updateGroups();
+  }
+
+  // Full clear (square + axis) — for leaving #page-8 entirely.
+  function hide() {
+    setAxisHover(null);
+    hideSquare();
   }
 
   // Runs the hit-test against p7.lastPositions using the cached cursor
@@ -1477,6 +1434,12 @@ function p7HoverInit() {
     const rect = canvasEl.getBoundingClientRect();
     const mx = lastCX - rect.left;
     const my = lastCY - rect.top;
+
+    // Axis event circles first — independent of the square scan below (a circle
+    // sits on the axis line, well clear of the squares), so both can be checked
+    // every move without one masking the other.
+    updateAxisHover(mx, my);
+
     const half = P7_SQ / 2;
 
     // Brute-force nearest-square scan — p7.lastPositions only holds the
@@ -1491,7 +1454,7 @@ function p7HoverInit() {
       if (dist < bestDist) { bestDist = dist; bestEvent = ev; bestPos = pos; }
     }
 
-    if (!bestEvent) { hide(); return; }
+    if (!bestEvent) { hideSquare(); return; }
 
     // Redraw with this square isolated only when the hovered event actually
     // changes — not on every check over the same square.
