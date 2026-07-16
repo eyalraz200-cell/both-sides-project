@@ -140,12 +140,7 @@ function p9TriggerLine(toT) {
 }
 
 const p9 = {
-  cols: 0,
-  leftTopPos: [], leftBotPos: [],
-  rightTopPos: [], rightBotPos: [],
   sides:       [],
-  aboveReach:  0,
-  belowReach:  0,
   lastW: 0, lastH: 0,
   // Shared column count for the extreme grid's two side-blocks — monotonic,
   // only ever grows (see drawPage9), so it doesn't reflow either side just to
@@ -353,23 +348,6 @@ function p9ExtremeRowsFor(H) {
 function p9UpdateLayout(W, H) {
   if (W === p9.lastW && H === p9.lastH) return;
 
-  // Dot grids
-  const topY    = Math.round(H * SBB.top);
-  const botY    = Math.round(H * SBB.bottom);
-  const midY    = Math.round(H * P9_MID);
-  const sideW   = W / 2 - 4 - W * SBB.left;
-  const cols    = Math.floor(sideW / P9_CELL);
-  const topRows = Math.floor((midY - topY) / P9_CELL);
-  const botRows = Math.floor((botY - midY) / P9_CELL);
-  const cells   = (n) => Array.from({ length: n }, (_, i) => i);
-  p9.cols       = cols;
-  p9.leftTopPos  = p7Shuffle(cells(cols * topRows), 21111);
-  p9.leftBotPos  = p7Shuffle(cells(cols * botRows), 22222);
-  p9.rightTopPos = p7Shuffle(cells(cols * topRows), 23333);
-  p9.rightBotPos = p7Shuffle(cells(cols * botRows), 24444);
-
-  // Category panel slots are computed dynamically in p9GetY
-
   // All categories start as "legitimate" (below), user drags up to mark as "extreme"
   if (p9.lastW === 0) {
     p9.sides = P9_CATEGORIES.map(() => "below");
@@ -377,25 +355,6 @@ function p9UpdateLayout(W, H) {
 
   p9.lastW = W;
   p9.lastH = H;
-}
-
-
-function p9GetY(i) {
-  const H    = p9.lastH;
-  const midY = Math.round(H * P9_MID);
-  const GAP  = H * 0.015;
-  const peers = p9.sides.map((s, j) => s === p9.sides[i] ? j : -1).filter(j => j >= 0);
-  const rank  = peers.indexOf(i);
-  const count = peers.length;
-  if (p9.sides[i] === "above") {
-    const lo = Math.round(H * SBB.top) + 24;
-    const hi = midY - GAP;
-    return lo + (rank + 0.5) * (hi - lo) / count;
-  } else {
-    const lo = midY + GAP;
-    const hi = H - 16;
-    return lo + (rank + 0.5) * (hi - lo) / count;
-  }
 }
 
 
@@ -413,11 +372,12 @@ function p9EnsureIndex() {
 // The legit grid's own edge margin — deliberately separate from SBB_TIMELINE
 // (the extreme grid's narrower-margin convention) since this spans the full
 // physical frame, literally edge to edge (0 margin), rather than mirroring
-// any other grid's margins. Pitch itself reuses P7_CELL (page7.js) directly —
-// same 4px pitch as the real timeline, not a coarser one, so the gapped look
-// below matches it stylistically rather than just sharing the same gap-
-// creation mechanism.
-const LEGIT_CELL   = P7_CELL;
+// any other grid's margins. Pitch is pinned to the ORIGINAL 4px timeline pitch
+// (P9_CELL = P9_SQ 3 + P9_GAP 1) — it used to reuse P7_CELL directly, but the
+// real timeline's dots were later enlarged (P7_SQ/P7_GAP in page7.js) and these
+// @fold12 dots must NOT follow: they settle at this size as the target of the
+// @fold11 animation, so their pitch is decoupled and fixed here.
+const LEGIT_CELL   = P9_CELL;
 const LEGIT_MARGIN = 0;
 
 // The grid reaches all the way up to the divider line itself (just a 2px
@@ -521,11 +481,8 @@ function drawPage9(ctx, W, H) {
 
   drawBackground(ctx, W, H);
 
-  const { cols } = p9;
   const topY   = Math.round(H * SBB.top);
   const midY   = Math.round(H * P9_MID);
-  const botY   = Math.round(H * SBB.bottom);
-  const leftX0  = W * SBB.left;
   const SQ = P9_SQ, CELL = P9_CELL;
 
 

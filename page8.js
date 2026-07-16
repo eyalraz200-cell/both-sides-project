@@ -114,13 +114,20 @@ function drawPage8(ctx, W, H) {
 
       const x = fromX + (target.x - fromX) * ease;
       const y = fromY + (target.y - fromY) * ease;
+      // Shrink each dot from the (now enlarged) real-timeline square size (p7.SQ)
+      // down to page9's legit-grid size (P9_SQ) across the glide, so the dots
+      // visibly get smaller on the way into @fold11 and land at exactly the size
+      // drawPage9 will keep drawing them — no size jump at the handoff. Both
+      // endpoints are top-left anchored (fromX/Y and target.x/y are cell corners),
+      // so a plain linear size lerp lines up at both ends.
+      const drawSQ = SQ + (P9_SQ - SQ) * ease;
       // No opacity fade — drawPage9 draws the legit grid at full opacity (see the
       // comment above its own drawBandedCols/drawJumbledBot calls; it used to be a
       // deliberate 0.12 de-emphasis, which this glide matched, but Figma's actual
       // reference doesn't show that dimming, so it was dropped). Glide only moves
       // position now, so there's no fade-to-faint here for fold11's draw to "pop" out of.
       ctx.fillStyle = p7ActorColor(e.actor);
-      ctx.fillRect(x, y, SQ, SQ);
+      ctx.fillRect(x, y, drawSQ, drawSQ);
     });
   }
 
