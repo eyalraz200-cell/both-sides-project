@@ -43,8 +43,8 @@ numbers in the source.
    `apply(v, mode, tab, on)`, `init(api)`, `custom(box, api, doc)`, `summary(v, mode)`.
 3. Insert `if (window.innerWidth < 900) return;   // desktop-only layout` immediately
    after `(function () {`.
-4. Add `<script src="_debug-<thing>.js"></script>` after the visual-edit loader block at
-   the bottom of `project.html`.
+4. Add `<script src="_debug-<thing>.js"></script>` after `_debug-visual-edit.js` in
+   `project.html`.
 5. Verify with `node --check` + `curl`.
 
 **Rules (non-negotiable):**
@@ -71,25 +71,6 @@ numbers in the source.
 Flip `const` → `let` for the duration of the harness — a top-level `let` in a classic
 script lives in the shared global lexical environment, so `_debug-*.js` can assign it.
 Revert to `const` when baking the value.
-
-## The visual editor (`_debug-visual-edit.js`)
-
-Scaffolding, and **off by default**. A small inline loader at the bottom of
-`project.html` reads a `ve2-enabled` localStorage flag and only injects the script when
-it's set — so while off, the 2,250-line file isn't fetched at all and none of its
-listeners exist (notably `Cmd+click`, which otherwise inspects an element instead of
-behaving normally).
-
-| Action | How |
-|---|---|
-| Toggle on/off | **Ctrl+Shift+E** — flips the flag and reloads |
-| Force on/off by URL | `?ve=1` / `?ve=0` (also sets the flag) |
-| Boot the UI once loaded | **Cmd+Ctrl** (the editor's own chord); Exit tears it down |
-
-The toggle's listener is registered in capture phase before the editor's own, so
-Ctrl+Shift+E still works while the editor is running. Toggling **reloads**, so commit or
-copy any pending edits first. The flag is per-browser, not in git — the loader block and
-the file itself still get deleted when editing is done for good.
 
 ## The fold badge
 
