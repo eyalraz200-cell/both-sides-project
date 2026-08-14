@@ -167,6 +167,33 @@
   <script src="js/bootstrap.js"></script>
   <script src="reload.js"></script>
   <!-- Visual-edit scaffolding (skill: visual-edit) — never ships; delete this
-       tag and _debug-visual-edit.js once editing is done. -->
-  <script src="_debug-visual-edit.js"></script></body>
+       block and _debug-visual-edit.js once editing is done.
+       OFF by default: the file is not even fetched unless the flag is set, so
+       none of its listeners (incl. Cmd+click peek) exist while off.
+       Ctrl+Shift+E toggles it and reloads. ?ve=1 / ?ve=0 also sets the flag. -->
+  <script>
+  (function () {
+    var KEY = "ve2-enabled";
+    function read() { try { return localStorage.getItem(KEY) === "1"; } catch (err) { return false; } }
+    function write(on) { try { localStorage.setItem(KEY, on ? "1" : "0"); } catch (err) { } }
+    var param = new URLSearchParams(location.search).get("ve");
+    if (param === "1" || param === "0") write(param === "1");
+    var on = read();
+    if (on) {
+      var s = document.createElement("script");
+      s.src = "_debug-visual-edit.js";
+      document.body.appendChild(s);
+    }
+    // Capture-phase and registered before the editor's own listeners, so the
+    // toggle still works while the editor is running.
+    document.addEventListener("keydown", function (e) {
+      if (e.ctrlKey && e.shiftKey && (e.key === "E" || e.key === "e")) {
+        e.preventDefault();
+        write(!on);
+        location.reload();
+      }
+    }, true);
+    console.log("visual-edit: " + (on ? "ON" : "OFF") + " — Ctrl+Shift+E to toggle");
+  })();
+  </script></body>
 </html>
