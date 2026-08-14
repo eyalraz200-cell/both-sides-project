@@ -10,22 +10,32 @@ One object per event:
 | `date` | `YYYY-MM-DD`. Sorted lexicographically = chronologically |
 | `side` | `"left"` or `"right"` — which camp column the dot lives in |
 | `actor` | Join key into `GROUPS`' `actor` field → the dot's color (`p7ActorColor`) |
-| `category` | English category string → `CATEGORY_EN_TO_IDX` (`page9.js`) |
+| `category` | Hebrew category string (the xlsx's `event_type`) → `CATEGORY_TO_IDX` (`page9.js`) |
 | `descHeMedium` | Per-event Hebrew description, shown in the hover tooltip |
 
-Committed dataset: **13,523 events — 4,872 left, 8,651 right**, from **2023-01-01** to
-**2026-05-29**.
+Committed dataset: **14,480 events — 5,353 left, 9,127 right**, from **2023-01-01** to
+**2026-07-03**.
 
-An unmatched `actor` falls back to `#888`. `#00B00C` (מפגינים ערבים ישראלים) has no
-`actor` at all — the dataset has no Israeli-Arab events, so that group never appears on
-the timeline.
+An unmatched `actor` falls back to `#888`. All six `GROUPS` actors — including `#00B00C`
+(מפגינים ערבים ישראלים, `arab israelis`, 565 events) — are present in the data, so every
+group appears on the timeline.
 
 ## Source of truth: the xlsx
 
-`Events_with_description_he_medium.xlsx` at the repo root. Its `main actor` and
-`event category` columns map directly onto the field names and English strings the code
-already expects; `description_he_medium` (a real per-event Hebrew translation for all
-13,523 rows) becomes `descHeMedium`.
+`full_v1.xlsx` at the repo root (sheet `raw-israel`, 14,480 data rows). Columns:
+
+| Column | Used as |
+|---|---|
+| `main_actor` | `actor` — lowercase strings matched verbatim by `GROUPS` |
+| `event_type` | `category` — Hebrew, 11 distinct values = `P9_CATEGORIES` one-to-one |
+| `date` | `date` |
+| `description_he_medium` | `descHeMedium` (2 rows empty → `null`) |
+| `row_id`, `Description`, `location`, `fatalities`, `source`, `actor_type` | unused |
+
+**There is no `side` column.** The camp split is derived from `main_actor` via
+`ACTOR_SIDE` in `server.py`, which must stay in sync with `FOLD4_COALITION_ROWS` /
+`FOLD4_CHANGE_ROWS` in `js/groups.js`. Every row maps to a known actor — zero rows are
+dropped; a row with an unmapped actor is skipped and reported as a startup warning.
 
 `server.py`'s `load_events()` rebuilds the JSON **in memory on every server start**, and
 `/events.json` serves that — so local dev is always current with the xlsx.
@@ -39,9 +49,10 @@ watch the xlsx. Editing the spreadsheet requires a server restart, not just a re
 
 ## Category mapping
 
-`CATEGORY_EN_TO_IDX` (`page9.js`) is the only place English category strings are
-translated. See [Drag-and-Drop](Drag-and-Drop.md) for the full table and the Hebrew pill
-names.
+`CATEGORY_TO_IDX` (`page9.js`) maps an event's `category` to its `P9_CATEGORIES` index.
+It is **derived** — `Object.fromEntries(P9_CATEGORIES.map((c, i) => [c, i]))` — because
+the pill labels and the xlsx's `event_type` values are now the same Hebrew strings, so
+the two lists can't drift. See [Drag-and-Drop](Drag-and-Drop.md) for the full table.
 
 Two Hebrew label lists must stay in sync with each other:
 `P9_CATEGORIES` (`page9.js`) and `FOLD6_SQUARE_LABELS` (`js/groups.js`).

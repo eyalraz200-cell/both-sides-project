@@ -24,24 +24,52 @@ def watch():
         if t > last_modified:
             last_modified = t
 
+EVENTS_XLSX = "full_v1.xlsx"
+
+# full_v1.xlsx has no `side` column — the camp split is derived from main_actor
+# instead. These two rosters must stay in sync with FOLD4_COALITION_ROWS /
+# FOLD4_CHANGE_ROWS in js/groups.js, which define the same membership by color.
+ACTOR_SIDE = {
+    # מחנה הימין (coalition)
+    "haredi jews":                   "right",
+    "settlers":                      "right",
+    "right wing protesters":         "right",
+    # גוש השינוי (change)
+    "peace movements":               "left",
+    "protesters against government": "left",
+    "arab israelis":                 "left",
+}
+
 def load_events():
-    wb = openpyxl.load_workbook(WATCH_DIR / "Events_with_description_he_medium.xlsx", read_only=True, data_only=True)
+    wb = openpyxl.load_workbook(WATCH_DIR / EVENTS_XLSX, read_only=True, data_only=True)
     ws = wb.active
+    rows = ws.iter_rows(values_only=True)
+    header = [str(h).strip() if h is not None else "" for h in next(rows)]
+    col = {name: i for i, name in enumerate(header)}
     events = []
-    for row in ws.iter_rows(min_row=2, values_only=True):
-        side, actor, cat, desc, date, fatal, crowd, desc_he_med = row
-        if date is None or side is None:
+    unknown_actors = set()
+    for row in rows:
+        actor = row[col["main_actor"]]
+        date  = row[col["date"]]
+        if date is None or actor is None:
+            continue
+        side = ACTOR_SIDE.get(str(actor).strip().lower())
+        if side is None:
+            unknown_actors.add(actor)
             continue
         date_str = date.strftime("%Y-%m-%d") if hasattr(date, "strftime") else str(date)[:10]
         events.append({
             "side": side,
             "actor": actor,
-            "category": cat,
+            # Hebrew event_type — the join key into P9_CATEGORIES (page9.js).
+            "category": row[col["event_type"]],
             "date": date_str,
-            "descHeMedium": desc_he_med or None,
+            "descHeMedium": row[col["description_he_medium"]] or None,
         })
     wb.close()
 
+    if unknown_actors:
+        print(f"  WARNING: dropped rows with unmapped main_actor: {sorted(unknown_actors)}")
     return events
 
 EVENTS_JSON = json.dumps(load_events()).encode()

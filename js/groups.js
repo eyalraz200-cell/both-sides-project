@@ -28,23 +28,24 @@ const GROUPS_FRAME_H = 982; // Figma frame height the y-coordinates below are au
 // fold6 (Figma node 120:1279/Frame 3219) is the persistent mini-legend the
 // groups settle into for good at @fold4 (#page-3, fold6Trigger — legacy name).
 //
-// `actor` is the events.json/P7_COLORS join key — see p7ActorColor in
-// page7.js, which reads this group's `color` directly so the real per-event
-// canvas dots always match this legend, including after a future color edit
-// here. #00B00C has no `actor` — the dataset has no Israeli-Arab events, so
-// it never appears on the real timeline.
+// `actor` is the events.json join key — see p7ActorColor in page7.js, which
+// reads this group's `color` directly so the real per-event canvas dots always
+// match this legend, including after a future color edit here. The values are
+// full_v1.xlsx's own lowercase `main_actor` strings, matched verbatim; the
+// camp membership they imply is duplicated as ACTOR_SIDE in server.py, which
+// derives each event's `side` from them (full_v1.xlsx has no side column).
 const GROUPS = [
-  { color: "#00B00C", label: "מפגינים ערבים ישראלים",
+  { color: "#00B00C", label: "מפגינים ערבים ישראלים",  actor: "arab israelis",
     fold4: { x: 725,  y: 514, swatchFirst: true }, fold6: { x: 31, y: 560 } },
   { color: "#FFAC11", label: "תנועות התנחלות באיו״ש",           actor: "settlers",
     fold4: { x: 887,  y: 488, swatchFirst: true }, fold6: { x: 31, y: 512 } },
-  { color: "#CC0000", label: "קבוצות ימין לאומיות",      actor: "Right-wing activists",
+  { color: "#CC0000", label: "קבוצות ימין לאומיות",      actor: "right wing protesters",
     fold4: { x: 887,  y: 514, swatchFirst: true }, fold6: { x: 31, y: 536 } },
-  { color: "#0073FF", label: "ארגוני מחאה נגד הממשלה", actor: "Protesters against the government",
+  { color: "#0073FF", label: "ארגוני מחאה נגד הממשלה", actor: "protesters against government",
     fold4: { x: 725,  y: 488, swatchFirst: true }, fold6: { x: 31, y: 512 } },
-  { color: "#CD00CD", label: "ארגוני שלום ודו קיום",     actor: "left wing activists",
+  { color: "#CD00CD", label: "ארגוני שלום ודו קיום",     actor: "peace movements",
     fold4: { x: 725,  y: 462, swatchFirst: true }, fold6: { x: 31, y: 536 } },
-  { color: "#4A4A4A", label: "מפגינים חרדים",           actor: "Haredi Jews",
+  { color: "#4A4A4A", label: "מפגינים חרדים",           actor: "haredi jews",
     fold4: { x: 887,  y: 462, swatchFirst: true }, fold6: { x: 31, y: 560 } },
 ];
 
@@ -280,19 +281,19 @@ function groupColorByActor(actor) {
 // S/R/H/H (uneven, but there's no 4th right-camp actor to reach for — order
 // swapped from the original H/R/S/H per explicit instruction, so the
 // top-right square is now S/מתיישבים and the 3rd-from-top-right is
-// H/חרדים). Index 0 is unchanged ("Protesters against the government")
+// H/חרדים). Index 0 is unchanged ("protesters against government")
 // since @fold8's tooltip (below) targets that specific square/event, and
 // it's already a left-camp actor in the left column.
 // S=מתיישבים L=פעילי שמאל H=חרדים P=מתנגדי הרפורמה R=פעילי ימין
 const FOLD6_SQUARE_ACTORS = [
-  "Protesters against the government",   // 0 (L col) - P - blue
+  "protesters against government",       // 0 (L col) - P - blue
   "settlers",                            // 1 (R col) - S - orange  (top-right; swapped with 5 per explicit instruction)
-  "left wing activists",                 // 2 (L col) - L - pink
-  "Right-wing activists",                // 3 (R col) - R - green
-  "Protesters against the government",   // 4 (L col) - P - blue
-  "Haredi Jews",                         // 5 (R col) - H - grey  (3rd from top-right; swapped with 1 per explicit instruction)
-  "left wing activists",                 // 6 (L col) - L - pink
-  "Haredi Jews",                         // 7 (R col) - H - grey
+  "peace movements",                     // 2 (L col) - L - pink
+  "right wing protesters",               // 3 (R col) - R - red
+  "protesters against government",       // 4 (L col) - P - blue
+  "haredi jews",                         // 5 (R col) - H - grey  (3rd from top-right; swapped with 1 per explicit instruction)
+  "peace movements",                     // 6 (L col) - L - pink
+  "haredi jews",                         // 7 (R col) - H - grey
 ];
 const FOLD6_SQUARE_COLORS = FOLD6_SQUARE_ACTORS.map(groupColorByActor);
 // Which occurrence (0 = first chronologically, 1 = second, ...) of its own

@@ -117,7 +117,9 @@ function fold8AdvanceSequence() {
   if (raw !== fold8PrevTooltipRaw) fold8SeqDirection = raw > fold8PrevTooltipRaw ? 1 : -1;
   fold8PrevTooltipRaw = raw;
 
-  const totalChars = event.date.length + event.descHeMedium.length;
+  // `|| ""` — two rows in full_v1.xlsx have an empty description_he_medium,
+  // which server.py passes through as null.
+  const totalChars = event.date.length + (event.descHeMedium || "").length;
   const total = FOLD8_GROW_MS + totalChars * FOLD8_TYPE_MS_PER_CHAR;
   fold8SeqElapsed = Math.max(0, Math.min(total, fold8SeqElapsed + fold8SeqDirection * dt));
 
