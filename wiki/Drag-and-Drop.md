@@ -47,7 +47,7 @@ Flow: `e.category` → `CATEGORY_EN_TO_IDX` → index into `p9.sides[]` → `"ab
 or `"below"` (legit). `p9.sides` starts all `"below"`. An unknown category yields
 `undefined` and is treated as extreme.
 
-> Renaming a pill in `P9_CATEGORIES` must also update `FOLD6_SQUARE_LABELS` in `main.js`.
+> Renaming a pill in `P9_CATEGORIES` must also update `FOLD6_SQUARE_LABELS` in `js/groups.js`.
 
 ## Drag mechanics
 

@@ -18,16 +18,16 @@
            two-camp columns through @fold5's mini-legend glide — one set of
            DOM nodes that's continuously repositioned/restyled as the user
            scrolls, rather than separate per-fold overlays crossfading into
-           each other (see GROUPS/updateGroups in main.js). -->
+           each other (see GROUPS in js/groups.js, updateGroups in js/update-groups.js). -->
       <div class="groups-overlay" id="groupsOverlay" aria-hidden="true"></div>
       <!-- @fold1's dot columns — fixed to the viewport so they don't scroll
            away with the rest of @fold1's content (see buildPage0AllDots in
-           page1.js); faded out via main.js's updateGroups once @fold2's
+           page1.js); faded out via js/update-groups.js once @fold2's
            title card reaches center. -->
       <div class="page0-dots-overlay" id="page0DotsOverlay" aria-hidden="true"></div>
       <!-- 10 small squares (Figma node 120:1279) that fade in at the center,
            taking the cluster's place once it settles into fold6's left
-           mini-legend — see FOLD6_SQUARES_OFFSET/layoutFold6Squares in main.js. -->
+           mini-legend — see FOLD6_SQUARES_OFFSET/layoutFold6Squares in js/groups.js. -->
       <div class="fold6-squares-overlay" id="fold6SquaresOverlay" aria-hidden="true"></div>
       <!-- Hover tooltip for page-9's drag-and-drop event dots (date + Hebrew
            description) — positioned/shown by p9HoverInit in page9.js. -->
@@ -40,7 +40,7 @@
          reference table) — fixed to the viewport, updated in setActivePage.
          A real <select> (not a div) so clicking it pops a native dropdown of
          every fold and jumping to one is just picking an option — see the
-         option-population/change-listener code in main.js. Lives as a direct
+         option-population/change-listener code in js/nav.js. Lives as a direct
          .layout child (not inside .graphic-col) so it stacks above .text-col
          (z-index 1) — .graphic-col itself is only z-index 0, so nesting it
          there left .text-col's transparent overlap area swallowing clicks. -->
@@ -58,7 +58,7 @@
       <div class="page9-cat-tooltip-desc"></div>
       <div class="page9-cat-tooltip-arrow"></div>
     </div>
-    <!-- The fold6 source-credit note (main.js: fold6NoteEl) is reparented
+    <!-- The fold6 source-credit note (js/groups.js: fold6NoteEl) is reparented
          into this layer at init instead of staying inside .groups-overlay —
          same reasoning as #foldNumberBadge/#page9CatTooltip above: a direct
          .layout child, not nested in .graphic-col, so its z-index actually
@@ -155,7 +155,16 @@
   <script src="page8.js"></script>
   <script src="page9.js"></script>
   <script src="page12.js"></script>
-  <script src="main.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/fold1-intro.js"></script>
+  <script src="js/page7-scrub.js"></script>
+  <script src="js/fold8-tooltip.js"></script>
+  <script src="js/groups.js"></script>
+  <script src="js/update-groups.js"></script>
+  <script src="js/page8-9-scroll.js"></script>
+  <script src="js/fold11.js"></script>
+  <script src="js/bootstrap.js"></script>
   <script src="reload.js"></script>
   <!-- Visual-edit scaffolding (skill: visual-edit) — never ships; delete this
        tag and _debug-visual-edit.js once editing is done. -->

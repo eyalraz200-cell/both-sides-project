@@ -2,7 +2,7 @@
 
 ## The roster
 
-`GROUPS` (`main.js`) is **6 groups** — camp groups only. The old no-camp groups
+`GROUPS` (`js/groups.js`) is **6 groups** — camp groups only. The old no-camp groups
 (אתיופיה, סביבתיים, להט"ב, דרוזים…) were removed entirely on v2 and appear nowhere,
 hero dots included. Any doc claiming 8/10/12 groups is stale.
 
@@ -40,7 +40,7 @@ repositioned and restyled from `updateGroups()` as the user scrolls — not per-
 overlays crossfading. Their whole journey:
 
 1. **@fold1** — 12 of @fold1's 200 decorative dots read their color from `GROUPS`
-   (`buildPage0AllDots`, called from `main.js` because `page1.js` parses before `GROUPS`
+   (`buildPage0AllDots`, called from `js/groups.js` because `page1.js` parses before `GROUPS`
    exists).
 2. **@fold2** — the dots fly into two 4×3 blocks of plain rects (Figma `279:1342`), no
    labels, no divider. Only each row's **rightmost** rect is the persistent
@@ -105,12 +105,12 @@ weight; see [Folds](Folds.md) for the beat-mirroring mechanism.
 means renaming the label here too.
 
 The squares also dim on hover-elsewhere, mirroring the canvas dots. That needs the
-opacity formula in `main.js` **and** the `updateGroups()` calls from `page7.js`/`page9.js`
+opacity formula in `js/update-groups.js` **and** the `updateGroups()` calls from `page7.js`/`page9.js`
 hover handlers to stay in sync — the squares are DOM, outside `draw()`.
 
 ## ACLED note
 
-`FOLD6_NOTE_TEXT` (`main.js`) is rendered into `#fold6NoteLayer` with "ACLED" wrapped as a
+`FOLD6_NOTE_TEXT` (`js/groups.js`) is rendered into `#fold6NoteLayer` with "ACLED" wrapped as a
 link. It's anchored to the right column's bottom row
 (`noteRightEdge = W - FOLD6_LEGEND_INSET_RIGHT`) and fades in on
 `squaresRevealTrigger.currentT()`.

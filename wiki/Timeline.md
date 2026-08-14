@@ -146,7 +146,7 @@ actor color and the dashed SVG border strokes `currentColor`; `.is-mirrored` fli
 box for `side === "left"`.
 
 **Page7's hover dim is a snap**, not a timed fade: non-hovered squares draw at
-`alpha * HOVER_DIM_OPACITY` (0.2, `main.js`). `HOVER_DIM_MS` 80 is page9-only. Every
+`alpha * HOVER_DIM_OPACITY` (0.2, `js/core.js`). `HOVER_DIM_MS` 80 is page9-only. Every
 hover change also calls `updateGroups()` so the 8 fold-6 DOM squares dim in step.
 
 ## Handoff to page8/page9
