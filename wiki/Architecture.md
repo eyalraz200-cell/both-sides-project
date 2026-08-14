@@ -46,9 +46,20 @@ load time — so `page7.js` freely calls `GROUPS` (defined later, in `js/groups.
 only runs after everything has loaded. A symbol used in one file being defined in
 another is intentional, not a missing import.
 
-The one place load order does matter: `buildPage0AllDots()` (defined in `page1.js`) is
-*called from* `js/groups.js` right after `GROUPS` is declared, because it reads group colors
-that don't exist yet when `page1.js` itself is parsed.
+Two places load order does matter:
+
+- `buildPage0AllDots()` (defined in `page1.js`) is *called from* `js/groups.js` right
+  after `GROUPS` is declared, because it reads group colors that don't exist yet when
+  `page1.js` itself is parsed.
+- The fold triggers in `js/groups.js` pass their tick callbacks as **arrow wrappers** —
+  `makeTrigger(MS, (...a) => updateGroups(...a))` — because `updateGroups`
+  (`js/update-groups.js`) and `updateFold13` (`js/fold11.js`) are declared in files that
+  load *after* `groups.js`. A bare identifier there evaluates at load time and throws a
+  ReferenceError; the wrapper defers resolution to call time. Don't "simplify" the
+  wrappers away, and don't fix it by reordering scripts instead — the dependency is
+  circular (`update-groups.js`'s `scrollend` listener needs `checkGroupTriggers`, and
+  `fold11.js`'s load-time `p13SyncGateVisibility()` needs `page12StickyEl`, both from
+  `groups.js`).
 
 | File | Role |
 |---|---|

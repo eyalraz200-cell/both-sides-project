@@ -459,7 +459,7 @@ const FOLD2_BEATS = {
   headerCoalition: { start: 0.677, len: 0.219 },  // 1625 → 2150ms
   headerChange:    { start: 0.781, len: 0.219 },  // 1875 → 2400ms
 };
-const fold2Trigger      = makeTrigger(FOLD2_ENTRANCE_MS, updateGroups);
+const fold2Trigger      = makeTrigger(FOLD2_ENTRANCE_MS, (...a) => updateGroups(...a));
 // @fold3 (#page-2): the same 3-beat shape as @fold2 above — (1) the 18
 // filler rects shrink away, (2) each row's surviving rect flies sideways so
 // all 3 of a camp's rects line up in ONE vertical column, (3) the labels
@@ -500,27 +500,27 @@ function fold3TypeSlot(row, isCoalition, rowCount) {
 }
 const fold3TypeSlotCount = rowCount =>
   FOLD3_TYPE_ORDER === "rows" ? rowCount : rowCount * 2;
-const fold3Trigger      = makeTrigger(FOLD3_ENTRANCE_MS, updateGroups);
+const fold3Trigger      = makeTrigger(FOLD3_ENTRANCE_MS, (...a) => updateGroups(...a));
 // @fold4 (#page-3): 2 sequential beats on one trigger — the split
 // merging back into one rect first, THEN the glide into the left mini-legend
 // (see the raw-slice spans in updateGroups).
-const fold6Trigger      = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
+const fold6Trigger      = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateGroups(...a));
 // Phase 2 (grey squares grow-in + ACLED bottom-legend note fade-in), split off
 // from fold6Trigger onto the inserted ACLED fold (#page-4). See
 // squaresRevealCardEl above.
-const squaresRevealTrigger = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
-const fold7LabelTrigger = makeTrigger(GROUP_TRANSITION_MS, updateGroups);
+const squaresRevealTrigger = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateGroups(...a));
+const fold7LabelTrigger = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateGroups(...a));
 // Matches FOLD8_GROW_MS (the tooltip's own wall-clock grow-to-full-scale
 // time, see its comment above) — not the typewriter that follows it — so the
 // non-tooltip squares' dim-to-color fade finishes exactly as the tooltip
 // reaches max scale, instead of tracking the shared GROUP_TRANSITION_MS tempo.
 const FOLD8_SQUARE_DIM_MS = FOLD8_GROW_MS;
-const fold8SquareDimTrigger = makeTrigger(FOLD8_SQUARE_DIM_MS, updateGroups);
+const fold8SquareDimTrigger = makeTrigger(FOLD8_SQUARE_DIM_MS, (...a) => updateGroups(...a));
 // @fold9 trigger #1 — its title card's ordinary midpoint crossing. Colors in
 // only the highlighted square (index 0) and its tooltip's border; the other
 // 7 squares are untouched by this trigger.
 const FOLD9_COLOR_MS = 500;
-const fold9Trigger = makeTrigger(FOLD9_COLOR_MS, updateGroups);
+const fold9Trigger = makeTrigger(FOLD9_COLOR_MS, (...a) => updateGroups(...a));
 // @fold9 trigger #2 — the same crossing that makes the year axis appear
 // (its title card passing fully offscreen, top <= 0 — see p7AxisShouldShow/
 // p7HasEngaged, page7.js). Colors in all 8 fold-6 squares (in their own
@@ -581,7 +581,7 @@ function fold9EnsureP8SyncLoop() {
 // delay timer so it can't fire late into a reversed state.
 const FOLD9_TOOLTIP_SHRINK_MS = 400;
 const FOLD9_TOOLTIP_SHRINK_DELAY_MS = 500;
-const fold9TooltipShrinkTrigger = makeTrigger(FOLD9_TOOLTIP_SHRINK_MS, updateGroups);
+const fold9TooltipShrinkTrigger = makeTrigger(FOLD9_TOOLTIP_SHRINK_MS, (...a) => updateGroups(...a));
 let fold9FlyReachedPast = null;
 let fold9TooltipShrinkDelayTimer = null;
 function checkFold9TooltipShrink() {
@@ -603,7 +603,7 @@ function checkFold9TooltipShrink() {
     }
   }
 }
-const fold13Trigger           = makeTrigger(GROUP_TRANSITION_MS, updateFold13);
+const fold13Trigger           = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateFold13(...a));
 let   fold13MorphStarted      = false;
 
 // Watches one title card's top edge for crossing H*frac, firing trigger
