@@ -15,8 +15,6 @@ let p8Engaged       = false; // true from the forward trigger until fully revers
 let p8PhaseStart    = null;  // performance.now() when the current phase (forward/reverse) began
 let p8PhaseFromT    = 0;     // t value the current phase started from
 let p8PhaseToT      = 0;     // t value the current phase is heading toward (1 forward, 0 reverse)
-let p8TriggerScrollY = null; // window.scrollY recorded at the forward trigger — scrolling back
-                              // above this is what fires the reverse (see page8CheckScroll)
 
 // Current eased-progress value, mid-phase or at rest. Speed is constant (full
 // 0..1 takes P8_TRANSITION_DURATION) regardless of where a phase starts from, so
@@ -32,14 +30,14 @@ function p8CurrentT() {
 
 function p8RunAnimLoop() {
   if (p8PhaseStart === null) return;
-  if (currentPage === 10) draw();
+  if (currentPage === 8) draw();
   if (p8CurrentT() !== p8PhaseToT) {
     requestAnimationFrame(p8RunAnimLoop);
   } else {
     p8PhaseFromT = p8PhaseToT; // settle here — p8CurrentT() reads this once phaseStart is null
     p8PhaseStart = null;
     if (p8PhaseToT === 0) p8Engaged = false; // back at rest — forward can fire again later
-    if (currentPage === 10) draw(); // final frame, locked at rest
+    if (currentPage === 8) draw(); // final frame, locked at rest
   }
 }
 
@@ -57,7 +55,6 @@ function p8StartPhase(toT) {
 function p8Trigger() {
   if (p8Engaged) return;
   p8Engaged        = true;
-  p8TriggerScrollY = window.scrollY; // no longer read anywhere — page8CheckScroll's reverse trigger is now itself crossing-based rather than scrollY-delta-based — kept only as a harmless breadcrumb of the moment engagement started.
   p8StartPhase(1);
 }
 
@@ -76,7 +73,7 @@ function drawPage8(ctx, W, H) {
 
   // Deliberately no fallback trigger here: currentPage flips to 9 (via the -50%
   // IntersectionObserver in main.js) well before the title visually reaches
-  // center, since page-9 already overlaps the screen-center line earlier than
+  // center, since page-8 already overlaps the screen-center line earlier than
   // that. Triggering on that flip would fire too early — page8CheckScroll
   // (main.js) is the only thing that calls p8Trigger/p8TriggerReverse, exactly
   // when the title crosses center (or scroll retreats back past that point).

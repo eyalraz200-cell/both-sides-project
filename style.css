@@ -11,8 +11,16 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* Shared design tokens — the page background and the title-card geometry are
+   the values repeated most across the file; everything else stays literal. */
+:root {
+  --bg: #FDFCFF;        /* flat page background, per Figma's intro cover */
+  --card-w: 480px;      /* fixed .text-card width */
+  --card-top: 4.4vh;    /* pinned title-card / page9-header top offset */
+}
+
 body {
-  background: #FDFCFF;
+  background: var(--bg);
 }
 
 /* .graphic-col is taken out of flow entirely (position: fixed), so it doesn't
@@ -83,8 +91,8 @@ body {
 }
 
 .text-section > .section-text {
-  /* Without min-width:0, the page-2 legend's unshrinkable (nowrap) items would push
-     their min-content size up into this flex item, growing it past .text-card's own
+  /* Without min-width:0, any unshrinkable (nowrap) descendant would push its
+     min-content size up into this flex item, growing it past .text-card's own
      explicit width (set on the .text-card class itself) instead of letting that
      fixed width win. */
   min-width: 0;
@@ -95,7 +103,7 @@ body {
      page7UpdateFromScroll in main.js). Scrub range controls how much scrolling
      it takes to cross the whole dataset — bigger means slower movement through
      the months. */
-  min-height: 600vh;
+  min-height: 780vh;
   display: block;
   padding: 0;
 }
@@ -104,7 +112,7 @@ body {
    would place the card at 50vh inside the section, requiring ~50vh of extra
    scrolling after the timeline fills before any text appears. Aligning to the
    top means the card enters the viewport the instant the scrub section ends. */
-#page-10 {
+#page-8 {
   align-items: flex-start;
   padding-top: 48px;
 }
@@ -116,7 +124,7 @@ body {
      so that when .page9-sticky.frozen switches sticky→fixed (removing it from
      flow), min-height still dominates and the section height stays at 200vh.
      If min-height < 200vh, the section shrinks when frozen fires, shifting
-     #page-12 up into the viewport and bypassing the gate. */
+     #page-10 up into the viewport and bypassing the gate. */
   min-height: 200vh;
   display: block;
   padding: 0;
@@ -144,7 +152,7 @@ body {
 
 .page9-title-row .text-card {
   position: sticky;
-  top: 4.4vh;
+  top: var(--card-top);
   height: max-content;
 }
 
@@ -153,10 +161,10 @@ body {
    is in view. Width/centering must be re-stated since fixed is viewport-relative. */
 .page9-title-row .text-card.is-stuck {
   position: fixed;
-  top: 4.4vh;
+  top: var(--card-top);
   left: 50%;
   transform: translateX(-50%);
-  width: 480px;
+  width: var(--card-w);
 }
 
 /* Subtitle sits below the title heading (normal flow), hidden while the card
@@ -207,8 +215,8 @@ body {
   height: 100vh;
 }
 
-/* Switched to fixed once the user scrolls into @fold13 (#page-12), keeping
-   the tray/zones visually frozen in place even though #page-11 has ended.
+/* Switched to fixed once the user scrolls into @fold11 (#page-10), keeping
+   the tray/zones visually frozen in place even though #page-9 has ended.
    Width must be explicit — fixed elements size relative to the viewport, not
    their DOM parent, so the implicit 100% no longer covers the full width. */
 .page9-sticky.frozen {
@@ -224,23 +232,9 @@ body {
    0.4 s later so the sequence is tray → zone. The (at-rest empty)
    dropped-pill stack just fades; the tray gets its own rule below since it
    also slides up, not just fades. */
-.page9-header {
-  opacity: 0;
-  pointer-events: none;
-  /* Slowed from 0.5s per explicit feedback — the engage fade read a touch
-     quick right when @fold11's title hits the top and the interaction state
-     kicks in. Kept matched with .page9-zone-wrap-extreme below, same as before. */
-  transition: opacity 0.7s ease-out;
-}
-
-.page9-zone-wrap-extreme {
-  opacity: 0;
-  pointer-events: none;
-  /* See .page9-header above — same slowdown, same reasoning, kept matched. */
-  transition: opacity 0.7s ease-out;
-}
-
-/* position:fixed — never scrolls, always at the same viewport position. */
+/* position:fixed — never scrolls, always at the same viewport position.
+   (The .page9-header / .page9-zone-wrap-extreme engage-fade props live in
+   each rule's single declaration block below.) */
 .page9-sticky.engaged .page9-zone-wrap-extreme {
   opacity: 1;
   pointer-events: auto;
@@ -262,16 +256,15 @@ body {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  top: 4.4vh;
+  top: var(--card-top);
   text-align: center;
   direction: rtl;
-}
-
-.page9-header-title {
-  font: 600 20px 'Assistant', sans-serif;
-  color: #000;
-  margin: 0;
-  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  /* Slowed from 0.5s per explicit feedback — the engage fade read a touch
+     quick right when @fold10's title hits the top and the interaction state
+     kicks in. Kept matched with .page9-zone-wrap-extreme below. */
+  transition: opacity 0.7s ease-out;
 }
 
 .page9-header-subtitle {
@@ -288,6 +281,10 @@ body {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  /* See .page9-header above — same engage-fade slowdown, kept matched. */
+  transition: opacity 0.7s ease-out;
   top: 14vh;
   bottom: 28.78vh; /* ends ~2vh above the divider — P9_MID (page9.js) is now 719/982 ≈ 73.22vh, unlike the canvas grids this box's own vh value isn't derived from that constant at render time, so it has to be hand-kept in sync whenever P9_MID moves */
   display: flex;
@@ -380,7 +377,7 @@ body {
   gap: 18px;
   padding: 50px 29px 35px; /* bottom bumped from 15px — taller frame, more breathing room below the lower pill row */
   border-radius: 20px 20px 0 0;
-  background: #fdfcff;
+  background: var(--bg);
   border: 1px solid rgba(90, 90, 90, 0.45);
   border-bottom: none; /* flush with the viewport's bottom edge — no visible edge to stroke there */
   pointer-events: none;
@@ -745,20 +742,36 @@ body {
   background: rgba(0, 0, 0, 0.4);
 }
 
-/* Hover tooltip for a single event dot in page-10's extreme/legit grid (Figma
-   node 158:41181) — date + short Hebrew description. Border color is set
+/* Hover tooltip for a single event dot in page-9's extreme/legit grid (Figma
+   node 158:41181) — date + short Hebrew description. Stroke color is set
    per-hover in JS (p9HoverInit, page9.js) to match the hovered dot's own
-   group color, so the value here is just a fallback/default. The bottom-left
-   corner is deliberately square (not rounded like the other three) — that's
-   the design's anchor point, positioned right at the hovered dot. */
+   group color, so the `color` value here is just a fallback/default. The
+   bottom-left corner is deliberately square (not rounded like the other
+   three) — that's the design's anchor point, positioned right at the hovered
+   dot.
+
+   The dash matches the title cards' (.text-card-frame) exactly — 2px stroke,
+   2px-dash/2px-gap — and is drawn the same way, and for the same reason: a
+   native `border: 2px dashed` renders the browser's own much looser dash
+   spacing. So the border here is transparent (it only holds the box-model
+   spacing open) and the visible stroke is an absolutely positioned inline
+   <svg> child (.page9-tooltip-dash, built/sized by updateTooltipDash() in
+   main.js on every hover) whose viewBox is set 1:1 to the box's own pixel
+   size, so the dash can't be scaled or squashed by the box's aspect ratio.
+   Unlike the title cards' plain rounded rect, this one is a <path> — it has
+   to carry the one square anchor corner (and swap which corner that is for
+   .is-mirrored below). It strokes `currentColor`, which is why JS sets
+   `color` rather than `border-color`. */
 .page9-tooltip {
+  --tip-border-w: 2px;
   position: fixed;
   z-index: 1000;
   pointer-events: none;
   display: none;
   direction: rtl;
   background: #fff;
-  border: 2px dashed #f16f16;
+  color: #f16f16;
+  border: var(--tip-border-w) solid transparent;
   border-radius: 8px 8px 8px 0;
   padding: 7px 10px;
   width: 222px;
@@ -781,6 +794,20 @@ body {
   border-radius: 8px 8px 0 8px;
 }
 
+/* Same correction as .text-card-frame-dash: an abs-pos element's containing
+   block is its nearest positioned ancestor's PADDING box, not its border box,
+   so plain `inset: 0` would size this --tip-border-w smaller than the
+   tooltip's real border-box on every side and leave a ring of bare white fill
+   outside the dash. */
+.page9-tooltip-dash {
+  position: absolute;
+  top: calc(-1 * var(--tip-border-w));
+  left: calc(-1 * var(--tip-border-w));
+  width: calc(100% + 2 * var(--tip-border-w));
+  height: calc(100% + 2 * var(--tip-border-w));
+  pointer-events: none;
+}
+
 .page9-tooltip-date {
   font: 700 12px 'Assistant', sans-serif;
   color: #000;
@@ -795,7 +822,7 @@ body {
   width: 100%;
 }
 
-/* Hover tooltip for a category pill in page-10's tray (#page9ZoneBelow only —
+/* Hover tooltip for a category pill in page-9's tray (#page9ZoneBelow only —
    dropped pills in the extreme zone get a different hover treatment, see
    .page9-pill.is-hover-highlighted above) — a short description of what the
    category covers. The arrow (.page9-cat-tooltip-arrow) is a separate element
@@ -870,15 +897,13 @@ body {
    stays centered without taking over layout. No fade — the card is always
    visible and simply scrolls with the page. The dashed-box visual treatment
    lives on .text-card-frame below, since per Figma (node 119:997 vs 119:969)
-   the box wraps only the title, not e.g. page-1's legend. */
+   the box wraps only the title, not sibling content below it. */
 .text-card {
   /* A definite width (not just max-width) matters here: as a flex item this
-     box would otherwise shrink-to-fit its widest child, and .page2-legend's
-     own width:100% would then resolve against that ambiguous auto width —
-     inconsistently per row, since each row's own max-content size differs.
-     A fixed width gives every descendant (the legend's swatch/label center
-     anchors included) the same definite box to measure against. */
-  width: 480px;
+     box would otherwise shrink-to-fit its widest child, so any full-width
+     descendant would resolve against an ambiguous auto width. A fixed width
+     gives every descendant the same definite box to measure against. */
+  width: var(--card-w);
   margin: 0 auto;
   direction: rtl;
   text-align: right;
@@ -887,7 +912,7 @@ body {
 /* The actual dashed-border white card chrome (Figma node 119:997: 4px dashed
    black border, white fill, 8px radius, 21px/29px padding — stroke thinned to
    2px per explicit instruction, overriding the Figma-spec 4px) — applied only
-   to the title, not to sibling content like page-1's legend.
+   to the title, not to sibling content below it.
 
    Native `border: 4px dashed` renders the browser's own loose dash spacing
    (dash/gap noticeably longer than 4px), not Figma's exact 2px-dash/2px-gap
@@ -1063,7 +1088,7 @@ body {
   padding: 0;
 }
 
-/* @fold12's outro section — exactly one viewport, matching the sticky
+/* @fold11's outro section — exactly one viewport, matching the sticky
    wrapper's own height (below): the wrapper pins the instant it arrives (see
    checkFold13/main.js, which fires right at that same moment) and there's no
    extra section height left over past that point for the page to keep
@@ -1071,7 +1096,7 @@ body {
    this is where the document ends. Previously 200vh (an extra full viewport
    of "hold the card centered" room past the pin point) — per explicit
    feedback that read as dead/null scroll once the title had already arrived. */
-#page-12 {
+#page-10 {
   min-height: 100vh;
   display: block;
   padding: 0;
@@ -1089,7 +1114,7 @@ body {
   direction: rtl;
 }
 
-/* Forced invisible while @fold12's scroll gate (main.js, p13GateLocked) is
+/* Forced invisible while @fold11's scroll gate (main.js, p13GateLocked) is
    locked — momentum-phase wheel events are non-cancelable in some browsers,
    so the page can genuinely scroll past the gate for a paint or two before
    the safety net corrects scrollY back. Since this wrapper is position:sticky,
@@ -1101,7 +1126,7 @@ body {
   pointer-events: none;
 }
 
-#page-12 .text-card-frame {
+#page-10 .text-card-frame {
   width: 450px;
   padding: 40px 40px 48px;
   box-sizing: border-box;
@@ -1110,20 +1135,20 @@ body {
 
 /* On shorter laptop viewports the card's height (title + body copy) leaves
    almost no gap from the screen's top/bottom edges — the sticky wrapper is a
-   fixed 100vh with no scroll room of its own to compensate (see #page-12's
+   fixed 100vh with no scroll room of its own to compensate (see #page-10's
    min-height comment above), so trim the card's own padding here instead. */
 @media (max-height: 920px) {
-  #page-12 .text-card-frame {
+  #page-10 .text-card-frame {
     padding: 24px 28px 28px;
   }
 }
 @media (max-height: 820px) {
-  #page-12 .text-card-frame {
+  #page-10 .text-card-frame {
     padding: 18px 22px 22px;
   }
 }
 
-#page-12 .section-title {
+#page-10 .section-title {
   font-size: 40px;
   text-align: center;
   line-height: 1.2;
@@ -1158,8 +1183,8 @@ body {
 }
 
 /* Logo recropped per node 217:9176 — swapped to the wordmark-only asset
-   (images/skuff-wordmark.png, the same pre-cropped "שקוף" glyphs already used
-   by index.html's .shk-logo-img) instead of the full elephant+tagline export,
+   (images/שקוף-לוגו-2020.svg, the pre-cropped "שקוף" glyphs) instead of the
+   full elephant+tagline export,
    since Figma's box (91x34, 2.68:1) only ever showed the bare wordmark. Still
    anchored top-right, 30px in from the right edge, but the vertical anchor
    needed recomputing for the new box: Figma's box top is 32px from the frame
@@ -1169,7 +1194,7 @@ body {
    tall, so 17.4px half-height) from that 459px.
    position: fixed — per explicit instruction the logo doesn't scroll up with
    the rest of @fold1 like the title/subtitle do, it fades out in place
-   instead (page0LagLoopTick in main.js sets its opacity directly, no
+   instead (page0ApplyTitleScrollLag in main.js sets its opacity directly, no
    transform). .page0-title/.page0-subtitle are also position: fixed now
    (see their own comments below) but, unlike the logo, still get a JS
    transform each frame to reproduce their own scroll-up motion — just
@@ -1210,7 +1235,7 @@ body {
      renders identically either way, and fixed just keeps it glued to the
      viewport instead of scrolling away by document flow. Switched from
      absolute per explicit instruction: the scroll-driven lag effect in
-     main.js (page0LagLoopTick) needs to be the *only* thing moving this
+     main.js (page0ApplyTitleScrollLag) needs to be the *only* thing moving this
      element — layering a JS transform on top of native scroll-driven flow
      movement (the old absolute behavior) meant two separate browser
      pipelines (layout/paint for the flow position, compositing for the
@@ -1254,54 +1279,6 @@ body {
   margin: 0;
 }
 
-/* Scroll-down cue — just the bouncing arrow now (the "גללו מטה כדי להתחיל"
-   caption was dropped per explicit request), repositioned from the frame's
-   right margin to sit just right of col. 1, the rightmost dot column
-   (centerX calc(50% + 13.5px), right edge at +17px) — a 10px gap puts the
-   arrow's own rendered center (wrapper left + the arrow's own 6px inset) at
-   +27px. Anchored from the viewport's bottom edge (not the H/2-relative
-   scheme every other page0-overlay element uses) so the cue never gets
-   pushed off-screen on short viewports.
-   position: fixed, same reasoning/mechanism as .page0-logo above — fades
-   out in place (page0UpdateFromScroll, main.js) rather than scrolling away,
-   since its whole job (telling the user to scroll) is done the moment they
-   actually start scrolling. */
-.page0-scroll {
-  position: fixed;
-  left: calc(50% + 31px);
-  bottom: 6px;
-  width: 14px;
-  height: 72px;
-}
-
-.page0-scroll-arrow {
-  position: absolute;
-  left: 6px;
-  top: 16px;
-  transform: translate(-50%, -50%) rotate(90deg);
-  animation: page0ScrollArrowMove 1.8s ease-in-out infinite;
-}
-
-/* Travels top 28px to 52.5px within .page0-scroll's 72px-tall box (a 24.5px
-   bounce, shorter than the original 48.5px per explicit request — same
-   midpoint, same 1.8s duration, just a shorter throw). */
-@keyframes page0ScrollArrowMove {
-  0% {
-    top: 28px;
-    opacity: 0;
-  }
-  20% {
-    opacity: 1;
-  }
-  80% {
-    opacity: 1;
-  }
-  100% {
-    top: 52.5px;
-    opacity: 0;
-  }
-}
-
 #page-0 .section-text {
   visibility: hidden;
 }
@@ -1333,24 +1310,10 @@ body {
   color: rgba(0, 0, 0, 0.81);
 }
 
-/* Satellite dots for the new-fold (@fold3) split animation — each starts at
-   size 0, positioned at the main swatch's origin; JS expands them outward as
-   foldNew3SplitTrigger fires. Inheriting position:absolute from .group-swatch
-   is not needed since the inline style sets it; this class exists purely as a
-   semantic hook and to ensure left:0 default matches the main swatch. */
-.group-swatch-split {
-  position: absolute;
-  left: 0;
-}
-
-/* Fold 4/5 distinguish the 5 groups that fall into the two opposing camps
-   (full black, .is-emphasized) from the 4 that don't (56%-opacity black,
-   .is-dimmed) — the legend/fold-3 default (81%-opacity) is untouched. */
+/* .is-emphasized (toggled in updateGroups from @fold2 until the mini-legend
+   settles) lifts a group label to full black — the default resting state is
+   81%-opacity black. */
 .group-item.is-emphasized .group-label {
-  color: #000;
-}
-
-.group-item.is-dimmed .group-label {
   color: #000;
 }
 
@@ -1366,21 +1329,14 @@ body {
   position: absolute;
   transform: translate(-100%, -50%);
   white-space: nowrap;
+  /* The header types in as two sibling spans (revealed prefix + transparent
+     remainder, main.js: fold8SetupTypewriter). The document is dir=ltr, so
+     without this the two Hebrew runs would lay out left-to-right relative to
+     each other and the prefix would render on the wrong side. */
+  direction: rtl;
   font: 18px 'Assistant', sans-serif;
   font-weight: 700;
   color: #000;
-  opacity: 0;
-}
-
-/* Vertical separator between fold 4's two camp clusters — opacity-only fade
-   (e4*(1-e6)), same convention as .fold6-note-divider. Slightly stronger
-   (.18 vs .12) since this is a primary structural separator between two
-   clusters, not a footnote hairline under a credit line. */
-.fold4-divider {
-  position: absolute;
-  width: 1px;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.18);
   opacity: 0;
 }
 
@@ -1414,34 +1370,5 @@ body {
   height: 1px;
   background: rgba(0, 0, 0, 0.12);
   opacity: 0;
-}
-
-/* Hidden measurement-only scaffold for fold 5's row layout — never painted
-   (visibility:hidden), just laid out via real flexbox so its children's
-   rendered positions (read via getBoundingClientRect in main.js) can be used
-   as the persistent items' flight targets, without needing to re-implement
-   flex's own label-width math by hand. */
-.fold5-top-row {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  gap: 45px;
-  visibility: hidden;
-  transform-origin: left top;
-}
-
-.fold5-row-ghost-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  white-space: nowrap;
-  font: 18px 'Assistant', sans-serif;
-}
-
-.fold5-row-ghost-swatch {
-  display: inline-block;
-  width: 13px;
-  height: 13px;
-  flex-shrink: 0;
 }
 
