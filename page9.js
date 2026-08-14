@@ -118,13 +118,13 @@ function p9LineRunLoop() {
   if (p9LinePhaseStart === null) return;
   const raw = p9LineCurrentRaw();
   page9LineT = p9Ease(raw);
-  if (currentPage === 11) draw();
+  if (currentPage === 9) draw();
   if (raw !== p9LineToT) {
     requestAnimationFrame(p9LineRunLoop);
   } else {
     p9LineFromT      = p9LineToT;
     p9LinePhaseStart = null;
-    if (currentPage === 11) draw();
+    if (currentPage === 9) draw();
   }
 }
 
@@ -159,7 +159,7 @@ const p9 = {
   // { from: Map, start: timestamp, duration } while a category is moving between
   // extreme/legit; null when at rest.
   anim: null,
-  // The event currently under the pointer in #page-10 (set by p9HoverInit's
+  // The event currently under the pointer in #page-9 (set by p9HoverInit's
   // onMove), or null — read by p9PlaceDot to dim every other dot while one is
   // hovered.
   hoveredEvent: null,
@@ -189,12 +189,12 @@ function p9Ease(t) {
 function p9RunAnimLoop() {
   if (!p9.anim) return;
   const t = (performance.now() - p9.anim.start) / p9.anim.duration;
-  if (currentPage === 11) draw();
+  if (currentPage === 9) draw();
   if (t < 1) {
     requestAnimationFrame(p9RunAnimLoop);
   } else {
     p9.anim = null;
-    if (currentPage === 11) draw();
+    if (currentPage === 9) draw();
   }
 }
 
@@ -206,7 +206,7 @@ let p9CountAnim = null; // { fromLeft, toLeft, fromRight, toRight, start, durati
 
 function p9CountRunLoop() {
   if (!p9CountAnim) return;
-  if (currentPage === 11) draw(); // draw() self-clears p9CountAnim via p9GetDisplayedCounts
+  if (currentPage === 9) draw(); // draw() self-clears p9CountAnim via p9GetDisplayedCounts
   if (p9CountAnim) requestAnimationFrame(p9CountRunLoop);
 }
 
@@ -233,7 +233,7 @@ function p9CountLabelAnimate(target) {
     p9CountLabelAlpha = p9CountLabelTarget > p9CountLabelAlpha
       ? Math.min(p9CountLabelTarget, p9CountLabelAlpha + delta)
       : Math.max(p9CountLabelTarget, p9CountLabelAlpha - delta);
-    if (currentPage === 11) draw();
+    if (currentPage === 9) draw();
     if (p9CountLabelAlpha !== p9CountLabelTarget) {
       p9CountLabelRaf = requestAnimationFrame(step);
     } else {
@@ -268,7 +268,7 @@ function makeP9CountPosAnimator() {
   function ensureLoop() {
     if (raf !== null) return;
     function step() {
-      if (currentPage === 11) draw();
+      if (currentPage === 9) draw();
       raf = currentT() < 1 ? requestAnimationFrame(step) : null;
     }
     raf = requestAnimationFrame(step);
@@ -662,7 +662,7 @@ function drawPage9(ctx, W, H) {
     // of that category stay full opacity and the rest dim by the same factor.
     // Dot-hover takes priority so both states are never active simultaneously.
     if (p9.hoveredEvent) {
-      drawAlpha = (e === p9.hoveredEvent) ? 1 : drawAlpha * 0.35;
+      drawAlpha = (e === p9.hoveredEvent) ? 1 : drawAlpha * HOVER_DIM_OPACITY;
     } else if (p9.hoveredCategoryIdx !== null) {
       const dimFactor = 1 - 0.65 * p9.hoverDimT;
       drawAlpha = (CATEGORY_EN_TO_IDX[e.category] === p9.hoveredCategoryIdx) ? 1 : drawAlpha * dimFactor;
@@ -716,8 +716,8 @@ function drawPage9(ctx, W, H) {
   // center, right events only right of center — but drops the *narrative*
   // clustering: within its own side, actors mix freely instead of grouping
   // into same-color blocks, built outward from the center, capped to a width
-  // budget (mirrored from the gap kept against the floating text column's
-  // dashed divider line, TEXT_COL_WIDTH in squareboundingbox.js) so it can
+  // budget (mirrored from the gap kept against the floating 480px text
+  // column) so it can
   // never grow into it. Sized per side, same fixed-slot reasoning as the
   // extreme grid above — reclassifying a category never reflows anyone
   // else's dot. The two sides butt up against each other with no gap.
@@ -936,7 +936,7 @@ function p9ResetDrops(animate = false) {
   p9CountAnim = null;
   if (animate && p9.lastPositions && p9.lastPositions.size > 0) {
     p9.anim = { from: new Map(p9.lastPositions), start: nowMs, duration: 3000 };
-    if (currentPage === 11) p9RunAnimLoop();
+    if (currentPage === 9) p9RunAnimLoop();
   } else {
     p9.anim = null;
   }
@@ -964,7 +964,7 @@ function p9RestoreDrops(idxs) {
   p13SyncGateVisibility?.();
   if (p9.lastPositions && p9.lastPositions.size > 0) {
     p9.anim = { from: new Map(p9.lastPositions), start: nowMs, duration: 3000 };
-    if (currentPage === 11) p9RunAnimLoop();
+    if (currentPage === 9) p9RunAnimLoop();
   }
 }
 
@@ -1227,7 +1227,7 @@ function p9BuildPanel() {
         baseRight,
       };
       p9CountAnim = null; // stagger drives the count directly — no separate count-up
-      if (currentPage === 11) p9RunAnimLoop();
+      if (currentPage === 9) p9RunAnimLoop();
 
     } else {
       // ── Dropping back into legit ───────────────────────────────────────────
@@ -1243,7 +1243,7 @@ function p9BuildPanel() {
 
       const DOT_DURATION = 3000;
       p9.anim = { from: new Map(p9.lastPositions), start: nowMs, duration: DOT_DURATION };
-      if (currentPage === 11) p9RunAnimLoop();
+      if (currentPage === 9) p9RunAnimLoop();
 
       const newCounts  = p9ExtremeCountsNow();
       const thisAnim   = p9CountAnim = {
@@ -1486,14 +1486,14 @@ function p9HoverInit() {
       // updateGroups (main.js) re-reads p9.hoverDimT/hoveredCategoryIdx to dim
       // the 8 fold6 squares in step with every other canvas dot — they're not
       // part of drawPage9's own dot loop, so draw() alone doesn't touch them.
-      if (currentPage === 11) { draw(); if (typeof updateGroups === "function") updateGroups(); }
+      if (currentPage === 9) { draw(); if (typeof updateGroups === "function") updateGroups(); }
       if (p9.hoverDimT !== hoverDimTarget) {
         hoverDimRaf = requestAnimationFrame(step);
       } else {
         hoverDimRaf = null;
         if (p9.hoverDimT === 0) {
           p9.hoverDimCategoryIdx = null;
-          if (currentPage === 11) { draw(); if (typeof updateGroups === "function") updateGroups(); }
+          if (currentPage === 9) { draw(); if (typeof updateGroups === "function") updateGroups(); }
         }
       }
     }
@@ -1579,7 +1579,7 @@ function p9HoverInit() {
   }
 
   function onMove(e) {
-    if (currentPage !== 11 || p9.anim) { hide(); return; }
+    if (currentPage !== 9 || p9.anim) { hide(); return; }
 
     const rect = canvasEl.getBoundingClientRect();
     const mx = e.clientX - rect.left;
@@ -1621,7 +1621,9 @@ function p9HoverInit() {
 
     dateEl.textContent = p7FormatDateDMY(bestEvent.date);
     descEl.textContent = bestEvent.descHeMedium;
-    tooltipEl.style.borderColor = p7ActorColor(bestEvent.actor);
+    // `color`, not `border-color`: the visible stroke is the dashed <svg>
+    // overlay (updateTooltipDash, main.js), which strokes currentColor.
+    tooltipEl.style.color = p7ActorColor(bestEvent.actor);
     tooltipEl.classList.add("is-visible");
 
     // Left-side events (event.side === "left", the grid's left column block)
@@ -1645,6 +1647,9 @@ function p9HoverInit() {
     const top  = Math.max(dotClientY - TOOLTIP_GAP - tooltipEl.offsetHeight, 8);
     tooltipEl.style.left = `${left}px`;
     tooltipEl.style.top  = `${top}px`;
+    // After sizing/mirroring are settled — the dash path is drawn to the box's
+    // actual pixel size, which changes with the description's line count.
+    updateTooltipDash(tooltipEl);
   }
 
   // Listens on window, not the canvas — .page9-sticky (the DOM-based tray/
@@ -1656,7 +1661,7 @@ function p9HoverInit() {
   // already hides the tooltip whenever nothing's under the cursor — so a
   // separate pointerleave handler isn't needed either.
   window.addEventListener("pointermove", onMove);
-  window.addEventListener("scroll", () => { if (currentPage !== 11) hide(); }, { passive: true });
+  window.addEventListener("scroll", () => { if (currentPage !== 9) hide(); }, { passive: true });
 }
 
 p9HoverInit();
@@ -1710,7 +1715,7 @@ function p9CategoryTooltipInit() {
     if (pill && zoneBelow.contains(pill)) show(pill); else hide();
   });
   zoneBelow.addEventListener("pointerleave", hide);
-  window.addEventListener("scroll", () => { if (currentPage !== 11) hide(); }, { passive: true });
+  window.addEventListener("scroll", () => { if (currentPage !== 9) hide(); }, { passive: true });
 }
 
 p9CategoryTooltipInit();

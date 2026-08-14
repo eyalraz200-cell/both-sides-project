@@ -1,14 +1,31 @@
 # Project overview
 
+> ## The wiki is the source of truth — read it first, and keep it updated
+>
+> `wiki/` documents the **current state** of this project: [Home](wiki/Home.md) ·
+> [Folds](wiki/Folds.md) · [Architecture](wiki/Architecture.md) ·
+> [Animation-System](wiki/Animation-System.md) · [Groups-and-Legend](wiki/Groups-and-Legend.md) ·
+> [Timeline](wiki/Timeline.md) · [Drag-and-Drop](wiki/Drag-and-Drop.md) · [Data](wiki/Data.md) ·
+> [Dev-Workflow](wiki/Dev-Workflow.md) · [Glossary](wiki/Glossary.md).
+>
+> **Every change that alters behavior, geometry, timing, or naming must update the
+> matching wiki page in the same turn as the code edit.** No "I'll document it later."
+>
+> The wiki describes what is true *now* — no history narration, no "this used to be…"
+> except in the explicit "Removed — don't reintroduce" callouts. If a wiki page and the
+> code disagree, **the code wins** — fix the page.
+
 Two separate, unrelated HTML entry points sharing no layout:
 
 - **`index.html`** — the article/home page ("שקוף" branding). Static content with a CTA button (`.shk-cta-button`) linking to `project.html`. Uses `trigger.css`.
-- **`project.html`** — the scrollytelling experience. Uses `style.css`, `main.js`, and per-page `page1.js`...`page9.js` scripts. A full-viewport `<canvas>` (`.graphic-col`) renders the visuals; a separate scroll column (`.text-col`) drives scroll position and `IntersectionObserver`-based page activation.
+- **`project.html`** — the scrollytelling experience. Uses `style.css`, `main.js`, and the per-page `pageN.js` scripts. A full-viewport `<canvas>` (`.graphic-col`) renders the visuals; a separate scroll column (`.text-col`) drives scroll position and `IntersectionObserver`-based page activation.
 
 ## Run / commands
 
 - **Serve:** `python3 server.py` → http://localhost:8080 (no-cache headers; auto-reloads the browser on `.html`/`.css`/`.js` change via mtime polling — note it does NOT watch the xlsx). Requires `openpyxl` (`pip install openpyxl`). Vanilla JS, **no build step, no npm, no tests** — edit files directly.
-- **Regenerate `events.json`:** it's rebuilt in-memory from the xlsx on every server start (`load_events()` in `server.py`), so local dev is always current. The committed static `events.json` (used by deployments not running `server.py`) is NOT auto-written — if the xlsx changes and a deployment needs it, dump `server.py`'s `/events.json` output to the file manually.
+- **Never kill the dev server as a cleanup step** — leave `:8080` running. Restarting it on explicit request is fine.
+- **Verify a JS edit:** `node --check <file>.js` then `curl -o /dev/null -w "%{http_code}" http://localhost:8080/project.html` — a classic `<script>` that fails to parse takes every global in it down, and the visible symptom can surface in a different file.
+- **Regenerate `events.json`:** rebuilt in-memory from the xlsx on every server start (`load_events()` in `server.py`), so local dev is always current. The committed static `events.json` (used by deployments not running `server.py`) is NOT auto-written — if the xlsx changes and a deployment needs it, dump `server.py`'s `/events.json` output to the file manually.
 
 ## Files
 
@@ -16,182 +33,68 @@ Two separate, unrelated HTML entry points sharing no layout:
 
 | File | Role |
 |---|---|
-| `main.js` | Scroll controller, `PAGES[]` dispatch, `GROUPS` roster, all fold triggers/`updateGroups`, page0 dots |
+| `main.js` | Scroll controller, `PAGES[]` dispatch, `GROUPS` roster, all fold triggers/`updateGroups`, page0 dots, fold badge |
 | `page1.js` | `drawPage1` + page-0 decorative dot column builder |
-| `page2–5.js` | Thin `drawPageN` stubs (background only) — wired into `PAGES[]`, keep |
 | `page7.js` | Pinned real timeline: per-event square cascade + canvas year axis |
 | `page8.js` | Bridge glide from timeline layout → page9 legit grid |
 | `page9.js` | Drag-and-drop categorization + dot-migration animation |
 | `page12.js` | `drawPage12` outro |
-| `squareboundingbox.js` | Shared grid-geometry constants (`SBB`, `SBB_TIMELINE`, `CENTER_GAP`, `TEXT_COL_WIDTH`) |
+| `squareboundingbox.js` | Shared grid-geometry constants (`SBB`, `SBB_TIMELINE`, `CENTER_GAP`) |
 | `reload.js` | Dev-only mtime poll → auto page reload |
 | `server.py` | Local dev server + xlsx→`events.json` generation |
 
-`index.html`/`trigger.css` are the separate article page. `main_draft1.js`/`main_bands.js`/`main_screens_backup.js` and the other `main_screen*.js` scratch files were deleted (were unreferenced scaffolding); don't recreate them.
+`index.html`/`trigger.css` are the separate article page. Old `main_*` scratch files were deleted; don't recreate them.
 
-Figma source: file `QASHSt1u7b6m6ASgrUPswf` ("Design"). We're revising `project.html`'s screens one at a time against Figma nodes, pixel-parity style — **only the pages explicitly revised should be treated as matching Figma**; everything else is still the old placeholder layout.
-
-`events.json` (fetched by `page7.js`, `{date, side, actor, category, descHeMedium}` per event) is generated from `Events_with_description_he_medium.xlsx` — the xlsx's `main actor`/`event category` columns map directly to the field names/English strings the code already expects (`P7_COLORS` keys, `CATEGORY_EN_TO_IDX` in `page9.js`), and `description_he_medium` (a real, per-event Hebrew translation for all 13,523 rows) becomes `descHeMedium`, shown in the dot hover tooltip (`page9.js`/`page7.js`). `server.py`'s `/events.json` route regenerates dynamically from the xlsx on every server start, so local dev is always current — but the static `events.json` file committed at the repo root (used by any deployment that doesn't run `server.py`) is not auto-regenerated; if the xlsx changes, regenerate that file from it manually.
+Figma source: file `QASHSt1u7b6m6ASgrUPswf` ("Design"). Screens are revised one at a time against Figma nodes, pixel-parity style — **only pages explicitly documented as revised should be treated as matching Figma**; everything else is still placeholder layout. See the wiki's per-fold notes and [Data](wiki/Data.md).
 
 ## Fold reference (`@foldN`)
 
-This doc's section headings below use a "Fold" numbering that doesn't match `project.html`'s actual ids (three folds were inserted at various points — see Fold 5/Fold 9's own notes for two of them; @fold3 was inserted between @fold2 and old @fold3 later — and a couple of headings carry a parenthetical "fold N in Figma/user-facing numbering" that's *yet another*, third numbering). To kill that ambiguity for good, `@foldN` is its own **fourth, canonical** numbering — 1-indexed by on-screen order (`@fold1` is the very first section, the intro/cover) — defined once and for all by this table:
+`@foldN` is the canonical fold numbering — 1-indexed by on-screen order, **off by one from the HTML id** (`@foldN` = `id="page-(N-1)"`). Never resolve it by eyeballing ids or symbol names (many symbol names carry legacy numbering, e.g. `fold6Trigger` fires on `@fold4`). The full table with triggers and beat structure is in [Folds](wiki/Folds.md); the short version:
 
-| `@foldN` | id | Title (Hebrew, may be truncated) | This doc's heading |
-|---|---|---|---|
-| `@fold1` | `page-0` | קיצוניים משני הצדדים (intro/cover) | Page 0 |
-| `@fold2` | `page-1` | בישראל פועלות קבוצות פוליטיות רבות... | Page 1 |
-| `@fold3` | `page-2` | כל קבוצה כוללת מגוון של אנשים... | (no section heading yet) |
-| `@fold4` | `page-3` | הזירה הפוליטית אינה מתחלקת תמיד... | Fold 3 |
-| `@fold5` | `page-4` | אבל, בשנים האחרונות מתחדדת חלוקה... אנו נתמקד בהן בלבד. | Fold 4 (**two-phase**, see below) |
-| `@fold6` | `page-5` | בתור הקבוצות הפעילות בשטח, נהוג לחשוב עליהן כאל הקצוות הפוליטיים... | (split phase 1 — see Fold 6 notes) |
-| `@fold7` | `page-6` | אספנו נתונים על אירועים פוליטיים... | Fold 6 |
-| `@fold8` | `page-7` | כל ריבוע מייצג פעולה פוליטית... | Fold 7 |
-| `@fold9` | `page-8` | צבע הריבוע מציין את הקבוצה... | Fold 9 |
-| `@fold10` | `page-9` | (no title — `page7-scrub`, the real pinned timeline) | "Explicitly out of scope" |
-| `@fold11` | `page-10` | פעולות פוליטיות שונות זו מזו באופי... | "Explicitly out of scope" |
-| `@fold12` | `page-11` | איפה עובר הגבול? (drag-and-drop) | "Explicitly out of scope" |
-| `@fold13` | `page-12` | קיצוניים משני הצדדים (scroll-gated outro) | Page 12 |
+| `@foldN` | id | What plays |
+|---|---|---|
+| `@fold1` | `page-0` | Hero/intro cover; dot columns with scroll-lag damping |
+| `@fold2` | `page-1` | Dots fly into the two 4×3 camp grids; camp headers type in — `fold2Trigger` |
+| `@fold3` | `page-2` | Filler rects shrink; one rect per row survives; group labels type in — `fold3Trigger` |
+| `@fold4` | `page-3` | Groups glide into the persistent mini-legend; camp headers un-type — `fold6Trigger` |
+| `@fold5` | `page-4` | 8 grey sample squares grow in + ACLED note — `squaresRevealTrigger` |
+| `@fold6` | `page-5` | Square labels + tooltip demo — `fold7LabelTrigger`, `fold8*` triggers |
+| `@fold7` | `page-6` | Squares gain colors and fly to their real timeline dots — `fold9Trigger`, `fold9FlyTrigger` |
+| `@fold8` | `page-7` | The real pinned timeline (`page7-scrub`, page7.js) |
+| `@fold9` | `page-8` | Bridge glide (page8.js) |
+| `@fold10` | `page-9` | Drag-and-drop categorization (page9.js) |
+| `@fold11` | `page-10` | Scroll-gated outro (`fold13Trigger`) |
 
-This table is the source of truth for `@foldN` going forward — note `@foldN` is **off by one** from the HTML id (`@foldN` = `id="page-(N-1)"`) and from this doc's own heading numbers, on purpose, so don't shortcut it by eyeballing either of those. The headings below are kept as-is (renumbering them would just create a fifth numbering to track against git history) — always resolve `@foldN` here first, then jump to whichever heading the right column names.
+**11 folds total.** Dev shortcut: **Ctrl+Shift+F** toggles the fold-number badge/jump menu.
 
-### `@fold5` is now a two-phase fold (the fold-6 merge)
+## Groups roster
 
-The old `@fold6` (`#page-5`, "חלק מהקבוצות לא משתייכות...") — a standalone section whose only job was the no-camp groups' fly-down-and-disappear — was **removed**, and its animation folded into `@fold5` (`#page-4`) as a **second phase**. `@fold5`'s title gained the closing clause **"אנו נתמקד בהן בלבד."** to carry that beat's meaning. Everything from the old `#page-6` onward was renumbered **down by one** (ids `page-6…page-13` → `page-5…page-12`; `currentPage`/`PAGES`-index `6…13` → `5…12`) across `project.html`, `main.js`, `page7/8/9.js`, and `style.css`.
+`GROUPS` in `main.js` is **6 groups** — camp groups only (the old no-camp groups were removed on v2 and never appear anywhere):
 
-`@fold5` plays two phases off a **single trigger point** — `#page-4 .text-card`'s `0.5` crossing (`checkFold5` in `main.js`). Phase 2 runs **right after** phase 1, chained on completion, not off a second scroll position:
-- **Phase 1 — everything moves to its destination** (`fold4Trigger`, `GROUP_TRANSITION_MS`): fires when the card crosses `frac 0.5`. On a single `e4` clock, the camp groups split into their two opposing columns AND the no-camp `row` groups fly straight into their bottom-row spots — the row groups simply take their `fold5RowTargets` position as their phase-1 `fold4Pos` (no bowing through the scattered fold-4 position). Nothing disappears yet.
-- **Phase 2 — the bottom groups disappear** (`fold5Trigger`, `FOLD5_TRANSITION_MS` ≈ 1100ms, a single shrink+fade beat = `fold5Trigger.currentT()`): chained off phase 1's completion via `makeTrigger`'s optional `onSettle(target)` callback — `fold4Trigger` settling at `1` calls `fold5Trigger.trigger(1)`. Only the no-camp `row` groups animate: swatch shrinks to 0 (`swatchSize *= 1 - fold5ExitT`) and label fades. On scroll-up the chain reverses: `checkFold5` rewinds phase 2 first, and `fold5Trigger` settling back at `0` calls `fold4Trigger.trigger(0)` to un-split (if phase 2 never ran, `checkFold5` reverses phase 1 directly). The old 2-beat `FOLD5_MOVE_SPAN`/`GAP_SPAN`/`EXIT_SPAN` slicing is gone — the move beat now lives in phase 1.
+- **מחנה הימין (coalition):** מפגינים חרדים `#4A4A4A`, תנועות התנחלות באיו״ש `#FFAC11`, קבוצות ימין לאומיות `#CC0000` (top→bottom)
+- **גוש השינוי (change):** ארגוני שלום ודו קיום `#CD00CD`, ארגוני מחאה נגד הממשלה `#0073FF`, מפגינים ערבים ישראלים `#00B00C` (top→bottom)
 
-The body sections below still narrate the pre-merge history (and their heading numbers were already unreliable — resolve via the table). Treat this note plus the table as authoritative for the current `@fold5`/renumbering state.
+Timeline dot color is `p7ActorColor(actor)` — a lookup into `GROUPS` by its `actor` field, `#888` fallback. There is no `P7_COLORS` object. Full roster details in [Groups-and-Legend](wiki/Groups-and-Legend.md).
 
-## `@nosidegroups`
+## Hard rules (do not violate)
 
-`GROUPS` in `main.js` is **12 groups** (was smaller in older notes below — `GROUPS` is the source of truth for the roster, counts, colors, and camp membership; treat any "8"/"9"/"3"/"5" group count elsewhere in this doc as stale). `@nosidegroups` = the **6** groups flagged `row: true` (dimmed at `@fold4`/`@fold5`) that don't belong to either opposing camp:
+- **page9.js "state 1"** (the non-interrupting extreme-drop animation) **is FINALIZED — never touch it without explicit instruction.** See [Drag-and-Drop](wiki/Drag-and-Drop.md).
+- Renaming a category pill in `P9_CATEGORIES` (`page9.js`) must also update `FOLD6_SQUARE_LABELS` (`main.js`).
+- "Removed — don't reintroduce" callouts in the wiki are binding: the page-1→fold-3 legend morph, the vertical dashed guide-line system on page-9, the anchor squares/`drawGroupLegend`, and the old `main_*` scratch files all stay gone.
+- `.section-title` is one shared base rule (20px, weight 600 faked on the Regular Hadassah Friedlaender face — no true Medium OTF exists in `fonts/`). No per-page font-size/weight overrides — a differently-sized title is a regression.
+- Harness/scaffolding files are `_debug-*.js`, never ship, and follow the recipe + rules in [Dev-Workflow](wiki/Dev-Workflow.md).
 
-- יוצאי אתיופיה (Ethiopian immigrants)
-- יוצאי ברית המועצות (Soviet Union immigrants) — **still present** in `GROUPS` (an earlier note claimed it was removed; it wasn't)
-- תושבי מזרח ירושלים (East Jerusalem residents)
-- בדואים בנגב (Negev Bedouins)
-- דרוזים (Druze)
-- מבקשי מקלט (Asylum seekers)
+## Conventions (short form — details in [Animation-System](wiki/Animation-System.md))
 
-These render dimmed/scattered at `@fold5`, glide into a row and fade out by the end of `@fold6`, and never reappear after that (see Fold 4/Fold 5 below). The other **6** groups — the camp groups (each has a `fold6` entry, undimmed at `@fold4`) — are מתיישבים, פעילי ימין, מתנגדי הרפורמה המשפטית, פעילי שמאל, חרדים, and **ערבים ישראלים** (Israeli Arabs — moved into the left/change bloc "גוש השינוי" per explicit instruction; it is NO LONGER a no-camp group, despite older notes below listing it as one).
+- Two easing curves cover everything hand-rolled: `p9Ease` (sine in-out, the default) and `p7Ease` (cubic out — timeline square pops and little else). Don't invent new curves.
+- Fold animations are fixed-duration 0↔1 triggers (`makeTrigger` + `watchCardThreshold`) fired by a scroll **crossing**, not live scroll readouts; all are reversible mid-flight covering only the remaining distance.
+- Multi-beat folds slice the trigger's **raw** progress into `{start, len}` windows and re-apply `p9Ease` fresh per window — never ease an already-eased slice.
+- **"Secondary attribute can snap, position never does":** x/y always animates continuously; color/opacity/label visibility may run on their own timing.
+- Elements JS repaints every frame deliberately have **no** CSS transition; CSS transitions are reserved for pure state flips.
+- Shared tempo: `GROUP_TRANSITION_MS` (1900ms) for legend-system beats; named exceptions get their own constant with a reason.
+- The title block system (`.text-card` 480px centered, `.text-card-frame` border-image dash) is documented in [Architecture](wiki/Architecture.md).
+- Overlays needing to sit above the canvas must be direct `.layout` children — `.graphic-col`'s stacking context traps z-index.
 
-## Naming convention
+## Glossary pointers
 
-Each scrolling page's text content (title, and on some pages a legend) is called the **title block** in conversation. In code it's the `.section-text` element inside each `.text-section` wrapper, e.g. `#page-1 .section-text`.
-
-## Title block architecture (applies to revised pages)
-
-Replacing the old right-aligned sidebar layout: every title block is a normal-flow, fixed-width (480px), horizontally-centered block (`.text-card` class — pure positioning/fade, no visual chrome) that scrolls continuously with the page rather than pinning. Visibility fades in/out via an `.is-visible` class toggled by a scroll-linked `IntersectionObserver` in `main.js` (each card fades as it crosses the viewport) — not tied to `currentPage`. The `.pageN-sticky` wrappers are plain in-flow containers (no `position: sticky`); their outer `.text-section` keeps an explicit scroll-height (`min-height`) just to give any scroll-driven canvas choreography (see fold 3 below) room to play out as the card crosses the viewport, not to hold a pin.
-
-The dashed-border white box itself (Figma node `119:997`: 4px dashed black border, white fill, 8px radius, 21/29px padding) is a **separate** class, `.text-card-frame` — applied only to the `<h2 class="section-title">`, not to sibling content like a legend. Per Figma, the box wraps just the title text, not everything below it. The dash itself is NOT the browser's native `border-style: dashed` (its default dash/gap is noticeably longer/looser than Figma's) — pixel-sampling the Figma export showed an exact 2px-dash/2px-gap repeat, so `.text-card-frame` draws it via a `border-image` (a small reference square sliced so the rounded corners render unscaled and tile seamlessly into the repeating edge dash).
-
-`.section-title`'s base rule (20px, Hadassah Friedlaender Medium — faked as `font-weight: 600` on the Regular face, no true Medium OTF in `fonts/`) is shared by **every** title card; verified identical across nodes `119:997`, `117:788`, `117:818`, `120:1279`. No page should override font-size/weight on `.section-title` individually — if a page's title looks differently sized, that's a regression, not an intentional per-page spec.
-
-## Animation conventions (project-wide)
-
-Two named easing curves cover almost every hand-rolled (non-CSS) animation in the project. If a new animation needs easing, use one of these two rather than inventing a bespoke curve:
-
-- **`p9Ease`** (`page9.js`) — `-(Math.cos(Math.PI * t) - 1) / 2`, a sine ease-in-out, described in its own comment as "a soft, slow ramp up and down." This is the default: every `makeTrigger`-based fold trigger's `currentT()`, the page0 entrance (`playPage0Entrance`), fold13's morph (`updateFold13`, partially — see below), page8's timeline→legit-grid blend (`p8CurrentT()` fed through `p9Ease(t)`), and page9's line reveal + both directions of dot migration all use it.
-- **`p7Ease`** (`page7.js`) — `1 - Math.pow(1 - t, 3)`, a cubic ease-out, explicitly the "punchy" exception to `p9Ease`'s gentleness. Used *only* for the real timeline's per-event square pop-in/out (`p7DrawSideSquares`'s month-by-month cascade) — a materializing dot reads better with a fast-start/decelerate curve than a sine.
-- `updateFold13` (`main.js`) re-derives the same cubic-ease-out formula inline rather than calling `p7Ease`, applied *on top of* `fold13Trigger.currentT()` (already `p9Ease`'d) — fold13's morph is the one place two easing passes stack. That's intentional (a snappier feel than a single `p9Ease` pass alone), not a bug to flatten to one curve on sight.
-
-**Trigger architecture** — nearly every fold's animation is a fixed-duration 0↔1 phase fired once by a scroll-position *crossing*, never a live readout of scroll position itself:
-- `makeTrigger(duration, onTick)` + `watchCardThreshold(cardEl, frac, trigger)` (`main.js`) pair a trigger with the scroll point that fires it — almost always a title card's top crossing `frac = 0.5` (its ordinary center crossing); deviations (fold 9's squares-fade at `1/12`) are called out explicitly in that fold's own note rather than assumed elsewhere.
-- `page7.js`/`page8.js` hand-roll the identical shape locally (`p8CurrentT`/`p8StartPhase`/`p8PhaseStart`, `p7MonthAnimStart`/`p7MonthReverseStart`) instead of reusing `makeTrigger` — same phase-start-time + duration + fixed-target pattern, just pre-dating `main.js`'s generic version.
-- Every one of these is **reversible mid-flight, covering only the remaining distance** — scrolling back up doesn't restart from 0, it plays the same distance in reverse from wherever it currently sits (`page8.js`'s own comment: "reversing mid-flight covers only the remaining distance... same logic as page7's month cascade, which mirrors its order on reverse rather than restarting cold").
-
-**Duration tiers** — roughly three bands, chosen by what the animation actually is:
-- **~1900ms** (`GROUP_TRANSITION_MS`) is the shared "legend tempo" for most single-beat fold triggers (fold3/4/6/7-label) — one deliberate tempo so the legend system reads as one consistent piece rather than each fold having its own speed. Named exceptions get their own duration when the shared tempo read wrong for that specific beat: `FOLD2_ENTRANCE_MS` (3400ms)/`FOLD5_TRANSITION_MS` (3600ms) for multi-beat entrances/exits (see below), `FOLD9_COLOR_MS` (500ms)/`FOLD9_SQUARES_FADE_MS` (600ms) because "the shared tempo read as sluggish for a plain background-color swap, per explicit feedback," `FOLD_NEW3_SPLIT_MS` (700ms) for the small dot-split.
-- **~600–3000ms** for the bigger canvas-driven glides outside the legend system: page7's month cascade (`P7_ANIM_TOTAL_DURATION` 2200ms total, `P7_POP_DURATION` 220ms per square), page8's full blend into page9's grid (`P8_TRANSITION_DURATION` 3000ms), page9's line reveal (`P9_LINE_DURATION` 800ms), and page9's dot migration (600ms travel per dot, staggered, plus up to a 2200ms reposition phase for already-placed extreme dots when a category moves to "extreme" — normally sequential (reposition finishes, then the new dots fly in), but if the drop lands while a previous drop's animation is still running, the new dots fly in immediately, concurrently with the reposition instead of waiting for it; a flat 3000ms `DOT_DURATION` when dropping back to "legit").
-- **~80–2800ms, deliberately un-eased/linear** for cases where a curve would be imperceptible or would fight the effect: the hover-dim crossfade (`HOVER_DIM_MS` 80ms, a plain per-frame increment/decrement with no easing function at all), the year-axis event label crossfade (`P7_AXIS_EVENT_FADE_IN_MS`/`_OUT_MS`, 400/1000ms, linear `Math.min(1, elapsed/duration)`), and the year axis's own build-in wipe (`P7_AXIS_INTRO_DURATION` 2800ms, also linear — a wipe reads as a wipe, not a moving object, so easing it would look wrong).
-
-**Multi-beat sequencing** — folds that pack more than one visual beat into a single trigger (fold 2's 3-beat entrance, fold 4's merge-then-spread) slice the trigger's **raw** (linear, `currentRaw()`) progress into sequential spans (e.g. `SHRINK_SPAN`/`MOVE_SPAN`/`LABEL_SPAN` summing to 1), then re-apply `p9Ease` fresh to each local 0..1 slice — never ease the whole span once and then carve it up, since "easing an already-eased curve's middle third looks close to linear (steep) while its first/last thirds look like they barely move," making the beats visibly run at different speeds.
-
-**Stagger** — row/dot-by-dot delays layered on top of a shared trigger's timeline, not separate triggers: `PAGE0_ROW_STAGGER_MS`/`ROW_STAGGER` for page0's/the legend's row-by-row pop, and page9's dot-arrival stagger (`ARRIVAL_STAGGER_MS`, sqrt-scaled by count against a calibration anchor — `ANCHOR_COUNT` — so a small category's handful of dots don't just snap in almost instantly next to how visibly the anchor category's own cascade plays out).
-
-**"Secondary attribute can snap, position never does"** — an explicit, named rule (`main.js`, by the fold-6-squares definition) that applies everywhere in the project: x/y always animates continuously on one of the two easing curves above, while color, opacity, and label visibility are free to move on their own independent trigger/timing when that reads better (e.g. fold 6/9's swatch-and-label lerp, fold 9's square color-lerp).
-
-**CSS-transition tier** — reserved for pure DOM opacity/background/transform toggles that don't need per-frame JS control (state flips, not continuous scroll-driven motion): `0.15s` default-ease for the drop-zone hover highlight (`.page9-zone`), `0.2s ease-out` for the legend overlay's initial reveal (`.groups-overlay.is-active`), `0.35s ease-out` for page9's stuck-state fades (header subtitle, dashed frame/fill), `0.5s ease-out` for the drag-panel's engage fades (`.page9-header`, `.page9-zone-wrap-extreme`), and one bespoke `cubic-bezier(0.22, 1, 0.36, 1)` at `0.6s` for the page9 tray's slide-in (`.page9-tray`) — the one deliberately snappier decelerate curve outside the two JS ones above. The flip side of this tier: elements JS already repaints every frame with a continuous value (e.g. `.fold6-square`/`.fold6-square-label`) deliberately have **no** CSS transition, since stacking one on top would lag behind or double up with the JS-driven motion.
-
-## Page 0 — intro/cover (Figma node `146:105164`)
-
-- Flat `#FDFCFF` background, no vignette, no dashed-card chrome (Figma's intro is a flat cover, not boxed).
-- `.page0-overlay`/`#page0Overlay`: fixed full-viewport overlay holding the logo + title + subtitle, toggled `.is-active` by `currentPage === 0`.
-- Logo (`images/skuff-logo.png`) is a 2048×2048 sprite sheet, not a tight crop — cropped via an oversized, offset `<img>` (`.page0-logo-img`) inside an `overflow: hidden` wrapper (`.page0-logo`), percentages copied from Figma's own generated crop. The asset is solid white with transparency; `filter: invert(1)` turns it black (a real `mix-blend-mode` doesn't work here since `.page0-overlay`'s `position: fixed` creates its own stacking context).
-- Title (`.page0-title`) and subtitle (`.page0-subtitle`) sit side-by-side (subtitle column to the title's left, both right-aligned, bottom-aligned to each other), anchored relative to the viewport's vertical center via `bottom: calc(50% + 57px)` — same `H/2`-relative reference the canvas-drawn dot pattern uses (`drawPage0Dots` in `page1.js`), so both stay in sync at any viewport height.
-- Title font is faked at `font-weight: 600` on the Regular `HadassahFriedlaender` face — no true Medium-weight OTF exists in `fonts/` (only Regular 400 and Thin 100). Flag to the user if a real Medium file becomes available.
-
-## Page 1 — "title block" + legend (Figma node `119:968`)
-
-- Title: `#page-1 .section-title`, wrapped in `.text-card-frame` (the dashed box) — uses the shared base `.section-title` size/weight (20px Medium), no per-page override (a stray 22px override here was removed, see "Title block architecture" above).
-- Legend (`.page2-legend`): 8 groups, vertical list, **not** inside the dashed box — sits below it as plain centered text. Order and colors must match Figma exactly: ערבים ישראלים `#008C99`, יוצאי אתיופיה `#7c3aed`, פעילי ימין `#65a30d`, חרדים `#57534c`, מתנגדי הרפורמה המשפטית `#3f76ed` (lightened slightly per explicit instruction from Figma's original `#2563eb`), פעילי שמאל `#d946ef`, מתיישבים `#f16f16` (adjusted per explicit instruction from Figma's original `#ea580c` — the darker value is no longer accurate), דרוזים `#eacc0c`.
-- Each `.page2-legend-item` is `position: relative`, with `.page2-legend-swatch` and `.page2-legend-label` both `position: absolute`, anchored off the row's own 50% mark (`right: 50%` for the swatch, `right: calc(50% + 13px + 12px)` for the label). Since each row spans the full width of the centered `.text-card`, every row's 50% mark coincides with the viewport's horizontal center — this is what pins all 9 swatches to one vertical line at center, with labels of varying length trailing left from it, **without** centering the label+swatch pair's combined bounding box as a whole (which would shift the swatch off-center depending on label length).
-- There is no animated transition from page 1's legend into fold 3's canvas content — see below.
-
-## Fold 3 — id `#page-2` (Figma node `117:757`)
-
-- Title: same `.text-card`/`.text-card-frame` treatment as other folds, no per-page override.
-- The 8 groups render as a **static scatter** of colored dots directly on the canvas overlay (`FOLD3_GROUPS` in `main.js`, `.group-item`/`.group-swatch` in `style.css`) — coordinates are copied straight from the Figma frame (1512×982) and rescaled to the canvas's actual size in `layoutFold3Groups()`. No animation: `groupsOverlayEl` just fades in/out via `setActivePage` when `currentPage === 2`, same mechanism as `.page0-overlay`.
-- There used to be a scroll-driven "legend swatches fly from page 1 into a centered list, then rearrange into page 4's scattered layout" animation (`page2to3UpdateFromScroll`/`page3to4UpdateFromScroll`/`page4UpdateFromScroll`) — **removed entirely** per explicit instruction, since Figma's fold 3 has no such transition (the dots are just there, no morph). Don't reintroduce it.
-
-## Fold 4 — id `#page-3` (Figma node `117:788`)
-
-- Title text updated to match Figma exactly: "אבל, בשנים האחרונות מתחדדת חלוקה בין מספר קבוצות לשני מחנות פוליטיים מנוגדים" (previously missing "בין מספר קבוצות"). Uses the shared base `.section-title` (20px Medium-faked-600, see "Title block architecture" above) — no per-page override needed.
-- The same 8 groups split into two static tiers, rendered into a separate overlay (`#fold4Overlay`, `FOLD4_CLUSTER`/`FOLD4_DIMMED`/`layoutFold4Groups()` in `main.js`): 5 groups that fall into the two opposing camps (מתיישבים, פעילי ימין, חרדים, מתנגדי הרפורמה, פעילי שמאל) render as a tight, full-black cluster aligned at one vertical line; the other 3 (יוצאי אתיופיה, ערבים ישראלים, דרוזים) render scattered and dimmed (`.group-item.is-dimmed`, 56%-opacity black) further from the cluster. No animation, same static-overlay pattern as fold 3 — fades in/out via `setActivePage` when `currentPage === 3`.
-- Each item's swatch-vs-label DOM order is per-item (`swatchFirst` flag) to match Figma's own left/right order exactly — not all 8 groups use the same order, this isn't a typo.
-
-## Fold 5 — id `#page-4` (Figma node `117:818`)
-
-- This is a **newly inserted section** — it didn't exist before; everything from the old `#page-4` onward was renumbered up by one to make room. A *second* insertion (fold 9, below) later shifted everything from the timeline onward up by one more — see that section for the current id table. A *third* insertion (the new `@fold7` = `#page-5`, "בתור הקבוצות הפעילות בשטח...") later split the old ACLED fold's combined animation in two: the **group-split** into the corner mini-legends now plays on that new `@fold7`/`#page-5` (still driven by `page6TitleCardEl`/`fold6Trigger`, which bind by selector and so followed the new section), while the **grey squares growing in + the ACLED bottom-legend note fading in** were detached onto a new `squaresRevealTrigger` on the ACLED fold, now `@fold8`/`#page-6`. That third insertion pushed everything from the old `#page-5` (ACLED) onward up by one more — the canonical `@foldN` table above already reflects it; the prose sections below use the post-insertion ids too. If you're hunting for "page-N" or `currentPage === N` logic for the timeline/bridge/drag-and-drop folds and the numbers look off by one or more, this is why — check git history for the old numbers if they show up unexpectedly in a diff or an old note.
-- Title: "חלק מהקבוצות לא משתייכות לחלוקה המחנאית שנוצרה, אנחנו נתמקד באלו שכן", same shared base `.section-title` styling as every other fold.
-- All 8 groups are one persistent set of DOM nodes shared across folds 2-5 (`GROUPS`/`groupItems` in `main.js` — see the comment block above `GROUPS`), not a per-fold overlay. The 5 camp groups (fold 4's cluster) just stay frozen at their fold-4 position for fold 5 — `fold5Pos` falls back to `fold4Pos` for any non-`row` group, so lerping toward it is a no-op.
-- The other 3 ("ערבים ישראלים", "יוצאי אתיופיה", "דרוזים" — `row: true` in `GROUPS`) are NOT static here: they run a single fixed-duration animation (`fold5Trigger`, `FOLD5_TRANSITION_MS`), fired once by fold 5's own title card crossing the screen's vertical center (the normal center → near-top window every other fold transition uses — same convention as fold 3/4/6, not an enter-viewport window) — see `updateGroups` in `main.js`:
-  - **Beat 1 (move)** — these 3 dots glide from fold 4's scattered/dimmed position into one horizontal row near the **bottom** of the frame (Figma node 117:818/Frame 3169, y=896 of 982, not under the title), landing exactly on Figma's row layout.
-  - **Beat 2 (exit)** — once the row has settled, the swatch shrinks (width/height → 0) while the label fades out via opacity — mirroring fold 2's entrance grow/fade-in technique (swatch `PAGE0_DOT_SQ`→`CLUSTER_SWATCH_SIZE`, then label opacity 0→1) in reverse, not a whole-item opacity fade. Leaves only the 5 camp groups on screen, matching the title's own point ("we'll focus on the ones that do [belong]").
-  - Both beats are sequential sub-spans of `fold5Trigger`'s one 0..1 timeline (re-eased independently via `p9Ease`, same `raw`/`SPAN`-slicing convention as fold 2's 3-beat entrance), not simultaneous.
-  - The row's exact spacing/position is resolved by a hidden flexbox measurement scaffold (`.fold5-top-row` — name is legacy, it's no longer at the top — `fold5RowGhosts`/`updateFold5RowTargets` in `main.js`), not hand-computed, since label widths vary.
-- The 5-camp cluster doesn't disappear after fold 5 — it moves on to fold 6/7's mini-legend, see below.
-
-## Fold 6 — id `#page-5` ("fold 7" in Figma/the user-facing numbering; Figma node `120:1279`)
-
-- Title updated to match Figma exactly: "אספנו נתונים על אירועים פוליטיים שהתקיימו במרחב הפיזי, מתחילת שנת 2023 עד היום" (previously a different, non-Figma sentence).
-- **This animation is now split across two folds** (see the third-insertion note in the Fold 5 section above). The **group-split** plays on the new `@fold7`/`#page-5` ("בתור הקבוצות הפעילות בשטח..."), still driven by `fold6MorphT()`/`page6TitleCardEl`/`fold6Trigger` (they bind by `#page-5` selector, so they followed the newly inserted section). The **grey squares + bottom note** were detached onto a new `squaresRevealTrigger` (`watchCardThreshold` on `#page-6 .text-card`) and now play on the ACLED fold, `@fold8`/`#page-6`. Both phases are the same crosses-center-to-near-top window every other fold uses, both continuous (no snapping), and **neither undoes itself on further scroll** — this is the legend's final resting state for the rest of the page:
-  - *Phase 1 (`@fold7`/`#page-5`):* The 5 camp groups (only they have a `fold6: {x,y}` in `GROUPS`) glide from the cluster into a persistent mini-legend at the screen's left edge (Figma Frame `3219`), shrinking from 13px to 6px swatches with a 12px→6px swatch-label gap, with the label continuously lerping (over `e6`, no snap) to 16px/`rgba(0,0,0,0.46)` — weight stays regular (400) throughout — all of it computed in `updateGroups()`, no separate overlay. The mini-legend rows are pre-shifted up by `fold6NoteShiftPx` here so the (not-yet-visible) note's space is already reserved — no jump when it fades in on phase 2.
-  - *Phase 2 (`@fold8`/`#page-6`):* 10 small static squares (Figma's own sample column, `FOLD6_SQUARES_X/Y` in `main.js`, `#fold6SquaresOverlay`) grow in (`growScale` from `squaresRevealTrigger.currentRaw()`) at the screen's center — visually replacing the cluster in the spot it just vacated — and the ACLED bottom-legend note (`fold6NoteEl`, "הפעולות נאספו ממאגר...") fades in (opacity = `squaresRevealTrigger.currentT()`). The squares are unlabeled here; they're plain divs, not tied to any group/color — they gain labels in fold 7 below. Unrelated to the *timeline's* own dynamic, data-driven canvas squares.
-- The 3 no-camp groups stay invisible (faded out at the end of fold 5) — they have no `fold6` target and are never revisited.
-
-## Fold 7 — id `#page-5` ("fold 8" in Figma/the user-facing numbering; Figma node `120:1299`)
-
-- **Just the timeline's intro title now** — "כל ריבוע מייצג פעולה פוליטית שהתקיימה במרחב הפיזי", plain `.text-card`/`.text-card-frame`, a normal continuously-scrolling fold like every other one. It used to be fused into the pinned timeline section itself (`.page6-intro`, now deleted) — that bundling meant the real per-event reveal engaged the instant this title appeared, clashing with the fold 6-9 curated squares for the entire ~7-viewport scrub range. Splitting it out here (and fold 9 below) means the real timeline (now `#page-7`, see below) doesn't start until both have been scrolled past.
-- Canvas content is `drawFold7` — plain background, nothing else; no real per-event squares yet (`p7HasEngaged` doesn't flip until `#page-7` is actually reached). The old 6 persistent "headline" anchor squares (`drawAnchorActions`, formerly in `squareboundingbox.js`) were removed entirely from the project — they were carried into `drawPage7`/`drawPage8` from the pre-split layout and, once the real timeline moved to `#page-7`, just read as a stray, detached artifact wherever they showed (this fold included). `ANCHOR_COUNT_PER_SIDE`'s old "skip the first 3 events per side, they're already drawn" logic in `p7DrawSideSquares`/`blendAndDraw` (`page7.js`/`page8.js`) was removed along with it — those events now draw normally like every other one.
-- The 10 fold-6 squares (above) each gain an action-type label here, briefly, before fold 9 (below) fades them out again — see fold 9's note on why that reveal is gated on `t6 >= 1`, not on reaching this section. Labels/positions/order are `FOLD6_SQUARE_LABELS` in `main.js`, matching Figma Frame `3181` top-to-bottom, plus a 10th ("פוגרום") that Figma's own mockup omitted but the real dataset's `event category` field confirms as genuine.
-- Removed the old canvas-drawn `drawGroupLegend`/`P7_LEGEND` (`squareboundingbox.js`/`page7.js`) and its call sites in `drawPage7`/`drawPage8`/`drawPage9` — a leftover top-left text legend that duplicated the fold-6 DOM mini-legend, which already persists through these same pages.
-
-## Fold 9 — id `#page-6` (Figma node `162:63876`)
-
-- This is a **second newly inserted section**, same pattern as fold 5 — it sits right after fold 7's timeline-intro title (above), *not* before it (an earlier pass got this backwards — "each square represents an action" has to be established before "the square's color means X" makes sense), and *not* bundled into the same pinned section as the real timeline either (a second earlier pass got that backwards too — see fold 7's note on why splitting them apart matters). Current id table: `#page-5` fold 6 → `#page-5` fold 7 (timeline-intro title only) → `#page-6` fold 9 (this one) → `#page-7` the real timeline (`page7-scrub`) → `#page-8` bridge ("פעולות פוליטיות שונות...") → `#page-9` drag-and-drop.
-- Canvas content is `drawFold9` — same as `drawFold7` above, plain background only.
-- Title: "צבע הריבוע מציין את הקבוצה שביצעה אותה", normal `.text-card`/`.text-card-frame` treatment — own card ref `page7TitleCardEl` (named for this slot in the file's older internal numbering, like `page6TitleCardEl`/`page7Section` elsewhere — note `page7TitleCardEl` and `page7Section` point at two *different* sections, an artifact of that older numbering, not a typo).
-- The 10 fold-6 squares (see fold 6 above) lose their labels here and the first 5 (`FOLD6_SQUARE_COLORS` in `main.js`) gain a group color — continuously cross-faded (label opacity down, square background lerped from black via `lerpFold6SquareColor`), not snapped. The other 5 have no Figma-assigned color and just stay black.
-- Driven by `fold9SquaresColorT()`: starts as the title card enters (top at H) and finishes once the card reaches the *halfway point between center and the standard near-top finish* (not "by center" like fold 5's row-entrance, and not "by near-top" like every normal fold transition) — per explicit spec, "finished before the title is halfway done."
-- The label's own *appearance* (before this fold's fade-out takes over) is gated on fold 6's transition being fully settled (`t6 >= 1`), not on `currentPage` — fold 9's card already starts entering, and its own fade-out already climbing, well before `currentPage` actually flips to fold 9's page number; gating on `currentPage` instead means the label never reaches full opacity before fading again.
-- The fold-6 squares overlay (`#fold6SquaresOverlay`) opacity is driven from `updateGroups` in `main.js` (currently set unconditionally to `"1"` at the fold-6 block, ~line 1820). NOTE: there is **no** explicit `currentPage >= 8` force-hide in the code (an earlier version of this note claimed one) — if the curated fold-6 squares ever visibly clash with the real per-event squares on the timeline, that missing hide is the place to look.
-
-## Real timeline's date axis — `#page-7` (Figma nodes `167:87281`/`167:87313`/`167:90105`)
-
-- The vertical, scroll-pinned month/year list that used to run down the screen's right edge (`#page7Timeline`) is gone, replaced by a canvas-drawn horizontal year axis along the bottom (`p7DrawYearAxis` in `page7.js`, called from `drawPage7`) — years only, no months (the month-granular square cascade itself is unchanged, see `p7DrawSideSquares`). The axis is a **single solid line** (two `fillRect`s: a faint full-span base with a dark "reached" portion grown right-to-left over it to `curX`), anchored at `p7.minDate` (right) and `p7.maxDate` (left). It grows as `p7.currentDate` advances — the dark fill trails via a per-frame lag (`p7AxisUpdateFillLag`), everything else read fresh from `p7AxisX()` every frame. Each year tick is a **hollow ring marker** on the line (background disc punched out, then a stroked outline — `P7_AXIS_MARKER_RADIUS`/`_STROKE`), faint until the growing edge reaches it then dark; **year labels sit centered BELOW the line** (`P7_AXIS_YEAR_LABEL_OFFSET`), same faint→dark reached coloring. Headline events (`P7_AXIS_EVENTS`) render as **filled dots** on the line at their true date x (no dot-snapping — that machinery, along with the old dashed-line helpers `p7DrawAxisDots`/`p7DrawAxisDash`/`p7AxisDotPositions`/`p7AxisNearestDotX`, was removed when the line went solid), with the crossfading event label + date above. **Each event's filled dot is persistent**: once the fill edge (`curX`) reaches an event's date its circle stays drawn on the axis even after its label has crossfaded away (drawn in a single up-front pass in `p7DrawAxisEvents`, cached to `p7.axisEventPositions`). **Hovering a persistent circle re-shows that event's faded label + date** — `p7HoverInit`'s `doHitTest` runs `updateAxisHover` (circle hit-test, `AXIS_HIT_PAD`) which sets `p7.hoveredAxisEvent`; `p7DrawAxisEvents` then forces that event's opacity to 1. This is an independent hover target from the timeline squares (`hoveredEvent`) — `hideSquare()` clears only the square tooltip so moving between the two doesn't stomp the reappeared label; full `hide()` clears both. Hover-dim (a timeline square hovered elsewhere) suspends the fill — whole line/rings go faint and the hovered event's own position pops as a filled dot. The build-in wipe (`p7AxisIntroT`) and the square grid (`SBB`, left/right camp split) are untouched. **The design reference is the user's flat-line screenshot (smooth line, rings above the years, filled current-edge dot), not the old dashed version.**
-
-## Drag-and-drop categorization — `#page-9` (Figma nodes `136:388381`/`136:418305`)
-
-- The pill tray relocated from a page-margin-anchored zone near the title to a single dashed, bottom-centered box (`.page9-tray`) holding all 10 category pills in a wrapping row, matching Figma exactly — the instruction text ("גררו את סוגי הפעולות...") moved from the title's subtitle into the tray itself (`.page9-tray-hint`).
-- The vertical dashed guide-line system (`.page9-divider-line`/`-top`/`-bottom`, `.page9-divider-highlight`, `p9SyncBottomDivider`/`p9SyncExtremeGap`/`p9SyncTopDividerHighlight`) was removed entirely — neither Figma frame shows it. Dropping a pill into "extreme" still works exactly as before (`commitDrop` moves the pill's DOM node and triggers the 3s dot-migration animation); the drop-target affordance is now just `#page9ZoneAbove` itself (with a `min-width` so it stays hittable while empty), highlighted via the pre-existing `.dragover` rule.
-- The horizontal divider (`P9_MID` in `page9.js`) moved from `0.75` to `719/982` (Figma's measured line position). The "קיצוני"/"לגיטימי" axis labels recentered on the line's horizontal midpoint with Figma's weights (קיצוני bold/dark, לגיטימי left almost invisible) instead of right-margin-anchored.
-- Found and fixed a pre-existing bug while verifying this: `drawPage9` read `e.cat` (always `undefined`) instead of `e.category` (the real `events.json` field), so every event defaulted to "extreme" regardless of `p9.sides` — the panel looked broken (full dataset always shown above the line) until this fix.
-- The extreme grid's two column-blocks now sit `P9_EXTREME_GAP` (320px) apart at center instead of 8px — widened specifically so the floating dropped-category labels (`.page9-zone-wrap-extreme`, centered at the canvas's true horizontal middle per Figma) don't overlap the squares, matching Figma's own ~415px gap.
-
-## Explicitly out of scope / unrevised
-
-Fold 7's own real timeline (the data-driven per-event squares in `page7.js`, now `#page-7` — `page7-scrub`, pinned/sticky, none of the `cardMorphT` machinery applies) has had its date axis revised (see above) but the square grid itself (`SBB`, left/right camp split, cascade animation) has not been pixel-audited against Figma. Page-9 (bridge, `#page-8`) only got the generic `.text-card`/`.text-card-frame` positioning treatment (no content/typography audit). Page-10's chrome (tray/divider/labels/grid-gap) now matches Figma (see above), but the extreme grid's exact column positions/widths weren't measured pixel-for-pixel against Figma's reference clusters — only the center gap was widened enough to clear the floating labels. Don't assume any of this is fully pixel-accurate beyond what's explicitly documented above.
+Conversation shorthand (`@legend`, `@dragcards`, "axis events", the two unrelated "state 1/2" term sets, "axis appearing" vs "axis filling up", "title block") is defined in [Glossary](wiki/Glossary.md) — check it before assuming what a term means.

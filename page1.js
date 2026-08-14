@@ -168,7 +168,20 @@ function buildPage0AllDots() {
       // runs once during init (well before the entrance's first setTimeout
       // fires) and would unconditionally overwrite this hidden scale(0) with
       // scale(1) (decorScale's own at-rest value), defeating the pop-in.
-      PAGE0_DECORATIVE_DOT_ELS.push({ el: dot, syncedRow, popped: false });
+      // `anchor` mirrors PAGE0_GROUP_DOT_ANCHORS' own convention (top-left
+      // corner, left relative to viewport center) — 18 of these dots don't
+      // shrink away at @fold2 but fly into the camp grids' filler cells
+      // alongside the real group dots (see assignFold2Fillers in main.js),
+      // and need the same numeric start point the group items lerp from.
+      // `color` is kept so main.js can lerp it toward its camp-row's group
+      // color over that same flight.
+      PAGE0_DECORATIVE_DOT_ELS.push({
+        el: dot,
+        syncedRow,
+        popped: false,
+        color,
+        anchor: { left: offsetX - PAGE0_DOT_SQ / 2, top: centerY - PAGE0_DOT_SQ / 2 },
+      });
     });
   });
 }
