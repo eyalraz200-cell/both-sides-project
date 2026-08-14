@@ -12,21 +12,24 @@ hero dots included. Any doc claiming 8/10/12 groups is stale.
 
 | Color | Label | `actor` |
 |---|---|---|
-| `#4A4A4A` | מפגינים חרדים | `Haredi Jews` |
+| `#4A4A4A` | מפגינים חרדים | `haredi jews` |
 | `#FFAC11` | תנועות התנחלות באיו״ש | `settlers` |
-| `#CC0000` | קבוצות ימין לאומיות | `Right-wing activists` |
+| `#CC0000` | קבוצות ימין לאומיות | `right wing protesters` |
 
 **גוש השינוי (change column, screen-left), top → bottom:**
 
 | Color | Label | `actor` |
 |---|---|---|
-| `#CD00CD` | ארגוני שלום ודו קיום | `left wing activists` |
-| `#0073FF` | ארגוני מחאה נגד הממשלה | `Protesters against the government` |
-| `#00B00C` | מפגינים ערבים ישראלים | *(none)* |
+| `#CD00CD` | ארגוני שלום ודו קיום | `peace movements` |
+| `#0073FF` | ארגוני מחאה נגד הממשלה | `protesters against government` |
+| `#00B00C` | מפגינים ערבים ישראלים | `arab israelis` |
 
-`#00B00C` deliberately has no `actor`: the dataset contains no Israeli-Arab events, so it
-never appears on the real timeline. `FOLD4_COALITION_ROWS` / `FOLD4_CHANGE_ROWS` define
-the camp membership and row order, resolved by color.
+The `actor` values are `full_v1.xlsx`'s own lowercase `main_actor` strings, matched
+verbatim. All six are present in the data, so every group appears on the real timeline.
+The camp membership they imply is duplicated as `ACTOR_SIDE` in `server.py`, which
+derives each event's `side` from `main_actor` (the xlsx has no `side` column).
+`FOLD4_COALITION_ROWS` / `FOLD4_CHANGE_ROWS` define the camp membership and row order in
+JS, resolved by color.
 
 **There is no `P7_COLORS` object.** The name survives only in stale comments. Colors come
 from `p7ActorColor(actor)` = `GROUPS.find(g => g.actor === actor)?.color || "#888"`, so

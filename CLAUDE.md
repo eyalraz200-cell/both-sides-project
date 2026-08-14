@@ -41,7 +41,7 @@ Two separate, unrelated HTML entry points sharing no layout:
 | `page12.js` | `drawPage12` outro |
 | `squareboundingbox.js` | Shared grid-geometry constants (`SBB`, `SBB_TIMELINE`, `CENTER_GAP`) |
 | `reload.js` | Dev-only mtime poll → auto page reload |
-| `server.py` | Local dev server + xlsx→`events.json` generation |
+| `server.py` | Local dev server + `full_v1.xlsx`→`events.json` generation (derives `side` from `main_actor`) |
 
 `index.html`/`trigger.css` are the separate article page. Old `main_*` scratch files were deleted; don't recreate them.
 
@@ -71,8 +71,10 @@ Figma source: file `QASHSt1u7b6m6ASgrUPswf` ("Design"). Screens are revised one 
 
 `GROUPS` in `js/groups.js` is **6 groups** — camp groups only (the old no-camp groups were removed on v2 and never appear anywhere):
 
-- **מחנה הימין (coalition):** מפגינים חרדים `#4A4A4A`, תנועות התנחלות באיו״ש `#FFAC11`, קבוצות ימין לאומיות `#CC0000` (top→bottom)
-- **גוש השינוי (change):** ארגוני שלום ודו קיום `#CD00CD`, ארגוני מחאה נגד הממשלה `#0073FF`, מפגינים ערבים ישראלים `#00B00C` (top→bottom)
+- **מחנה הימין (coalition):** מפגינים חרדים `#4A4A4A` (`haredi jews`), תנועות התנחלות באיו״ש `#FFAC11` (`settlers`), קבוצות ימין לאומיות `#CC0000` (`right wing protesters`) (top→bottom)
+- **גוש השינוי (change):** ארגוני שלום ודו קיום `#CD00CD` (`peace movements`), ארגוני מחאה נגד הממשלה `#0073FF` (`protesters against government`), מפגינים ערבים ישראלים `#00B00C` (`arab israelis`) (top→bottom)
+
+The `actor` values are `full_v1.xlsx`'s own lowercase `main_actor` strings; the xlsx has no `side` column, so the camp split is derived from them by `ACTOR_SIDE` in `server.py`.
 
 Timeline dot color is `p7ActorColor(actor)` — a lookup into `GROUPS` by its `actor` field, `#888` fallback. There is no `P7_COLORS` object. Full roster details in [Groups-and-Legend](wiki/Groups-and-Legend.md).
 

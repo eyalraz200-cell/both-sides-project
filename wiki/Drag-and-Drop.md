@@ -30,20 +30,23 @@ the matching event dots migrate above the divider line.
 
 ## Categories
 
-`P9_CATEGORIES` (index = `data-idx`): 0 הפגנה לא אלימה · 1 פוגרום · 2 הטרדה ואיומים ·
-3 החזקה בכפייה · 4 תקיפה חמושה · 5 תקיפה פיזית · 6 הפרות סדר · 7 ניכוס שטח ·
-8 פגיעה ברכוש · 9 חסימת כביש.
+`P9_CATEGORIES` is **11 pills** (index = `data-idx`): 0 הפגנה לא אלימה · 1 פוגרום ·
+2 הטרדה ואיומים · 3 החזקה בכפייה · 4 תקיפה בנשק קר · 5 תקיפה בנשק חם · 6 תקיפה פיזית ·
+7 הפרות סדר · 8 ניכוס שטח · 9 פגיעה ברכוש · 10 חסימת כביש.
+
+These strings ARE the join key into the data — they must match `full_v1.xlsx`'s
+`event_type` values verbatim, and all 11 of the dataset's event types are represented
+one-to-one.
 
 `P9_CATEGORY_DESC` is index-aligned and used only by the tray tooltip.
 `P9_TRAY_GRID` gives each index a fixed `{row, col}` slot, applied as inline grid
 placement — so a pill always returns to its own cell.
 
-`CATEGORY_EN_TO_IDX` maps `events.json`'s English `category` to those indices:
-`Peaceful protest`→0, `Pogrom`→1, `Threats and harassment`→2, `Abduction`→3,
-`Armed attack against uninvolved person`→4, `Physical assault of uninvolved person`→5,
-`Public disorder`→6, `Land takeover`→7, `Property damage`→8, `Road blocking`→9.
+`CATEGORY_TO_IDX` maps `events.json`'s `category` to those indices. It is **derived**
+from `P9_CATEGORIES` (`Object.fromEntries(P9_CATEGORIES.map((c, i) => [c, i]))`), not
+hand-written, so the pill list and the lookup can't drift.
 
-Flow: `e.category` → `CATEGORY_EN_TO_IDX` → index into `p9.sides[]` → `"above"` (extreme)
+Flow: `e.category` → `CATEGORY_TO_IDX` → index into `p9.sides[]` → `"above"` (extreme)
 or `"below"` (legit). `p9.sides` starts all `"below"`. An unknown category yields
 `undefined` and is treated as extreme.
 
@@ -113,7 +116,7 @@ column count actually grows (`neededColsNow > prevColsSticky`).
 Arrival timing: `BASE_TRAVEL_MS = 600 * factor`, `ARRIVAL_STAGGER_MS = 4 * factor` per dot,
 sqrt-scaled against `ANCHOR_COUNT = 1880`
 (`effectiveStagger = 4 * max(1, sqrt(1880 / maxNew))`) so a small category still reads as
-a cascade. `FAST_ARRIVAL_CATEGORIES = {0, 4, 5, 8}` get `FAST_ARRIVAL_FACTOR = 0.75`.
+a cascade. `FAST_ARRIVAL_CATEGORIES = {0, 4, 6, 9}` (the four largest categories) get `FAST_ARRIVAL_FACTOR = 0.75`.
 In state 2, dots still mid-flight from the interrupted animation are carried forward with
 their **original** arrival times.
 

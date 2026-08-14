@@ -550,11 +550,11 @@ function updateGroups() {
         if (targetEvent !== p9.hoveredEvent) opacity *= HOVER_DIM_OPACITY;
       } else if (p9.hoveredCategoryIdx !== null) {
         const dimFactor = 1 - 0.65 * p9.hoverDimT;
-        if (CATEGORY_EN_TO_IDX[targetEvent.category] !== p9.hoveredCategoryIdx) opacity *= dimFactor;
+        if (CATEGORY_TO_IDX[targetEvent.category] !== p9.hoveredCategoryIdx) opacity *= dimFactor;
       } else if (p9.hoverDimT > 0) {
         const dimFactor = 1 - 0.65 * p9.hoverDimT;
         const stillHighlighted = p9.hoverDimCategoryIdx !== null &&
-          CATEGORY_EN_TO_IDX[targetEvent.category] === p9.hoverDimCategoryIdx;
+          CATEGORY_TO_IDX[targetEvent.category] === p9.hoverDimCategoryIdx;
         if (!stillHighlighted) opacity *= dimFactor;
       }
     }
@@ -565,7 +565,7 @@ function updateGroups() {
     // never dragged to extreme fades out with the rest of the legit grid
     // instead of sitting there alone after everything else has disappeared.
     if (typeof p9 !== "undefined" && targetEvent) {
-      const idx = CATEGORY_EN_TO_IDX[targetEvent.category];
+      const idx = CATEGORY_TO_IDX[targetEvent.category];
       const isExtreme = idx !== undefined && p9.sides && p9.sides[idx] === "above";
       if (!isExtreme) opacity *= 1 - (p9.fold13OutT ?? 0);
     }
@@ -601,7 +601,7 @@ function updateGroups() {
         fold8SeqLastFrameTime = null;
         fold8PrevTooltipRaw = fold7LabelTrigger.currentRaw();
         fold8DateSpans = fold8SetupTypewriter(fold8TooltipDateEl, p7FormatDateDMY(event.date));
-        fold8DescSpans = fold8SetupTypewriter(fold8TooltipDescEl, event.descHeMedium);
+        fold8DescSpans = fold8SetupTypewriter(fold8TooltipDescEl, event.descHeMedium || "");
       }
 
       if (forceHide) {
