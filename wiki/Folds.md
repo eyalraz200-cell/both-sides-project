@@ -2,7 +2,7 @@
 
 `@foldN` is the canonical, 1-indexed on-screen numbering. **It is off by one from the
 HTML id: `@foldN` = `id="page-(N-1)"`.** Verified against `project.html`'s sections and
-`PAGES[]` in `main.js` — there are **11 folds** (`page-0` … `page-10`).
+`PAGES[]` in `js/core.js` — there are **11 folds** (`page-0` … `page-10`).
 
 > Older notes (including CLAUDE.md's own table) describe 12 folds ending at `#page-11`.
 > That is stale — the code has 11. This page is the source of truth.
@@ -45,7 +45,7 @@ the fraction of viewport height the card's top must cross.
 
 ## Notable per-fold details
 
-**@fold2 — camp headers type in.** `FOLD2_BEATS` (main.js) slices `FOLD2_ENTRANCE_MS`
+**@fold2 — camp headers type in.** `FOLD2_BEATS` (js/groups.js) slices `FOLD2_ENTRANCE_MS`
 (2400 ms) into `shrink` `{0, .198}`, `move` `{.073, .708}`, `headerCoalition`
 `{.677, .219}`, `headerChange` `{.781, .219}`. The two headers have their **own** beats,
 so one camp can start before the other.

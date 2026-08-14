@@ -18,7 +18,7 @@
 Two separate, unrelated HTML entry points sharing no layout:
 
 - **`index.html`** — the article/home page ("שקוף" branding). Static content with a CTA button (`.shk-cta-button`) linking to `project.html`. Uses `trigger.css`.
-- **`project.html`** — the scrollytelling experience. Uses `style.css`, `main.js`, and the per-page `pageN.js` scripts. A full-viewport `<canvas>` (`.graphic-col`) renders the visuals; a separate scroll column (`.text-col`) drives scroll position and `IntersectionObserver`-based page activation.
+- **`project.html`** — the scrollytelling experience. Uses `style.css`, the `js/` controller scripts (formerly one `main.js`), and the per-page `pageN.js` scripts. A full-viewport `<canvas>` (`.graphic-col`) renders the visuals; a separate scroll column (`.text-col`) drives scroll position and `IntersectionObserver`-based page activation.
 
 ## Run / commands
 
@@ -33,7 +33,7 @@ Two separate, unrelated HTML entry points sharing no layout:
 
 | File | Role |
 |---|---|
-| `main.js` | Scroll controller, `PAGES[]` dispatch, `GROUPS` roster, all fold triggers/`updateGroups`, page0 dots, fold badge |
+| `js/*.js` (10 files) | The former `main.js`, split by concern — load order matters and is fixed in `project.html`: `core` (canvas/`PAGES`/`draw`/dash utils) → `nav` (`setActivePage`, fold badge) → `fold1-intro` → `page7-scrub` → `fold8-tooltip` → `groups` (`GROUPS` roster + **all fold triggers**) → `update-groups` (`updateGroups`) → `page8-9-scroll` → `fold11` → `bootstrap` (last, always). Full table in [Architecture](wiki/Architecture.md) |
 | `page1.js` | `drawPage1` + page-0 decorative dot column builder |
 | `page7.js` | Pinned real timeline: per-event square cascade + canvas year axis |
 | `page8.js` | Bridge glide from timeline layout → page9 legit grid |
@@ -69,7 +69,7 @@ Figma source: file `QASHSt1u7b6m6ASgrUPswf` ("Design"). Screens are revised one 
 
 ## Groups roster
 
-`GROUPS` in `main.js` is **6 groups** — camp groups only (the old no-camp groups were removed on v2 and never appear anywhere):
+`GROUPS` in `js/groups.js` is **6 groups** — camp groups only (the old no-camp groups were removed on v2 and never appear anywhere):
 
 - **מחנה הימין (coalition):** מפגינים חרדים `#4A4A4A`, תנועות התנחלות באיו״ש `#FFAC11`, קבוצות ימין לאומיות `#CC0000` (top→bottom)
 - **גוש השינוי (change):** ארגוני שלום ודו קיום `#CD00CD`, ארגוני מחאה נגד הממשלה `#0073FF`, מפגינים ערבים ישראלים `#00B00C` (top→bottom)
@@ -79,7 +79,7 @@ Timeline dot color is `p7ActorColor(actor)` — a lookup into `GROUPS` by its `a
 ## Hard rules (do not violate)
 
 - **page9.js "state 1"** (the non-interrupting extreme-drop animation) **is FINALIZED — never touch it without explicit instruction.** See [Drag-and-Drop](wiki/Drag-and-Drop.md).
-- Renaming a category pill in `P9_CATEGORIES` (`page9.js`) must also update `FOLD6_SQUARE_LABELS` (`main.js`).
+- Renaming a category pill in `P9_CATEGORIES` (`page9.js`) must also update `FOLD6_SQUARE_LABELS` (`js/groups.js`).
 - "Removed — don't reintroduce" callouts in the wiki are binding: the page-1→fold-3 legend morph, the vertical dashed guide-line system on page-9, the anchor squares/`drawGroupLegend`, and the old `main_*` scratch files all stay gone.
 - `.section-title` is one shared base rule (20px, weight 600 faked on the Regular Hadassah Friedlaender face — no true Medium OTF exists in `fonts/`). No per-page font-size/weight overrides — a differently-sized title is a regression.
 - Harness/scaffolding files are `_debug-*.js`, never ship, and follow the recipe + rules in [Dev-Workflow](wiki/Dev-Workflow.md).

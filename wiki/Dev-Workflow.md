@@ -21,7 +21,7 @@ watch the xlsx, so spreadsheet edits need a restart.
 There's no test suite, so the habit is:
 
 ```
-node --check main.js          # (or whichever file was edited)
+node --check js/update-groups.js          # (or whichever file was edited)
 curl -o /dev/null -w "%{http_code}" http://localhost:8080/project.html
 ```
 

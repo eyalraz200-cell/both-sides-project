@@ -35,22 +35,33 @@ Loaded as plain `<script>` tags, in this order (`project.html`):
 
 ```
 squareboundingbox.js → page1.js → page7.js → page8.js → page9.js → page12.js
-→ main.js → reload.js
+→ js/core.js → js/nav.js → js/fold1-intro.js → js/page7-scrub.js
+→ js/fold8-tooltip.js → js/groups.js → js/update-groups.js
+→ js/page8-9-scroll.js → js/fold11.js → js/bootstrap.js → reload.js
 ```
 
 There are no modules and no imports. Every file declares top-level `const`/`function`s
 into the shared global scope, and cross-file references resolve **at call time**, not at
-load time — so `page7.js` freely calls `GROUPS` (defined later, in `main.js`) because it
+load time — so `page7.js` freely calls `GROUPS` (defined later, in `js/groups.js`) because it
 only runs after everything has loaded. A symbol used in one file being defined in
 another is intentional, not a missing import.
 
 The one place load order does matter: `buildPage0AllDots()` (defined in `page1.js`) is
-*called from* `main.js` right after `GROUPS` is declared, because it reads group colors
+*called from* `js/groups.js` right after `GROUPS` is declared, because it reads group colors
 that don't exist yet when `page1.js` itself is parsed.
 
 | File | Role |
 |---|---|
-| `main.js` | Scroll controller, `PAGES[]` dispatch, `GROUPS`, all fold triggers, `updateGroups`, the fold-6 squares + @fold8 tooltip sequence, page0 dots, fold13 outro |
+| `js/core.js` | Canvas + `ctx`, `PAGES[]` dispatch, `currentPage`, trivial draw fns, `draw`/`init`, dashed-frame SVG utilities |
+| `js/nav.js` | `.text-section` roster, fold-number badge, `setActivePage`, the IntersectionObserver |
+| `js/fold1-intro.js` | @fold1 logo scroll-fade, title scroll-lag, page-load entrance |
+| `js/page7-scrub.js` | `#page-7` scroll→date scrub + its scroll listener |
+| `js/fold8-tooltip.js` | @fold6's tooltip typewriter demo (`fold8*` state + fns) |
+| `js/groups.js` | `GROUPS` roster, fold2 grid tables, `groupItems` DOM, FOLD6 square tables/elements, title-card refs, `makeTrigger`, **all fold triggers**, `watchCardThreshold` + checkers, legend/fold4/fold6-note constants |
+| `js/update-groups.js` | The `updateGroups` monolith, `layoutGroups`, groups/axis scroll wiring |
+| `js/page8-9-scroll.js` | page8 title-center hold, page9 sticky/title scroll |
+| `js/fold11.js` | Outro morph (`updateFold13`) + the scroll gate |
+| `js/bootstrap.js` | Font-load bootstrap + resize handler — **must load last** |
 | `page1.js` | `drawPage1` + the @fold1 decorative dot-column builder |
 | `page7.js` | The pinned real timeline: per-event square cascade + canvas year axis + hover |
 | `page8.js` | Bridge glide from timeline layout → page9's legit grid |
@@ -94,7 +105,7 @@ The dashed white box is a **separate** class, `.text-card-frame`, applied only t
 `<h2 class="section-title">` — never to sibling content like a legend. The dash is not
 `border-style: dashed` (too loose); it's a `border-image` sliced so the rounded corners
 render unscaled and the 2px-dash/2px-gap edge tiles seamlessly. `DASH_PERIOD = 4` plus
-`fitDashArray`/`updateTextCardFrameDashes` in `main.js` keep the repeat aligned.
+`fitDashArray`/`updateTextCardFrameDashes` in `js/core.js` keep the repeat aligned.
 
 `.section-title`'s base rule (20px, Hadassah Friedlaender, `font-weight: 600` faking
 Medium — there is no true Medium OTF in `fonts/`) is shared by **every** card. No page

@@ -44,7 +44,7 @@ translated. See [Drag-and-Drop](Drag-and-Drop.md) for the full table and the Heb
 names.
 
 Two Hebrew label lists must stay in sync with each other:
-`P9_CATEGORIES` (`page9.js`) and `FOLD6_SQUARE_LABELS` (`main.js`).
+`P9_CATEGORIES` (`page9.js`) and `FOLD6_SQUARE_LABELS` (`js/groups.js`).
 
 ## Design source
 
