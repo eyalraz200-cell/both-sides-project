@@ -34,7 +34,7 @@ the matching event dots migrate above the divider line.
 2 הטרדה ואיומים · 3 החזקה בכפייה · 4 תקיפה בנשק קר · 5 תקיפה בנשק חם · 6 תקיפה פיזית ·
 7 הפרות סדר · 8 ניכוס שטח · 9 פגיעה ברכוש · 10 חסימת כביש.
 
-These strings ARE the join key into the data — they must match `full_v1.xlsx`'s
+These strings ARE the join key into the data — they must match `full_v2.xlsx`'s
 `event_type` values verbatim, and all 11 of the dataset's event types are represented
 one-to-one.
 

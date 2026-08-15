@@ -1,13 +1,13 @@
 # The real timeline — `@fold8` (`#page-7`, `page7.js`)
 
-The pinned, scroll-scrubbed section that renders all 14,480 events as per-event squares
+The pinned, scroll-scrubbed section that renders all 14,452 events as per-event squares
 with a canvas year axis along the bottom.
 
 ## Data and state
 
 `initPage7()` fetches `events.json`, sorts by `date` (lexicographic on `YYYY-MM-DD` =
 chronological), and splits by `e.side` into `p7.leftEvents` / `p7.rightEvents`.
-Committed dataset: **14,480 events — 5,353 left, 9,127 right**, spanning
+Committed dataset: **14,452 events — 5,325 left, 9,127 right**, spanning
 `p7.minDate` **2023-01-01** → `p7.maxDate` **2026-07-03**. A fetch error is swallowed to
 `console.error` and `p7.ready` stays false (every draw path early-returns to just the
 background).

@@ -1,4 +1,4 @@
-// These strings ARE the join key into the data — they must match full_v1.xlsx's
+// These strings ARE the join key into the data — they must match full_v2.xlsx's
 // `event_type` values verbatim (see CATEGORY_TO_IDX below, and load_events in
 // server.py). All 11 of the dataset's event types are represented one-to-one.
 const P9_CATEGORIES = [
@@ -85,7 +85,7 @@ const P9_ZONE_DRAG_BORDER = 2;
 // breathing room on each side so the label isn't flush against the squares.
 const P9_GAP_PADDING = 190;
 
-// Maps an event's `category` (full_v1.xlsx's Hebrew `event_type`, passed
+// Maps an event's `category` (full_v2.xlsx's Hebrew `event_type`, passed
 // through verbatim by server.py) to its P9_CATEGORIES index. Derived rather
 // than hand-written: the pill labels and the data's event types are now the
 // same strings, so a typo can't silently desync the two lists.
@@ -296,7 +296,7 @@ const p9AnimateRightCountPos = makeP9CountPosAnimator();
 // other side, arab israelis (green) below protesters against government
 // (blue), which sits below peace movements (pink). This is a *global* ranking,
 // not just "whatever order categories were dropped in".
-// Names are full_v1.xlsx's own lowercase `main_actor` values (see GROUPS).
+// Names are full_v2.xlsx's own lowercase `main_actor` values (see GROUPS).
 const P9_ACTOR_ORDER = [
   "arab israelis",
   "protesters against government",
@@ -1121,9 +1121,9 @@ function p9BuildPanel() {
         ? (wasInterrupting ? STATE2_REPOSITION_MS : STATE1_REPOSITION_MS)
         : 0;
       // The 4 categories with by far the most events dataset-wide
-      // (הפגנה לא אלימה idx0/4586, פגיעה ברכוש idx9/2943, תקיפה בנשק קר
-      // idx4/2136, תקיפה פיזית idx6/1907 — see CATEGORY_TO_IDX; the next
-      // largest, חסימת כביש, is only 914) fly in a bit faster than every
+      // (הפגנה לא אלימה idx0/4574, פגיעה ברכוש idx9/2943, תקיפה בנשק קר
+      // idx4/2136, תקיפה פיזית idx6/1906 — see CATEGORY_TO_IDX; the next
+      // largest, חסימת כביש, is only 901) fly in a bit faster than every
       // other category's drop, per explicit feedback. Scales both the
       // per-dot travel time and the stagger interval, so the whole cascade
       // finishes proportionally sooner rather than just compressing the

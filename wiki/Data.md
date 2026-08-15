@@ -13,16 +13,16 @@ One object per event:
 | `category` | Hebrew category string (the xlsx's `event_type`) → `CATEGORY_TO_IDX` (`page9.js`) |
 | `descHeMedium` | Per-event Hebrew description, shown in the hover tooltip |
 
-Committed dataset: **14,480 events — 5,353 left, 9,127 right**, from **2023-01-01** to
+Committed dataset: **14,452 events — 5,325 left, 9,127 right**, from **2023-01-01** to
 **2026-07-03**.
 
 An unmatched `actor` falls back to `#888`. All six `GROUPS` actors — including `#00B00C`
-(מפגינים ערבים ישראלים, `arab israelis`, 565 events) — are present in the data, so every
+(מפגינים ערבים ישראלים, `arab israelis`, 537 events) — are present in the data, so every
 group appears on the timeline.
 
 ## Source of truth: the xlsx
 
-`full_v1.xlsx` at the repo root (sheet `raw-israel`, 14,480 data rows). Columns:
+`full_v2.xlsx` at the repo root (sheet `raw-israel`, 14,452 data rows). Columns:
 
 | Column | Used as |
 |---|---|
