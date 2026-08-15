@@ -24,7 +24,7 @@ hero dots included. Any doc claiming 8/10/12 groups is stale.
 | `#0073FF` | ארגוני מחאה נגד הממשלה | `protesters against government` |
 | `#00B00C` | מפגינים ערבים ישראלים | `arab israelis` |
 
-The `actor` values are `full_v1.xlsx`'s own lowercase `main_actor` strings, matched
+The `actor` values are `full_v2.xlsx`'s own lowercase `main_actor` strings, matched
 verbatim. All six are present in the data, so every group appears on the real timeline.
 The camp membership they imply is duplicated as `ACTOR_SIDE` in `server.py`, which
 derives each event's `side` from `main_actor` (the xlsx has no `side` column).

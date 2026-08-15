@@ -24,9 +24,9 @@ def watch():
         if t > last_modified:
             last_modified = t
 
-EVENTS_XLSX = "full_v1.xlsx"
+EVENTS_XLSX = "full_v2.xlsx"
 
-# full_v1.xlsx has no `side` column — the camp split is derived from main_actor
+# full_v2.xlsx has no `side` column — the camp split is derived from main_actor
 # instead. These two rosters must stay in sync with FOLD4_COALITION_ROWS /
 # FOLD4_CHANGE_ROWS in js/groups.js, which define the same membership by color.
 ACTOR_SIDE = {

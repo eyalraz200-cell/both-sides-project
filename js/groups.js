@@ -31,9 +31,9 @@ const GROUPS_FRAME_H = 982; // Figma frame height the y-coordinates below are au
 // `actor` is the events.json join key — see p7ActorColor in page7.js, which
 // reads this group's `color` directly so the real per-event canvas dots always
 // match this legend, including after a future color edit here. The values are
-// full_v1.xlsx's own lowercase `main_actor` strings, matched verbatim; the
+// full_v2.xlsx's own lowercase `main_actor` strings, matched verbatim; the
 // camp membership they imply is duplicated as ACTOR_SIDE in server.py, which
-// derives each event's `side` from them (full_v1.xlsx has no side column).
+// derives each event's `side` from them (full_v2.xlsx has no side column).
 const GROUPS = [
   { color: "#00B00C", label: "מפגינים ערבים ישראלים",  actor: "arab israelis",
     fold4: { x: 725,  y: 514, swatchFirst: true }, fold6: { x: 31, y: 560 } },
