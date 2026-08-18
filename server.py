@@ -24,9 +24,9 @@ def watch():
         if t > last_modified:
             last_modified = t
 
-EVENTS_XLSX = "full_v2.xlsx"
+EVENTS_XLSX = "full_v3.xlsx"
 
-# full_v2.xlsx has no `side` column — the camp split is derived from main_actor
+# full_v3.xlsx has no `side` column — the camp split is derived from main_actor
 # instead. These two rosters must stay in sync with FOLD4_COALITION_ROWS /
 # FOLD4_CHANGE_ROWS in js/groups.js, which define the same membership by color.
 ACTOR_SIDE = {
@@ -59,6 +59,10 @@ def load_events():
             continue
         date_str = date.strftime("%Y-%m-%d") if hasattr(date, "strftime") else str(date)[:10]
         events.append({
+            # The xlsx's own stable row_id ("row-145"). Passed through so JS can
+            # pin to one specific event by id instead of by its position in the
+            # date-sorted list — see FOLD6_TOOLTIP_ROW_ID (js/groups.js).
+            "rowId": row[col["row_id"]],
             "side": side,
             "actor": actor,
             # Hebrew event_type — the join key into P9_CATEGORIES (page9.js).

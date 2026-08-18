@@ -72,19 +72,12 @@ function updateGroups() {
   const fold6NoteBlockGapPx = FOLD6_DIVIDER_GAP_TOP + FOLD6_DIVIDER_HEIGHT + FOLD6_DIVIDER_GAP_BOTTOM;
   const fold6NoteShiftPx = (fold6NoteBlockGapPx + fold6NoteHeightPx) / 2;
 
-  // Divider fits the note's own rendered text, not its 150px wrap container
-  // — the container is just a wrap width, and the note's wrapped lines don't
-  // actually reach its full 150px (greedy word-wrap breaks short of the
-  // edge), so sizing off the container left the hairline visibly wider than
-  // the text under it. A Range over the note's text node gives one rect per
-  // wrapped line (standard trick for measuring wrap results without
-  // reimplementing word-wrap by hand); take the widest of those. Read live
-  // off the real element each tick, same reasoning as fold6NoteHeightPx above.
-  const fold6NoteRange = document.createRange();
-  fold6NoteRange.selectNodeContents(fold6NoteEl);
-  const fold6NoteLineWidths = Array.from(fold6NoteRange.getClientRects(), r => r.width);
-  const fold6NoteMaxLineWidth = Math.max(...fold6NoteLineWidths);
-  fold6NoteDividerEl.style.width = `${fold6NoteMaxLineWidth}px`;
+  // Divider spans the note's FULL frame width (FOLD6_NOTE_WIDTH), not the
+  // widest wrapped line — the hairline reads as the note block's own edge, so
+  // it should match the box, and a text-width hairline made its right end
+  // wander every time the wrap changed. Both share the same left x (fold6X
+  // below), so they line up on the left and both end at noteRightEdge.
+  fold6NoteDividerEl.style.width = `${FOLD6_NOTE_WIDTH}px`;
 
   // Beat 2 staggers the rows top-to-bottom within its own slice of the
   // timeline, same makeTrigger-style "reaches target exactly at local t=1"
@@ -399,7 +392,7 @@ function updateGroups() {
   // POSITION is still anchored to fold6's settled mini-legend target above; only
   // its reveal is deferred to the second fold.
   const noteRevealT = squaresRevealTrigger.currentT();
-  fold6NoteDividerEl.style.left = `${noteRightEdge - fold6NoteMaxLineWidth}px`;
+  fold6NoteDividerEl.style.left = `${fold6X}px`;
   fold6NoteDividerEl.style.top = `${dividerY}px`;
   fold6NoteDividerEl.style.opacity = String(noteRevealT);
   fold6NoteEl.style.left = `${fold6X}px`;
@@ -506,7 +499,7 @@ function updateGroups() {
     // the fold8 tooltip, fold13's legit fade, and the fly target) instead of
     // calling p7EventForActorOccurrence four separate times.
     const targetEvent = typeof p7EventForActorOccurrence === "function"
-      ? p7EventForActorOccurrence(FOLD6_SQUARE_ACTORS[i], FOLD6_SQUARE_OCCURRENCE[i])
+      ? p7EventForActorOccurrence(FOLD6_SQUARE_ACTORS[i], fold6SquareOccurrence(i))
       : null;
     // Figma node 258:2159: every square except the one with a tooltip (index
     // 0, kept at full opacity) renders at ~46% opacity while still gray —
@@ -535,7 +528,7 @@ function updateGroups() {
     // otherwise these 8 squares read as permanently full-opacity while the
     // rest of the grid dims around the hovered dot.
     if (typeof p7 !== "undefined" && p7.hoveredEvent && targetEvent) {
-      if (targetEvent !== p7.hoveredEvent) opacity *= HOVER_DIM_OPACITY;
+      if (targetEvent !== p7.hoveredEvent) opacity *= hoverDim(targetEvent.actor);
     }
     // Same parity for @fold10's own hover-dim (p9.hoveredEvent/hoveredCategoryIdx/
     // hoverDimT, page9.js's p9PlaceDot) — these squares are also drawn a second
@@ -547,7 +540,7 @@ function updateGroups() {
     // lingering hover-dim tail) exactly, so the two stay visually identical.
     if (typeof p9 !== "undefined" && targetEvent) {
       if (p9.hoveredEvent) {
-        if (targetEvent !== p9.hoveredEvent) opacity *= HOVER_DIM_OPACITY;
+        if (targetEvent !== p9.hoveredEvent) opacity *= hoverDim(targetEvent.actor);
       } else if (p9.hoveredCategoryIdx !== null) {
         const dimFactor = 1 - 0.65 * p9.hoverDimT;
         if (CATEGORY_TO_IDX[targetEvent.category] !== p9.hoveredCategoryIdx) opacity *= dimFactor;
@@ -654,7 +647,7 @@ function updateGroups() {
     // blendAndDraw (page8.js) uses for every other real dot — so it "animates
     // down just like any other dot" instead of snapping the instant page9 is
     // reached.
-    const target = p7TargetForActorOccurrence(FOLD6_SQUARE_ACTORS[i], FOLD6_SQUARE_OCCURRENCE[i], W, H);
+    const target = p7TargetForActorOccurrence(FOLD6_SQUARE_ACTORS[i], fold6SquareOccurrence(i), W, H);
     // currentPage reaching 11 (drawPage9, PAGES above) is a *harder* signal
     // than p8CurrentT() > 0: the section-level IntersectionObserver that
     // flips currentPage can cross into page9's own slot before page8's own

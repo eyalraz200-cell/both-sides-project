@@ -1,10 +1,12 @@
-// These strings ARE the join key into the data — they must match full_v2.xlsx's
+// These strings ARE the join key into the data — they must match full_v3.xlsx's
 // `event_type` values verbatim (see CATEGORY_TO_IDX below, and load_events in
-// server.py). All 11 of the dataset's event types are represented one-to-one.
+// server.py). All 10 of the dataset's event types are represented one-to-one.
+// (הטרדה ואיומים was retired on the v2→v3 dataset: its 104 rows were
+// hand-reclassified into the categories below, so the type no longer exists
+// in the data and its pill is gone.)
 const P9_CATEGORIES = [
   "הפגנה לא אלימה",
   "פוגרום",
-  "הטרדה ואיומים",
   "החזקה בכפייה",
   "תקיפה בנשק קר",
   "תקיפה בנשק חם",
@@ -21,7 +23,6 @@ const P9_CATEGORIES = [
 const P9_CATEGORY_DESC = [
   "הפגנה, עצרת, צעדה או נוכחות מחאתית ללא אלימות מצד המפגינים.",
   "התקפה המונית על קהילה, שכונה או אזור מגורים, הכוללת פגיעה באנשים, ברכוש או במרחב האזרחי.",
-  "הפחדה, איומים, מעקב, או נוכחות מאיימת.",
   "לקיחה או החזקה של אדם בלתי מעורב בניגוד לרצונו.",
   "שימוש באבנים, מקלות, סכינים או אמצעי תקיפה חדים ומקהים אחרים נגד בלתי מעורבים.",
   "ירי בנשק חם, שימוש בחומרי נפץ או הצתה נגד בלתי מעורבים.",
@@ -49,11 +50,12 @@ const P9_CATEGORY_DESC = [
 const P9_TRAY_GRID = [
   { row: 1, col: 5 }, // הפגנה לא אלימה — moved to the row's left end, out of the first (rightmost) slot
   { row: 1, col: 3 }, // פוגרום — swapped with החזקה בכפייה below
-  { row: 1, col: 2 },
   { row: 2, col: 1 }, // החזקה בכפייה — swapped with פוגרום above
   { row: 1, col: 4 }, // תקיפה בנשק קר — the old single תקיפה חמושה slot
-  { row: 1, col: 6 }, // תקיפה בנשק חם — the 11th pill; extends row 1 one slot further left
-                      // (col 6) so every previously hand-tuned slot keeps its exact position.
+  { row: 1, col: 2 }, // תקיפה בנשק חם — took the slot the retired הטרדה ואיומים pill
+                      // vacated, which puts row 1 back at 5 columns (it had been
+                      // extended to 6 only to fit an 11th pill); every other
+                      // hand-tuned slot keeps its exact position.
   { row: 1, col: 1 }, // תקיפה פיזית — moved to the row's right end (first slot)
   { row: 2, col: 2 },
   { row: 2, col: 5 }, // ניכוס שטח — swapped with חסימת כביש below to free up the bottom-middle slot
@@ -85,7 +87,7 @@ const P9_ZONE_DRAG_BORDER = 2;
 // breathing room on each side so the label isn't flush against the squares.
 const P9_GAP_PADDING = 190;
 
-// Maps an event's `category` (full_v2.xlsx's Hebrew `event_type`, passed
+// Maps an event's `category` (full_v3.xlsx's Hebrew `event_type`, passed
 // through verbatim by server.py) to its P9_CATEGORIES index. Derived rather
 // than hand-written: the pill labels and the data's event types are now the
 // same strings, so a typo can't silently desync the two lists.
@@ -293,13 +295,13 @@ const p9AnimateRightCountPos = makeP9CountPosAnimator();
 
 // Bottom-to-top stacking order for the extreme grid: settlers (orange) lowest,
 // then right wing protesters (red), then haredi jews (grey) — and on the
-// other side, arab israelis (green) below protesters against government
-// (blue), which sits below peace movements (pink). This is a *global* ranking,
+// other side, protesters against government (blue) below arab israelis
+// (green), which sits below peace movements (pink). This is a *global* ranking,
 // not just "whatever order categories were dropped in".
-// Names are full_v2.xlsx's own lowercase `main_actor` values (see GROUPS).
+// Names are full_v3.xlsx's own lowercase `main_actor` values (see GROUPS).
 const P9_ACTOR_ORDER = [
-  "arab israelis",
   "protesters against government",
+  "arab israelis",
   "peace movements",
   "settlers",
   "right wing protesters",
@@ -665,7 +667,7 @@ function drawPage9(ctx, W, H) {
     // of that category stay full opacity and the rest dim by the same factor.
     // Dot-hover takes priority so both states are never active simultaneously.
     if (p9.hoveredEvent) {
-      drawAlpha = (e === p9.hoveredEvent) ? 1 : drawAlpha * HOVER_DIM_OPACITY;
+      drawAlpha = (e === p9.hoveredEvent) ? 1 : drawAlpha * hoverDim(e.actor);
     } else if (p9.hoveredCategoryIdx !== null) {
       const dimFactor = 1 - 0.65 * p9.hoverDimT;
       drawAlpha = (CATEGORY_TO_IDX[e.category] === p9.hoveredCategoryIdx) ? 1 : drawAlpha * dimFactor;
@@ -1121,21 +1123,21 @@ function p9BuildPanel() {
         ? (wasInterrupting ? STATE2_REPOSITION_MS : STATE1_REPOSITION_MS)
         : 0;
       // The 4 categories with by far the most events dataset-wide
-      // (הפגנה לא אלימה idx0/4574, פגיעה ברכוש idx9/2943, תקיפה בנשק קר
-      // idx4/2136, תקיפה פיזית idx6/1906 — see CATEGORY_TO_IDX; the next
-      // largest, חסימת כביש, is only 901) fly in a bit faster than every
+      // (הפגנה לא אלימה idx0/4625, פגיעה ברכוש idx8/2943, תקיפה בנשק קר
+      // idx3/2136, תקיפה פיזית idx5/1907 — see CATEGORY_TO_IDX; the next
+      // largest, חסימת כביש, is only 909) fly in a bit faster than every
       // other category's drop, per explicit feedback. Scales both the
       // per-dot travel time and the stagger interval, so the whole cascade
       // finishes proportionally sooner rather than just compressing the
       // stagger (which would bunch the dots up instead of reading as an
       // across-the-board faster version of the same motion).
-      const FAST_ARRIVAL_CATEGORIES = new Set([0, 4, 6, 9]);
+      const FAST_ARRIVAL_CATEGORIES = new Set([0, 3, 5, 8]);
       const FAST_ARRIVAL_FACTOR     = 0.75;
       const arrivalSpeedFactor = FAST_ARRIVAL_CATEGORIES.has(newCatIdx) ? FAST_ARRIVAL_FACTOR : 1;
 
       const BASE_TRAVEL_MS     = 600 * arrivalSpeedFactor;
       const ARRIVAL_STAGGER_MS = 4 * arrivalSpeedFactor;    // ms/dot at the anchor count
-      const ANCHOR_COUNT       = 1880; // תקיפה פיזית right-side count (1874) — calibration reference
+      const ANCHOR_COUNT       = 1880; // תקיפה פיזית right-side count (1875) — calibration reference
 
       const newInLeft  = p9.leftTopOrder.filter(e => CATEGORY_TO_IDX[e.category] === newCatIdx);
       const newInRight = p9.rightTopOrder.filter(e => CATEGORY_TO_IDX[e.category] === newCatIdx);

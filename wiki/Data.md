@@ -7,30 +7,32 @@ One object per event:
 
 | Field | Meaning |
 |---|---|
+| `rowId` | The xlsx's own stable `row_id` (`"row-145"`). Lets JS pin to one specific event by id — see `FOLD6_TOOLTIP_ROW_ID` / `p7OccurrenceOfRowId` |
 | `date` | `YYYY-MM-DD`. Sorted lexicographically = chronologically |
 | `side` | `"left"` or `"right"` — which camp column the dot lives in |
 | `actor` | Join key into `GROUPS`' `actor` field → the dot's color (`p7ActorColor`) |
 | `category` | Hebrew category string (the xlsx's `event_type`) → `CATEGORY_TO_IDX` (`page9.js`) |
 | `descHeMedium` | Per-event Hebrew description, shown in the hover tooltip |
 
-Committed dataset: **14,452 events — 5,325 left, 9,127 right**, from **2023-01-01** to
+Committed dataset: **14,451 events — 5,325 left, 9,126 right**, from **2023-01-01** to
 **2026-07-03**.
 
-An unmatched `actor` falls back to `#888`. All six `GROUPS` actors — including `#00B00C`
+An unmatched `actor` falls back to `#888`. All six `GROUPS` actors — including `#31CE1C`
 (מפגינים ערבים ישראלים, `arab israelis`, 537 events) — are present in the data, so every
 group appears on the timeline.
 
 ## Source of truth: the xlsx
 
-`full_v2.xlsx` at the repo root (sheet `raw-israel`, 14,452 data rows). Columns:
+`full_v3.xlsx` at the repo root (sheet `raw-israel`, 14,451 data rows). Columns:
 
 | Column | Used as |
 |---|---|
 | `main_actor` | `actor` — lowercase strings matched verbatim by `GROUPS` |
-| `event_type` | `category` — Hebrew, 11 distinct values = `P9_CATEGORIES` one-to-one |
+| `event_type` | `category` — Hebrew, 10 distinct values = `P9_CATEGORIES` one-to-one |
 | `date` | `date` |
 | `description_he_medium` | `descHeMedium` (2 rows empty → `null`) |
-| `row_id`, `Description`, `location`, `fatalities`, `source`, `actor_type` | unused |
+| `row_id` | `rowId` — the stable per-row handle JS pins to, and what a harness reports back for marking rows in the sheet |
+| `Description`, `location`, `fatalities`, `source`, `actor_type` | unused |
 
 **There is no `side` column.** The camp split is derived from `main_actor` via
 `ACTOR_SIDE` in `server.py`, which must stay in sync with `FOLD4_COALITION_ROWS` /

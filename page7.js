@@ -174,21 +174,57 @@ function p7MonthKeyToStartStr(monthKey) {
 // otherwise purely scroll-driven). Each event gets its own start delay, spread across
 // P7_ANIM_TOTAL_DURATION in chronological order, then pops into place over P7_POP_DURATION
 // (a quick scale+fade at its final grid cell — no flight, no travel).
-// p7MonthAnimStart records a start time per month (not just "the current one"), so a
-// month's cascade keeps playing to completion on its own clock even after the user
-// scrolls past it and it's no longer centered — nothing here ever gets force-settled.
+// Each month owns ONE number — a cascade cursor `c`, in ms, from 0 (the month is
+// entirely absent) to P7_ANIM_TOTAL_DURATION (every square settled). A square's
+// presence is a pure function of it, `p7Ease((c - itsDelay) / P7_POP_DURATION)`,
+// so the cursor advancing plays the cascade in and the cursor retreating plays it
+// back out — squares with the largest delay (the last to arrive) reaching 0 first,
+// i.e. last in, first out, for free.
 //
-// Scrolling backward past a month reverses it: p7MonthReverseStart records when that
-// retreat began, and p7MonthMaxReached is the highest month ever reached so the draw
-// loop knows to keep rendering (and retracting) months ahead of the current one
-// instead of just snapping them away. See p7DrawSideSquares for how forward/reverse
-// share the same pop, just shrinking/fading out instead of growing/fading in.
+// This is deliberately the same shape as page8's p8CurrentT: a phase runs at a
+// constant 1ms of cursor per 1ms of clock toward a target, so REVERSING MID-FLIGHT
+// COVERS ONLY THE REMAINING DISTANCE and every square continues from exactly the
+// presence it had. Don't reintroduce separate forward/reverse start timestamps —
+// two independent clocks can't express "half-grown, now shrinking", so every
+// interrupted direction change snapped the month to full (or empty) for a frame.
+//
+// p7MonthMaxReached is the highest month ever reached, so the draw loop knows to
+// keep rendering (and retracting) months ahead of the current one instead of just
+// snapping them away.
 const P7_ANIM_TOTAL_DURATION = 2200; // ms — full span of a month's staggered cascade
 const P7_POP_DURATION        = 220;  // ms — each individual square's own pop in/out
-const p7MonthAnimStart    = {}; // monthKey -> performance.now() timestamp (forward)
-const p7MonthReverseStart = {}; // monthKey -> performance.now() timestamp (retreat)
+const p7MonthPhase = {};        // monthKey -> { fromC, toC, start } | undefined (never reached)
 let p7MonthMaxReached = -1;     // highest monthKey ever reached, forward
 let p7AnimRunning = false;
+
+// Where a month's cascade is right now. undefined = the month has never been
+// reached at all (or was fully retreated and cleaned up) — callers treat that as
+// "not part of the animated range", distinct from a cursor of 0.
+function p7MonthCursor(k) {
+  const ph = p7MonthPhase[k];
+  if (ph === undefined) return undefined;
+  const span = ph.toC - ph.fromC;
+  if (span === 0) return ph.toC;
+  const t = Math.min(1, (performance.now() - ph.start) / Math.abs(span));
+  return ph.fromC + span * t;
+}
+
+// Point a month at a new cursor target, starting from wherever it is now (0 for a
+// month being reached for the first time). Idempotent — re-aiming at the target
+// it's already heading for is a no-op, so this is safe to call every frame.
+function p7MonthAim(k, toC) {
+  const ph = p7MonthPhase[k];
+  if (ph !== undefined && ph.toC === toC) return false;
+  const fromC = p7MonthCursor(k) ?? 0;
+  p7MonthPhase[k] = { fromC, toC, start: performance.now() };
+  return true;
+}
+
+// Drop a month straight to a resting cursor with no animation (used for months
+// landed on while scrolling backward, which should just already be there).
+function p7MonthSettle(k, c) {
+  p7MonthPhase[k] = { fromC: c, toC: c, start: performance.now() };
+}
 
 // Set once, the instant currentPage flips from 9 to 8 (leaving page8's
 // bridge) while page8's own timeline<->legit-grid glide (p8CurrentT,
@@ -207,8 +243,7 @@ let p7EntryAnim = null;
 // Called from setActivePage (main.js) when the user scrolls back out of
 // @fold10 toward an earlier fold.
 function p7ResetForReplay() {
-  for (const k in p7MonthAnimStart)    delete p7MonthAnimStart[k];
-  for (const k in p7MonthReverseStart) delete p7MonthReverseStart[k];
+  for (const k in p7MonthPhase) delete p7MonthPhase[k];
   p7MonthMaxReached = -1;
 }
 
@@ -255,15 +290,13 @@ let p7RealTimelineReached = false;
 // two states.
 // Small hysteresis gap so a decelerating/momentum scroll settling right at
 // (or bouncing a couple px around) the exact top<=0 boundary can't flicker
-// p7HasEngaged true/false frame-to-frame. That flicker used to be visible:
-// p7DrawTimelineSquares' `if (p7HasEngaged) delete p7MonthReverseStart[curMonthKey]`
-// runs unconditionally every frame p7HasEngaged reads true, even for a single
-// stray frame — wiping the current month's in-progress retreat entry, which
-// then read as "not yet started" and got re-armed from scratch the very next
-// frame (if p7HasEngaged flipped back false) — one blank frame (nothing to
-// draw, since groupStartTime was momentarily undefined) followed by the
-// group popping back to full opacity and restarting its retreat, repeating
-// with every further flicker. Once engaged, disengaging now requires the
+// p7HasEngaged true/false frame-to-frame. That flicker used to be visible as a
+// blank frame followed by the current month popping back to full and restarting
+// its retreat, once per flicker: engagement flips the month's cursor target
+// between 0 and P7_ANIM_TOTAL_DURATION, and back when it flips back. (The cursor
+// now makes that merely a tiny jitter rather than a full replay, but the
+// hysteresis stays — a month shouldn't twitch direction on scroll noise.)
+// Once engaged, disengaging requires the
 // title to clear this small buffer past 0, not just barely cross it.
 const P7_ENGAGE_HYSTERESIS_PX = 24;
 function p7UpdateEngagement() {
@@ -328,11 +361,8 @@ function p7AxisUpdateFillLag() {
 
 function p7AnyAnimActive() {
   const now = performance.now();
-  for (const k in p7MonthAnimStart) {
-    if (now - p7MonthAnimStart[k] < P7_ANIM_TOTAL_DURATION) return true;
-  }
-  for (const k in p7MonthReverseStart) {
-    if (now - p7MonthReverseStart[k] < P7_ANIM_TOTAL_DURATION) return true;
+  for (const k in p7MonthPhase) {
+    if (p7MonthCursor(k) !== p7MonthPhase[k].toC) return true; // still travelling
   }
   if (p7AxisEventsAnimActive()) return true;
   if (p7AxisIntroStart !== null && p7AxisIntroT() < 1) return true;
@@ -373,16 +403,20 @@ function p7StartAnimLoop() {
 // Draws events[settledCount..monthEnd). Events strictly before settledCount are drawn
 // at rest by the caller. Events in range may belong to several different months (if
 // the user scrolled through more than one month within P7_ANIM_TOTAL_DURATION) — since
-// events are date-sorted, each month's events are contiguous, so the per-month group
-// boundaries (cascade start time, forward vs. reverse) are recomputed only when the
-// month actually changes while scanning, not on every single event.
+// events are date-sorted, each month's events are contiguous, so the per-month cascade
+// cursor is read only when the month actually changes while scanning, not on every
+// single event.
 //
-// A group is "reverse" when its month is ahead of curMonthKey (the user scrolled back
-// past it): its cascade order is mirrored (the last square to arrive is the first to
-// leave), shrinking/fading out the same way the entrance grew/faded in.
-function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, monthEnd, settledCount, curMonthKey, posMap) {
+// There is no separate forward/reverse code path: a square's presence is a pure
+// function of its month's cursor (p7MonthCursor), which the tick in
+// p7DrawTimelineSquares aims at P7_ANIM_TOTAL_DURATION going forward and at 0 going
+// back. A cursor sliding backward retracts the month's squares in mirrored order (the
+// last to arrive is the first to leave) simply because they're the ones with the
+// largest delay.
+function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, monthEnd, settledCount, posMap) {
   const stagger = Math.max(0, P7_ANIM_TOTAL_DURATION - P7_POP_DURATION);
-  let groupMonthKey = null, groupStart = 0, groupEnd = 0, groupStartTime = 0, groupReverse = false;
+  let groupMonthKey = null, groupStart = 0, groupEnd = 0;
+  let groupCursor = P7_ANIM_TOTAL_DURATION; // months with no phase at all read as settled
   const claimedEvents = p7GetClaimedEvents();
 
   for (let i = 0; i < monthEnd; i++) {
@@ -426,20 +460,19 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
         groupMonthKey  = mk;
         groupStart     = i;
         groupEnd       = p7BisectBefore(events, p7MonthKeyToStartStr(mk + 1));
-        groupReverse   = mk > curMonthKey;
-        groupStartTime = groupReverse ? p7MonthReverseStart[mk] : p7MonthAnimStart[mk];
+        // No phase at all = a month below the animated range, i.e. long settled.
+        groupCursor    = p7MonthCursor(mk) ?? P7_ANIM_TOTAL_DURATION;
       }
 
-      const elapsed = groupStartTime !== undefined ? performance.now() - groupStartTime : Infinity;
       const countInGroup = groupEnd - groupStart;
       const localIdx = i - groupStart;
-      const orderIdx = groupReverse ? (countInGroup - 1 - localIdx) : localIdx;
-      const delay = countInGroup > 1 ? (orderIdx / (countInGroup - 1)) * stagger : 0;
-      const t = Math.min(1, Math.max(0, (elapsed - delay) / P7_POP_DURATION));
-      if (groupReverse ? t >= 1 : t <= 0) continue; // fully gone, or not popped in yet
-      const e = p7Ease(t);
-      const presence = groupReverse ? 1 - e : e; // 0 = gone, 1 = fully popped in
-
+      // Each square's own slot in the month's cascade. Because presence is read off
+      // the shared cursor rather than off "time since the cascade started", a square
+      // is wherever the cursor says — mid-grow, mid-shrink or settled — no matter how
+      // many times the user reversed direction on the way here.
+      const delay = countInGroup > 1 ? (localIdx / (countInGroup - 1)) * stagger : 0;
+      const presence = p7Ease(Math.min(1, Math.max(0, (groupCursor - delay) / P7_POP_DURATION)));
+      if (presence <= 0) continue; // not popped in yet, or fully retreated
       // Nothing pops from nothing: start at a visible (if small) size rather than 0.
       scale = 0.5 + 0.5 * presence;
       alpha = presence;
@@ -452,7 +485,7 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     // reads as isolated against the grid — same convention as page9.js's
     // p9PlaceDot.
     let drawAlpha = alpha;
-    if (p7.hoveredEvent) drawAlpha = (events[i] === p7.hoveredEvent) ? 1 : alpha * HOVER_DIM_OPACITY;
+    if (p7.hoveredEvent) drawAlpha = (events[i] === p7.hoveredEvent) ? 1 : alpha * hoverDim(events[i].actor);
 
     const size = SQ * scale;
     const off  = (SQ - size) / 2; // keep the shrink/grow centered on the cell
@@ -589,8 +622,27 @@ function p7EventForActorOccurrence(actor, n) {
   return null;
 }
 
+// Inverse of p7NthIndexOfActor for one specific event, identified by the xlsx's
+// own stable `rowId`: returns which occurrence (0-based) of its actor that event
+// is, within its own side's date-sorted list — i.e. exactly the `n` the two
+// lookups above expect. -1 if the data isn't loaded or no row carries that id.
+// Lets a curated pin (FOLD6_TOOLTIP_ROW_ID, js/groups.js) name an event by id and
+// have the fragile positional number derived at runtime, so editing the xlsx
+// can't silently repoint it at a neighbouring event.
+function p7OccurrenceOfRowId(rowId) {
+  if (!p7.ready) return -1;
+  for (const events of [p7.leftEvents, p7.rightEvents]) {
+    const idx = events.findIndex(e => e.rowId === rowId);
+    if (idx === -1) continue;
+    let seen = 0;
+    for (let i = 0; i < idx; i++) if (events[i].actor === events[idx].actor) seen++;
+    return seen;
+  }
+  return -1;
+}
+
 // The 8 real events @fold9's fold-6 squares fly to/become (FOLD6_SQUARE_ACTORS/
-// FOLD6_SQUARE_OCCURRENCE, main.js — referenced here only inside this function
+// fold6SquareOccurrence, js/groups.js — referenced here only inside this function
 // body, never at load time, since page7.js loads before main.js in
 // project.html) are never drawn by the real per-event cascade below — the
 // flying DOM square *is* that dot permanently, not a stand-in that hands off
@@ -603,7 +655,7 @@ function p7GetClaimedEvents() {
   if (!p7.ready || typeof FOLD6_SQUARE_ACTORS === "undefined") return null;
   p7ClaimedEvents = new Set();
   FOLD6_SQUARE_ACTORS.forEach((actor, i) => {
-    const event = p7EventForActorOccurrence(actor, FOLD6_SQUARE_OCCURRENCE[i]);
+    const event = p7EventForActorOccurrence(actor, fold6SquareOccurrence(i));
     if (event) p7ClaimedEvents.add(event);
   });
   return p7ClaimedEvents;
@@ -634,12 +686,11 @@ function p7DrawTimelineSquares(ctx, W, H) {
   // Events from months whose cascade has already fully finished are settled (drawn
   // at rest, no animation); events from the centered month, or from any earlier month
   // whose cascade is still mid-flight (the user scrolled past it before it finished),
-  // keep animating on their own clock — see p7DrawSideSquares/p7MonthAnimStart. The
+  // keep animating on their own clock — see p7DrawSideSquares/p7MonthCursor. The
   // loop's upper bound must cover the *whole* centered month (monthEndL/monthEndR),
   // not just events whose date has already been reached, so the full cascade can play.
   const { y: curY, m: curM } = p7DateDayFrac(p7.currentDate);
   const curMonthKey = curY * 12 + curM;
-  const now = performance.now();
 
   // Only a month that's genuinely beyond anything reached before gets a fresh forward
   // cascade. A month can have no forward-start yet without being new territory — e.g.
@@ -661,38 +712,44 @@ function p7DrawTimelineSquares(ctx, W, H) {
     // engagement is still pending, so the moment it fires, `t` (and the date
     // it maps to) can already be several months past minDate. Without
     // backfilling every skipped month here, each one falls straight into
-    // "settled" below (its own p7MonthAnimStart never set at all) and pops in
+    // "settled" below (no phase of its own at all) and pops in
     // instantly, fully-formed, with no cascade — the exact "instant jump"
-    // this loop exists to prevent. All backfilled months start ticking at the
-    // same `now` (simpler than staggering month-to-month, and each month's
+    // this loop exists to prevent. All backfilled months start their cursor at
+    // the same instant (simpler than staggering month-to-month, and each month's
     // own events still cascade individually within it via p7DrawSideSquares'
     // own per-event delay), rather than one after another.
     for (let k = Math.max(p7MonthMaxReached + 1, p7MonthKeyOf(p7.minDate)); k <= curMonthKey; k++) {
-      if (p7MonthAnimStart[k] === undefined) p7MonthAnimStart[k] = now;
+      if (p7MonthPhase[k] === undefined) p7MonthAim(k, P7_ANIM_TOTAL_DURATION); // from cursor 0
     }
     p7StartAnimLoop();
-  } else if (p7HasEngaged && p7MonthAnimStart[curMonthKey] === undefined) {
+  } else if (p7HasEngaged && p7MonthPhase[curMonthKey] === undefined) {
     // Not new territory: curMonthKey was already skipped over earlier while
     // moving forward, and we're now landing on it while scrolling backward —
     // it should just appear settled, not fire off a brand new entrance while
     // the user is scrolling the other way.
-    p7MonthAnimStart[curMonthKey] = now - P7_ANIM_TOTAL_DURATION;
+    p7MonthSettle(curMonthKey, P7_ANIM_TOTAL_DURATION);
   }
 
   if (p7HasEngaged) {
-    // Scrolling back onto a month cancels any retreat it had started — it just
-    // resumes showing at rest (its original forward cascade, started long ago,
-    // is already done).
-    delete p7MonthReverseStart[curMonthKey];
-  } else if (p7MonthMaxReached > -1 && p7MonthReverseStart[curMonthKey] === undefined) {
+    // Scrolling back down onto months that had started retreating turns them
+    // around. Every month at or below the centered one gets re-aimed, not just
+    // curMonthKey: one scroll tick can re-enter several at once, and a month
+    // left aimed at 0 while no longer ahead of curMonthKey would keep vanishing
+    // under the user. Aiming is enough to make each square resume growing from
+    // the exact presence it had — that's the whole point of the shared cursor;
+    // there is no snapshot to take and no "was it mid-flight?" case to special-case.
+    for (const key in p7MonthPhase) {
+      const k = Number(key);
+      if (k <= curMonthKey && p7MonthAim(k, P7_ANIM_TOTAL_DURATION)) p7StartAnimLoop();
+    }
+  } else if (p7MonthMaxReached > -1) {
     // Disengaged (scrolled back up past this fold's own title — see
     // p7UpdateEngagement): the "current" month itself now needs to retreat
     // too, not just months ahead of it (the loop below already handles those
     // unconditionally) — otherwise it just sits at rest until
     // nextMonthStartStr's clamp further down cuts it away in a single frame
     // instead of playing the same reverse cascade every other month gets.
-    p7MonthReverseStart[curMonthKey] = now;
-    p7StartAnimLoop();
+    if (p7MonthPhase[curMonthKey] !== undefined && p7MonthAim(curMonthKey, 0)) p7StartAnimLoop();
   }
 
   if (p7HasEngaged && curMonthKey > p7MonthMaxReached) p7MonthMaxReached = curMonthKey;
@@ -703,51 +760,27 @@ function p7DrawTimelineSquares(ctx, W, H) {
   // pinned at the first month (p7.currentDate = p7.minDate, page7UpdateFromScroll),
   // so this still correctly covers every later month up through p7MonthMaxReached.
   for (let k = curMonthKey + 1; k <= p7MonthMaxReached; k++) {
-    if (p7MonthReverseStart[k] === undefined) {
-      p7MonthReverseStart[k] = now;
-      p7StartAnimLoop();
-    }
+    if (p7MonthPhase[k] !== undefined && p7MonthAim(k, 0)) p7StartAnimLoop();
   }
   // Once every month ahead of the centered one has fully retreated, stop tracking
   // (and drawing) them — otherwise we'd iterate them forever.
-  while (
-    p7MonthMaxReached > curMonthKey &&
-    p7MonthReverseStart[p7MonthMaxReached] !== undefined &&
-    now - p7MonthReverseStart[p7MonthMaxReached] >= P7_ANIM_TOTAL_DURATION
-  ) {
-    delete p7MonthReverseStart[p7MonthMaxReached];
-    delete p7MonthAnimStart[p7MonthMaxReached];
+  while (p7MonthMaxReached > curMonthKey && (p7MonthCursor(p7MonthMaxReached) ?? 0) <= 0) {
+    delete p7MonthPhase[p7MonthMaxReached];
     p7MonthMaxReached--;
   }
-  // Deliberately NOT cleaning up curMonthKey's own p7MonthReverseStart entry
-  // once its retreat finishes (unlike the loop above, which does clean up
-  // months strictly ahead of curMonthKey): deleting it here would make it
-  // read as undefined again, which re-arms the "start the current month's
-  // retreat" branch above on the very next frame — the current month's
-  // events would pop back in at full presence and shrink out a second time,
-  // repeating forever. Leaving the stale (fully-elapsed) entry in place is
-  // harmless — p7DrawSideSquares' own elapsed check just keeps reading it as
-  // "long past P7_ANIM_TOTAL_DURATION" (t clamped to 1, nothing drawn) — and
-  // p7MonthMaxReached simply stays resting at curMonthKey, which is a valid
-  // final state, not something that needs further cleanup.
+  // curMonthKey's own phase is deliberately left in place once its retreat
+  // finishes (unlike the loop above, which drops months strictly ahead of it):
+  // it rests at cursor 0, drawing nothing, and the retreat branch above can't
+  // re-arm off it because p7MonthAim is a no-op when the target is already 0.
   //
   // ...with one exception: once we're fully DISENGAGED and that last month's
   // retreat has finished, there is nothing left on screen, so the whole
   // cascade must reset to its virgin state — otherwise scrolling back down
-  // re-engages with p7MonthAnimStart[curMonthKey] still set and
-  // p7MonthMaxReached still === curMonthKey, so `isNewTerritory` reads false
-  // and the first month's dots appear instantly, fully settled, with no
-  // cascade. Clearing p7MonthReverseStart here can't re-arm the retreat branch
-  // above (the "current month retreats too" case is guarded on
-  // p7MonthMaxReached > -1, which we drop back to -1 in the same breath).
-  if (
-    !p7HasEngaged &&
-    p7MonthMaxReached === curMonthKey &&
-    p7MonthReverseStart[curMonthKey] !== undefined &&
-    now - p7MonthReverseStart[curMonthKey] >= P7_ANIM_TOTAL_DURATION
-  ) {
-    delete p7MonthReverseStart[curMonthKey];
-    delete p7MonthAnimStart[curMonthKey];
+  // re-engages with curMonthKey's phase still present and p7MonthMaxReached
+  // still === curMonthKey, so `isNewTerritory` reads false and the first
+  // month's dots appear instantly, fully settled, with no cascade.
+  if (!p7HasEngaged && p7MonthMaxReached === curMonthKey && (p7MonthCursor(curMonthKey) ?? 0) <= 0) {
+    delete p7MonthPhase[curMonthKey];
     p7MonthMaxReached = -1;
   }
 
@@ -759,7 +792,7 @@ function p7DrawTimelineSquares(ctx, W, H) {
   let settledStr = p7.minDate;
   if (p7HasEngaged) {
     let earliestActiveMonthKey = curMonthKey;
-    for (let k = curMonthKey - 1; p7MonthAnimStart[k] !== undefined && now - p7MonthAnimStart[k] < P7_ANIM_TOTAL_DURATION; k--) {
+    for (let k = curMonthKey - 1; p7MonthPhase[k] !== undefined && p7MonthCursor(k) < P7_ANIM_TOTAL_DURATION; k--) {
       earliestActiveMonthKey = k;
     }
     settledStr = p7MonthKeyToStartStr(earliestActiveMonthKey);
@@ -787,22 +820,12 @@ function p7DrawTimelineSquares(ctx, W, H) {
 
   const posMap = new Map();
 
-  // groupReverse (p7DrawSideSquares) is decided by comparing a group's own
-  // month key against the value passed here — while disengaged, the current
-  // month's own group must also read as "reverse" (it's retreating too, see
-  // above), which plain curMonthKey can't express since a month is never
-  // "ahead of itself." -1 always sorts below every real month key
-  // (curY*12+curM, always a large positive number), so passing it here
-  // instead makes every real month — including the current one — compare as
-  // reverse. Only ever used for this numeric comparison, never fed into
-  // p7MonthKeyToStartStr.
-  const drawCurMonthKey = p7HasEngaged ? curMonthKey : -1;
 
   // Draw left events.
-  p7DrawSideSquares(ctx, p7.leftEvents, p7.leftPos, leftX0, topY, cols, CELL, SQ, monthEndL, settledL, drawCurMonthKey, posMap);
+  p7DrawSideSquares(ctx, p7.leftEvents, p7.leftPos, leftX0, topY, cols, CELL, SQ, monthEndL, settledL, posMap);
 
   // Draw right events.
-  p7DrawSideSquares(ctx, p7.rightEvents, p7.rightPos, rightX0, topY, cols, CELL, SQ, monthEndR, settledR, drawCurMonthKey, posMap);
+  p7DrawSideSquares(ctx, p7.rightEvents, p7.rightPos, rightX0, topY, cols, CELL, SQ, monthEndR, settledR, posMap);
 
   p7.lastPositions = posMap;
 }
@@ -932,13 +955,25 @@ function p7AxisYearTicks() {
 // *next* event's date is reached, at which point it crossfades into that one.
 // So only one is ever on screen, but which one is showing tracks scroll position
 // directly rather than a wall-clock timer.
+//
+// `maxWidth` (px) is a per-event cap on how wide the title may render: over it,
+// the title wraps onto extra lines that stack UPWARD from the date, so a long
+// headline gets narrow-and-tall instead of wide — which is what actually keeps
+// two neighbouring events from colliding, since the de-collision pass below can
+// only slide labels sideways within a fixed axis width. `null` = no cap, draw
+// on one line. Tuned by eye per event, so they're hand-set numbers, not derived.
 const P7_AXIS_EVENTS = [
-  { date: "2023-01-11", label: "הצגת הרפורמה המשפטית" },
-  { date: "2023-07-01", label: "אישור ביטול עילת הסבירות" },
-  { date: "2023-10-07", label: "מתקפת 7 באוקטובר" },
-  { date: "2024-06-01", label: "פסיקת בג\"ץ על גיוס חרדים" },
-  { date: "2025-06-01", label: "מבצע עם כלביא" },
-  { date: "2025-10-01", label: "הסכם הפסקת אש ושחרור חטופים בעזה" },
+  // Nudged left to clear the "2023" year ring — 04.01 sits only 3 days from
+  // minDate, so at its true x its dot all but touches the axis's right anchor.
+  { date: "2023-01-04", label: "הצגת הרפורמה המשפטית", maxWidth: null, xOffset: -14 },
+  { date: "2023-10-07", label: "מתקפת 7 באוקטובר", maxWidth: null },
+  { date: "2024-06-25", label: "פסיקת בג״ץ על גיוס חרדים", maxWidth: null },
+  { date: "2024-12-08", label: "נפילת משטר אסד", maxWidth: null, xOffset: 12 },
+  { date: "2025-06-13", label: "מבצע ״עם כלביא״", maxWidth: null },
+  { date: "2025-10-13", label: "שחרור החטופים מעזה", maxWidth: null },
+  // Past maxDate (2026-07-03) — parks at the axis's left end (see the clamp in
+  // p7AxisEventTrueX); the +26 holds it clear of that end rather than flush to it.
+  { date: "2026-07-17", label: "התפזרות הכנסת ה-25", maxWidth: null, xOffset: 26 },
 ];
 
 // Fixed real-time (wall-clock) fade durations — these only govern the crossfade
@@ -952,6 +987,7 @@ const P7_AXIS_EVENT_LABEL_OFFSET = 34; // px above the axis line (lifted to give
 const P7_AXIS_EVENT_FONT         = "500 14px 'Assistant', sans-serif";
 const P7_AXIS_DATE_FONT          = "400 14px 'Assistant', sans-serif";
 const P7_AXIS_DATE_OFFSET        = 18;  // px above the label baseline
+const P7_AXIS_EVENT_LINE_HEIGHT  = 19;  // px between wrapped title lines
 
 // triggeredAt is a performance.now() timestamp, set once when the event is first
 // reached, and cleared only once its own reverse fade-out (leavingAt below) has
@@ -973,8 +1009,21 @@ const P7_AXIS_DATE_OFFSET        = 18;  // px above the label baseline
 // circle is hovered, decaying back to 0 when it isn't, easing the dot's
 // grow/shrink (and its label's re-show) instead of snapping. Kept on the same
 // state object so the anim loop (p7AxisEventsAnimActive) can see it settle.
+// reachedT (0 → 1) is the eased "the fill edge has passed me" amount, driving the
+// circle's radius in and OUT. Without it the marker's existence was a hard
+// boolean on the fill edge, so scrolling back up made every dot vanish in one
+// frame while its label was still fading — position never snaps, and neither
+// should a dot's presence. Same lerp speed as hoverT so the axis has one tempo.
 const P7_AXIS_HOVER_ANIM_SPEED = 0.18; // per-frame lerp toward the hover target
-const P7_AXIS_EVENT_STATE = P7_AXIS_EVENTS.map(() => ({ triggeredAt: null, leavingAt: null, hoverT: 0 }));
+const P7_AXIS_EVENT_STATE = P7_AXIS_EVENTS.map(() => ({ triggeredAt: null, leavingAt: null, hoverT: 0, reachedT: 0 }));
+
+// Eased 0 → 1 amount of the "roster" state: 1 while a regular timeline square is
+// hovered, decaying back to 0 when it is not. ONE shared value rather than a
+// per-event one, because the roster is a single whole-axis state — every reached
+// label fades in and every dot shrinks together on the same clock. Eased with the
+// same P7_AXIS_HOVER_ANIM_SPEED lerp as an individual dot's hoverT, so both hover
+// behaviours move at one tempo instead of snapping.
+let p7AxisRosterT = 0;
 
 // Checked every draw (see p7AnyAnimActive) so the animation loop keeps running —
 // and labels keep fading — purely on elapsed time, with no further scrolling
@@ -988,6 +1037,14 @@ function p7AxisEventsAnimActive() {
     return Math.abs(state.hoverT - target) > 0.001;
   });
   if (hoverAnimating) return true;
+  // A circle still growing in or shrinking out (p7DrawAxisEvents' reachedT)
+  // outlives its label's fade in the scroll-back case, so it needs its own check.
+  const markerAnimating = P7_AXIS_EVENT_STATE.some((state) => state.reachedT > 0.001 && state.reachedT < 0.999);
+  if (markerAnimating) return true;
+  // The shared roster ease has to keep the loop alive on its own: it moves even
+  // when no individual event's hoverT does (nothing on the axis is hovered — a
+  // regular timeline square is).
+  if (Math.abs((p7.hoveredEvent ? 1 : 0) - p7AxisRosterT) > 0.001) return true;
   return P7_AXIS_EVENT_STATE.some((state, i) => {
     if (state.triggeredAt === null) return false;
     if (now - state.triggeredAt < P7_AXIS_EVENT_FADE_IN_MS) return true;
@@ -1005,9 +1062,45 @@ function p7AxisEventsAnimActive() {
 // the canvas edge for an event anchored right at it, so it falls back to
 // right/left alignment, extending only inward). Requires ctx.font already
 // set to P7_AXIS_EVENT_FONT.
+// Greedy word wrap of `text` into lines no wider than `maxWidth` (in whatever
+// font ctx currently carries). A single word longer than the cap is left on its
+// own over-long line rather than being broken mid-word. maxWidth null/0 → one
+// line, unchanged. Hebrew bidi is handled by the canvas per drawn string, so
+// wrapping on plain spaces and drawing each line separately keeps word order
+// correct within every line.
+function p7WrapLabel(ctx, text, maxWidth) {
+  if (!maxWidth) return [text];
+  const words = text.split(" ");
+  const lines = [];
+  let line = "";
+  words.forEach((word) => {
+    const candidate = line ? line + " " + word : word;
+    if (line && ctx.measureText(candidate).width > maxWidth) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = candidate;
+    }
+  });
+  if (line) lines.push(line);
+  return lines;
+}
+
 function p7AxisEventBounds(ctx, ev, i, W) {
-  const x = p7AxisEventX[i] !== undefined ? p7AxisEventX[i] : p7AxisX(ev.date, W);
-  const textWidth = ctx.measureText(ev.label).width;
+  const x = p7AxisEventX[i] !== undefined ? p7AxisEventX[i] : p7AxisEventTrueX(ev, i, W);
+  const lines = p7WrapLabel(ctx, ev.label, ev.maxWidth);
+  // The collision extent is the whole title+date BLOCK, not just the title:
+  // the date renders in its own (narrower) font but centred on the same axis,
+  // so for a short title it can be the wider of the two — measuring only the
+  // title would let two blocks clear each other while their dates overlap.
+  ctx.save();
+  ctx.font = P7_AXIS_DATE_FONT;
+  const dateWidth = ctx.measureText(p7FormatDateDMY(ev.date, ".")).width;
+  ctx.restore();
+  const textWidth = Math.max(
+    dateWidth,
+    ...lines.map((l) => ctx.measureText(l).width)
+  );
   let align = "center", left, right;
   if (x + textWidth / 2 > W)      { align = "right"; left = x - textWidth; right = x; }
   else if (x - textWidth / 2 < 0) { align = "left";  left = x; right = x + textWidth; }
@@ -1015,7 +1108,7 @@ function p7AxisEventBounds(ctx, ev, i, W) {
   const lineX = align === "right" ? x - textWidth / 2
               : align === "left"  ? x + textWidth / 2
               : x;
-  return { x, left, right, align, lineX };
+  return { x, left, right, align, lineX, lines };
 }
 
 // Fires each event's one-shot animation the instant p7.currentDate reaches its
@@ -1026,19 +1119,34 @@ function p7AxisEventBounds(ctx, ev, i, W) {
 // t=0 → currentDate=minDate, before the user has scrolled within it at all —
 // so a `>=` comparison would count minDate itself as "reached" on arrival,
 // and any event dated at the dataset's very start (minDate is 2023-01-01;
-// the first axis event is 2023-01-11) could show before any scrolling
+// the first axis event is 2023-01-04) could show before any scrolling
 // happened. The strict `>` guard requires real scroll progress. Every event,
 // including the first, uses this same plain date-based rule (and renders at
 // this same date's axis position, p7AxisEventBounds below) — per explicit
 // instruction, no special-cased extra delay for the first one.
-function p7UpdateAxisEventTriggers() {
+function p7UpdateAxisEventTriggers(W) {
   const curMs = new Date(p7.currentDate + "T00:00:00Z").getTime();
   const minMs = new Date(p7.minDate + "T00:00:00Z").getTime();
+  const maxMs = new Date(p7.maxDate + "T00:00:00Z").getTime();
   const hasScrolled = curMs > minMs;
   const now = performance.now();
   P7_AXIS_EVENTS.forEach((ev, i) => {
     const state = P7_AXIS_EVENT_STATE[i];
-    const reached = hasScrolled && curMs >= new Date(ev.date + "T00:00:00Z").getTime();
+    const evMs = new Date(ev.date + "T00:00:00Z").getTime();
+    let reached;
+    if (evMs > maxMs) {
+      // An event dated past the dataset's end has no date the scrub can ever
+      // reach — clamping its compare date to maxDate fired it only on the one
+      // final frame where currentDate === maxDate exactly, so in practice it
+      // never showed. Instead it uses the same rule everything else does, just
+      // expressed in x: reached once the growing fill edge has caught up to the
+      // dot's actual DRAWN position (p7AxisEventTrueX — the clamped end of the
+      // axis plus its xOffset gap). Time runs right → left, so "caught up"
+      // is <=. Nudging its xOffset therefore moves when it appears, too.
+      reached = hasScrolled && p7AxisX(p7.currentDate, W) <= p7AxisEventTrueX(ev, i, W);
+    } else {
+      reached = hasScrolled && curMs >= evMs;
+    }
     if (reached) {
       if (state.triggeredAt === null) {
         state.triggeredAt = now;
@@ -1100,7 +1208,7 @@ function p7AxisEventOpacity(i, now) {
 }
 
 function p7DrawAxisEvents(ctx, W, axisY, curX, hoverActive, highlightX) {
-  p7UpdateAxisEventTriggers();
+  p7UpdateAxisEventTriggers(W);
   const now = performance.now();
   ctx.save();
   ctx.font = P7_AXIS_EVENT_FONT;
@@ -1118,11 +1226,23 @@ function p7DrawAxisEvents(ctx, W, axisY, curX, hoverActive, highlightX) {
   // (hoverActive) they all dim like the rest of the axis.
   p7.axisEventPositions = new Map();
   const hoveredAxisEvent = p7.hoveredAxisEvent;
+  // Eased once per frame, before anything reads it below.
+  const rosterTarget = hoverActive ? 1 : 0;
+  p7AxisRosterT += (rosterTarget - p7AxisRosterT) * P7_AXIS_HOVER_ANIM_SPEED;
+  if (Math.abs(rosterTarget - p7AxisRosterT) < 0.001) p7AxisRosterT = rosterTarget;
   P7_AXIS_EVENTS.forEach((ev, i) => {
-    const x = p7AxisEventX[i] !== undefined ? p7AxisEventX[i] : p7AxisX(ev.date, W);
+    const x = p7AxisEventX[i] !== undefined ? p7AxisEventX[i] : p7AxisEventTrueX(ev, i, W);
     const reached = x >= curX;
     const state = P7_AXIS_EVENT_STATE[i];
-    if (!reached) { state.hoverT = 0; return; }
+    // Ease presence rather than switching it: scrolling back up now shrinks the
+    // dot away over the same handful of frames it grew in over, instead of
+    // deleting it mid-fade. Below ~0 it stops drawing (and stops being
+    // hit-testable) entirely.
+    const reachedTarget = reached ? 1 : 0;
+    state.reachedT += (reachedTarget - state.reachedT) * P7_AXIS_HOVER_ANIM_SPEED;
+    if (Math.abs(reachedTarget - state.reachedT) < 0.001) state.reachedT = reachedTarget;
+    if (!reached) state.hoverT = 0;
+    if (state.reachedT <= 0.001) return;
     const isAxisHovered = hoveredAxisEvent === ev;
     // Ease hoverT toward its target (1 hovered, 0 not) once per frame — this is
     // what makes the hover grow/shrink animate instead of snap.
@@ -1135,16 +1255,28 @@ function p7DrawAxisEvents(ctx, W, axisY, curX, hoverActive, highlightX) {
     // pointed at. "Prominence" (0 faded → 1 full) is the larger of the label's
     // own opacity and the eased hover amount, interpolating the radius between
     // P7_AXIS_MARKER_RADIUS_FADED and P7_AXIS_MARKER_RADIUS.
-    const prominence = Math.max(p7AxisEventOpacity(i, now), state.hoverT);
-    const markerRadius = P7_AXIS_MARKER_RADIUS_FADED +
-      (P7_AXIS_MARKER_RADIUS - P7_AXIS_MARKER_RADIUS_FADED) * prominence;
+    // The roster SHRINKS every dot rather than growing any: while a square is
+    // hovered, all the axis circles read small and equal — including the one
+    // whose label is currently showing at full size — so the revealed labels
+    // are the only thing the roster adds, and nothing competes with the square
+    // actually being hovered. Scaled by (1 - p7AxisRosterT) so the shrink and
+    // its regrow animate rather than snap.
+    const prominence = Math.max(p7AxisEventOpacity(i, now), state.hoverT) * (1 - p7AxisRosterT);
+    const markerRadius = (P7_AXIS_MARKER_RADIUS_FADED +
+      (P7_AXIS_MARKER_RADIUS - P7_AXIS_MARKER_RADIUS_FADED) * prominence) * state.reachedT;
     p7.axisEventPositions.set(ev, { x, y: axisY, radius: markerRadius });
     // Wipe the line under the marker back to the frame background (see the
-    // per-visible dot below for why), then fill. The wipe uses the FULL radius
-    // so shrinking never leaves a ring of the previous frame's larger dot behind.
+    // per-visible dot below for why), then fill. The wipe tracks the CURRENT
+    // radius, not the full one: a fixed full-size hole left the line gapped
+    // under a shrinking dot and then healed it in a single frame the moment the
+    // dot vanished. Scaling it means the line closes back up continuously as the
+    // dot shrinks. Safe because the canvas is fully repainted every frame, so
+    // there are no leftover pixels from the previous, larger dot to cover.
     ctx.fillStyle = "#FDFCFF";
     ctx.beginPath();
-    ctx.arc(x, axisY, P7_AXIS_MARKER_RADIUS + 1, 0, Math.PI * 2);
+    // The +1 breathing room is scaled by reachedT too — left at a flat +1 it was
+    // still a 2px hole in the line at radius 0, which then closed in one frame.
+    ctx.arc(x, axisY, markerRadius + state.reachedT, 0, Math.PI * 2);
     ctx.fill();
     const color = hoverActive
       ? (highlightX !== null && x === highlightX ? P7_AXIS_HOVER_COLOR : P7_AXIS_BG_COLOR)
@@ -1164,10 +1296,25 @@ function p7DrawAxisEvents(ctx, W, axisY, curX, hoverActive, highlightX) {
     // The eased hover amount re-shows a faded label (and holds it while the
     // hover fades back out), so include any event whose hoverT is still lifting
     // its opacity — not just currently-triggered ones.
-    const opacity = Math.max(p7AxisEventOpacity(i, now), P7_AXIS_EVENT_STATE[i].hoverT);
+    // While a regular timeline square is hovered (hoverActive), every ALREADY
+    // REACHED headline event's label is forced on, not just the one currently
+    // crossfading — the hover turns the axis into a reference key for reading
+    // where that square sits among the headlines so far. Events the scrub has
+    // not passed yet stay hidden: the roster must never spoil what is still
+    // ahead. "Reached" is the trigger state's own definition (triggeredAt set
+    // and not currently reversing out), so scrolling back un-reveals in step.
+    // They render at the same faint state3 alpha as the rest of the dimmed axis
+    // (see labelAlpha below) — a quiet roster, not seven full-black labels.
+    const st = P7_AXIS_EVENT_STATE[i];
+    const rosterOn = st.triggeredAt !== null && st.leavingAt === null;
+    const opacity = Math.max(
+      p7AxisEventOpacity(i, now),
+      st.hoverT,
+      rosterOn ? p7AxisRosterT : 0
+    );
     if (opacity <= 0) return;
-    const { x, left, right, lineX } = p7AxisEventBounds(ctx, ev, i, W);
-    visible.push({ ev, i, x, lineX, left, right, opacity, textWidth: right - left });
+    const { x, left, right, lineX, lines } = p7AxisEventBounds(ctx, ev, i, W);
+    visible.push({ ev, i, x, lineX, left, right, opacity, lines, textWidth: right - left });
   });
 
   // When two labels' horizontal extents collide, shift the older one
@@ -1195,20 +1342,24 @@ function p7DrawAxisEvents(ctx, W, axisY, curX, hoverActive, highlightX) {
         moved = true;
       }
     }
+    // Re-clamp after shifting: without this a block pushed toward an edge can
+    // run off the canvas, and the next one then lands on top of what is
+    // visually pinned at that edge instead of clearing it.
+    if (left < 0)      { left = 0; right = entry.textWidth; }
+    else if (right > W) { right = W; left = W - entry.textWidth; }
     entry.left = left; entry.right = right;
     entry.lineX = (left + right) / 2;
   }
 
   visible.forEach((entry) => {
-    const { ev, left, lineX, opacity } = entry;
+    const { ev, lineX, opacity, lines } = entry;
     const yOff = P7_AXIS_EVENT_LABEL_OFFSET;
-    // Always anchored at its own left edge (== the true dot position when
-    // nothing collided, since p7AxisEventBounds already returns `left` as
-    // the label's true left-most pixel for every one of its own align cases)
-    // rather than switching ctx.textAlign per entry — a plain left-edge
-    // anchor is the one thing that stays correct however far a collision
-    // above has pushed `left` from the event's real anchor x.
-    ctx.textAlign = "left";
+    // Every line is centred on the block's own centre (lineX) rather than
+    // anchored to the event's real x — lineX is recomputed from left/right
+    // after de-collision, so it stays correct however far a collision above
+    // has pushed the block from its anchor, and it keeps a wrapped title's
+    // lines centred on each other and on the date below them.
+    ctx.textAlign = "center";
 
     // In state3 (a dot elsewhere is hovered), the label dims to the same
     // faint alpha as every other non-highlighted axis element — unless this
@@ -1218,7 +1369,13 @@ function p7DrawAxisEvents(ctx, W, axisY, curX, hoverActive, highlightX) {
     const labelAlpha = (hoverActive && !isHoverHighlighted) ? P7_AXIS_BG_ALPHA : 1;
     ctx.font = P7_AXIS_EVENT_FONT;
     ctx.fillStyle = `rgba(0, 0, 0, ${labelAlpha * opacity})`;
-    ctx.fillText(ev.label, left, axisY - yOff);
+    // Wrapped lines stack UPWARD: the LAST line keeps the single-line baseline
+    // (axisY - yOff) so the date underneath never moves, and earlier lines are
+    // lifted a line-height each above it.
+    lines.forEach((text, li) => {
+      const y = axisY - yOff - (lines.length - 1 - li) * P7_AXIS_EVENT_LINE_HEIGHT;
+      ctx.fillText(text, lineX, y);
+    });
 
     // Date below the label — same color as the axis's own reached year labels
     // (P7_AXIS_LABEL_COLOR, via globalAlpha rather than string-parsing its
@@ -1247,6 +1404,21 @@ function p7DrawAxisEvents(ctx, W, axisY, curX, hoverActive, highlightX) {
 // P7_AXIS_EVENTS; rebuilt fresh every frame, so a resize or date-range change
 // can't leave a stale snap behind.
 let p7AxisEventX = [];
+
+// An event's rendered x = its true date position plus its own optional
+// `xOffset` (screen px, − = left / later on this RTL axis, + = right). The
+// offset is PURELY a rendering nudge to keep a dot from crowding a year ring
+// it happens to land next to — `date` stays the truthful one and is what
+// every trigger, the printed date label, and the crossfade order still use.
+// Dot and label both read this, so they never separate.
+function p7AxisEventTrueX(ev, i, W) {
+  // An event dated past p7.maxDate (the dataset's last event) has no position
+  // of its own on the line — p7AxisX would put it beyond the left end, floating
+  // off the axis. Clamped to the span so it parks AT the end instead; give it an
+  // xOffset to hold a gap there. Its printed date stays the real one.
+  const x = Math.min(Math.max(p7AxisX(ev.date, W), P7_AXIS_MARGIN), W - P7_AXIS_MARGIN);
+  return x + (ev.xOffset || 0);
+}
 
 function p7DrawYearAxis(ctx, W, H) {
   const ticks = p7AxisYearTicks();
@@ -1293,7 +1465,7 @@ function p7DrawYearAxis(ctx, W, H) {
   // Events (and the hover highlight) render at their true date x on the
   // continuous line — no dot-snapping now that the line is solid, not a row of
   // discrete dots. p7AxisEventX is read by p7AxisEventBounds below.
-  p7AxisEventX = P7_AXIS_EVENTS.map((ev) => p7AxisX(ev.date, W));
+  p7AxisEventX = P7_AXIS_EVENTS.map((ev, i) => p7AxisEventTrueX(ev, i, W));
   const hoveredEvent = p7.hoveredEvent;
   const hoverActive  = !!hoveredEvent;
   const hoverAxisX   = hoverActive ? p7AxisX(hoveredEvent.date, W) : null;

@@ -30,13 +30,18 @@ the matching event dots migrate above the divider line.
 
 ## Categories
 
-`P9_CATEGORIES` is **11 pills** (index = `data-idx`): 0 הפגנה לא אלימה · 1 פוגרום ·
-2 הטרדה ואיומים · 3 החזקה בכפייה · 4 תקיפה בנשק קר · 5 תקיפה בנשק חם · 6 תקיפה פיזית ·
-7 הפרות סדר · 8 ניכוס שטח · 9 פגיעה ברכוש · 10 חסימת כביש.
+`P9_CATEGORIES` is **10 pills** (index = `data-idx`): 0 הפגנה לא אלימה · 1 פוגרום ·
+2 החזקה בכפייה · 3 תקיפה בנשק קר · 4 תקיפה בנשק חם · 5 תקיפה פיזית ·
+6 הפרות סדר · 7 ניכוס שטח · 8 פגיעה ברכוש · 9 חסימת כביש.
 
-These strings ARE the join key into the data — they must match `full_v2.xlsx`'s
-`event_type` values verbatim, and all 11 of the dataset's event types are represented
+These strings ARE the join key into the data — they must match `full_v3.xlsx`'s
+`event_type` values verbatim, and all 10 of the dataset's event types are represented
 one-to-one.
+
+> **Removed — don't reintroduce:** `הטרדה ואיומים`. It was retired on the v2→v3 dataset;
+> its 104 rows were hand-reclassified (51 הפגנה לא אלימה, 43 הפרות סדר, 8 חסימת כביש,
+> 1 תקיפה פיזית, 1 תקיפה בנשק חם) and the type no longer exists in `full_v3.xlsx`.
+> Its tray slot (row 1, col 2) went to תקיפה בנשק חם, which puts row 1 back at 5 columns.
 
 `P9_CATEGORY_DESC` is index-aligned and used only by the tray tooltip.
 `P9_TRAY_GRID` gives each index a fixed `{row, col}` slot, applied as inline grid
@@ -51,6 +56,11 @@ or `"below"` (legit). `p9.sides` starts all `"below"`. An unknown category yield
 `undefined` and is treated as extreme.
 
 > Renaming a pill in `P9_CATEGORIES` must also update `FOLD6_SQUARE_LABELS` in `js/groups.js`.
+
+`page12.js` reads the same lookup to decide which events join @fold11's freeform
+spread (`p12EnsureFreeformTargets` keeps only events whose category is `"above"`).
+Its old name `CATEGORY_EN_TO_IDX` is gone — a stale reference there throws a
+`ReferenceError` inside `drawPage12` and the extreme dots silently never spread.
 
 ## Drag mechanics
 
@@ -116,7 +126,7 @@ column count actually grows (`neededColsNow > prevColsSticky`).
 Arrival timing: `BASE_TRAVEL_MS = 600 * factor`, `ARRIVAL_STAGGER_MS = 4 * factor` per dot,
 sqrt-scaled against `ANCHOR_COUNT = 1880`
 (`effectiveStagger = 4 * max(1, sqrt(1880 / maxNew))`) so a small category still reads as
-a cascade. `FAST_ARRIVAL_CATEGORIES = {0, 4, 6, 9}` (the four largest categories) get `FAST_ARRIVAL_FACTOR = 0.75`.
+a cascade. `FAST_ARRIVAL_CATEGORIES = {0, 3, 5, 8}` (the four largest categories) get `FAST_ARRIVAL_FACTOR = 0.75`.
 In state 2, dots still mid-flight from the interrupted animation are carried forward with
 their **original** arrival times.
 
@@ -140,9 +150,13 @@ Scroll-driven reset/restore (`p9ResetDrops` / `p9RestoreDrops`, driven from
 brute-force scans `p9.lastPositions` with `HIT_PAD` 3 and **skips any dot at or below
 `p9.midY`** — legit dots are not hoverable. A hit highlights the matching dropped pill
 (`.is-hover-highlighted`) and shows `#page9Tooltip` with the date, `descHeMedium`, and
-the actor color driving the dashed SVG border.
+the actor color driving the dashed SVG border. That border's width is one knob,
+`TOOLTIP_BORDER_W` (2, `js/core.js`): `updateTooltipDash` writes it to both the SVG
+stroke and the tooltip's `--tip-border-w` (the transparent CSS border holding the
+box-model space open), and derives the path inset/radius from it.
 
-Dimming: a dot hover drops everything else to `HOVER_DIM_OPACITY` 0.2; a pill hover drops
+Dimming: a dot hover drops everything else to `hoverDim(actor)` — `HOVER_DIM_OPACITY` 0.2
+unless that group overrides it in `HOVER_DIM_BY_ACTOR` (`js/core.js`); a pill hover drops
 non-matching dots to `1 - 0.65 * hoverDimT`, ramped over `HOVER_DIM_MS` 80 with no easing
 curve at all. `p9HoverDimAnimate` also calls `updateGroups()` so the fold-6 squares dim in
 step.

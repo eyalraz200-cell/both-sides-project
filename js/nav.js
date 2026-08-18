@@ -1,55 +1,20 @@
 // ── Scrollytelling: which text section is active drives the pinned canvas ──
 const sections = Array.from(document.querySelectorAll(".text-section"));
 
-const foldNumberBadge = document.getElementById("foldNumberBadge");
-
-// Populate once with one <option> per section (@foldN is this project's own
-// canonical fold numbering — see CLAUDE.md's fold reference table — always
-// currentPage's id + 1). Picking an option scrolls its section into view;
-// the resulting scroll re-triggers the existing IntersectionObserver, which
-// calls setActivePage/updateFoldNumberBadge on its own, so no extra state
-// sync is needed here.
-if (foldNumberBadge) {
-  sections.forEach((sec, i) => {
-    const opt = document.createElement("option");
-    opt.value = String(i);
-    opt.textContent = `@fold${i + 1}`;
-    foldNumberBadge.appendChild(opt);
-  });
-  foldNumberBadge.addEventListener("change", () => {
-    sections[Number(foldNumberBadge.value)].scrollIntoView({ behavior: "smooth" });
-  });
-  // Hidden by default (see style.css); Ctrl+Shift+F toggles it and persists
-  // the choice in localStorage so it stays put across reloads. localStorage
-  // access is wrapped in try/catch — browsers with storage blocked (Safari's
-  // "Block all cookies", strict private-browsing modes, some corporate
-  // policies) throw a SecurityError on access rather than failing quietly,
-  // which would otherwise kill this whole (unrelated) script and blank the
-  // entire page for anyone with those settings.
-  const FOLD_BADGE_VISIBLE_KEY = "foldNumberBadgeVisible";
-  // Visible on every load — force-shown regardless of any stale saved pref.
-  // Ctrl+Shift+F still hides/shows it within the session.
-  foldNumberBadge.classList.add("is-visible");
-  try { localStorage.setItem(FOLD_BADGE_VISIBLE_KEY, "1"); } catch {}
-  window.addEventListener("keydown", (e) => {
-    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "f") {
-      e.preventDefault();
-      const visible = foldNumberBadge.classList.toggle("is-visible");
-      try { localStorage.setItem(FOLD_BADGE_VISIBLE_KEY, visible ? "1" : "0"); } catch {}
-    }
-  });
-}
-
-function updateFoldNumberBadge() {
-  if (foldNumberBadge) foldNumberBadge.value = String(currentPage);
-}
-
 function setActivePage(page) {
   if (page === currentPage) return;
-  // Scrolling back out of the timeline toward an earlier fold — wipe all
-  // per-month animation state so the next entry replays from scratch instead
-  // of showing the previously-settled dots still hanging around.
-  if (currentPage === 7 && page < 7) p7ResetForReplay();
+  // Scrolling back out of the timeline toward a fold that doesn't draw the
+  // per-event squares at all (anything before drawFold7, i.e. currentPage < 5)
+  // — wipe all per-month animation state so the next entry replays from
+  // scratch instead of showing the previously-settled dots hanging around.
+  //
+  // Deliberately NOT on the 7 -> 6 crossing. drawFold9/drawFold7 (js/core.js)
+  // keep drawing and retreating the squares while p7RealTimelineReached, so the
+  // reverse cascade is *supposed* to play out across that boundary; wiping here
+  // made every dot vanish in one frame the instant the IntersectionObserver
+  // crossed. Those two draw functions run the wipe themselves once the retreat
+  // has actually finished.
+  if (currentPage >= 5 && page < 5) p7ResetForReplay();
 
   // Continuing into page9 (fold12) while page8's own timeline->legit-grid
   // glide (p8CurrentT, page8.js) hasn't actually finished yet — the
@@ -59,12 +24,23 @@ function setActivePage(page) {
   // snap straight to their final legit position the instant page9 takes
   // over drawing instead of page8 — see p8CaptureBlendedPositions' own
   // comment (page8.js) for the full rationale.
+  //
+  // The continuation is seeded from the glide's *start* positions (t=0) with a
+  // back-dated `start`, NOT from the current blended position with the
+  // remaining duration. p9PlaceDot re-applies p9Ease to whatever window it's
+  // given, so the latter eased an already-eased slice: velocity dropped to
+  // exactly zero at the handoff (sine-in-out starts at rest) and the path
+  // deviated up to ~15% of total travel before catching up at the end. Because
+  // the IntersectionObserver that fires this handoff crosses at a
+  // *scroll-dependent* moment, that showed up as the glide stuttering and
+  // landing differently depending on whether the user kept scrolling through
+  // it. Replaying the same global 0..1 clock makes the handoff invisible.
   if (currentPage === 8 && page === 9 && typeof p8CurrentT === "function" && p8Engaged && p8CurrentT() < 1) {
     const W = canvas.clientWidth, H = canvas.clientHeight;
     p9.anim = {
-      from: p8CaptureBlendedPositions(W, H),
-      start: performance.now(),
-      duration: Math.max(1, P8_TRANSITION_DURATION * (1 - p8CurrentT())),
+      from: p8CaptureBlendedPositions(W, H, 0),
+      start: performance.now() - P8_TRANSITION_DURATION * p8CurrentT(),
+      duration: P8_TRANSITION_DURATION,
       plainGlide: true, // see p9PlaceDot (page9.js) — keeps this at page8's own pace, no tier stagger
     };
   }
@@ -78,16 +54,21 @@ function setActivePage(page) {
   // comment (page7.js) for the full rationale.
   if (currentPage === 8 && page === 7 && typeof p8CurrentT === "function" && p8CurrentT() > 0) {
     const W = canvas.clientWidth, H = canvas.clientHeight;
+    // Same back-dating as the forward handoff above, mirrored: this direction
+    // runs t: p8CurrentT() -> 0 and its target IS the timeline layout, so the
+    // "from" is the glide's other endpoint (t=1) and the elapsed time is
+    // (1 - p8CurrentT()) of a full traverse. p9Ease is symmetric
+    // (p9Ease(1-x) === 1 - p9Ease(x)), so that reproduces the glide's own curve
+    // exactly, with no dead stop at the handoff.
     p7EntryAnim = {
-      from: p8CaptureBlendedPositions(W, H),
-      start: performance.now(),
-      duration: Math.max(1, P8_TRANSITION_DURATION * p8CurrentT()),
+      from: p8CaptureBlendedPositions(W, H, 1),
+      start: performance.now() - P8_TRANSITION_DURATION * (1 - p8CurrentT()),
+      duration: P8_TRANSITION_DURATION,
     };
   }
 
   currentPage = page;
   updateGroups();
-  updateFoldNumberBadge();
   draw();
 
   // p9.anim (if just seeded above) only advances when something drives a

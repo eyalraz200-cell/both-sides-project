@@ -68,9 +68,3 @@ The tooltip holds `FOLD9_TOOLTIP_SHRINK_DELAY_MS` (500 ms) after square 0 lands,
 shrinks over `FOLD9_TOOLTIP_SHRINK_MS` (400 ms); reversing un-latches immediately and
 cancels the pending timer.
 
-## The fold badge
-
-`#foldNumberBadge` is a real `<select>` (a direct `.layout` child, so it stacks above
-`.text-col`), populated with one option per `.text-section` labeled `@fold${i+1}`.
-**Ctrl+Shift+F** toggles it; picking an option jumps to that fold. Its localStorage
-access is try/catch-wrapped against `SecurityError`. Dev-only.

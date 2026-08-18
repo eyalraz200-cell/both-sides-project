@@ -143,8 +143,14 @@ function drawPage8(ctx, W, H) {
 // wherever these dots currently are" entrances) — just seeded once here with
 // this glide's current on-screen (blended) position as the "from", identical
 // math to blendAndDraw above.
-function p8CaptureBlendedPositions(W, H) {
-  const ease = p9Ease(p8CurrentT());
+// `tOverride` asks for the positions the glide would have at some *other* t
+// than right now — the handoffs in setActivePage (js/nav.js) pass the glide's
+// own endpoint (0 or 1) and back-date the animation's `start` instead of
+// capturing the current blend, so the continuation replays this exact curve
+// rather than re-easing a fresh 0..1 on top of an already-eased position. See
+// that call site for why that distinction is load-bearing.
+function p8CaptureBlendedPositions(W, H, tOverride) {
+  const ease = p9Ease(tOverride === undefined ? p8CurrentT() : tOverride);
 
   p7UpdateLayout(W, H);
   p9EnsureIndex();

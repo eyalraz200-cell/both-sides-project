@@ -43,8 +43,8 @@ numbers in the source.
    `apply(v, mode, tab, on)`, `init(api)`, `custom(box, api, doc)`, `summary(v, mode)`.
 3. Insert `if (window.innerWidth < 900) return;   // desktop-only layout` immediately
    after `(function () {`.
-4. Add `<script src="_debug-<thing>.js"></script>` after `_debug-visual-edit.js` in
-   `project.html`.
+4. Add `<script src="_debug-<thing>.js"></script>` at the end of `project.html`'s script
+   list.
 5. Verify with `node --check` + `curl`.
 
 **Rules (non-negotiable):**
@@ -66,16 +66,34 @@ numbers in the source.
   unknown and a converted value re-evaluates differently.
 - Delete the file **and** its `<script>` tag once the decision is made. It never ships.
 
+## Previously-built harnesses (all deleted)
+
+No `_debug-*.js` file is in the repo right now, and `project.html` loads none. The three
+that existed are gone; what's worth keeping is what each one *baked into*, so a rebuilt
+version knows where its numbers land:
+
+- **@fold2 dot colours/positions** — group colours → `GROUPS[].color` **plus** the
+  hex-literal lookups `FOLD4_COALITION_ROWS` / `FOLD4_CHANGE_ROWS` (they resolve groups by
+  hex and go `undefined` if missed); positions → `FOLD2_GROUP_CELL`; filler colours →
+  `FOLD2_FILLER_COLORS`. Moving a group onto a cell with a filler override evicts it.
+- **@fold1 hero dot arrangement** — group slots → `PAGE0_GROUP_SLOTS`; decorative
+  moves/recolours → `PAGE0_DOT_COLORS` (both `page1.js`, `{col, row}` with column-local
+  `row`). Two things a bake must survive, both already handled in `buildPage0DotColorSet`:
+  a short viewport ending a column above an arranged row (group slots walk upward, stray
+  decorative rows are skipped and rejoin the palette), and palette dedup being **one
+  shared `claimed` set**, not one per column — otherwise an arranged colour carried across
+  columns gets dealt twice.
+- **@fold10 row picking** — not a tuning harness: it collected `rowId`s off the page to
+  paste back into `full_v3.xlsx`. Its two reusable tricks: hit-test by coordinate against
+  `p9.lastPositions` on `window` listeners (both dot layers are `pointer-events: none`),
+  and overdraw by **wrapping the global `draw`**, which is a writable property of
+  `globalThis`.
+
 ## Making a constant live-tunable
 
 Flip `const` → `let` for the duration of the harness — a top-level `let` in a classic
 script lives in the shared global lexical environment, so `_debug-*.js` can assign it.
 Revert to `const` when baking the value.
-
-## The fold badge
-
-**Ctrl+Shift+F** toggles `#foldNumberBadge`, a native `<select>` listing every fold as
-`@foldN`; picking one jumps there. Dev-only, hidden by default.
 
 ## Reading the code
 

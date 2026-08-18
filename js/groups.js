@@ -31,21 +31,21 @@ const GROUPS_FRAME_H = 982; // Figma frame height the y-coordinates below are au
 // `actor` is the events.json join key — see p7ActorColor in page7.js, which
 // reads this group's `color` directly so the real per-event canvas dots always
 // match this legend, including after a future color edit here. The values are
-// full_v2.xlsx's own lowercase `main_actor` strings, matched verbatim; the
+// full_v3.xlsx's own lowercase `main_actor` strings, matched verbatim; the
 // camp membership they imply is duplicated as ACTOR_SIDE in server.py, which
-// derives each event's `side` from them (full_v2.xlsx has no side column).
+// derives each event's `side` from them (full_v3.xlsx has no side column).
 const GROUPS = [
-  { color: "#00B00C", label: "מפגינים ערבים ישראלים",  actor: "arab israelis",
-    fold4: { x: 725,  y: 514, swatchFirst: true }, fold6: { x: 31, y: 560 } },
-  { color: "#FFAC11", label: "תנועות התנחלות באיו״ש",           actor: "settlers",
+  { color: "#31CE1C", label: "מפגינים ערבים ישראלים",  actor: "arab israelis",
+    fold4: { x: 725,  y: 514, swatchFirst: true }, fold6: { x: 31, y: 536 } },
+  { color: "#F9B624", label: "תנועות התנחלות באיו״ש",           actor: "settlers",
     fold4: { x: 887,  y: 488, swatchFirst: true }, fold6: { x: 31, y: 512 } },
-  { color: "#CC0000", label: "קבוצות ימין לאומיות",      actor: "right wing protesters",
+  { color: "#F024FF", label: "קבוצות ימין לאומיות",      actor: "right wing protesters",
     fold4: { x: 887,  y: 514, swatchFirst: true }, fold6: { x: 31, y: 536 } },
-  { color: "#0073FF", label: "ארגוני מחאה נגד הממשלה", actor: "protesters against government",
+  { color: "#6B89FF", label: "ארגוני מחאה נגד הממשלה", actor: "protesters against government",
     fold4: { x: 725,  y: 488, swatchFirst: true }, fold6: { x: 31, y: 512 } },
-  { color: "#CD00CD", label: "ארגוני שלום ודו קיום",     actor: "peace movements",
-    fold4: { x: 725,  y: 462, swatchFirst: true }, fold6: { x: 31, y: 536 } },
-  { color: "#4A4A4A", label: "מפגינים חרדים",           actor: "haredi jews",
+  { color: "#FF1A94", label: "ארגוני שלום ודו קיום",     actor: "peace movements",
+    fold4: { x: 725,  y: 462, swatchFirst: true }, fold6: { x: 31, y: 560 } },
+  { color: "#454545", label: "מפגינים חרדים",           actor: "haredi jews",
     fold4: { x: 887,  y: 462, swatchFirst: true }, fold6: { x: 31, y: 560 } },
 ];
 
@@ -58,8 +58,8 @@ buildPage0AllDots();
 // Which camp each group belongs to, top-to-bottom in that camp's own column
 // order. Declared here (rather than down by the camp headers, where they used
 // to live) because @fold2's grid roster below already needs them.
-const FOLD4_COALITION_ROWS = ["#4A4A4A", "#FFAC11", "#CC0000"].map(c => GROUPS.find(g => g.color === c));
-const FOLD4_CHANGE_ROWS    = ["#CD00CD", "#0073FF", "#00B00C"].map(c => GROUPS.find(g => g.color === c));
+const FOLD4_COALITION_ROWS = ["#454545", "#F9B624", "#F024FF"].map(c => GROUPS.find(g => g.color === c));
+const FOLD4_CHANGE_ROWS    = ["#FF1A94", "#6B89FF", "#31CE1C"].map(c => GROUPS.find(g => g.color === c));
 
 // ── @fold2's camp grids (Figma node 279:1342, frame 1512×982) ──
 // Each camp is no longer a single column of 3 labelled rows — it's a 4-col ×
@@ -73,13 +73,13 @@ const FOLD4_CHANGE_ROWS    = ["#CD00CD", "#0073FF", "#00B00C"].map(c => GROUPS.f
 //
 // Measured off the RENDERED Figma frame (its two blocks' own layer x/y are
 // mutually inconsistent; the render is a clean regular grid both sides):
-// 11px rects, 31px column pitch, 28px row pitch (row pitch tuned by eye at
+// 11px rects, 31px column pitch, 32px row pitch (row pitch tuned by eye at
 // @fold3, where the column reads with its labels), rows at y=462/488/514
 // (those rows live in GROUPS' own fold4.y, so they can't drift out of sync).
 // Pitches are plain px (not frame-scaled) for the same reason
 // FOLD2_CAMP_CENTER_GAP_PX below is — a grid must stay square at any viewport.
 const FOLD2_GRID_COLS = 4;
-const FOLD2_COL_PITCH_PX = 31, FOLD2_ROW_PITCH_PX = 28;
+const FOLD2_COL_PITCH_PX = 31, FOLD2_ROW_PITCH_PX = 32;
 // Each camp block's center, as a fixed px distance either side of screen
 // center (Figma: block centers at x=590 and x=913 about the frame's own 756).
 // Symmetric on purpose — Figma's own two blocks are within ~5px of symmetric,
@@ -103,12 +103,12 @@ const FOLD2_CAMP_CENTER_GAP_PX = 160;
 // own row of the block's rightmost column (see the align beat in
 // updateGroups), so the labels still get one clean line each.
 const FOLD2_GROUP_CELL = [
-  { row: 2, col: 3 },  // #00B00C  מפגינים ערבים ישראלים   (change)
-  { row: 0, col: 3 },  // #FFAC11  תנועות התנחלות          (coalition)
-  { row: 2, col: 2 },  // #CC0000  קבוצות ימין לאומיות     (coalition)
-  { row: 2, col: 0 },  // #0073FF  ארגוני מחאה נגד הממשלה  (change)
-  { row: 1, col: 2 },  // #CD00CD  תנועות שלום ודו קיום    (change)
-  { row: 0, col: 1 },  // #4A4A4A  מפגינים חרדים           (coalition)
+  { row: 0, col: 1 },  // #31CE1C  מפגינים ערבים ישראלים   (change)
+  { row: 0, col: 3 },  // #F9B624  תנועות התנחלות          (coalition)
+  { row: 2, col: 0 },  // #F024FF  קבוצות ימין לאומיות     (coalition)
+  { row: 2, col: 0 },  // #6B89FF  ארגוני מחאה נגד הממשלה  (change)
+  { row: 0, col: 0 },  // #FF1A94  תנועות שלום ודו קיום    (change)
+  { row: 1, col: 1 },  // #454545  מפגינים חרדים           (coalition)
 ];
 // Flat cell roster, parallel to fold2FillerDots: cell k sits in `camp`'s
 // block at grid row/col (0 = top / leftmost) — every cell of both 4×3 blocks
@@ -120,6 +120,36 @@ const FOLD2_FILLER_CELLS = [true, false].flatMap((camp) =>
     FOLD4_COALITION_ROWS.includes(g) === camp &&
     FOLD2_GROUP_CELL[i].row === row && FOLD2_GROUP_CELL[i].col === col))
 );
+// Per-cell color overrides for the filler dots, picked by eye at @fold2.
+// Keyed by CELL, not by dot: which decorative dot lands in which cell depends
+// on the viewport height (see the even-spaced pick below), so a per-dot record
+// wouldn't survive a resize. A filler is a real @fold1 decorative dot flown
+// into the grid — the SAME element in both folds — so overriding it here
+// recolors the hero dot too, which is the point. Cells not listed keep their
+// PAGE0_PALETTE color (page1.js) — but every cell is listed here on purpose,
+// so which decorative dot the even-spaced pick happens to hand a cell no
+// longer shows: the grid's 18 filler colors are fixed by cell at any viewport.
+const FOLD2_FILLER_COLORS = [
+  { camp: true,  row: 0, col: 0, color: "#E58415" },
+  { camp: true,  row: 0, col: 1, color: "#757EFF" },
+  { camp: true,  row: 0, col: 2, color: "#6754F8" },
+  { camp: true,  row: 1, col: 0, color: "#009988" },
+  { camp: true,  row: 1, col: 2, color: "#9900CC" },
+  { camp: true,  row: 1, col: 3, color: "#7DBC01" },
+  { camp: true,  row: 2, col: 1, color: "#FF6600" },
+  { camp: true,  row: 2, col: 2, color: "#32CD8A" },
+  { camp: true,  row: 2, col: 3, color: "#43C5E5" },
+  { camp: false, row: 0, col: 2, color: "#F79940" },
+  { camp: false, row: 0, col: 3, color: "#B522D3" },
+  { camp: false, row: 1, col: 0, color: "#7D4EFD" },
+  { camp: false, row: 1, col: 1, color: "#3E82CC" },
+  { camp: false, row: 1, col: 2, color: "#EE3311" },
+  { camp: false, row: 1, col: 3, color: "#E65B5B" },
+  { camp: false, row: 2, col: 1, color: "#4422DD" },
+  { camp: false, row: 2, col: 2, color: "#007755" },
+  { camp: false, row: 2, col: 3, color: "#EE8800" },
+];
+
 let fold2FillerDots = [];
 function assignFold2Fillers() {
   const pool = PAGE0_DECORATIVE_DOT_ELS;
@@ -129,14 +159,50 @@ function assignFold2Fillers() {
   if (!pool.length) return;
   const step = pool.length / need;
   const used = new Set();
+  const cellColor = (cell) => {
+    const hit = FOLD2_FILLER_COLORS.find(
+      (o) => o.camp === cell.camp && o.row === cell.row && o.col === cell.col);
+    return hit && hit.color;
+  };
+  // BY COLOR first: @fold1's dots are hand-arranged (PAGE0_DOT_COLORS,
+  // page1.js) and several of them are deliberately carrying a filler cell's
+  // color, so a cell takes the dot that already IS its color — otherwise the
+  // spaced walk below would pick some other dot and repaint it, silently
+  // undoing the hero arrangement. A dot is the same element in both folds, so
+  // this is also the only pick that needs no repaint at all.
   for (let k = 0; k < need; k++) {
+    const want = cellColor(FOLD2_FILLER_CELLS[k]);
+    if (!want) continue;
+    const idx = pool.findIndex(
+      (d, i) => !used.has(i) && d.color.toLowerCase() === want.toLowerCase());
+    if (idx < 0) continue;
+    used.add(idx);
+    fold2FillerDots[k] = pool[idx];
+  }
+  // Anything still unmatched (a cell color that no hero dot carries, e.g. an
+  // unarranged slot below the hand-placed rows) falls back to the original
+  // evenly-spaced walk over whatever dots are left, and IS repainted.
+  for (let k = 0; k < need; k++) {
+    if (fold2FillerDots[k]) continue;
     let idx = Math.min(pool.length - 1, Math.floor(k * step));
     while (used.has(idx) && idx < pool.length - 1) idx++;
     if (used.has(idx)) break; // very short viewport: fewer dots than cells
     used.add(idx);
-    pool[idx].isFold2Filler = true;
-    fold2FillerDots.push(pool[idx]);
+    fold2FillerDots[k] = pool[idx];
+    // Both the element and the record's `color` (read by the @fold2 flight in
+    // js/update-groups.js) have to move together, and it has to happen here
+    // rather than in page1.js — which dot is a filler isn't known until this
+    // function has run.
+    const want = cellColor(FOLD2_FILLER_CELLS[k]);
+    if (!want) continue;
+    pool[idx].color = want;
+    pool[idx].el.style.background = want;
   }
+  // A short viewport can leave holes; fold2FillerDots is indexed by cell, and
+  // everything downstream tests each entry, so compact it back to a dense list
+  // only if nothing was skipped.
+  fold2FillerDots = fold2FillerDots.slice(0, need);
+  fold2FillerDots.forEach((d) => { if (d) d.isFold2Filler = true; });
 }
 assignFold2Fillers();
 
@@ -256,7 +322,7 @@ const FOLD6_SQUARE_LABELS = [
   "הפגנה לא אלימה",
   "החזקה בכפייה",
   "הפרות סדר",
-  "הטרדה ואיומים",
+  "פוגרום", // was הטרדה ואיומים, retired from P9_CATEGORIES on the v3 dataset
   "תקיפה פיזית",
   "ניכוס שטח",
   "פגיעה ברכוש",
@@ -301,13 +367,41 @@ const FOLD6_SQUARE_COLORS = FOLD6_SQUARE_ACTORS.map(groupColorByActor);
 // (p7.leftEvents' own order — see p7NthIndexOfActor/p7EventForActorOccurrence,
 // page7.js) — auto-derived from FOLD6_SQUARE_ACTORS' own position (count of
 // the same actor appearing earlier in the list), same as the original
-// 10-square design, except index 0: overridden to 8 so @fold8's tooltip
-// keeps pointing at its specific chosen event (the left-side "מחאה מחוץ
-// לביתו של שר המשפטים יריב לוין במודיעין" protest dated 2023-01-14).
+// 10-square design, except index 0 — see FOLD6_TOOLTIP_ROW_ID below.
 const FOLD6_SQUARE_OCCURRENCE = FOLD6_SQUARE_ACTORS.map((actor, i) =>
   FOLD6_SQUARE_ACTORS.slice(0, i).filter(a => a === actor).length
 );
-FOLD6_SQUARE_OCCURRENCE[0] = 8;
+
+// Square 0 is the tooltip square, so it must point at ONE chosen real event
+// rather than "whichever event happens to be first". It names that event by the
+// xlsx's own stable row_id (passed through by server.py) — "row-145", the
+// 2023-02-04 "מחאה מחוץ לביתו של שר המשפטים יריב לוין במודיעין" הפגנה לא אלימה.
+// The occurrence number the lookups actually need is derived from the loaded
+// data at first use (p7OccurrenceOfRowId, page7.js) and cached, so adding or
+// removing earlier events in the xlsx can no longer silently slide the tooltip
+// onto a neighbouring event. Resolved lazily because events.json loads after
+// this file parses.
+const FOLD6_TOOLTIP_ROW_ID = "row-145";
+let fold6TooltipOccurrence = null;
+let fold6TooltipWarned = false;
+function fold6SquareOccurrence(i) {
+  if (i !== 0) return FOLD6_SQUARE_OCCURRENCE[i];
+  if (fold6TooltipOccurrence === null) {
+    const n = p7OccurrenceOfRowId(FOLD6_TOOLTIP_ROW_ID);
+    if (n === -1) {
+      // Data not loaded yet (retry next frame), or the row is gone from the
+      // dataset — in which case fall back to the plain derived occurrence so
+      // the square still has *an* event, and say so once.
+      if (p7.ready && !fold6TooltipWarned) {
+        fold6TooltipWarned = true;
+        console.warn(`fold6 tooltip: row_id ${FOLD6_TOOLTIP_ROW_ID} not in events.json — pick a new one`);
+      }
+      return FOLD6_SQUARE_OCCURRENCE[0];
+    }
+    fold6TooltipOccurrence = n;
+  }
+  return fold6TooltipOccurrence;
+}
 
 const fold6SquaresOverlayEl = document.getElementById("fold6SquaresOverlay");
 const fold6SquareEls = FOLD6_SQUARES_OFFSET.map((_, i) => {
@@ -669,7 +763,7 @@ function checkGroupTriggers() {
 // established earlier — vs. the smaller mini-legend ones (Figma node
 // 120:1279/Frame 3219), interpolated continuously by fold6Trigger rather
 // than snapped, same "seamless, no popping" rule as every other transition.
-const CLUSTER_SWATCH_SIZE = 11, CLUSTER_LABEL_GAP = 16;
+const CLUSTER_SWATCH_SIZE = 11, CLUSTER_LABEL_GAP = 12;
 const LEFT_LEGEND_SWATCH_SIZE = 6, LEFT_LEGEND_LABEL_GAP = 6;
 // Mini-legend geometry: each column's inset from ITS OWN screen edge, in px
 // (not frame units — tuned by eye at one viewport, see CLAUDE.md's manual/
@@ -744,8 +838,8 @@ function typedText(full, t) {
 // hardcoded font sizes above. FOLD6_BOTTOM_ROW is the mini-legend's
 // bottom-most row (highest fold6.y — now ערבים ישראלים, since it joined the
 // change bloc below פעילי שמאל) — the note hangs off it.
-const FOLD6_NOTE_TEXT = "הנתונים לקוחים מגוף המחקר הבינלאומי ACLED, המתעד וממפה אירועי מחאה ואלימות פוליטית על בסיס דיווחים מכלי תקשורת, ארגונים ומקורות מקומיים";
-const FOLD6_NOTE_WIDTH = 150;
+const FOLD6_NOTE_TEXT = "הנתונים לקוחים מגוף המחקר הבינלאומי ACLED, המתעד וממפה אירועי מחאה ואלימות פוליטית על בסיס דיווחים מכלי תקשורת ומקורות מקומיים.";
+const FOLD6_NOTE_WIDTH = 155;
 // Divider (faint hairline) sits between the last row and the note, its own
 // height folded into the gap math below like the note's own height is.
 const FOLD6_DIVIDER_GAP_TOP = 10, FOLD6_DIVIDER_GAP_BOTTOM = 10, FOLD6_DIVIDER_HEIGHT = 1;

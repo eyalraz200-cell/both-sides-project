@@ -16,7 +16,7 @@ function p12EnsureFreeformTargets(W, H) {
   // Left half: col 0 is nearest to center (x = W/2 - CELL), grows leftward.
   const leftShuf = p7Shuffle(Array.from({ length: total }, (_, i) => i), 31337);
   p7.leftEvents.filter(e => {
-    const idx = CATEGORY_EN_TO_IDX[e.category];
+    const idx = CATEGORY_TO_IDX[e.category];
     return idx !== undefined && p9.sides[idx] === "above";
   }).forEach((e, i) => {
     if (i >= total) return;
@@ -29,7 +29,7 @@ function p12EnsureFreeformTargets(W, H) {
   // Right half: col 0 is nearest to center (x = W/2), grows rightward.
   const rightShuf = p7Shuffle(Array.from({ length: total }, (_, i) => i), 42424);
   p7.rightEvents.filter(e => {
-    const idx = CATEGORY_EN_TO_IDX[e.category];
+    const idx = CATEGORY_TO_IDX[e.category];
     return idx !== undefined && p9.sides[idx] === "above";
   }).forEach((e, i) => {
     if (i >= total) return;
