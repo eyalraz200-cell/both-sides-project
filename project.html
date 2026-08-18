@@ -36,18 +36,9 @@
         <div class="page9-tooltip-desc"></div>
       </div>
     </div>
-    <!-- Dev-only indicator of the current @foldN (see CLAUDE.md's fold
-         reference table) — fixed to the viewport, updated in setActivePage.
-         A real <select> (not a div) so clicking it pops a native dropdown of
-         every fold and jumping to one is just picking an option — see the
-         option-population/change-listener code in js/nav.js. Lives as a direct
-         .layout child (not inside .graphic-col) so it stacks above .text-col
-         (z-index 1) — .graphic-col itself is only z-index 0, so nesting it
-         there left .text-col's transparent overlap area swallowing clicks. -->
-    <select class="fold-number-badge" id="foldNumberBadge" aria-label="Jump to fold"></select>
     <!-- Hover tooltip for a category pill in page-9's tray (#page9ZoneBelow
          only — see p9CategoryTooltipInit in page9.js). Same reasoning as
-         #foldNumberBadge above: a direct .layout child, not nested in
+         #page9Tooltip above: a direct .layout child, not nested in
          .graphic-col, so its z-index actually stacks above .text-col's tray/
          dashed box instead of losing to them regardless of its own z-index
          (.graphic-col's own stacking context traps any z-index inside it).
@@ -60,7 +51,7 @@
     </div>
     <!-- The fold6 source-credit note (js/groups.js: fold6NoteEl) is reparented
          into this layer at init instead of staying inside .groups-overlay —
-         same reasoning as #foldNumberBadge/#page9CatTooltip above: a direct
+         same reasoning as #page9CatTooltip above: a direct
          .layout child, not nested in .graphic-col, so its z-index actually
          stacks above .text-col instead of losing to it regardless of its
          own z-index (.graphic-col traps any z-index inside it). Without
@@ -78,7 +69,7 @@
       </section>
       <section class="text-section" data-page="1" id="page-1">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">בשנים האחרונות התגבשו בישראל שני מחנות פוליטיים מנוגדים, המורכבים מקבוצות בעלות עמדות ומאבקים שונים.</h2>
+          <h2 class="section-title text-card-frame">בשנים האחרונות התגבשו בישראל שני מחנות פוליטיים מנוגדים, המורכבים מקבוצות בעלות עמדות ומטרות פוליטיות שונות.</h2>
         </div>
       </section>
       <section class="text-section" data-page="2" id="page-2">
@@ -93,7 +84,7 @@
       </section>
       <section class="text-section" data-page="4" id="page-4">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">אספנו תיעודים של פעולות פוליטיות משני צדי המפה, מתחילת 2023 ועד היום. הנתונים לקוחים מגוף המחקר הבינלאומי <span class="latin-acronym">ACLED</span>, המתעד וממפה אירועי מחאה ואלימות פוליטית על בסיס דיווחים מכלי תקשורת, ארגונים ומקורות מקומיים.</h2>
+          <h2 class="section-title text-card-frame">אספנו תיעודים של פעולות פוליטיות משני צדי המפה, מתחילת 2023 ועד היום. הנתונים לקוחים מגוף המחקר הבינלאומי <span class="latin-acronym">ACLED</span>, המתעד וממפה אירועי מחאה ואלימות פוליטית על בסיס דיווחים מכלי תקשורת ומקורות מקומיים.</h2>
         </div>
       </section>
       <section class="text-section" data-page="5" id="page-5">
@@ -165,8 +156,5 @@
   <script src="js/page8-9-scroll.js"></script>
   <script src="js/fold11.js"></script>
   <script src="js/bootstrap.js"></script>
-  <script src="reload.js"></script>
-  <!-- Visual-edit scaffolding (skill: visual-edit) — never ships; delete this
-       tag and _debug-visual-edit.js once editing is done. -->
-  <script src="_debug-visual-edit.js"></script></body>
+  <script src="reload.js"></script></body>
 </html>

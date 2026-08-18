@@ -41,7 +41,7 @@ Two separate, unrelated HTML entry points sharing no layout:
 | `page12.js` | `drawPage12` outro |
 | `squareboundingbox.js` | Shared grid-geometry constants (`SBB`, `SBB_TIMELINE`, `CENTER_GAP`) |
 | `reload.js` | Dev-only mtime poll → auto page reload |
-| `server.py` | Local dev server + `full_v2.xlsx`→`events.json` generation (derives `side` from `main_actor`) |
+| `server.py` | Local dev server + `full_v3.xlsx`→`events.json` generation (derives `side` from `main_actor`) |
 
 `index.html`/`trigger.css` are the separate article page. Old `main_*` scratch files were deleted; don't recreate them.
 
@@ -65,16 +65,18 @@ Figma source: file `QASHSt1u7b6m6ASgrUPswf` ("Design"). Screens are revised one 
 | `@fold10` | `page-9` | Drag-and-drop categorization (page9.js) |
 | `@fold11` | `page-10` | Scroll-gated outro (`fold13Trigger`) |
 
-**11 folds total.** Dev shortcut: **Ctrl+Shift+F** toggles the fold-number badge/jump menu.
+**11 folds total.**
 
 ## Groups roster
 
 `GROUPS` in `js/groups.js` is **6 groups** — camp groups only (the old no-camp groups were removed on v2 and never appear anywhere):
 
-- **מחנה הימין (coalition):** מפגינים חרדים `#4A4A4A` (`haredi jews`), תנועות התנחלות באיו״ש `#FFAC11` (`settlers`), קבוצות ימין לאומיות `#CC0000` (`right wing protesters`) (top→bottom)
-- **גוש השינוי (change):** ארגוני שלום ודו קיום `#CD00CD` (`peace movements`), ארגוני מחאה נגד הממשלה `#0073FF` (`protesters against government`), מפגינים ערבים ישראלים `#00B00C` (`arab israelis`) (top→bottom)
+- **מחנה הימין (coalition):** תנועות התנחלות באיו״ש `#F9B624` (`settlers`), קבוצות ימין לאומיות `#F024FF` (`right wing protesters`), מפגינים חרדים `#454545` (`haredi jews`) (top→bottom)
+- **גוש השינוי (change):** ארגוני מחאה נגד הממשלה `#6B89FF` (`protesters against government`), מפגינים ערבים ישראלים `#31CE1C` (`arab israelis`), ארגוני שלום ודו קיום `#FF1A94` (`peace movements`) (top→bottom)
 
-The `actor` values are `full_v2.xlsx`'s own lowercase `main_actor` strings; the xlsx has no `side` column, so the camp split is derived from them by `ACTOR_SIDE` in `server.py`.
+Row order is the sort of each camp's `fold6.y` (`legendRow`), not the `FOLD4_*_ROWS` declaration order — see [Groups-and-Legend](wiki/Groups-and-Legend.md).
+
+The `actor` values are `full_v3.xlsx`'s own lowercase `main_actor` strings; the xlsx has no `side` column, so the camp split is derived from them by `ACTOR_SIDE` in `server.py`.
 
 Timeline dot color is `p7ActorColor(actor)` — a lookup into `GROUPS` by its `actor` field, `#888` fallback. There is no `P7_COLORS` object. Full roster details in [Groups-and-Legend](wiki/Groups-and-Legend.md).
 

@@ -19,6 +19,32 @@ let currentPage = 0;
 // from the console/a tuning harness.
 var HOVER_DIM_OPACITY = 0.2;
 
+// Per-group override of the factor above, keyed by the DIMMED dot's own
+// `actor` (GROUPS' events.json join key) — not the hovered one's. The six
+// group colors don't read alike at one shared opacity (the near-black
+// #454545 disappears where the yellow #F9B624 still shouts), so each may
+// carry its own. An actor with no entry here falls back to
+// HOVER_DIM_OPACITY, so this staying empty = the old single-value behavior.
+// `var` for the same reason as above: overridable from a tuning harness.
+// Only the three groups that needed to go FURTHER back than the shared 0.2 are
+// listed — tuned by eye on the real timeline; the other three read right at the
+// default and are deliberately absent rather than restating 0.2.
+var HOVER_DIM_BY_ACTOR = {
+  "settlers": 0.15,                       // תנועות התנחלות באיו״ש
+  "right wing protesters": 0.15,          // קבוצות ימין לאומיות
+  "protesters against government": 0.11,  // ארגוני מחאה נגד הממשלה
+};
+function hoverDim(actor) {
+  const v = HOVER_DIM_BY_ACTOR[actor];
+  return v === undefined ? HOVER_DIM_OPACITY : v;
+}
+
+// Stroke width of the event tooltip's dashed frame, in px. One knob for both
+// halves of that frame: the transparent CSS border holding the box-model
+// space open (--tip-border-w, .page9-tooltip in style.css, set from
+// updateTooltipDash below) and the SVG stroke actually drawn over it.
+var TOOLTIP_BORDER_W = 2;
+
 function drawBackground(ctx, W, H) {
   // p9PlaceDot (page9.js) leaves ctx.globalAlpha at a dimmed value (0.35) on
   // a hovered frame and never restores it — without resetting here first,
@@ -58,7 +84,10 @@ function drawFold7(ctx, W, H) {
   // shown this far back and shouldn't start now.
   if (p7.ready && p7RealTimelineReached) {
     p7DrawTimelineSquares(ctx, W, H);
-    if (!p7HasEngaged && !p7AnyAnimActive()) p7RealTimelineReached = false;
+    // Fully retreated — this is where the per-month state gets wiped (see
+    // setActivePage, js/nav.js), i.e. once the reverse cascade has finished
+    // rather than the moment currentPage dropped.
+    if (!p7HasEngaged && !p7AnyAnimActive()) { p7RealTimelineReached = false; p7ResetForReplay(); }
   }
 }
 
@@ -88,7 +117,9 @@ function drawFold9(ctx, W, H) {
   // — this only smooths out the reverse crossing.
   if (p7RealTimelineReached) {
     p7DrawTimelineSquares(ctx, W, H);
-    if (!p7HasEngaged && !p7AnyAnimActive()) p7RealTimelineReached = false;
+    // Same as drawFold7 above: wipe only once the reverse cascade has actually
+    // finished, never on the currentPage crossing itself.
+    if (!p7HasEngaged && !p7AnyAnimActive()) { p7RealTimelineReached = false; p7ResetForReplay(); }
   }
   if (p7AxisTriggerIfNeeded()) p7DrawYearAxis(ctx, W, H);
 }
@@ -114,7 +145,6 @@ function init() {
   canvas.height = rect.height * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   draw();
-  updateFoldNumberBadge();
 }
 
 // .text-card-frame's dashed border (see style.css for why this isn't plain
@@ -186,6 +216,9 @@ function updateTextCardFrameDashes() {
 // set by p7HoverInit/p9HoverInit carries through. Called on every hover, since
 // the box's height changes with the description's line count.
 function updateTooltipDash(tip) {
+  // Before measuring, not after — the border is part of the box the offsets
+  // report, so a width change has to land first or the viewBox is one call stale.
+  tip.style.setProperty("--tip-border-w", TOOLTIP_BORDER_W + "px");
   const w = tip.offsetWidth, h = tip.offsetHeight;
   if (w === 0 || h === 0) return;
   let svg = tip.querySelector(":scope > svg.page9-tooltip-dash");
@@ -196,18 +229,18 @@ function updateTooltipDash(tip) {
     path = document.createElementNS("http://www.w3.org/2000/svg", "path");
     path.setAttribute("fill", "none");
     path.setAttribute("stroke", "currentColor");
-    path.setAttribute("stroke-width", "2");
     path.setAttribute("stroke-dasharray", "2 2");
     svg.appendChild(path);
     tip.insertBefore(svg, tip.firstChild);
   } else {
     path = svg.firstElementChild;
   }
+  path.setAttribute("stroke-width", TOOLTIP_BORDER_W);
   svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
-  // Inset by 1 (half the 2px stroke) so the stroke's outer edge lands on the
-  // box's true edge; r=7 then puts that outer edge back on the background's
-  // own 8px radius, same as the title cards' rx=7.
-  const r = 7, i = 1, R = w - 1, B = h - 1;
+  // Inset by half the stroke so its outer edge lands on the box's true edge;
+  // the radius then puts that outer edge back on the background's own 8px
+  // border-radius, same as the title cards' rx=7 against a 2px stroke.
+  const i = TOOLTIP_BORDER_W / 2, r = Math.max(0, 8 - i), R = w - i, B = h - i;
   const mirrored = tip.classList.contains("is-mirrored");
   const br = mirrored ? 0 : r, bl = mirrored ? r : 0;
   const arc = (rad, dx, dy) => (rad ? `a${rad},${rad} 0 0 1 ${dx},${dy}` : "");

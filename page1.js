@@ -68,42 +68,99 @@ const PAGE0_PALETTE = [
   "#3311CC", "#EE3311", "#006688", "#FF3377", "#880000",
 ];
 
-// Builds dot colors for both columns. Group colors occupy evenly-spaced slots
-// across the full sequence. Decorative slots in each column draw from their
-// own non-overlapping half of PAGE0_PALETTE, so no color ever appears in both
-// columns. Cycling within a half only if a column needs more than ~20 slots.
+// Where each group's own dot sits, hand-arranged by eye with
+// _debug-fold1-dots.js (see wiki/Dev-Workflow.md), parallel to GROUPS.
+// `col` indexes PAGE0_DOT_COLS (0 = the right-hand column, 1 = the left one)
+// and `row` is the step down THAT column — not the two-column "syncedRow",
+// so a number here is the dot's own index within its column and stays put
+// when the columns' relative offset changes. A row past the bottom of a
+// short column is pulled up to the nearest free slot (see below), so all six
+// groups appear at any viewport height.
+const PAGE0_GROUP_SLOTS = [
+  { col: 1, row: 2 },  // #31CE1C  arab israelis
+  { col: 0, row: 13 }, // #F9B624  settlers
+  { col: 0, row: 27 }, // #F024FF  right wing protesters
+  { col: 1, row: 5 },  // #6B89FF  protesters against government
+  { col: 1, row: 19 }, // #FF1A94  peace movements
+  { col: 1, row: 32 }, // #454545  haredi jews
+];
+
+// Hand-placed decorative dots, same source and same {col, row} convention as
+// PAGE0_GROUP_SLOTS. Only the arranged slots are listed — every other slot
+// still falls back to the sequential PAGE0_PALETTE walk below, so the columns
+// keep filling to the bottom of any viewport. Several of these colors are
+// FOLD2_FILLER_COLORS values rather than palette entries: a decorative dot is
+// the SAME element in @fold1 and @fold2, and assignFold2Fillers (js/groups.js)
+// picks each filler cell's dot BY COLOR, so a dot arranged here keeps the
+// color it was arranged with and lands in the matching @fold2 cell.
+const PAGE0_DOT_COLORS = [
+  { col: 0, row: 0, color: "#B522D3" },
+  { col: 0, row: 1, color: "#757EFF" },
+  { col: 0, row: 2, color: "#44BB00" },
+  { col: 0, row: 3, color: "#FF2244" },
+  { col: 0, row: 4, color: "#00AAAA" },
+  { col: 0, row: 5, color: "#E58415" },
+  { col: 0, row: 6, color: "#0044EE" },
+  { col: 0, row: 7, color: "#FF6600" },
+  { col: 0, row: 18, color: "#00AA22" },
+  { col: 1, row: 0, color: "#6754F8" },
+  { col: 1, row: 1, color: "#00BBCC" },
+  { col: 1, row: 6, color: "#EE1166" },
+  { col: 1, row: 11, color: "#7D4EFD" },
+];
+
+// Builds dot colors for both columns, as one array per column (indexed by the
+// dot's row within that column). Three passes, each only filling slots the
+// previous one left empty: the six group colors at PAGE0_GROUP_SLOTS, then the
+// hand-placed decorative dots of PAGE0_DOT_COLORS, then everything remaining
+// from the column's own non-overlapping half of PAGE0_PALETTE in sequence — so
+// no palette color ever appears in both columns, and a hand-placed color is
+// never also dealt out by the walk. Cycling within a half only if a column
+// needs more slots than it has colors.
 // Deterministic: same viewport height → same colors every load.
 //
-// Only ever called from main.js's buildPage0AllDots(), never from this file
-// directly — GROUPS doesn't exist yet when page1.js itself runs.
+// Only ever called from buildPage0AllDots() below, itself called from
+// js/groups.js — GROUPS doesn't exist yet when page1.js itself runs.
 function buildPage0DotColorSet(counts) {
-  const total = counts[0] + counts[1];
-  const groupCount = Math.min(GROUPS.length, total);
-  const groupSlots = new Set();
-  for (let i = 0; i < groupCount; i++) {
-    groupSlots.add(Math.round((i * (total - 1)) / (groupCount - 1)));
-  }
+  const cols = counts.map((n) => new Array(n).fill(null));
+
+  PAGE0_GROUP_SLOTS.forEach((s, i) => {
+    const slots = cols[s.col];
+    if (!slots || !slots.length) return;
+    // A short viewport can end a column above the arranged row — walk upward
+    // to the nearest free slot rather than dropping the group entirely.
+    let row = Math.min(s.row, slots.length - 1);
+    while (row >= 0 && slots[row]) row--;
+    if (row >= 0) slots[row] = GROUPS[i].color;
+  });
+
+  // One set for BOTH columns, not one each: arranging a dot can carry a color
+  // across to the other column, and the walk below deals from fixed per-column
+  // halves — a per-column set would let the half that still owns that color
+  // deal it out again, so it would appear twice on screen.
+  const claimed = new Set();
+  PAGE0_DOT_COLORS.forEach(({ col, row, color }) => {
+    const slots = cols[col];
+    if (!slots || row >= slots.length || slots[row]) return;
+    slots[row] = color;
+    claimed.add(color.toLowerCase());
+  });
 
   const groupColors = new Set(GROUPS.map((g) => g.color.toLowerCase()));
   const half = Math.ceil(PAGE0_PALETTE.length / 2);
-  const colPools = [
-    PAGE0_PALETTE.slice(0, half).filter((c) => !groupColors.has(c.toLowerCase())),
-    PAGE0_PALETTE.slice(half).filter((c) => !groupColors.has(c.toLowerCase())),
-  ];
-
-  const colors = new Array(total);
-  let gi = 0;
-  const pi = [0, 0];
-  for (let i = 0; i < total; i++) {
-    if (groupSlots.has(i)) {
-      colors[i] = GROUPS[gi++].color;
-    } else {
-      const col = i < counts[0] ? 0 : 1;
-      const pool = colPools[col];
-      colors[i] = pool[pi[col]++ % pool.length];
+  [PAGE0_PALETTE.slice(0, half), PAGE0_PALETTE.slice(half)].forEach((raw, col) => {
+    const slots = cols[col];
+    if (!slots) return;
+    const pool = raw.filter(
+      (c) => !groupColors.has(c.toLowerCase()) && !claimed.has(c.toLowerCase()));
+    let pi = 0;
+    for (let i = 0; i < slots.length; i++) {
+      if (slots[i]) continue;
+      slots[i] = pool.length ? pool[pi++ % pool.length] : PAGE0_PALETTE[0];
     }
-  }
-  return colors;
+  });
+
+  return cols;
 }
 
 // Rebuilds the dot columns (in #page0DotsOverlay, a fixed one-viewport-tall
@@ -121,17 +178,12 @@ function buildPage0AllDots() {
     const firstCenterY = vh / 2 - PAGE0_DOT_BASE_OFFSET_Y + startOffsetY;
     return Math.max(0, Math.ceil((vh - firstCenterY) / PAGE0_DOT_STEP));
   });
-  const total = counts.reduce((a, b) => a + b, 0);
-  const allColors = buildPage0DotColorSet(counts);
+  const colorsByCol = buildPage0DotColorSet(counts);
 
-  let consumed = 0;
   PAGE0_DOT_COLS.forEach(({ centerX, offsetX, startOffsetY }, colIndex) => {
     const firstCenterY = vh / 2 - PAGE0_DOT_BASE_OFFSET_Y + startOffsetY;
-    const count = counts[colIndex];
-    const colors = allColors.slice(consumed, consumed + count);
-    consumed += count;
 
-    colors.forEach((color, i) => {
+    colorsByCol[colIndex].forEach((color, i) => {
       const centerY = firstCenterY + i * PAGE0_DOT_STEP;
       const syncedRow = startOffsetY / PAGE0_DOT_STEP + i;
 

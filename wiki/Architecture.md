@@ -18,15 +18,14 @@
 │   ├── #page0DotsOverlay @fold1's fixed decorative dot columns
 │   ├── #fold6SquaresOverlay  the 8 sample squares
 │   └── #page9Tooltip     shared hover tooltip (page7 + page9 + @fold6's demo)
-├── #foldNumberBadge      dev fold picker
 ├── #page9CatTooltip      tray-pill tooltip
 ├── #fold6NoteLayer       the ACLED source note is reparented here at init
 └── .text-col             z-index 1 — the 11 <section.text-section> scroll drivers
 ```
 
 **`.graphic-col` traps z-index.** Anything that must stack above `.text-col` has to be a
-direct `.layout` child, not nested inside `.graphic-col` — that's why the badge, the
-category tooltip and the ACLED note layer live where they do. Without it the ACLED
+direct `.layout` child, not nested inside `.graphic-col` — that's why the category
+tooltip and the ACLED note layer live where they do. Without it the ACLED
 link was unclickable and the tooltips lost to the tray. Don't "tidy" them back inside.
 
 ## Scripts and shared globals
@@ -64,7 +63,7 @@ Two places load order does matter:
 | File | Role |
 |---|---|
 | `js/core.js` | Canvas + `ctx`, `PAGES[]` dispatch, `currentPage`, trivial draw fns, `draw`/`init`, dashed-frame SVG utilities |
-| `js/nav.js` | `.text-section` roster, fold-number badge, `setActivePage`, the IntersectionObserver |
+| `js/nav.js` | `.text-section` roster, `setActivePage`, the IntersectionObserver |
 | `js/fold1-intro.js` | @fold1 logo scroll-fade, title scroll-lag, page-load entrance |
 | `js/page7-scrub.js` | `#page-7` scroll→date scrub + its scroll listener |
 | `js/fold8-tooltip.js` | @fold6's tooltip typewriter demo (`fold8*` state + fns) |
@@ -96,11 +95,15 @@ const PAGES = [drawPage1, drawBackground, drawBackground, drawFoldSplit, drawBac
 `rootMargin: "-50% 0px -50% 0px"` — i.e. a section becomes current when it crosses the
 viewport's vertical midline. It also handles the cross-fold handoffs:
 
-- `7 → <7`: `p7ResetForReplay()`
-- `8 → 9`: seeds `p9.anim` from `p8CaptureBlendedPositions` (`plainGlide: true`)
-- `8 → 7`: seeds `p7EntryAnim` from the same capture
+- `>=5 → <5`: `p7ResetForReplay()` — backstop only; the normal wipe happens in
+  `drawFold7`/`drawFold9` once the reverse cascade finishes (see [Timeline](Timeline.md))
+- `8 → 9`: seeds `p9.anim` from `p8CaptureBlendedPositions(W, H, 0)` (`plainGlide: true`)
+- `8 → 7`: seeds `p7EntryAnim` from `p8CaptureBlendedPositions(W, H, 1)`
 
-then sets `currentPage`, and calls `updateGroups()`, `updateFoldNumberBadge()`, `draw()`.
+Both seed the glide's **endpoint** positions with a back-dated `start`, never the current
+blended position with the remaining duration — see [Timeline](Timeline.md#handoff-to-page8page9).
+
+then sets `currentPage`, and calls `updateGroups()` and `draw()`.
 
 `draw()` dispatches to `PAGES[currentPage]`. Scroll-driven per-frame work is
 rAF-throttled behind passive `scroll` listeners (`page7Ticking` and friends).

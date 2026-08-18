@@ -52,34 +52,6 @@ body {
   width: 100%;
 }
 
-/* Dev-only @foldN indicator (see project.html) — fixed to the viewport
-   (not the scrolling .text-col), so it stays put in the upper-left
-   regardless of scroll position. Hidden by default; toggled with
-   Ctrl+Shift+F (see main.js), which persists the choice in localStorage. */
-.fold-number-badge {
-  display: none;
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  z-index: 1000;
-  font: 600 13px 'Assistant', sans-serif;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.6);
-  padding: 4px 8px;
-  border-radius: 4px;
-  border: none;
-  cursor: pointer;
-}
-
-.fold-number-badge.is-visible {
-  display: block;
-}
-
-.fold-number-badge option {
-  color: #000;
-  font-weight: 600;
-}
-
 .text-section {
   position: relative;
   min-height: 100vh;
@@ -982,7 +954,7 @@ body {
 /* Holds only the fold6 source-credit note + its divider (main.js reparents
    fold6NoteEl/fold6NoteDividerEl here instead of .groups-overlay) — a direct
    .layout child, not nested in .graphic-col, so its z-index actually stacks
-   above .text-col (see #foldNumberBadge/#page9CatTooltip for the same
+   above .text-col (see #page9CatTooltip for the same
    pattern). Same fixed/inset/pointer-events convention as .groups-overlay;
    only .fold6-note-link inside re-enables pointer-events so it's clickable
    while every other pixel still passes clicks through to .text-col. */
