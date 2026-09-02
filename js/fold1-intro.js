@@ -156,13 +156,17 @@ function playPage0Entrance() {
     }
 
     PAGE0_DECORATIVE_DOT_ELS.forEach((d) => {
+      // Once popped, updateGroups()'s @fold2 shrink line owns this dot's
+      // transform — this loop must stop writing it entirely. It used to keep
+      // writing scale(1) every frame and rely on the updateGroups() call
+      // below to synchronously overwrite it, but updateGroups is coalesced
+      // to once per frame now, so a stale write here would win the frame and
+      // the dots would never shrink.
+      if (d.popped) return;
       const rowRaw = Math.max(0, Math.min(1, (elapsed - PAGE0_TITLE_MS - d.syncedRow * PAGE0_ROW_STAGGER_MS) / PAGE0_POP_MS));
       const rowT = p9Ease(rowRaw);
       d.el.style.opacity = String(rowT);
       d.el.style.transform = `scale(${rowT})`;
-      // Once true, updateGroups()'s @fold2 shrink line (below) takes over
-      // this dot's transform every frame instead — needs to land instantly
-      // there, not ease through this entrance's own per-row timing.
       if (rowRaw >= 1) d.popped = true;
     });
 

@@ -30,6 +30,18 @@ const PAGE0_DOT_COLS = [
 ];
 const PAGE0_DOT_BASE_OFFSET_Y = 97.77; // px above viewport center, col. 1
 
+// On mobile the whole hero (title, subtitle and both dot columns) sits 1 dot
+// step lower than on desktop — the phone's own status/URL chrome eats the top
+// of the viewport, so the desktop centering reads as riding too high. Measured
+// in dot steps deliberately: the columns must land on the same 17px lattice
+// they always had, just started lower, and the title/subtitle move by the SAME
+// 17px in style.css's ≤600px block so the pixel-measured title→column and
+// subtitle→column gaps documented on .page0-title survive the shift.
+const PAGE0_MOBILE_DROP = 1 * PAGE0_DOT_STEP; // 17px
+function page0DotBaseOffsetY() {
+  return PAGE0_DOT_BASE_OFFSET_Y - (isMobile() ? PAGE0_MOBILE_DROP : 0);
+}
+
 // Where each of GROUPS' 9 colors landed among @fold1's dots, keyed by color —
 // left/top match .group-item's own anchor convention (top-left corner, left
 // relative to viewport center), not the dot's center, so main.js's
@@ -175,13 +187,13 @@ function buildPage0AllDots() {
   PAGE0_DECORATIVE_DOT_ELS = [];
 
   const counts = PAGE0_DOT_COLS.map(({ startOffsetY }) => {
-    const firstCenterY = vh / 2 - PAGE0_DOT_BASE_OFFSET_Y + startOffsetY;
+    const firstCenterY = vh / 2 - page0DotBaseOffsetY() + startOffsetY;
     return Math.max(0, Math.ceil((vh - firstCenterY) / PAGE0_DOT_STEP));
   });
   const colorsByCol = buildPage0DotColorSet(counts);
 
   PAGE0_DOT_COLS.forEach(({ centerX, offsetX, startOffsetY }, colIndex) => {
-    const firstCenterY = vh / 2 - PAGE0_DOT_BASE_OFFSET_Y + startOffsetY;
+    const firstCenterY = vh / 2 - page0DotBaseOffsetY() + startOffsetY;
 
     colorsByCol[colIndex].forEach((color, i) => {
       const centerY = firstCenterY + i * PAGE0_DOT_STEP;

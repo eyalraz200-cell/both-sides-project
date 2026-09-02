@@ -63,6 +63,34 @@ const P9_TRAY_GRID = [
   { row: 2, col: 3 }, // חסימת כביש — moved to row 2's middle column
 ];
 
+// Desktop layout V2's tray grid: one single row of all 10 pills. Column order
+// keeps the hand-tuned reading order of the old two-row tray — row 1's slots
+// right-to-left first (cols 1..5), then row 2's (cols 6..10). Indexed in
+// parallel with P9_CATEGORIES, same as P9_TRAY_GRID. Read through p9TrayGrid()
+// (below), never directly, so the variant switch has one place to live.
+const P9_TRAY_GRID_V2 = P9_TRAY_GRID.map(g => ({
+  row: 1,
+  col: g.row === 1 ? g.col : 5 + g.col,
+}));
+
+// The tray grid for the layout currently in force. Regular-width desktops
+// (≤ P9_DESKTOP_REGULAR_MAX) can't fit all 10 pills in one 20px row, so V2
+// falls back to the legacy hand-tuned 5/5 two-row arrangement there — the
+// rendering picked in the pill-row compare ("two rows at 20px", not shrunk
+// pills). Re-resolved by p9ApplyTrayGrid on every resize, so crossing the
+// cutoff re-slots the pills live.
+function p9TrayGrid() {
+  if (!p9IsV2()) return P9_TRAY_GRID;
+  // TRIAL under judgment: regular desktop keeps the single V2 row too, with
+  // the pills shrunk to 18px by the ≤1600px media rule in style.css — instead
+  // of the earlier two-row fallback (return p9IsRegularDesktop() ?
+  // P9_TRAY_GRID : P9_TRAY_GRID_V2). Revert to that line if rejected.
+  return P9_TRAY_GRID_V2;
+}
+// Both row wrappers are always built, in every layout — V2 simply leaves row 2
+// empty (all 10 pills sit in row 1), and `.page9-tray-row:empty` hides it. That
+// keeps a resize across the 600px breakpoint from having to rebuild the DOM.
+
 const P9_SQ      = 3;
 const P9_GAP  = 1;
 const P9_CELL = P9_SQ + P9_GAP;
@@ -75,6 +103,245 @@ const P9_MID  = 719 / 982; // divider position as fraction of H (~73.22vh) — F
 // 136:418305), whose two blocks sit ~415px apart on a 1512-wide frame to leave
 // room for exactly this.
 const P9_EXTREME_GAP = 320;
+
+// --- Mobile (@fold10 touch adaptation) ---------------------------------------
+// Under the 600px breakpoint the fold keeps ONE render path — only the geometry
+// swaps. Every consumer (p9PlaceDot's three interpolation branches, the
+// finalized state-1 drop, page8's bridge glide, page12's freeform spread) reads
+// positions through p9LegitPosOf / drawPage9's extreme math, so changing where
+// those two grids sit is enough; none of that machinery is touched.
+//
+// Vertical stack on mobile, top to bottom (Figma node 294-1272):
+//   מקרא bar -> title card -> tray band -> docked tooltip frame -> extreme grid
+//   -> divider (p9MidY) -> legit bar, flush with the viewport's bottom edge
+// The tray is a band pinned under the titles, NOT a bottom sheet — and the
+// docked tooltip frame slides DOWN from its @fold8 spot to make room for it as
+// @fold10 engages (p9TooltipDropTrigger, js/groups.js).
+// Dot size — both grids, so p9PlaceDot needs no extra param. 1.5 against a pitch
+// of 2 leaves a 0.5px gap: the dots read denser and bolder without touching grid
+// capacity. The pitch is what caps the dot, not taste — at pitch 3 one side's
+// 176×509 box holds ~9.8k cells against the right camp's 9,126 events, which a
+// shorter phone (360×640 → ~5.4k) doesn't clear, and an oversubscribed extreme
+// grid widens its monotonic columns straight across the center gap.
+const P9_SQ_M          = 1.5;
+const P9_CELL_M        = 2;   // extreme-grid pitch
+const LEGIT_CELL_M     = 1;   // legit-bar pitch: real dots, packed until they read as a solid bar
+const P9_EXTREME_GAP_M = 64;  // no floating pill labels on mobile, so the gap is purely visual (widened from 40 — one-column sides sat too close to center)
+// The tray band's top rule (Figma's Line 15) — must match `top` in .page9-tray's
+// ≤600px rule, which is the thing that actually positions it.
+const P9_TRAY_TOP_M          = 108; // 104 + 4: rode down with --card-top 48→52 (legend→title gap widened to 8px)
+const P9_TRAY_TOOLTIP_GAP_M  = 20; // band's bottom rule -> docked frame's top (Figma had 28; tightened by eye)
+const P9_TOOLTIP_COLLAPSED_H = 100; // the docked frame's collapsed height (`.page9-tooltip.is-docked` in style.css); the "עוד" expansion overlays rather than pushing
+const P9_TOOLTIP_GRID_GAP_M  = 20; // collapsed frame's bottom -> the count-label block (matches P9_TRAY_TOOLTIP_GAP_M — change them together)
+// The mobile count label is a TWO-line block (the number with "אירועים" under
+// it), so the reserved band above the grid is the old one-line 20 plus one
+// extra line's height — the grid ceiling (p9ExtremeTopY) moves down by that
+// line, shortening the max column so every gap in the stack stays what it was.
+const P9_COUNT_LINE_H_M      = 15; // baseline-to-baseline for the 13px label lines
+const P9_COUNT_LABEL_ROOM_M  = 20 + P9_COUNT_LINE_H_M; // label block -> the extreme grid's first row
+// The mobile legit bar is a FIXED 4 rows of LEGIT_CELL_M — 4px, a hair under
+// Figma node 290-409's ~7px bars. It is deliberately not derived from the event
+// count: at 1px pitch each camp's half only holds ~800 cells against 5.3k/9.1k
+// events, so the dots oversubscribe their cells and overdraw. That overdraw is
+// exactly what makes the bar read as solid, and it lets the height be a design
+// decision instead of a consequence of the dataset size.
+const LEGIT_BAR_ROWS_M = 4;
+// Mobile legit-half variant under review: desktop-style spread strip (free
+// individually-shuffled dots at the extreme grid's own 2px pitch, hanging off
+// the divider into a fixed-height bottom strip, exactly the V2 desktop look)
+// instead of the packed 4px `mode:"bar"`. Flip to false to restore the bar —
+// every bar-mode consumer keys off `mode === "bar"` in the geometry, so the
+// whole pipeline (drawJumbledBot, the at-rest rect pass, page8's landed
+// handoff) follows this one switch.
+const P9_LEGIT_SPREAD_M = true;
+const P9_LEGIT_H_M      = 54; // the strip's height, up from the viewport's bottom edge
+// The spread strip gets its own, smaller dot/pitch than the extreme grid
+// (1 on 1.5 vs 1.5 on 2) — the finer texture is what lets the band be this
+// short while still reading as spread dots rather than a solid bar.
+const P9_LEGIT_SQ_SPREAD_M   = 1;
+const P9_LEGIT_CELL_SPREAD_M = 1.5;
+
+// --- Desktop layout V2 (pills on top, drop zone below, dense bottom band) ----
+// Flip P9_LAYOUT_V2 to false to restore the old desktop layout (bottom tray,
+// tall legit shuffle). Mobile is untouched either way — p9IsV2() is always
+// false under the 600px breakpoint. The class `page9-layout-v2` on
+// .page9-sticky (synced at boot + on resize, see the resize listener near
+// p9SyncSubtitle) scopes every V2 CSS rule; old rules stay as-is.
+const P9_LAYOUT_V2 = true;
+// The typeof guard is the same cross-script ordering caveat p9MeasureTrayLayout
+// documents: isMobile() lives in js/core.js, a LATER <script> than page9.js, so
+// anything reachable from page9.js's own top-level run has to survive it being
+// undefined. Falling back to "not V2" is safe — every such call site is
+// re-resolved from the DOMContentLoaded pass.
+function p9IsV2() { return P9_LAYOUT_V2 && typeof isMobile === "function" && !isMobile(); }
+
+// --- Regular-desktop tier (V2 at ≤1600px) ------------------------------------
+// Everything above this width is the "big screen" desktop the V2 layout was
+// built on; at or under it the fold re-tunes itself (two-row pill band via
+// p9TrayGrid; matching CSS lives under `@media (max-width: 1600px)` in the V2
+// block of style.css — keep the two 1600s in sync).
+const P9_DESKTOP_REGULAR_MAX = 1600;
+function p9IsRegularDesktop() {
+  return p9IsV2() && window.innerWidth <= P9_DESKTOP_REGULAR_MAX;
+}
+
+// V2 keeps the ordinary desktop legit grid — free, individually-shuffled dots
+// hanging off the divider, NOT mobile's packed `mode:"bar"` — it just gets a
+// shorter strip to live in, so the same dots read denser. This is the strip's
+// height in px, measured up from the viewport's bottom edge; p9MidY derives
+// the divider from it (the old layout's H * P9_MID fraction is ~240px on a
+// 900px viewport, so this is a real compression, not a rename).
+const P9_LEGIT_H_V2 = 150;
+// Regular-desktop tier: a shorter strip, paired with a finer legit pitch
+// (P9_LEGIT_CELL_REGULAR below via p9Metrics) — the two MUST move together.
+// At the base 4px pitch the ~14.5k events already need ≈150px on a ~1500px
+// viewport, and the shuffle never drops dots when short on room (legitRows =
+// max(visibleRows, rowsNeeded)); overflow rows just clip invisibly below the
+// viewport. Shrinking the height alone would silently lose dots off-screen.
+const P9_LEGIT_H_V2_REGULAR = 110;
+function p9LegitHV2() {
+  return p9IsRegularDesktop() ? P9_LEGIT_H_V2_REGULAR : P9_LEGIT_H_V2;
+}
+// The finer pitch itself: 2px dots on a 3px pitch (base: 3 on 4). Capacity
+// scales with 1/cell², so the 110px strip at 3px holds more cells than the
+// 150px strip does at 4px. Same asymmetry-vs-extreme-dots precedent as
+// mobile's spread strip (1px on 1.5px).
+const P9_LEGIT_CELL_REGULAR = 3;
+const P9_LEGIT_SQ_REGULAR   = 2;
+// Fallback center gap for the first frames, before the drop zone's box has
+// been measured — normally the gap is derived from that measured width (see
+// P9_ZONE_GAP_SLACK_V2 and the gapWidth block in drawPage9).
+const P9_EXTREME_GAP_V2 = 120;
+// Top of the V2 pill row — the single source; also written to the CSS var
+// --p9-v2-tray-top (p9SyncLayoutV2Class) so .page9-tray's V2 rule and the
+// drop-zone wrap position derive from the same number instead of a
+// hand-synced twin (the 28.78vh trap).
+const P9_TRAY_TOP_V2 = 120;
+const P9_TRAY_HEADER_GAP_V2 = 20; // floor: this much clear air under .page9-header
+
+// Where the V2 pill band's top edge actually lands: P9_TRAY_TOP_V2, but never
+// closer than P9_TRAY_HEADER_GAP_V2 under the pinned header — --card-top is a
+// dvh fraction, so on a tall viewport the header's own bottom can outgrow the
+// constant. Written to --p9-v2-tray-top (p9MeasureTrayLayout) and read back by
+// p9ExtremeTopY, so the CSS and the canvas ceiling never disagree.
+function p9TrayTopV2() {
+  const header = document.querySelector(".page9-header");
+  const headerBottom = header ? header.offsetTop + header.offsetHeight : 0;
+  return Math.round(Math.max(P9_TRAY_TOP_V2, headerBottom + P9_TRAY_HEADER_GAP_V2));
+}
+// V2 vertical rhythm below the pill row: tray -> drop zone gap, then the
+// reserved drop-zone stack (FULL height always, so the extreme grid's ceiling
+// never moves as pills dock), then room for the count labels.
+// The V2 drop zone is a VERTICAL stack again, sitting in the center gap
+// between the two extreme column-blocks (it briefly lived as a horizontal box
+// under the pill row). Its box is therefore sized exactly like the legacy
+// layout's — ten pills deep, the longest one wide — and this is the clear air
+// left on EACH side of it inside the canvas gap.
+const P9_ZONE_GAP_SLACK_V2 = 64; // widened from 40 — a one-column-wide side sat too close to the zone
+const P9_TRAY_ZONE_GAP_V2   = 18;
+const P9_COUNT_LABEL_ROOM_V2 = 28; // one 12px count line + breathing room above the grid
+// Clear air between the pill row and the TOP of a full-height extreme column
+// (i.e. above the count label, which sits at the grid's ceiling). Separate
+// from P9_COUNT_LABEL_ROOM_V2 because that one is the label's own line box —
+// this is the gap the tallest possible column keeps from the band above it, so
+// the two never read as touching.
+const P9_ZONE_GRID_GAP_V2 = 26;
+
+// The full drop-zone stack height (--page9-zone-stack-height, written by
+// p9MeasureTrayLayout) in px — the always-reserved vertical budget for
+// #page9ZoneAbove in V2. 0 until first measure.
+function p9ZoneStackHV2() {
+  const zone = document.getElementById("page9ZoneAbove");
+  if (!zone) return 0;
+  const v = getComputedStyle(zone).getPropertyValue("--page9-zone-stack-height");
+  return parseFloat(v) || 0;
+}
+
+// Its width twin (--page9-zone-stack-width) — the canvas center gap is sized
+// off this in V2 so the two extreme blocks part exactly wide enough for the
+// zone that sits between them. 0 until first measure.
+function p9ZoneStackWV2() {
+  const zone = document.getElementById("page9ZoneAbove");
+  if (!zone) return 0;
+  const v = getComputedStyle(zone).getPropertyValue("--page9-zone-stack-width");
+  return parseFloat(v) || 0;
+}
+
+// Per-breakpoint dot/pitch metrics. Read fresh (not cached) so a resize across
+// the breakpoint reflows on the very next frame.
+function p9Metrics() {
+  return isMobile()
+    ? { SQ: P9_SQ_M, CELL: P9_CELL_M,
+        legitCell: P9_LEGIT_SPREAD_M ? P9_LEGIT_CELL_SPREAD_M : LEGIT_CELL_M,
+        legitSq:   P9_LEGIT_SPREAD_M ? P9_LEGIT_SQ_SPREAD_M   : LEGIT_CELL_M }
+    : p9IsRegularDesktop()
+      ? { SQ: P9_SQ, CELL: P9_CELL,
+          legitCell: P9_LEGIT_CELL_REGULAR, legitSq: P9_LEGIT_SQ_REGULAR }
+      : { SQ: P9_SQ,   CELL: P9_CELL,   legitCell: LEGIT_CELL, legitSq: P9_SQ };
+}
+
+// Height of the mobile legit bar. Constant by design (see LEGIT_BAR_ROWS_M) —
+// takes W only so callers don't have to care which breakpoint they're in.
+function p9LegitBarH(_W) {
+  return LEGIT_BAR_ROWS_M * LEGIT_CELL_M;
+}
+
+// The tray's own height. offsetHeight is transform-independent, so this is
+// correct even while the tray still sits at translateY(100%) before .engaged —
+// the divider doesn't jump when the tray slides up.
+function p9TrayH() {
+  return document.querySelector(".page9-tray")?.offsetHeight || 0;
+}
+
+// Where the docked tooltip frame comes to rest on mobile at @fold10 — directly
+// under the tray band. Measuring the band (rather than hard-coding Figma's 259)
+// keeps the frame glued to it however the pills end up sizing.
+function p9DockTopM() {
+  return P9_TRAY_TOP_M + p9TrayH() + P9_TRAY_TOOLTIP_GAP_M;
+}
+
+// The divider's y — the single source both grids derive from. On desktop it's
+// the Figma-measured fraction of H; on mobile the legit bar sits flush with the
+// viewport's bottom edge (the tray is a top band now), so everything above it
+// is extreme-grid territory.
+function p9MidY(H, W) {
+  const w = W || p9.lastW || window.innerWidth;
+  // V2: same free-dot grid as the old desktop layout, just given a shorter
+  // strip — the divider sits P9_LEGIT_H_V2 above the bottom edge instead of at
+  // the H * P9_MID fraction. The max() keeps the extreme grid its minimum 8
+  // rows if a very short viewport would otherwise squeeze it out.
+  if (p9IsV2()) {
+    return Math.max(
+      p9ExtremeTopY(H) + P9_CELL * 8,
+      Math.round(H - p9LegitHV2()),
+    );
+  }
+  if (!isMobile()) return Math.round(H * P9_MID);
+  return Math.max(
+    p9ExtremeTopY(H) + P9_CELL_M * 8,
+    Math.round(H - (P9_LEGIT_SPREAD_M ? P9_LEGIT_H_M : p9LegitBarH(w))),
+  );
+}
+
+// The extreme grid's top clearance — shared by drawPage9 and p9ExtremeRowsFor.
+// On mobile it trails the docked tooltip frame, using the frame's *collapsed*
+// height so tapping "עוד" overlays the grid instead of shoving it down.
+function p9ExtremeTopY(H) {
+  // V2: the grid hangs off the bottom of the pill row — the drop zone no
+  // longer sits between the two, it lives in the columns' own center gap, so
+  // its height is not part of this stack. Pill row, the gap under it, the
+  // clear air, then the count-label line.
+  if (p9IsV2()) {
+    return Math.round(
+      p9TrayTopV2() + p9TrayH() + P9_TRAY_ZONE_GAP_V2 +
+        P9_ZONE_GRID_GAP_V2 + P9_COUNT_LABEL_ROOM_V2,
+    );
+  }
+  if (!isMobile()) return Math.round(H * SBB.top);
+  return Math.round(
+    p9DockTopM() + P9_TOOLTIP_COLLAPSED_H + P9_TOOLTIP_GRID_GAP_M + P9_COUNT_LABEL_ROOM_M,
+  );
+}
 
 // Matches the dashed border-width of .page9-sticky.dragging #page9ZoneAbove
 // (style.css) — needed below because the page-wide `* { box-sizing:
@@ -117,17 +384,26 @@ function p9LineCurrentRaw() {
   return p9LineFromT + span * localT;
 }
 
+// @fold10's canvas stays visible into @fold11 (drawPage12 renders through
+// drawPage9), so every animation loop below must keep painting on page 10
+// too — guarding on currentPage === 9 alone froze a mid-flight drop
+// animation the instant @fold11 was entered, leaving dots hanging in the
+// air until the user scrolled back.
+function p9PageVisible() {
+  return currentPage === 9 || currentPage === 10;
+}
+
 function p9LineRunLoop() {
   if (p9LinePhaseStart === null) return;
   const raw = p9LineCurrentRaw();
   page9LineT = p9Ease(raw);
-  if (currentPage === 9) draw();
+  if (p9PageVisible()) draw();
   if (raw !== p9LineToT) {
     requestAnimationFrame(p9LineRunLoop);
   } else {
     p9LineFromT      = p9LineToT;
     p9LinePhaseStart = null;
-    if (currentPage === 9) draw();
+    if (p9PageVisible()) draw();
   }
 }
 
@@ -192,12 +468,12 @@ function p9Ease(t) {
 function p9RunAnimLoop() {
   if (!p9.anim) return;
   const t = (performance.now() - p9.anim.start) / p9.anim.duration;
-  if (currentPage === 9) draw();
+  if (p9PageVisible()) draw();
   if (t < 1) {
     requestAnimationFrame(p9RunAnimLoop);
   } else {
     p9.anim = null;
-    if (currentPage === 9) draw();
+    if (p9PageVisible()) draw();
   }
 }
 
@@ -209,7 +485,7 @@ let p9CountAnim = null; // { fromLeft, toLeft, fromRight, toRight, start, durati
 
 function p9CountRunLoop() {
   if (!p9CountAnim) return;
-  if (currentPage === 9) draw(); // draw() self-clears p9CountAnim via p9GetDisplayedCounts
+  if (p9PageVisible()) draw(); // draw() self-clears p9CountAnim via p9GetDisplayedCounts
   if (p9CountAnim) requestAnimationFrame(p9CountRunLoop);
 }
 
@@ -236,7 +512,7 @@ function p9CountLabelAnimate(target) {
     p9CountLabelAlpha = p9CountLabelTarget > p9CountLabelAlpha
       ? Math.min(p9CountLabelTarget, p9CountLabelAlpha + delta)
       : Math.max(p9CountLabelTarget, p9CountLabelAlpha - delta);
-    if (currentPage === 9) draw();
+    if (p9PageVisible()) draw();
     if (p9CountLabelAlpha !== p9CountLabelTarget) {
       p9CountLabelRaf = requestAnimationFrame(step);
     } else {
@@ -271,7 +547,7 @@ function makeP9CountPosAnimator() {
   function ensureLoop() {
     if (raf !== null) return;
     function step() {
-      if (currentPage === 9) draw();
+      if (p9PageVisible()) draw();
       raf = currentT() < 1 ? requestAnimationFrame(step) : null;
     }
     raf = requestAnimationFrame(step);
@@ -345,9 +621,12 @@ function p9SyncTopOrder(orderArr, currentSet) {
 // reposition" phase at all — see needsReposition there, state-1-only per
 // user instruction).
 function p9ExtremeRowsFor(H) {
-  const midY        = Math.round(H * P9_MID);
-  const dividerTopY = Math.round(H * 0.18);
-  return Math.max(1, Math.floor((midY - dividerTopY) / P9_CELL));
+  const midY        = p9MidY(H);
+  // Deliberately a tighter ceiling than drawPage9's own SBB.top clip (0.08) —
+  // this is the row *budget*, kept conservative on desktop. On mobile the two
+  // agree, since there the docked tooltip is the real ceiling either way.
+  const dividerTopY = (isMobile() || p9IsV2()) ? p9ExtremeTopY(H) : Math.round(H * 0.18);
+  return Math.max(1, Math.floor((midY - dividerTopY) / p9Metrics().CELL));
 }
 
 function p9UpdateLayout(W, H) {
@@ -393,22 +672,136 @@ const LEGIT_LINE_PAD = 2;
 // Geometry for the legitimate (below-the-line) grid, factored out of drawPage9 so
 // page8's pre-page9 transition can target the exact same layout — the state every
 // event starts in before any category has been dragged to "extreme".
+// Segment order inside a mobile bar: the camp's own legend order, top row
+// first. That's the sort of fold6.y (js/groups.js) — the same rule the legend
+// itself uses (legendRow, js/update-groups.js) — and within one camp the three
+// y values are distinct, so it's a total order per side.
+// Built lazily, NOT at load time: GROUPS lives in js/groups.js, a *later*
+// <script> in project.html, so it doesn't exist yet while page9.js is running.
+let p9BarActorRank = null;
+function p9BarActorRankOf(actor) {
+  if (!p9BarActorRank) p9BarActorRank = new Map(GROUPS.map(g => [g.actor, g.fold6.y]));
+  return p9BarActorRank.get(actor) ?? 9999;
+}
+
+// Rebuilds p9.legitRank: for each side, every event that is *still legit*, in
+// bar order — group segment first, then category, then the event's own index.
+// Stable, so each group is one contiguous colour block and each category is a
+// contiguous run inside it. Keyed on the classification state, so it only
+// rebuilds when a pill is actually tapped.
+function p9SyncLegitRank() {
+  p9EnsureIndex();
+  const key = p9.sides.join(",");
+  if (p9.legitRank && p9.legitRankKey === key) return;
+  const build = (pool, indexOf) => {
+    const legit = pool.filter(e => {
+      const i = CATEGORY_TO_IDX[e.category];
+      return i === undefined || p9.sides[i] !== "above";
+    });
+    legit.sort((a, b) =>
+      p9BarActorRankOf(a.actor)          - p9BarActorRankOf(b.actor)          ||
+      (CATEGORY_TO_IDX[a.category] ?? 99) - (CATEGORY_TO_IDX[b.category] ?? 99) ||
+      (indexOf.get(a) ?? 0)               - (indexOf.get(b) ?? 0));
+    // Each event carries its group's SEGMENT index alongside its rank, and the
+    // segments carry their own rank spans. That's what lets p9LegitGeometry
+    // give every group a whole number of columns: without the spans it could
+    // only place a rank on a continuous scale, and a group boundary landing
+    // mid-column left that column half one colour and half the next.
+    const rank = new Map();
+    const segs = [];
+    let cur = null;
+    legit.forEach((e, i) => {
+      const g = p9BarActorRankOf(e.actor);
+      // `actor` rides along so the at-rest bar pass (drawPage9) can colour a
+      // whole segment without digging an event back out of the rank map.
+      if (!cur || cur.g !== g) { cur = { g, actor: e.actor, r0: i, rn: 0 }; segs.push(cur); }
+      cur.rn++;
+      rank.set(e, { r: i, s: segs.length - 1 });
+    });
+    return { rank, segs };
+  };
+  const L = build(p7.leftEvents,  p9.leftIndexOf);
+  const R = build(p7.rightEvents, p9.rightIndexOf);
+  p9.legitRank    = { left: L.rank, right: R.rank };
+  p9.legitSegs    = { left: L.segs, right: R.segs };
+  p9.legitRankKey = key;
+}
+
 function p9LegitGeometry(W, H) {
-  const midY     = Math.round(H * P9_MID);
-  const gridTopY = midY + LEGIT_LINE_PAD;
+  const CELL     = p9Metrics().legitCell;
+  const mobile   = isMobile();
+  const midY     = p9MidY(H, W);
+  // Desktop: the grid hangs off the divider and runs to the bottom edge.
+  // Mobile: it detaches from the divider entirely and becomes a 4px bar sitting
+  // flush with the viewport's bottom edge — Figma node 294-1272 (the tray is a
+  // top band there, so nothing sits below the bar). See the `mode: "bar"`
+  // branch below; p9LegitPosOf's signature (and so page8's glide target) is
+  // unchanged, only the packing behind it.
+  // Desktop V2 is NOT a bar: it keeps this same free-dot grid and only gets a
+  // shorter strip to fill (p9MidY, see P9_LEGIT_H_V2), so the dots stay
+  // individually shuffled and simply read denser.
+  const bar      = mobile && !P9_LEGIT_SPREAD_M;
+  // Mobile's spread strip halves the divider clearance — its dots are 1px on a
+  // 1.5px pitch, so desktop's 2px LEGIT_LINE_PAD reads as a visible blank band
+  // above the strip rather than a hairline of breathing room.
+  const gridTopY = bar ? H - p9LegitBarH(W) : midY + (mobile ? 1 : LEGIT_LINE_PAD);
   // Reaches all the way to the viewport's own bottom edge — unlike the
   // extreme grid above (which stops short for its own count-label/axis
   // clearance), the legit grid has nothing below it to clear, so per
   // explicit request it spreads all the way down instead of stopping short.
   const dashBotY = H;
-  const visibleRows = Math.max(1, Math.floor((dashBotY - gridTopY) / LEGIT_CELL));
+  const visibleRows = Math.max(1, Math.floor((dashBotY - gridTopY) / CELL));
 
   const leftBoundX     = LEGIT_MARGIN;
   const rightBoundX    = W - LEGIT_MARGIN;
   const midX           = W / 2;
-  const legitColsTotal = Math.max(2, Math.floor((rightBoundX - leftBoundX) / LEGIT_CELL));
+  const legitColsTotal = Math.max(2, Math.floor((rightBoundX - leftBoundX) / CELL));
   const legitLeftCols  = Math.floor(legitColsTotal / 2);
   const legitRightCols = legitColsTotal - legitLeftCols;
+
+  // ── Mobile: the bar ──────────────────────────────────────────────────────
+  // A fixed 8-row rectangle per camp, filled column-major from midX outward.
+  // Each camp's ORIGINAL legit count maps onto its full cell pool, so an
+  // untouched camp fills its whole half of the screen; as events go extreme
+  // the surviving ranks compress against the same pool and the bar's outer end
+  // retreats. That's what makes classifying read as "the bar shrinks from the
+  // edge" instead of "holes open up inside it" — no cell is ever skipped, and
+  // events oversubscribe cells rather than needing one each.
+  if (bar) {
+    p9SyncLegitRank();
+    // Column budget per group. Boundaries are computed on the CUMULATIVE rank
+    // scale and then rounded to whole columns, so consecutive groups share an
+    // edge exactly (group i ends on the column group i+1 starts on) and every
+    // colour change in the bar is a straight vertical line. Rounding against
+    // n0 — the camp's ORIGINAL legit count, not its current one — is what keeps
+    // the bar retreating from its outer end as events go extreme rather than
+    // re-spreading to fill the width.
+    const colSegsFor = (side, totalCols, n0) => {
+      const segs = p9.legitSegs?.[side] || [];
+      const out = [];
+      let prevEnd = 0;
+      for (const s of segs) {
+        const c0 = Math.min(totalCols, Math.max(prevEnd, Math.round(s.r0 / n0 * totalCols)));
+        // A group with events always gets at least one column — better a 1-column
+        // sliver than a camp member silently vanishing from the bar.
+        const c1 = Math.min(totalCols, Math.max(c0 + (s.rn ? 1 : 0),
+                                                Math.round((s.r0 + s.rn) / n0 * totalCols)));
+        out.push({ c0, c1, r0: s.r0, rn: s.rn, actor: s.actor });
+        prevEnd = c1;
+      }
+      return out;
+    };
+    const n0L = p7.leftEvents.length  || 1;
+    const n0R = p7.rightEvents.length || 1;
+    return {
+      mode: "bar",
+      gridTopY, midX, cell: CELL,
+      legitRows: LEGIT_BAR_ROWS_M,
+      legitLeftCols, legitRightCols,
+      colSegs: { left:  colSegsFor("left",  legitLeftCols,  n0L),
+                 right: colSegsFor("right", legitRightCols, n0R) },
+    };
+  }
 
   // legitRows is purely physical (however many rows of real pixels are
   // available, period) — exactly how p7UpdateLayout sizes the real timeline's
@@ -424,7 +817,9 @@ function p9LegitGeometry(W, H) {
   const rightRowsNeeded = Math.ceil(p7.rightEvents.length / legitRightCols);
   const legitRows = Math.max(visibleRows, leftRowsNeeded, rightRowsNeeded);
 
-  const geom = { gridTopY, legitRows, legitLeftCols, legitRightCols, midX };
+  // `cell` travels with the geometry so every consumer (p9LegitCellXY here,
+  // page8's glide) lays out at whichever pitch this breakpoint chose.
+  const geom = { gridTopY, legitRows, legitLeftCols, legitRightCols, midX, cell: CELL };
 
   // Two independent cell pools, one per side — left events only ever land in
   // left-half columns, right events only in right-half columns, so the two
@@ -458,10 +853,11 @@ function p9LegitGeometry(W, H) {
 function p9LegitCellXY(cell, geom, side) {
   const r = cell % geom.legitRows;
   const c = Math.floor(cell / geom.legitRows);
+  const CELL = geom.cell ?? LEGIT_CELL;
   const x = side === "left"
-    ? geom.midX - (geom.legitLeftCols - c) * LEGIT_CELL
-    : geom.midX + c * LEGIT_CELL;
-  const y = geom.gridTopY + r * LEGIT_CELL;
+    ? geom.midX - (geom.legitLeftCols - c) * CELL
+    : geom.midX + c * CELL;
+  const y = geom.gridTopY + r * CELL;
   return { x, y };
 }
 
@@ -470,10 +866,68 @@ function p9LegitCellXY(cell, geom, side) {
 // result reads as gapped/free-form within that side, while every dot still
 // sits on the grid and never crosses into the other side's columns.
 function p9LegitPosOf(e, indexOf, side, geom) {
+  if (geom.mode === "bar") {
+    const rec = p9.legitRank?.[side]?.get(e);
+    if (!rec) return null;                 // classified extreme — not in the bar
+    const seg = geom.colSegs?.[side]?.[rec.s];
+    if (!seg) return null;
+    const rows = geom.legitRows;
+    const cols = seg.c1 - seg.c0;
+    if (cols <= 0) return null;            // group rounded down to no width
+    // Within the group's own block of whole columns, the same oversubscribed
+    // linear map as before: many events share a cell (there are far more events
+    // than the bar has cells), no cell is ever skipped, and the block fills
+    // column-major so it grows outward one clean column at a time.
+    const pool  = cols * rows;
+    const local = Math.min(Math.floor((rec.r - seg.r0) * pool / seg.rn), pool - 1);
+    const col   = seg.c0 + Math.floor(local / rows);
+    const row   = local % rows;
+    // Both bars fill OUTWARD from the center line, so column 0 sits against midX
+    // and the far end is where the bar retreats from. The right side already
+    // does that (p9LegitCellXY grows its column index rightward from midX), but
+    // the left side's columns are numbered left-to-right from the screen edge,
+    // so its column index is mirrored here. Without this the left bar reads
+    // pink-green-blue right-to-left and shrinks from the center instead of the
+    // edge. Bar mode only — the desktop shuffle wants the raw numbering.
+    const cellOut = side === "left"
+      ? (geom.legitLeftCols - 1 - col) * rows + row
+      : col * rows + row;
+    return p9LegitCellXY(cellOut, geom, side);
+  }
   const shuffle = side === "left" ? p9.legitShuffleLeft : p9.legitShuffleRight;
   const cell = shuffle[indexOf.get(e)];
   if (cell === undefined) return null;
   return p9LegitCellXY(cell, geom, side);
+}
+
+// The at-rest mobile bar as solid rects: one rect per colour segment per side.
+// Shared by drawPage9 (its barAtRest pass) and drawPage8 (page8.js), which
+// paints it the moment its glide has fully landed — the glide's own per-dot
+// pass at 1px cells leaves ragged colour seams the instant motion stops
+// masking them. Both edges snapped to whole DEVICE pixels with the same
+// rounding the dots use, so adjacent segments (and the two camps at midX)
+// share the exact device-pixel boundary — no gap, no overlap, one hard
+// vertical seam.
+function p9DrawBarRects(ctx, legitGeom, H, alpha) {
+  const dpr = window.devicePixelRatio || 1;
+  const q   = v => Math.round(v * dpr) / dpr;
+  const barCell = legitGeom.cell;
+  const yTop = q(legitGeom.gridTopY);
+  ctx.globalAlpha = alpha;
+  for (const side of ["left", "right"]) {
+    for (const seg of legitGeom.colSegs[side]) {
+      if (seg.c1 <= seg.c0) continue;
+      const x0 = side === "left"
+        ? q(legitGeom.midX - seg.c1 * barCell)
+        : q(legitGeom.midX + seg.c0 * barCell);
+      const x1 = side === "left"
+        ? q(legitGeom.midX - seg.c0 * barCell)
+        : q(legitGeom.midX + seg.c1 * barCell);
+      ctx.fillStyle = p7ActorColor(seg.actor);
+      ctx.fillRect(x0, yTop, x1 - x0, H - yTop);
+    }
+  }
+  ctx.globalAlpha = 1;
 }
 
 function drawPage9(ctx, W, H) {
@@ -486,9 +940,12 @@ function drawPage9(ctx, W, H) {
 
   drawBackground(ctx, W, H);
 
-  const topY   = Math.round(H * SBB.top);
-  const midY   = Math.round(H * P9_MID);
-  const SQ = P9_SQ, CELL = P9_CELL;
+  const mobile = isMobile();
+  const topY   = p9ExtremeTopY(H);
+  const midY   = p9MidY(H, W);
+  // One SQ for both grids at either breakpoint (mobile 1px, desktop 3px), so
+  // p9PlaceDot's closure needs no per-grid size parameter.
+  const { SQ, CELL } = p9Metrics();
 
 
   // Read by p9HoverInit (outside this function) to exclude below-the-line
@@ -567,7 +1024,37 @@ function drawPage9(ctx, W, H) {
   // categories in p9BuildPanel) plus breathing room, so the floating label
   // never overlaps the squares no matter which category that turns out to
   // be or how lopsided its left/right split is.
-  const gapWidth = p9.maxPillWidth ? p9.maxPillWidth + P9_GAP_PADDING : P9_EXTREME_GAP;
+  // On mobile there are no floating dropped-pill labels to clear (the pills
+  // stay in the tray and highlight in place), so the gap shrinks to a plain
+  // visual separator instead of being sized to the widest label — but never
+  // below what the two count labels need. Each label is centered over its own
+  // column block, so when both sides are only a column or two wide the two
+  // "אירועים" blocks would meet across a bare-minimum gap; the gap widens
+  // (P9_EXTREME_GAP_M stays the floor) until the label centers — sitting at
+  // half of each side's real column span off the gap edges — clear each other
+  // by P9_COUNT_LABEL_CLEAR_M. Wide columns push the centers apart on their
+  // own, so `needed` goes negative and the floor takes over. Measured off the
+  // total per-side counts (not the hover-filtered ones) so hovering a pill
+  // never re-flows the whole grid.
+  let gapWidth;
+  if (mobile) {
+    ctx.font = "400 13px 'Assistant', sans-serif"; // the mobile count-label font
+    const wordW  = ctx.measureText("אירועים").width;
+    const halfL  = Math.max(wordW, ctx.measureText(String(p9.leftTopOrder.length)).width)  / 2;
+    const halfR  = Math.max(wordW, ctx.measureText(String(p9.rightTopOrder.length)).width) / 2;
+    const P9_COUNT_LABEL_CLEAR_M = 12; // min px between the two label blocks
+    const needed = halfL + halfR + P9_COUNT_LABEL_CLEAR_M
+                 - (leftRealCols + rightRealCols) * CELL / 2;
+    gapWidth = Math.max(P9_EXTREME_GAP_M, Math.ceil(needed));
+  } else if (p9IsV2()) {
+    // V2: the drop zone itself sits in this gap, so the blocks have to part
+    // wide enough for its measured box plus slack on each side. Falls back to
+    // the flat visual gap until that box has been measured.
+    const zoneW = p9ZoneStackWV2();
+    gapWidth = zoneW ? Math.round(zoneW + P9_ZONE_GAP_SLACK_V2 * 2) : P9_EXTREME_GAP_V2;
+  } else {
+    gapWidth = p9.maxPillWidth ? p9.maxPillWidth + P9_GAP_PADDING : P9_EXTREME_GAP;
+  }
   const centerX  = W / 2 - gapWidth / 2;
   const rightX0  = W / 2 + gapWidth / 2;
 
@@ -586,10 +1073,26 @@ function drawPage9(ctx, W, H) {
   // rank-sorted) — used to rescale orderIndex/orderCount down to a position
   // *within this dot's own rank tier* below, rather than within the whole
   // (often much larger) column.
-  function p9PlaceDot(e, targetX, targetY, targetAlpha, orderIndex, orderCount, lowRankCount) {
+  // sizeOverride: the mobile legit BAR draws at exactly its own cell pitch
+  // instead of the shared SQ. SQ (1.5) is wider than that pitch (1) on purpose
+  // for the extreme grid, but in the bar it made every dot bleed a quarter of a
+  // pixel into the columns either side of it — which at a colour boundary reads
+  // as dots of one group scattered into the next, and as a ragged rather than
+  // straight edge between them. At the pitch the segments are solid blocks with
+  // exact vertical seams.
+  // recordOnly: run the full interpolation/posMap bookkeeping but paint
+  // nothing — used by the at-rest mobile bar, which paints itself as solid
+  // per-segment rects instead (see the barAtRest pass below) but still needs
+  // every event's position on record for the next drop's p9.anim.from and the
+  // picker's nearest-dot scan.
+  function p9PlaceDot(e, targetX, targetY, targetAlpha, orderIndex, orderCount, lowRankCount, sizeOverride, recordOnly) {
     let drawX = targetX, drawY = targetY, drawAlpha = targetAlpha;
-    if (p9.anim) {
-      const from = p9.anim.from.get(e);
+    // The animation's own eased progress for this dot, kept for the size lerp
+    // below. 1 (= fully arrived, draw at the target size) whenever nothing is
+    // animating this dot.
+    let animT = 1;
+    const from = p9.anim ? p9.anim.from.get(e) : null;
+    {
       if (from) {
         let t;
         if (p9.anim.newEventStagger && p9.anim.newEventStagger.has(e)) {
@@ -648,6 +1151,7 @@ function drawPage9(ctx, W, H) {
         drawX     = from.x     + (targetX     - from.x)     * t;
         drawY     = from.y     + (targetY     - from.y)     * t;
         drawAlpha = from.alpha + (targetAlpha - from.alpha) * t;
+        animT     = t;
       }
     }
     // Recorded here — the actually-drawn, mid-interpolation position/alpha,
@@ -659,7 +1163,30 @@ function drawPage9(ctx, W, H) {
     // real one. Captured before hover-dimming below, which is a transient
     // display-only effect that shouldn't get baked into the next animation's
     // starting alpha.
-    posMap.set(e, { x: drawX, y: drawY, alpha: drawAlpha });
+    let sq = sizeOverride ?? SQ;
+    // page8's glide doesn't only move the dots, it SHRINKS them from the real
+    // timeline's square size down to the legit grid's across the flight
+    // (blendAndDraw, page8.js). When @fold10's title scrolls up mid-glide,
+    // drawPage9 takes the flight over (p9.anim.plainGlide, seeded in
+    // setActivePage) — and it used to paint them at their final size from that
+    // frame on. A still-spread cloud of dots suddenly drawn small covers much
+    // less ground, which reads as the whole animation dropping opacity at the
+    // handoff. Continuing the same size lerp on the same clock keeps it
+    // invisible, like the position handoff already was.
+    if (p9.anim && p9.anim.plainGlide && p9.anim.fromSQ !== undefined) {
+      sq = p9.anim.fromSQ + (sq - p9.anim.fromSQ) * animT;
+    } else if (from && from.sq !== undefined) {
+      // Every other animation lerps size on the dot's own clock too, from the
+      // size it was last DRAWN at (recorded in posMap below). Without this, a
+      // dropped category's dots snapped from the legit resting size (2px on
+      // ≤1600px desktop, 1px mobile) to the extreme grid's SQ on the first
+      // frame, before the flight even started — and mirror-image on un-drop.
+      // On big desktop legitSq === SQ so this is a no-op there.
+      sq = from.sq + (sq - from.sq) * animT;
+    }
+    posMap.set(e, { x: drawX, y: drawY, alpha: drawAlpha, sq: sq });
+
+    if (recordOnly) return;
 
     // While one dot is hovered (p9.hoveredEvent), it's drawn fully opaque and
     // every other dot is dimmed. While a dropped pill is hovered instead
@@ -669,10 +1196,13 @@ function drawPage9(ctx, W, H) {
     if (p9.hoveredEvent) {
       drawAlpha = (e === p9.hoveredEvent) ? 1 : drawAlpha * hoverDim(e.actor);
     } else if (p9.hoveredCategoryIdx !== null) {
-      const dimFactor = 1 - 0.65 * p9.hoverDimT;
+      // Same per-actor floor as dot-hover (hoverDim, js/core.js), only
+      // animated: hoverDimT ramps 0→1 so each dot fades from full down to
+      // exactly the opacity a dot-hover would give it, not a lighter flat one.
+      const dimFactor = 1 - (1 - hoverDim(e.actor)) * p9.hoverDimT;
       drawAlpha = (CATEGORY_TO_IDX[e.category] === p9.hoveredCategoryIdx) ? 1 : drawAlpha * dimFactor;
     } else if (p9.hoverDimT > 0) {
-      const dimFactor = 1 - 0.65 * p9.hoverDimT;
+      const dimFactor = 1 - (1 - hoverDim(e.actor)) * p9.hoverDimT;
       drawAlpha = (p9.hoverDimCategoryIdx !== null && CATEGORY_TO_IDX[e.category] === p9.hoverDimCategoryIdx)
         ? 1
         : drawAlpha * dimFactor;
@@ -680,7 +1210,41 @@ function drawPage9(ctx, W, H) {
 
     ctx.globalAlpha = drawAlpha;
     ctx.fillStyle   = p7ActorColor(e.actor);
-    ctx.fillRect(drawX, drawY, SQ, SQ);
+    if (sizeOverride === undefined && (isMobile() || p9IsV2())) {
+      // The ordinary dots get the same device-pixel snap for a DIFFERENT
+      // reason than the bar cells below: not the seam, but the loupe. The
+      // mobile picker (p7InspectInit, page7.js) serves this fold too, and its
+      // glass is a nearest-neighbour 4x blit of this canvas — so a dot left at
+      // a fractional position antialiases into a partial-alpha band that
+      // magnifies into a pale ring, and the dots read as if they were stroked.
+      // p7DrawSideSquares snaps for exactly this; @fold10 was the path it
+      // never reached.
+      //
+      // V2 desktop snaps for a third reason: on a display whose DPR isn't a
+      // whole number (1.25 / 1.5 — a scaled external monitor) a 3px square at
+      // a fractional CSS position spreads across 4-5 device pixels at partial
+      // alpha and the dots read soft, visibly so beside the same page on a 1x
+      // or 2x screen where those same coordinates happen to land clean. The
+      // legacy desktop layout keeps its unsnapped smoothness, as before.
+      const dpr = window.devicePixelRatio || 1;
+      drawX = Math.round(drawX * dpr) / dpr;
+      drawY = Math.round(drawY * dpr) / dpr;
+      sq    = Math.max(1 / dpr, Math.round(sq * dpr) / dpr);
+    } else if (sizeOverride !== undefined) {
+      // Snap the bar's cells to whole DEVICE pixels. The canvas is scaled by
+      // devicePixelRatio (js/core.js), and midX is W/2 — a half-pixel on any
+      // odd-width phone — so a 1px cell landed on fractional device
+      // coordinates and every dot got antialiased across its neighbours. At a
+      // group boundary that blend IS the ragged seam: the two colours mix over
+      // the shared pixel column instead of meeting on it. Snapping both the
+      // origin and the size means consecutive columns tile exactly, with no
+      // gap and no overlap, so the seam is one hard vertical edge.
+      const dpr = window.devicePixelRatio || 1;
+      drawX = Math.round(drawX * dpr) / dpr;
+      drawY = Math.round(drawY * dpr) / dpr;
+      sq    = Math.max(1 / dpr, Math.round(sq * dpr) / dpr);
+    }
+    ctx.fillRect(drawX, drawY, sq, sq);
   }
 
   function drawBandedCols(orderArr, rightAlign, colsTotal) {
@@ -710,7 +1274,12 @@ function drawPage9(ctx, W, H) {
       const c = i % colsTotal;
       const x = rightAlign ? centerX - (c + 1) * CELL : rightX0 + c * CELL;
       const y = midY - (r + 1) * CELL;
-      if (y < topY || y >= H - 16) return;
+      // Clipped at midY, the grid's own anchor — NOT at H - 16. On desktop the
+      // two are equivalent (midY is 0.6H, far above H - 16, and no row can sit
+      // at or below midY by construction), but on mobile midY is H minus the
+      // 4px legit bar, so an H - 16 floor culled the bottom rows and opened a
+      // ~12px gap between the columns and the bar they should be resting on.
+      if (y < topY || y >= midY) return;
       p9PlaceDot(e, x, y, targetAlpha, i, orderArr.length, lowRankCount);
     });
     return Math.ceil(orderArr.length / colsTotal) || 1;
@@ -726,18 +1295,59 @@ function drawPage9(ctx, W, H) {
   // never grow into it. Sized per side, same fixed-slot reasoning as the
   // extreme grid above — reclassifying a category never reflows anyone
   // else's dot. The two sides butt up against each other with no gap.
+  //
+  // On mobile both of those last two properties invert: the grid is a 4px bar
+  // in which actors DO cluster into contiguous colour segments, and a
+  // reclassification reflows every surviving dot inward so the bar shrinks
+  // from its outer end with no holes (p9LegitGeometry's `mode: "bar"` branch).
+  // Those reflowing dots animate for free — they're already in p9.anim.from
+  // (it's a copy of p9.lastPositions, which p9PlaceDot fills for legit dots
+  // too), so they glide via p9PlaceDot's "existing dot repositioning" branch;
+  // with no orderIndex passed that degrades to an unstaggered glide, which is
+  // what we want here.
   const legitGeom = p9LegitGeometry(W, H);
+
+  // At rest the mobile bar is NOT drawn dot-by-dot: ~14k 1px dots would all
+  // have to tile perfectly for a colour boundary to read as one vertical
+  // line, and any residual per-dot artifact (rounding, overdraw order) shows
+  // up as a ragged seam. Instead each group segment is painted as ONE solid
+  // rect (see the pass after drawJumbledBot) — a hard vertical edge by
+  // construction. Per-dot painting remains only while p9.anim runs, where the
+  // motion masks it; p9RunAnimLoop nulls p9.anim on completion and redraws,
+  // so the handoff back to rects is automatic and lands on the same footprint.
+  const barAtRest = legitGeom.mode === "bar" && !p9.anim;
 
   function drawJumbledBot(poolEvents, indexOf, side, botSet) {
     // Same fix as drawBandedCols above, same reason — literal 1 (or its
     // fold13 fade equivalent), not a read of ctx.globalAlpha.
     const targetAlpha = 1 - (p9.fold13OutT ?? 0);
-    poolEvents.forEach(e => {
+    const bar = legitGeom.mode === "bar";
+    // In bar mode several events share each cell (the bar has far fewer cells
+    // than events), so whichever is drawn LAST is the one you see. Iterating the
+    // pool in its own chronological order made that winner effectively random
+    // with respect to group, which at every segment boundary sprinkled one
+    // group's colour into its neighbour. p9.legitRank is inserted in rank order,
+    // so iterating its keys instead resolves every shared cell in favour of the
+    // higher-ranked group — consistently, on the same side of every boundary.
+    const order = bar ? [...(p9.legitRank?.[side]?.keys() ?? [])] : poolEvents;
+    // The legit grid's own dot size — in bar mode the packed cell, otherwise
+    // the per-breakpoint legitSq (desktop P9_SQ; the mobile spread strip's
+    // finer P9_LEGIT_SQ_SPREAD_M).
+    const sq    = bar ? legitGeom.cell : p9Metrics().legitSq;
+    order.forEach(e => {
       if (!botSet.has(e)) return;
       const pos = p9LegitPosOf(e, indexOf, side, legitGeom);
       if (!pos) return; // guards a stale cache
-      if (pos.y < topY || pos.y >= H) return;
-      p9PlaceDot(e, pos.x, pos.y, targetAlpha);
+      // Offscreen dots are still PUT ON RECORD, only not painted. The legit
+      // grid packs however many rows its events need (legitRows), which on the
+      // V2 desktop strip is more rows than the 150px band can show — skipping
+      // those outright left them absent from p9.lastPositions, so the next
+      // drop's p9.anim.from had no start point for them and they snapped
+      // straight into their extreme column instead of flying. Same reasoning
+      // as the mobile bar's recordOnly use.
+      const offscreen = pos.y < topY || pos.y >= H;
+      p9PlaceDot(e, pos.x, pos.y, targetAlpha, undefined, undefined, undefined, sq,
+                 barAtRest || offscreen);
     });
   }
 
@@ -755,6 +1365,13 @@ function drawPage9(ctx, W, H) {
   const rightTopRows = drawBandedCols(p9.rightTopOrder, false, extremeColsTotal);
   drawJumbledBot(p7.leftEvents,  p9.leftIndexOf,  "left",  leftBotSet);
   drawJumbledBot(p7.rightEvents, p9.rightIndexOf, "right", rightBotSet);
+
+  // The at-rest bar itself (see the barAtRest comment above). Column→x maths
+  // in p9DrawBarRects mirrors p9LegitCellXY exactly — right side's column c
+  // starts at midX + c*CELL; the left side's bar-mode numbering (0 =
+  // innermost, per p9LegitPosOf's mirror) puts column c at midX - (c+1)*CELL,
+  // so a segment's cols c0..c1 span [midX - c1*CELL, midX - c0*CELL].
+  if (barAtRest) p9DrawBarRects(ctx, legitGeom, H, 1 - (p9.fold13OutT ?? 0));
 
   // p9PlaceDot leaves ctx.globalAlpha at whichever dimmed value (e.g. 0.35)
   // the last-drawn dot used while one dot is hovered — reset before anything
@@ -799,7 +1416,11 @@ function drawPage9(ctx, W, H) {
     }
 
     if (p9CountLabelAlpha > 0) {
-      ctx.font         = "400 12px 'Assistant', sans-serif";
+      // 13px on mobile per explicit request (tried 14, settled on 13) — the
+      // bare number is the column's only caption there, and 12px read too
+      // small at arm's length.
+      ctx.font         = mobile ? "400 13px 'Assistant', sans-serif"
+                                : "400 12px 'Assistant', sans-serif";
       ctx.textBaseline = "alphabetic";
       ctx.fillStyle    = `rgba(17,17,17,${p9CountLabelAlpha * (1 - (p9.fold13OutT ?? 0))})`;
 
@@ -811,7 +1432,19 @@ function drawPage9(ctx, W, H) {
       const P9_EVENTS_WORD = "אירועים";
       const P9_EVENTS_GAP  = 4; // px between the word and the number
       function drawEventsCount(count, targetCenterX, y) {
-        const numStr      = String(count);
+        const numStr = String(count);
+        // Mobile: the number with "אירועים" stacked UNDER it, per explicit
+        // request — the narrow columns can't carry the whole line side by
+        // side. Two single-script runs (digits / Hebrew), so no bidi problem
+        // to dodge either. `y` is the block's BOTTOM baseline (the word), kept
+        // 16px above the column top like the old single line; the number rides
+        // one line above it, inside the room P9_COUNT_LABEL_ROOM_M reserves.
+        if (mobile) {
+          ctx.textAlign = "center";
+          ctx.fillText(numStr, targetCenterX, y - P9_COUNT_LINE_H_M);
+          ctx.fillText(P9_EVENTS_WORD, targetCenterX, y);
+          return;
+        }
         const wordWidth   = ctx.measureText(P9_EVENTS_WORD).width;
         const numWidth    = ctx.measureText(numStr).width;
         const leftX       = targetCenterX - (wordWidth + P9_EVENTS_GAP + numWidth) / 2;
@@ -824,7 +1457,22 @@ function drawPage9(ctx, W, H) {
       // Glided to (p9AnimateLeftCountPos/p9AnimateRightCountPos, above) —
       // this target can jump the instant a drop changes either side's row
       // count or column span, but the label itself shouldn't.
-      const countsY  = midY - Math.max(leftTopRows, rightTopRows) * CELL - 16;
+      // On mobile the columns can legally grow all the way up to topY, and the
+      // tooltip→grid clearance explicitly reserves a label line's worth of room
+      // above that ceiling (P9_COUNT_LABEL_ROOM_M inside p9ExtremeTopY) — so a
+      // full column puts this baseline exactly at the top of that reserved
+      // band. The clamp is a safety net for the same boundary, never the
+      // normal path.
+      // Mobile pulls the column 2 dot-rows (2 * P9_CELL_M = 4px) closer to the
+      // label than desktop's 16px baseline gap, per explicit request.
+      const countsGap  = mobile ? 16 - 2 * P9_CELL_M : 16;
+      const countsYRaw = midY - Math.max(leftTopRows, rightTopRows) * CELL - countsGap;
+      // Floor at the reserved band's top PLUS one line: countsY is the block's
+      // bottom baseline, and the number line above it has to stay inside the
+      // band too, clear of the docked frame.
+      const countsY    = mobile
+        ? Math.max(countsYRaw, topY - P9_COUNT_LABEL_ROOM_M + P9_COUNT_LINE_H_M)
+        : countsYRaw;
       const leftPos  = p9AnimateLeftCountPos(centerX - leftRealCols * CELL / 2, countsY);
       const rightPos = p9AnimateRightCountPos(rightX0 + rightRealCols * CELL / 2, countsY);
       drawEventsCount(leftCount,  leftPos.x,  leftPos.y);
@@ -845,16 +1493,35 @@ function drawPage9(ctx, W, H) {
   // stroke (previously a linear gradient fading toward each end, still
   // scaled by lineAlpha below for fold13's fade-out). Color matches the
   // tray's own border (.page9-tray, style.css) exactly — rgba(90,90,90,0.45).
-  const dividerStartX = W * (1 - page9LineT);
-  const lineAlpha = 1 - (p9.fold13OutT ?? 0);
-  ctx.strokeStyle = `rgba(90,90,90,${0.45 * lineAlpha})`;
-  ctx.lineWidth   = 1;
-  ctx.beginPath();
-  ctx.moveTo(dividerStartX, midY);
-  ctx.lineTo(W, midY);
-  ctx.stroke();
+  // Drawn on both breakpoints. (It used to be skipped on mobile, back when the
+  // tray sat immediately below midY and was itself the boundary — the tray now
+  // lives in a band at the top and the legit half is a bottom strip, so the
+  // divider is the only edge between the two grids there, same as desktop.)
+  {
+    const dividerStartX = W * (1 - page9LineT);
+    const lineAlpha = 1 - (p9.fold13OutT ?? 0);
+    // Mobile draws it a bit lighter (explicit request) — desktop keeps the
+    // tray-border-matching 0.45.
+    const baseAlpha = mobile ? 0.32 : 0.45;
+    ctx.strokeStyle = `rgba(90,90,90,${baseAlpha * lineAlpha})`;
+    ctx.lineWidth   = 1;
+    ctx.beginPath();
+    ctx.moveTo(dividerStartX, midY);
+    ctx.lineTo(W, midY);
+    ctx.stroke();
+  }
 
   p9.lastPositions = posMap;
+
+  // The picker's selection halo — dims every dot except the picked one. Drawn
+  // after the dots and after posMap is published, since it reads that map to
+  // find the hole. See p7DrawInspectScrim (page7.js).
+  p7DrawInspectScrim(ctx, W, H);
+
+  // The mobile event picker (p7InspectInit, page7.js) serves this fold too —
+  // its state is kept in step from the owning fold's own draw, exactly as
+  // @fold8 does it from doHitTest. Cheap and idempotent.
+  p7InspectSync?.();
 }
 
 // The extreme-zone counts as currently *displayed* — mid-stagger this is the
@@ -923,16 +1590,37 @@ function p9GetDisplayedCounts() {
 // drag-and-drop state reverts to the @fold12 starting point.
 // animate=true  → 3s dot migration (scroll-back from @fold12)
 // animate=false → instant reset    (@fold13 reverse completion)
+// The currently-extreme categories, newest-first. On desktop that's
+// #page9ZoneAbove's own DOM order; on mobile pills never leave the tray (they
+// highlight in place), so the .is-extreme flag is the record instead — order is
+// meaningless there, since there is no dropped-pill stack to rebuild.
+function p9DroppedIdxs() {
+  const sel = isMobile()
+    ? "#page9ZoneBelow .page9-pill.is-extreme"
+    : "#page9ZoneAbove .page9-pill";
+  return Array.from(document.querySelectorAll(sel)).map(p => Number(p.dataset.idx));
+}
+
 function p9ResetDrops(animate = false) {
   const zoneAbove = document.getElementById("page9ZoneAbove");
   if (!zoneAbove) return;
-  const pills = Array.from(zoneAbove.querySelectorAll(".page9-pill"));
+  const mobile = isMobile();
+  const pills = mobile
+    ? Array.from(document.querySelectorAll("#page9ZoneBelow .page9-pill.is-extreme"))
+    : Array.from(zoneAbove.querySelectorAll(".page9-pill"));
   if (!pills.length) return;
   const trayRows = Array.from(document.querySelectorAll("#page9ZoneBelow .page9-tray-row"));
   const nowMs = performance.now();
   pills.forEach(pill => {
     const idx = Number(pill.dataset.idx);
-    const rowCfg = P9_TRAY_GRID[idx];
+    // Mobile: the pill is already in its own tray slot — only the selected
+    // look and the classification come off.
+    if (mobile) {
+      pill.classList.remove("is-extreme");
+      p9.sides[idx] = "below";
+      return;
+    }
+    const rowCfg = p9TrayGrid()[idx];
     if (!rowCfg || !trayRows[rowCfg.row - 1]) return;
     trayRows[rowCfg.row - 1].appendChild(pill);
     p9.sides[idx] = "below";
@@ -959,11 +1647,15 @@ function p9RestoreDrops(idxs) {
   if (!idxs || !idxs.length) return;
   const zoneAbove = document.getElementById("page9ZoneAbove");
   if (!zoneAbove) return;
+  const mobile = isMobile();
   const nowMs = performance.now();
   [...idxs].reverse().forEach(idx => {
     const pill = document.querySelector(`#page9ZoneBelow .page9-pill[data-idx="${idx}"]`);
     if (!pill) return;
-    zoneAbove.prepend(pill);
+    // Mobile: re-flag in place rather than moving the pill into the (hidden)
+    // extreme zone — see p9DroppedIdxs.
+    if (mobile) pill.classList.add("is-extreme");
+    else zoneAbove.prepend(pill);
     p9.sides[idx] = "above";
   });
   p13SyncGateVisibility?.();
@@ -976,6 +1668,23 @@ function p9RestoreDrops(idxs) {
 // ── Category panel — real DOM/HTML in the text column. Drag a pill between the
 // "extreme" and "legitimate" zones to reclassify it; p9.sides drives which half of
 // the canvas dot-grid (drawn above) each category's events land in. ──
+// Set by p9BuildPanel to its own nested p9MeasureTrayLayout, so the resize
+// hook further down can re-measure (and re-apply the active tray grid) when a
+// resize crosses the 600px breakpoint and flips the layout variant.
+let p9RemeasureTray = null;
+
+// Keeps `page9-layout-v2` on .page9-sticky in sync with p9IsV2() — the class
+// every V2 CSS rule is scoped under. Never present under 600px, so the mobile
+// layout can't be reached by a V2 rule.
+function p9SyncLayoutV2Class() {
+  const panel = document.querySelector(".page9-sticky");
+  if (!panel) return;
+  const on = p9IsV2();
+  if (panel.classList.contains("page9-layout-v2") === on) return false;
+  panel.classList.toggle("page9-layout-v2", on);
+  return true; // changed — caller re-measures
+}
+
 function p9BuildPanel() {
   const zoneAbove   = document.getElementById("page9ZoneAbove");
   const zoneBelow   = document.getElementById("page9ZoneBelow");
@@ -1012,9 +1721,14 @@ function p9BuildPanel() {
     if (targetZone === zoneAbove) {
       // prepend so the newest card becomes the top of the stacked column.
       targetZone.prepend(pill);
+      // If the zone is in its scrolling state (short viewport, stack taller
+      // than the clamped box — see overflow-y in style.css's V2 zone rule),
+      // snap to the top so the pill that just landed is the one on screen.
+      // A no-op whenever the stack fits (scrollTop is already 0).
+      targetZone.scrollTop = 0;
     } else {
       const idx = Number(pill.dataset.idx);
-      trayRows[P9_TRAY_GRID[idx].row - 1].appendChild(pill);
+      trayRows[p9TrayGrid()[idx].row - 1].appendChild(pill);
     }
   }
 
@@ -1028,6 +1742,14 @@ function p9BuildPanel() {
   // smoothly rather than snapping — see the "from" comment there.
   function commitDrop(pill, targetZone) {
     placePillInZone(pill, targetZone);
+    // A drop that doesn't actually reclassify — an extreme pill released back
+    // in the extreme zone (or a tray pill back in the tray) — only re-docks
+    // the chip. Running commitDropState anyway would replay the whole
+    // drop-into-extreme sequence (counts re-baselined, order arrays resynced,
+    // p9.anim reseeded) for dots that aren't going anywhere, visibly
+    // scrambling any animation still in flight.
+    const side = targetZone === zoneAbove ? "above" : "below";
+    if (p9.sides[Number(pill.dataset.idx)] === side) return;
     commitDropState(pill, targetZone);
   }
 
@@ -1236,7 +1958,7 @@ function p9BuildPanel() {
 
     } else {
       // ── Dropping back into legit ───────────────────────────────────────────
-      // Dots migrate over 3 s; count ticks down once they've left.
+      // Dots migrate over 3 s; count ticks down as they leave (see COUNT_DELAY).
 
       const prevDisplayed = p9GetDisplayedCounts();
       const prevActual    = p9ExtremeCountsNow();
@@ -1250,14 +1972,20 @@ function p9BuildPanel() {
       p9.anim = { from: new Map(p9.lastPositions), start: nowMs, duration: DOT_DURATION };
       if (currentPage === 9) p9RunAnimLoop();
 
+      // Ticks down WHILE the dots leave, not after — waiting out the full 3s
+      // flight before an 800ms count-down (and only then the label fade for
+      // an emptied zone) read as the numbers hanging around for ~4s past the
+      // drop, per explicit feedback. The short start delay keeps it causal:
+      // the dots visibly launch first, then the count follows them down.
+      const COUNT_DELAY = 300;
       const newCounts  = p9ExtremeCountsNow();
       const thisAnim   = p9CountAnim = {
         fromLeft, toLeft: newCounts.left,
         fromRight, toRight: newCounts.right,
-        start: nowMs + DOT_DURATION,
+        start: nowMs + COUNT_DELAY,
         duration: 800,
       };
-      setTimeout(() => { if (p9CountAnim === thisAnim) p9CountRunLoop(); }, DOT_DURATION);
+      setTimeout(() => { if (p9CountAnim === thisAnim) p9CountRunLoop(); }, COUNT_DELAY);
     }
   }
 
@@ -1277,7 +2005,17 @@ function p9BuildPanel() {
     // and bumps it into a second implicit row instead of back into its own
     // slot, regardless of DOM order.
     pill.style.gridRow    = "1";
+    // Deliberately the legacy grid, not p9TrayGrid(): this build loop runs at
+    // page9.js's own top level, before js/core.js defines isMobile() (which
+    // p9IsV2 needs). p9ApplyTrayGrid, run from the DOMContentLoaded measure,
+    // re-assigns the column from the ACTIVE grid a moment later.
     pill.style.gridColumn = String(P9_TRAY_GRID[idx].col);
+    // Mobile's tray is one nowrap FLEX row (display: contents wrappers), where
+    // grid-column is inert and DOM order would rule — putting idx 0 (הפגנה לא
+    // אלימה) first. `order` re-sequences the flex row to the desktop reading
+    // order (V2's single-row column order), per explicit instruction; both
+    // desktop grids ignore it because every pill is explicitly placed.
+    pill.style.order = String(P9_TRAY_GRID_V2[idx].col);
 
     // Handle first, label second: per explicit request, the grip dots sit on
     // the right edge of the pill — in this RTL flex row that means the handle
@@ -1294,6 +2032,19 @@ function p9BuildPanel() {
     labelEl.textContent = label;
     pill.appendChild(labelEl);
 
+    // Mobile-only ⓘ affordance: touch has no hover, so the category description
+    // that desktop reveals by hovering the pill needs an explicit target. Built
+    // for every pill and hidden by CSS on desktop (see .page9-pill-info), so
+    // crossing the breakpoint on a resize needs no rebuild. Its taps are caught
+    // in the capture phase by p9CategoryTooltipInit — it sits INSIDE the pill,
+    // whose own bubble-phase click classifies.
+    const infoEl = document.createElement("button");
+    infoEl.type        = "button";
+    infoEl.className   = "page9-pill-info";
+    infoEl.textContent = "i";
+    infoEl.setAttribute("aria-label", `מידע על ${label}`);
+    pill.appendChild(infoEl);
+
     // Manual pointer-based dragging instead of native HTML5 drag-and-drop —
     // once a native drag starts, the OS/browser takes over rendering the
     // cursor and CSS `cursor` on the dragged element has no effect for the
@@ -1301,8 +2052,24 @@ function p9BuildPanel() {
     // Doing it by hand keeps the cursor under our control the whole time —
     // set on <body> rather than the pill, since the pointer roams over many
     // different elements (other pills, drop zones, the canvas) during the drag.
+    // Mobile: tapping replaces dragging entirely, per explicit request. The
+    // pill never leaves #page9ZoneBelow — it toggles .is-extreme in place and
+    // commits through commitDropState, the same and only writer of
+    // p9.sides[idx] the drag path uses, so every downstream animation
+    // (including the finalized state-1 drop) is reached identically.
+    // #page9ZoneAbove is hidden by CSS under the breakpoint, so a "dropped"
+    // pill has nowhere to go and no ghost/hit-testing is needed.
+    pill.addEventListener("click", () => {
+      if (!isMobile()) return;
+      const goingExtreme = !pill.classList.contains("is-extreme");
+      pill.classList.toggle("is-extreme", goingExtreme);
+      commitDropState(pill, goingExtreme ? zoneAbove : zoneBelow);
+    });
+
     pill.addEventListener("pointerdown", e => {
       if (e.button !== 0) return;
+      // Drag is desktop-only — see the click handler above.
+      if (isMobile()) return;
       e.preventDefault();
 
       const rect    = pill.getBoundingClientRect();
@@ -1331,6 +2098,11 @@ function p9BuildPanel() {
 
       pill.classList.add("dragging");
       panel.classList.add("dragging");
+      // Origin marker for CSS: a drag OUT of the extreme zone highlights the
+      // legit band below as the destination (and suppresses the extreme
+      // zone's own dragging fill) — see the .dragging-from-above rules in
+      // style.css's V2 block.
+      panel.classList.toggle("dragging-from-above", draggingFromAbove);
       document.body.style.cursor = "grabbing";
       pill.setPointerCapture(e.pointerId);
       // Clears any active pill-hover highlight (see setPillHover's own
@@ -1339,6 +2111,11 @@ function p9BuildPanel() {
       // this it stays visually "hovered" while invisible for the rest of
       // the drag.
       p9.setPillHover?.(null);
+      // …but a pill grabbed OUT of the extreme zone keeps the canvas side of
+      // that hover (dim + category counts) frozen for the whole drag — see
+      // p9.holdPillHoverDim (p9HoverInit). Only the DOM pill highlight
+      // clears (the pill itself is invisible mid-drag anyway).
+      if (draggingFromAbove) p9.holdPillHoverDim?.(Number(pill.dataset.idx));
       // Starting the drag can re-fire a synthetic pointerover on this same
       // pill (see p9CategoryTooltipInit's own "dragging" guard) instead of
       // ever reaching #page9ZoneBelow's pointerleave — hide the category
@@ -1377,17 +2154,23 @@ function p9BuildPanel() {
         document.body.style.cursor = "";
         pill.classList.remove("dragging");
         panel.classList.remove("dragging");
+        panel.classList.remove("dragging-from-above");
         if (activeDropTarget) {
           activeDropTarget.el.classList.remove(activeDropTarget.overClass);
           commitDrop(pill, activeDropTarget.targetZone);
         }
+        // Release the held hover-dim from drag-start (extreme-origin drags
+        // only — see holdPillHoverDim above). After a real drop the fade-out
+        // runs under the dot-migration animation; after a cancelled drag the
+        // pointer, if still resting on the pill, simply re-hovers it.
+        if (draggingFromAbove) p9.releasePillHoverDim?.();
       }
 
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
     });
 
-    trayRows[P9_TRAY_GRID[idx].row - 1].appendChild(pill); // every category starts out "legitimate"
+    trayRows[P9_TRAY_GRID[idx].row - 1].appendChild(pill); // every category starts out "legitimate" — legacy grid here, see the gridColumn note above
   });
 
   // Sizes the tray's per-row grid tracks and the extreme-zone gap
@@ -1400,7 +2183,69 @@ function p9BuildPanel() {
   // necessarily finished downloading, may still be sized against the
   // fallback font's metrics — re-running this once the real font is
   // actually active corrects that).
+  // (Re-)applies the ACTIVE tray grid to every pill still sitting in the tray:
+  // its permanent column, and its row wrapper. Called from p9MeasureTrayLayout
+  // so a resize that flips the layout variant (crossing 600px turns V2 off and
+  // back on) re-lays the tray instead of leaving it in the other layout's
+  // slots. Pills currently docked in #page9ZoneAbove are left alone — they get
+  // their slot back from p9TrayGrid() when they're dropped back.
+  function p9ApplyTrayGrid() {
+    const grid = p9TrayGrid();
+    document.querySelectorAll("#page9ZoneBelow .page9-pill").forEach(pill => {
+      const idx  = Number(pill.dataset.idx);
+      const slot = grid[idx];
+      if (!slot) return;
+      pill.style.gridColumn = String(slot.col);
+      const row = trayRows[slot.row - 1];
+      if (row && pill.parentElement !== row) row.appendChild(pill);
+    });
+  }
+
   function p9MeasureTrayLayout() {
+    p9ApplyTrayGrid();
+    // Release the fixed grid tracks BEFORE measuring: the tracks written at the
+    // bottom of this function are baked pixel widths from the previous run, and
+    // a resize that grows the pill font (crossing 1600px upward flips 18px→20px,
+    // crossing 600px flips 16px→20px) leaves labels wider than their old track —
+    // they wrap, and offsetWidth then reads the clamped wrapped width, re-baking
+    // the too-narrow columns forever. Clearing first lets every pill lay out at
+    // its natural one-line width for the reads below; the tracks are re-applied
+    // from those fresh numbers at the end as before.
+    trayRows.forEach(rowEl => {
+      rowEl.style.gridTemplateColumns = "";
+      rowEl.style.height = "";
+    });
+    // Tight tier: when even the ≤1600px 18px row is wider than the viewport,
+    // the centered row runs off both screen edges — drop the pills to 16px
+    // (.page9-pills-tight in style.css). Decided by MEASURING the row at the
+    // un-tight font, never by a hand-picked breakpoint: the overflow point is
+    // a function of ten Hebrew labels' rendered widths plus gaps, and a px
+    // twin of that here would rot the first time a label changes. The class
+    // is removed before the read so the decision is always made at the
+    // regular size in both directions — measuring at 16px on the way back up
+    // would fit again and flap. Mirrored onto <body> for the drag ghost,
+    // which lives there, outside the panel's class scope (same reason the
+    // ≤1600px media rule lists the ghost separately). This read happens
+    // before the width reads below, so every measurement they bake reflects
+    // the font the pills will actually wear. nowrap is forced for the read:
+    // tray pills can wrap their labels, so under a too-narrow viewport the
+    // grid compresses to fit instead of overflowing and offsetWidth would
+    // never exceed the screen — nowrap makes the row take its true
+    // one-line-per-pill width, which is the width being judged. The nowrap
+    // is held until AFTER the track bake below, not just for this read: the
+    // same compression would otherwise feed the per-pill offsetWidth reads
+    // wrapped (narrower, taller) boxes, and the baked tracks would seal that
+    // wrap in permanently — the exact too-narrow-columns trap the clearing
+    // comment above describes, arriving through viewport pressure instead of
+    // stale tracks. Desktop only: mobile's flex row wraps by flex-wrap and
+    // its pills are already nowrap by CSS.
+    const mobile = isMobile();
+    if (!mobile) trayRows.forEach(rowEl => { rowEl.style.whiteSpace = "nowrap"; });
+    panel.classList.remove("page9-pills-tight");
+    const pillsTight = p9IsV2() && trayRows[0].offsetWidth > document.documentElement.clientWidth;
+    panel.classList.toggle("page9-pills-tight", pillsTight);
+    document.body.classList.toggle("page9-pills-tight", pillsTight);
+
     const pillByIdx = [];
     document.querySelectorAll(".page9-pill").forEach(p => {
       pillByIdx[Number(p.dataset.idx)] = p;
@@ -1416,7 +2261,7 @@ function p9BuildPanel() {
     // never inflated by leftover space from a wider column elsewhere.
     const pillHeight = Math.ceil(Math.max(...pillByIdx.map(p => p.offsetHeight)));
     const rowColWidths = trayRows.map(() => []);
-    P9_TRAY_GRID.forEach((slot, idx) => {
+    p9TrayGrid().forEach((slot, idx) => {
       rowColWidths[slot.row - 1][slot.col - 1] = pillByIdx[idx].offsetWidth;
     });
     // +2px: offsetWidth rounds to the nearest whole CSS px, but the actual
@@ -1425,9 +2270,17 @@ function p9BuildPanel() {
     // column to *exactly* the rounded value occasionally wrapped a label to
     // two lines. 2px is well below "spread out" territory but always covers
     // the gap.
+    // Mobile rows are a wrapping flexbox, not a grid (style.css) — a fixed
+    // track list and a one-line height would both fight the wrap, so neither
+    // inline value is written under the breakpoint. Cleared rather than merely
+    // skipped, so crossing the breakpoint on a resize doesn't leave a stale one.
     trayRows.forEach((rowEl, i) => {
-      rowEl.style.gridTemplateColumns = rowColWidths[i].map(w => `${w + 2}px`).join(" ");
-      rowEl.style.height = `${pillHeight}px`;
+      rowEl.style.gridTemplateColumns = mobile ? "" : rowColWidths[i].map(w => `${w + 2}px`).join(" ");
+      rowEl.style.height = mobile ? "" : `${pillHeight}px`;
+      // Release the measurement nowrap only now that the tracks are baked at
+      // natural one-line width (+2px) — with those tracks in place the labels
+      // fit on one line without it.
+      rowEl.style.whiteSpace = "";
     });
 
     // The extreme zone's own drop-target box (shown only while dragging, see
@@ -1443,9 +2296,10 @@ function p9BuildPanel() {
     const zoneGap       = parseFloat(zoneCs.rowGap) || 0;
     const zonePaddingX  = parseFloat(zoneCs.paddingLeft) + parseFloat(zoneCs.paddingRight);
     const zonePaddingY  = parseFloat(zoneCs.paddingTop) + parseFloat(zoneCs.paddingBottom);
-    const stackContentHeight = P9_CATEGORIES.length * pillHeight + (P9_CATEGORIES.length - 1) * zoneGap;
+    let stackContentHeight = P9_CATEGORIES.length * pillHeight + (P9_CATEGORIES.length - 1) * zoneGap;
+    let stackContentWidth  = p9.maxPillWidth;
     const stackHeight = stackContentHeight + zonePaddingY + P9_ZONE_DRAG_BORDER * 2;
-    const stackWidth  = p9.maxPillWidth + zonePaddingX + P9_ZONE_DRAG_BORDER * 2;
+    const stackWidth  = stackContentWidth + zonePaddingX + P9_ZONE_DRAG_BORDER * 2;
     zoneAbove.style.setProperty("--page9-zone-stack-height", `${stackHeight}px`);
     zoneAbove.style.setProperty("--page9-zone-stack-width", `${stackWidth}px`);
     // Read by #page9ZoneAbove .page9-pill (style.css) — every dropped pill is
@@ -1454,13 +2308,72 @@ function p9BuildPanel() {
     // top/bottom line (spanning the full pill width) lines up at one shared
     // standard width instead of each being only as wide as its own label.
     zoneAbove.style.setProperty("--page9-max-pill-width", `${p9.maxPillWidth}px`);
+
+    // V2 stacks the drop zone UNDER the pill row, so its CSS `top` needs the
+    // tray's real measured height. Published as a var rather than duplicated
+    // as a hand-tuned length (the old layout's `bottom: 28.78vh` twin of
+    // P9_MID is exactly the trap this avoids).
+    panel.style.setProperty("--page9-tray-height", `${document.querySelector(".page9-tray")?.offsetHeight || 0}px`);
+    panel.style.setProperty("--p9-v2-tray-top", `${p9TrayTopV2()}px`);
+    // The legit band's height, so the drop-zone wrap's CSS can end above the
+    // divider without a second hand-synced copy of P9_LEGIT_H_V2.
+    panel.style.setProperty("--p9-v2-legit-h", `${p9LegitHV2()}px`);
   }
 
-  p9MeasureTrayLayout();
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(p9MeasureTrayLayout);
+  // The tray ships at opacity:0 (style.css) because its resting hidden
+  // transform is -100% of its OWN height, and that height isn't real until the
+  // measure above has run against the loaded font — until then the band doesn't
+  // clear the edge and paints over @fold1 on a refresh. Lifting the gate is
+  // deferred one frame past the measure so the corrected transform is committed
+  // before the tray can be painted at all.
+  function p9RevealTray() {
+    p9MeasureTrayLayout();
+    requestAnimationFrame(() => {
+      document.querySelector(".page9-tray")?.classList.add("is-measured");
+    });
+  }
+  // Deferred to DOMContentLoaded, not run inline: the measure now branches on
+  // isMobile(), which lives in js/core.js — a *later* <script> in
+  // project.html. Function declarations don't hoist across separate classic
+  // scripts, so calling it during page9.js's own top-level run would throw.
+  // The variant class has to land BEFORE the first measure — the V2 CSS is
+  // what decides the tray's height/width, which the measure then reads back.
+  document.addEventListener("DOMContentLoaded", () => {
+    p9SyncLayoutV2Class();
+    p9MeasureTrayLayout();
+  });
+  p9RemeasureTray = p9MeasureTrayLayout; // see the resize hook below
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(p9RevealTray);
+  // No document.fonts at all (or a font that never resolves): don't strand the
+  // tray invisible forever — window load is late enough that the DOMContentLoaded
+  // measure above has certainly run.
+  else addEventListener("load", p9RevealTray);
 }
 
 p9BuildPanel();
+
+// The header subtitle names the gesture, and the gesture differs by
+// breakpoint — drag on desktop, tap on mobile. Kept in JS rather than as two
+// CSS-toggled <p>s so there is exactly one copy of each string, and re-synced
+// on resize so crossing the breakpoint corrects it live.
+const P9_SUBTITLE_DESKTOP = "גררו סוגי פעולות הנחשבות קיצוניות בעיניכם";
+const P9_SUBTITLE_MOBILE  = "בחרו סוגי פעולות הנחשבות קיצוניות בעיניכם";
+function p9SyncSubtitle() {
+  const el = document.querySelector(".page9-header-subtitle");
+  if (el) el.textContent = isMobile() ? P9_SUBTITLE_MOBILE : P9_SUBTITLE_DESKTOP;
+}
+// Same cross-script ordering caveat as p9MeasureTrayLayout above — isMobile()
+// isn't defined yet while page9.js is still running.
+document.addEventListener("DOMContentLoaded", p9SyncSubtitle);
+window.addEventListener("resize", p9SyncSubtitle);
+// A resize that crosses the 600px breakpoint flips the layout variant (one
+// tray row vs two, a different measured height); and even within V2, the
+// header's --card-top is a dvh fraction, so p9TrayTopV2's floor moves with the
+// viewport. Both are re-resolved by re-measuring, so just always do it.
+window.addEventListener("resize", () => {
+  p9SyncLayoutV2Class();
+  p9RemeasureTray?.();
+});
 
 // Hover tooltip for a single event dot — date + Hebrew description. Every
 // event has its own real `descHeMedium` (events.json/server.py, sourced from
@@ -1552,6 +2465,26 @@ function p9HoverInit() {
   // sibling-lookahead hover rule then uses to darken a neighboring pill's
   // own line for a highlight nobody can actually see.
   p9.setPillHover = setPillHover;
+  // Holds the canvas-side half of a pill hover (dim + category-only counts)
+  // WITHOUT a pill being DOM-hovered — used by the drag handler when a pill
+  // is grabbed OUT of the extreme zone: releasing the hover on grab made the
+  // dots un-dim and the count labels jump back to totals the instant the drag
+  // started, when nothing has actually been reclassified yet. The hold keeps
+  // that state frozen for the whole drag; pointerup releases it via
+  // setPillHover(null) (a real drop then animates on top of the fade-out).
+  p9.holdPillHoverDim = idx => {
+    p9.hoveredCategoryIdx = idx;
+    p9.hoverDimCategoryIdx = idx;
+    p9HoverDimAnimate(1);
+  };
+  // Explicit counterpart for the drag handler's pointerup: setPillHover(null)
+  // can't release the hold — hoveredCatPill is already null (the hold sets
+  // p9.hoveredCategoryIdx directly, bypassing setPillHover), so its
+  // `pill === hoveredCatPill` early-return fires and the dim never fades.
+  p9.releasePillHoverDim = () => {
+    p9.hoveredCategoryIdx = null;
+    p9HoverDimAnimate(0);
+  };
 
   zoneAboveEl.addEventListener("pointerover", e => {
     if (p9.hoveredEvent) return; // dot-hover takes priority
@@ -1584,7 +2517,14 @@ function p9HoverInit() {
   }
 
   function onMove(e) {
-    if (currentPage !== 9 || p9.anim) { hide(); return; }
+    // Mobile has no hover: the tooltip is driven by the press-and-hold loupe
+    // (p7InspectInit, page7.js) into the same docked #page9Tooltip, and a
+    // synthetic mouse move from a tap would fight it for the element.
+    // Also fully off mid-drag (.dragging on .page9-sticky): the pointer
+    // carrying a pill across the canvas shouldn't light up dot tooltips
+    // under the ghost on its way to a zone.
+    if (currentPage !== 9 || p9.anim || isMobile() ||
+        document.querySelector(".page9-sticky")?.classList.contains("dragging")) { hide(); return; }
 
     const rect = canvasEl.getBoundingClientRect();
     const mx = e.clientX - rect.left;
@@ -1649,7 +2589,18 @@ function p9HoverInit() {
       ? dotClientX - TOOLTIP_GAP - tooltipEl.offsetWidth
       : dotClientX + TOOLTIP_GAP;
     const left = Math.max(8, Math.min(rawLeft, window.innerWidth - tooltipEl.offsetWidth - 8));
-    const top  = Math.max(dotClientY - TOOLTIP_GAP - tooltipEl.offsetHeight, 8);
+    // Flip downward when opening upward would poke above the column area's
+    // fixed ceiling (p9ExtremeTopY — the same boundary the grid itself grows
+    // up to, under the drop zone / pill row), per explicit request: near the
+    // top of a tall column the box hangs below the dot instead, its square
+    // anchor corner moving to the TOP (see .is-flipped in style.css and the
+    // matching corner logic in updateTooltipDash, js/core.js).
+    const rawTop  = dotClientY - TOOLTIP_GAP - tooltipEl.offsetHeight;
+    const flipped = rawTop < rect.top + p9ExtremeTopY(canvasEl.clientHeight);
+    tooltipEl.classList.toggle("is-flipped", flipped);
+    const top = flipped
+      ? dotClientY + P9_SQ + TOOLTIP_GAP
+      : Math.max(rawTop, 8);
     tooltipEl.style.left = `${left}px`;
     tooltipEl.style.top  = `${top}px`;
     // After sizing/mirroring are settled — the dash path is drawn to the box's
@@ -1699,9 +2650,19 @@ function p9CategoryTooltipInit() {
     const rect     = pill.getBoundingClientRect();
     const rawLeft  = rect.left + rect.width / 2 - tooltipEl.offsetWidth / 2;
     const left     = Math.max(8, Math.min(rawLeft, window.innerWidth - tooltipEl.offsetWidth - 8));
-    const top      = rect.top - tooltipEl.offsetHeight - GAP;
+    // Above the pill by default on legacy desktop; below when there isn't
+    // room above. `is-below` flips the arrow to match.
+    // V2 and MOBILE are always below, unconditionally: both bands sit high
+    // but not always so high that the fits-above test fails — on mobile a
+    // one-line description could pass it and angle up over the title while
+    // taller ones angled down (explicit instruction: all angle down).
+    // On V2 it hangs downward per explicit request, painting over the drop
+    // zone (z-index 1006, see style.css).
+    const above    = rect.top - tooltipEl.offsetHeight - GAP;
+    const isBelow  = p9IsV2() || isMobile() || above < 8;
+    tooltipEl.classList.toggle("is-below", isBelow);
     tooltipEl.style.left = `${left}px`;
-    tooltipEl.style.top  = `${top}px`;
+    tooltipEl.style.top  = `${isBelow ? rect.bottom + GAP : above}px`;
 
     // Previews the drop target — same idle (:empty) box treatment (dashed
     // border, light fill) even though the zone already has pills dropped in
@@ -1713,13 +2674,62 @@ function p9CategoryTooltipInit() {
   function hide() {
     tooltipEl.classList.remove("is-visible");
     zoneAbove.classList.remove("tray-pill-hover");
+    openInfoPill = null;
   }
 
+  // Which pill's ⓘ is currently open (mobile). Hover has no such state — it is
+  // implied by the pointer — but a tap does: the second tap on the same button
+  // must close it.
+  let openInfoPill = null;
+
   zoneBelow.addEventListener("pointerover", e => {
+    // Mobile drives the tooltip from the ⓘ button alone. Without this guard a
+    // classify-tap also fires pointerover and would raise the tooltip as a
+    // side effect of tapping anywhere on the pill.
+    if (isMobile()) return;
     const pill = e.target.closest(".page9-pill");
     if (pill && zoneBelow.contains(pill)) show(pill); else hide();
   });
-  zoneBelow.addEventListener("pointerleave", hide);
+  // Desktop only, for the same reason as the pointerover guard above — and one
+  // sharper one. A touch pointer is destroyed at pointerup, which fires
+  // pointerleave BEFORE the click: on mobile this handler ran on every tap and
+  // cleared `openInfoPill` a beat before the click handler read it, so the
+  // close branch never saw an open tooltip and every second tap re-opened
+  // instead of closing. On touch there is no "left the tray" to detect anyway —
+  // the ⓘ, an outside tap and a tray scroll are what dismiss it.
+  zoneBelow.addEventListener("pointerleave", () => { if (!isMobile()) hide(); });
+
+  // Capture phase, and stopPropagation: the button is a child of the pill, so a
+  // bubbling listener would run only AFTER the pill's own click handler had
+  // already toggled .is-extreme. Tapping ⓘ must inform, never classify.
+  zoneBelow.addEventListener("click", e => {
+    const btn = e.target.closest(".page9-pill-info");
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const pill = btn.closest(".page9-pill");
+    // Any ⓘ tap while one is open closes it — the same button or a different
+    // pill's. It does NOT hop the tooltip over to the newly tapped pill: with
+    // one frame on screen at a time, "tap to open, tap to close" is a single
+    // rule the finger can rely on anywhere in the run.
+    if (openInfoPill) { hide(); return; }
+    show(pill);
+    openInfoPill = pill;
+  }, true);
+
+  // Tap anywhere else dismisses it (including on another pill, whose classify
+  // tap still goes through — only the tooltip closes).
+  document.addEventListener("click", e => {
+    if (openInfoPill && !e.target.closest(".page9-pill-info")) hide();
+  });
+
+  // Scrolling the tray dismisses it too. The tooltip is positioned once, from
+  // the pill's rect at open time, and then sits in viewport coordinates — so a
+  // horizontal scroll of the run slides the pill out from under a tooltip that
+  // stays put. Rather than track the pill every frame, close it: the gesture
+  // is the user moving on from that pill anyway.
+  zoneBelow.addEventListener("scroll", () => { if (openInfoPill) hide(); }, { passive: true });
+
   window.addEventListener("scroll", () => { if (currentPage !== 9) hide(); }, { passive: true });
 }
 

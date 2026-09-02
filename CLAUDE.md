@@ -85,7 +85,7 @@ Timeline dot color is `p7ActorColor(actor)` — a lookup into `GROUPS` by its `a
 - **page9.js "state 1"** (the non-interrupting extreme-drop animation) **is FINALIZED — never touch it without explicit instruction.** See [Drag-and-Drop](wiki/Drag-and-Drop.md).
 - Renaming a category pill in `P9_CATEGORIES` (`page9.js`) must also update `FOLD6_SQUARE_LABELS` (`js/groups.js`).
 - "Removed — don't reintroduce" callouts in the wiki are binding: the page-1→fold-3 legend morph, the vertical dashed guide-line system on page-9, the anchor squares/`drawGroupLegend`, and the old `main_*` scratch files all stay gone.
-- `.section-title` is one shared base rule (20px, weight 600 faked on the Regular Hadassah Friedlaender face — no true Medium OTF exists in `fonts/`). No per-page font-size/weight overrides — a differently-sized title is a regression.
+- `.section-title` is one shared base rule (20px desktop, **16px under the 600px breakpoint**; weight 600 faked on the Regular Hadassah Friedlaender face — no true Medium OTF exists in `fonts/`). No **per-page** font-size/weight overrides — a differently-sized title at the same viewport width is a regression. On the scrolling cards the title and the frame are the *same* `<h2>`, so `.text-card-frame`'s `margin: 0 auto` already zeroes the base rule's bottom margin — see [Architecture](wiki/Architecture.md).
 - Harness/scaffolding files are `_debug-*.js`, never ship, and follow the recipe + rules in [Dev-Workflow](wiki/Dev-Workflow.md).
 
 ## Conventions (short form — details in [Animation-System](wiki/Animation-System.md))

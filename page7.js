@@ -11,6 +11,48 @@
 const P7_SQ  = 3.5;  // square size in px (was 3)
 const P7_GAP = 1.5;  // gap between squares in px (was 1)
 const P7_CELL = P7_SQ + P7_GAP; // grid cell size
+// On mobile the square size is SOLVED per viewport, not fixed. A fixed pitch
+// has to be small enough for the smallest phone, which left every larger one
+// with capacity far above its event count — and since p7OrderFromCenter sizes
+// its usable pool to the side's own events, that surplus showed up as a thin
+// scatter of dots in a box mostly made of gaps. p7SolveMobileSq instead picks
+// the LARGEST square whose grid still holds the bigger camp, so the dots grow
+// to fill whatever box the phone actually has.
+//
+// P7_MOBILE_FILL is how much of the grid the bigger camp is allowed to occupy
+// at most — the remainder is the deliberate scatter of permanent gaps, so 0.86
+// keeps the texture the desktop grid has rather than packing the box solid.
+// The gap stays half the square (1.5/0.75 was the same ratio) so the density
+// reads the same at every solved size.
+const P7_MOBILE_FILL      = 0.86;
+// 1.25 is only ever reached by the very smallest phones (320×568 needs ~1.35 to
+// hold the right camp inside the taller axis clearance); every phone from
+// 320×700 up solves well above it. Below ~1.2 a square stops reading as a mark
+// at all, so the floor is where truncation is preferred to invisibility.
+const P7_MOBILE_SQ_MIN    = 1.25;
+const P7_MOBILE_SQ_MAX    = 3;     // just under desktop's 3.5
+const P7_MOBILE_GAP_RATIO = 0.5;
+const P7_MOBILE_SQ_STEP   = 0.05;
+let p7MobileSq = P7_MOBILE_SQ_MIN;  // rewritten by p7UpdateLayout
+
+// sideW/sideH are one camp's box in px; maxEvents the bigger camp's count.
+// Walks down from the max because the first size that fits is the biggest one.
+function p7SolveMobileSq(sideW, sideH, maxEvents) {
+  if (!maxEvents) return P7_MOBILE_SQ_MIN;
+  for (let sq = P7_MOBILE_SQ_MAX; sq >= P7_MOBILE_SQ_MIN; sq -= P7_MOBILE_SQ_STEP) {
+    const cell = sq * (1 + P7_MOBILE_GAP_RATIO);
+    const cap  = Math.floor(sideW / cell) * Math.floor(sideH / cell);
+    if (cap * P7_MOBILE_FILL >= maxEvents) return Math.round(sq * 100) / 100;
+  }
+  // Nothing fits even at the floor: keep the floor and let p7OrderFromCenter's
+  // own min(total, maxEvents) clamp truncate, rather than shrinking below the
+  // size at which a square is still visible.
+  return P7_MOBILE_SQ_MIN;
+}
+
+// Live reads (isMobile() reads innerWidth), same convention as sbbTimeline().
+function p7Sq()   { return isMobile() ? p7MobileSq : P7_SQ; }
+function p7Cell() { return isMobile() ? p7MobileSq * (1 + P7_MOBILE_GAP_RATIO) : P7_CELL; }
 // ─────────────────────────────────────────
 
 // Shared left-grid geometry — leftX0 is rounded (not raw W*SBB_TIMELINE.left) because that raw
@@ -18,10 +60,12 @@ const P7_CELL = P7_SQ + P7_GAP; // grid cell size
 // previously made Math.floor(sideW/CELL) silently drop a whole column and leave the
 // grid's near-center edge a few px further from center than intended.
 function p7GridGeometry(W, H) {
-  const leftX0 = Math.round(W * SBB_TIMELINE.left);
-  const sideW  = W / 2 - CENTER_GAP / 2 - leftX0;
-  const cols   = Math.floor(sideW / P7_CELL);
-  return { leftX0, cols, CELL: P7_CELL };
+  const leftX0  = Math.round(W * sbbTimeline(H).left);
+  const rightX0 = W / 2 + CENTER_GAP / 2;
+  const sideW   = W / 2 - CENTER_GAP / 2 - leftX0;
+  const CELL    = p7Cell();
+  const cols    = Math.floor(sideW / CELL);
+  return { leftX0, rightX0, cols, CELL };
 }
 
 // Looks up an event's color via GROUPS (main.js) rather than a separate
@@ -55,7 +99,7 @@ const p7 = {
   rightPos: [],
   CELL: 6, SQ: 4,
   cols: 0,
-  lastW: 0, lastH: 0,
+  lastW: 0, lastH: 0, lastMaxEvents: -1,
   // Per-event {x,y,alpha} from the most recently drawn frame (page9.js's
   // p9.lastPositions pattern) — built fresh in drawPage7 every frame, read by
   // p7HoverInit below to hit-test the mouse against the real timeline's
@@ -366,6 +410,7 @@ function p7AnyAnimActive() {
   }
   if (p7AxisEventsAnimActive()) return true;
   if (p7AxisIntroStart !== null && p7AxisIntroT() < 1) return true;
+  if (p7AxisOutroStart !== null && p7AxisIntroT() > 0) return true;
   if (p7AxisFillLagActive()) return true;
   if (p7EntryAnim && now - p7EntryAnim.start < p7EntryAnim.duration) return true;
   return false;
@@ -418,6 +463,24 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
   let groupMonthKey = null, groupStart = 0, groupEnd = 0;
   let groupCursor = P7_ANIM_TOTAL_DURATION; // months with no phase at all read as settled
   const claimedEvents = p7GetClaimedEvents();
+  // Mobile squares are ~1.25–3 CSS px (p7SolveMobileSq) sitting at fractional
+  // positions, so on a DPR>1 phone every edge lands mid-device-pixel and the
+  // canvas antialiases it into a band of partial-alpha pixels. The loupe is a
+  // nearest-neighbour 4x blit of this canvas (drawLoupe below), so that band
+  // magnifies into a pale ring and the dots read as if they were stroked.
+  // Snapping the rect onto the device-pixel grid leaves nothing to antialias —
+  // in the glass and in the un-magnified grid alike. Hoisted out of the loop
+  // because this runs over every event, every frame.
+  //
+  // Desktop snaps too: the squares are small enough that on a display whose
+  // DPR isn't a whole number (a scaled external monitor at 1.25x/1.5x) every
+  // fractional edge bleeds into the neighbouring device pixel at partial alpha
+  // and the whole timeline reads soft — next to the same page on a 1x/2x
+  // screen, where the coordinates happen to land clean, the difference is
+  // obvious.
+  const snapPx = true;
+  const dpr    = window.devicePixelRatio || 1;
+  const q      = v => Math.round(v * dpr) / dpr;
 
   for (let i = 0; i < monthEnd; i++) {
     const cell = positions[i];
@@ -491,7 +554,15 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     const off  = (SQ - size) / 2; // keep the shrink/grow centered on the cell
     ctx.globalAlpha = drawAlpha;
     ctx.fillStyle = p7ActorColor(events[i].actor);
-    ctx.fillRect(drawX + off, drawY + off, size, size);
+    // The 1/dpr floor is a guard, not a routine path: the smallest real square
+    // is scale 0.5 on sq 1.25, still ~2 device px.
+    // Desktop snaps only once a square is SETTLED. Mid-pop, quantising the
+    // grow to whole device pixels turns the smooth scale ramp into two or
+    // three visible steps and the cascade reads as stuttering — worse than the
+    // softness it fixes. Mobile still snaps throughout: the loupe magnifies
+    // any fractional edge into a pale ring, which is the louder artifact there.
+    if (snapPx && (scale === 1 || isMobile())) ctx.fillRect(q(drawX + off), q(drawY + off), Math.max(1 / dpr, q(size)), Math.max(1 / dpr, q(size)));
+    else        ctx.fillRect(drawX + off, drawY + off, size, size);
   }
   ctx.globalAlpha = 1;
 }
@@ -514,18 +585,33 @@ async function initPage7() {
 }
 
 function p7UpdateLayout(W, H) {
-  if (W === p7.lastW && H === p7.lastH) return;
+  // The event count joins W/H in the guard because the mobile square size is
+  // solved FROM it: the first layout runs before events.json has landed
+  // (counts 0 → the floor size), and without this the solved size would stay
+  // at that floor for the whole session on an unchanged viewport.
+  const maxEvents = Math.max(p7.leftEvents.length, p7.rightEvents.length);
+  if (W === p7.lastW && H === p7.lastH && maxEvents === p7.lastMaxEvents) return;
+  p7.lastMaxEvents = maxEvents;
 
-  const topY   = Math.round(H * SBB_TIMELINE.top);
-  const botY   = Math.round(H * SBB_TIMELINE.bottom);
+  const box    = sbbTimeline(H);
+  const topY   = Math.round(H * box.top);
+  const botY   = Math.round(H * box.bottom);
   const sideH  = botY - topY;
+  // Solved before any geometry is read: p7GridGeometry/p7Sq below go through
+  // p7Cell(), which returns this. The box itself doesn't depend on the square
+  // size, so there's no circularity — sideW is the same measurement
+  // p7GridGeometry makes.
+  if (isMobile()) {
+    const sideW = W / 2 - CENTER_GAP / 2 - Math.round(W * box.left);
+    p7MobileSq = p7SolveMobileSq(sideW, sideH, maxEvents);
+  }
   const { leftX0, cols, CELL } = p7GridGeometry(W, H);
   p7.leftX0 = leftX0;
   p7.CELL = CELL;
-  p7.SQ   = P7_SQ;
+  p7.SQ   = p7Sq();
   p7.cols = cols;
 
-  const rows  = Math.floor(sideH / P7_CELL);
+  const rows  = Math.floor(sideH / CELL);
   const total = p7.cols * rows;
   p7.leftPos  = p7OrderFromCenter(total, p7.cols, 11111, "left",  p7.leftEvents.length);
   p7.rightPos = p7OrderFromCenter(total, p7.cols, 99999, "right", p7.rightEvents.length);
@@ -600,8 +686,8 @@ function p7TargetForActorOccurrence(actor, n, W, H) {
   const resolved = p7ResolveActorOccurrenceCell(actor, n);
   if (!resolved) return null;
 
-  const topY = Math.round(H * SBB_TIMELINE.top);
-  const x0  = resolved.side === "left" ? p7.leftX0 : W / 2 + CENTER_GAP / 2;
+  const topY = Math.round(H * sbbTimeline(H).top);
+  const x0  = resolved.side === "left" ? p7.leftX0 : p7GridGeometry(W, H).rightX0;
   const col = resolved.cell % p7.cols;
   const row = Math.floor(resolved.cell / p7.cols);
   return { x: x0 + col * p7.CELL, y: topY + row * p7.CELL, size: p7.SQ };
@@ -680,8 +766,8 @@ function p7DrawTimelineSquares(ctx, W, H) {
   if (p7EntryAnim && performance.now() - p7EntryAnim.start >= p7EntryAnim.duration) p7EntryAnim = null;
 
   const { CELL, SQ, cols, leftX0 } = p7;
-  const topY    = Math.round(H * SBB_TIMELINE.top);
-  const rightX0 = W / 2 + CENTER_GAP / 2;
+  const topY    = Math.round(H * sbbTimeline(H).top);
+  const rightX0 = p7GridGeometry(W, H).rightX0;
 
   // Events from months whose cascade has already fully finished are settled (drawn
   // at rest, no animation); events from the centered month, or from any earlier month
@@ -845,8 +931,103 @@ function drawPage7(ctx, W, H) {
   p7UpdateEngagement();
   p7RealTimelineReached = true;
   p7DrawTimelineSquares(ctx, W, H);
+  p7DrawInspectScrim(ctx, W, H);
 
   if (p7AxisTriggerIfNeeded()) p7DrawYearAxis(ctx, W, H);
+}
+
+// The mobile picker's selection halo, drawn by SUBTRACTION: one even-odd path —
+// the whole canvas, minus a disc at the selected dot — filled with a white
+// scrim. Everything else dims; the selection alone keeps its full colour.
+//
+// It runs on the MAIN canvas, not inside the loupe, so the dimming reaches
+// every dot on screen rather than only the handful under the glass. The loupe
+// is a plain blit of this canvas, so it inherits the halo already magnified and
+// needs no marker of its own.
+//
+// Placed after the squares and before the axis deliberately: the axis is the
+// reading context for the selected date and stays at full contrast.
+//
+// It is a DRAG-TIME aid, gated on p7Inspect.dragging: it exists to show which
+// dot the finger is currently on. Lifting the finger clears the selection
+// outright (onEnd -> release), so the chart, the axis and the docked frame all
+// return to neutral together — a halo left standing would read as a persistent
+// highlight rather than as aim.
+function p7DrawInspectScrim(ctx, W, H) {
+  if (!p7InspectPage() || !p7Inspect.dragging || !p7Inspect.event) return;
+  // Same source the hit-test uses, so the hole lands on the dot that was picked
+  // in whichever fold the picker is currently serving (@fold8 or @fold10).
+  const { positions, half, cell } = p7InspectSource();
+  const pos = positions.get(p7Inspect.event);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, W, H);
+  // No position means the selected event isn't in this frame's draw range (the
+  // cascade retreated past it) — the scrim then covers everything, with nothing
+  // exempted, which is the honest reading: there is nothing to point at.
+  if (pos) {
+    // The hole is measured in dot widths so it tracks the per-viewport solved
+    // square size (p7SolveMobileSq) instead of drifting at either end. The 1.5px
+    // floor keeps it from vanishing at @fold10's 1px dots.
+    //
+    // Then capped so the hole can never reach a NEIGHBOUR. The grid pitch is
+    // 1.5 dots, so the nearest edge of the adjacent dot sits `cell - half` from
+    // this dot's centre; at the nominal 1 dot-width the hole landed exactly on
+    // that edge, and any rounding let a sliver of each neighbour through
+    // undimmed — the selection's brightness looked like it was spreading to the
+    // dots around it, which is the one thing the halo exists to prevent. The 0.9
+    // keeps a real margin. The floor below it is the selected square's own
+    // half-diagonal (half * √2), so a tight grid clips a neighbour before it
+    // ever clips the dot being pointed at.
+    const r = Math.max(half * 1.42,
+                       Math.min((cell - half) * 0.9,
+                                Math.max(1.5, P7_INSPECT_HOLE_DOTS * half * 2)));
+    ctx.arc(pos.x + half, pos.y + half, r, 0, Math.PI * 2);
+  }
+  ctx.fillStyle = `rgba(255,255,255,${P7_INSPECT_SCRIM})`;
+  ctx.fill("evenodd");
+  ctx.restore();
+
+  // Then repaint the picked dot at a slightly more saturated version of its own
+  // group colour. Inside the hole it was merely *un*-dimmed — correct, but at
+  // 1–3px, ringed by a field gone pale, "same as it always was" doesn't read as
+  // chosen. Saturation, not lightness: pushing toward white would wash a small
+  // dot out against the scrim, while pushing the channels away from their own
+  // grey point makes the hue itself more insistent at the same weight.
+  // Deliberately not a change to GROUPS: this is a transient selection state,
+  // and the roster's colours are the legend's contract.
+  // Snapped onto the device-pixel grid for the same reason p7DrawSideSquares
+  // snaps (see its comment): this repaint lands on the fractional position the
+  // dot was solved at, so unsnapped it antialiases into a partial-alpha band
+  // that the loupe's nearest-neighbour blit magnifies into a pale ring. That
+  // would put the "extra stroke" back on the ONE dot the halo exists to show
+  // clearly, while every dot around it — drawn by the snapping path — stayed
+  // clean. Mobile only; the picker is a mobile gesture and desktop's
+  // rendering is settled at full-size squares.
+  if (pos) {
+    ctx.fillStyle = p7Saturate(p7ActorColor(p7Inspect.event.actor),
+                               P7_INSPECT_PICK_SAT);
+    const size = half * 2;
+    if (isMobile()) {
+      const dpr = window.devicePixelRatio || 1;
+      const q   = v => Math.round(v * dpr) / dpr;
+      ctx.fillRect(q(pos.x), q(pos.y), Math.max(1 / dpr, q(size)), Math.max(1 / dpr, q(size)));
+    } else {
+      ctx.fillRect(pos.x, pos.y, size, size);
+    }
+  }
+}
+
+// #rrggbb -> a more saturated rgb(), by pushing each channel away from the
+// colour's own luminance by `amt` (0 = unchanged). Cheap and hue-preserving —
+// no HSL round trip. Local to the picker; lerpFold6SquareColor (js/groups.js)
+// parses hex the same way but always blends against the fold6 rest gray.
+function p7Saturate(hex, amt) {
+  const n = parseInt(String(hex).slice(1), 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  const push = v => Math.round(Math.max(0, Math.min(255, lum + (v - lum) * (1 + amt))));
+  return `rgb(${push(r)}, ${push(g)}, ${push(b)})`;
 }
 
 // The axis *appearing* (the one-shot build-in wipe) and the axis *filling up*
@@ -869,12 +1050,37 @@ function p7AxisShouldShow() {
 // interruptible-replay pattern as the axis's own headline events (see
 // p7UpdateAxisEventTriggers above), just for the axis's first appearance
 // instead of a single event.
-function p7AxisTriggerIfNeeded() {
-  if (!p7AxisShouldShow()) {
+// Don't snap the axis away — hand whatever wipe progress it had to a quick
+// reverse wipe (p7AxisOutroStart) and keep it drawable until that reaches 0.
+// Shared exit path: called both when the fly trigger un-fires (scrolling back
+// up out of the timeline, via p7AxisTriggerIfNeeded) and the moment @fold9's
+// bridge glide starts (drawPage8, which draws the axis itself during the
+// reverse wipe so it undraws instead of vanishing with the timeline frame).
+// Returns true while there is still reverse-wipe progress worth drawing.
+function p7AxisReverseOut() {
+  if (p7AxisIntroStart !== null) {
+    const t = p7AxisIntroT();
     p7AxisIntroStart = null;
-    return false;
+    if (t > 0) {
+      p7AxisOutroStart = performance.now();
+      p7AxisOutroFromT = t;
+      p7StartAnimLoop();
+    }
   }
-  if (p7AxisIntroStart === null) {
+  if (p7AxisOutroStart !== null && p7AxisIntroT() <= 0) p7AxisOutroStart = null;
+  return p7AxisOutroStart !== null;
+}
+
+function p7AxisTriggerIfNeeded() {
+  if (!p7AxisShouldShow()) return p7AxisReverseOut();
+  if (p7AxisOutroStart !== null) {
+    // Re-triggered mid-reverse: resume the build-in from wherever the reverse
+    // wipe currently is (back-date the start so introT continues seamlessly).
+    const t = p7AxisIntroT();
+    p7AxisOutroStart = null;
+    p7AxisIntroStart = performance.now() - t * P7_AXIS_INTRO_DURATION;
+    p7StartAnimLoop();
+  } else if (p7AxisIntroStart === null) {
     p7AxisIntroStart = performance.now();
     p7StartAnimLoop();
   }
@@ -890,14 +1096,29 @@ function p7AxisTriggerIfNeeded() {
 // from p7.currentDate, so scrolling backward just naturally shrinks the dark
 // overlay back — no separate reverse bookkeeping needed.
 const P7_AXIS_MARGIN          = 120;  // px inset from each edge — widened from 48 to SHORTEN the whole axis (both ends move inward symmetrically). The right anchor (p7.minDate/"2023") now sits far enough from the screen edge that the first axis event's label can center over its own circle with clearance instead of falling back to right-alignment (see p7AxisEventBounds' x+textWidth/2 > W test).
-const P7_AXIS_Y_FRAC          = 0.90;  // fraction of H — vertical center of the solid line; the year labels now sit BELOW it (P7_AXIS_YEAR_LABEL_OFFSET), not on the same row
+const P7_AXIS_MARGIN_MOBILE   = 28;   // px — the desktop 120 would leave only ~150px of axis on a 393px phone; 28 keeps the year ticks ~90px apart while still giving the end labels room off the screen edges.
+function p7AxisMargin() { return isMobile() ? P7_AXIS_MARGIN_MOBILE : P7_AXIS_MARGIN; }
+const P7_AXIS_Y_FRAC          = 0.90; // fraction of H — vertical center of the solid line; the year labels now sit BELOW it (P7_AXIS_YEAR_LABEL_OFFSET), not on the same row
+const P7_AXIS_Y_FRAC_MOBILE   = 0.94; // fraction of H — the axis sits lower on a phone: the grid above it ends higher (sbbTimeline()'s mobile bottom reserves SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX under it) and the year label under it is 14px rather than 18, so 0.90 left a conspicuous empty band under the axis while the grid felt crowded.
+function p7AxisYFrac() { return isMobile() ? P7_AXIS_Y_FRAC_MOBILE : P7_AXIS_Y_FRAC; }
 const P7_AXIS_LINE_THICKNESS  = 1;     // px — the solid line's stroke height
 const P7_AXIS_MARKER_RADIUS   = 4;     // px — radius of the year-tick ring markers AND the headline-event dots at full size (shared so they read as one system)
 const P7_AXIS_MARKER_RADIUS_FADED = 2; // px — shrunk radius a headline-event dot settles to once its label has crossfaded away (grows back to _RADIUS on hover)
 const P7_AXIS_MARKER_STROKE   = 1;     // px — ring line width for the hollow year markers
 const P7_AXIS_YEAR_LABEL_OFFSET = 12;  // px gap from the marker's bottom edge down to the year label's top
+const P7_AXIS_YEAR_LABEL_OFFSET_MOBILE = 5; // px — the same gap tightened on a phone, so the year reads as attached to its own tick rather than floating below the axis
+function p7AxisYearLabelOffset() { return isMobile() ? P7_AXIS_YEAR_LABEL_OFFSET_MOBILE : P7_AXIS_YEAR_LABEL_OFFSET; }
 const P7_AXIS_BG_ALPHA        = 0.22;  // faint full-span line's alpha, under the dark "filled" overlay — also reused to dim the axis event label during state3 (hover elsewhere)
 const P7_AXIS_BG_COLOR        = `rgba(0, 0, 0, ${P7_AXIS_BG_ALPHA})`;
+// STRICTLY during state3 (hover elsewhere): the UNFILLED span of the axis line
+// drops below the shared BG_ALPHA, widening its contrast with the (0.34-dimmed)
+// filled span so the fill edge stays legible under the hover. Un-hovered, the
+// unfilled line uses the plain BG_COLOR like everything else.
+const P7_AXIS_UNFILLED_HOVER_ALPHA = 0.14;
+// The dimmed headline labels + dates during state3 (hover elsewhere) get their
+// own, slightly higher alpha than the axis chrome — at BG_ALPHA the roster read
+// too faint to actually serve as a reference key.
+const P7_AXIS_ROSTER_LABEL_ALPHA = 0.34;
 const P7_AXIS_FILLED_COLOR    = "rgba(0, 0, 0, 1)";    // the portion scroll has already reached
 const P7_AXIS_HOVER_COLOR     = P7_AXIS_FILLED_COLOR;  // the single dash highlighted while a matching dot elsewhere is hovered — same solid black as the "filled" state now that it's already fully opaque, no room to go darker
 const P7_AXIS_LABEL_FAINT_COLOR = "rgba(0, 0, 0, 0.12)"; // unreached year label — same faint/filled ratio as the dots
@@ -914,9 +1135,22 @@ const P7_AXIS_LABEL_COLOR       = "rgba(0, 0, 0, 0.65)";
 // where the scroll-driven reveal above starts from too. p7AxisIntroStart is
 // null when not yet triggered (or reset back to it, see p7AxisTriggerIfNeeded).
 const P7_AXIS_INTRO_DURATION = 2800; // ms — full right-edge-to-left-edge wipe
+// Reverse wipe when the trigger un-fires (scrolling back up past the fly
+// trigger): the same wipe plays backwards, much quicker than the build-in.
+// 500ms is the FULL-wipe time; an interrupted intro reverses over only its
+// remaining distance (duration scaled by how far it had got), per convention.
+const P7_AXIS_OUTRO_DURATION = 500; // ms — full left-edge-back-to-right-edge un-wipe
 let p7AxisIntroStart = null;
+let p7AxisOutroStart = null; // non-null while the reverse wipe is running
+let p7AxisOutroFromT = 0;    // introT captured at the moment the reverse began
 
 function p7AxisIntroT() {
+  if (p7AxisOutroStart !== null) {
+    const dur = P7_AXIS_OUTRO_DURATION * p7AxisOutroFromT;
+    if (dur <= 0) return 0;
+    const gone = (performance.now() - p7AxisOutroStart) / dur;
+    return p7AxisOutroFromT * (1 - Math.min(1, gone));
+  }
   if (p7AxisIntroStart === null) return 0;
   return Math.min(1, (performance.now() - p7AxisIntroStart) / P7_AXIS_INTRO_DURATION);
 }
@@ -928,8 +1162,8 @@ function p7AxisIntroT() {
 function p7AxisX(dateStr, W) {
   const minMs = new Date(p7.minDate + "T00:00:00Z").getTime();
   const maxMs = new Date(p7.maxDate + "T00:00:00Z").getTime();
-  const rightX = W - P7_AXIS_MARGIN;
-  const leftX  = P7_AXIS_MARGIN;
+  const rightX = W - p7AxisMargin();
+  const leftX  = p7AxisMargin();
   if (maxMs === minMs) return rightX;
   const frac = (new Date(dateStr + "T00:00:00Z").getTime() - minMs) / (maxMs - minMs);
   return rightX - frac * (rightX - leftX);
@@ -989,6 +1223,31 @@ const P7_AXIS_DATE_FONT          = "400 14px 'Assistant', sans-serif";
 const P7_AXIS_DATE_OFFSET        = 18;  // px above the label baseline
 const P7_AXIS_EVENT_LINE_HEIGHT  = 19;  // px between wrapped title lines
 
+// Mobile (≤600px): smaller type and tighter stacking. The lines stack upward
+// toward the grid, whose bottom is set to clear a 3-line block
+// (SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX).
+const P7_AXIS_EVENT_LABEL_OFFSET_MOBILE = 36;
+const P7_AXIS_EVENT_FONT_MOBILE         = "500 14px 'Assistant', sans-serif";
+const P7_AXIS_DATE_FONT_MOBILE          = "400 14px 'Assistant', sans-serif";
+const P7_AXIS_DATE_OFFSET_MOBILE        = 16;
+const P7_AXIS_EVENT_LINE_HEIGHT_MOBILE  = 18;
+// Every title gets a cap on mobile (desktop leaves them all uncapped). It used
+// to be a narrow 120 so the de-collision pass could fit several blocks side by
+// side on a ~300px axis; now that mobile prints ONE centred block (see
+// p7DrawAxisEvents) the whole width is available, so it widens to 220 and most
+// titles come back to one or two lines. Per-event `maxWidthMobile` overrides it.
+const P7_AXIS_EVENT_MAXWIDTH_MOBILE     = 220;
+
+function p7AxisEventFont()       { return isMobile() ? P7_AXIS_EVENT_FONT_MOBILE : P7_AXIS_EVENT_FONT; }
+function p7AxisDateFont()        { return isMobile() ? P7_AXIS_DATE_FONT_MOBILE  : P7_AXIS_DATE_FONT; }
+function p7AxisEventLabelOffset(){ return isMobile() ? P7_AXIS_EVENT_LABEL_OFFSET_MOBILE : P7_AXIS_EVENT_LABEL_OFFSET; }
+function p7AxisDateOffset()      { return isMobile() ? P7_AXIS_DATE_OFFSET_MOBILE : P7_AXIS_DATE_OFFSET; }
+function p7AxisEventLineHeight() { return isMobile() ? P7_AXIS_EVENT_LINE_HEIGHT_MOBILE : P7_AXIS_EVENT_LINE_HEIGHT; }
+function p7AxisEventMaxWidth(ev) {
+  if (!isMobile()) return ev.maxWidth;
+  return ev.maxWidthMobile != null ? ev.maxWidthMobile : P7_AXIS_EVENT_MAXWIDTH_MOBILE;
+}
+
 // triggeredAt is a performance.now() timestamp, set once when the event is first
 // reached, and cleared only once its own reverse fade-out (leavingAt below) has
 // fully finished — null means "not currently triggered or shown" (either never
@@ -1044,7 +1303,7 @@ function p7AxisEventsAnimActive() {
   // The shared roster ease has to keep the loop alive on its own: it moves even
   // when no individual event's hoverT does (nothing on the axis is hovered — a
   // regular timeline square is).
-  if (Math.abs((p7.hoveredEvent ? 1 : 0) - p7AxisRosterT) > 0.001) return true;
+  if (Math.abs(((p7.hoveredEvent || (p7Inspect.dragging && p7Inspect.event)) ? 1 : 0) - p7AxisRosterT) > 0.001) return true;
   return P7_AXIS_EVENT_STATE.some((state, i) => {
     if (state.triggeredAt === null) return false;
     if (now - state.triggeredAt < P7_AXIS_EVENT_FADE_IN_MS) return true;
@@ -1088,13 +1347,13 @@ function p7WrapLabel(ctx, text, maxWidth) {
 
 function p7AxisEventBounds(ctx, ev, i, W) {
   const x = p7AxisEventX[i] !== undefined ? p7AxisEventX[i] : p7AxisEventTrueX(ev, i, W);
-  const lines = p7WrapLabel(ctx, ev.label, ev.maxWidth);
+  const lines = p7WrapLabel(ctx, ev.label, p7AxisEventMaxWidth(ev));
   // The collision extent is the whole title+date BLOCK, not just the title:
   // the date renders in its own (narrower) font but centred on the same axis,
   // so for a short title it can be the wider of the two — measuring only the
   // title would let two blocks clear each other while their dates overlap.
   ctx.save();
-  ctx.font = P7_AXIS_DATE_FONT;
+  ctx.font = p7AxisDateFont();
   const dateWidth = ctx.measureText(p7FormatDateDMY(ev.date, ".")).width;
   ctx.restore();
   const textWidth = Math.max(
@@ -1121,9 +1380,9 @@ function p7AxisEventBounds(ctx, ev, i, W) {
 // and any event dated at the dataset's very start (minDate is 2023-01-01;
 // the first axis event is 2023-01-04) could show before any scrolling
 // happened. The strict `>` guard requires real scroll progress. Every event,
-// including the first, uses this same plain date-based rule (and renders at
-// this same date's axis position, p7AxisEventBounds below) — per explicit
-// instruction, no special-cased extra delay for the first one.
+// including the first, uses this same rule: date reached AND the fill edge
+// has caught up to the drawn (xOffset-nudged) position — see the comment at
+// the x test below. No special-cased extra delay for the first one.
 function p7UpdateAxisEventTriggers(W) {
   const curMs = new Date(p7.currentDate + "T00:00:00Z").getTime();
   const minMs = new Date(p7.minDate + "T00:00:00Z").getTime();
@@ -1145,7 +1404,15 @@ function p7UpdateAxisEventTriggers(W) {
       // is <=. Nudging its xOffset therefore moves when it appears, too.
       reached = hasScrolled && p7AxisX(p7.currentDate, W) <= p7AxisEventTrueX(ev, i, W);
     } else {
-      reached = hasScrolled && curMs >= evMs;
+      // Besides the date, the fill edge must also have caught up to the dot's
+      // DRAWN x — an event nudged LEFT by xOffset (the first one, −14) draws
+      // later along the axis than its date, and its persistent circle
+      // (p7DrawAxisEvents' `x >= curX`) grows in at that drawn position. Without
+      // this the label faded in at the date while the circle was still ahead of
+      // the fill. For rightward nudges the x test passes before the date does,
+      // so the date still governs and nothing changes.
+      reached = hasScrolled && curMs >= evMs
+        && p7AxisX(p7.currentDate, W) <= p7AxisEventTrueX(ev, i, W);
     }
     if (reached) {
       if (state.triggeredAt === null) {
@@ -1211,7 +1478,7 @@ function p7DrawAxisEvents(ctx, W, axisY, curX, hoverActive, highlightX) {
   p7UpdateAxisEventTriggers(W);
   const now = performance.now();
   ctx.save();
-  ctx.font = P7_AXIS_EVENT_FONT;
+  ctx.font = p7AxisEventFont();
   ctx.textBaseline = "alphabetic";
 
   // Persistent circle markers: every event the growing edge has reached keeps a
@@ -1327,33 +1594,64 @@ function p7DrawAxisEvents(ctx, W, axisY, curX, hoverActive, highlightX) {
   // already-placed (newer) label it collides with, chained rather than
   // pairwise, so two older labels shifted toward the same side don't just
   // land on top of each other instead.
-  const OVERLAP_PAD = 8; // minimum horizontal clearance between labels
-  for (let idx = visible.length - 1; idx >= 0; idx--) {
-    const entry = visible[idx];
-    let { left, right } = entry;
-    let moved = true, guard = 0;
-    while (moved && guard++ < visible.length) {
-      moved = false;
-      for (let j = idx + 1; j < visible.length; j++) {
-        const p = visible[j];
-        if (right + OVERLAP_PAD < p.left || p.right + OVERLAP_PAD < left) continue;
-        if (entry.x >= p.x) { left = p.right + OVERLAP_PAD; right = left + entry.textWidth; }
-        else                { right = p.left - OVERLAP_PAD; left = right - entry.textWidth; }
-        moved = true;
+  // MOBILE: the headline text does not travel with its dot. There is no room on
+  // a phone-width axis for a title block to sit over its own date position —
+  // de-collision just shoved blocks to the edges and the reading order stopped
+  // matching the axis. Instead every headline prints in ONE fixed slot centred
+  // on the canvas, and only the dot marks where on the axis it happened (drawn
+  // in the persistent-circle pass above, untouched by this).
+  //
+  // One slot means one label: a fast flick can trigger several events in the
+  // same frame, and at full opacity they would print on top of each other. Only
+  // the most recently triggered visible entry is kept — the older ones are the
+  // ones the scrub has already passed, and their dots still stand on the axis.
+  if (isMobile()) {
+    if (visible.length > 1) {
+      const firedAt = (e) => {
+        const t = P7_AXIS_EVENT_STATE[e.i].triggeredAt;
+        return t === null || t === undefined ? -Infinity : t;
+      };
+      let best = visible[0];
+      for (const e of visible) {
+        if (firedAt(e) > firedAt(best) || (firedAt(e) === firedAt(best) && e.i > best.i)) best = e;
       }
+      visible.length = 0;
+      visible.push(best);
     }
-    // Re-clamp after shifting: without this a block pushed toward an edge can
-    // run off the canvas, and the next one then lands on top of what is
-    // visually pinned at that edge instead of clearing it.
-    if (left < 0)      { left = 0; right = entry.textWidth; }
-    else if (right > W) { right = W; left = W - entry.textWidth; }
-    entry.left = left; entry.right = right;
-    entry.lineX = (left + right) / 2;
+    visible.forEach((e) => {
+      e.lineX = W / 2;
+      e.left  = W / 2 - e.textWidth / 2;
+      e.right = W / 2 + e.textWidth / 2;
+    });
+  } else {
+    const OVERLAP_PAD = 8; // minimum horizontal clearance between labels
+    for (let idx = visible.length - 1; idx >= 0; idx--) {
+      const entry = visible[idx];
+      let { left, right } = entry;
+      let moved = true, guard = 0;
+      while (moved && guard++ < visible.length) {
+        moved = false;
+        for (let j = idx + 1; j < visible.length; j++) {
+          const p = visible[j];
+          if (right + OVERLAP_PAD < p.left || p.right + OVERLAP_PAD < left) continue;
+          if (entry.x >= p.x) { left = p.right + OVERLAP_PAD; right = left + entry.textWidth; }
+          else                { right = p.left - OVERLAP_PAD; left = right - entry.textWidth; }
+          moved = true;
+        }
+      }
+      // Re-clamp after shifting: without this a block pushed toward an edge can
+      // run off the canvas, and the next one then lands on top of what is
+      // visually pinned at that edge instead of clearing it.
+      if (left < 0)      { left = 0; right = entry.textWidth; }
+      else if (right > W) { right = W; left = W - entry.textWidth; }
+      entry.left = left; entry.right = right;
+      entry.lineX = (left + right) / 2;
+    }
   }
 
   visible.forEach((entry) => {
     const { ev, lineX, opacity, lines } = entry;
-    const yOff = P7_AXIS_EVENT_LABEL_OFFSET;
+    const yOff = p7AxisEventLabelOffset();
     // Every line is centred on the block's own centre (lineX) rather than
     // anchored to the event's real x — lineX is recomputed from left/right
     // after de-collision, so it stays correct however far a collision above
@@ -1366,14 +1664,14 @@ function p7DrawAxisEvents(ctx, W, axisY, curX, hoverActive, highlightX) {
     // very event's own marker is the one being highlighted (see markerColor
     // below), in which case it stays fully visible.
     const isHoverHighlighted = hoverActive && highlightX !== null && lineX === highlightX;
-    const labelAlpha = (hoverActive && !isHoverHighlighted) ? P7_AXIS_BG_ALPHA : 1;
-    ctx.font = P7_AXIS_EVENT_FONT;
+    const labelAlpha = (hoverActive && !isHoverHighlighted) ? P7_AXIS_ROSTER_LABEL_ALPHA : 1;
+    ctx.font = p7AxisEventFont();
     ctx.fillStyle = `rgba(0, 0, 0, ${labelAlpha * opacity})`;
     // Wrapped lines stack UPWARD: the LAST line keeps the single-line baseline
     // (axisY - yOff) so the date underneath never moves, and earlier lines are
     // lifted a line-height each above it.
     lines.forEach((text, li) => {
-      const y = axisY - yOff - (lines.length - 1 - li) * P7_AXIS_EVENT_LINE_HEIGHT;
+      const y = axisY - yOff - (lines.length - 1 - li) * p7AxisEventLineHeight();
       ctx.fillText(text, lineX, y);
     });
 
@@ -1384,11 +1682,11 @@ function p7DrawAxisEvents(ctx, W, axisY, curX, hoverActive, highlightX) {
     // proportional dim of its own already-lighter color, which would land
     // dimmer than the label instead of matching it).
     const dateLabel = p7FormatDateDMY(ev.date, ".");
-    ctx.font = P7_AXIS_DATE_FONT;
+    ctx.font = p7AxisDateFont();
     ctx.textAlign = "center";
-    ctx.fillStyle = (hoverActive && !isHoverHighlighted) ? `rgba(0, 0, 0, ${P7_AXIS_BG_ALPHA})` : P7_AXIS_LABEL_COLOR;
+    ctx.fillStyle = (hoverActive && !isHoverHighlighted) ? `rgba(0, 0, 0, ${P7_AXIS_ROSTER_LABEL_ALPHA})` : P7_AXIS_LABEL_COLOR;
     ctx.globalAlpha = opacity;
-    ctx.fillText(dateLabel, lineX, axisY - yOff + P7_AXIS_DATE_OFFSET);
+    ctx.fillText(dateLabel, lineX, axisY - yOff + p7AxisDateOffset());
     ctx.globalAlpha = 1;
     // The event's own FILLED dot on the line is drawn once, up front, in the
     // persistent-circle pass above (it stays put whether or not this label is
@@ -1416,7 +1714,7 @@ function p7AxisEventTrueX(ev, i, W) {
   // of its own on the line — p7AxisX would put it beyond the left end, floating
   // off the axis. Clamped to the span so it parks AT the end instead; give it an
   // xOffset to hold a gap there. Its printed date stays the real one.
-  const x = Math.min(Math.max(p7AxisX(ev.date, W), P7_AXIS_MARGIN), W - P7_AXIS_MARGIN);
+  const x = Math.min(Math.max(p7AxisX(ev.date, W), p7AxisMargin()), W - p7AxisMargin());
   return x + (ev.xOffset || 0);
 }
 
@@ -1428,7 +1726,14 @@ function p7DrawYearAxis(ctx, W, H) {
   // x position — the start tick is always reached by definition.
   const visible = ticks.filter((tick, i) => i === 0 || p7AxisX(tick.dateStr, W) >= rawCurX);
 
-  const axisY = H * P7_AXIS_Y_FRAC;
+  // Snapped onto the device-pixel grid for the same reason p7DrawSideSquares
+  // snaps its squares: at ~4px radius the ring markers are small enough that a
+  // fractional center smears their 1px stroke across two device-pixel rows,
+  // and on a display whose DPR isn't a whole number that happens on every
+  // frame — the circles read soft next to the same page on a 1x/2x screen.
+  const axisDpr = window.devicePixelRatio || 1;
+  const axisQ   = v => Math.round(v * axisDpr) / axisDpr;
+  const axisY   = axisQ(H * p7AxisYFrac());
   ctx.save();
 
   // Build-in wipe (p7AxisIntroT, triggered by p7AxisTriggerIfNeeded) — clips
@@ -1439,8 +1744,8 @@ function p7DrawYearAxis(ctx, W, H) {
   // the wipe finishes (revealX reaches the left edge) or if it's not playing.
   const introT = p7AxisIntroT();
   if (introT < 1) {
-    const rightEdge = W - P7_AXIS_MARGIN;
-    const leftEdge   = P7_AXIS_MARGIN;
+    const rightEdge = W - p7AxisMargin();
+    const leftEdge   = p7AxisMargin();
     const revealX = rightEdge - p7Ease(introT) * (rightEdge - leftEdge);
     ctx.beginPath();
     ctx.rect(revealX, 0, W - revealX, H);
@@ -1452,7 +1757,7 @@ function p7DrawYearAxis(ctx, W, H) {
   // is one uninterrupted span with no label-clearance gaps — the fill can
   // start right at the right anchor rather than past a "2023" label's width.
   const rightAnchorX = p7AxisX(ticks[0].dateStr, W); // == W - P7_AXIS_MARGIN, the p7.minDate ("2023") end
-  const leftEdgeX    = P7_AXIS_MARGIN;
+  const leftEdgeX    = p7AxisMargin();
 
   // Scroll-driven fill edge — the same lagged frac (0 at p7.minDate, 1 at
   // p7.maxDate) as before, mapped straight across the full span now that
@@ -1466,23 +1771,33 @@ function p7DrawYearAxis(ctx, W, H) {
   // continuous line — no dot-snapping now that the line is solid, not a row of
   // discrete dots. p7AxisEventX is read by p7AxisEventBounds below.
   p7AxisEventX = P7_AXIS_EVENTS.map((ev, i) => p7AxisEventTrueX(ev, i, W));
-  const hoveredEvent = p7.hoveredEvent;
+  // The mobile picker counts as a hover here — a loupe-picked dot marks its
+  // date on the axis with the same state-3 treatment desktop hover gets — but
+  // only WHILE the finger is down (dragging), same gating as the selection
+  // halo: it's an aiming aid, and the axis returns to normal on release even
+  // though the selection itself persists in the docked frame.
+  const hoveredEvent = p7.hoveredEvent || (p7Inspect.dragging ? p7Inspect.event : null);
   const hoverActive  = !!hoveredEvent;
   const hoverAxisX   = hoverActive ? p7AxisX(hoveredEvent.date, W) : null;
 
   // The line itself: one faint full-span base drawn first, then the dark
   // "reached" portion grown right-to-left from the right anchor to curX laid
   // on top — so it reads as a single line filling up, not a faint line with a
-  // separate dark one beside it. While a dot elsewhere is hovered, the fill is
-  // suspended (whole line stays faint) and the hovered event's own marker pops
-  // instead (p7DrawAxisEvents).
+  // separate dark one beside it. While a dot elsewhere is hovered, the fill
+  // dims (see below) and the hovered event's own marker pops instead
+  // (p7DrawAxisEvents).
   const lineTop = axisY - P7_AXIS_LINE_THICKNESS / 2;
-  ctx.fillStyle = P7_AXIS_BG_COLOR;
+  ctx.fillStyle = hoverActive
+    ? `rgba(0, 0, 0, ${P7_AXIS_UNFILLED_HOVER_ALPHA})`
+    : P7_AXIS_BG_COLOR;
   ctx.fillRect(leftEdgeX, lineTop, rightAnchorX - leftEdgeX, P7_AXIS_LINE_THICKNESS);
-  if (!hoverActive) {
-    ctx.fillStyle = P7_AXIS_FILLED_COLOR;
-    ctx.fillRect(curX, lineTop, rightAnchorX - curX, P7_AXIS_LINE_THICKNESS);
-  }
+  // In state3 (hover elsewhere) the filled span doesn't vanish into the faint
+  // line — it dims to the same lifted alpha the roster labels use, so how far
+  // the timeline has filled stays readable under the hover.
+  ctx.fillStyle = hoverActive
+    ? `rgba(0, 0, 0, ${P7_AXIS_ROSTER_LABEL_ALPHA})`
+    : P7_AXIS_FILLED_COLOR;
+  ctx.fillRect(curX, lineTop, rightAnchorX - curX, P7_AXIS_LINE_THICKNESS);
 
   // Hollow ring marker on the line at each year tick — faint until the growing
   // edge reaches it, then dark (same reached/unreached signal the labels use).
@@ -1492,7 +1807,7 @@ function p7DrawYearAxis(ctx, W, H) {
   // event's own position is drawn as a filled dot by p7DrawAxisEvents instead.
   const reachedTicks = new Set(visible);
   for (const tick of ticks) {
-    const x = p7AxisX(tick.dateStr, W);
+    const x = axisQ(p7AxisX(tick.dateStr, W));
     const ringColor = hoverActive
       ? P7_AXIS_BG_COLOR
       : (reachedTicks.has(tick) ? P7_AXIS_FILLED_COLOR : P7_AXIS_BG_COLOR);
@@ -1511,10 +1826,10 @@ function p7DrawYearAxis(ctx, W, H) {
   // start — but, like the line, stays faint until scroll actually reaches it,
   // then switches to the darker color. In state3, every label (reached or not)
   // drops to the same faint alpha as the dimmed axis event label/date.
-  ctx.font = "18px 'Assistant', sans-serif";
+  ctx.font = `${isMobile() ? 14 : 18}px 'Assistant', sans-serif`;
   ctx.textAlign    = "center";
   ctx.textBaseline = "top";
-  const labelY = axisY + P7_AXIS_MARKER_RADIUS + P7_AXIS_YEAR_LABEL_OFFSET;
+  const labelY = axisY + P7_AXIS_MARKER_RADIUS + p7AxisYearLabelOffset();
   for (const tick of ticks) {
     ctx.fillStyle = hoverActive
       ? `rgba(0, 0, 0, ${P7_AXIS_BG_ALPHA})`
@@ -1535,11 +1850,11 @@ function p7DrawYearAxis(ctx, W, H) {
     ctx.save();
     ctx.fillStyle = "#FDFCFF";
     ctx.beginPath();
-    ctx.arc(hoverAxisX, axisY, P7_AXIS_MARKER_RADIUS + 1, 0, Math.PI * 2);
+    ctx.arc(axisQ(hoverAxisX), axisY, P7_AXIS_MARKER_RADIUS + 1, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = p7ActorColor(hoveredEvent.actor);
     ctx.beginPath();
-    ctx.arc(hoverAxisX, axisY, P7_AXIS_MARKER_RADIUS, 0, Math.PI * 2);
+    ctx.arc(axisQ(hoverAxisX), axisY, P7_AXIS_MARKER_RADIUS, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
@@ -1563,6 +1878,22 @@ function p7HoverInit() {
   const HIT_PAD = 3; // px of extra hit area around each P7_SQ=3 square, in every direction
   const AXIS_HIT_PAD = 6; // px of extra hit area around each axis event circle (small target, generous pad)
   const TOOLTIP_GAP = 5; // px of breathing room between the square and the tooltip box, both axes
+  // Viewport-px line: a hovered dot above it opens its tooltip DOWNWARD
+  // (.is-flipped) instead of the default upward. 295 was tuned by eye with the
+  // _debug-tip-flip.js harness — exact px per explicit instruction, don't
+  // convert to vh (the choice was made at one viewport size).
+  const P7_TIP_FLIP_Y = 295;
+  // Horizontal counterparts (viewport px): outside these two lines the tooltip
+  // side is forced away from the nearer mini-legend, overriding the data-side
+  // mirroring. Tuned by eye with _debug-tip-flip-x.js — exact px, see the
+  // comment where they're used in doHitTest. Each line is measured from the
+  // edge its legend hangs off: L from the left edge, R as an INSET from the
+  // right edge (475 = 1900 − the 1425 screen-X picked at the 1900px-wide
+  // tuning viewport). The R line used to be that absolute 1425 — on any
+  // window narrower than it no dot could ever cross the line, so the
+  // rightward flip silently died after a resize.
+  const P7_TIP_FLIP_L = 475;
+  const P7_TIP_FLIP_R_INSET = 475;
 
   // Last pointer position in client (viewport) coordinates — updated on every
   // pointermove, read by doHitTest so re-checks after redraws don't need an event.
@@ -1604,6 +1935,11 @@ function p7HoverInit() {
     tooltipEl.classList.remove("is-visible");
     p7.hoveredEvent = null;
     draw();
+    // The axis-event roster (p7AxisRosterT) eases one step per FRAME, and this
+    // single draw() is only one frame — without the loop the roster froze
+    // mid-fade at whatever alpha hovering had pumped it up to.
+    // p7AxisEventsAnimActive keeps the loop alive until it settles back to 0.
+    p7StartAnimLoop();
     // The 8 @fold9 squares' own opacity (a DOM style, not part of the canvas
     // draw() above) also dims/undims with hover — see updateGroups' own
     // p7.hoveredEvent check — so it needs its own refresh here too.
@@ -1620,7 +1956,23 @@ function p7HoverInit() {
   // position. Called both from onMove (pointer moved) and from p7RecheckHover
   // (canvas just redrew — new dots may have appeared under a stationary cursor).
   function doHitTest() {
-    if (lastCX === null || currentPage !== 7) { hide(); return; }
+    // No hover layer on mobile: a ~2px square is far below a finger-sized
+    // target, and pointermove on touch would latch a tooltip that nothing
+    // clears. Tap-to-inspect is a separate future addition. Read live, so a
+    // resize back over the 600px boundary restores hover (and clears anything
+    // still showing on the way in).
+    // MOBILE: no hover layer, but the docked frame still has to keep its
+    // picker/selected state in step with the page (p7InspectInit below) —
+    // doHitTest is the one thing that already runs on every redraw, scroll and
+    // pointer event, so it's where that sync is hung.
+    if (isMobile()) { hide(); p7InspectSync(); return; }
+    // Also fully off while @fold9's bridge glide (page8.js) is mid-flight in
+    // either direction (p8PhaseStart non-null): scrolling back up from @fold9
+    // lands currentPage on 7 while the dots are still flying back to their
+    // timeline spots, and hovering one mid-flight latched a tooltip onto a
+    // moving target.
+    if (lastCX === null || currentPage !== 7 ||
+        (typeof p8PhaseStart !== "undefined" && p8PhaseStart !== null)) { hide(); return; }
 
     const rect = canvasEl.getBoundingClientRect();
     const mx = lastCX - rect.left;
@@ -1652,6 +2004,9 @@ function p7HoverInit() {
     if (p7.hoveredEvent !== bestEvent) {
       p7.hoveredEvent = bestEvent;
       draw();
+      // Same reason as hideSquare(): the roster fade-in needs frames, not one
+      // draw — run the loop until p7AxisRosterT settles at 1.
+      p7StartAnimLoop();
       // Same DOM-opacity refresh as hide() above — see that comment.
       if (typeof updateGroups === "function") updateGroups();
       // draw() just rebuilt p7.lastPositions — bestPos (read below for
@@ -1670,8 +2025,32 @@ function p7HoverInit() {
     // Left-side events open the tooltip toward the left of the square instead
     // of the right, so it doesn't reach across the canvas's center gap into
     // the opposite side's column — same mirroring convention as page9.js.
-    const mirrored = bestEvent.side === "left";
+    // Mobile: one docked frame above the grid instead of a callout beside the
+    // dot — no mirroring, no anchor math, only the contents change (see
+    // tooltipDockMobile in js/fold8-tooltip.js). The hit-test above bails out
+    // on mobile today (no finger-sized hover target), so this branch only
+    // comes alive once tap-to-select lands; it's here so the timeline's own
+    // tooltip can never disagree with @fold6/@fold7's about where the frame is.
+    const docked = tooltipDockMobile(tooltipEl);
+    // Two vertical screen-X lines keep the tooltip off the mini-legends: a dot
+    // left of P7_TIP_FLIP_L always opens rightward, a dot within
+    // P7_TIP_FLIP_R_INSET of the RIGHT edge always opens leftward; between them
+    // the data-side rule holds. Both tuned by eye with the _debug-tip-flip-x.js
+    // harness — exact px per explicit instruction, don't convert to vw. Each is
+    // a px distance from the edge its legend hangs off, so both lines follow a
+    // window resize (an absolute right-line screen-X died on narrow windows).
+    // On windows narrower than 950px the bands overlap; the right rule runs
+    // last, so it wins there — moot in practice, mobile docks the tooltip.
+    const dotCX = rect.left + bestPos.x;
+    let mirrored = !docked && bestEvent.side === "left";
+    if (!docked && dotCX < P7_TIP_FLIP_L) mirrored = false;
+    if (!docked && dotCX > window.innerWidth - P7_TIP_FLIP_R_INSET) mirrored = true;
     tooltipEl.classList.toggle("is-mirrored", mirrored);
+    if (docked) {
+      tooltipEl.classList.remove("is-flipped");
+      updateTooltipDash(tooltipEl);
+      return;
+    }
 
     const dotClientX = rect.left + bestPos.x;
     const dotClientY = rect.top  + bestPos.y;
@@ -1679,7 +2058,15 @@ function p7HoverInit() {
       ? dotClientX - TOOLTIP_GAP - tooltipEl.offsetWidth
       : dotClientX + TOOLTIP_GAP;
     const left = Math.max(8, Math.min(rawLeft, window.innerWidth - tooltipEl.offsetWidth - 8));
-    const top  = Math.max(dotClientY - TOOLTIP_GAP - tooltipEl.offsetHeight, 8);
+    // Opens upward by default; a dot above the P7_TIP_FLIP_Y line flips the box
+    // downward instead — same .is-flipped mechanism as @fold10's hover, whose
+    // corner logic updateTooltipDash (js/core.js) already understands.
+    const rawTop  = dotClientY - TOOLTIP_GAP - tooltipEl.offsetHeight;
+    const flipped = dotClientY < P7_TIP_FLIP_Y;
+    tooltipEl.classList.toggle("is-flipped", flipped);
+    const top = flipped
+      ? dotClientY + P7_SQ + TOOLTIP_GAP
+      : rawTop;
     tooltipEl.style.left = `${left}px`;
     tooltipEl.style.top  = `${top}px`;
     // After sizing/mirroring are settled — the dash path is drawn to the box's
@@ -1702,7 +2089,649 @@ function p7HoverInit() {
   window.addEventListener("pointermove", onMove);
   window.addEventListener("scroll", () => {
     if (currentPage !== 7) hide();
+    p7InspectSync();
   }, { passive: true });
 }
 
 p7HoverInit();
+
+/* =========================================================================
+   MOBILE EVENT PICKER (#page-7 only) — the touch counterpart to p7HoverInit
+   =========================================================================
+   Touch has no hover, and a solved mobile dot (p7SolveMobileSq: ~1.35px at
+   320 wide) is two orders of magnitude below a fingertip, so the timeline had
+   no way at all to show an event on a phone. This is the tap-to-inspect layer
+   the mobile notes have been deferring.
+
+   Two states, both inside the existing docked tooltip frame — there is no
+   button to press first. The gesture itself is the affordance, and the frame's
+   resting content is the line of text that names it:
+
+     hint  — the empty frame reads P7_INSPECT_HINT.
+     event — the ordinary docked tooltip (date + description). There is no
+             dismiss control: the selection stands until the next hold replaces
+             it, or until leaving #page-7 releases the frame.
+
+   A press-and-hold anywhere on the chart (P7_LONGPRESS_MS with the finger
+   inside P7_LONGPRESS_SLOP_PX) opens a 96px circular loupe riding 60px above
+   the finger, blitting the main canvas at 4x (drawImage — there is
+   deliberately no second render path to keep in sync with draw()). The nearest
+   event is marked by p7DrawInspectScrim's halo, which is painted onto the main
+   canvas and so arrives in the blit already magnified. Only that gesture blocks page
+   scroll (preventDefault on a non-passive touchmove); a touch that moves
+   before the hold completes is a scroll and is left entirely alone. */
+
+const P7_LOUPE_SIZE      = 96; // px, matches .p7-loupe
+const P7_LOUPE_ZOOM      = 4;  // magnification
+const P7_LOUPE_LIFT_PX   = 60; // how far above the fingertip the loupe centre sits
+const P7_INSPECT_SNAP_PX = 44; // furthest a dot can be from the finger and still be picked
+const P7_LONGPRESS_MS      = 300; // hold this long, without moving, to open the loupe
+const P7_LONGPRESS_SLOP_PX = 10;  // move further than this first and it's a scroll, not a hold
+const P7_INSPECT_HINT      = "לחצו והחזיקו על נקודה להצגת פרטי האירוע";
+// The clipped-description toggle's two labels (p7-tip-more).
+const P7_TIP_MORE          = "עוד";
+const P7_TIP_LESS          = "פחות";
+// Must match `-webkit-line-clamp` on `.page9-tooltip.is-docked
+// .page9-tooltip-desc` (style.css) — syncMore measures the text against this
+// budget instead of against the clamped box, which misreports its own height.
+const P7_TIP_CLAMP_LINES   = 3;
+// The selection halo (p7DrawInspectScrim): how far back everything but the
+// picked dot is scrimmed, and the exempt disc's radius in dot widths. Both
+// tuned by eye on device.
+const P7_INSPECT_SCRIM     = 0.76;
+const P7_INSPECT_HOLE_DOTS = 1;
+// How much the picked dot's own colour is saturated, 0 = unchanged. Deliberately
+// small: it should read as the same group colour, just more insistent.
+const P7_INSPECT_PICK_SAT = 0.35;
+
+const p7Inspect = { dragging: false, event: null };
+
+// Assigned by p7InspectInit; a no-op until then so doHitTest/the scroll
+// handler above can call it unconditionally (and harmlessly on desktop).
+let p7InspectSync = () => {};
+
+// Which fold the picker is currently serving, or null. @fold8's pinned timeline
+// (page 7) is where it started; @fold10's drag-and-drop grid (page 9) reuses the
+// exact same gesture, loupe and docked frame, since its dots are 1px there and
+// touch has no hover to fall back on. Everything below that differs between the
+// two folds reads this rather than testing currentPage inline.
+function p7InspectPage() {
+  if (!isMobile()) return null;
+  return (currentPage === 7 || currentPage === 9) ? currentPage : null;
+}
+
+// The dot map the picker hit-tests against, per fold — same shape either way:
+// a Map of event -> {x, y} in CSS-pixel canvas space, recorded by that fold's
+// own draw. `maxY` excludes dots the fold doesn't consider inspectable (page 9's
+// legit band below the divider, matching desktop p9HoverInit's own exclusion).
+function p7InspectSource() {
+  if (currentPage === 9) {
+    return { positions: p9.lastPositions, half: p9Metrics().SQ / 2, cell: p9Metrics().CELL, maxY: p9.midY ?? Infinity };
+  }
+  return { positions: p7.lastPositions, half: p7Sq() / 2, cell: p7Cell(), maxY: Infinity };
+}
+
+function p7InspectInit() {
+  const tipEl    = document.getElementById("page9Tooltip");
+  const dateEl   = tipEl.querySelector(".page9-tooltip-date");
+  const descEl   = tipEl.querySelector(".page9-tooltip-desc");
+  const canvasEl = document.getElementById("canvas");
+
+  // --- the resting content: one line of text, no control -------------------
+  const hintEl = document.createElement("div");
+  hintEl.className = "p7-inspect-hint";
+  hintEl.textContent = P7_INSPECT_HINT;
+
+  // --- "read the rest" -----------------------------------------------------
+  // Most descriptions fit the frame's three clamped lines; the long tail does
+  // not, and ends in an ellipsis (see .page9-tooltip.is-docked .page9-tooltip-desc
+  // in style.css). This is the way out of that clip: it appears ONLY when the
+  // text is actually clipped, and opening it grows the frame downward over the
+  // chart — never pushing the grid, whose top clearance is derived from the
+  // collapsed height (SBB_TIMELINE_MOBILE_TOP_PX).
+  // A label, not a <button>: the tap target is the whole frame (the click
+  // handler below), so a nested control that can't be clicked would only be a
+  // second, misleading target.
+  const moreEl = document.createElement("div");
+  moreEl.className = "p7-tip-more";
+
+  tipEl.append(hintEl, moreEl);
+
+  // Truncation can only be MEASURED, not predicted — it depends on where the
+  // Hebrew wraps at this viewport's width. But it cannot be measured on the
+  // description element itself: -webkit-line-clamp truncates that box's LAYOUT
+  // rather than merely hiding overflow, so a clamped element reports its
+  // clamped height as `scrollHeight` and every scrollHeight > clientHeight test
+  // reads "fits" no matter how long the text is. (Lifting the clamp for one
+  // forced reflow and reading it back doesn't survive every engine either.)
+  //
+  // So the text is laid out a second time, offscreen, in a box that is a copy
+  // of the description's own width and type but has no clamp to lie about:
+  // whatever height it comes to is the honest one.
+  const measEl = document.createElement("div");
+  measEl.setAttribute("aria-hidden", "true");
+  Object.assign(measEl.style, {
+    position: "absolute", left: "-9999px", top: "0",
+    visibility: "hidden", pointerEvents: "none", whiteSpace: "normal",
+  });
+  document.body.appendChild(measEl);
+
+  function syncMore() {
+    const expanded = tipEl.classList.contains("is-expanded");
+    let clipped = false;
+    // The description spans the frame's content box, so the frame's own inner
+    // width stands in whenever the description itself can't be measured (it is
+    // display:none in the picker's resting state). Without that fallback a
+    // mistimed call fails SILENTLY as "fits" — which is exactly how this went
+    // unnoticed before.
+    const width = descEl.clientWidth ||
+      (tipEl.clientWidth - 20 /* .page9-tooltip padding, style.css */);
+    if (!expanded && width > 0) {
+      const cs = getComputedStyle(descEl);
+      measEl.style.font       = cs.font;
+      measEl.style.lineHeight = cs.lineHeight;
+      measEl.style.direction  = cs.direction;
+      measEl.style.width      = `${width}px`;
+      measEl.textContent      = descEl.textContent;
+      // Compared against the clamp's own budget (lines × line-height) rather
+      // than the live box's clientHeight, so the test never depends on the
+      // clamped element reporting anything truthfully.
+      const line = parseFloat(cs.lineHeight) || 17;
+      clipped = measEl.offsetHeight > line * P7_TIP_CLAMP_LINES + 1;
+    }
+    tipEl.classList.toggle("is-expandable", clipped || expanded);
+    moreEl.textContent = expanded ? P7_TIP_LESS : P7_TIP_MORE;
+  }
+
+  function collapseMore() {
+    tipEl.classList.remove("is-expanded", "is-expandable");
+  }
+
+  // The whole FRAME is the target, not the little label — a full-width tap area
+  // instead of a 30px word. It only accepts events at all while there is
+  // something to open (.is-expandable / .is-expanded opt back into
+  // pointer-events; see style.css), so in every other state a touch here falls
+  // through to the chart exactly as before.
+  //
+  // It listens on touchend as well as click, not instead of it: the window-level
+  // touch handlers further down call preventDefault while a hold is live, and a
+  // touch sequence that has been prevented may never emit the synthetic click at
+  // all. `lastToggle` swallows the click that normally follows the same tap, so
+  // a phone that does emit both doesn't toggle twice and land back where it was.
+  let lastToggle = 0;
+  function toggleMore(e) {
+    if (!tipEl.classList.contains("is-expandable") &&
+        !tipEl.classList.contains("is-expanded")) return;
+    const now = performance.now();
+    if (now - lastToggle < 400) return;
+    lastToggle = now;
+    // The frame sits over the chart and the tray; without this the tap reaches
+    // whatever is behind it (a category pill on @fold10).
+    e.stopPropagation();
+    tipEl.classList.toggle("is-expanded");
+    syncMore();
+    // The dashed border is an <svg> sized to the box's own pixel dimensions, so
+    // a box that just changed height has to have it rebuilt or the stroke keeps
+    // the old outline (js/core.js).
+    updateTooltipDash(tipEl);
+  }
+  tipEl.addEventListener("click", toggleMore);
+  tipEl.addEventListener("touchend", toggleMore);
+
+  // --- the loupe ----------------------------------------------------------
+  // A sibling of the tooltip in .layout for the same reason #page9Tooltip is
+  // one: .graphic-col's stacking context traps any z-index declared inside it.
+  const loupeEl = document.createElement("canvas");
+  loupeEl.className = "p7-loupe";
+  loupeEl.setAttribute("aria-hidden", "true");
+  tipEl.parentNode.appendChild(loupeEl);
+  const lctx = loupeEl.getContext("2d");
+
+  function hideLoupe() {
+    p7Inspect.dragging = false;
+    // The dodge belongs to the live finger — lifting it snaps the frame
+    // straight back to its resting spot.
+    if (p7TipAvoidActive) {
+      p7TipAvoidActive = false;
+      tooltipDockMobile(tipEl);
+    }
+    // Dragging is what holds the axis in its hover/state-3 treatment (see
+    // p7DrawAxisLine), so the release is where its fade-out has to start.
+    p7StartAnimLoop();
+    loupeEl.classList.remove("is-visible");
+    // The halo is painted into the canvas and only lives for the drag, so
+    // lifting the finger has to repaint — nothing else is animating a settled
+    // fold, and the chart would otherwise stay dimmed.
+    draw();
+    // Same for the 8 DOM squares that carry the scrim's dim themselves.
+    if (typeof updateGroups === "function") updateGroups();
+  }
+
+  // Hands the frame back to @fold6/@fold7's scripted sequence. Its typewriter
+  // spans are rebuilt rather than its whole sequence restarted: the spans were
+  // detached the moment this picker wrote plain textContent into the same two
+  // elements, but fold8SeqElapsed is still valid, so re-seeding them leaves the
+  // sequence exactly where it was instead of replaying its grow+type from zero
+  // (which would read as the empty frame flickering back in).
+  function release() {
+    p7Inspect.event = null;
+    hideLoupe();
+    p7InspectOwnsTooltip = false;
+    collapseMore();
+    dateEl.textContent = "";
+    descEl.textContent = "";
+    // @fold8 only — page 9 has no scripted typewriter sequence sharing these
+    // two elements, so there is nothing to hand the frame back to there.
+    if (currentPage === 7 && typeof fold8SequenceEvent !== "undefined" && fold8SequenceEvent) {
+      fold8DateSpans = fold8SetupTypewriter(dateEl, p7FormatDateDMY(fold8SequenceEvent.date));
+      fold8DescSpans = fold8SetupTypewriter(descEl, fold8SequenceEvent.descHeMedium || "");
+    }
+    if (typeof updateGroups === "function") updateGroups();
+  }
+
+  function showEvent(ev) {
+    p7Inspect.event = ev;
+    p7InspectOwnsTooltip = true;
+    // The selection marks its date on the year axis with the hover treatment
+    // (see p7DrawAxisLine) — the roster fade eases per frame, so the loop has
+    // to be running, same as p7HoverInit does when a hover starts.
+    p7StartAnimLoop();
+    dateEl.textContent = p7FormatDateDMY(ev.date);
+    descEl.textContent = ev.descHeMedium || "";
+    // The sequence's own inline fades are still on these two elements from the
+    // @fold7 shrink beat that emptied the frame — clear them or the text this
+    // picker just wrote is invisible.
+    dateEl.style.opacity = "1";
+    descEl.style.opacity = "1";
+    // `color`, not `border-color` — the dashed stroke is the <svg> overlay,
+    // which strokes currentColor (see .page9-tooltip in style.css).
+    tipEl.style.color = p7ActorColor(ev.actor);
+    // Same fold13 factor as sync() below — every writer of this element's
+    // opacity must agree during @fold11's scroll fade.
+    tipEl.style.opacity =
+      String(1 - (typeof p9 !== "undefined" ? (p9.fold13OutT ?? 0) : 0));
+    tipEl.style.transform = "translateX(-50%)";
+    tipEl.classList.remove("is-mirrored");
+    tipEl.classList.remove("is-flipped");
+    tipEl.classList.add("is-visible");
+    // A new event is a new read: the frame goes back to its collapsed size
+    // before the toggle is re-tested, so an open frame can't be left open (and
+    // covering the chart) around a description that fits.
+    collapseMore();
+    tooltipDockMobile(tipEl);
+    updateTooltipDash(tipEl);
+    // sync() BEFORE syncMore(), and the order is load-bearing: sync() is what
+    // drops `is-picker`, and `.is-picker .page9-tooltip-desc` is display:none.
+    // Measuring the description while that class is still on measures a hidden
+    // box — zero width, no line boxes — so the clip test always reads "fits"
+    // and the toggle never appears.
+    sync();
+    syncMore();
+    // While the finger is still down (the loupe is live), a clipped
+    // description opens in full immediately — the reader can't tap the
+    // frame mid-hold, and the point of the picker is reading the event
+    // under the finger. The release (onEnd below) collapses it again; a
+    // tap afterwards reopens it through the normal toggle.
+    // `is-holding` hides the עוד/פחות label for the duration (style.css):
+    // mid-hold it isn't a control — the finger is on the chart — and a
+    // "פחות" on a frame that will collapse by itself on release is noise.
+    if (p7Inspect.dragging && tipEl.classList.contains("is-expandable")) {
+      tipEl.classList.add("is-expanded", "is-holding");
+      syncMore();
+      updateTooltipDash(tipEl);
+    }
+  }
+
+  // Nearest dot to a canvas-space point, within P7_INSPECT_SNAP_PX. Same
+  // brute-force scan over p7.lastPositions doHitTest uses — that map holds only
+  // the squares actually drawn this frame, already in CSS-pixel space.
+  function nearestEvent(mx, my) {
+    const { positions, half, maxY } = p7InspectSource();
+    if (!positions) return null;
+    let best = null, bestDist = P7_INSPECT_SNAP_PX * P7_INSPECT_SNAP_PX, bestPos = null;
+    for (const [ev, pos] of positions) {
+      if (pos.y >= maxY) continue;
+      const dx = mx - (pos.x + half), dy = my - (pos.y + half);
+      const dist = dx * dx + dy * dy;
+      if (dist < bestDist) { bestDist = dist; best = ev; bestPos = pos; }
+    }
+    return best ? { event: best, x: bestPos.x + half, y: bestPos.y + half } : null;
+  }
+
+  // Flips p7TipAvoidActive (js/fold8-tooltip.js) from the finger's height: if
+  // the loupe's glass would reach into the docked frame's NORMAL spot, the
+  // frame snaps to its dodge spot above the year axis (tooltipAvoidPx). The
+  // threshold is computed against where the frame RESTS on this fold — a
+  // constant per fold, not the frame's live rect — so a frame already
+  // mid-dodge can't drag the threshold down with it and flip-flop. 100 is the
+  // collapsed frame height (style.css solves it against the 15px type); an
+  // expanded frame reaches lower, but the dodge only needs the common case.
+  // Re-docks every call, not just on the flip: the dodge spot is
+  // bottom-anchored on the frame's live height, which changes mid-hold as
+  // selections swap and descriptions expand.
+  function syncTipAvoid(fingerY) {
+    const frameTop = currentPage === 9 && typeof p9DockTopM === "function"
+      ? p9DockTopM() : TOOLTIP_DOCK_TOP_PX;
+    const frameBottom = frameTop + 100;
+    const loupeTop = fingerY - P7_LOUPE_LIFT_PX - P7_LOUPE_SIZE / 2;
+    // The threshold sits a bit lower than the frame's edge (explicit
+    // instruction, first on @fold10 then @fold8 too) — the finger doesn't have
+    // to climb as high before the frame snaps down.
+    const AVOID_MARGIN_PX = 24;
+    p7TipAvoidActive = loupeTop < frameBottom + AVOID_MARGIN_PX;
+    tooltipDockMobile(tipEl);
+  }
+
+  function drawLoupe(cx, cy) {
+    syncTipAvoid(cy);
+    const rect = canvasEl.getBoundingClientRect();
+    const mx = cx - rect.left, my = cy - rect.top;
+    const dpr = window.devicePixelRatio || 1;
+    const src = P7_LOUPE_SIZE / P7_LOUPE_ZOOM; // CSS px of canvas sampled, per side
+
+    if (loupeEl.width !== P7_LOUPE_SIZE * dpr) {
+      loupeEl.width  = P7_LOUPE_SIZE * dpr;
+      loupeEl.height = P7_LOUPE_SIZE * dpr;
+    }
+    // Pick the dot BEFORE blitting, and repaint the main canvas if the pick
+    // changed: the selection halo (p7DrawInspectScrim) lives on that canvas, and
+    // the loupe is a plain blit of it. Painting the halo first is what puts it in
+    // the glass — magnified along with everything else, with no second render
+    // path to keep in sync. Without the repaint the loupe would show the previous
+    // frame's halo, since nothing else is animating a settled timeline.
+    const hit = nearestEvent(mx, my);
+    // updateGroups() alongside it: the 8 fold6 DOM squares carry the same
+    // scrim dim as the canvas dots under them (see updateGroups' own
+    // P7_INSPECT_SCRIM clause), and draw() alone doesn't touch DOM.
+    if (hit && hit.event !== p7Inspect.event) {
+      showEvent(hit.event);
+      draw();
+      if (typeof updateGroups === "function") updateGroups();
+    }
+
+    lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    lctx.clearRect(0, 0, P7_LOUPE_SIZE, P7_LOUPE_SIZE);
+    lctx.fillStyle = "#fff";
+    lctx.fillRect(0, 0, P7_LOUPE_SIZE, P7_LOUPE_SIZE);
+    // The main canvas's backing store is DPR-scaled (see draw() in js/core.js),
+    // so the source rect is in device pixels while the destination is CSS px.
+    const sx = (mx - src / 2) * dpr, sy = (my - src / 2) * dpr;
+    lctx.imageSmoothingEnabled = false; // dots are 1–2px; smoothing turns them to mush
+    lctx.drawImage(canvasEl, sx, sy, src * dpr, src * dpr, 0, 0, P7_LOUPE_SIZE, P7_LOUPE_SIZE);
+
+    // Held above the fingertip so the finger isn't covering what's being read,
+    // and clamped so it stays fully on screen near the edges.
+    const half = P7_LOUPE_SIZE / 2;
+    const left = Math.max(4, Math.min(cx - half, window.innerWidth - P7_LOUPE_SIZE - 4));
+    const top  = Math.max(4, cy - P7_LOUPE_LIFT_PX - half);
+    loupeEl.style.left = `${left}px`;
+    loupeEl.style.top  = `${top}px`;
+    loupeEl.classList.add("is-visible");
+  }
+
+  // Keeps the frame's three states in step with the page. Cheap and
+  // idempotent — called from doHitTest (i.e. every redraw/scroll) as well as
+  // from the interactions below.
+  function sync() {
+    const active = p7InspectPage() !== null;
+    if (!active) {
+      if (p7Inspect.event || p7InspectOwnsTooltip) release();
+      // @fold9's bridge (page 8) sits BETWEEN the two folds the picker serves,
+      // and updateGroups' keepEmptyFrame branch deliberately keeps the docked
+      // frame on screen through it (gliding down to p9DockTopM()). Without
+      // is-picker the hint is display:none, so the frame would make that whole
+      // glide as an empty box — keep the hint's class on, gesture still off.
+      tipEl.classList.toggle("is-picker", isMobile() && currentPage === 8);
+      tipEl.classList.remove("is-inspect");
+      return;
+    }
+    const hasEvent = !!p7Inspect.event;
+    tipEl.classList.toggle("is-picker", !hasEvent);
+    tipEl.classList.toggle("is-inspect", hasEvent);
+    // The frame is normally held open (empty) by updateGroups' keepEmptyFrame
+    // branch; assert it here too so the control can never be invisible inside
+    // a frame that happens to be down.
+    if (!hasEvent) {
+      tipEl.classList.add("is-visible");
+      // × (1 - fold13OutT): sync() runs on every redraw/scroll while the
+      // picker's page is active, which is still true through @fold11's
+      // scroll-in (currentPage stays 9 until the observer flips) — an
+      // unconditional "1" here re-asserted full opacity between updateFold13's
+      // fade writes every frame, making the frame stutter instead of fading.
+      tipEl.style.opacity =
+        String(1 - (typeof p9 !== "undefined" ? (p9.fold13OutT ?? 0) : 0));
+      tipEl.style.transform = "translateX(-50%)";
+      tooltipDockMobile(tipEl);
+      updateTooltipDash(tipEl);
+    }
+  }
+  p7InspectSync = sync;
+
+  // --- the press-and-hold gesture -----------------------------------------
+  // There is no armed mode to enter, so the hold itself has to distinguish
+  // "inspect" from "scroll". A touch on the chart starts a timer; movement past
+  // P7_LONGPRESS_SLOP_PX doesn't kill it — it RE-ANCHORS it (armTimer below at
+  // the new position), so a finger that drag-scrolls the pinned timeline and
+  // then comes to rest WITHOUT lifting still opens the loupe after
+  // P7_LONGPRESS_MS of stillness. (It used to cancel outright, which made a
+  // hold impossible mid-scroll — precisely when the cascade is popping dots in,
+  // since on the pinned fold the scrolling finger is what drives it.) While the
+  // finger keeps moving the re-anchors keep pushing the deadline back, so a
+  // live scroll never opens it. Only once the hold completes does touchmove
+  // start calling preventDefault — up to that point the page scrolls exactly
+  // as it does today.
+  //
+  // The one case the re-anchor can't reach is iOS momentum, and it can't be
+  // reached from here at all: while a fling is coasting, WebKit delivers NO
+  // touch or pointer events to the page whatsoever. Verified on-device with a
+  // trace harness — a finger planted on a coasting timeline and held for two
+  // seconds produced not one touchstart, not one pointerdown, not one
+  // touchcancel. So no handler in this file can arm, re-arm or rescue a hold
+  // during a coast; the events simply don't exist until the page settles.
+  // Machinery that tried to (P7_COAST_MS/P7_STEAL_MS/armedAfterCancel/
+  // P7_HOLD_GRACE_MS, keyed on a touchcancel that never fires) was removed —
+  // don't reintroduce it. The reader lifting and pressing again once the page
+  // has stopped is, for now, the only path that works.
+  let pendingTimer = null, startX = 0, startY = 0;
+
+  function cancelPending() {
+    if (pendingTimer !== null) { clearTimeout(pendingTimer); pendingTimer = null; }
+  }
+
+  function armTimer(x, y) {
+    cancelPending();
+    startX = x;
+    startY = y;
+    pendingTimer = setTimeout(() => {
+      pendingTimer = null;
+      p7Inspect.dragging = true;
+      loupeX = startX;
+      loupeY = startY;
+      drawLoupe(loupeX, loupeY);
+      // The scrim arrives with `dragging`; the 8 DOM squares only learn about
+      // it here (drawLoupe repaints the canvas, not the DOM) — and won't at all
+      // if the first hit is already the selected event.
+      if (typeof updateGroups === "function") updateGroups();
+      requestAnimationFrame(loupeTick);
+    }, P7_LONGPRESS_MS);
+  }
+
+  function chartTouch(e) {
+    if (p7InspectPage() === null) return null;
+    const t = e.touches[0];
+    if (!t) return null;
+    const inside = el => {
+      if (!el) return false;
+      const r = el.getBoundingClientRect();
+      return t.clientY >= r.top && t.clientY <= r.bottom &&
+             t.clientX >= r.left && t.clientX <= r.right;
+    };
+    // The docked frame is opaque and sits over the chart's top strip — a hold
+    // there is reading the tooltip, not aiming at a dot behind it. Same for
+    // @fold10's tray: a hold on a pill is a (mis-timed) classification tap, and
+    // opening the loupe over it would swallow the tap's own click.
+    if (inside(tipEl)) return null;
+    if (currentPage === 9 && inside(document.querySelector(".page9-tray"))) return null;
+    return t;
+  }
+
+  window.addEventListener("touchstart", (e) => {
+    cancelPending();
+    const t = chartTouch(e);
+    if (!t) return;
+    armTimer(t.clientX, t.clientY);
+  }, { passive: true });
+
+  // Re-run the pick + loupe blit every frame while the hold is live, at the
+  // last known finger position. The pick otherwise only happens at timer fire
+  // and on touchmove — so a hold started while the month cascade is still
+  // popping dots in would open on nothing and STAY on nothing under a still
+  // finger, even once dots have appeared right under it (this was the "first
+  // hold needs two tries" bug). The per-frame pass also keeps the loupe glass
+  // itself live while the canvas animates, instead of freezing on the blit
+  // from the moment the finger last moved. drawLoupe is cheap (one 96px blit;
+  // it only repaints the main canvas when the picked dot actually changes).
+  // loupeX/loupeY are what touchmove keeps current below.
+  let loupeX = 0, loupeY = 0;
+  function loupeTick() {
+    if (!p7Inspect.dragging) return;
+    drawLoupe(loupeX, loupeY);
+    requestAnimationFrame(loupeTick);
+  }
+
+  window.addEventListener("touchmove", (e) => {
+    const t = e.touches[0];
+    if (!t) return;
+    if (pendingTimer !== null) {
+      // Finger is scrolling: re-anchor at the new position and restart the
+      // clock, instead of giving up. A finger that then stays within slop for
+      // P7_LONGPRESS_MS — i.e. comes to rest without lifting — fires the hold
+      // right where it stopped; a finger that keeps moving keeps pushing the
+      // deadline back and the scroll stays untouched.
+      if (Math.abs(t.clientX - startX) > P7_LONGPRESS_SLOP_PX ||
+          Math.abs(t.clientY - startY) > P7_LONGPRESS_SLOP_PX)
+        armTimer(t.clientX, t.clientY);
+      return;
+    }
+    if (!p7Inspect.dragging) return;
+    e.preventDefault();
+    loupeX = t.clientX;
+    loupeY = t.clientY;
+    drawLoupe(loupeX, loupeY);
+  }, { passive: false });
+
+  // Release drops the selection entirely — the frame goes back to its resting
+  // state: the "לחצו והחזיקו" hint, the neutral gray stroke (restored by
+  // updateGroups' keepEmptyFrame branch, which repaints the color every frame
+  // it runs), no date, no description. The reading belongs to the gesture, not
+  // to the page: an event's text and its actor-colored stroke parked there
+  // after the finger lifts read as permanent furniture, and kept covering the
+  // chart the gesture had just been used to explore.
+  //
+  // release() does the whole teardown (event, tooltip ownership, text, and
+  // @fold8's handback to its scripted typewriter) and calls hideLoupe() itself.
+  // Then sync() flips the frame is-inspect -> is-picker.
+  const onEnd = () => {
+    cancelPending();
+    if (p7Inspect.dragging) {
+      tipEl.classList.remove("is-expanded", "is-holding");
+      release();
+      // sync()'s resting branch re-docks the frame and redraws the dashed
+      // stroke for its collapsed height, so no separate updateTooltipDash here.
+      sync();
+    }
+  };
+  window.addEventListener("touchend", onEnd);
+  window.addEventListener("touchcancel", onEnd);
+
+  sync();
+}
+
+// --- The momentum brake ------------------------------------------------------
+// iOS delivers NO touch events while a native fling coasts (see the note above
+// p7InspectInit's pendingTimer), so a finger landing mid-coast is invisible to
+// the picker and the hold can't start until the page settles on its own. The
+// only way around it is to not let the native fling run: on the picker folds
+// (@fold8/@fold10, mobile only) a flick's deceleration is taken over the moment
+// the finger lifts — the first programmatic scrollTo cancels the imminent
+// native momentum, and a short rAF glide with much stronger friction plays out
+// instead. Because the motion is now script-driven, touch events keep arriving
+// during it: a finger landing mid-glide stops it dead (the touchstart below)
+// and the picker's own touchstart arms the hold — "touch stops the page, then
+// picks", which the native fling made impossible.
+function p7BrakeInit() {
+  // e-folding time of the glide's velocity. Native iOS friction is far weaker
+  // (a hard flick coasts for seconds); 180ms stops the same flick in well under
+  // half a second and a couple hundred px — enough drift to feel like throw,
+  // short enough that the picker is reachable almost immediately.
+  const P7_BRAKE_FRICTION_MS = 260;
+  // px/ms. Below this the glide ends (and a lift slower than it never starts
+  // one — a slow drag just stops where the finger left it, like native).
+  const P7_BRAKE_MIN_V = 0.05;
+  // A lift more than this after the last move means the finger came to rest
+  // first — the stored velocity is stale, not a throw.
+  const P7_BRAKE_STALE_MS = 80;
+
+  let lastY = 0, lastT = 0, vy = 0;
+  let raf = null;
+  const stopGlide = () => {
+    if (raf !== null) { cancelAnimationFrame(raf); raf = null; }
+  };
+
+  window.addEventListener("touchstart", (e) => {
+    stopGlide();
+    const t = e.touches[0];
+    if (!t) return;
+    lastY = t.clientY;
+    lastT = performance.now();
+    vy = 0;
+  }, { passive: true });
+
+  window.addEventListener("touchmove", (e) => {
+    const t = e.touches[0];
+    if (!t) return;
+    const now = performance.now();
+    const dt = now - lastT;
+    if (dt > 0) {
+      // Page velocity is opposite the finger's. Lightly smoothed so one jittery
+      // sample at the lift doesn't decide the whole throw.
+      const inst = (lastY - t.clientY) / dt;
+      vy = vy * 0.4 + inst * 0.6;
+    }
+    lastY = t.clientY;
+    lastT = now;
+  }, { passive: true });
+
+  window.addEventListener("touchend", (e) => {
+    if (p7InspectPage() === null) return;   // other folds keep native momentum
+    if (e.touches.length) return;           // another finger is still down
+    if (p7Inspect.dragging) return;         // that was a hold ending, not a throw
+    if (performance.now() - lastT > P7_BRAKE_STALE_MS) return;
+    if (Math.abs(vy) < P7_BRAKE_MIN_V) return;
+
+    let v = vy;
+    let y = window.scrollY;
+    let prev = performance.now();
+    const step = () => {
+      raf = null;
+      const now = performance.now();
+      const dt = now - prev;
+      prev = now;
+      y += v * dt;
+      v *= Math.exp(-dt / P7_BRAKE_FRICTION_MS);
+      window.scrollTo(0, y);
+      if (Math.abs(v) >= P7_BRAKE_MIN_V) raf = requestAnimationFrame(step);
+    };
+    // The first scrollTo — to the position the page already holds — is what
+    // cancels the native fling before it gets going; the glide owns it from here.
+    window.scrollTo(0, y);
+    raf = requestAnimationFrame(step);
+  }, { passive: true });
+}
+
+// page7.js is the FIRST script on the page (before js/core.js — see
+// project.html), so unlike p7HoverInit above this can't run inline: it reads
+// isMobile()/currentPage/tooltipDockMobile at init, none of which exist yet.
+// The scripts all sit at the end of <body>, so DOMContentLoaded is after them.
+document.addEventListener("DOMContentLoaded", p7InspectInit);
+document.addEventListener("DOMContentLoaded", p7BrakeInit);

@@ -7,7 +7,7 @@ One object per event:
 
 | Field | Meaning |
 |---|---|
-| `rowId` | The xlsx's own stable `row_id` (`"row-145"`). Lets JS pin to one specific event by id — see `FOLD6_TOOLTIP_ROW_ID` / `p7OccurrenceOfRowId` |
+| `rowId` | The xlsx's own stable `row_id` (`"row-34"`). Lets JS pin to one specific event by id — see `FOLD6_TOOLTIP_ROW_ID` / `p7OccurrenceOfRowId` |
 | `date` | `YYYY-MM-DD`. Sorted lexicographically = chronologically |
 | `side` | `"left"` or `"right"` — which camp column the dot lives in |
 | `actor` | Join key into `GROUPS`' `actor` field → the dot's color (`p7ActorColor`) |

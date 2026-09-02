@@ -95,8 +95,8 @@ function drawPage8(ctx, W, H) {
   const legitGeom = p9LegitGeometry(W, H);
 
   const { CELL, SQ, cols, leftX0 } = p7;
-  const topY    = Math.round(H * SBB_TIMELINE.top);
-  const rightX0 = W / 2 + CENTER_GAP / 2;
+  const topY    = Math.round(H * sbbTimeline(H).top);
+  const rightX0 = p7GridGeometry(W, H).rightX0;
 
   function blendAndDraw(events, indexOf, side, positions, x0) {
     events.forEach((e, i) => {
@@ -117,7 +117,11 @@ function drawPage8(ctx, W, H) {
       // drawPage9 will keep drawing them — no size jump at the handoff. Both
       // endpoints are top-left anchored (fromX/Y and target.x/y are cell corners),
       // so a plain linear size lerp lines up at both ends.
-      const drawSQ = SQ + (P9_SQ - SQ) * ease;
+      // In a bar layout (mobile) the legit grid draws its dots
+      // at the bar's own cell size, not P9_SQ — land on that instead, or the
+      // dots pop a pixel at the handoff.
+      const endSQ  = legitGeom.mode === "bar" ? legitGeom.cell : p9Metrics().legitSq;
+      const drawSQ = SQ + (endSQ - SQ) * ease;
       // No opacity fade — drawPage9 draws the legit grid at full opacity (see the
       // comment above its own drawBandedCols/drawJumbledBot calls; it used to be a
       // deliberate 0.12 de-emphasis, which this glide matched, but Figma's actual
@@ -128,8 +132,31 @@ function drawPage8(ctx, W, H) {
     });
   }
 
-  blendAndDraw(p7.leftEvents,  p9.leftIndexOf,  "left",  p7.leftPos,  leftX0);
-  blendAndDraw(p7.rightEvents, p9.rightIndexOf, "right", p7.rightPos, rightX0);
+  // Once the glide has fully landed on a bar layout (mobile), stop drawing
+  // dot-by-dot: thousands of 1px dots at fractionally-lerped positions leave
+  // ragged colour seams the moment motion stops masking them, and this
+  // function keeps drawing at t=1 until @fold10's own drawPage9 takes over.
+  // Same solid-rect pass drawPage9's at-rest bar uses (p9DrawBarRects,
+  // page9.js), so the handoff is pixel-identical.
+  if (ease >= 1 && legitGeom.mode === "bar") {
+    p9DrawBarRects(ctx, legitGeom, H, 1);
+  } else {
+    blendAndDraw(p7.leftEvents,  p9.leftIndexOf,  "left",  p7.leftPos,  leftX0);
+    blendAndDraw(p7.rightEvents, p9.rightIndexOf, "right", p7.rightPos, rightX0);
+  }
+
+  // The year axis undraws in reverse of its build-in wipe (quick, 500ms —
+  // p7AxisReverseOut/P7_AXIS_OUTRO_DURATION in page7.js) as this glide starts,
+  // instead of vanishing with the timeline frame. Once the reverse wipe hits 0
+  // this returns false and the axis stops being drawn; scrolling back to t<=0
+  // hands drawing back to drawPage7, whose p7AxisTriggerIfNeeded replays the
+  // build-in.
+  if (p7AxisReverseOut()) {
+    const saved = p7.currentDate;
+    p7.currentDate = p7.maxDate;   // same forcing as the t<=0 branch above
+    p7DrawYearAxis(ctx, W, H);
+    p7.currentDate = saved;
+  }
 }
 
 // Called once, right when currentPage flips from 10 to 11 while this glide is
@@ -157,8 +184,8 @@ function p8CaptureBlendedPositions(W, H, tOverride) {
   const legitGeom = p9LegitGeometry(W, H);
 
   const { CELL, cols, leftX0 } = p7;
-  const topY    = Math.round(H * SBB_TIMELINE.top);
-  const rightX0 = W / 2 + CENTER_GAP / 2;
+  const topY    = Math.round(H * sbbTimeline(H).top);
+  const rightX0 = p7GridGeometry(W, H).rightX0;
 
   const out = new Map();
   function capture(events, indexOf, side, positions, x0) {

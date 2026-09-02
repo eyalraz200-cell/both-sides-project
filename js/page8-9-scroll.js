@@ -25,6 +25,17 @@ let page8TitleWasPast = null;
 function page8CheckScroll() {
   const rect = page8TitleEl.getBoundingClientRect();
   const nowPast = rect.top + rect.height / 2 <= window.innerHeight / 2;
+  // Mobile only: @fold10's pill band lands where the docked tooltip frame has
+  // been sitting, so the frame steps down to p9DockTopM() (page9.js) to clear
+  // it. That drop rides @fold9's own crossing rather than @fold10's stick, so
+  // the frame is already out of the way by the time the band slides in — one
+  // move at a time instead of two at once. Set unconditionally (not just on a
+  // crossing) so it also resolves on the first tick and stays latched while
+  // scrolled past; trigger() early-returns when already at rest at the target,
+  // so calling it every tick is free.
+  if (typeof p9TooltipDropTrigger !== "undefined") {
+    p9TooltipDropTrigger.trigger(nowPast && isMobile() ? 1 : 0);
+  }
   if (page8TitleWasPast === null) {
     page8TitleWasPast = nowPast;
     if (nowPast) p8Trigger();
@@ -71,6 +82,33 @@ let page9WasStuck = false; // tracks isStuck across frames to detect the stuck�
 // session the instant they scroll away.
 let page9SavedAboveIdxs = null;
 
+// @fold10's title block is an ordinary centered card while it scrolls up, and
+// only travels to the right edge once it pins at the top (mobile only — desktop
+// stays centered throughout). CSS can't animate that trip on its own: the flush
+// is `margin-inline: 0 auto` and `auto` doesn't interpolate, so the box would
+// snap sideways the frame the class lands. Instead the frame stays centered and
+// .is-stuck applies translateX(--p9-title-flush), measured here.
+//
+// The distance is half the slack between the card and the frame's own
+// zero-padding width — the frame is `width: fit-content`, so that width depends
+// on how the title happened to wrap at this viewport.
+//
+// Measured ONLY while unstuck, for two reasons: the value is needed *before*
+// the class lands, and the padding is mid-transition for 0.35s after it does,
+// which would drift the number. Subtracting the live computed padding (rather
+// than a hard-coded 29) makes the reading self-consistent at any point of that
+// transition anyway, so a reverse crossing can't poison the cache either.
+function page9UpdateTitleFlush(isStuck) {
+  if (!isMobile()) { page9TitleCardEl.style.removeProperty("--p9-title-flush"); return; }
+  if (isStuck) return;
+  const frame = page9TitleCardEl.querySelector(".text-card-frame");
+  if (!frame) return;
+  const padX = parseFloat(getComputedStyle(frame).paddingInlineStart) || 0;
+  const flushW = frame.offsetWidth - padX * 2;
+  const shift = Math.max(0, (page9TitleCardEl.clientWidth - flushW) / 2);
+  page9TitleCardEl.style.setProperty("--p9-title-flush", `${shift}px`);
+}
+
 function page9UpdateFromScroll() {
   // Use the title *row* container's position rather than the card's own
   // getBoundingClientRect() — once the card switches to position:fixed its
@@ -86,22 +124,29 @@ function page9UpdateFromScroll() {
   }
 
   // Card's natural sticky top = titleRowTop + 50vh - cardH/2 ≈ titleRowTop + 50vh.
-  // Sticks when that value <= 4.4vh → titleRowTop <= (0.044 - 0.5) * H.
-  const isStuck = titleRowTop <= window.innerHeight * (0.044 - 0.5);
+  // Sticks when that value reaches --card-top, the resting offset the CSS
+  // actually pins it at. Read from the variable rather than hard-coded, because
+  // that offset differs per breakpoint (mobile pushes it down to clear the מקרא
+  // bar) and a threshold out of step with it makes the card jump as it sticks.
+  const cardTopPx = parseFloat(getComputedStyle(page9TitleCardEl).top) || 0;
+  const isStuck = titleRowTop <= cardTopPx - window.innerHeight * 0.5;
+  page9UpdateTitleFlush(isStuck);
   page9TitleCardEl.classList.toggle("is-stuck", isStuck);
   // Both tray and zone-wrap are position:fixed — always at their final viewport
   // position — so both can fire together the moment the title card sticks.
   page9StickyEl.classList.toggle("engaged", isStuck);
+  // (The mobile docked-tooltip drop that clears room for the tray band is NOT
+  // fired here — it rides @fold9's title crossing in page8CheckScroll above.)
 
   // Scrolling back up past the stick threshold: animate all extreme dots back
   // down to the legit zone and return pills to the tray — but remember which
   // categories were dropped first, so scrolling back down can restore them
   // (see page9SavedAboveIdxs above) instead of this being a permanent reset.
   if (page9WasStuck && !isStuck && typeof p9ResetDrops === "function") {
-    const zoneAboveEl = document.getElementById("page9ZoneAbove");
-    const droppedIdxs = zoneAboveEl
-      ? Array.from(zoneAboveEl.querySelectorAll(".page9-pill")).map(p => Number(p.dataset.idx))
-      : [];
+    // p9DroppedIdxs (page9.js) reads whichever record this breakpoint keeps —
+    // #page9ZoneAbove's DOM order on desktop, the .is-extreme flag on mobile,
+    // where tapped pills never leave the tray.
+    const droppedIdxs = typeof p9DroppedIdxs === "function" ? p9DroppedIdxs() : [];
     page9SavedAboveIdxs = droppedIdxs.length ? droppedIdxs : null;
     p9ResetDrops(true);
   } else if (!page9WasStuck && isStuck && page9SavedAboveIdxs && typeof p9RestoreDrops === "function") {

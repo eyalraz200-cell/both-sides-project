@@ -9,11 +9,12 @@
 //   - eScroll (fold13ScrollT below): a plain scroll-position readout over the
 //     gate-line-to-fully-arrived range, 0..1, moving continuously with every
 //     scroll tick in both directions. Drives:
-//       - tray slides down (inline style.transform, transition:none so it tracks scroll)
+//       - tray (the pills' frame) fades out in place (inline opacity, transition:none)
 //       - header title + subtitle fade out (page9HeaderEl opacity)
 //       - extreme zone + dropped pill labels fade out (page9ZoneWrapEl opacity)
 //       - canvas count numbers + dividing line + legit dots fade out (p9.fold13OutT)
-//       - legend fades out (groupsOverlayEl opacity)
+//       - legend fades out (groupsOverlayEl opacity), and on mobile its מקרא
+//         button too (fold6MobileLegendLayerEl opacity)
 //       - fold12's own title card (frame included) fades out (page9TitleCardEl opacity)
 //   - eTrigger (fold13Trigger, unchanged): fires once, only when the title
 //     card's wrapper (.page12-sticky-center) reaches top<=0 (fully stopped),
@@ -41,17 +42,17 @@ function updateFold13() {
 
   p9.fold13OutT = eScroll; // fades legit dots / dividing line / counts in drawPage9
 
-  if (eScroll > 0) {
-    page9TrayEl.style.transition = "none";
-    page9TrayEl.style.transform  = `translate(-50%, ${eScroll * 100}%)`;
-  } else {
-    page9TrayEl.style.transition = "";
-    page9TrayEl.style.transform  = "";
-  }
   // When fully reversed (eScroll=0) clear inline opacity so CSS class rules
   // (engaged, is-active, etc.) take over — inline "1" would otherwise
   // override them and freeze elements in their @fold11 state.
   const opacityVal = eScroll > 0 ? String(1 - eScroll) : '';
+  // The tray (the pills' frame) fades out in place with everything else —
+  // it used to slide off (up on mobile/V2, down in the old bottom-sheet
+  // layout) while the rest of the fold faded, which made it the one element
+  // exiting by motion. transition:none so the fade tracks scroll ticks, no
+  // CSS opacity transition fighting it.
+  page9TrayEl.style.transition = eScroll > 0 ? "none" : "";
+  page9TrayEl.style.opacity    = opacityVal;
   if (page9HeaderEl)    page9HeaderEl.style.opacity    = opacityVal;
   if (page9TitleCardEl) page9TitleCardEl.style.opacity = opacityVal;
   if (page9ZoneWrapEl)  page9ZoneWrapEl.style.opacity  = opacityVal;
@@ -61,6 +62,16 @@ function updateFold13() {
   // explicitly — otherwise it stays visible through @fold11 while the rest
   // of the legend fades out.
   fold6NoteLayerEl.style.opacity = opacityVal;
+  // Same for the mobile מקרא bar: it is the legend's *control* on a phone, in
+  // its own fixed layer outside groupsOverlayEl, so without this it stayed
+  // sitting on screen while the legend it opens faded away underneath it.
+  // Fading the whole layer takes the panel with it if it happens to be open.
+  if (fold6MobileLegendLayerEl) fold6MobileLegendLayerEl.style.opacity = opacityVal;
+  // The shared #page9Tooltip too — on mobile it's the docked event frame,
+  // which sat fully visible through @fold11 while everything around it faded.
+  // Inline opacity only (the base rule has no opacity transition), cleared at
+  // eScroll=0 like the rest so its normal show/hide styling takes back over.
+  if (fold8TooltipEl) fold8TooltipEl.style.opacity = opacityVal;
   // page12TitleCardEl (the fold13 card) stays visible throughout.
   // fold6SquareEls' own opacity (updateGroups) reads p9.fold13OutT just set
   // above to fade a still-legit square out with the rest of the legit grid —

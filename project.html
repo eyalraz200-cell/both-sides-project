@@ -29,12 +29,17 @@
            taking the cluster's place once it settles into fold6's left
            mini-legend — see FOLD6_SQUARES_OFFSET/layoutFold6Squares in js/groups.js. -->
       <div class="fold6-squares-overlay" id="fold6SquaresOverlay" aria-hidden="true"></div>
-      <!-- Hover tooltip for page-9's drag-and-drop event dots (date + Hebrew
-           description) — positioned/shown by p9HoverInit in page9.js. -->
-      <div class="page9-tooltip" id="page9Tooltip" aria-hidden="true">
-        <div class="page9-tooltip-date"></div>
-        <div class="page9-tooltip-desc"></div>
-      </div>
+    </div>
+    <!-- Hover tooltip for the event dots (date + Hebrew description) —
+         positioned/shown by p9HoverInit (page9.js), p7HoverInit/p7InspectInit
+         (page7.js) and the fold8 demo (js/update-groups.js). A direct .layout
+         child, NOT nested in .graphic-col: that column is its own stacking
+         context (position:fixed + z-index:0), which traps any z-index inside
+         it below .text-col's full-viewport sections — on mobile that made the
+         docked frame untappable, every touch landing on section#page-7. -->
+    <div class="page9-tooltip" id="page9Tooltip" aria-hidden="true">
+      <div class="page9-tooltip-date"></div>
+      <div class="page9-tooltip-desc"></div>
     </div>
     <!-- Hover tooltip for a category pill in page-9's tray (#page9ZoneBelow
          only — see p9CategoryTooltipInit in page9.js). Same reasoning as
@@ -57,6 +62,12 @@
          own z-index (.graphic-col traps any z-index inside it). Without
          this, the ACLED link inside the note was unclickable. -->
     <div class="fold6-note-layer" id="fold6NoteLayer" aria-hidden="true"></div>
+    <!-- Mobile-only מקרא legend bar (js/groups.js builds its contents). It gets
+         its OWN layer rather than sharing #fold6NoteLayer above, because that
+         one is aria-hidden and pointer-events:none — correct for a decorative
+         credit line, fatal for a button that has to be tappable and reachable
+         by assistive tech. Same direct-.layout-child trick for the z-index. -->
+    <div class="fold6-mlegend-layer" id="fold6MobileLegendLayer"></div>
     <div class="text-col" id="textCol">
       <section class="text-section" data-page="0" id="page-0">
         <div class="page0-overlay">
@@ -107,7 +118,7 @@
         <div class="page9-title-row">
           <div class="section-text text-card">
             <h2 class="section-title text-card-frame">איפה עובר הגבול בעיניכם?</h2>
-            <p class="page9-header-subtitle">גררו סוגי פעולות שנחשבות בעיניכם לקיצוניות</p>
+            <p class="page9-header-subtitle">גררו סוגי פעולות הנחשבות קיצוניות בעיניכם</p>
           </div>
         </div>
         <div class="page9-sticky">
