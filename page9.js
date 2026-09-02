@@ -221,7 +221,7 @@ const P9_TRAY_HEADER_GAP_V2 = 20; // floor: this much clear air under .page9-hea
 
 // Where the V2 pill band's top edge actually lands: P9_TRAY_TOP_V2, but never
 // closer than P9_TRAY_HEADER_GAP_V2 under the pinned header — --card-top is a
-// dvh fraction, so on a tall viewport the header's own bottom can outgrow the
+// vh fraction, so on a tall viewport the header's own bottom can outgrow the
 // constant. Written to --p9-v2-tray-top (p9MeasureTrayLayout) and read back by
 // p9ExtremeTopY, so the CSS and the canvas ceiling never disagree.
 function p9TrayTopV2() {
@@ -2368,7 +2368,7 @@ document.addEventListener("DOMContentLoaded", p9SyncSubtitle);
 window.addEventListener("resize", p9SyncSubtitle);
 // A resize that crosses the 600px breakpoint flips the layout variant (one
 // tray row vs two, a different measured height); and even within V2, the
-// header's --card-top is a dvh fraction, so p9TrayTopV2's floor moves with the
+// header's --card-top is a vh fraction, so p9TrayTopV2's floor moves with the
 // viewport. Both are re-resolved by re-measuring, so just always do it.
 window.addEventListener("resize", () => {
   p9SyncLayoutV2Class();

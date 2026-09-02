@@ -434,8 +434,11 @@ hover change also calls `updateGroups()` so the 8 fold-6 DOM squares dim in step
 
 `page8.js` is the bridge and imports page9's geometry as the source of truth
 (`p9EnsureIndex`, `p9LegitGeometry`, `p9LegitPosOf`). `p8CurrentT()` runs at constant
-speed over `P8_TRANSITION_DURATION` 3000 ms, so a mid-flight reversal covers only the
-remaining distance. `drawPage8` at `t <= 0` delegates to `drawPage7` with `currentDate`
+speed over the current phase's clock — `P8_TRANSITION_DURATION` 3000 ms forward,
+`P8_REVERSE_DURATION` 700 ms reverse (`p8PhaseDur`) — so a mid-flight reversal covers
+only the remaining distance. The reverse is deliberately much faster: it fires while the
+reader is already scrolling back up the multi-viewport scrub, and at 3000 ms the canvas
+showed a crushed page9-blend band and the end-state axis deep into @fold8 for seconds. `drawPage8` at `t <= 0` delegates to `drawPage7` with `currentDate`
 temporarily forced to `maxDate`; above that it lerps each dot from its timeline cell to
 its page9 legit-grid target and lerps the square size 3.5 → 3 over the same ease (no
 opacity fade). `p8CaptureBlendedPositions(W, H, tOverride)` feeds both `p9.anim` (forward) and
@@ -443,8 +446,9 @@ opacity fade). `p8CaptureBlendedPositions(W, H, tOverride)` feeds both `p9.anim`
 
 **The handoff replays the glide's own global clock — it does not restart one.** Both
 call sites capture the glide's *endpoint* positions (`tOverride` 0 forward, 1 backward)
-and back-date `start` by the elapsed fraction, so the continuation's
-`p9Ease(elapsed / P8_TRANSITION_DURATION)` reproduces `p9Ease(p8CurrentT())` exactly
+and back-date `start` by the elapsed fraction — each direction against its own clock
+(forward `P8_TRANSITION_DURATION`, backward `P8_REVERSE_DURATION`) — so the continuation's
+`p9Ease(elapsed / duration)` reproduces `p9Ease(p8CurrentT())` exactly
 (verified to float precision at every handoff point). Do not "simplify" this back to
 capturing the current blended position with the remaining duration: that eases an
 already-eased slice — the standard mistake this project's easing rule names — so the
@@ -472,7 +476,7 @@ no extra invalidation; desktop rendering is untouched.
 | Title / date type | 14 / 14px | 14 / 14px | The date matches the year label, so the two lines under the axis read as one size |
 | Label offset / date offset / line height | 34 / 18 / 19 | 36 / 15 / 15 | |
 | Title `maxWidth` | all `null` | 220 default, per-event `maxWidthMobile` | Mobile prints one centred block (below), so the whole axis width is available — most titles come back to one or two lines, well inside the 3-line reserve |
-| `.page7-scrub` | 780vh | 560**dvh** | A touch flick covers far more page per gesture; `dvh` so the URL bar doesn't change the range mid-scrub (safe — the scrub re-measures live rects every scroll event) |
+| `.page7-scrub` | 780vh | 560**vh** | A touch flick covers far more page per gesture. `vh`, never `dvh`: `dvh` re-resolves when the URL/bottom bar collapses, which grew the section ~600px mid-scrub and jumped the visible date back by months |
 
 `sbbTimeline(H)` takes the canvas height it is being used for and turns those two px
 clearances into the `top`/`bottom` fractions the rest of the code already expects, so no

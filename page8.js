@@ -10,11 +10,19 @@
 // Scrolling back up past the original trigger point plays the same glide in
 // reverse (see p8TriggerReverse), the same interruptible-cascade pattern
 // page7.js uses for its month-by-month reveal.
-const P8_TRANSITION_DURATION = 3000; // ms — playback time of a full 0->1 traverse
+const P8_TRANSITION_DURATION = 3000; // ms — playback time of a full 0->1 forward traverse
+// The reverse runs on its own, much shorter clock. The forward glide is a
+// reveal the reader watches in place, but the reverse fires while they're
+// already scrolling away back up @fold8's multi-viewport scrub — at 3000ms a
+// flick leaves the canvas showing a crushed page9-blend band and the end-state
+// axis several folds away for seconds. Position still animates continuously
+// (never snaps); it just resolves before the reader has left the neighborhood.
+const P8_REVERSE_DURATION = 700; // ms — playback time of a full 1->0 traverse
 let p8Engaged       = false; // true from the forward trigger until fully reversed back to rest
 let p8PhaseStart    = null;  // performance.now() when the current phase (forward/reverse) began
 let p8PhaseFromT    = 0;     // t value the current phase started from
 let p8PhaseToT      = 0;     // t value the current phase is heading toward (1 forward, 0 reverse)
+let p8PhaseDur      = P8_TRANSITION_DURATION; // full-traverse ms for the current phase (direction-dependent)
 
 // Current eased-progress value, mid-phase or at rest. Speed is constant (full
 // 0..1 takes P8_TRANSITION_DURATION) regardless of where a phase starts from, so
@@ -24,7 +32,7 @@ function p8CurrentT() {
   if (p8PhaseStart === null) return p8PhaseFromT;
   const span = p8PhaseToT - p8PhaseFromT;
   if (span === 0) return p8PhaseToT;
-  const localT = Math.min(1, (performance.now() - p8PhaseStart) / (P8_TRANSITION_DURATION * Math.abs(span)));
+  const localT = Math.min(1, (performance.now() - p8PhaseStart) / (p8PhaseDur * Math.abs(span)));
   return p8PhaseFromT + span * localT;
 }
 
@@ -44,6 +52,7 @@ function p8RunAnimLoop() {
 function p8StartPhase(toT) {
   p8PhaseFromT = p8CurrentT();
   p8PhaseToT   = toT;
+  p8PhaseDur   = toT === 0 ? P8_REVERSE_DURATION : P8_TRANSITION_DURATION;
   p8PhaseStart = performance.now();
   p8RunAnimLoop();
 }

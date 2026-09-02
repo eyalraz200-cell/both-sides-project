@@ -19,7 +19,11 @@
      minus the .text-section gutters, so it fits a phone without overflowing.
      Still a DEFINITE width (min() resolves to one), which .text-card relies on. */
   --card-w: min(480px, 100vw - 48px);
-  --card-top: 4.4dvh;   /* pinned title-card / page9-header top offset (dvh: mobile URL-bar stability) */
+  /* vh, NOT dvh: on mobile vh is pinned to the LARGE viewport and never
+     re-resolves, while dvh tracks the URL/bottom bar and moves everything it
+     sizes each time the bar collapses — the exact instability it was once
+     (wrongly) used to prevent. */
+  --card-top: 4.4vh;   /* pinned title-card / page9-header top offset */
 }
 
 body {
@@ -61,7 +65,11 @@ body {
 
 .text-section {
   position: relative;
-  min-height: 100dvh;
+  /* vh, not dvh — dvh made every section (and so every later fold's offsetTop)
+     grow ~100px the moment a phone's URL/bottom bar collapsed, teleporting the
+     reader backwards through folds 8–10 while scrollY stayed put. vh = lvh on
+     mobile: fixed for the whole session. */
+  min-height: 100vh;
   display: flex;
   align-items: center;
   padding: 0 48px;
@@ -2250,7 +2258,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     top: calc(50% - 162px);
   }
 
-  /* The pinned title card rests 4.4dvh (~37px on an 844px phone) from the top
+  /* The pinned title card rests 4.4vh (~37px on an 844px phone) from the top
      by default, which crowds the מקרא bar ending around 46px. Pushed to a flat
      48px so the two read as separate bands without drifting apart. Flat px, not
      a fraction: the thing being cleared is itself fixed-px. page9UpdateFromScroll
@@ -2610,11 +2618,13 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 
   /* Shorter scrub than desktop's 780vh: a touch flick covers far more of the
      page per gesture, so the desktop range makes crossing the dataset feel
-     endless on a phone. dvh (not vh) so the URL bar showing/hiding doesn't
-     change the range mid-scrub — page7UpdateFromScroll re-measures live rects
-     on every scroll event, so a height change just remaps t continuously. */
+     endless on a phone. vh, NOT dvh: dvh re-resolves when the URL/bottom bar
+     collapses, which grew this section by ~600px mid-scrub and jumped the
+     visible date back by months (scrollY holds still while the section top and
+     height both move). vh is pinned to the large viewport, so the scrub range
+     never changes under the reader's finger. */
   .text-section.page7-scrub {
-    min-height: 560dvh;
+    min-height: 560vh;
   }
 
   /* ── The מקרא bar ──────────────────────────────────────────────────────

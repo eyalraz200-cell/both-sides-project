@@ -177,6 +177,12 @@ Two knock-on values in that stack:
   `page9UpdateFromScroll` no longer hard-codes the old
   `0.044` — it reads `getComputedStyle(page9TitleCardEl).top` back off the card, so the
   stick threshold follows the variable at either breakpoint and the card can't jump as it sticks.
+  The card's natural top is computed exactly from the title row's measured box
+  (`rowTop + (rowH − cardH)/2`), **never** approximated as `innerHeight * 0.5`: `innerHeight`
+  is the *visual* viewport while the row is `100vh` (the large viewport), and on mobile the
+  two disagree by the browser-bar height exactly while scrolling up (bars showing) — the
+  approximation released `.is-stuck` ~100px before CSS sticky let go, pinning the
+  white-filled dashed frame at the top of @fold10 in its un-stuck styling.
 - **The extreme grid's rows are clipped at `midY`, not `H - 16`** (`drawBandedCols`, `page9.js`).
   On desktop the two are equivalent; on mobile `midY` is `H` minus the 4px legit bar, so the old
   floor culled the bottom rows and opened a ~12px gap between the dot columns and the bar they

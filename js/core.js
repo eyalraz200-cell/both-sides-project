@@ -156,6 +156,23 @@ function draw() {
   drawRanThisFrame = true;
   requestAnimationFrame(() => { drawRanThisFrame = false; });
   const W = canvas.clientWidth, H = canvas.clientHeight;
+  // Keep the backing store in lockstep with the CSS box on every paint, not
+  // just on `resize`: iOS fires resize mid browser-bar slide, so init() can
+  // bake the backing at a height the canvas only passes through (e.g. 763px)
+  // and never revisits once it settles (721px). From then on every frame is
+  // drawn at clientHeight but displayed stretched to the stale backing —
+  // the whole picture squeezes a few percent and the leftover band at the
+  // bottom of the buffer keeps old pixels forever (seen on device as a
+  // ghost second row of year labels and a crushed dot strip). Assigning
+  // width/height also clears the canvas, so the check must stay a no-op
+  // when nothing changed.
+  const dpr = window.devicePixelRatio || 1;
+  const bw = Math.round(W * dpr), bh = Math.round(H * dpr);
+  if (canvas.width !== bw || canvas.height !== bh) {
+    canvas.width = bw;
+    canvas.height = bh;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
   // While the fold13 dot morph is active (forward or reverse), keep calling
   // drawPage12 regardless of currentPage — drawPage9 suppresses the extreme
   // dots when morphT > 0 (to avoid ghosting under the overdraw), so if
@@ -169,10 +186,12 @@ function draw() {
 }
 
 function init() {
+  // Same basis (clientWidth/Height, rounded) as draw()'s per-frame resync —
+  // a fractional rect here would disagree with draw()'s integers and make it
+  // re-clear the canvas on every single frame.
   const dpr  = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  canvas.width  = rect.width  * dpr;
-  canvas.height = rect.height * dpr;
+  canvas.width  = Math.round(canvas.clientWidth  * dpr);
+  canvas.height = Math.round(canvas.clientHeight * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   draw();
 }
@@ -223,7 +242,12 @@ const textCardFrameResizeObs = typeof ResizeObserver !== "undefined"
 
 function updateTextCardFrameDashes() {
   document.querySelectorAll(".text-card-frame").forEach((frame) => {
-    textCardFrameResizeObs?.observe(frame); // re-observe is a no-op
+    // border-box, NOT the default content-box: @fold10's stick/un-stick
+    // animates PADDING, which moves the border box while the content box
+    // stays put — the default observer stayed silent through the whole
+    // transition, so a mid-stuck re-bake (address-bar resize) froze a stale
+    // viewBox in and the dash faded back in stretched after un-sticking.
+    textCardFrameResizeObs?.observe(frame, { box: "border-box" }); // re-observe is a no-op
     const w = frame.offsetWidth, h = frame.offsetHeight;
     if (w === 0 || h === 0) return;
     let svg = frame.querySelector(":scope > svg.text-card-frame-dash");

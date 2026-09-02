@@ -123,13 +123,22 @@ function page9UpdateFromScroll() {
     p9TriggerLine(titlePastCenter ? 1 : 0);
   }
 
-  // Card's natural sticky top = titleRowTop + 50vh - cardH/2 ≈ titleRowTop + 50vh.
+  // Card's natural (un-pinned) top = row top + (rowH - cardH)/2 — the flex
+  // centering inside the 100vh row, computed from the row's own measured box.
   // Sticks when that value reaches --card-top, the resting offset the CSS
   // actually pins it at. Read from the variable rather than hard-coded, because
   // that offset differs per breakpoint (mobile pushes it down to clear the מקרא
   // bar) and a threshold out of step with it makes the card jump as it sticks.
+  // Do NOT approximate the centering as window.innerHeight * 0.5: innerHeight
+  // is the *visual* viewport, while the row is 100vh (the large viewport). On
+  // mobile the two disagree by the browser-bar height exactly when the bars are
+  // showing — i.e. while scrolling UP — which released .is-stuck ~100px before
+  // CSS sticky let go of the card, leaving the white-filled dashed frame pinned
+  // at the top of @fold10 in its un-stuck styling.
   const cardTopPx = parseFloat(getComputedStyle(page9TitleCardEl).top) || 0;
-  const isStuck = titleRowTop <= cardTopPx - window.innerHeight * 0.5;
+  const rowRect = page9TitleRowEl.getBoundingClientRect();
+  const naturalTop = rowRect.top + (rowRect.height - page9TitleCardEl.offsetHeight) / 2;
+  const isStuck = naturalTop <= cardTopPx;
   page9UpdateTitleFlush(isStuck);
   page9TitleCardEl.classList.toggle("is-stuck", isStuck);
   // Both tray and zone-wrap are position:fixed — always at their final viewport
