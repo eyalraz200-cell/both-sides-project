@@ -36,7 +36,7 @@ crossing point differs by viewport.
 | Trigger | Card | `frac` |
 |---|---|---|
 | `fold2Trigger` | `#page-1 .text-card` | 0.5 |
-| `fold3Trigger` | `#page-2 .text-card` | 0.5 |
+| `fold3Trigger` | `#page-2 .text-card` | **0.38 on mobile** (`FOLD3_CARD_FRAC`, nudged later from 0.6 in two steps per explicit instruction), 0.5 desktop |
 | `fold6Trigger` | `#page-3 .text-card` | **0.8 on mobile** (`FOLD6_CARD_FRAC`), 0.5 desktop |
 | `squaresRevealTrigger` | `#page-4 .text-card` | 0.5 |
 | `fold7LabelTrigger` | `#page-5 .text-card` | 0.5 |
