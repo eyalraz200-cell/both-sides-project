@@ -66,12 +66,23 @@ numbers in the source.
   unknown and a converted value re-evaluates differently.
 - Delete the file **and** its `<script>` tag once the decision is made. It never ships.
 
+## Currently in the repo
+
+`_debug-glide-perf.js` — `@fold9` glide-stutter attribution. `project.html` loads it last.
+Delete the file **and** its `<script>` tag when it is no longer wanted.
+
+*(`_debug-fold-badge.js`, the ≤600px chip printing the active `@foldN`, and
+`_debug-fold4-handoff.js`, the `@fold4` hand-off compare, were both deleted once their
+work was done.)*
+
 ## Previously-built harnesses (all deleted)
 
-No `_debug-*.js` file is in the repo right now, and `project.html` loads none. The three
-that existed are gone; what's worth keeping is what each one *baked into*, so a rebuilt
+The tuning harnesses that existed are gone; what's worth keeping is what each one *baked into*, so a rebuilt
 version knows where its numbers land:
 
+- **@fold8/@fold10 loupe marker** (`compare/`: crosshair vs halo-by-subtraction vs
+  grow-the-selection) — halo won, and it moved out of the loupe onto the main canvas:
+  `P7_INSPECT_SCRIM` / `P7_INSPECT_HOLE_DOTS` + `p7DrawInspectScrim` in `page7.js`.
 - **@fold2 dot colours/positions** — group colours → `GROUPS[].color` **plus** the
   hex-literal lookups `FOLD4_COALITION_ROWS` / `FOLD4_CHANGE_ROWS` (they resolve groups by
   hex and go `undefined` if missed); positions → `FOLD2_GROUP_CELL`; filler colours →
@@ -100,3 +111,41 @@ Revert to `const` when baking the value.
 Files are large and heavily commented. Prefer `grep -n` plus line-ranged reads over
 reading a file end to end — the comments carry a lot of "why", so grepping for a constant
 name usually lands directly on its rationale.
+
+## Checking mobile
+
+There's no device lab, so visual mobile verification is done in the browser's own device
+emulation at **393×852** (the size the Figma mobile frames are drawn at). The breakpoint is
+600px — see [Architecture](Architecture.md#mobile--responsive).
+
+### Horizontal-overflow check (headless)
+
+Layout overflow is measurable rather than eyeballed, and worth re-running after any width
+change. There's no browser in the repo, but `npm i puppeteer` into a scratch directory
+(never into the project — there is no `package.json` here and there must not be one) gives
+a headless Chromium. The check that matters, per viewport width and at ~20 scroll positions
+down each page:
+
+- `document.documentElement.scrollWidth > clientWidth` → the document itself scrolls
+  sideways. This is the bug the user actually feels.
+- any element whose `getBoundingClientRect()` crosses either viewport edge → paints
+  off-screen. A `position: fixed` ancestor means it can't extend document scroll, but it's
+  still visibly clipped, and mobile browsers can pan to it.
+
+Sweep **320 / 360 / 393 / 430 / 600 / 768 / 1024 / 1440** on both `index.html` and
+`project.html`. 320 is the useful floor — it catches fixed-width rows that survive 393.
+Remember the article page is RTL, so overflow extends *left*: `getBoundingClientRect().left
+< 0` is as much a failure as `right > vw`.
+
+Fix the offending element's own width; don't reach for `overflow-x: hidden` on `html`/`body`
+— it hides the symptom and makes the next one invisible to this check.
+
+What to actually check, since most regressions here are directional:
+
+- Scroll folds 1–7 and 11 **both ways**. Every fold animation is a reversible trigger, so a
+  layout value that only looks right scrolling down is still broken.
+- Resize across 600px **mid-session**. The resize handler rebuilds the dot columns, re-picks
+  the @fold2 fillers and clears the label-width cache; a value cached on the wrong side of
+  the breakpoint shows up as @fold3's two camps sitting off-center.
+- Confirm **desktop at 1440px is pixel-identical** to before. Everything mobile is gated on
+  the breakpoint, so any desktop movement is a bug in the gate, not a tradeoff.

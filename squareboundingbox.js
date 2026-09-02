@@ -20,7 +20,60 @@ const SBB_TIMELINE = {
   bottom: 0.81,   // fraction of H
 };
 
+// Mobile variant (≤600px). `left` is a screen-edge inset (0.03×393≈12px,
+// matching FOLD6_LEGEND_INSET_MOBILE) — the legend is top-pinned there, not
+// left-pinned, so nothing has to be cleared horizontally.
+//
+// top/bottom are NOT fractions: on a phone the two things the grid has to clear
+// are both fixed-px objects — the docked tooltip frame above it and the axis
+// event labels below it — so a fraction of H either wasted a band of screen on a
+// tall phone or collided on a short one. They're plain px clearances instead,
+// turned into fractions against the live H by sbbTimeline() below:
+//
+//   top    = the docked tooltip's own bottom edge + SBB_TIMELINE_MOBILE_GAP_PX
+//            (TOOLTIP_DOCK_TOP_PX 62 + its 100px collapsed height, see
+//            `.page9-tooltip.is-docked` in style.css) — read as constants here
+//            rather than measured, because the frame isn't in the DOM flow and
+//            its size is fixed by that rule. The frame's ONE growing state
+//            (.is-expanded, a reader opening a clipped description) is
+//            deliberately NOT accounted for here: it overlays the grid instead
+//            of moving it, so this clearance stays constant.
+//   bottom = the year axis line (P7_AXIS_Y_FRAC_MOBILE of H) minus the tallest
+//            axis-event label block that can print above it, minus the SAME
+//            SBB_TIMELINE_MOBILE_GAP_PX. The grid is the middle of a three-part
+//            stack (tooltip / dots / axis labels) so it breathes equally on both
+//            sides — a different gap top and bottom reads as the grid sitting
+//            crooked in its band.
+//            Block height is measured for what actually prints: at the 220px
+//            wrap all seven P7_AXIS_EVENTS titles fit on ONE line, so it is
+//            P7_AXIS_EVENT_LABEL_OFFSET_MOBILE (36, that line's baseline) + ~10px
+//            cap height (14px Assistant) = 46. Reserving extra lines "just in
+//            case" pushed the dots that far off every block that really prints,
+//            and the fold read as having a hole in it. If a longer title is ever
+//            added it wraps and eats 18px per extra line out of the gap
+//            (P7_AXIS_EVENT_LINE_HEIGHT_MOBILE) — check it by eye then.
+const SBB_TIMELINE_MOBILE_LEFT          = 0.03;  // fraction of W
+const SBB_TIMELINE_MOBILE_GAP_PX        = 18;    // shared clearance above AND below the grid
+const SBB_TIMELINE_MOBILE_TOP_PX        = 62 + 100 + SBB_TIMELINE_MOBILE_GAP_PX;
+const SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX = 36 + 10 + SBB_TIMELINE_MOBILE_GAP_PX;
+
+
+// Live-read at layout/draw time (isMobile() reads innerWidth), so a resize
+// across the 600px boundary picks the right box on the next relayout. H is the
+// canvas height the caller is laying out against — passed in rather than read
+// off window.innerHeight so the box can never disagree with the geometry it's
+// being used for.
+function sbbTimeline(H) {
+  if (!isMobile()) return SBB_TIMELINE;
+  const h = H || window.innerHeight;
+  return {
+    left:   SBB_TIMELINE_MOBILE_LEFT,
+    top:    SBB_TIMELINE_MOBILE_TOP_PX / h,
+    bottom: (P7_AXIS_Y_FRAC_MOBILE * h - SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX) / h,
+  };
+}
+
 // Standard horizontal gap (px) left empty at the canvas's center, between any
 // left-side and right-side event/action grid (timeline + page9's grids) — keeps them
 // visually consistent as one continuous two-sided dataset.
-const CENTER_GAP = 8;
+const CENTER_GAP = 4;

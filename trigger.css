@@ -559,6 +559,24 @@ a {
 }
 
 @media (max-width: 600px) {
+  /* Absolute + left:24px + the 900px block's 48px of horizontal padding makes
+     this row 24+327 = 351px wide from the left edge — past a 320px viewport,
+     which is what let the article page scroll sideways. Out of absolute
+     positioning it's a plain full-width flex row in .shk-utility (which is
+     already position:relative with the matching min-height), so it can never
+     be wider than the bar it sits in. */
+  .shk-utility-inner {
+    position: static;
+    transform: none;
+    padding: 10px 16px;
+    min-height: 46px;
+    /* Support button + social cluster measure ~321px side by side, so on a
+       narrow phone they wrap onto two lines instead of pushing the row (and
+       with it the document) past the viewport. */
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px 12px;
+  }
   .shk-headline {
     font-size: 36px;
   }
@@ -582,5 +600,16 @@ a {
   }
   .shk-support-banner-text {
     font-size: 12px;
+  }
+  /* The 330px float plus its negative left margin leaves the body copy a
+     sliver of a column on a phone — drop the float so the CTA becomes a
+     full-width block between paragraphs instead. */
+  .shk-cta {
+    float: none;
+    width: 100%;
+    margin: 24px 0;
+  }
+  .shk-cta-button {
+    width: 100%;
   }
 }

@@ -27,14 +27,36 @@ const check = watchCardThreshold(cardEl, frac, t, instantReverse = false);
 
 - `currentRaw()` is the linear 0..1 progress; `currentT()` is that through `p9Ease`.
 - `watchCardThreshold` fires the trigger when `cardEl`'s top crosses `frac * innerHeight`
-  — almost always `frac = 0.5`. Deviations are listed in [Folds](Folds.md).
+  — almost always `frac = 0.5`; bigger is earlier. `frac` may also be a **function**,
+  re-read every check, for a fold that crosses at a different point per viewport (only
+  `fold6Trigger` does, see `FOLD6_CARD_FRAC`). Deviations are listed in [Folds](Folds.md).
 - **Reversal covers only the remaining distance.** Scrolling back up doesn't restart from
   0; it plays the same distance backwards from wherever it currently sits.
+- **Instant-jump snap:** if at crossing time the card is **more than one viewport past
+  its threshold** (an instant jump — iOS status-bar tap, Home key, anchor — not a real
+  scroll, which always checks within a few px of the threshold), `watchCardThreshold`
+  calls `trigger.set()` instead of `trigger.trigger()`, in **both directions**. Without
+  this, a jump to the top played ~2s of fold-6/8 fixed overlays (open מקרא panel, demo
+  tooltip, group labels un-typing) on top of the hero. The fold8 demo-tooltip sequence
+  runs on wall-clock, so it mirrors the snap itself: in `fold8AdvanceSequence`, a
+  one-tick `fold7LabelTrigger` raw drop of >0.5 down to ≤0 (impossible for an animated
+  reverse, which moves ~0.01/frame) triggers an immediate `fold8ResetTooltip()`.
 - `page7.js`/`page8.js` hand-roll the same shape locally (`p8CurrentT`/`p8StartPhase`,
   `p7MonthAnimStart`/`p7MonthReverseStart`) — they pre-date `makeTrigger`.
 - `makeTrigger`'s own rAF loop **stops once a phase settles**. Anything that must keep
   running afterwards (the @fold6 tooltip sequence, page8's glide sync) needs its own
   loop — see `fold8SequenceTick` and `fold9EnsureP8SyncLoop`.
+- Because several of these loops legitimately run at once and each calls the same
+  globals, **`draw()` (js/core.js) and `updateGroups()` (js/update-groups.js) are
+  coalesced to once per rAF frame**: the first call in a frame runs; any later
+  same-frame call queues exactly one rerun on the next frame (so a state change made
+  between the two calls still paints, one frame late at worst — never dropped). New
+  loops may therefore call them freely without stacking duplicate per-frame work.
+  Corollary: a loop must NOT write a style it has handed off to `updateGroups` and
+  rely on its own synchronous `updateGroups()` call to overwrite it — that call may
+  be deferred, letting the stale write win the frame (this is exactly how @fold1's
+  entrance loop briefly broke the @fold2 dot shrink; it now stops writing a dot's
+  transform once `popped`).
 
 ## Beat windows
 

@@ -8,7 +8,10 @@ function p12EnsureFreeformTargets(W, H) {
   p12FreeformTargets = new Map();
   p12FreeformW = W; p12FreeformH = H;
 
-  const CELL  = P7_CELL;
+  // Mobile scatters at @fold10's own pitch (p9Metrics: 2px) — the desktop
+  // P7_CELL pitch is more than double it and made the spread dots read
+  // oversized/sparse on a phone. Desktop keeps P7_CELL as before.
+  const CELL  = isMobile() ? p9Metrics().CELL : P7_CELL;
   const cols  = Math.floor(W / 2 / CELL);
   const rows  = Math.floor(H / CELL);
   const total = cols * rows;
@@ -56,7 +59,9 @@ function drawPage12(ctx, W, H) {
   // Overdraw extreme dots at their lerped freeform positions.
   const targets  = p12EnsureFreeformTargets(W, H);
   const startPos = p9.fold13StartPos;
-  const SQ       = P9_SQ;
+  // Same size the dots had in @fold10's extreme grid (1.5px on mobile, 3px on
+  // desktop) — drawing the morph at a hardcoded P9_SQ doubled them on a phone.
+  const SQ       = p9Metrics().SQ;
 
   for (const e of [...p9.leftTopOrder, ...p9.rightTopOrder]) {
     const to   = targets.get(e);

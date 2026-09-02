@@ -4,6 +4,18 @@ window.scrollTo(0, 0);
 const canvas = document.getElementById("canvas");
 const ctx    = canvas.getContext("2d");
 
+// ── Mobile breakpoint ──
+// One shared breakpoint for the whole page, matching trigger.css's own 600px
+// article breakpoint. JS layout code that needs to scale a desktop px
+// constant down on phones gates on isMobile(); CSS uses
+// `@media (max-width: 600px)`. Read live (not cached) so the existing
+// resize path in bootstrap.js picks up a desktop↔mobile crossing for free —
+// every caller runs inside layout code that resize already re-runs.
+const MOBILE_BP = 600;
+function isMobile() {
+  return window.innerWidth <= MOBILE_BP;
+}
+
 // drawFoldSplit/drawFold7/drawFold9 are tiny inline background-only
 // functions (see below) — these folds' only visual content is the DOM overlay.
 // Folds whose canvas is *purely* background use drawBackground directly.
@@ -124,7 +136,25 @@ function drawFold9(ctx, W, H) {
   if (p7AxisTriggerIfNeeded()) p7DrawYearAxis(ctx, W, H);
 }
 
+// Several independent rAF loops legitimately run at once (p8RunAnimLoop,
+// p7StartAnimLoop, every animating makeTrigger, …) and each calls this same
+// global draw() — measured at ~2 full canvas paints per frame during @fold9's
+// bridge glide, which is where its scroll stutter came from. Coalesced: the
+// first call in a frame paints, later same-frame calls queue ONE rerun on the
+// next frame instead (not dropped — state mutated between the two calls still
+// gets painted, one frame late at worst, which any active loop repaints anyway).
+let drawRanThisFrame = false;
+let drawRerunQueued  = false;
 function draw() {
+  if (drawRanThisFrame) {
+    if (!drawRerunQueued) {
+      drawRerunQueued = true;
+      requestAnimationFrame(() => { drawRerunQueued = false; draw(); });
+    }
+    return;
+  }
+  drawRanThisFrame = true;
+  requestAnimationFrame(() => { drawRanThisFrame = false; });
   const W = canvas.clientWidth, H = canvas.clientHeight;
   // While the fold13 dot morph is active (forward or reverse), keep calling
   // drawPage12 regardless of currentPage — drawPage9 suppresses the extreme
@@ -177,8 +207,23 @@ function fitDashArray(geomEl) {
   return `${period / 2} ${period / 2}`;
 }
 
+// The dash <svg> is CSS-sized at 100% of the frame but drawn against a baked
+// viewBox — any box-size change the bake didn't see leaves the stroke scaled
+// off the box edge while the white fill (a plain CSS background) still hugs
+// the real box, i.e. fill visibly outside the stroke. @fold10's card is the
+// worst case: on mobile its padding TRANSITIONS on .is-stuck (style.css), so
+// the box resizes over 0.35s with no explicit update call, and an address-bar
+// resize could even re-bake the viewBox mid-transition/while-stuck, freezing
+// the mismatch in. Observing the frames' border boxes redraws the dash on
+// every size change from any cause (the svg is abs-pos, so redrawing it can't
+// resize the frame and loop the observer).
+const textCardFrameResizeObs = typeof ResizeObserver !== "undefined"
+  ? new ResizeObserver(() => updateTextCardFrameDashes())
+  : null;
+
 function updateTextCardFrameDashes() {
   document.querySelectorAll(".text-card-frame").forEach((frame) => {
+    textCardFrameResizeObs?.observe(frame); // re-observe is a no-op
     const w = frame.offsetWidth, h = frame.offsetHeight;
     if (w === 0 || h === 0) return;
     let svg = frame.querySelector(":scope > svg.text-card-frame-dash");
@@ -242,15 +287,29 @@ function updateTooltipDash(tip) {
   // border-radius, same as the title cards' rx=7 against a 2px stroke.
   const i = TOOLTIP_BORDER_W / 2, r = Math.max(0, 8 - i), R = w - i, B = h - i;
   const mirrored = tip.classList.contains("is-mirrored");
-  const br = mirrored ? 0 : r, bl = mirrored ? r : 0;
+  // The mobile docked frame (tooltipDockMobile, js/fold8-tooltip.js) has no
+  // anchor dot to point at, so it drops the one square "pointer" corner and
+  // rounds all four — matching .page9-tooltip.is-docked's own border-radius.
+  const docked = tip.classList.contains("is-docked");
+  // .is-flipped (p9HoverInit) hangs the box BELOW the dot, so the square
+  // anchor corner moves to the top edge: top-left normally, top-right when
+  // mirrored — mirroring the bottom-corner pairing below.
+  const flipped = tip.classList.contains("is-flipped");
+  const sq = docked ? null
+    : flipped ? (mirrored ? "tr" : "tl")
+    : (mirrored ? "br" : "bl");
+  const tl = sq === "tl" ? 0 : r;
+  const tr = sq === "tr" ? 0 : r;
+  const br = sq === "br" ? 0 : r;
+  const bl = sq === "bl" ? 0 : r;
   const arc = (rad, dx, dy) => (rad ? `a${rad},${rad} 0 0 1 ${dx},${dy}` : "");
   path.setAttribute(
     "d",
-    `M${i + r},${i}` +
-      `H${R - r}${arc(r, r, r)}` +
+    `M${i + tl},${i}` +
+      `H${R - tr}${arc(tr, tr, tr)}` +
       `V${B - br}${arc(br, -br, br)}` +
       `H${i + bl}${arc(bl, -bl, -bl)}` +
-      `V${i + r}${arc(r, r, -r)}Z`
+      `V${i + tl}${arc(tl, tl, -tl)}Z`
   );
   path.setAttribute("stroke-dasharray", fitDashArray(path));
 }

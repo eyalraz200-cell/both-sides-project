@@ -42,6 +42,12 @@ function setActivePage(page) {
       start: performance.now() - P8_TRANSITION_DURATION * p8CurrentT(),
       duration: P8_TRANSITION_DURATION,
       plainGlide: true, // see p9PlaceDot (page9.js) — keeps this at page8's own pace, no tier stagger
+      // The glide's starting SQUARE SIZE too, not just its positions: page8
+      // shrinks the dots across the flight and drawPage9 has to keep doing so,
+      // or the dots snap small at the handoff and the flight looks dimmer.
+      // p8CaptureBlendedPositions above has just run p7UpdateLayout, so p7.SQ
+      // is this viewport's real timeline size.
+      fromSQ: p7.SQ,
     };
   }
 
