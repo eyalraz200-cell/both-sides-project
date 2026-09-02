@@ -312,7 +312,7 @@ the measure reads back) and on every `resize`, which also re-runs `p9MeasureTray
 | `P9_COUNT_LABEL_ROOM_V2` | 28 | count-label line above the extreme grid |
 
 `p9TrayTopV2()` is `max(P9_TRAY_TOP_V2, header bottom + P9_TRAY_HEADER_GAP_V2)` — `--card-top`
-is a `dvh` fraction, so the header's own bottom outgrows the constant on a tall viewport.
+is a `vh` fraction, so the header's own bottom outgrows the constant on a tall viewport.
 
 ### Geometry
 

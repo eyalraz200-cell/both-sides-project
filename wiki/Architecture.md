@@ -131,9 +131,12 @@ The dashed white box is a **separate** class, `.text-card-frame`, applied only t
 render unscaled and the 2px-dash/2px-gap edge tiles seamlessly. `DASH_PERIOD = 4` plus
 `fitDashArray`/`updateTextCardFrameDashes` in `js/core.js` keep the repeat aligned. A
 `ResizeObserver` on every frame re-runs the bake whenever a frame's border box changes —
-without it, any resize the explicit call sites didn't see (e.g. @fold10's mobile
-`.is-stuck` padding transition) left the stroke drawn against a stale viewBox while the
-white fill tracked the real box, so the fill leaked outside the stroke.
+it MUST observe with `{ box: "border-box" }`, not the default content-box: @fold10's
+mobile `.is-stuck` transition animates *padding*, which moves the border box while the
+content box stays put, so the default observer never fired for it. With the observer
+silent, a mid-stuck re-bake (iOS address-bar `resize`) froze the stuck-size viewBox in,
+and on scroll-back-up the dash faded back in stretched across the wider un-stuck frame
+while the white fill tracked the real box — fill leaking outside a distorted stroke.
 
 `.section-title`'s base rule (20px, Hadassah Friedlaender, `font-weight: 600` faking
 Medium — there is no true Medium OTF in `fonts/`) is shared by **every** card. No page
@@ -170,6 +173,15 @@ every scroll and re-pins that fraction (instant `scrollTo`) at the end of its re
 handler, after all re-layout has settled. Skipped under `isMobile()` — mobile browsers fire
 resize on plain scrolling (address-bar show/hide), and re-pinning there would fight the
 user's own scroll.
+
+**Canvas backing-store sync:** the canvas's pixel buffer is sized in `init()` (js/core.js)
+and *re-checked on every `draw()` frame* against `clientWidth/Height × dpr` (rounded ints,
+same basis in both places — a fractional `getBoundingClientRect` would disagree and
+re-clear every frame). The per-frame check exists because iOS fires `resize` mid
+browser-bar slide: `init()` alone could bake the buffer at a height the canvas only passed
+through, after which every frame draws squeezed onto the stale buffer and its bottom band
+keeps old pixels forever (seen on device as a ghost second row of year-axis labels and
+crushed dot strips on scroll-up). Never size the buffer only from resize events.
 
 Most of the page needed nothing: `.graphic-col`/`#canvas` are already full-viewport, the
 canvas is DPR-aware, `SBB`/`SBB_TIMELINE` are fractions, every fold's Y is scaled from the
@@ -243,8 +255,11 @@ longest line and is anchored on the edge facing the swatch, so swatch-first labe
 label-leading left legend column flush **left**. `updateGroups` writes it inline off the
 same `sideT` that drives the side-swap, snapped at 0.5 (`text-align` has no in-between).
 
-`vh` → `dvh` on `--card-top` and `.text-section`'s `min-height`, so a mobile URL bar
-showing/hiding doesn't shift the pinned cards.
+`--card-top` and every `.text-section` `min-height` use **`vh`, never `dvh`**: on mobile
+`vh` is pinned to the large viewport for the whole session, while `dvh` re-resolves each
+time the URL/bottom bar collapses — which resized every section, shifted every later
+fold's `offsetTop` by hundreds of px under a fixed `scrollY`, and threw the reader
+backwards through folds 8–10 (the timeline date alone jumped ~10 months per collapse).
 
 ### No horizontal scroll, and no `overflow-x` guard
 

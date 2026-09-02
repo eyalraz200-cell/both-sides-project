@@ -65,11 +65,13 @@ function setActivePage(page) {
     // "from" is the glide's other endpoint (t=1) and the elapsed time is
     // (1 - p8CurrentT()) of a full traverse. p9Ease is symmetric
     // (p9Ease(1-x) === 1 - p9Ease(x)), so that reproduces the glide's own curve
-    // exactly, with no dead stop at the handoff.
+    // exactly, with no dead stop at the handoff. This direction continues the
+    // REVERSE glide, so it replays the reverse's own (shorter) clock —
+    // P8_REVERSE_DURATION, not the forward's 3000ms.
     p7EntryAnim = {
       from: p8CaptureBlendedPositions(W, H, 1),
-      start: performance.now() - P8_TRANSITION_DURATION * (1 - p8CurrentT()),
-      duration: P8_TRANSITION_DURATION,
+      start: performance.now() - P8_REVERSE_DURATION * (1 - p8CurrentT()),
+      duration: P8_REVERSE_DURATION,
     };
   }
 
