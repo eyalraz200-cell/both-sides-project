@@ -893,9 +893,8 @@ function watchCardThreshold(cardEl, frac, trigger, instantReverse = false) {
 const checkFold2      = watchCardThreshold(page2TitleCardEl, 0.5, fold2Trigger);
 // @fold3 fires earlier than the house 0.5 on mobile, same reason as @fold4
 // below: the shrink + the labels typing in need more of the fold still on
-// screen there. A bigger fraction = an earlier crossing. Was 0.6, nudged
-// later twice per explicit instruction (0.6 → 0.52 → 0.38). Desktop keeps 0.5.
-const FOLD3_CARD_FRAC = 0.38;
+// screen there. A bigger fraction = an earlier crossing. Desktop keeps 0.5.
+const FOLD3_CARD_FRAC = 0.6;
 const checkFold3      = watchCardThreshold(
   page3TitleCardEl, () => (isMobile() ? FOLD3_CARD_FRAC : 0.5), fold3Trigger);
 // @fold4 fires EARLIER than the house 0.5 on mobile: the crossing has to leave
@@ -904,9 +903,9 @@ const checkFold3      = watchCardThreshold(
 // fold is still on screen. A bigger fraction is an earlier crossing (the card's
 // top only has to reach further down the viewport); 0.8 fires it as the card
 // is still coming up, per explicit instruction (0.75 → 0.85 → 0.8, tuned by
-// eye).
+// eye; then 0.8 → 0.7, a bit later, per explicit instruction).
 // Desktop keeps 0.5: it has no panel demo, and its glide is settled.
-const FOLD6_CARD_FRAC = 0.8;
+const FOLD6_CARD_FRAC = 0.7;
 const checkFold6      = watchCardThreshold(
   page6TitleCardEl, () => (isMobile() ? FOLD6_CARD_FRAC : 0.5), fold6Trigger);
 const checkSquaresReveal = watchCardThreshold(squaresRevealCardEl, 0.5, squaresRevealTrigger);

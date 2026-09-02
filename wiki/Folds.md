@@ -36,8 +36,8 @@ crossing point differs by viewport.
 | Trigger | Card | `frac` |
 |---|---|---|
 | `fold2Trigger` | `#page-1 .text-card` | 0.5 |
-| `fold3Trigger` | `#page-2 .text-card` | **0.38 on mobile** (`FOLD3_CARD_FRAC`, nudged later from 0.6 in two steps per explicit instruction), 0.5 desktop |
-| `fold6Trigger` | `#page-3 .text-card` | **0.8 on mobile** (`FOLD6_CARD_FRAC`), 0.5 desktop |
+| `fold3Trigger` | `#page-2 .text-card` | **0.6 on mobile** (`FOLD3_CARD_FRAC`), 0.5 desktop |
+| `fold6Trigger` | `#page-3 .text-card` | **0.7 on mobile** (`FOLD6_CARD_FRAC`, nudged later from 0.8 per explicit instruction), 0.5 desktop |
 | `squaresRevealTrigger` | `#page-4 .text-card` | 0.5 |
 | `fold7LabelTrigger` | `#page-5 .text-card` | 0.5 |
 | `fold8SquareDimTrigger` | `#page-5 .text-card` | 0.5 |
@@ -167,7 +167,7 @@ gutter widens. The far (left) end keeps a plain 12px; it scrolls off screen.
 
 Two knock-on values in that stack:
 
-- **`--card-top` is `52px` under the breakpoint** (base: `4.4dvh`, `style.css:22`). At 4.4dvh
+- **`--card-top` is `52px` under the breakpoint** (base: `4.4vh`, `style.css:22`). At 4.4vh
   the pinned title card crowded the מקרא bar; 52 puts an 8px gap between the מקרא button's
   bottom edge (44px) and the card box (explicit instruction; the tray band rode down the same
   4px — `P9_TRAY_TOP_M` 104→108). It's flat px because the
