@@ -21,17 +21,16 @@
     tab: null,
     onTab: null,
     sliders: [
-      { key: 'corridorPx', label: 'corridor px',  min: 40, max: 160, step: 2,    value: 64,   source: 'squareboundingbox.js:86 P7_AXIS_CORRIDOR_PX' },
+      { key: 'corridorPx', label: 'corridor px (band)',  min: 40, max: 160, step: 2,    value: 64,   source: 'squareboundingbox.js:86 P7_AXIS_CORRIDOR_PX' },
       { key: 'bandPx',     label: 'band px',      min: 24, max: 120, step: 2,    value: 60,   source: 'page7.js P7_VERT.bandPx (band mode)' },
-      { key: 'widenPx',    label: 'widen px',     min: 0,  max: 260, step: 5,    value: 110,  source: 'page7.js:222 P7_VERT.widenPx (widen mode)' },
-      { key: 'widenRows',  label: 'widen rows',   min: 2,  max: 40,  step: 1,    value: 12,   source: 'page7.js:223 P7_VERT.widenRows (widen mode)' },
+      { key: 'wideCorridorPx', label: 'wide corridor px', min: 120, max: 400, step: 5, value: 220, source: 'page7.js P7_VERT.wideCorridorPx (widen mode, full height)' },
       { key: 'fillRatio',  label: 'fill ratio',   min: 0.5, max: 1,  step: 0.02, value: 0.86, source: 'page7.js:224 P7_VERT.fillRatio' },
       { key: 'rowJitter',  label: 'row jitter',   min: 0,  max: 6,   step: 0.5,  value: 1.5,  source: 'page7.js:225 P7_VERT.rowJitter' },
     ],
     colors: [],
     modes: [
       { key: '1', id: 'band',  label: 'band — dots pause, headline across the row' },
-      { key: '2', id: 'widen', label: 'widen — centre gap opens around the headline' },
+      { key: '2', id: 'widen', label: 'widen — wider centre gap top to bottom, headlines inside it' },
     ],
     mode: 'band',
     toggles: [
@@ -41,8 +40,7 @@
       if (typeof P7_VERT === 'undefined') return;
       P7_VERT.corridorPx = v.corridorPx;
       P7_VERT.bandPx     = v.bandPx;
-      P7_VERT.widenPx    = v.widenPx;
-      P7_VERT.widenRows  = v.widenRows;
+      P7_VERT.wideCorridorPx = v.wideCorridorPx;
       P7_VERT.fillRatio  = v.fillRatio;
       P7_VERT.rowJitter  = v.rowJitter;
       P7_VERT.eventMode  = mode === 'widen' ? 'widen' : 'band';
