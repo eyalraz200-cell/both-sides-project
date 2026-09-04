@@ -15,7 +15,7 @@ white box around just the `<h2>` is `.text-card-frame`.
 `@fold4` and alive through every later fold. Not the old page-1 list.
 
 **`@dragcards` / "draggable events"** — the category **pills** (`.page9-pill`,
-`P9_CATEGORIES`) in `@fold10`'s tray. **Not** the per-event canvas dots.
+`P9_CATEGORIES`) in `@fold11`'s tray. **Not** the per-event canvas dots.
 
 **"Axis events"** — the `P7_AXIS_EVENTS` headline labels/dates above the year axis (6 of
 them). **Not** the per-event canvas dots.
@@ -43,8 +43,8 @@ own timing.
 **Camp headers** — מחנה הימין / גוש השינוי (`.fold4-column-title`). They type in at
 `@fold2` and un-type in place at `@fold4`; they never travel into the legend.
 
-**The 8 squares** — `#fold6SquaresOverlay`'s sample squares, which grow in at `@fold5`,
-gain labels at `@fold6`, and gain colors + fly to their real per-event dots at `@fold7`.
+**The 8 squares** — `#fold6SquaresOverlay`'s sample squares, which grow in at `@fold6`,
+gain labels at `@fold7`, and gain colors + fly to their real per-event dots at `@fold8`.
 
 **Legit grid / extreme grid** — page9's two dot fields, below and above the `P9_MID`
 divider.

@@ -108,7 +108,7 @@ const p7 = {
   // transient" convention p9PlaceDot uses), so hit-testing stays stable
   // while a square is still popping in/out.
   lastPositions: new Map(),
-  // The event currently under the pointer in #page-7 (set by p7HoverInit's
+  // The event currently under the pointer in #page-8 (set by p7HoverInit's
   // onMove), or null — read by p7DrawSideSquares to dim every other square
   // while one is hovered.
   hoveredEvent: null,
@@ -276,7 +276,7 @@ function p7MonthSettle(k, c) {
 // p7DrawSideSquares below has no notion of that glide's progress and would
 // draw every square straight at its resting timeline cell the instant this
 // section starts drawing instead of page8, i.e. an instant teleport back to
-// the @fold9/10 layout mid-reverse-glide. { from: Map<event,{x,y}>, start,
+// the @fold10/10 layout mid-reverse-glide. { from: Map<event,{x,y}>, start,
 // duration } — same shape/plain-glide convention as p9.anim's plainGlide
 // flag (page9.js), just for this one entry point instead of a persistent
 // per-frame system.
@@ -285,37 +285,37 @@ let p7EntryAnim = null;
 // Wipes all per-month animation state so the next entry into the timeline
 // replays the cascade from scratch instead of showing settled dots.
 // Called from setActivePage (main.js) when the user scrolls back out of
-// @fold10 toward an earlier fold.
+// @fold11 toward an earlier fold.
 function p7ResetForReplay() {
   for (const k in p7MonthPhase) delete p7MonthPhase[k];
   p7MonthMaxReached = -1;
 }
 
-// True once fold 9's own title card (#page-6 .text-card, page7TitleCardEl in
+// True once fold 9's own title card (#page-7 .text-card, page7TitleCardEl in
 // main.js) has scrolled all the way past the top of the viewport — not once
-// #page-7 itself reaches the top, which (since #page-6's card sits vertically
+// #page-8 itself reaches the top, which (since #page-7's card sits vertically
 // centered in its own 100vh-tall section) only happens half a viewport-height
 // *after* the card is already gone, leaving a stretch of scrolling where
 // nothing visibly happens before the real per-event reveal kicks in. Tying
 // engagement directly to the card's own exit instead means the timeline
 // starts exactly when the title that introduces it leaves the screen, no
-// matter how main.js ends up sizing #page-6's section.
+// matter how main.js ends up sizing #page-7's section.
 let p7HasEngaged = false;
 
-// True once the real timeline (drawPage7, #page-7) has actually been reached
+// True once the real timeline (drawPage7, #page-8) has actually been reached
 // at least once this "visit" — set by drawPage7 itself, cleared by drawFold9
 // (main.js) once fully retreated back out (p7HasEngaged false again and
 // nothing left animating). Lets drawFold9 keep drawing/animating the
 // per-event squares (p7DrawTimelineSquares below) for as long as there's
-// still something to retreat when the user scrolls back up from #page-7 into
-// #page-6, without changing when the *forward* reveal itself first starts —
-// that still only ever happens via drawPage7, i.e. once #page-7 is actually
+// still something to retreat when the user scrolls back up from #page-8 into
+// #page-7, without changing when the *forward* reveal itself first starts —
+// that still only ever happens via drawPage7, i.e. once #page-8 is actually
 // reached, same as before this flag existed.
 let p7RealTimelineReached = false;
 
 // Updates p7HasEngaged — called from drawPage7 (currentPage 7) and drawFold9
 // (main.js, currentPage 6) alike, since the title card this depends on
-// belongs to fold 9/#page-6. p7HasEngaged is recomputed fresh every call, not
+// belongs to fold 9/#page-7. p7HasEngaged is recomputed fresh every call, not
 // a one-way latch, so scrolling back up un-engages it again and scrolling
 // forward replays the same axis-then-squares sequence — calling this from
 // both draw functions (rather than only drawPage7) is what makes that
@@ -346,7 +346,7 @@ const P7_ENGAGE_HYSTERESIS_PX = 24;
 function p7UpdateEngagement() {
   if (!page7TitleCardEl) { p7HasEngaged = false; return; }
   const top = page7TitleCardEl.getBoundingClientRect().top;
-  // Engagement is deliberately NOT gated on @fold8's squares finishing their
+  // Engagement is deliberately NOT gated on @fold9's squares finishing their
   // fly-in (fold9FlyTrigger, main.js — legacy name). Per explicit instruction
   // the two are unrelated animations that simply run at the same time: the
   // axis fills and the per-event dots appear on the card's own exit, whether
@@ -420,15 +420,15 @@ function p7AnyAnimActive() {
 // maxDate (see page8.js) — it's a continuation of page7's view, not a separate one, so
 // the cascade must keep redrawing there too, or it freezes the instant the user
 // scrolls into page8 mid-flight instead of finishing "off screen" as page7 intended.
-// Fold 9 (#page-6, currentPage 6 — drawFold9 in main.js, just before the real
+// Fold 9 (#page-7, currentPage 6 — drawFold9 in main.js, just before the real
 // timeline) is included too, now that its own axis build-in (p7AxisIntroT
-// above) can be playing while it's on screen. Fold 7 (#page-5, currentPage 5 —
+// above) can be playing while it's on screen. Fold 7 (#page-6, currentPage 5 —
 // drawFold7 in main.js) is included too, now that it also keeps drawing
 // p7DrawTimelineSquares for as long as p7RealTimelineReached is true (see that
 // flag's own comment) — a fast enough scroll-up can carry the user past
-// #page-6 into this fold within a single continuous motion while squares are
+// #page-7 into this fold within a single continuous motion while squares are
 // still mid-retreat.
-function p7ShouldRedrawForAnim() { return currentPage === 5 || currentPage === 6 || currentPage === 7 || currentPage === 8; }
+function p7ShouldRedrawForAnim() { return currentPage === 6 || currentPage === 7 || currentPage === 8 || currentPage === 9; }
 
 function p7StartAnimLoop() {
   if (p7AnimRunning) return;
@@ -727,7 +727,7 @@ function p7OccurrenceOfRowId(rowId) {
   return -1;
 }
 
-// The 8 real events @fold9's fold-6 squares fly to/become (FOLD6_SQUARE_ACTORS/
+// The 8 real events @fold10's fold-6 squares fly to/become (FOLD6_SQUARE_ACTORS/
 // fold6SquareOccurrence, js/groups.js — referenced here only inside this function
 // body, never at load time, since page7.js loads before main.js in
 // project.html) are never drawn by the real per-event cascade below — the
@@ -747,13 +747,13 @@ function p7GetClaimedEvents() {
   return p7ClaimedEvents;
 }
 
-// Extracted from drawPage7 below so drawFold9 (main.js, #page-6, currentPage
+// Extracted from drawPage7 below so drawFold9 (main.js, #page-7, currentPage
 // 6) can keep this running too — see p7RealTimelineReached's own comment
-// above for why: without this, scrolling back up from #page-7 into #page-6
-// (crossing back over @fold9's own title) made every still-retreating square
+// above for why: without this, scrolling back up from #page-8 into #page-7
+// (crossing back over @fold10's own title) made every still-retreating square
 // (and the year axis's own headline events, p7DrawAxisEvents) vanish in a
 // single frame the instant currentPage dropped, instead of finishing their
-// reverse cascade like they do while scrolling backward *within* #page-7
+// reverse cascade like they do while scrolling backward *within* #page-8
 // itself. Callers must call p7UpdateEngagement() themselves first (drawPage7/
 // drawFold9 both already do, since the axis needs a fresh p7HasEngaged too).
 function p7DrawTimelineSquares(ctx, W, H) {
@@ -793,7 +793,7 @@ function p7DrawTimelineSquares(ctx, W, H) {
   const isNewTerritory = p7HasEngaged && curMonthKey > p7MonthMaxReached;
   if (isNewTerritory) {
     // A single engaged tick can jump curMonthKey forward by more than one
-    // month at once — e.g. @fold9's fly-then-engage gate (p7UpdateEngagement,
+    // month at once — e.g. @fold10's fly-then-engage gate (p7UpdateEngagement,
     // main.js) lets scroll position race ahead of curMonthKey while
     // engagement is still pending, so the moment it fires, `t` (and the date
     // it maps to) can already be several months past minDate. Without
@@ -956,7 +956,7 @@ function drawPage7(ctx, W, H) {
 function p7DrawInspectScrim(ctx, W, H) {
   if (!p7InspectPage() || !p7Inspect.dragging || !p7Inspect.event) return;
   // Same source the hit-test uses, so the hole lands on the dot that was picked
-  // in whichever fold the picker is currently serving (@fold8 or @fold10).
+  // in whichever fold the picker is currently serving (@fold9 or @fold11).
   const { positions, half, cell } = p7InspectSource();
   const pos = positions.get(p7Inspect.event);
   ctx.save();
@@ -968,7 +968,7 @@ function p7DrawInspectScrim(ctx, W, H) {
   if (pos) {
     // The hole is measured in dot widths so it tracks the per-viewport solved
     // square size (p7SolveMobileSq) instead of drifting at either end. The 1.5px
-    // floor keeps it from vanishing at @fold10's 1px dots.
+    // floor keeps it from vanishing at @fold11's 1px dots.
     //
     // Then capped so the hole can never reach a NEIGHBOUR. The grid pitch is
     // 1.5 dots, so the nearest edge of the adjacent dot sits `cell - half` from
@@ -1033,8 +1033,8 @@ function p7Saturate(hex, amt) {
 // The axis *appearing* (the one-shot build-in wipe) and the axis *filling up*
 // (p7HasEngaged advancing p7.currentDate) are two separate trigger points —
 // this is the appearing one. Per explicit instruction it fires the moment
-// @fold8's fly trigger is activated (fold9FlyTrigger — legacy name, it's the
-// squares' fly-out on id #page-7), NOT after the squares land: p7HasEngaged
+// @fold9's fly trigger is activated (fold9FlyTrigger — legacy name, it's the
+// squares' fly-out on id #page-8), NOT after the squares land: p7HasEngaged
 // additionally waits for that fly to finish (`flyDone` in p7UpdateEngagement),
 // which made the wipe start late. Falls back to p7HasEngaged if main.js hasn't
 // defined the trigger yet, so this still degrades safely.
@@ -1053,7 +1053,7 @@ function p7AxisShouldShow() {
 // Don't snap the axis away — hand whatever wipe progress it had to a quick
 // reverse wipe (p7AxisOutroStart) and keep it drawable until that reaches 0.
 // Shared exit path: called both when the fly trigger un-fires (scrolling back
-// up out of the timeline, via p7AxisTriggerIfNeeded) and the moment @fold9's
+// up out of the timeline, via p7AxisTriggerIfNeeded) and the moment @fold10's
 // bridge glide starts (drawPage8, which draws the axis itself during the
 // reverse wipe so it undraws instead of vanishing with the timeline frame).
 // Returns true while there is still reverse-wipe progress worth drawing.
@@ -1865,7 +1865,7 @@ function p7DrawYearAxis(ctx, W, H) {
 // p7HoverInit below (no-op until then, safe to call at any time).
 let p7RecheckHover = () => {};
 
-// Hover tooltip for a single event square in the real timeline (#page-7) — date
+// Hover tooltip for a single event square in the real timeline (#page-8) — date
 // + Hebrew description, reusing the exact same DOM element/styling as page9.js's
 // hover (#page9Tooltip is generic markup, not page9-specific), and isolating the
 // hovered square the same way p9PlaceDot does (see p7DrawSideSquares above).
@@ -1940,13 +1940,13 @@ function p7HoverInit() {
     // mid-fade at whatever alpha hovering had pumped it up to.
     // p7AxisEventsAnimActive keeps the loop alive until it settles back to 0.
     p7StartAnimLoop();
-    // The 8 @fold9 squares' own opacity (a DOM style, not part of the canvas
+    // The 8 @fold10 squares' own opacity (a DOM style, not part of the canvas
     // draw() above) also dims/undims with hover — see updateGroups' own
     // p7.hoveredEvent check — so it needs its own refresh here too.
     if (typeof updateGroups === "function") updateGroups();
   }
 
-  // Full clear (square + axis) — for leaving #page-7 entirely.
+  // Full clear (square + axis) — for leaving #page-8 entirely.
   function hide() {
     setAxisHover(null);
     hideSquare();
@@ -1966,12 +1966,12 @@ function p7HoverInit() {
     // doHitTest is the one thing that already runs on every redraw, scroll and
     // pointer event, so it's where that sync is hung.
     if (isMobile()) { hide(); p7InspectSync(); return; }
-    // Also fully off while @fold9's bridge glide (page8.js) is mid-flight in
-    // either direction (p8PhaseStart non-null): scrolling back up from @fold9
+    // Also fully off while @fold10's bridge glide (page8.js) is mid-flight in
+    // either direction (p8PhaseStart non-null): scrolling back up from @fold10
     // lands currentPage on 7 while the dots are still flying back to their
     // timeline spots, and hovering one mid-flight latched a tooltip onto a
     // moving target.
-    if (lastCX === null || currentPage !== 7 ||
+    if (lastCX === null || currentPage !== 8 ||
         (typeof p8PhaseStart !== "undefined" && p8PhaseStart !== null)) { hide(); return; }
 
     const rect = canvasEl.getBoundingClientRect();
@@ -2030,7 +2030,7 @@ function p7HoverInit() {
     // tooltipDockMobile in js/fold8-tooltip.js). The hit-test above bails out
     // on mobile today (no finger-sized hover target), so this branch only
     // comes alive once tap-to-select lands; it's here so the timeline's own
-    // tooltip can never disagree with @fold6/@fold7's about where the frame is.
+    // tooltip can never disagree with @fold7/@fold8's about where the frame is.
     const docked = tooltipDockMobile(tooltipEl);
     // Two vertical screen-X lines keep the tooltip off the mini-legends: a dot
     // left of P7_TIP_FLIP_L always opens rightward, a dot within
@@ -2059,7 +2059,7 @@ function p7HoverInit() {
       : dotClientX + TOOLTIP_GAP;
     const left = Math.max(8, Math.min(rawLeft, window.innerWidth - tooltipEl.offsetWidth - 8));
     // Opens upward by default; a dot above the P7_TIP_FLIP_Y line flips the box
-    // downward instead — same .is-flipped mechanism as @fold10's hover, whose
+    // downward instead — same .is-flipped mechanism as @fold11's hover, whose
     // corner logic updateTooltipDash (js/core.js) already understands.
     const rawTop  = dotClientY - TOOLTIP_GAP - tooltipEl.offsetHeight;
     const flipped = dotClientY < P7_TIP_FLIP_Y;
@@ -2088,7 +2088,7 @@ function p7HoverInit() {
   // DOM overlays can sit on top of the canvas depending on scroll position.
   window.addEventListener("pointermove", onMove);
   window.addEventListener("scroll", () => {
-    if (currentPage !== 7) hide();
+    if (currentPage !== 8) hide();
     p7InspectSync();
   }, { passive: true });
 }
@@ -2096,7 +2096,7 @@ function p7HoverInit() {
 p7HoverInit();
 
 /* =========================================================================
-   MOBILE EVENT PICKER (#page-7 only) — the touch counterpart to p7HoverInit
+   MOBILE EVENT PICKER (#page-8 only) — the touch counterpart to p7HoverInit
    =========================================================================
    Touch has no hover, and a solved mobile dot (p7SolveMobileSq: ~1.35px at
    320 wide) is two orders of magnitude below a fingertip, so the timeline had
@@ -2110,7 +2110,7 @@ p7HoverInit();
      hint  — the empty frame reads P7_INSPECT_HINT.
      event — the ordinary docked tooltip (date + description). There is no
              dismiss control: the selection stands until the next hold replaces
-             it, or until leaving #page-7 releases the frame.
+             it, or until leaving #page-8 releases the frame.
 
    A press-and-hold anywhere on the chart (P7_LONGPRESS_MS with the finger
    inside P7_LONGPRESS_SLOP_PX) opens a 96px circular loupe riding 60px above
@@ -2150,14 +2150,14 @@ const p7Inspect = { dragging: false, event: null };
 // handler above can call it unconditionally (and harmlessly on desktop).
 let p7InspectSync = () => {};
 
-// Which fold the picker is currently serving, or null. @fold8's pinned timeline
-// (page 7) is where it started; @fold10's drag-and-drop grid (page 9) reuses the
+// Which fold the picker is currently serving, or null. @fold9's pinned timeline
+// (page 7) is where it started; @fold11's drag-and-drop grid (page 9) reuses the
 // exact same gesture, loupe and docked frame, since its dots are 1px there and
 // touch has no hover to fall back on. Everything below that differs between the
 // two folds reads this rather than testing currentPage inline.
 function p7InspectPage() {
   if (!isMobile()) return null;
-  return (currentPage === 7 || currentPage === 9) ? currentPage : null;
+  return (currentPage === 8 || currentPage === 10) ? currentPage : null;
 }
 
 // The dot map the picker hit-tests against, per fold — same shape either way:
@@ -2165,7 +2165,7 @@ function p7InspectPage() {
 // own draw. `maxY` excludes dots the fold doesn't consider inspectable (page 9's
 // legit band below the divider, matching desktop p9HoverInit's own exclusion).
 function p7InspectSource() {
-  if (currentPage === 9) {
+  if (currentPage === 10) {
     return { positions: p9.lastPositions, half: p9Metrics().SQ / 2, cell: p9Metrics().CELL, maxY: p9.midY ?? Infinity };
   }
   return { positions: p7.lastPositions, half: p7Sq() / 2, cell: p7Cell(), maxY: Infinity };
@@ -2266,7 +2266,7 @@ function p7InspectInit() {
     if (now - lastToggle < 400) return;
     lastToggle = now;
     // The frame sits over the chart and the tray; without this the tap reaches
-    // whatever is behind it (a category pill on @fold10).
+    // whatever is behind it (a category pill on @fold11).
     e.stopPropagation();
     tipEl.classList.toggle("is-expanded");
     syncMore();
@@ -2307,7 +2307,7 @@ function p7InspectInit() {
     if (typeof updateGroups === "function") updateGroups();
   }
 
-  // Hands the frame back to @fold6/@fold7's scripted sequence. Its typewriter
+  // Hands the frame back to @fold7/@fold8's scripted sequence. Its typewriter
   // spans are rebuilt rather than its whole sequence restarted: the spans were
   // detached the moment this picker wrote plain textContent into the same two
   // elements, but fold8SeqElapsed is still valid, so re-seeding them leaves the
@@ -2320,9 +2320,9 @@ function p7InspectInit() {
     collapseMore();
     dateEl.textContent = "";
     descEl.textContent = "";
-    // @fold8 only — page 9 has no scripted typewriter sequence sharing these
+    // @fold9 only — page 9 has no scripted typewriter sequence sharing these
     // two elements, so there is nothing to hand the frame back to there.
-    if (currentPage === 7 && typeof fold8SequenceEvent !== "undefined" && fold8SequenceEvent) {
+    if (currentPage === 8 && typeof fold8SequenceEvent !== "undefined" && fold8SequenceEvent) {
       fold8DateSpans = fold8SetupTypewriter(dateEl, p7FormatDateDMY(fold8SequenceEvent.date));
       fold8DescSpans = fold8SetupTypewriter(descEl, fold8SequenceEvent.descHeMedium || "");
     }
@@ -2339,7 +2339,7 @@ function p7InspectInit() {
     dateEl.textContent = p7FormatDateDMY(ev.date);
     descEl.textContent = ev.descHeMedium || "";
     // The sequence's own inline fades are still on these two elements from the
-    // @fold7 shrink beat that emptied the frame — clear them or the text this
+    // @fold8 shrink beat that emptied the frame — clear them or the text this
     // picker just wrote is invisible.
     dateEl.style.opacity = "1";
     descEl.style.opacity = "1";
@@ -2347,7 +2347,7 @@ function p7InspectInit() {
     // which strokes currentColor (see .page9-tooltip in style.css).
     tipEl.style.color = p7ActorColor(ev.actor);
     // Same fold13 factor as sync() below — every writer of this element's
-    // opacity must agree during @fold11's scroll fade.
+    // opacity must agree during @fold12's scroll fade.
     tipEl.style.opacity =
       String(1 - (typeof p9 !== "undefined" ? (p9.fold13OutT ?? 0) : 0));
     tipEl.style.transform = "translateX(-50%)";
@@ -2410,12 +2410,12 @@ function p7InspectInit() {
   // bottom-anchored on the frame's live height, which changes mid-hold as
   // selections swap and descriptions expand.
   function syncTipAvoid(fingerY) {
-    const frameTop = currentPage === 9 && typeof p9DockTopM === "function"
+    const frameTop = currentPage === 10 && typeof p9DockTopM === "function"
       ? p9DockTopM() : TOOLTIP_DOCK_TOP_PX;
     const frameBottom = frameTop + 100;
     const loupeTop = fingerY - P7_LOUPE_LIFT_PX - P7_LOUPE_SIZE / 2;
     // The threshold sits a bit lower than the frame's edge (explicit
-    // instruction, first on @fold10 then @fold8 too) — the finger doesn't have
+    // instruction, first on @fold11 then @fold9 too) — the finger doesn't have
     // to climb as high before the frame snaps down.
     const AVOID_MARGIN_PX = 24;
     p7TipAvoidActive = loupeTop < frameBottom + AVOID_MARGIN_PX;
@@ -2476,12 +2476,12 @@ function p7InspectInit() {
     const active = p7InspectPage() !== null;
     if (!active) {
       if (p7Inspect.event || p7InspectOwnsTooltip) release();
-      // @fold9's bridge (page 8) sits BETWEEN the two folds the picker serves,
+      // @fold10's bridge (page 8) sits BETWEEN the two folds the picker serves,
       // and updateGroups' keepEmptyFrame branch deliberately keeps the docked
       // frame on screen through it (gliding down to p9DockTopM()). Without
       // is-picker the hint is display:none, so the frame would make that whole
       // glide as an empty box — keep the hint's class on, gesture still off.
-      tipEl.classList.toggle("is-picker", isMobile() && currentPage === 8);
+      tipEl.classList.toggle("is-picker", isMobile() && currentPage === 9);
       tipEl.classList.remove("is-inspect");
       return;
     }
@@ -2494,7 +2494,7 @@ function p7InspectInit() {
     if (!hasEvent) {
       tipEl.classList.add("is-visible");
       // × (1 - fold13OutT): sync() runs on every redraw/scroll while the
-      // picker's page is active, which is still true through @fold11's
+      // picker's page is active, which is still true through @fold12's
       // scroll-in (currentPage stays 9 until the observer flips) — an
       // unconditional "1" here re-asserted full opacity between updateFold13's
       // fade writes every frame, making the frame stutter instead of fading.
@@ -2568,10 +2568,10 @@ function p7InspectInit() {
     };
     // The docked frame is opaque and sits over the chart's top strip — a hold
     // there is reading the tooltip, not aiming at a dot behind it. Same for
-    // @fold10's tray: a hold on a pill is a (mis-timed) classification tap, and
+    // @fold11's tray: a hold on a pill is a (mis-timed) classification tap, and
     // opening the loupe over it would swallow the tap's own click.
     if (inside(tipEl)) return null;
-    if (currentPage === 9 && inside(document.querySelector(".page9-tray"))) return null;
+    if (currentPage === 10 && inside(document.querySelector(".page9-tray"))) return null;
     return t;
   }
 
@@ -2629,7 +2629,7 @@ function p7InspectInit() {
   // chart the gesture had just been used to explore.
   //
   // release() does the whole teardown (event, tooltip ownership, text, and
-  // @fold8's handback to its scripted typewriter) and calls hideLoupe() itself.
+  // @fold9's handback to its scripted typewriter) and calls hideLoupe() itself.
   // Then sync() flips the frame is-inspect -> is-picker.
   const onEnd = () => {
     cancelPending();
@@ -2652,7 +2652,7 @@ function p7InspectInit() {
 // p7InspectInit's pendingTimer), so a finger landing mid-coast is invisible to
 // the picker and the hold can't start until the page settles on its own. The
 // only way around it is to not let the native fling run: on the picker folds
-// (@fold8/@fold10, mobile only) a flick's deceleration is taken over the moment
+// (@fold9/@fold11, mobile only) a flick's deceleration is taken over the moment
 // the finger lifts — the first programmatic scrollTo cancels the imminent
 // native momentum, and a short rAF glide with much stronger friction plays out
 // instead. Because the motion is now script-driven, touch events keep arriving

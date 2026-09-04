@@ -1,10 +1,10 @@
-// ── Page 7's tall section (#page-7) is a pure scroll-driver: scroll position
+// ── Page 7's tall section (#page-8) is a pure scroll-driver: scroll position
 // -> date. Its own intro title used to be fused in here as a static header
-// above the timeline's month list — it's now its own earlier fold (#page-5,
-// "כל ריבוע..."), with fold 9 ("צבע הריבוע...", #page-6) after it, so the
+// above the timeline's month list — it's now its own earlier fold (#page-6,
+// "כל ריבוע..."), with fold 9 ("צבע הריבוע...", #page-7) after it, so the
 // real per-event reveal below doesn't engage until both have been scrolled
 // past. ──
-const page7Section = document.getElementById("page-7");
+const page7Section = document.getElementById("page-8");
 let page7Ticking = false;
 
 // The scrub's opening is deliberately slower than the rest: over the first
@@ -26,15 +26,15 @@ function page7UpdateFromScroll() {
 
   // t=0 the instant fold 9's own title card clears the top of the viewport
   // (the same instant p7HasEngaged flips true below) rather than when
-  // #page-7's own top reaches the viewport top — #page-6 (fold 9) keeps
-  // scrolling for a while after its title clears before #page-7 actually
-  // begins, and anchoring t=0 to #page-7's own top left that whole stretch as
+  // #page-8's own top reaches the viewport top — #page-7 (fold 9) keeps
+  // scrolling for a while after its title clears before #page-8 actually
+  // begins, and anchoring t=0 to #page-8's own top left that whole stretch as
   // dead scroll space where engagement had already fired but the axis never
-  // moved off 0%. `gap` (page7TitleCardEl's top minus #page-7's own top, at
+  // moved off 0%. `gap` (page7TitleCardEl's top minus #page-8's own top, at
   // this same instant) is a pure document-layout constant regardless of
   // current scroll position, so recomputing it fresh here — instead of
   // caching it — keeps this correct across a resize too. t=1 stays anchored
-  // to the exact same endpoint as before (#page-7's bottom reaching the
+  // to the exact same endpoint as before (#page-8's bottom reaching the
   // viewport bottom); starting earlier just means that same endpoint is now
   // reached over a correspondingly longer scroll distance.
   const titleTop = page7TitleCardEl ? page7TitleCardEl.getBoundingClientRect().top : rect.top;
@@ -54,7 +54,7 @@ function page7UpdateFromScroll() {
   // moment the first draw call with p7HasEngaged===true hits them.
   if (!p7HasEngaged) {
     p7.currentDate = p7.minDate;
-    if (currentPage === 7) { draw(); p7RecheckHover(); }
+    if (currentPage === 8) { draw(); p7RecheckHover(); }
     return;
   }
 
@@ -65,7 +65,7 @@ function page7UpdateFromScroll() {
   cur.setUTCDate(cur.getUTCDate() + Math.round(p7ScrubEaseIn(t) * totalDays));
   p7.currentDate = cur.toISOString().slice(0, 10);
 
-  if (currentPage === 7) { draw(); p7RecheckHover(); }
+  if (currentPage === 8) { draw(); p7RecheckHover(); }
 }
 
 window.addEventListener("scroll", () => {

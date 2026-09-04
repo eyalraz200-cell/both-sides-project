@@ -44,7 +44,7 @@ const check = watchCardThreshold(cardEl, frac, t, instantReverse = false);
 - `page7.js`/`page8.js` hand-roll the same shape locally (`p8CurrentT`/`p8StartPhase`,
   `p7MonthAnimStart`/`p7MonthReverseStart`) — they pre-date `makeTrigger`.
 - `makeTrigger`'s own rAF loop **stops once a phase settles**. Anything that must keep
-  running afterwards (the @fold6 tooltip sequence, page8's glide sync) needs its own
+  running afterwards (the @fold7 tooltip sequence, page8's glide sync) needs its own
   loop — see `fold8SequenceTick` and `fold9EnsureP8SyncLoop`.
 - Because several of these loops legitimately run at once and each calls the same
   globals, **`draw()` (js/core.js) and `updateGroups()` (js/update-groups.js) are
@@ -107,7 +107,7 @@ Named exceptions, each because the shared tempo read wrong for that specific bea
 **Bigger canvas glides:** `P7_ANIM_TOTAL_DURATION` 2200 (one month's cascade),
 `P7_POP_DURATION` 220 (one square), `P8_TRANSITION_DURATION` 3000 (full blend into
 page9's grid — forward only; the reverse runs on `P8_REVERSE_DURATION` 700, because it
-fires while the reader is already flicking back up @fold8's scrub and at 3000 ms the
+fires while the reader is already flicking back up @fold9's scrub and at 3000 ms the
 canvas showed a crushed page9-blend band several folds away), `P9_LINE_DURATION` 800, page9's dot migration (600 ms travel per dot plus
 stagger; 2200/3400 ms reposition; flat 3000 ms back to legit) — see
 [Drag-and-Drop](Drag-and-Drop.md).

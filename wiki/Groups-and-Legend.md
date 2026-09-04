@@ -22,7 +22,7 @@ hero dots included. Any doc claiming 8/10/12 groups is stale.
 |---|---|---|
 | `#6B89FF` | ארגוני מחאה נגד הממשלה | `protesters against government` |
 | `#31CE1C` | מפגינים ערבים ישראלים | `arab israelis` |
-| `#FF1A94` | ארגוני שלום ודו קיום | `peace movements` |
+| `#FF1A94` | ארגוני שמאל | `peace movements` |
 
 Row order in **both** columns is the sort of that camp's `fold6.y` values (`legendRow` in
 `js/update-groups.js`), not the declaration order of `FOLD4_COALITION_ROWS` /
@@ -136,8 +136,8 @@ the ACLED note section), so there is no `noteShift` anywhere in the row math any
 instead of the vertical center — `fold6RowIndexY` returns
 `FOLD6_LEGEND_TOP_MOBILE (24px) + rowIndex * pitch`, with no pitch
 re-centering (the rows are anchored at the top, so a widened pitch grows downward). This applies to
-the legend for its whole life from @fold4 on, not just @fold5: on a phone the centered
-desktop anchor printed the rows over the title card and @fold5's sample squares.
+the legend for its whole life from @fold4 on, not just @fold6: on a phone the centered
+desktop anchor printed the rows over the title card and @fold6's sample squares.
 
 Mobile also tightens the two knobs that made the legend read as floating inboard with
 airy rows:
@@ -213,15 +213,15 @@ are both fixed px, so on a phone an H-scaled distance would swing with the URL b
 `#fold6SquaresOverlay` holds 8 plain divs (`FOLD6_SQUARE_REST_COLOR` = `#767676`), which:
 
 - **grow in at @fold5** at screen center, taking the cluster's vacated spot
-  (`squaresRevealTrigger`), alongside the ACLED note;
-- **gain labels at @fold6** (`FOLD6_SQUARE_LABELS`), while square 0 shows the shared
+  (`squaresRevealTrigger`); the ACLED note follows one fold later, at @fold6 (`acledNoteTrigger`);
+- **gain labels at @fold7** (`FOLD6_SQUARE_LABELS`), while square 0 shows the shared
   `#page9Tooltip` with a real event's date + description, grown and typed on its own
   wall-clock sequence;
-- **gain colors and fly at @fold7** — `FOLD6_SQUARE_ACTORS` (via `groupColorByActor`) gives
+- **gain colors and fly at @fold8** — `FOLD6_SQUARE_ACTORS` (via `groupColorByActor`) gives
   each its group color, and `FOLD6_SQUARE_OCCURRENCE` says which chronological occurrence
   of that actor it stands in for. The real cascade never draws those 8 events
   (`p7GetClaimedEvents`), so the DOM square just stays once it lands.
-- **shrink with the @fold9 glide** — as page8's blend carries them down to the legit
+- **shrink with the @fold10 glide** — as page8's blend carries them down to the legit
   band, both position *and size* lerp by the same ease (`js/update-groups.js`): the end
   size is the band's own rule (`legitGeom.cell` in bar mode, else `p9Metrics().legitSq`),
   matching what page8.js uses for canvas dots. On big desktop that's a no-op (legitSq =
@@ -255,9 +255,9 @@ link. **On mobile the note is not positioned at all** — it is reparented into 
 panel (below) and flows there; everything in this section is the desktop layout.
 
 **Mobile also toggles `hidden` on the note and its divider** (`js/update-groups.js`, right
-after the opacity write) while `squaresRevealTrigger.currentT()` is 0. Flowing content at
+after the opacity write) while `acledNoteTrigger.currentT()` is 0. Flowing content at
 opacity 0 still occupies its full height, so the מקרא frame would open with an empty gap
-under the rows before @fold5 has revealed anything. Desktop is absolutely positioned and
+under the rows before @fold6 has revealed anything. Desktop is absolutely positioned and
 reserves nothing, so it stays opacity-only and never sets `hidden`.
 
 On desktop it hangs **below** the right (coalition) mini-legend column (per explicit
@@ -266,7 +266,7 @@ gone). It's anchored to that column's **bottom** row target — the settled labe
 edge is computed as `bottom anchor + LEFT_LEGEND_SWATCH_SIZE/2 + groupLabelInkShift(14) +
 fold6RowMeasureEl.offsetHeight/2` (the same swatch-half + ink-shift offset the live labels
 get) — at `noteRightEdge = W - FOLD6_LEGEND_INSET_RIGHT`, and fades in on
-`squaresRevealTrigger.currentT()` (its divider, `fold6NoteDividerEl`, on the same t).
+`acledNoteTrigger.currentT()` (@fold6, the ACLED card; its divider, `fold6NoteDividerEl`, on the same t).
 The stack reads downward from the bottom row: the note sits
 `FOLD6_DIVIDER_GAP_TOP + 1 + FOLD6_DIVIDER_GAP_BOTTOM` (**8+1+8px**) below the rows, and
 the divider is placed at the visual **center** of that white (explicit instruction) —
@@ -305,7 +305,7 @@ persistent bar pinned to the top of the viewport (`js/groups.js`, `.fold6-mlegen
   ever reaches the button. The title block still paints over the bar because
   `.section-text.text-card` lifts itself to **4** (mobile only, with
   `.text-section > .section-text.text-card` supplying the `position: relative` — the child
-  combinator leaves `@fold10`/`@fold11`'s sticky/fixed cards alone). That lift only escapes
+  combinator leaves `@fold11`/`@fold12`'s sticky/fixed cards alone). That lift only escapes
   because **`.text-col` deliberately carries no `z-index`** — giving it one re-opens a
   stacking context and traps every descendant under the bar again. Side effect of the same
   change: `.page9-tooltip`/`.page9-pill-ghost` (`z-index: 1000`) now really are above
@@ -373,7 +373,7 @@ persistent bar pinned to the top of the viewport (`js/groups.js`, `.fold6-mlegen
   — fading one small button over that long reads as never arriving. `fold6SetMobileLegendVisible`
   re-maps the progress onto a front-loaded slice, `FOLD6_MLEGEND_IN_SPAN` (**0.3**), and
   scales the **button** (not the bar — the bar contains the panel) in with
-  `fold8TooltipGrowEase`, the same pop the panel and the `@fold6` tooltip use. So it lands
+  `fold8TooltipGrowEase`, the same pop the panel and the `@fold7` tooltip use. So it lands
   while the on-canvas rows are still leaving behind it. The `@fold4` intro below still waits
   for the *unmapped* progress to reach 1.
 - The panel's rows are a **separate static copy** of the six groups, not the animated
@@ -383,7 +383,7 @@ persistent bar pinned to the top of the viewport (`js/groups.js`, `.fold6-mlegen
   `fold6SyncNoteHome()` — one set of nodes, one ACLED link. Crossing the breakpoint reparents
   them back; `.is-in-panel` undoes their `position: absolute`, and the inline
   `left/top/width/opacity` are cleared on the way in. They still fade on
-  `squaresRevealTrigger`, so opening the panel before `@fold5` shows no credit.
+  `acledNoteTrigger`, so opening the panel before `@fold6` shows no credit.
 - Open/close: tap the button, tap outside, or Escape. Resizing to desktop closes it
   (`fold6SetMobileLegendVisible(0)`).
 - **The `@fold4` hand-off has two versions, switched by `window.FOLD4_FLY`** (default
@@ -622,13 +622,13 @@ persistent bar pinned to the top of the viewport (`js/groups.js`, `.fold6-mlegen
   the panel is hidden, so a hand-opened panel always comes back whole.
 - **The ACLED note never joins the panel mid-demo.** `fold6MLegendIntroActive` is true for
   the whole intro (grow + hold + shrink), and `updateGroups` keeps the note + divider
-  `hidden` — out of layout, not just transparent — while it is. On a fast scroll @fold5
-  (`squaresRevealTrigger`) can be crossed while the demo is still playing, and the note
+  `hidden` — out of layout, not just transparent — while it is. On a fast scroll @fold6
+  (`acledNoteTrigger`) can be crossed while the demo is still playing, and the note
   flowing in would grow the frame taller under rows that are still typing. It first appears
   when the reader **taps מקרא**: any tap aborts the intro, and both the abort and the
   natural end go through `fold6EndMLegendIntro`, which un-hides it by hand — `updateGroups`
   only runs on scroll frames, and the demo usually ends with the page standing still. The
-  note's own @fold5 ramp still gates it, so tapping before @fold5 shows no credit.
+  note's own @fold6 ramp still gates it, so tapping before @fold6 shows no credit.
 - **The מקרא button un-fills *with* that shrink, not after it.** `fold6CloseMLegendIntro`
   removes `.is-open` from the bar at the *start* of the close, and `.fold6-mlegend-btn`
   carries a 300ms `background`/`border-color`/`color` transition matching
@@ -637,7 +637,7 @@ persistent bar pinned to the top of the viewport (`js/groups.js`, `.fold6-mlegen
   instantly — a transition declared on the base state only runs when the element returns
   to it. Keep the two durations in step if either changes.
 - **The frame's curve is `fold8TooltipGrowEase`** (`js/fold8-tooltip.js`), the same subtle
-  back-out pop `@fold6`'s tooltip grows with — the panel should read as the same kind of
+  back-out pop `@fold7`'s tooltip grows with — the panel should read as the same kind of
   object the reader met one fold earlier. The rows use the house `p9Ease`. The inline
   transform the intro writes **replaces** the stylesheet's `translateZ(0)` compositor-layer
   promotion, so it repeats it (`translateZ(0) scale(g)`) and clears the property outright at
@@ -684,7 +684,7 @@ leaving marks on screen at `@fold4`, most visibly on the way back up:
   entirely inside a pixel that was already invisible, so no beat's visible timing moves.
 - **The 8 sample squares** rest at `scale(growScale)`, and at `growScale` 0 the eight
   specks sat in `FOLD6_SQUARES_OFFSET`'s 2×4 arrangement, reading as two small wedges
-  mid-screen on every fold before `@fold5`. Their wraps are now `display: none` whenever
+  mid-screen on every fold before `@fold6`. Their wraps are now `display: none` whenever
   `growScale` is 0. `display: none` is safe here **only** because nothing measures these
   wraps — `layoutFold6Squares` writes their `left`/`top` from constants. Anything that
   needs measuring must use the opacity form instead.

@@ -17,7 +17,7 @@
 │   ├── #groupsOverlay    the 6 persistent group DOM nodes (see Groups-and-Legend)
 │   ├── #page0DotsOverlay @fold1's fixed decorative dot columns
 │   └── #fold6SquaresOverlay  the 8 sample squares
-├── #page9Tooltip         shared event tooltip (page7 + page9 + @fold6's demo)
+├── #page9Tooltip         shared event tooltip (page7 + page9 + @fold7's demo)
 ├── #page9CatTooltip      tray-pill tooltip
 ├── #fold6NoteLayer       z-index 2 — the ACLED source note is reparented here at init
 ├── #fold6MobileLegendLayer  z-index 3 — the mobile מקרא bar (Groups-and-Legend)
@@ -28,7 +28,7 @@
 direct `.layout` child, not nested inside `.graphic-col` — that's why the event
 tooltip, the category tooltip and the ACLED note layer live where they do. Without it
 the ACLED link was unclickable, the category tooltip lost to the tray, and the mobile
-docked event frame was untappable (every touch landed on `section#page-7`, so the
+docked event frame was untappable (every touch landed on `section#page-8`, so the
 עוד toggle looked dead). Don't "tidy" them back inside.
 
 **`.text-col` carries no `z-index` on purpose.** Being positioned, it already paints above
@@ -73,8 +73,8 @@ Two places load order does matter:
 | `js/core.js` | Canvas + `ctx`, `PAGES[]` dispatch, `currentPage`, trivial draw fns, `draw`/`init`, dashed-frame SVG utilities |
 | `js/nav.js` | `.text-section` roster, `setActivePage`, the IntersectionObserver |
 | `js/fold1-intro.js` | @fold1 logo scroll-fade, title scroll-lag, page-load entrance |
-| `js/page7-scrub.js` | `#page-7` scroll→date scrub + its scroll listener |
-| `js/fold8-tooltip.js` | @fold6's tooltip typewriter demo (`fold8*` state + fns) |
+| `js/page7-scrub.js` | `#page-8` scroll→date scrub + its scroll listener |
+| `js/fold8-tooltip.js` | @fold7's tooltip typewriter demo (`fold8*` state + fns) |
 | `js/groups.js` | `GROUPS` roster, fold2 grid tables, `groupItems` DOM, FOLD6 square tables/elements, title-card refs, `makeTrigger`, **all fold triggers**, `watchCardThreshold` + checkers, legend/fold4/fold6-note constants |
 | `js/update-groups.js` | The `updateGroups` monolith, `layoutGroups`, groups/axis scroll wiring |
 | `js/page8-9-scroll.js` | page8 title-center hold, page9 sticky/title scroll |
@@ -131,7 +131,7 @@ The dashed white box is a **separate** class, `.text-card-frame`, applied only t
 render unscaled and the 2px-dash/2px-gap edge tiles seamlessly. `DASH_PERIOD = 4` plus
 `fitDashArray`/`updateTextCardFrameDashes` in `js/core.js` keep the repeat aligned. A
 `ResizeObserver` on every frame re-runs the bake whenever a frame's border box changes —
-it MUST observe with `{ box: "border-box" }`, not the default content-box: @fold10's
+it MUST observe with `{ box: "border-box" }`, not the default content-box: @fold11's
 mobile `.is-stuck` transition animates *padding*, which moves the border box while the
 content box stays put, so the default observer never fired for it. With the observer
 silent, a mid-stuck re-bake (iOS address-bar `resize`) froze the stuck-size viewBox in,
@@ -199,15 +199,15 @@ throughout. What the breakpoint actually changes:
 | `.text-section` gutter | 48px | 24px |
 | `.section-title` | 20px | 16px |
 | `.page0-title` (hero) | 42px, `top: calc(50% - 276px)` | 32px, `top: calc(50% - 240px)` — the top compensates for the 3 lines shrinking ~36px, holding the tuned title/subtitle dot-column gaps |
-| `.text-card-frame` padding | `21px 29px` | `16px 22px` (holds the 1.38 h:v ratio); exception: @fold10's title frame (`.page9-title-row`) runs `padding-block: 8px` — its single short line read as an oversized fill at 16px. The subtitle's `-8px` margin-top is derived from it (gap − 10) |
+| `.text-card-frame` padding | `21px 29px` | `16px 22px` (holds the 1.38 h:v ratio); exception: @fold11's title frame (`.page9-title-row`) runs `padding-block: 8px` — its single short line read as an oversized fill at 16px. The subtitle's `-8px` margin-top is derived from it (gap − 10) |
 | camp header → top swatch row (`js/update-groups.js`) | `FOLD4_HEADER_GAP` 44 frame-units center-to-center, `H`-scaled | `FOLD4_HEADER_GAP_MOBILE_PX` — a flat **24px visible** gap, measured off the header's rendered height |
 | camp gap (`campCenterGapPx`, `js/groups.js`) | flat 160px half-gap | a fixed **80px visible** gap between the blocks' facing edges (`FOLD2_CAMP_EDGE_GAP_MOBILE_PX`), i.e. a 92px half-gap at the 4-wide shape — chosen by eye |
 | `.group-label` | 18px, `nowrap` | 16px, wraps, `width: max-content` + `max-width: 100px`, `direction: rtl` |
 | group-label font-size (inline, `js/update-groups.js`) | 18 column / 14 legend | 16 column / 12 legend — via `groupLabelColumnFontSize()` / `groupLabelLegendFontSize()` |
 | @fold3 row pitch (`fold3RowPitch`) | 32px | measured — tallest wrapped label + 14px (`FOLD3_ROW_LABEL_GAP_PX`, mobile only; desktop keeps 16) |
-| @fold6 legend row pitch (`fold6RowPitchPx()`) | 24px | measured — tallest wrapped legend label + 6px |
+| @fold7 legend row pitch (`fold6RowPitchPx()`) | 24px | measured — tallest wrapped legend label + 6px |
 | Mini-legend + ACLED note | Six DOM group rows over the canvas; the note sits above their top row | **Both collapse into the מקרא bar** — camp names pinned top, legend + note in a drop-down panel; the six rows fly into the button at `@fold4`. See [Groups-and-Legend](Groups-and-Legend.md#the-mobile-מקרא-bar) |
-| `#page-10` frame / title | 450px / 40px | `min(450px, 100vw-48px)` / 28px |
+| `#page-11` frame / title | 450px / 40px | `min(450px, 100vw-48px)` / 28px |
 
 **The camp gap is the load-bearing one.** `FOLD2_CAMP_CENTER_GAP_PX` (160) puts two 104px
 blocks *plus* @fold3's outward-trailing labels at ~500–600px of required width. Everything

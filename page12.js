@@ -8,7 +8,7 @@ function p12EnsureFreeformTargets(W, H) {
   p12FreeformTargets = new Map();
   p12FreeformW = W; p12FreeformH = H;
 
-  // Mobile scatters at @fold10's own pitch (p9Metrics: 2px) — the desktop
+  // Mobile scatters at @fold11's own pitch (p9Metrics: 2px) — the desktop
   // P7_CELL pitch is more than double it and made the spread dots read
   // oversized/sparse on a phone. Desktop keeps P7_CELL as before.
   const CELL  = isMobile() ? p9Metrics().CELL : P7_CELL;
@@ -59,7 +59,7 @@ function drawPage12(ctx, W, H) {
   // Overdraw extreme dots at their lerped freeform positions.
   const targets  = p12EnsureFreeformTargets(W, H);
   const startPos = p9.fold13StartPos;
-  // Same size the dots had in @fold10's extreme grid (1.5px on mobile, 3px on
+  // Same size the dots had in @fold11's extreme grid (1.5px on mobile, 3px on
   // desktop) — drawing the morph at a hardcoded P9_SQ doubled them on a phone.
   const SQ       = p9Metrics().SQ;
 
@@ -76,7 +76,7 @@ function drawPage12(ctx, W, H) {
   ctx.globalAlpha = 1;
 }
 
-// Share row on the @fold11 card (teacher review 2026-09-03, K2). The anchors
+// Share row on the @fold12 card (teacher review 2026-09-03, K2). The anchors
 // ship with href="#" and get their real share URLs here, from the page's own
 // location at load; the copy button writes the URL to the clipboard and flips
 // its label for a moment as feedback. Runs once from bootstrap (p12ShareInit).

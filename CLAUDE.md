@@ -57,22 +57,23 @@ Figma source: file `QASHSt1u7b6m6ASgrUPswf` ("Design"). Screens are revised one 
 | `@fold2` | `page-1` | Dots fly into the two 4×3 camp grids; camp headers type in — `fold2Trigger` |
 | `@fold3` | `page-2` | Filler rects shrink; one rect per row survives; group labels type in — `fold3Trigger` |
 | `@fold4` | `page-3` | Groups glide into the persistent mini-legend; camp headers un-type — `fold6Trigger` |
-| `@fold5` | `page-4` | 8 grey sample squares grow in + ACLED note — `squaresRevealTrigger` |
-| `@fold6` | `page-5` | Square labels + tooltip demo — `fold7LabelTrigger`, `fold8*` triggers |
-| `@fold7` | `page-6` | Squares gain colors and fly to their real timeline dots — `fold9Trigger`, `fold9FlyTrigger` |
-| `@fold8` | `page-7` | The real pinned timeline (`page7-scrub`, page7.js) |
-| `@fold9` | `page-8` | Bridge glide (page8.js) |
-| `@fold10` | `page-9` | Drag-and-drop categorization (page9.js) |
-| `@fold11` | `page-10` | Scroll-gated outro (`fold13Trigger`) |
+| `@fold5` | `page-4` | «אספנו תיעודים…»: 8 grey sample squares grow in — `squaresRevealTrigger` |
+| `@fold6` | `page-5` | ACLED methodology card (visible external link); the ACLED note fades into the mini-legend — `acledNoteTrigger` |
+| `@fold7` | `page-6` | Square labels + tooltip demo — `fold7LabelTrigger`, `fold8*` triggers |
+| `@fold8` | `page-7` | Squares gain colors and fly to their real timeline dots — `fold9Trigger`, `fold9FlyTrigger` |
+| `@fold9` | `page-8` | The real pinned timeline (`page7-scrub`, page7.js) |
+| `@fold10` | `page-9` | Bridge glide (page8.js) |
+| `@fold11` | `page-10` | Drag-and-drop categorization (page9.js) |
+| `@fold12` | `page-11` | Scroll-gated outro (`fold13Trigger`) |
 
-**11 folds total.**
+**12 folds total.**
 
 ## Groups roster
 
 `GROUPS` in `js/groups.js` is **6 groups** — camp groups only (the old no-camp groups were removed on v2 and never appear anywhere):
 
 - **מחנה הימין (coalition):** תנועות התנחלות באיו״ש `#F9B624` (`settlers`), קבוצות ימין לאומיות `#F024FF` (`right wing protesters`), מפגינים חרדים `#454545` (`haredi jews`) (top→bottom)
-- **גוש השינוי (change):** ארגוני מחאה נגד הממשלה `#6B89FF` (`protesters against government`), מפגינים ערבים ישראלים `#31CE1C` (`arab israelis`), ארגוני שלום ודו קיום `#FF1A94` (`peace movements`) (top→bottom)
+- **גוש השינוי (change):** ארגוני מחאה נגד הממשלה `#6B89FF` (`protesters against government`), מפגינים ערבים ישראלים `#31CE1C` (`arab israelis`), ארגוני שמאל `#FF1A94` (`peace movements`) (top→bottom)
 
 Row order is the sort of each camp's `fold6.y` (`legendRow`), not the `FOLD4_*_ROWS` declaration order — see [Groups-and-Legend](wiki/Groups-and-Legend.md).
 
@@ -84,7 +85,7 @@ Timeline dot color is `p7ActorColor(actor)` — a lookup into `GROUPS` by its `a
 
 - **page9.js "state 1"** (the non-interrupting extreme-drop animation) **is FINALIZED — never touch it without explicit instruction.** See [Drag-and-Drop](wiki/Drag-and-Drop.md).
 - Renaming a category pill in `P9_CATEGORIES` (`page9.js`) must also update `FOLD6_SQUARE_LABELS` (`js/groups.js`).
-- "Removed — don't reintroduce" callouts in the wiki are binding: the page-1→fold-3 legend morph, the vertical dashed guide-line system on page-9, the anchor squares/`drawGroupLegend`, and the old `main_*` scratch files all stay gone.
+- "Removed — don't reintroduce" callouts in the wiki are binding: the page-1→fold-3 legend morph, the vertical dashed guide-line system on page-10, the anchor squares/`drawGroupLegend`, and the old `main_*` scratch files all stay gone.
 - `.section-title` is one shared base rule (20px desktop, **16px under the 600px breakpoint**; `font-weight: 300` + `line-height: 1.5` — 300 resolves down to the real Thin OTF, the only alternative face in `fonts/` besides Regular). No **per-page** font-size/weight overrides — a differently-sized title at the same viewport width is a regression. On the scrolling cards the title and the frame are the *same* `<h2>`, so `.text-card-frame`'s `margin: 0 auto` already zeroes the base rule's bottom margin — see [Architecture](wiki/Architecture.md).
 - Harness/scaffolding files are `_debug-*.js`, never ship, and follow the recipe + rules in [Dev-Workflow](wiki/Dev-Workflow.md).
 

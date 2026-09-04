@@ -1,7 +1,7 @@
 // ── Folds 2 through 4 (ids #page-1..#page-3) all show the same 6 camp
 // groups — flying from @fold1's hero dot columns straight into the two-camp
 // column layout (@fold2), gaining labels (@fold3), splitting into 3 (@fold4),
-// then merging back + settling into the left mini-legend (@fold5). Rather
+// then merging back + settling into the left mini-legend (@fold6). Rather
 // than a separate overlay per fold crossfading into the next (which made the
 // handoffs visibly "pop" — two different DOM nodes for the same group,
 // swapped at the exact instant their positions matched), there's ONE
@@ -16,7 +16,7 @@ const GROUPS_FRAME_H = 982; // Figma frame height the y-coordinates below are au
 // groups split into two clean top-aligned columns, hand-placed per explicit
 // written spec (not a Figma frame): coalition trio (מפגינים חרדים/תנועות
 // התנחלות/קבוצות ימין לאומיות) at x=887 (screen-right), change trio (תנועות
-// שלום ודו קיום/ארגוני מחאה נגד הממשלה/מפגינים ערבים ישראלים) at x=725
+// ארגוני שמאל/ארגוני מחאה נגד הממשלה/מפגינים ערבים ישראלים) at x=725
 // (screen-left), both starting
 // at y=443 with a 40-unit row gap. The two columns are placed with enough
 // clearance on each side of the frame's own horizontal center (x=756, i.e.
@@ -43,7 +43,7 @@ const GROUPS = [
     fold4: { x: 887,  y: 514, swatchFirst: true }, fold6: { x: 31, y: 536 } },
   { color: "#6B89FF", label: "ארגוני מחאה נגד הממשלה", actor: "protesters against government",
     fold4: { x: 725,  y: 488, swatchFirst: true }, fold6: { x: 31, y: 512 } },
-  { color: "#FF1A94", label: "ארגוני שלום ודו קיום",     actor: "peace movements",
+  { color: "#FF1A94", label: "ארגוני שמאל",            actor: "peace movements",
     fold4: { x: 725,  y: 462, swatchFirst: true }, fold6: { x: 31, y: 560 } },
   { color: "#454545", label: "מפגינים חרדים",           actor: "haredi jews",
     fold4: { x: 887,  y: 462, swatchFirst: true }, fold6: { x: 31, y: 560 } },
@@ -151,7 +151,7 @@ const FOLD2_GROUP_CELL = [
   { row: 0, col: 3 },  // #F9B624  תנועות התנחלות          (coalition)
   { row: 2, col: 0 },  // #F024FF  קבוצות ימין לאומיות     (coalition)
   { row: 2, col: 0 },  // #6B89FF  ארגוני מחאה נגד הממשלה  (change)
-  { row: 0, col: 0 },  // #FF1A94  תנועות שלום ודו קיום    (change)
+  { row: 0, col: 0 },  // #FF1A94  ארגוני שמאל             (change)
   { row: 1, col: 1 },  // #454545  מפגינים חרדים           (coalition)
 ];
 // The scatter above is AUTHORED in the canonical 4-wide reading order; a cell's
@@ -463,7 +463,7 @@ const FOLD6_SQUARE_LABELS = [
 function groupColorByActor(actor) {
   return GROUPS.find(g => g.actor === actor).color;
 }
-// Kept for the next @fold9 trigger to reuse: each square's actor is chosen to
+// Kept for the next @fold10 trigger to reuse: each square's actor is chosen to
 // match its own column's political side — left column (even indices, dx
 // -16.5) gets left-camp actors, right column (odd indices, dx +8.5, see
 // FOLD6_SQUARES_OFFSET) gets right-camp actors. Only 2 left-camp actors exist
@@ -472,7 +472,7 @@ function groupColorByActor(actor) {
 // swapped from the original H/R/S/H per explicit instruction, so the
 // top-right square is now S/מתיישבים and the 3rd-from-top-right is
 // H/חרדים). Index 0 is unchanged ("protesters against government")
-// since @fold8's tooltip (below) targets that specific square/event, and
+// since @fold9's tooltip (below) targets that specific square/event, and
 // it's already a left-camp actor in the left column.
 // S=מתיישבים L=פעילי שמאל H=חרדים P=מתנגדי הרפורמה R=פעילי ימין
 const FOLD6_SQUARE_ACTORS = [
@@ -583,23 +583,24 @@ const page2TitleCardEl  = document.querySelector("#page-1 .text-card");
 // @fold3 (#page-2) — the group labels fading in next to their rects.
 const page3TitleCardEl  = document.querySelector("#page-2 .text-card");
 const page6TitleCardEl  = document.querySelector("#page-3 .text-card");
-const page7TitleCardEl  = document.querySelector("#page-6 .text-card");
-// Fold 6's own card (#page-5, "כל ריבוע מייצג..." — the timeline-intro title,
-// not to be confused with page7TitleCardEl above, which is fold 8's #page-7
+const page7TitleCardEl  = document.querySelector("#page-7 .text-card");
+// Fold 6's own card (#page-6, "כל ריבוע מייצג..." — the timeline-intro title,
+// not to be confused with page7TitleCardEl above, which is fold 8's #page-8
 // card) drives the fold-6 squares' labels fading IN — previously this had no
 // card of its own and just snapped on the instant fold6Trigger settled,
 // which (now that that's a fixed ~1s tween instead of a scroll-coupled one)
 // finishes long before the user actually reaches fold 7.
-const fold7LabelCardEl  = document.querySelector("#page-5 .text-card");
-// Phase-2 fold: the ACLED "אספנו תיעודים…" fold, now #page-4 after the mini-legend
-// split fold at #page-3. This card drives the grey squares growing in at centre
-// AND the ACLED bottom-legend note fading in — both were previously coupled to
-// fold6Trigger (the split) and are now detached onto their own trigger so the
-// split and the squares+note land on two separate folds.
+const fold7LabelCardEl  = document.querySelector("#page-6 .text-card");
+// @fold5 (#page-4, «אספנו תיעודים…»): this card drives the 8 grey squares
+// growing in at centre. @fold6 (#page-5, the ACLED methodology card) then
+// drives the ACLED bottom-legend note fading in. They used to be one fold
+// (and, before that, coupled to fold6Trigger, the split) — split per the
+// 2026-09-03 review so the collection statement and the source stand alone.
 const squaresRevealCardEl = document.querySelector("#page-4 .text-card");
+const acledNoteCardEl     = document.querySelector("#page-5 .text-card");
 // Hoisted above checkFold13 (below), which needs it already resolved at
 // definition time — also reused by p13SyncGateVisibility further down.
-const page12StickyEl    = document.querySelector("#page-10 .page12-sticky-center");
+const page12StickyEl    = document.querySelector("#page-11 .page12-sticky-center");
 
 // Generic discrete trigger: a fixed-duration 0<->1 phase fired once by
 // crossing a scroll threshold (see watchCardThreshold below), exactly like
@@ -731,10 +732,10 @@ const fold3Trigger      = makeTrigger(FOLD3_ENTRANCE_MS, (...a) => updateGroups(
 // merging back into one rect first, THEN the glide into the left mini-legend
 // (see the raw-slice spans in updateGroups).
 const fold6Trigger      = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateGroups(...a));
-// Phase 2 (grey squares grow-in + ACLED bottom-legend note fade-in), split off
-// from fold6Trigger onto the inserted ACLED fold (#page-4). See
-// squaresRevealCardEl above.
+// Grey squares grow-in (@fold5, #page-4) and the ACLED bottom-legend note
+// fade-in (@fold6, #page-5) — see squaresRevealCardEl / acledNoteCardEl above.
 const squaresRevealTrigger = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateGroups(...a));
+const acledNoteTrigger     = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateGroups(...a));
 const fold7LabelTrigger = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateGroups(...a));
 // Matches FOLD8_GROW_MS (the tooltip's own wall-clock grow-to-full-scale
 // time, see its comment above) — not the typewriter that follows it — so the
@@ -742,12 +743,12 @@ const fold7LabelTrigger = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateGroup
 // reaches max scale, instead of tracking the shared GROUP_TRANSITION_MS tempo.
 const FOLD8_SQUARE_DIM_MS = FOLD8_GROW_MS;
 const fold8SquareDimTrigger = makeTrigger(FOLD8_SQUARE_DIM_MS, (...a) => updateGroups(...a));
-// @fold9 trigger #1 — its title card's ordinary midpoint crossing. Colors in
+// @fold10 trigger #1 — its title card's ordinary midpoint crossing. Colors in
 // only the highlighted square (index 0) and its tooltip's border; the other
 // 7 squares are untouched by this trigger.
 const FOLD9_COLOR_MS = 500;
 const fold9Trigger = makeTrigger(FOLD9_COLOR_MS, (...a) => updateGroups(...a));
-// @fold9 trigger #2 — the same crossing that makes the year axis appear
+// @fold10 trigger #2 — the same crossing that makes the year axis appear
 // (its title card passing fully offscreen, top <= 0 — see p7AxisShouldShow/
 // p7HasEngaged, page7.js). Colors in all 8 fold-6 squares (in their own
 // actor's group color) and flies each one to the real per-event dot it's
@@ -760,8 +761,8 @@ const fold9Trigger = makeTrigger(FOLD9_COLOR_MS, (...a) => updateGroups(...a));
 // cascade + the axis fill): both fire off the same crossing and simply play at
 // the same time — the axis/cascade never waits for the squares to land. Since
 // a fast scroll can carry currentPage on to the pinned real-timeline section
-// (#page-7) before this 1500ms fly has finished, draw() below is called
-// unconditionally (not just while currentPage === 6) so whichever page is now
+// (#page-8) before this 1500ms fly has finished, draw() below is called
+// unconditionally (not just while currentPage === 7) so whichever page is now
 // active keeps re-running the fly's own per-frame work.
 const FOLD9_FLY_MS = 1500;
 const fold9FlyTrigger = makeTrigger(FOLD9_FLY_MS, () => {
@@ -829,13 +830,13 @@ function checkFold9TooltipShrink() {
     }
   }
 }
-// @fold10 on mobile pins the pill tray as a band under the titles, right where
-// the docked tooltip frame has been sitting since @fold7 — so the frame steps
+// @fold11 on mobile pins the pill tray as a band under the titles, right where
+// the docked tooltip frame has been sitting since @fold8 — so the frame steps
 // down to p9DockTopM() (page9.js) to make room, and back up on the way out.
 // Fired from page9UpdateFromScroll's `isStuck` crossing, the same one that
 // slides the band in; matches .page9-tray's own 850ms slide so the two move as
 // one gesture. A trigger rather than a CSS `transition: top` because the frame's
-// `top` is already rewritten every frame by the @fold6→@fold7 dock lerp, and a
+// `top` is already rewritten every frame by the @fold7→@fold8 dock lerp, and a
 // transition would smear that.
 const P9_TOOLTIP_DROP_MS = 850;
 const p9TooltipDropTrigger = makeTrigger(P9_TOOLTIP_DROP_MS, () => {
@@ -909,6 +910,7 @@ const FOLD6_CARD_FRAC = 0.7;
 const checkFold6      = watchCardThreshold(
   page6TitleCardEl, () => (isMobile() ? FOLD6_CARD_FRAC : 0.5), fold6Trigger);
 const checkSquaresReveal = watchCardThreshold(squaresRevealCardEl, 0.5, squaresRevealTrigger);
+const checkAcledNote     = watchCardThreshold(acledNoteCardEl, 0.5, acledNoteTrigger);
 const checkFold7Label = watchCardThreshold(fold7LabelCardEl, 0.5, fold7LabelTrigger);
 const checkFold8SquareDim = watchCardThreshold(fold7LabelCardEl, 0.5, fold8SquareDimTrigger);
 const checkFold9 = watchCardThreshold(page7TitleCardEl, 0.5, fold9Trigger);
@@ -916,7 +918,7 @@ const checkFold9 = watchCardThreshold(page7TitleCardEl, 0.5, fold9Trigger);
 // top <= 0. Used to instant-reverse (snap straight back to rest on scroll-up
 // rather than being catchable mid-flight) — per explicit instruction, this is
 // now a normal reversible trigger like every other fold's, so scrolling back
-// up from @fold8 into @fold7 plays the same fly-out/color-in animation in
+// up from @fold9 into @fold8 plays the same fly-out/color-in animation in
 // reverse, covering only the remaining distance, instead of snapping.
 const checkFold9Fly = watchCardThreshold(page7TitleCardEl, 0, fold9FlyTrigger);
 // Unlike every other fold trigger above, watches the *sticky wrapper*
@@ -931,7 +933,7 @@ const checkFold9Fly = watchCardThreshold(page7TitleCardEl, 0, fold9FlyTrigger);
 const checkFold13 = watchCardThreshold(page12StickyEl, 0, fold13Trigger);
 
 function checkGroupTriggers() {
-  checkFold2(); checkFold3(); checkFold6(); checkSquaresReveal(); checkFold7Label(); checkFold8SquareDim(); checkFold9(); checkFold9Fly(); checkFold13();
+  checkFold2(); checkFold3(); checkFold6(); checkSquaresReveal(); checkAcledNote(); checkFold7Label(); checkFold8SquareDim(); checkFold9(); checkFold9Fly(); checkFold13();
 }
 
 // Default (camp-column) swatch size + the swatch-to-label gap
@@ -1094,7 +1096,7 @@ function fold6RowIndexY(rowIndex, H) {
   const pitch = fold6RowPitchPx();
   // Mobile: both mini-legend columns sit at the TOP of the viewport rather
   // than on the vertically-centered desktop anchor. A phone's short viewport
-  // has the title card and @fold5's sample squares occupying the middle band,
+  // has the title card and @fold6's sample squares occupying the middle band,
   // and a centered anchor printed the legend rows straight over them. Anchored
   // flat off the top edge, and with no re-centering — the rows are meant to
   // hang off the top, so a taller pitch should grow downward.
@@ -1258,7 +1260,7 @@ function fold6PlaceMobileLegend() {
 // The bar does NOT ride fold6Trigger's full ~1.9s ramp — fading a single small
 // button over that long makes it feel like it never arrives. It runs its own
 // front-loaded slice (FOLD6_MLEGEND_IN_SPAN of the trigger) and POPS in with
-// @fold6's tooltip curve, so it lands early and with a gesture, while the
+// @fold7's tooltip curve, so it lands early and with a gesture, while the
 // on-canvas rows are still leaving behind it. The intro below still waits for
 // the full trigger.
 const FOLD6_MLEGEND_IN_SPAN = 0.3;
@@ -1334,7 +1336,7 @@ const FOLD6_MLEGEND_INTRO_CLOSE_MS = 300; // and the shrink back up into the but
 let fold6MLegendIntroRaf = 0;
 let fold6MLegendIntroTimer = 0;
 let fold6MLegendIntroPlayed = false;
-// True for the whole demo (grow + hold + shrink). @fold5's own reveal
+// True for the whole demo (grow + hold + shrink). @fold6's own reveal
 // (squaresRevealTrigger) can land in the middle of it on a fast scroll, and the
 // ACLED note flowing into the panel mid-demo would grow the frame under the
 // rows while they are still typing. updateGroups keeps the note + divider out
@@ -1345,11 +1347,11 @@ let fold6MLegendIntroActive = false;
 // Clearing the flag alone isn't enough: updateGroups (which writes the note's
 // `hidden`) only runs on scroll frames, and the demo typically ends with the
 // page standing still. So put the note back into the panel's layout here and
-// now — subject to its own @fold5 ramp, which is the only other thing that
+// now — subject to its own @fold6 ramp, which is the only other thing that
 // gates it.
 function fold6EndMLegendIntro() {
   fold6MLegendIntroActive = false;
-  if (isMobile() && squaresRevealTrigger.currentT() > 0) {
+  if (isMobile() && acledNoteTrigger.currentT() > 0) {
     fold6NoteDividerEl.hidden = fold6NoteEl.hidden = false;
   }
 }
@@ -1863,7 +1865,7 @@ function fold6PlayMLegendIntro() {
     return;
   }
   // Pulled out of the panel's layout right here for the same reason
-  // fold6EndMLegendIntro puts it back by hand: replaying the demo after @fold5
+  // fold6EndMLegendIntro puts it back by hand: replaying the demo after @fold6
   // has already revealed the note (scrolled back up and down again) would
   // otherwise leave it in the frame until the next updateGroups frame.
   fold6NoteDividerEl.hidden = fold6NoteEl.hidden = true;
@@ -1878,7 +1880,7 @@ function fold6PlayMLegendIntro() {
   const tick = () => {
     fold6MLegendIntroRaf = 0;
     const el = performance.now() - t0;
-    // The frame grows from its TOP edge with @fold6's own tooltip curve
+    // The frame grows from its TOP edge with @fold7's own tooltip curve
     // (fold8TooltipGrowEase, the subtle back-out pop) — same gesture, so the
     // panel dropping open reads as the same kind of object as the tooltip the
     // reader met one fold earlier. transform-origin is set in CSS; translateZ(0)
@@ -1929,7 +1931,7 @@ function fold6CloseMLegendIntro() {
     fold6SetMobileLegendOpen(false);
     // Only after it's hidden: a hand-opened panel must come back at full size,
     // and the ACLED note is allowed back into the panel's layout (its own
-    // @fold5 ramp still decides whether it's actually visible).
+    // @fold6 ramp still decides whether it's actually visible).
     fold6EndMLegendIntro();
     fold6MLegendRestRows();
   };
