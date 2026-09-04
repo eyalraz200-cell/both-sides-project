@@ -16,8 +16,8 @@ const SBB = {
 // mirrors left automatically (see p7GridGeometry), so no `right` field.
 const SBB_TIMELINE = {
   left:   0.18,   // fraction of W
-  top:    0.13,   // fraction of H
-  bottom: 0.81,   // fraction of H
+  top:    0.07,   // fraction of H
+  bottom: 0.93,   // fraction of H
 };
 
 // Mobile variant (≤600px). `left` is a screen-edge inset (0.03×393≈12px,
