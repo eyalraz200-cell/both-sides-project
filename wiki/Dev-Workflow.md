@@ -70,11 +70,6 @@ numbers in the source.
 
 `_debug-glide-perf.js` — `@fold10` glide-stutter attribution.
 
-`_debug-headline-type.js` — desktop-only `compare/`+`manual/` for the @fold9 headline block:
-keys `1`/`2` = date above / below the title (`P7_VERT.dateAbove`); tabs title/date with size,
-weight, line height, colour, opacity, plus a shared title-to-date gap. Writes `P7_VERT.type`
-(`page7.js`) and repaints.
-
 `_debug-note-style.js` — desktop-only `manual/` for the @fold6 ACLED note's **chevron** (size,
 stroke, gap to the title text, room from the card's edge, colour, opacity, vertical nudge) and its **title** (font-size,
 weight, line-height, tracking, colour), plus the card's padding and radius. Two knob groups,
