@@ -22,7 +22,7 @@ Legend: 🔴 must · 🟡 should · 🟢 nice-to-have / "not critical" · 📱 m
   Files: `page7.js` (grid + axis), `squareboundingbox.js` (`SBB_TIMELINE`, `CENTER_GAP`),
   `page8.js` (bridge glide targets), `js/page8-9-scroll.js`. Wiki: [Timeline](Timeline.md),
   [Folds](Folds.md). Check edge cases + whether the pattern reads as time-based.
-  *Done (desktop only, branch `vertical-axis`): axis at `W/2` inside a 64px corridor, rows
+  *Done (desktop only, branch `vertical-axis`): axis at the box centre (`SBB_TIMELINE` left 0.18 / right 0.06) inside a 64px corridor, rows
   are dates (`p7BuildVerticalLayout`), jumble kept, dense days stretch, square size solved
   per viewport. Headline placement (band vs widen) is behind `_debug-axis.js` for the user
   to pick. Mobile untouched.*
@@ -110,11 +110,13 @@ Legend: 🔴 must · 🟡 should · 🟢 nice-to-have / "not critical" · 📱 m
 
 ## H. @fold10 → @fold11 copy (`page-9`, `page-10`) 🔴
 
-- [ ] **H1. Make the question stand alone.** "איפה עובר הגבול בעיניכם?" currently depends on
-  the previous card ("…הגבול אינו תמיד מוסכם") and reads as "the border passes here". It's the
-  key question and the interactive pivot of the whole piece — rewrite so it is self-contained
-  and concrete, e.g. **"מתי פעולת מחאה הופכת לבלתי לגיטימית?"** / "מה הופך מחאה ציבורית ללא
-  לגיטימית?".
+- [x] **H1. Made the question stand alone → «מה נחשב בעיניכם לפעולה לגיטימית, ומה לפעולה קיצונית?».**
+  The old "איפה עובר הגבול בעיניכם?" depended on the previous card ("…הגבול אינו תמיד מוסכם")
+  and read as "the border passes here". The replacement names both poles outright, so it works
+  with no run-up. @fold10's card is unchanged and still sets it up. Note it is 52 characters
+  against the old 24, and `#page-10 .section-title` runs 40px/1.2 (28px on mobile) inside the
+  480px card — the pinned header is now several lines tall. The subtitle's `margin-top: -21px`
+  was tuned against a one-line title.
 - [x] **H2. @fold10→@fold11 transition 🟢.** "A bit clumsy but livable." Idea: pills enter from
   the side and the previous text turns into the title (there is something nice in that).
   → Done: title as before; the V2 band no longer slides down — its pills pop in right → left
