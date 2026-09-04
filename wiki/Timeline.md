@@ -66,7 +66,8 @@ row spills to row±1, ±2… That keeps the old jumble — ragged outer edges, h
 inner edge hugs the axis. Deterministic, so a resize/relayout reproduces itself.
 
 The tunables live in `P7_VERT` (`page7.js`): `corridorPx` (band), `eventMode`, `eventLine`,
-`bandPx` 60, `wideCorridorPx` 220, `fillRatio` 0.86, `rowJitter` 1.5. Changing
+`bandPx` 60, `wideCorridorPx` 170, `fillRatio` 1, `rowJitter` 0 — shipped defaults are
+**widen mode, line off** (picked 2026-09-04); the harness and the band branch stay for now. Changing
 one needs a relayout (`p7.lastW = 0; draw()`), which also clears `p7TargetCellCache`.
 
 **Headline placement is under comparison** (`_debug-axis.js`, review item A1/A2 — the

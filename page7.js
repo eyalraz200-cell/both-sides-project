@@ -219,12 +219,12 @@ function p7OrderFromCenter(total, cols, seed, side, maxEvents) {
    ------------------------------------------------------------------------- */
 const P7_VERT = {
   corridorPx: P7_AXIS_CORRIDOR_PX,
-  eventMode:  "band",
-  eventLine:  true,
+  eventMode:  "widen", // picked 2026-09-04 (harness kept for now)
+  eventLine:  false,
   bandPx:     60,    // band mode: height reserved per headline (title line(s) + date)
-  wideCorridorPx: 220, // widen mode: the corridor, full height
-  fillRatio:  0.86,
-  rowJitter:  1.5,   // ± rows a dot may drift from its day's own rows
+  wideCorridorPx: 170, // widen mode: the corridor, full height
+  fillRatio:  1,     // no permanent gaps — picked 2026-09-04
+  rowJitter:  0,     // picked 2026-09-04 — ± rows a dot may drift from its day's own rows
 };
 // Vertical layout result (p7.vert) — null on mobile / before layout.
 function p7DayMs(dateStr) { return new Date(dateStr + "T00:00:00Z").getTime(); }
