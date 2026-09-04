@@ -20,7 +20,7 @@ HTML id: `@foldN` = `id="page-(N-1)"`.** Verified against `project.html`'s secti
 | `@fold7` | `page-6` | `drawFold7` | כל ריבוע מייצג פעולה פוליטית בשטח | `fold7LabelTrigger`: square labels appear; `fold8SquareDimTrigger` dims the rest while the fold-8 tooltip grows + types (**mobile:** the tooltip is a docked frame above the timeline instead — see [Timeline](Timeline.md#hover)) |
 | `@fold8` | `page-7` | `drawFold9` | צבע הריבוע מציין את הקבוצה… | `fold9Trigger` colors square 0 + its tooltip border; `fold9FlyTrigger` colors all 8 and flies them to their real per-event dots |
 | `@fold9` | `page-8` | `drawPage7` | *(no title — `page7-scrub`)* | The pinned real timeline — see [Timeline](Timeline.md) |
-| `@fold10` | `page-9` | `drawPage8` | פעולות פוליטיות נבדלות זו מזו… | Bridge glide from timeline layout into page9's legit grid (`page8.js`) |
+| `@fold10` | `page-9` | `drawPage8` | פעולות פוליטיות נבדלות זו מזו… | Bridge glide from timeline layout into page9's legit grid (`page8.js`). Card sits at the section top (`padding-top: 48px`); on desktop the section is **60vh** (not the house 100vh) so @fold11's card is already rising while this one leaves — no dead run |
 | `@fold11` | `page-10` | `drawPage9` | איפה עובר הגבול בעיניכם? | Drag-and-drop categorization. Desktop runs **layout V2** (`P9_LAYOUT_V2`): bare pill band on top, horizontal drop zone under it, legit dots denser in a 150px bottom strip — see [Drag-and-Drop](Drag-and-Drop.md#desktop-layout-v2) |
 | `@fold12` | `page-11` | `drawPage12` | קיצוניים משני הצדדים (outro) | Scroll-gated outro card; `fold13Trigger`/`updateFold13` morph. Under the methodology the card carries a share row (`.page12-share`: WhatsApp / X / Facebook intent links + copy-link, wired by `p12ShareInit` in page12.js) and a one-line credits paragraph (`.page12-credits`). Both are single lines on purpose — the card already fills a 900px-tall viewport, so `@media (max-height: 920px)` also trims their spacing |
 
@@ -36,7 +36,7 @@ crossing point differs by viewport.
 
 | Trigger | Card | `frac` |
 |---|---|---|
-| `fold2Trigger` | `#page-1 .text-card` | 0.5 |
+| `fold2Trigger` | `#page-1 .text-card` | **0.75 on desktop** (`FOLD2_CARD_FRAC`), 0.5 mobile. Desktop also pulls the card up: `#page-1` is `align-items: flex-start; padding-top: 32vh` (style.css), so the card enters while the hero title is still leaving — no empty run after @fold1 |
 | `fold3Trigger` | `#page-2 .text-card` | **0.6 on mobile** (`FOLD3_CARD_FRAC`), 0.5 desktop |
 | `fold6Trigger` | `#page-3 .text-card` | **0.7 on mobile** (`FOLD6_CARD_FRAC`, nudged later from 0.8 per explicit instruction), 0.5 desktop |
 | `squaresRevealTrigger` | `#page-4 .text-card` | 0.5 |
