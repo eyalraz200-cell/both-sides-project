@@ -71,17 +71,11 @@ numbers in the source.
 `_debug-glide-perf.js` — `@fold10` glide-stutter attribution.
 Delete the file **and** its `<script>` tag when it is no longer wanted.
 
-`_debug-axis.js` — `@fold9` **A1/A2 compare** (desktop-gated, `project.html` loads it
-last): `1` band / `2` widen headline placement, `L` the A2 full-width event line, plus
-live knobs for `P7_AXIS_CORRIDOR_PX` and the `P7_VERT` tunables (each change relayouts the
-grid). Copy emits mode + line + values. Delete it, its `<script>` tag and the losing
-`eventMode` branch in `page7.js` once the placement is picked.
-
 
 *(`_debug-fold-badge.js`, the ≤600px chip printing the active `@foldN`, and
 `_debug-fold4-handoff.js`, the `@fold4` hand-off compare, and `_debug-edge.js`, the `@fold9`
-outer-dot-edge `manual/` slider that picked `SBB_TIMELINE_LEFT_PX`, were all deleted once
-their work was done.)*
+outer-dot-edge `manual/` slider that picked `SBB_TIMELINE_LEFT_PX`, and `_debug-axis.js`, the
+`@fold9` A1/A2 band-vs-widen compare, were all deleted once their work was done.)*
 
 ## Previously-built harnesses (all deleted)
 
