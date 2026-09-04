@@ -1648,6 +1648,20 @@ const P7_AXIS_EVENT_MAXWIDTH_MOBILE     = 220;
 function p7AxisEventFont()       { return isMobile() ? P7_AXIS_EVENT_FONT_MOBILE : P7_AXIS_EVENT_FONT; }
 // The vertical (desktop) headline faces come from P7_VERT.type instead.
 function p7VertFont(t)           { return `${t.weight} ${t.size}px 'Assistant', sans-serif`; }
+// Draw one headline line so its INK (cap/Hebrew letter height, measured on a
+// fixed reference so lines don't jitter with descenders) is centred in its
+// line box — with textBaseline 'top' the glyphs sit high in the box and the
+// block reads as more padding below than above. Uses the current ctx.font.
+function p7VertLineText(ctx, text, x, lineTop, lh) {
+  const prev = ctx.textBaseline;
+  // measureText's bounding boxes are relative to the CURRENT baseline —
+  // switch to alphabetic first or the ascent comes back negative under 'top'.
+  ctx.textBaseline = "alphabetic";
+  const m = ctx.measureText("0א");
+  const a = m.actualBoundingBoxAscent, d = m.actualBoundingBoxDescent;
+  ctx.fillText(text, x, lineTop + (lh - (a + d)) / 2 + a);
+  ctx.textBaseline = prev;
+}
 function p7AxisDateFont()        { return isMobile() ? P7_AXIS_DATE_FONT_MOBILE  : P7_AXIS_DATE_FONT; }
 function p7AxisEventLabelOffset(){ return isMobile() ? P7_AXIS_EVENT_LABEL_OFFSET_MOBILE : P7_AXIS_EVENT_LABEL_OFFSET; }
 function p7AxisDateOffset()      { return isMobile() ? P7_AXIS_DATE_OFFSET_MOBILE : P7_AXIS_DATE_OFFSET; }
@@ -2596,11 +2610,11 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     const dimmed = hoverActive && !isHoverHighlighted;
     ctx.font = p7VertFont(TY.title);
     ctx.fillStyle = dimmed ? `rgba(0, 0, 0, ${labelAlpha})` : TY.title.color;
-    lines.forEach((text, li) => ctx.fillText(text, tx, titleY0 + li * lh));
+    lines.forEach((text, li) => p7VertLineText(ctx, text, tx, titleY0 + li * lh, lh));
     ctx.font = p7VertFont(TY.date);
     ctx.fillStyle = dimmed ? `rgba(0, 0, 0, ${P7_AXIS_ROSTER_LABEL_ALPHA})` : TY.date.color;
     if (!split) {
-      ctx.fillText(dateLabel, tx, dateFirst ? y0 : y0 + lines.length * lh + TY.gap + (dateBelowBar ? barExtra + dateGap : 0));
+      p7VertLineText(ctx, dateLabel, tx, dateFirst ? y0 : y0 + lines.length * lh + TY.gap + (dateBelowBar ? barExtra + dateGap : 0), dlh);
     } else {
       // Split date: its own side, centred on the dot, dodging same-side year labels.
       const dOn  = dateSide !== 'center';

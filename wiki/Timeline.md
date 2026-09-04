@@ -370,7 +370,7 @@ over `totalRows × CELL`:
   a `bar.h` 1.5px black bar with rounded ends (`bar.round` true) sits `bar.gap` 1 below the
   block's last line, `bar.padX` 6 wider than the text on each side (`bar.dateBelow` true
   would move it between title and date, the date `bar.dateGap` under it). The bar counts
-  toward the block's height for the year dodge. **Type** is `P7_VERT.type` (desktop only;
+  toward the block's height for the year dodge. Each line's ink is centred in its line box (`p7VertLineText`, measured on a fixed reference with an alphabetic baseline), so a card pads the text equally above and below. **Type** is `P7_VERT.type` (desktop only;
   mobile keeps the `P7_AXIS_*_FONT` constants): title 500 14px, line height 19, black;
   date 400 14px, line height 19, black at 0.3; `gap` 0 extra px between title and date. The dot-to-block gap is `card.gap` 4. **Default side** (`P7_VERT.firstOnlyBelow` true): the first
   headline hangs under its dot; every later one sits **above** its dot (bottom edge
