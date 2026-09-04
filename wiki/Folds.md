@@ -11,7 +11,7 @@ HTML id: `@foldN` = `id="page-(N-1)"`.** Verified against `project.html`'s secti
 
 | `@foldN` | id | `PAGES[]` draw fn | Title (Hebrew, truncated) | What plays |
 |---|---|---|---|---|
-| `@fold1` | `page-0` | `drawPage1` | קיצוניים משני הצדדים (cover) | Hero overlay (logo/title/subtitle) + the fixed dot columns; scroll-lag damping |
+| `@fold1` | `page-0` | `drawPage1` | קיצוניים משני הצדדים (cover) | Hero overlay (logo/title/subtitle) + the fixed dot columns; scroll-lag damping. **Idle scroll cue:** 3.5s after the entrance finishes with no scroll, the dot columns (decorative dots + the six group swatches) pulse in a wave from the bottom row to the top (`page0CueRun`, js/fold1-intro.js: peak scale 1.6, 520ms per dot, 30ms per row), repeating every 5s; the first scroll/wheel/touchmove cancels it for good and restores the at-rest transforms. Skipped under `prefers-reduced-motion` |
 | `@fold2` | `page-1` | `drawBackground` | בשנים האחרונות התגבשו בישראל… | `fold2Trigger`, 4 beats: dots shrink → fly into the two 4×3 camp grids → each camp header types in |
 | `@fold3` | `page-2` | `drawBackground` | בשני המחנות קיימות קבוצות… | `fold3Trigger`, 3 beats: filler rects shrink away → surviving rect per row flies into one column → group labels type in |
 | `@fold4` | `page-3` | `drawFoldSplit` | בשל פעילותן בשטח… | `fold6Trigger`: the 6 groups glide into the persistent two-column mini-legend; the camp headers **un-type** (see below) |

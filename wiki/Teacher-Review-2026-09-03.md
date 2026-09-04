@@ -36,7 +36,7 @@ Legend: 🔴 must · 🟡 should · 🟢 nice-to-have / "not critical" · 📱 m
 
 ## B. @fold1 hero (`page-0`) 
 
-- [ ] **B1. Scroll indicator 🔴 📱🖥.** Non-expert user (Galia) tapped the dots and never
+- [x] **B1. Scroll indicator 🔴 📱🖥.** Non-expert user (Galia) tapped the dots and never
   scrolled. Add a subtle, delayed cue: after a timeout with no scroll, something very gentle
   pulses (a small arrow, or a hint on the dots/squares themselves, e.g. dots lifting/growing
   slightly). Applies to desktop too.
