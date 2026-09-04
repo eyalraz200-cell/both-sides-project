@@ -2181,8 +2181,10 @@ function p7DrawYearAxisVertical(ctx, W, H) {
     const ly = y + P7_AXIS_MARKER_RADIUS + P7_VERT_YEAR_LABEL_GAP;
     // Ring + label as one vertical span, for the headline blocks to dodge.
     yearSpans.push({ top: y - P7_AXIS_MARKER_RADIUS, bottom: ly + 21 });
+    // The punch starts at the ring's edge so no sliver of line shows between
+    // the ring and its digits.
     ctx.fillStyle = "#FDFCFF";
-    ctx.fillRect(axisX - tw / 2 - 3, ly - 1, tw + 6, 22);
+    ctx.fillRect(axisX - tw / 2 - 3, y + P7_AXIS_MARKER_RADIUS, tw + 6, ly + 21 - (y + P7_AXIS_MARKER_RADIUS));
     ctx.fillStyle = hoverActive
       ? `rgba(0, 0, 0, ${P7_AXIS_BG_ALPHA})`
       : (reached ? P7_AXIS_LABEL_COLOR : P7_AXIS_LABEL_FAINT_COLOR);
@@ -2284,8 +2286,16 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
       }
     }
     ctx.globalAlpha = opacity;
+    // Punch from the dot's edge (or, when pushed past a year label, from that
+    // label's bottom) to the block's far edge — no line between dot and text.
     ctx.fillStyle = "#FDFCFF";
-    ctx.fillRect(axisX - tw / 2 - 4, y0 - 2, tw + 8, blockH + 2);
+    if (y0 >= evY[i]) {
+      const punchTop = y0 - P7_VERT_EVENT_TEXT_GAP;
+      ctx.fillRect(axisX - tw / 2 - 4, punchTop, tw + 8, y0 + blockH - punchTop);
+    } else {
+      const punchBot = evY[i] - P7_AXIS_MARKER_RADIUS;
+      ctx.fillRect(axisX - tw / 2 - 4, y0 - 2, tw + 8, punchBot - (y0 - 2));
+    }
     const isHoverHighlighted = hoverActive && highlightY !== null && Math.abs(evY[i] - highlightY) < 0.5;
     const labelAlpha = (hoverActive && !isHoverHighlighted) ? P7_AXIS_ROSTER_LABEL_ALPHA : 1;
     ctx.font = p7AxisEventFont();

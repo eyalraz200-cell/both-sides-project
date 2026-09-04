@@ -305,13 +305,13 @@ over `totalRows × CELL`:
 - **Build-in wipe:** the intro clips to `rect(0, 0, W, topY + p7Ease(introT) × len)` — the
   axis (and its headlines) reveal downward; the reverse wipe undraws upward.
 - **Year labels** sit directly under their ring, centred on the line (18px, `P7_VERT_YEAR_LABEL_GAP`
-  6), on a punched `#FDFCFF` rect so the line doesn't run through the digits.
+  6), on a punched `#FDFCFF` rect that starts at the ring's edge, so no line shows between the ring and the digits or through them.
 - **Headlines:** dot on the line at `p7RowY(events[i].row)`; "reached" = its y ≤ the fill
   edge. `p7UpdateAxisEventTriggers` uses one rule for all seven on desktop:
   `p7CurRow() ≥ events[i].reachRow`. Title lines (`p7WrapLabel`, `maxWidth` 320 in band
   mode, `p7CenterGap() − 16` in widen mode) and the date hang under the dot
   (`P7_VERT_EVENT_TEXT_GAP` 6), centred on the axis, on a punched background drawn at the
-  label's opacity. The only dodge: if hanging below would overlap a year ring or its label
+  label's opacity; the punch runs from the dot's edge (or the year label's bottom when pushed past one) to the block's far edge, so no line shows between dot and text. The only dodge: if hanging below would overlap a year ring or its label
   (`yearSpans`, collected while the rings are drawn), the whole block flips to sit **above**
   the dot instead; if above is not free either or would rise past the axis's top (the
   04.01.2023 event under the 2023 ring), it stays below, pushed down just past the year
