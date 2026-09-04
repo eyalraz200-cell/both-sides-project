@@ -194,17 +194,16 @@ function p7OrderFromCenter(total, cols, seed, side, maxEvents) {
    The year axis is a vertical line at W/2 running top → bottom through the
    corridor between the two camps. Every dot's ROW is its date, and each camp
    grows OUTWARD from the axis along that row, so the dots follow the axis's
-   fill edge down the screen. Rows are handed out per DAY: a day gets its
-   linear share of the rows (span/days), stretched to more rows when either
-   camp has more events that day than one row holds (Oct 2023 needs ~3× its
-   linear share) — dense periods read taller, the axis stays monotonic.
+   fill edge down the screen. Every row stands for the same fixed span of
+   days (P7_VERT.daysPerRow, counted from minDate), so the axis is linear in
+   time and a row's fill width IS its event count. A day with more events
+   than its row can hold spills DOWN into the next row, never up, so a row
+   never shows anything from before its span.
 
-   Within a row the placement keeps the old p7OrderFromCenter texture: the
-   fill starts at the corridor and walks outward, a random roll leaves
-   permanent gaps (1 − fillRatio of the cells) and the day's events are
-   spread over the day's rows with ±jitter, so the outer edge stays ragged
-   rather than a neat bar chart. Deterministic (p7Rng) so the layout is stable
-   across frames and resizes.
+   Within a row the fill starts at the corridor and walks outward in date
+   order; a random roll can leave permanent gaps (1 − fillRatio of the cells,
+   off at fillRatio 1). Deterministic (p7Rng) so the layout is stable across
+   frames and resizes.
 
    P7_VERT is the tunable bundle (edited live by _debug-axis.js while the
    headline placement is being compared — see wiki/Timeline.md):
@@ -223,8 +222,14 @@ const P7_VERT = {
   bandPx:     60,    // band mode: height reserved per headline (title line(s) + date)
   wideCorridorPx: 180, // widen mode: the corridor, full height
   fillRatio:  1,     // no permanent gaps — picked 2026-09-04
-  rowJitter:  0,     // picked 2026-09-04 — ± rows a dot may drift from its day's own rows
+  // What one grid row stands for: a fixed span of this many days, counted
+  // from minDate — picked 2026-09-04 (8 days: 160 rows fit the box at 3.3px;
+  // one-week rows needed 183 and shrank the square to 2.9px). A day with more
+  // events than its row holds spills DOWN into the next row, never up.
+  daysPerRow: 8,
 };
+// Rows the fixed-span layout needs (ignores `rows`, the viewport's count).
+function p7VertFixedRows(nDays) { return Math.ceil(nDays / P7_VERT.daysPerRow); }
 // Vertical layout result (p7.vert) — null on mobile / before layout.
 function p7DayMs(dateStr) { return new Date(dateStr + "T00:00:00Z").getTime(); }
 
@@ -242,6 +247,9 @@ function p7SolveVerticalSq(sideW, sideH, maxEvents) {
     const cols = Math.floor(sideW / CELL), rows = Math.floor(sideH / CELL);
     const cap  = Math.max(1, Math.floor(cols * P7_VERT.fillRatio));
     const avail = rows - bands * Math.ceil(P7_VERT.bandPx / CELL);
+    // Every fixed-span row must fit the box (the row count is set by the dates).
+    const nDays = Math.round((p7DayMs(p7.maxDate) - p7DayMs(p7.minDate)) / 86400000) + 1;
+    if (rows < p7VertFixedRows(nDays)) continue;
     if (avail * cap >= maxEvents * 1.06) return sq;
   }
   return 1.5;
@@ -267,21 +275,6 @@ function p7BuildVerticalLayout(rows, cols, CELL) {
     bandDay.get(d).push(i);
   });
   const bandRows  = band ? p7VertBandRows(CELL) : 0;
-  const rowsAvail = Math.max(1, rows - bandRows * P7_AXIS_EVENTS.length);
-  const linear    = rowsAvail / nDays;
-  const need      = new Float64Array(nDays);
-  let sum = 0;
-  for (let d = 0; d < nDays; d++) {
-    // Fractional rows: there are ~10× more days than rows, so quiet days
-    // share a row and only a day with more events than one row holds
-    // (Oct 7th and its week) stretches beyond its linear share.
-    need[d] = Math.max(linear, Math.max(countL[d], countR[d]) / cap);
-    sum += need[d];
-  }
-  // Normalise so the days + bands exactly fill `rows`. Days that needed more
-  // than their linear share keep proportionally more; the squeeze lands on the
-  // sparse days.
-  const scale = rowsAvail / sum;
   const rowStart = new Float64Array(nDays + 1);
   const rowsOf   = new Float64Array(nDays);
   const events   = P7_AXIS_EVENTS.map(() => ({ row: 0, reachRow: 0, bandStart: 0, bandEnd: 0 }));
@@ -293,13 +286,15 @@ function p7BuildVerticalLayout(rows, cols, CELL) {
       cursor += bandRows;
     });
   };
+  // One row per P7_VERT.daysPerRow days: rowStart = row index + the day's
+  // fraction inside its row. NOTE: the unused "band" eventMode reserves no
+  // rows here any more (placeBands is not called) — bands would overlap dots.
+  const dpr = P7_VERT.daysPerRow;
   for (let d = 0; d < nDays; d++) {
-    placeBands(d);
-    rowStart[d] = cursor;
-    rowsOf[d]   = need[d] * scale;
-    cursor     += rowsOf[d];
+    rowStart[d] = Math.floor(d / dpr) + (d % dpr) / dpr;
+    rowsOf[d]   = 1 / dpr;
   }
-  placeBands(nDays);
+  cursor = Math.ceil(rowStart[nDays - 1] + rowsOf[nDays - 1]);
   rowStart[nDays] = cursor;
   const totalRows = cursor;
 
@@ -343,12 +338,12 @@ function p7BuildVerticalLayout(rows, cols, CELL) {
     }
     evs.forEach((e, i) => {
       const d = dayOf(e.date);
-      const want = rowStart[d] + rng() * rowsOf[d] + (rng() * 2 - 1) * P7_VERT.rowJitter;
-      const base = Math.min(lastRow, Math.max(0, Math.round(want)));
+      // The day's own row, spilling DOWN only, so a row never holds anything
+      // from before its span.
+      const base = Math.min(lastRow, Math.max(0, Math.floor(rowStart[d])));
       let k = -1, row = base;
-      // Spill outward: base, base+1, base-1, base+2, ...
       for (let step = 0; k < 0 && step <= lastRow; step++) {
-        const cand = step === 0 ? base : (step % 2 ? base + (step + 1) / 2 : base - step / 2);
+        const cand = base + step;
         if (cand < 0 || cand > lastRow) continue;
         k = claim(cand); row = cand;
       }
