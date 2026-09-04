@@ -22,13 +22,10 @@ mid-animation blends), `hoveredEvent`, `axisEventPositions`, `hoveredAxisEvent`.
 ## The square grid
 
 Geometry comes from `SBB_TIMELINE` in `squareboundingbox.js`
-(`left 0.18, right 0.06, top 0.13, bottom 0.81` — `left` clears the left-pinned legend,
-whose widest label ends ~250px; `right` is a slim margin from the right edge, so the box is
-**asymmetric** and its centre `p7BoxCenterX(W, H)`, not `W/2`, is where the axis runs; the
-mobile box is symmetric so there the centre is `W/2`) plus the centre gap: `p7CenterGap()` is
+(`left 0.18, top 0.13, bottom 0.81`) plus the centre gap: `p7CenterGap()` is
 `P7_AXIS_CORRIDOR_PX = 64` on desktop (the vertical axis's corridor — line, rings and
 18px year labels) and `CENTER_GAP = 4` on mobile. `SBB` itself belongs to page9, **not**
-here. The right camp's origin is `p7BoxCenterX + gap/2` inside `p7GridGeometry` — there
+here. The right camp's origin is mirrored (`W/2 + gap/2`) inside `p7GridGeometry` — there
 is no `right` field.
 
 `P7_SQ = 3.5`, `P7_GAP = 1.5`, `P7_CELL = 5` are the *ceiling*: on desktop the square is
@@ -82,7 +79,7 @@ losing mode is deleted once picked):
   simply wider over its whole height (`p7CenterGap()` returns `wideCorridorPx` instead of
   `corridorPx`) so every headline block fits inside it beside the axis. Dot at the middle
   of the day's rows (past-the-end: `totalRows − 3`); `reachRow` = the dot's row.
-- `eventLine` (A2) — a 1px `rgba(90,90,90,0.18)` rule from `leftX0` to `p7BoxRightX(W, H)` at each
+- `eventLine` (A2) — a 1px `rgba(90,90,90,0.18)` rule from `leftX0` to `W − leftX0` at each
   event's dot row, drawn in `p7DrawTimelineSquares` *under* the dots. Persistent like the
   event's dot (`reachedT`, × the intro wipe), not tied to the label's crossfade.
 
@@ -299,7 +296,7 @@ dot.
 ## The vertical axis (desktop) — `p7DrawYearAxisVertical`, `p7DrawAxisEventsVertical`
 
 The same colours, radii, fonts, fill lag, hover states (state 1/2/3) and headline fade
-logic as the horizontal axis, laid out **top → bottom at `x = p7BoxCenterX(W, H)`** (the asymmetric box's centre) from the grid's `topY`
+logic as the horizontal axis, laid out **top → bottom at `x = W/2`** from the grid's `topY`
 over `totalRows × CELL`:
 - **Fill:** `p7AxisFillFracTarget()` is `p7CurRow() / totalRows` (the bottom of
   `currentDate`'s rows, so the dark span always covers that day's own dots), through the
