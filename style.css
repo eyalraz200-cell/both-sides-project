@@ -497,10 +497,11 @@ body {
 .page9-sticky.page9-layout-v2 .page9-tray {
   top: var(--p9-v2-tray-top, 120px);
   bottom: auto;
-  /* Hidden off the TOP now, not the bottom — its own height plus the gap down
-     from the viewport edge. Mirrored by updateFold13's inline slide-out
-     (js/fold11.js), which reads P9_TRAY_TOP_V2 for the same offset. */
-  transform: translate(-50%, calc(-100% - var(--p9-v2-tray-top, 120px)));
+  /* Not slid off-screen any more: the band waits in place, invisible
+     (visibility/opacity gates from the base rule), and its pills pop in on
+     .engaged. updateFold13's inline slide-out (js/fold11.js) still lifts it
+     off the top by P9_TRAY_TOP_V2 at @fold12. */
+  transform: translate(-50%, 0); /* in place — see the H2 pop-in block below */
   /* No card chrome at all — the pills sit straight on the page and a single
      full-bleed rule under them separates the band from the canvas below,
      exactly as on mobile. Full-bleed needs the width overrides too, since the
@@ -514,11 +515,59 @@ body {
   border-left: none;
   border-right: none;
   border-top: none;
-  border-bottom: 1px solid rgba(90, 90, 90, 0.18);
+  border-bottom: none; /* the rule is the ::after below, so it can draw in */
   /* The title overlay is hidden below, so the padding no longer has to leave
      room for it — even top/bottom instead of the sheet's 50/35, and no side
      padding now that the band is full-bleed and its pills are centered. */
   padding: 14px 0 14px;
+}
+
+/* ── V2 engage: pills pop in right → left, rule draws under them in step
+   (teacher review 2026-09-03, H2). The band no longer slides down from the
+   top: it sits in place (the transform below is the at-rest value in BOTH
+   states) and is simply invisible until .engaged. Each pill starts at
+   scale(0) and pops to 1 in P9 "dot pop" time (280ms, the hero dots' own
+   PAGE0_POP_MS), delayed by its --p9-pop-i (page9.js: 0 for the rightmost
+   pill, the first in RTL reading order, up to 9) × 60ms — so the pop crest
+   travels leftward across the band. Un-engaging (scrolling back up) mirrors
+   it: the leftmost pill shrinks first. The full-bleed rule is a ::after
+   scaled from its RIGHT edge over the same 9×60+280 = 820ms, linear so its
+   leading edge keeps pace with the constant stagger. Only pills IN the band
+   are scoped — a pill docked in #page9ZoneAbove is untouched. ── */
+.page9-sticky.page9-layout-v2 .page9-tray {
+  --p9-pop-ms: 280ms;
+  --p9-pop-stagger: 60ms;
+  --p9-pop-total: 820ms;
+}
+.page9-sticky.page9-layout-v2 .page9-tray::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: rgba(90, 90, 90, 0.18);
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition: transform var(--p9-pop-total) linear;
+}
+.page9-sticky.page9-layout-v2.engaged .page9-tray::after {
+  transform: scaleX(1);
+}
+.page9-sticky.page9-layout-v2 .page9-tray .page9-pill {
+  transform: scale(0);
+  transition: transform var(--p9-pop-ms) cubic-bezier(0.37, 0, 0.63, 1)
+              calc((9 - var(--p9-pop-i, 0)) * var(--p9-pop-stagger));
+}
+.page9-sticky.page9-layout-v2.engaged .page9-tray .page9-pill {
+  transform: scale(1);
+  transition-delay: calc(var(--p9-pop-i, 0) * var(--p9-pop-stagger));
+}
+@media (prefers-reduced-motion: reduce) {
+  .page9-sticky.page9-layout-v2 .page9-tray .page9-pill,
+  .page9-sticky.page9-layout-v2 .page9-tray::after {
+    transition: none;
+  }
 }
 
 /* The dragover tint is a fill on the tray card — and in V2 there is no card,

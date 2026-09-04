@@ -44,7 +44,7 @@ var HOVER_DIM_OPACITY = 0.2;
 var HOVER_DIM_BY_ACTOR = {
   "settlers": 0.15,                       // תנועות התנחלות באיו״ש
   "right wing protesters": 0.15,          // קבוצות ימין לאומיות
-  "protesters against government": 0.11,  // ארגוני מחאה נגד הממשלה
+  "protesters against government": 0.11,  // מתנגדי הרפורמה ותומכי עסקת החטופים
 };
 function hoverDim(actor) {
   const v = HOVER_DIM_BY_ACTOR[actor];

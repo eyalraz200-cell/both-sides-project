@@ -87,6 +87,13 @@ Its old name `CATEGORY_EN_TO_IDX` is gone — a stale reference there throws a
 **Desktop only** — the `pointerdown` handler returns immediately under `isMobile()`, where
 a `click` handler classifies instead (see [Mobile](#mobile)).
 
+**Click-to-classify (desktop).** Both gestures are supported. The same `pointerdown`
+handler tracks a `moved` flag: a press whose pointer never travels more than
+`P9_CLICK_SLOP_PX` (4px) before release is a click, and `onUp` then calls
+`commitDrop(pill, <the other zone>)` — tray pill → `#page9ZoneAbove`, docked pill → tray —
+instead of the drop-target path. It is the exact commit path a drop takes, so the FINALIZED
+state-1 animation runs untouched. A press that does move is a normal drag.
+
 No HTML5 drag-and-drop — manual pointer events. `pointerdown` on a pill (left button
 only) clones it into a `.page9-pill-ghost` on `<body>`, hides the original with
 `.dragging`, sets `pointerCapture`, and registers `pointermove`/`pointerup` on `window`.
@@ -388,12 +395,21 @@ was touched**.
   across 600px never has to rebuild DOM. `p9ApplyTrayGrid()` (called at the top of
   `p9MeasureTrayLayout`) re-assigns each tray pill's `grid-column` and row wrapper, so a
   variant flip re-lays the tray live.
-- `.page9-tray` in V2: `top: var(--p9-v2-tray-top); bottom: auto`, hidden transform
-  `translate(-50%, calc(-100% - var(--p9-v2-tray-top)))` — it slides in **from above**, like
-  mobile's band. **No card chrome** (per explicit request): full-bleed `width: 100vw`,
-  transparent background, no radius and no border except a single
-  `1px rgba(90,90,90,0.18)` rule on the bottom edge — the same treatment the ≤600px block
-  gives the mobile band. `.page9-tray-title` is hidden, padding is `14px 0`, and the
+- `.page9-tray` in V2: `top: var(--p9-v2-tray-top); bottom: auto`, and it does **not**
+  slide — its transform is `translate(-50%, 0)` in both states; the base rule's
+  visibility/opacity gate keeps it unseen until `.engaged`. The entrance is the **pill
+  pop-in** instead: each tray pill rests at `scale(0)` and pops to `scale(1)` over 280ms
+  (sine in-out — the hero dots' own pop) delayed by `--p9-pop-i × 60ms`, where
+  `--p9-pop-i` is set by `p9BuildPanel` from `P9_TRAY_GRID_V2[idx].col − 1` (0 = the
+  rightmost pill, first in RTL reading order), so the crest travels **right → left**.
+  Un-engaging mirrors the delays (leftmost shrinks first). The bottom rule is a
+  `.page9-tray::after` (1px `rgba(90,90,90,0.18)`, full-bleed) scaled from
+  `transform-origin: right` over `9×60+280 = 820ms` **linear**, so its leading edge keeps
+  pace with the constant pill stagger. The rules are scoped to `.page9-tray .page9-pill`
+  so a pill docked in `#page9ZoneAbove` is unaffected; `prefers-reduced-motion` drops both
+  transitions. **No card chrome** (per explicit request): full-bleed `width: 100vw`,
+  transparent background, no radius and no border other than that rule — the same
+  treatment the ≤600px block gives the mobile band. `.page9-tray-title` is hidden, padding is `14px 0`, and the
   `:has(.dragover)` card tint is neutralized (there's no card to tint) — **except while
   dragging a pill OUT of the extreme zone**: `p9BuildPanel`'s pointerdown puts
   `.dragging-from-above` on `.page9-sticky` for that direction, and then the legit band is
