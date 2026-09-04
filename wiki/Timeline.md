@@ -52,29 +52,32 @@ gaps remain at the edges.
 
 ### The vertical layout (desktop) — `p7BuildVerticalLayout(rows, cols, CELL)` → `p7.vert`
 
-Rows are dates. Events are bucketed per **day** (`dayOf`, 1279 days for the current data);
-each day gets `need[d] = max(rowsAvail / nDays, max(countL, countR) / cap)` fractional rows
-(`cap = floor(cols × fillRatio)`), normalised so days (+ bands) exactly fill `rows`. So the
-axis is linear in time except where a day has more events than one row holds (Oct 7 and its
-week), which stretches taller. `rowStart[d]`/`rowsOf[d]` are the cumulative map;
-`p7RowOfDate` (middle of the day's rows — ticks, hover marker, widen-mode dots),
+Rows are dates, and **every row stands for the same span: `P7_VERT.daysPerRow` days (8,
+picked 2026-09-04) counted from `minDate`**. Events are bucketed per **day** (`dayOf`, 1279
+days for the current data → 160 rows); `rowStart[d] = floor(d / 8) + (d % 8) / 8`,
+`rowsOf[d] = 1/8`, so the axis is exactly linear in time and a row's fill width *is* its
+event count. `p7SolveVerticalSq` shrinks the square until all the rows fit the box
+(3.3 px at 1440×900; one-week rows needed 183 and 2.9 px, which is why 8 days won).
+`p7RowOfDate` (middle of the day's slice — ticks, hover marker, widen-mode dots),
 `p7RowEndOfDate` (bottom — the fill edge, `p7CurRow()` for `currentDate`), `p7RowY(row, H)`
-and `p7AxisY(dateStr, H)` read it. A date past `maxDate` clamps to the end.
+and `p7AxisY(dateStr, H)` read the map. A date past `maxDate` clamps to the end.
 
-Placement per side (same seeds): `row = round(rowStart + rng × rowsOf ± rowJitter)`, then the
-first free cell walking **outward from the corridor** (`k` → `col = right ? k : cols−1−k`);
+Placement per side (same seeds), in date order: the day's own row `floor(rowStart[d])`, then
+the first free cell walking **outward from the corridor** (`k` → `col = right ? k : cols−1−k`);
 each cell is rolled a permanent gap with probability `1 − fillRatio` on first visit; a full
-row spills to row±1, ±2… That keeps the old jumble — ragged outer edges, holes — while the
-inner edge hugs the axis. Deterministic, so a resize/relayout reproduces itself.
+row spills **down only** (row+1, row+2…) so a row never holds anything from before its span.
+The inner edge hugs the axis, the outer edge is the count. Deterministic, so a
+resize/relayout reproduces itself.
 
 The tunables live in `P7_VERT` (`page7.js`): `corridorPx` (band), `eventMode`, `eventLine`,
-`bandPx` 60, `wideCorridorPx` 180, `fillRatio` 1, `rowJitter` 0 — shipped defaults are
+`bandPx` 60, `wideCorridorPx` 180, `fillRatio` 1, `daysPerRow` 8 — shipped defaults are
 **widen mode, line off** (picked 2026-09-04); the harness and the band branch stay for now. Changing
 one needs a relayout (`p7.lastW = 0; draw()`), which also clears `p7TargetCellCache`.
 
 **Headline placement** (review item A1/A2; `widen` is the picked default, the `band` code is
 still present but unused — the `_debug-axis.js` harness that compared them is deleted):
-- `eventMode: "band"` — `ceil(bandPx / CELL)` empty rows are reserved just *before* the
+- `eventMode: "band"` — *(dead since fixed-span rows: the layout no longer reserves band rows,
+  so switching it on would overlap dots)* `ceil(bandPx / CELL)` empty rows were reserved just *before* the
   event's day (the past-the-end event's band goes after the last day); the dot sits 1.5 rows
   into the band (`events[i].row`) and the headline + date hang under it, centred on the axis.
   `reachRow` = the band's top.
