@@ -69,11 +69,41 @@ numbers in the source.
 ## Currently in the repo
 
 `_debug-glide-perf.js` — `@fold10` glide-stutter attribution.
-Delete the file **and** its `<script>` tag when it is no longer wanted.
+
+`_debug-axis-cards.js` — desktop-only `compare/` for putting the @fold9 axis-event
+headlines in cards: `1` thin grey outline, `2` soft grey fill, `3` dashed frame, `4` white
+with a soft shadow, `5` white with a 2px accent bar under the text, `6` the accent bar
+alone under bare text (no card); `0` the bare punched text it ships with. Toggle `S` keeps the line visible as a stem between dot and card.
+Sliders for side padding, top/bottom padding, radius and dot-to-card gap. Writes
+`P7_VERT.card` (`page7.js`; `null` = no card) and repaints.
+
+`_debug-note-style.js` — desktop-only `manual/` for the @fold6 ACLED note's **chevron** (size,
+stroke, gap to the title text, room from the card's edge, colour, opacity, vertical nudge) and its **title** (font-size,
+weight, line-height, tracking, colour), plus the card's padding and radius. Two knob groups,
+`chevron` and `title`. Three things it has to do that a plain stylesheet override wouldn't:
+the card's **padding is a JS variable** (`FOLD6_CARD_PAD`) because the rect is written inline
+every frame; the chevron's `transform` must be restated **whole** (it carries the centring
+translate *and* the per-frame open/closed rotation); and any title restyle must be mirrored
+onto `fold6NoteTitleMeasureEl`, the off-screen twin the collapsed card's width is measured
+from. It supersedes `_debug-note-chevron.js` (rule vs chevron) and `_debug-note-card.js` (the
+card-style `compare/`, baked to the background tint on 2026-09-04); `_debug-pill-x.js`, the
+`compare/` for the dropped-pill ✕ placement, was deleted after the same day's bake.
+
+`_debug-fold-badge.js` — all-viewport corner chip printing the active `@foldN`, its
+`#page-(N-1)` id and a one-line name for what plays there. Tracks the same 50%-viewport
+crossing the real `IntersectionObserver` uses, so it always agrees with `currentPage`.
+Click it or press `B` to collapse it to just `@foldN`. Not a panel harness — no knobs.
+
+Delete each file **and** its `<script>` tag when it is no longer wanted.
 
 
-*(`_debug-fold-badge.js`, the ≤600px chip printing the active `@foldN`,
-`_debug-fold4-handoff.js`, the `@fold4` hand-off compare, `_debug-edge.js`, the `@fold9`
+*(`_debug-fold3.js`, the `manual/` that picked `@fold3`'s per-camp row order and the 180px
+camp gap — it permuted `fold6.y` among a camp's three groups rather than turning any order
+field, since `legendRow` derives the order from those y values,
+`_debug-tooltip-style.js`, the `compare/` that picked the desktop tooltip's group-colour
+fill over the old white-box-with-dashed-stroke, `_debug-tooltip-weight.js`, the `manual/`
+sliders that picked the tooltip description's 550 weight, `_debug-fold4-handoff.js`, the `@fold4`
+hand-off compare, `_debug-edge.js`, the `@fold9`
 outer-dot-edge `manual/` slider that picked `SBB_TIMELINE_LEFT_PX`, and `_debug-axis.js`,
 the `@fold9` vertical-axis knobs that picked `P7_VERT`, were all deleted once their work was
 done.)*

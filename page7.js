@@ -245,6 +245,14 @@ const P7_VERT = {
   // unbroken and the break eats the ends of the neighbouring line segments.
   yearGapPad: 3,
   yearRing:   false,   // no ring on the line — the digits alone mark the year
+  // Headline card (centred blocks only). null = bare text on a punched
+  // background. Otherwise { style: 'outline'|'fill'|'dashed'|'shadow'|'accent',
+  // padX, padY, radius, gap (px from the dot's edge to the card's edge),
+  // stem (true = the line stays visible between dot and card as a connector) }.
+  card: null,
+  // Which headlines hang UNDER their dot by default: the first one only; every
+  // later headline sits ABOVE its dot (the year dodge can still flip either).
+  firstOnlyBelow: true,
 };
 // The row plan of the fixed-span layout: every P7_VERT.daysPerRow days take
 // one row, counted afresh from each 1 January (the rows themselves run on
@@ -2391,6 +2399,38 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   }
 }
 
+// One headline card (P7_VERT.card) — the rounded rect behind a centred block.
+function p7DrawHeadlineCard(ctx, card, x, y, w, h) {
+  const r = Math.min(card.radius || 0, w / 2, h / 2);
+  const path = () => { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); };
+  ctx.save();
+  if (card.style === 'bar') {
+    // No card: bare punched text with the accent bar under it.
+    ctx.fillStyle = '#FDFCFF'; ctx.fillRect(x, y, w, h);
+  } else if (card.style === 'shadow') {
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.14)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 3;
+    ctx.fillStyle = '#FDFCFF'; path(); ctx.fill();
+    ctx.shadowColor = 'transparent';
+  } else if (card.style === 'fill') {
+    ctx.fillStyle = card.fill || '#F1F0F5'; path(); ctx.fill();
+  } else {
+    ctx.fillStyle = '#FDFCFF'; path(); ctx.fill();
+  }
+  if (card.style === 'outline' || card.style === 'dashed' || card.style === 'accent') {
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = card.style === 'accent' ? 'rgba(0, 0, 0, 0.12)' : (card.stroke || 'rgba(0, 0, 0, 0.3)');
+    if (card.style === 'dashed') ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.roundRect(x + 0.5, y + 0.5, w - 1, h - 1, r); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  if (card.style === 'accent' || card.style === 'bar') {
+    // 2px bar always along the bottom of the text.
+    ctx.fillStyle = P7_AXIS_FILLED_COLOR;
+    ctx.fillRect(x + r, y + h - 2, w - r * 2, 2);
+  }
+  ctx.restore();
+}
+
 function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlightY, yearSpans) {
   p7UpdateAxisEventTriggers(W);
   const now = performance.now();
@@ -2473,22 +2513,38 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     // on the dot, aligned toward the line; it only dodges year labels that
     // live on the same side (or on the line itself, whose span is below the ring).
     const onSide = evSideI !== 'center';
+    const card = !onSide && P7_VERT.card ? P7_VERT.card : null;
+    const cpx = card ? card.padX : 0, cpy = card ? card.padY : 0;
+    const textGap = card ? card.gap + cpy : P7_VERT_EVENT_TEXT_GAP;
     const spans = (yearSpans || []).filter(s => !(onSide && s.side !== 'center' && s.side !== evSideI));
-    const hits = (top) => spans.some(s => top - 2 < s.bottom && top + blockH + 2 > s.top);
-    const below = onSide ? evY[i] - lh / 2 : evY[i] + P7_AXIS_MARKER_RADIUS + P7_VERT_EVENT_TEXT_GAP;
-    const above = evY[i] - P7_AXIS_MARKER_RADIUS - P7_VERT_EVENT_TEXT_GAP - blockH;
+    const hits = (top) => spans.some(s => top - 2 - cpy < s.bottom && top + blockH + 2 + cpy > s.top);
+    const below = onSide ? evY[i] - lh / 2 : evY[i] + P7_AXIS_MARKER_RADIUS + textGap;
+    const above = evY[i] - P7_AXIS_MARKER_RADIUS - textGap - blockH;
     // Default: under the dot. If that runs into a year label the block flips
     // ABOVE its dot; only if both sides collide is it pushed down past the year.
-    let y0 = below, flipped = false;
-    if (hits(below)) {
-      if (!hits(above)) { y0 = above; flipped = true; }
-      else spans.forEach(s => { if (hits(y0)) y0 = s.bottom + P7_VERT_EVENT_TEXT_GAP; });
+    // Default side: under the dot for the first headline, above for the rest
+    // (P7_VERT.firstOnlyBelow); side blocks always start beside the dot.
+    const preferAbove = !onSide && P7_VERT.firstOnlyBelow && i > 0;
+    let y0 = preferAbove ? above : below, flipped = preferAbove;
+    if (hits(y0)) {
+      const alt = preferAbove ? below : above;
+      if (!hits(alt)) { y0 = alt; flipped = !preferAbove; }
+      else spans.forEach(s => { if (hits(y0)) y0 = s.bottom + textGap; });
     }
     ctx.globalAlpha = opacity;
     ctx.fillStyle = "#FDFCFF";
     const tx = onSide ? axisX + evDirI * (P7_AXIS_MARKER_RADIUS + P7_VERT.sideGap) : axisX;
     if (onSide) {
       ctx.fillRect(evDirI > 0 ? tx - 3 : tx - tw - 3, y0 - 2, tw + 6, blockH + 4);
+    } else if (card) {
+      // Card: no punch between dot and card when it has a stem (the line is
+      // the connector); otherwise clear that gap too.
+      if (!card.stem || card.style === 'bar') {
+        const a = flipped ? y0 + blockH : evY[i] - P7_AXIS_MARKER_RADIUS;
+        const b = flipped ? evY[i] - P7_AXIS_MARKER_RADIUS : y0;
+        ctx.fillRect(axisX - 2, Math.min(a, b), 4, Math.abs(b - a));
+      }
+      p7DrawHeadlineCard(ctx, card, axisX - tw / 2 - cpx, y0 - cpy, tw + cpx * 2, blockH + cpy * 2);
     } else if (flipped) {
       // Above the dot: punch from the block's top edge down to the dot's edge.
       ctx.fillRect(axisX - tw / 2 - 4, y0 - 2, tw + 8, evY[i] - P7_AXIS_MARKER_RADIUS - y0 + 2);
