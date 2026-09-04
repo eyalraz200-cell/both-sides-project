@@ -67,7 +67,7 @@ function p7Cell() { return isMobile() ? p7MobileSq * (1 + P7_MOBILE_GAP_RATIO) :
 // AXIS block below), so the centre gap is the wider P7_AXIS_CORRIDOR_PX
 // corridor rather than CENTER_GAP. Mobile keeps CENTER_GAP + the horizontal axis.
 function p7VerticalAxis() { return !isMobile(); }
-function p7CenterGap()    { return p7VerticalAxis() ? P7_VERT.corridorPx : CENTER_GAP; }
+function p7CenterGap()    { return p7VerticalAxis() ? (P7_VERT.eventMode === "widen" ? P7_VERT.wideCorridorPx : P7_VERT.corridorPx) : CENTER_GAP; }
 function p7GridGeometry(W, H) {
   const leftX0  = Math.round(W * sbbTimeline(H).left);
   const gap     = p7CenterGap();
@@ -212,10 +212,9 @@ function p7OrderFromCenter(total, cols, seed, side, maxEvents) {
      eventMode "band"  — the dot flow pauses at each headline event: bandRows
                           empty rows are reserved and the headline + date sit
                           in that band, centred on the axis.
-     eventMode "widen" — no rows reserved; instead the corridor opens wider
-                          around the event's rows (widenPx at the peak,
-                          p9Ease'd over ±widenRows) and the headline sits in
-                          the opened space.
+     eventMode "widen" — no rows reserved; instead the whole corridor is
+                          wider (wideCorridorPx, top to bottom) so every
+                          headline fits inside it beside the axis.
      eventLine         — A2: a faint full-width line at each reached event's row.
    ------------------------------------------------------------------------- */
 const P7_VERT = {
@@ -223,8 +222,7 @@ const P7_VERT = {
   eventMode:  "band",
   eventLine:  true,
   bandPx:     60,    // band mode: height reserved per headline (title line(s) + date)
-  widenPx:    110,
-  widenRows:  12,
+  wideCorridorPx: 220, // widen mode: the corridor, full height
   fillRatio:  0.86,
   rowJitter:  1.5,   // ± rows a dot may drift from its day's own rows
 };
@@ -323,23 +321,6 @@ function p7BuildVerticalLayout(rows, cols, CELL) {
     }
   });
 
-  // Widen: cells nearest the corridor are blocked around each event's rows so
-  // the camps part around the headline. The bump is centred a few rows below
-  // the dot (where the text block actually sits).
-  const blockedCols = new Int32Array(Math.ceil(totalRows) + 2);
-  if (!band) {
-    const blockTextRows = Math.ceil(46 / CELL) / 2; // half of dot-radius + title + date (px) in rows
-    events.forEach((e) => {
-      const centre = e.row + blockTextRows;
-      for (let r = Math.floor(centre - P7_VERT.widenRows); r <= Math.ceil(centre + P7_VERT.widenRows); r++) {
-        if (r < 0 || r >= blockedCols.length) continue;
-        const t = 1 - Math.abs(r - centre) / P7_VERT.widenRows;
-        if (t <= 0) continue;
-        const bump = P7_VERT.widenPx * p9Ease(t);
-        blockedCols[r] = Math.max(blockedCols[r], Math.ceil(bump / CELL));
-      }
-    });
-  }
 
   const lastRow = rows - 1;
   function placeSide(evs, seed, side) {
@@ -351,8 +332,7 @@ function p7BuildVerticalLayout(rows, cols, CELL) {
     // returns k or -1. Cells rolled as permanent gaps are marked used (2).
     function claim(row) {
       const u = cellRow(row);
-      const usable = cols - (blockedCols[row] || 0);
-      for (let k = blockedCols[row] || 0; k < usable; k++) {
+      for (let k = 0; k < cols; k++) {
         if (u[k]) continue;
         if (rng() > P7_VERT.fillRatio) { u[k] = 2; continue; } // permanent gap
         u[k] = 1;
@@ -2228,10 +2208,8 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
   ctx.textBaseline = "top";
 
   // Width available to a headline block: the whole band in band mode, the
-  // opened corridor (minus a margin) in widen mode.
-  const maxWidth = P7_VERT.eventMode === "band"
-    ? 320
-    : P7_VERT.corridorPx + 2 * P7_VERT.widenPx - 24;
+  // corridor (minus a margin) in widen mode.
+  const maxWidth = P7_VERT.eventMode === "band" ? 320 : p7CenterGap() - 16;
 
   p7.axisEventPositions = new Map();
   const hoveredAxisEvent = p7.hoveredAxisEvent;

@@ -28,7 +28,7 @@ right → left along the bottom axis.
 
 **"Band" / "widen"** — the two headline placements under comparison on the desktop
 vertical axis (`P7_VERT.eventMode`): *band* pauses the dot flow and prints the headline
-across the reserved rows; *widen* opens the centre corridor around the event's rows.
+across the reserved rows; *widen* makes the whole centre corridor wider (top to bottom) so the headlines fit inside it.
 See [Timeline](Timeline.md#the-vertical-layout-desktop--p7buildverticallayoutrows-cols-cell--p7vert).
 
 **"State 1" / "state 2" — page9** — the two extreme-drop animation modes.

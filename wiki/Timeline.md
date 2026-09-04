@@ -32,8 +32,8 @@ is no `right` field.
 **solved per viewport** like mobile (`p7SolveVerticalSq` → `p7DesktopSq`, read through
 `p7Sq()`/`p7Cell()`, gap ratio kept at 1.5/3.5) — the largest square whose grid still holds
 the busier camp once each day's events must sit in that day's rows (6% slack for the jitter
-spill; band mode also gives whole rows to the headlines, so it solves smaller). At 1440×900
-that is ~2.7px in widen mode, ~1.8px in band mode. (page9 uses `P9_SQ 3 / P9_GAP 1` —
+spill; band mode gives whole rows to the headlines, widen mode gives the corridor more
+width, so both solve smaller than the ceiling). (page9 uses `P9_SQ 3 / P9_GAP 1` —
 deliberately different; page8 lerps between them.)
 
 `p7UpdateLayout(W, H)` early-returns unless the viewport (or the desktop/mobile branch)
@@ -65,8 +65,8 @@ each cell is rolled a permanent gap with probability `1 − fillRatio` on first 
 row spills to row±1, ±2… That keeps the old jumble — ragged outer edges, holes — while the
 inner edge hugs the axis. Deterministic, so a resize/relayout reproduces itself.
 
-The tunables live in `P7_VERT` (`page7.js`): `corridorPx`, `eventMode`, `eventLine`,
-`bandPx` 60, `widenPx` 110, `widenRows` 12, `fillRatio` 0.86, `rowJitter` 1.5. Changing
+The tunables live in `P7_VERT` (`page7.js`): `corridorPx` (band), `eventMode`, `eventLine`,
+`bandPx` 60, `wideCorridorPx` 220, `fillRatio` 0.86, `rowJitter` 1.5. Changing
 one needs a relayout (`p7.lastW = 0; draw()`), which also clears `p7TargetCellCache`.
 
 **Headline placement is under comparison** (`_debug-axis.js`, review item A1/A2 — the
@@ -75,11 +75,10 @@ losing mode is deleted once picked):
   event's day (the past-the-end event's band goes after the last day); the dot sits 1.5 rows
   into the band (`events[i].row`) and the headline + date hang under it, centred on the axis.
   `reachRow` = the band's top.
-- `eventMode: "widen"` — no rows reserved; the cells nearest the corridor are blocked
-  around the event (`bump = widenPx × p9Ease(1 − |row − centre| / widenRows)`, centre a
-  few rows below the dot where the text block sits; `blockedCols[row] = ceil(bump / CELL)`)
-  so the two camps part around the headline. Dot at the middle of the day's rows
-  (past-the-end: `totalRows − 3`); `reachRow` = the dot's row.
+- `eventMode: "widen"` — no rows reserved and no per-event bump: the centre corridor is
+  simply wider over its whole height (`p7CenterGap()` returns `wideCorridorPx` instead of
+  `corridorPx`) so every headline block fits inside it beside the axis. Dot at the middle
+  of the day's rows (past-the-end: `totalRows − 3`); `reachRow` = the dot's row.
 - `eventLine` (A2) — a 1px `rgba(90,90,90,0.18)` rule from `leftX0` to `W − leftX0` at each
   event's dot row, drawn in `p7DrawTimelineSquares` *under* the dots. Persistent like the
   event's dot (`reachedT`, × the intro wipe), not tied to the label's crossfade.
@@ -309,7 +308,7 @@ over `totalRows × CELL`:
 - **Headlines:** dot on the line at `p7RowY(events[i].row)`; "reached" = its y ≤ the fill
   edge. `p7UpdateAxisEventTriggers` uses one rule for all seven on desktop:
   `p7CurRow() ≥ events[i].reachRow`. Title lines (`p7WrapLabel`, `maxWidth` 320 in band
-  mode, `corridor + 2 × widenPx − 24` in widen mode) and the date hang under the dot
+  mode, `p7CenterGap() − 16` in widen mode) and the date hang under the dot
   (`P7_VERT_EVENT_TEXT_GAP` 6), centred on the axis, on a punched background drawn at the
   label's opacity. **No de-collision** — the layout reserves the space.
 - **Hover:** the hovered square's date marks the axis at `p7AxisY(date, H)` in its actor
