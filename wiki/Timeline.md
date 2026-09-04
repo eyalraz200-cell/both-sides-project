@@ -352,7 +352,8 @@ over `totalRows × CELL`:
   segments; time and the dot rows are continuous. Each segment is drawn unfilled first, then
   filled up to the fill edge.
 - **Year digits** (18px, `P7_AXIS_LABEL_COLOR`, faint until reached) are centred on the line
-  in the break, on a punched `#FDFCFF` rect, with **no ring** (`yearRing` false). Ring on:
+  in the break **by their measured ink box** (`actualBoundingBoxAscent/Descent`, alphabetic
+  baseline), not by the font's line box, on a punched `#FDFCFF` rect, with **no ring** (`yearRing` false). Ring on:
   hollow ring at the top of the centred block with the digits `P7_VERT_YEAR_LABEL_GAP` 6
   below it, punch from the ring's edge. `yearSide` `'left'`/`'right'` puts the digits
   beside the line instead, vertically centred on the year row, aligned toward the line
