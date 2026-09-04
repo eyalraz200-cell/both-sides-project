@@ -246,9 +246,10 @@ const P7_VERT = {
   yearGapPad: 3,
   yearRing:   false,   // no ring on the line — the digits alone mark the year
   // Headline card (centred blocks only). null = bare text on a punched
-  // background. Shipped: style 'bar' — bare text with an accent bar under it
-  // (geometry in `bar` below). The other styles ('outline'|'fill'|'dashed'|
-  // 'shadow'|'accent' = card + bar) are kept as unused code paths.
+  // background. Shipped: style 'outline' — white card, 1px 30%-black outline,
+  // accent bar along its bottom edge (geometry in `bar` below). The other
+  // styles ('bar' = bare text + bar, 'fill', 'dashed', 'shadow', 'accent' =
+  // card + bar) are kept as unused code paths.
   // { style, padX, padTop, padBottom, radius, gap (px from the dot's edge to the block),
   //   stem (true = the line stays visible between dot and card; 'bar' always
   //   clears that gap) }.
@@ -257,7 +258,7 @@ const P7_VERT = {
   //   the card sits `gap` past the dot's edge; 'center' = the card's
   //   dot-facing edge runs through the dot's centre and the dot is redrawn
   //   on top of it).
-  card: { style: 'fill', fill: '#f5f5f5', padX: 10, padTop: 4, padBottom: 4, radius: 8, radiusBottom: 0,
+  card: { style: 'outline', fill: '#f5f5f5', padX: 16, padTop: 6, padBottom: 6, radius: 4, radiusBottom: 0,
           gap: 0, stem: false, bar: true, anchor: 'center' },
   // The accent bar under a headline: h px tall, `gap` px below the text's
   // last line, `padX` px wider than the text on each side, `alpha` opacity of
@@ -1549,10 +1550,14 @@ const P7_AXIS_LABEL_COLOR       = "rgba(0, 0, 0, 0.65)";
 // null when not yet triggered (or reset back to it, see p7AxisTriggerIfNeeded).
 const P7_AXIS_INTRO_DURATION = 2800; // ms — full right-edge-to-left-edge wipe
 // Reverse wipe when the trigger un-fires (scrolling back up past the fly
-// trigger): the same wipe plays backwards, much quicker than the build-in.
-// 500ms is the FULL-wipe time; an interrupted intro reverses over only its
-// remaining distance (duration scaled by how far it had got), per convention.
-const P7_AXIS_OUTRO_DURATION = 500; // ms — full left-edge-back-to-right-edge un-wipe
+// trigger) and when @fold10's bridge glide starts: the same wipe plays
+// backwards, at the SAME SPEED as the build-in (explicit instruction) — at the
+// old 500ms the axis snapped away the moment @fold10's title block hit, which
+// read as a glitch rather than as the axis undrawing. Tied to the intro rather
+// than restated, so the two can't drift apart. This is the FULL-wipe time; an
+// interrupted intro reverses over only its remaining distance (duration scaled
+// by how far it had got), per convention.
+const P7_AXIS_OUTRO_DURATION = P7_AXIS_INTRO_DURATION; // ms — full left-edge-back-to-right-edge un-wipe
 let p7AxisIntroStart = null;
 let p7AxisOutroStart = null; // non-null while the reverse wipe is running
 let p7AxisOutroFromT = 0;    // introT captured at the moment the reverse began
