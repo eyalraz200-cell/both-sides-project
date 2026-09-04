@@ -265,7 +265,7 @@ const P7_VERT = {
   // `color` may carry alpha. `gap` = extra px between the title and the date.
   type: {
     title: { size: 14, weight: 500, lh: 19, color: 'rgba(0, 0, 0, 1)' },
-    date:  { size: 14, weight: 400, lh: 19, color: 'rgba(0, 0, 0, 0.65)' },
+    date:  { size: 14, weight: 400, lh: 19, color: 'rgba(0, 0, 0, 0.3)' },
     gap: 0,
   },
   // Which headlines hang UNDER their dot by default: the first one only; every

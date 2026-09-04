@@ -372,7 +372,7 @@ over `totalRows × CELL`:
   would move it between title and date, the date `bar.dateGap` under it). The bar counts
   toward the block's height for the year dodge. **Type** is `P7_VERT.type` (desktop only;
   mobile keeps the `P7_AXIS_*_FONT` constants): title 500 14px, line height 19, black;
-  date 400 14px, line height 19, black at 0.65; `gap` 0 extra px between title and date. The dot-to-block gap is `card.gap` 4. **Default side** (`P7_VERT.firstOnlyBelow` true): the first
+  date 400 14px, line height 19, black at 0.3; `gap` 0 extra px between title and date. The dot-to-block gap is `card.gap` 4. **Default side** (`P7_VERT.firstOnlyBelow` true): the first
   headline hangs under its dot; every later one sits **above** its dot (bottom edge
   `P7_VERT_EVENT_TEXT_GAP` above the dot, punch from the block's top down to the dot's
   edge). The only dodge: if the default side would overlap a year label (`yearSpans`,
