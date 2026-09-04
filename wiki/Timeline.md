@@ -76,7 +76,7 @@ resize/relayout reproduces itself.
 
 The tunables live in `P7_VERT` (`page7.js`): `corridorPx` (band), `eventMode`, `eventLine`,
 `bandPx` 60, `wideCorridorPx` 200, `fillRatio` 1, `daysPerRow` 8, `yearGapPad` 3,
-`yearRing` false, `yearSide`/`eventSide` `'center'`, `dateSide` `'with'`, `dateAbove` true,
+`yearRing` false, `yearSide`/`eventSide` `'center'`, `dateSide` `'with'`, `dateAbove` false,
 `sideGap` 8, `firstOnlyBelow` true, `card` null (headline card, see the `_debug-axis-cards.js`
 compare in [Dev-Workflow](Dev-Workflow.md)) — shipped defaults are **widen mode, line off, everything centred on the line**
 (compare/ "version 1", picked 2026-09-04). The side/alternate/split placements
@@ -361,15 +361,16 @@ over `totalRows × CELL`:
   (`sideGap` 8 from the ring's edge).
 - **Headlines:** dot on the line at `p7RowY(events[i].row)`; "reached" = its y ≤ the fill
   edge. `p7UpdateAxisEventTriggers` uses one rule for all seven on desktop:
-  `p7CurRow() ≥ events[i].reachRow`. The block — **date line first (`dateAbove` true), then
-  the title lines** (`p7WrapLabel`, `maxWidth` 320 in band mode, `p7CenterGap() − 16` in
+  `p7CurRow() ≥ events[i].reachRow`. The block — **title lines first, then the accent bar,
+  then the date line** (`dateAbove` false, `bar.dateBelow` true; `p7WrapLabel`, `maxWidth` 320 in band mode, `p7CenterGap() − 16` in
   widen mode) — hangs under the dot (`P7_VERT_EVENT_TEXT_GAP` 6), centred on the axis, on
   a punched background drawn at the label's opacity; the punch runs from the dot's edge (or
   the year label's bottom when pushed past one) to the block's far edge, so no line shows
   between dot and text. **Accent bar** (`P7_VERT.card` style `'bar'`, `p7DrawHeadlineCard`):
-  a `bar.h` 2px black bar along the bottom of the text, `bar.gap` 0 below the last line,
-  `bar.padX` 10 wider than the text on each side; it counts toward the block's height for
-  the year dodge. The dot-to-block gap is `card.gap` 6. **Default side** (`P7_VERT.firstOnlyBelow` true): the first
+  a `bar.h` 1.5px black bar with rounded ends (`bar.round` true) sits `bar.gap` 1 below the
+  title's last line, `bar.padX` 6 wider than the text on each side; the date hangs
+  `bar.dateGap` 3 under the bar on its own punch. Bar and date both count toward the
+  block's height for the year dodge. The dot-to-block gap is `card.gap` 4. **Default side** (`P7_VERT.firstOnlyBelow` true): the first
   headline hangs under its dot; every later one sits **above** its dot (bottom edge
   `P7_VERT_EVENT_TEXT_GAP` above the dot, punch from the block's top down to the dot's
   edge). The only dodge: if the default side would overlap a year label (`yearSpans`,

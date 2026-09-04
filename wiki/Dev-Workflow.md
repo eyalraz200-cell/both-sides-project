@@ -70,11 +70,6 @@ numbers in the source.
 
 `_debug-glide-perf.js` — `@fold10` glide-stutter attribution.
 
-`_debug-accent-bar.js` — desktop-only `manual/` for the accent bar under the @fold9 axis-event
-headlines: thickness, text-to-bar gap, how much wider than the text, opacity, colour,
-rounded ends (`R`), and the dot-to-block gap. Writes `P7_VERT.bar` / `P7_VERT.card.gap`
-(`page7.js`) and repaints.
-
 `_debug-note-style.js` — desktop-only `manual/` for the @fold6 ACLED note's **chevron** (size,
 stroke, gap to the title text, room from the card's edge, colour, opacity, vertical nudge) and its **title** (font-size,
 weight, line-height, tracking, colour), plus the card's padding and radius. Two knob groups,
