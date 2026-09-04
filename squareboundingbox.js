@@ -14,8 +14,13 @@ const SBB = {
 // at the screen's left edge (GROUPS' fold6 position in main.js) — measured ~0.07-0.10
 // of W at typical desktop widths, so 0.18 leaves a comfortable margin. The right edge
 // mirrors left automatically (see p7GridGeometry), so no `right` field.
+// DESKTOP `left` is a fixed px (SBB_TIMELINE_LEFT_PX), not a fraction — picked by eye
+// with the `manual/` edge harness on 2026-09-04 at 1920 wide (was 0.18 ≈ 346px there).
+// Read it through sbbTimelineLeftX(W, H), never W * box.left, so the exact px survives
+// every viewport width. Mobile stays a fraction (SBB_TIMELINE_MOBILE_LEFT).
+const SBB_TIMELINE_LEFT_PX = 200;
 const SBB_TIMELINE = {
-  left:   0.18,   // fraction of W
+  left:   0.18,   // fraction of W — MOBILE-ONLY fallback; desktop uses SBB_TIMELINE_LEFT_PX
   top:    0.07,   // fraction of H
   bottom: 0.93,   // fraction of H
 };
@@ -71,6 +76,13 @@ function sbbTimeline(H) {
     top:    SBB_TIMELINE_MOBILE_TOP_PX / h,
     bottom: (P7_AXIS_Y_FRAC_MOBILE * h - SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX) / h,
   };
+}
+
+// The box's outer x edge (left grid's leftX0; the right grid mirrors it at W − this).
+// Desktop: the exact SBB_TIMELINE_LEFT_PX. Mobile: rounded fraction of W (rounded so a
+// float just under a whole px can't drop a column — see p7GridGeometry).
+function sbbTimelineLeftX(W, H) {
+  return isMobile() ? Math.round(W * sbbTimeline(H).left) : SBB_TIMELINE_LEFT_PX;
 }
 
 // Standard horizontal gap (px) left empty at the canvas's center, between any

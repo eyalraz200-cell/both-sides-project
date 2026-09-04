@@ -59,17 +59,16 @@ function p7Sq()   { return isMobile() ? p7MobileSq : (p7DesktopSq || P7_SQ); }
 function p7Cell() { return isMobile() ? p7MobileSq * (1 + P7_MOBILE_GAP_RATIO) : p7Sq() * (1 + P7_GAP / P7_SQ); }
 // ─────────────────────────────────────────
 
-// Shared left-grid geometry — leftX0 is rounded (not raw W*SBB_TIMELINE.left) because that raw
-// float can land just under a whole px (e.g. 392.00000000000006 on some widths), which
-// previously made Math.floor(sideW/CELL) silently drop a whole column and leave the
-// grid's near-center edge a few px further from center than intended.
+// Shared left-grid geometry — leftX0 comes from sbbTimelineLeftX (a fixed px on desktop,
+// a rounded fraction on mobile; rounding matters because a raw float just under a whole
+// px, e.g. 392.00000000000006, makes Math.floor(sideW/CELL) silently drop a column).
 // DESKTOP: the year axis runs vertically down the centre (see the VERTICAL
 // AXIS block below), so the centre gap is the wider P7_AXIS_CORRIDOR_PX
 // corridor rather than CENTER_GAP. Mobile keeps CENTER_GAP + the horizontal axis.
 function p7VerticalAxis() { return !isMobile(); }
 function p7CenterGap()    { return p7VerticalAxis() ? (P7_VERT.eventMode === "widen" ? P7_VERT.wideCorridorPx : P7_VERT.corridorPx) : CENTER_GAP; }
 function p7GridGeometry(W, H) {
-  const leftX0  = Math.round(W * sbbTimeline(H).left);
+  const leftX0  = sbbTimelineLeftX(W, H);
   const gap     = p7CenterGap();
   const rightX0 = W / 2 + gap / 2;
   const sideW   = W / 2 - gap / 2 - leftX0;
@@ -814,10 +813,10 @@ function p7UpdateLayout(W, H) {
   // size, so there's no circularity — sideW is the same measurement
   // p7GridGeometry makes.
   if (isMobile()) {
-    const sideW = W / 2 - CENTER_GAP / 2 - Math.round(W * box.left);
+    const sideW = W / 2 - CENTER_GAP / 2 - sbbTimelineLeftX(W, H);
     p7MobileSq = p7SolveMobileSq(sideW, sideH, maxEvents);
   } else {
-    const sideW = W / 2 - p7CenterGap() / 2 - Math.round(W * box.left);
+    const sideW = W / 2 - p7CenterGap() / 2 - sbbTimelineLeftX(W, H);
     p7DesktopSq = p7.ready ? p7SolveVerticalSq(sideW, sideH, maxEvents) : P7_SQ;
   }
   const { leftX0, cols, CELL } = p7GridGeometry(W, H);
