@@ -73,7 +73,7 @@ numbers in the source.
 `_debug-card-bar.js` — desktop-only `compare/`+`manual/` for the @fold9 headline block: keys
 `1`–`7` pick the card style (`P7_VERT.card.style`, `0` = bare text), sliders for the bar
 (`P7_VERT.bar`), the card side/top/bottom padding, radius and dot gap (`P7_VERT.card`) and the title-to-date gap
-(`P7_VERT.type.gap`); toggles `R` rounded bar, `S` stem, `D` bar between title and date.
+(`P7_VERT.type.gap`); toggles `R` rounded bar, `S` stem, `D` bar between title and date, `B` bar along the card bottom, `C` card edge on the dot centre.
 
 `_debug-note-style.js`, the `manual/` for the @fold6 ACLED note's chevron and title, was
 deleted after its bake on 2026-09-04, as were `_debug-note-chevron.js` (rule vs chevron),

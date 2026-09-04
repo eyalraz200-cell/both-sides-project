@@ -252,7 +252,13 @@ const P7_VERT = {
   // { style, padX, padTop, padBottom, radius, gap (px from the dot's edge to the block),
   //   stem (true = the line stays visible between dot and card; 'bar' always
   //   clears that gap) }.
-  card: { style: 'bar', padX: 10, padTop: 0, padBottom: 0, radius: 0, gap: 4, stem: false },
+  //   radiusBottom (the two bottom corners; null = same as radius), bar (true = accent bar along the
+  //   card's bottom edge, full card width, for any style), anchor ('edge' =
+  //   the card sits `gap` past the dot's edge; 'center' = the card's
+  //   dot-facing edge runs through the dot's centre and the dot is redrawn
+  //   on top of it).
+  card: { style: 'fill', fill: '#f5f5f5', padX: 10, padTop: 4, padBottom: 4, radius: 8, radiusBottom: 0,
+          gap: 0, stem: false, bar: true, anchor: 'center' },
   // The accent bar under a headline: h px tall, `gap` px below the text's
   // last line, `padX` px wider than the text on each side, `alpha` opacity of
   // `color`, `round` = rounded ends.
@@ -2433,10 +2439,19 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   }
 }
 
+// One axis-event dot: a white halo ring then the marker itself.
+function p7DrawAxisMarker(ctx, x, y, radius, halo, color) {
+  ctx.fillStyle = "#FDFCFF";
+  ctx.beginPath(); ctx.arc(x, y, radius + halo, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill();
+}
+
 // One headline card (P7_VERT.card) — the rounded rect behind a centred block.
 function p7DrawHeadlineCard(ctx, card, x, y, w, h) {
   const r = Math.min(card.radius || 0, w / 2, h / 2);
-  const path = () => { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); };
+  const rb = Math.min(card.radiusBottom == null ? r : card.radiusBottom, w / 2, h / 2);
+  const path = () => { ctx.beginPath(); ctx.roundRect(x, y, w, h, [r, r, rb, rb]); };
   ctx.save();
   if (card.style === 'bar') {
     // No card: bare punched text with the accent bar under it.
@@ -2454,13 +2469,14 @@ function p7DrawHeadlineCard(ctx, card, x, y, w, h) {
     ctx.lineWidth = 1;
     ctx.strokeStyle = card.style === 'accent' ? 'rgba(0, 0, 0, 0.12)' : (card.stroke || 'rgba(0, 0, 0, 0.3)');
     if (card.style === 'dashed') ctx.setLineDash([3, 3]);
-    ctx.beginPath(); ctx.roundRect(x + 0.5, y + 0.5, w - 1, h - 1, r); ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(x + 0.5, y + 0.5, w - 1, h - 1, [r, r, rb, rb]); ctx.stroke();
     ctx.setLineDash([]);
   }
-  if (card.style === 'accent' || card.style === 'bar') {
+  if (card.style === 'accent' || card.style === 'bar' || card.bar) {
     // The accent bar, always along the bottom of the text (P7_VERT.bar).
+    // card.bar = along the card's whole bottom edge instead.
     const b = P7_VERT.bar;
-    const bw = card.style === 'bar' ? w - (Math.max(card.padX, b.padX) - b.padX) * 2 : w - r * 2;
+    const bw = card.bar ? w : card.style === 'bar' ? w - (Math.max(card.padX, b.padX) - b.padX) * 2 : w - r * 2;
     const bx = x + (w - bw) / 2, by = y + h - b.h;
     ctx.globalAlpha *= b.alpha;
     ctx.fillStyle = b.color;
@@ -2509,14 +2525,12 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     const prominence = Math.max(p7AxisEventOpacity(i, now), state.hoverT) * (1 - p7AxisRosterT);
     const markerRadius = (P7_AXIS_MARKER_RADIUS_FADED +
       (P7_AXIS_MARKER_RADIUS - P7_AXIS_MARKER_RADIUS_FADED) * prominence) * state.reachedT;
-    p7.axisEventPositions.set(ev, { x: axisX, y, radius: markerRadius });
-    ctx.fillStyle = "#FDFCFF";
-    ctx.beginPath(); ctx.arc(axisX, y, markerRadius + state.reachedT, 0, Math.PI * 2); ctx.fill();
     const isHighlighted = highlightY !== null && Math.abs(y - highlightY) < 0.5;
-    ctx.fillStyle = hoverActive
+    const markerColor = hoverActive
       ? (isHighlighted ? P7_AXIS_HOVER_COLOR : P7_AXIS_BG_COLOR)
       : (isAxisHovered ? P7_AXIS_HOVER_COLOR : P7_AXIS_FILLED_COLOR);
-    ctx.beginPath(); ctx.arc(axisX, y, markerRadius, 0, Math.PI * 2); ctx.fill();
+    p7.axisEventPositions.set(ev, { x: axisX, y, radius: markerRadius, halo: state.reachedT, color: markerColor });
+    p7DrawAxisMarker(ctx, axisX, y, markerRadius, state.reachedT, markerColor);
   });
 
   // Labels: title lines then the date, hanging under the dot, centred on the
@@ -2561,8 +2575,10 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     // on the dot, aligned toward the line; it only dodges year labels that
     // live on the same side (or on the line itself, whose span is below the ring).
     // Dot-to-text gap: the card's own gap plus whichever pad faces the dot.
-    const textGapBelow = card ? card.gap + cpt : P7_VERT_EVENT_TEXT_GAP;
-    const textGapAbove = card ? card.gap + cpb : P7_VERT_EVENT_TEXT_GAP;
+    const centred = !!(card && card.anchor === 'center');
+    // anchor 'center': the dot-facing card edge sits ON the dot's centre.
+    const textGapBelow = card ? (centred ? -P7_AXIS_MARKER_RADIUS : card.gap) + cpt : P7_VERT_EVENT_TEXT_GAP;
+    const textGapAbove = card ? (centred ? -P7_AXIS_MARKER_RADIUS : card.gap) + cpb : P7_VERT_EVENT_TEXT_GAP;
     const textGap = textGapBelow;
     const spans = (yearSpans || []).filter(s => !(onSide && s.side !== 'center' && s.side !== evSideI));
     const hits = (top) => spans.some(s => top - 2 - cpt < s.bottom && top + blockH + 2 + cpb > s.top);
@@ -2587,7 +2603,7 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     } else if (card) {
       // Card: no punch between dot and card when it has a stem (the line is
       // the connector); otherwise clear that gap too.
-      if (!card.stem || card.style === 'bar') {
+      if (!centred && (!card.stem || card.style === 'bar')) {
         const a = flipped ? y0 + blockH : evY[i] - P7_AXIS_MARKER_RADIUS;
         const b = flipped ? evY[i] - P7_AXIS_MARKER_RADIUS : y0;
         ctx.fillRect(axisX - 2, Math.min(a, b), 4, Math.abs(b - a));
@@ -2597,6 +2613,11 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
       if (dateBelowBar) {
         ctx.fillStyle = "#FDFCFF";
         ctx.fillRect(axisX - tw / 2 - 4, y0 + cardH + cpb, tw + 8, blockH - cardH + 2);
+      }
+      if (centred) {
+        // The card overlaps the dot — put the dot back on top of it.
+        const mk = p7.axisEventPositions.get(ev);
+        if (mk) p7DrawAxisMarker(ctx, mk.x, mk.y, mk.radius, mk.halo, mk.color);
       }
     } else if (flipped) {
       // Above the dot: punch from the block's top edge down to the dot's edge.
