@@ -97,17 +97,20 @@ missing clear here is what made those squares land outside the grid on other vie
 
 ## The reveal: desktop row sweep, mobile month cascade
 
-**Desktop (vertical axis)** — `p7DrawSideSquares` reads one number, the **sweep edge**
-`p7SweepRow` (in grid rows, 0 = nothing shown). Each frame `p7SweepTick`
+**Desktop (vertical axis)** — two layers. The **sweep edge** `p7SweepRow` (in grid rows,
+0 = nothing shown) decides *when* each square is due: every frame `p7SweepTick`
 (`p7DrawTimelineSquares`) moves it toward the fill edge `p7CurRow()` (or toward 0 once
-disengaged) at a bounded `P7_SWEEP_ROWS_PER_S` **40** rows/s — it never jumps, so a fast
+disengaged) at a bounded `P7_SWEEP_ROWS_PER_S` **12** rows/s — it never jumps, so a fast
 scroll queues up a continuous top → bottom sweep instead of several months popping at once.
-A square's presence is `p7Ease(clamp((p7SweepRow − (row + k/cols)) / P7_SWEEP_POP_ROWS))`,
-`P7_SWEEP_POP_ROWS` **4**, `k` = distance from the corridor (a row fills outward from the
-axis); `scale = 0.5 + 0.5*presence`, `alpha = presence`. Rows appear strictly top → bottom
-and retreat strictly bottom → top; reversing mid-sweep simply turns the edge around from
-where it is. The per-month state below is untouched on desktop (the desktop branch returns
-before the month orchestration) and `p7ResetForReplay` zeroes the edge alongside it.
+A square is due once `p7SweepRow ≥ row + k/cols` (`k` = distance from the corridor, so a
+row fills outward from the axis). Each square then **pops on its own wall clock**: its
+presence (`p7.leftPres` / `p7.rightPres`, per event) travels toward 1 when due and back
+toward 0 when not at `1/P7_POP_DURATION` (220 ms) per ms, drawn as `p7Ease(presence)`,
+`scale = 0.5 + 0.5*presence`, `alpha = presence`. So squares keep animating after the
+scroll stops, rows appear strictly top → bottom and retreat strictly bottom → top, and a
+reversal turns each square around from its current size. The per-month state below is
+untouched on desktop (the desktop branch returns before the month orchestration);
+`p7ResetForReplay` zeroes the edge and both presence arrays.
 
 **Mobile** keeps the month cascade: `p7DrawSideSquares` animates one month's worth of
 squares at a time:
