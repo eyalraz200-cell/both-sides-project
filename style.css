@@ -264,7 +264,7 @@ body {
 
 .page9-header-subtitle {
   font: 600 16px 'Assistant', sans-serif;
-  color: rgba(0, 0, 0, 0.3);
+  color: rgba(0, 0, 0, 0.55);
   margin: 4px 0 0;
   white-space: nowrap;
 }
@@ -1308,24 +1308,28 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   top: -6px;
 }
 
-/* Figma specs every title card at 20px Medium (verified across nodes
-   119:997, 117:788, 117:818, 120:1279) — faked as font-weight:600 on the
-   Regular HadassahFriedlaender face since no true Medium OTF exists in
-   fonts/. This is the shared base for ALL title cards; no page should
-   override font-size/weight here individually. */
+/* Figma specs every title card at 20px (verified across nodes 119:997,
+   117:788, 117:818, 120:1279). Weight 300 was chosen by eye over the 300-700
+   sweep: with only Regular (400) and Thin (100) OTFs in fonts/, 500-700 are
+   all browser-synthesized thickening of Regular and read as the same muddy
+   face, while 300 resolves DOWN to the real Thin file and stays a genuine
+   drawn weight. line-height 1.5 (up from the face's default `normal`) opens
+   up the multi-line Hebrew cards. This is the shared base for ALL title
+   cards; no page should override font-size/weight here individually. */
 .section-title {
-  font: 600 20px 'HadassahFriedlaender', serif;
+  font: 300 20px/1.5 'HadassahFriedlaender', serif;
   color: #111;
   margin: 0 0 8px;
 }
 
-/* The synthetic bold browsers use for .section-title's faked 600 weight (see
-   above — no true Medium OTF) fills in the sharp apex of a capital "A" into a
-   solid wedge, distorting it in a way lowercase/rounder letters don't show.
-   Only ever needed for the ACLED acronym so far — normal-weight Latin next to
-   bold Hebrew reads fine and avoids the artifact. */
+/* Left at the base weight deliberately. This rule used to force 400 to dodge
+   the synthetic-bold artifact (a capital "A"'s apex filling into a solid
+   wedge) back when .section-title asked for a faked 600. At 300 the title
+   renders the real Thin face with no synthesis at all, so there is no
+   artifact to dodge — and a 400 acronym would now sit HEAVIER than the Hebrew
+   around it. Only ever applied to the ACLED acronym (project.html:98). */
 .latin-acronym {
-  font-weight: 400;
+  font-weight: inherit;
 }
 
 /* Normal-flow, horizontally-centered text block for every page's scrolled
@@ -1589,6 +1593,14 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   #page-10 .text-card-frame {
     padding: 24px 28px 28px;
   }
+  /* id-scoped: the base .page12-share/.page12-credits rules sit later in the file */
+  #page-10 .page12-share {
+    margin-top: 12px;
+    padding-top: 10px;
+  }
+  #page-10 .page12-credits {
+    margin-top: 8px;
+  }
 }
 @media (max-height: 820px) {
   #page-10 .text-card-frame {
@@ -1628,6 +1640,59 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 
 .page12-body p:last-child {
   margin-bottom: 0;
+}
+
+/* Share row + credits under the methodology (teacher review 2026-09-03,
+   K2/K3). Two single lines, kept tight on purpose: the card already fills a
+   900px-tall viewport before these rows (see the max-height rules above), so
+   every px here costs bottom clearance. Same Assistant face as .page12-body. */
+.page12-share {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.15);
+  font-family: 'Assistant', sans-serif;
+}
+
+.page12-share-title {
+  font-weight: 700;
+  font-size: 14px;
+  margin-inline-end: 4px;
+}
+
+.page12-share-btn {
+  font: 600 13px 'Assistant', sans-serif;
+  color: #111;
+  background: none;
+  border: 1.5px solid #111;
+  border-radius: 999px;
+  padding: 3px 11px;
+  text-decoration: none;
+  cursor: pointer;
+  line-height: 1.2;
+  transition: background 0.15s ease-out, color 0.15s ease-out;
+}
+
+.page12-share-btn:hover,
+.page12-share-btn:focus-visible,
+.page12-share-btn.is-copied {
+  background: #111;
+  color: #fff;
+}
+
+.page12-credits {
+  margin: 10px 0 0;
+  font: 400 12px/1.4 'Assistant', sans-serif;
+  color: rgba(0, 0, 0, 0.6);
+  text-align: right;
+}
+
+.page12-credits a {
+  color: inherit;
+  text-decoration: underline;
 }
 
 /* Logo recropped per node 217:9176 — swapped to the wordmark-only asset

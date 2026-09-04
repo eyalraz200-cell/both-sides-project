@@ -75,3 +75,38 @@ function drawPage12(ctx, W, H) {
   }
   ctx.globalAlpha = 1;
 }
+
+// Share row on the @fold11 card (teacher review 2026-09-03, K2). The anchors
+// ship with href="#" and get their real share URLs here, from the page's own
+// location at load; the copy button writes the URL to the clipboard and flips
+// its label for a moment as feedback. Runs once from bootstrap (p12ShareInit).
+function p12ShareInit() {
+  const wrap = document.getElementById("page12Share");
+  if (!wrap) return;
+  const url   = location.href.split("#")[0];
+  const title = document.title || "קיצוניים משני הצדדים";
+  const enc   = encodeURIComponent;
+  const hrefs = {
+    whatsapp: `https://wa.me/?text=${enc(title + " " + url)}`,
+    x:        `https://twitter.com/intent/tweet?text=${enc(title)}&url=${enc(url)}`,
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}`,
+  };
+  wrap.querySelectorAll("[data-share]").forEach(el => {
+    const kind = el.dataset.share;
+    if (hrefs[kind]) { el.href = hrefs[kind]; return; }
+    if (kind !== "copy") return;
+    const label = el.textContent;
+    el.addEventListener("click", () => {
+      const done = () => {
+        el.textContent = "הקישור הועתק";
+        el.classList.add("is-copied");
+        setTimeout(() => { el.textContent = label; el.classList.remove("is-copied"); }, 1600);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(done, done);
+      } else {
+        window.prompt("העתיקו את הקישור:", url);
+      }
+    });
+  });
+}

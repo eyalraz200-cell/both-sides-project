@@ -30,3 +30,5 @@ Everything here describes the **v2 branch as it is now** — no history narratio
   one at a time to pixel parity — only explicitly revised pages match Figma.
 - Fold numbering: **always** resolve `@foldN` via [Folds](Folds.md) — it is off by one from
   the HTML ids (`@foldN` = `id="page-(N-1)"`).
+
+- [Teacher-Review-2026-09-03](Teacher-Review-2026-09-03.md) — action items from the 3 Sep 2026 review call; tick off as they land
