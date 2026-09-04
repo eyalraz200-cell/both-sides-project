@@ -268,20 +268,29 @@ function p7BuildVerticalLayout(rows, cols, CELL) {
   });
   const bandRows  = band ? p7VertBandRows(CELL) : 0;
   const rowsAvail = Math.max(1, rows - bandRows * P7_AXIS_EVENTS.length);
-  const linear    = rowsAvail / nDays;
-  const need      = new Float64Array(nDays);
-  let sum = 0;
-  for (let d = 0; d < nDays; d++) {
-    // Fractional rows: there are ~10× more days than rows, so quiet days
-    // share a row and only a day with more events than one row holds
-    // (Oct 7th and its week) stretches beyond its linear share.
-    need[d] = Math.max(linear, Math.max(countL[d], countR[d]) / cap);
-    sum += need[d];
+  // Rows per day, water-filled: a day whose events don't fit its linear share
+  // (Oct 7th and its week) takes exactly the rows it needs; every other day
+  // splits what's left evenly. Iterated because taking rows from the sparse
+  // days lowers their share, which can push more days over the line. Days
+  // always sum to rowsAvail exactly, so a dense day is never squeezed below
+  // its own count — that squeeze is what used to overflow the last weeks and
+  // spill their dots UPWARD, out of date order.
+  const need   = new Float64Array(nDays);
+  const perDay = new Float64Array(nDays);
+  for (let d = 0; d < nDays; d++) perDay[d] = Math.max(countL[d], countR[d]) / cap;
+  const dense  = new Uint8Array(nDays);
+  let linear = rowsAvail / nDays;
+  for (let pass = 0; pass < 50; pass++) {
+    let denseRows = 0, nSparse = 0, changed = false;
+    for (let d = 0; d < nDays; d++) {
+      if (!dense[d] && perDay[d] > linear) { dense[d] = 1; changed = true; }
+      if (dense[d]) denseRows += perDay[d]; else nSparse++;
+    }
+    linear = nSparse ? Math.max(0, rowsAvail - denseRows) / nSparse : 0;
+    if (!changed) break;
   }
-  // Normalise so the days + bands exactly fill `rows`. Days that needed more
-  // than their linear share keep proportionally more; the squeeze lands on the
-  // sparse days.
-  const scale = rowsAvail / sum;
+  for (let d = 0; d < nDays; d++) need[d] = dense[d] ? perDay[d] : linear;
+  const scale = 1;
   const rowStart = new Float64Array(nDays + 1);
   const rowsOf   = new Float64Array(nDays);
   const events   = P7_AXIS_EVENTS.map(() => ({ row: 0, reachRow: 0, bandStart: 0, bandEnd: 0 }));
@@ -339,17 +348,21 @@ function p7BuildVerticalLayout(rows, cols, CELL) {
       }
       return -1;
     }
+    // Row inside a day follows the event's index within that day (not a random
+    // pick): the month cascade pops squares in index order, so this is what
+    // makes a busy day (Oct 7th) fill top → bottom instead of shuffling
+    // between its rows. Spill goes DOWNWARD first for the same reason.
+    const seenInDay = new Int32Array(nDays);
+    const sideCount = side === "right" ? countR : countL;
     evs.forEach((e, i) => {
       const d = dayOf(e.date);
-      const want = rowStart[d] + rng() * rowsOf[d] + (rng() * 2 - 1) * P7_VERT.rowJitter;
-      const base = Math.min(lastRow, Math.max(0, Math.round(want)));
+      const j = seenInDay[d]++;
+      const want = rowStart[d] + (j + 0.5) / sideCount[d] * rowsOf[d] + (rng() * 2 - 1) * P7_VERT.rowJitter;
+      const base = Math.min(lastRow, Math.max(0, Math.floor(want)));
       let k = -1, row = base;
-      // Spill outward: base, base+1, base-1, base+2, ...
-      for (let step = 0; k < 0 && step <= lastRow; step++) {
-        const cand = step === 0 ? base : (step % 2 ? base + (step + 1) / 2 : base - step / 2);
-        if (cand < 0 || cand > lastRow) continue;
-        k = claim(cand); row = cand;
-      }
+      // Spill: base, base+1, base+2, ... then base-1, base-2, ... if the bottom is full.
+      for (let cand = base; k < 0 && cand <= lastRow; cand++) { k = claim(cand); row = cand; }
+      for (let cand = base - 1; k < 0 && cand >= 0; cand--)   { k = claim(cand); row = cand; }
       if (k < 0) { k = 0; row = base; } // grid genuinely full — overlap rather than drop
       const col = side === "right" ? k : cols - 1 - k;
       positions[i] = row * cols + col;
