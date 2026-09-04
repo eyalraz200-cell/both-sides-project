@@ -77,8 +77,8 @@ resize/relayout reproduces itself.
 The tunables live in `P7_VERT` (`page7.js`): `corridorPx` (band), `eventMode`, `eventLine`,
 `bandPx` 60, `wideCorridorPx` 200, `fillRatio` 1, `daysPerRow` 8, `yearGapPad` 3,
 `yearRing` false, `yearSide`/`eventSide` `'center'`, `dateSide` `'with'`, `dateAbove` false,
-`sideGap` 8, `firstOnlyBelow` true, `card` `{ style 'bar', padX 10, padTop 0, padBottom 0,
-radius 0, gap 4, stem false }` (the headline block, see "Headlines" below) — shipped defaults are **widen mode, line off, everything centred on the line**
+`sideGap` 8, `firstOnlyBelow` true, `card` `{ style 'fill', fill #f5f5f5, padX 10, padTop 4,
+padBottom 4, radius 8, radiusBottom 0, gap 0, stem false, bar true, anchor 'center' }` (the headline block, see "Headlines" below) — shipped defaults are **widen mode, line off, everything centred on the line**
 (compare/ "version 1", picked 2026-09-04). The side/alternate/split placements
 (`yearSide`/`eventSide` `'left'`/`'right'`, `eventSide` `'alternate'`, `dateSide` `'left'`/`'right'`)
 are live but unused code paths kept for a later compare; the band branch stays too. Changing
@@ -366,13 +366,17 @@ over `totalRows × CELL`:
   widen mode) — hangs under the dot (`P7_VERT_EVENT_TEXT_GAP` 6), centred on the axis, on
   a punched background drawn at the label's opacity; the punch runs from the dot's edge (or
   the year label's bottom when pushed past one) to the block's far edge, so no line shows
-  between dot and text. **Accent bar** (`P7_VERT.card` style `'bar'`, `p7DrawHeadlineCard`):
-  a `bar.h` 1.5px black bar with rounded ends (`bar.round` true) sits `bar.gap` 1 below the
-  block's last line, `bar.padX` 6 wider than the text on each side (`bar.dateBelow` true
-  would move it between title and date, the date `bar.dateGap` under it). The bar counts
-  toward the block's height for the year dodge. Each line's ink is centred in its line box (`p7VertLineText`, measured on a fixed reference with an alphabetic baseline), so a card pads the text equally above and below. **Type** is `P7_VERT.type` (desktop only;
+  between dot and text. **Card** (`P7_VERT.card`, `p7DrawHeadlineCard`): a
+  `#f5f5f5` filled tab, 10px side / 4px top and bottom padding, 8px top corners and square
+  bottom corners (`radiusBottom` 0), with a `bar.h` 1.5px black rounded-end accent bar along
+  its whole bottom edge (`card.bar` true; the bar's `gap`/`padX` only apply to the bare
+  `'bar'` style). `anchor 'center'`: the card's dot-facing edge runs through the dot's
+  centre — the bar passes through the circle — and the dot is redrawn on top of the card
+  (`p7DrawAxisMarker`). The other styles (`'bar'` bare text + bar, `'outline'`, `'dashed'`,
+  `'shadow'`, `'accent'`, plain) and `anchor 'edge'` (card `gap` px past the dot's edge) stay
+  as code paths. Each line's ink is centred in its line box (`p7VertLineText`, measured on a fixed reference with an alphabetic baseline), so a card pads the text equally above and below. **Type** is `P7_VERT.type` (desktop only;
   mobile keeps the `P7_AXIS_*_FONT` constants): title 500 14px, line height 19, black;
-  date 400 14px, line height 19, black at 0.3; `gap` 0 extra px between title and date. The dot-to-block gap is `card.gap` 4 plus whichever card pad faces the dot (`card.padTop` / `card.padBottom`, both 0). **Default side** (`P7_VERT.firstOnlyBelow` true): the first
+  date 400 14px, line height 19, black at 0.3; `gap` 0 extra px between title and date. With `anchor 'edge'` the dot-to-block gap would be `card.gap` plus whichever card pad faces the dot. **Default side** (`P7_VERT.firstOnlyBelow` true): the first
   headline hangs under its dot; every later one sits **above** its dot (bottom edge
   `P7_VERT_EVENT_TEXT_GAP` above the dot, punch from the block's top down to the dot's
   edge). The only dodge: if the default side would overlap a year label (`yearSpans`,
