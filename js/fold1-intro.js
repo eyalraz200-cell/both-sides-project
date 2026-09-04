@@ -185,7 +185,7 @@ function playPage0Entrance() {
       const logoT = p9Ease(Math.max(0, Math.min(1, (elapsed - dotsDoneMs) / PAGE0_LOGO_FADE_MS)));
       page0LogoOpacity = logoT;
       page0LogoEl.style.opacity = String(logoT);
-      if (elapsed >= totalMs) page0EntranceDone = true;
+      if (elapsed >= totalMs) { page0EntranceDone = true; page0CueSchedule(PAGE0_CUE_IDLE_MS); }
     } else {
       page0ApplyLogoScrollFade();
     }
@@ -196,3 +196,83 @@ function playPage0Entrance() {
   requestAnimationFrame(frame);
 }
 
+
+// ── @fold1 idle scroll cue (teacher review 2026-09-03, B1). A non-expert
+// tester tapped the dots and never scrolled, so once the page-load entrance
+// has finished and the user has done nothing for PAGE0_CUE_IDLE_MS, the two
+// dot columns pulse in a gentle wave from the BOTTOM row up to the top —
+// "look up here, this continues" — and repeat every PAGE0_CUE_REPEAT_MS until
+// the first scroll, which cancels the cue for good and hands the dots back to
+// updateGroups' own @fold2 shrink/fly. Both the decorative .page0-dot
+// elements and the six group swatches (the legend items standing in for
+// dots in the column) take part, so the wave reads as one column.
+//
+// Writes transforms directly rather than going through updateGroups: while
+// the page sits idle at scrollY 0 nothing else repaints those dots, and the
+// first scroll event both cancels the loop and restores the at-rest transform
+// before updateGroups runs. Each dot's own pulse is p9Ease up then p9Ease back
+// down (no new curve), row-staggered so the crest travels upward. ──
+const PAGE0_CUE_IDLE_MS = 3500;       // quiet time after the entrance before the first pulse
+const PAGE0_CUE_REPEAT_MS = 5000;     // between pulses while still idle
+const PAGE0_CUE_ROW_STAGGER_MS = 30;  // per row, bottom → top
+const PAGE0_CUE_DOT_MS = 520;         // one dot's grow-and-settle
+const PAGE0_CUE_SCALE = 1.6;          // peak scale of a 7px dot (≈11px)
+let page0CueTimer = null;
+let page0CueCancelled = false;
+let page0CueRunning = false;
+
+function page0CueTargets() {
+  const targets = [];
+  PAGE0_DECORATIVE_DOT_ELS.forEach((d) => { if (d.popped) targets.push({ el: d.el, row: d.syncedRow, rest: "scale(1)" }); });
+  GROUPS.forEach((g, i) => {
+    const anchor = PAGE0_GROUP_DOT_ANCHORS[g.color];
+    if (anchor) targets.push({ el: groupItems[i].swatch, row: anchor.syncedRow, rest: "" });
+  });
+  return targets;
+}
+
+function page0CueSchedule(delayMs) {
+  if (page0CueCancelled || window.scrollY > 0) return;
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  clearTimeout(page0CueTimer);
+  page0CueTimer = setTimeout(page0CueRun, delayMs);
+}
+
+function page0CueRun() {
+  if (page0CueCancelled || window.scrollY > 0 || page0CueRunning) return;
+  const targets = page0CueTargets();
+  if (!targets.length) return;
+  const maxRow = Math.max(...targets.map((t) => t.row));
+  const totalMs = maxRow * PAGE0_CUE_ROW_STAGGER_MS + PAGE0_CUE_DOT_MS;
+  const start = performance.now();
+  page0CueRunning = true;
+
+  function frame() {
+    if (page0CueCancelled) return; // page0CueCancel already restored the transforms
+    const elapsed = performance.now() - start;
+    targets.forEach((t) => {
+      // Bottom row (largest syncedRow) leads; each row starts PAGE0_CUE_ROW_STAGGER_MS after the one below it.
+      const local = Math.max(0, Math.min(1, (elapsed - (maxRow - t.row) * PAGE0_CUE_ROW_STAGGER_MS) / PAGE0_CUE_DOT_MS));
+      const bump = local < 0.5 ? p9Ease(local * 2) : 1 - p9Ease((local - 0.5) * 2);
+      t.el.style.transform = local <= 0 || local >= 1 ? t.rest : `scale(${1 + (PAGE0_CUE_SCALE - 1) * bump})`;
+    });
+    if (elapsed < totalMs) { requestAnimationFrame(frame); return; }
+    page0CueRunning = false;
+    page0CueSchedule(PAGE0_CUE_REPEAT_MS);
+  }
+  requestAnimationFrame(frame);
+}
+
+function page0CueCancel() {
+  if (page0CueCancelled) return;
+  page0CueCancelled = true;
+  clearTimeout(page0CueTimer);
+  if (page0CueRunning) {
+    page0CueTargets().forEach((t) => { t.el.style.transform = t.rest; });
+    page0CueRunning = false;
+    updateGroups();
+  }
+}
+window.addEventListener("scroll", page0CueCancel, { passive: true });
+window.addEventListener("wheel", page0CueCancel, { passive: true });
+window.addEventListener("touchmove", page0CueCancel, { passive: true });
