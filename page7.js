@@ -446,10 +446,15 @@ function p7MonthKeyToStartStr(monthKey) {
 // snapping them away.
 const P7_ANIM_TOTAL_DURATION = 2200; // ms — full span of a month's staggered cascade
 const P7_POP_DURATION        = 220;  // ms — each individual square's own pop in/out
-// Gap between the starts of months reached in the same tick (fast scroll / jump).
-// Deliberately much shorter than P7_ANIM_TOTAL_DURATION so a many-month jump
-// overlaps its cascades instead of taking 2.2 s × months.
-const P7_MONTH_CHAIN_MS      = 500;
+// Months are CHAINED: a month reached fresh (cursor 0) starts only when the month
+// before it has begun its last row (its cursor reached `stagger`), so the rows fire
+// strictly top → bottom across month boundaries too (desktop rows share a boundary
+// row; mobile just inherits the same chain). When the scroll outruns the chain the
+// queued wait would grow without bound, so instead the whole cascade runs faster:
+// p7CascadeRate multiplies every cursor's clock so that the longest queued wait is
+// at most P7_CHAIN_MAX_WAIT_MS of wall time. Order is never traded for speed.
+const P7_CHAIN_MAX_WAIT_MS   = 700;
+let p7CascadeRate = 1;          // cursor-ms per wall-ms, >= 1
 const p7MonthPhase = {};        // monthKey -> { fromC, toC, start } | undefined (never reached)
 let p7MonthMaxReached = -1;     // highest monthKey ever reached, forward
 let p7AnimRunning = false;
@@ -462,22 +467,61 @@ function p7MonthCursor(k) {
   if (ph === undefined) return undefined;
   const span = ph.toC - ph.fromC;
   if (span === 0) return ph.toC;
-  // Clamped below 0 too: a month queued with a future start (P7_MONTH_CHAIN_MS)
-  // reads fromC until its turn.
-  const t = Math.min(1, Math.max(0, (performance.now() - ph.start) / Math.abs(span)));
+  // Clamped below 0 too: a chained month with a future start reads fromC until
+  // its turn.
+  const t = Math.min(1, Math.max(0, (performance.now() - ph.start) * p7CascadeRate / Math.abs(span)));
   return ph.fromC + span * t;
+}
+
+// Wall-clock moment a fresh cascade of month k may begin: when month k-1's
+// cursor reaches `stagger` (its last square starts popping). `now` if there is
+// no such month or it isn't heading to full.
+function p7MonthChainStart(k, now) {
+  const prev = p7MonthPhase[k - 1];
+  if (prev === undefined || prev.toC !== P7_ANIM_TOTAL_DURATION) return now;
+  const stagger = P7_ANIM_TOTAL_DURATION - P7_POP_DURATION;
+  const reach = prev.start + Math.max(0, stagger - prev.fromC) / p7CascadeRate;
+  return Math.max(now, reach);
+}
+
+// Re-times every phase for a new global rate so no cursor jumps: in-flight
+// months rebase at their current cursor, queued months keep their remaining
+// wait in cursor-time (so it shrinks in wall time as the rate rises).
+function p7SetCascadeRate(rate) {
+  if (rate === p7CascadeRate) return;
+  const now = performance.now();
+  for (const key in p7MonthPhase) {
+    const ph = p7MonthPhase[key];
+    if (ph.start > now) ph.start = now + (ph.start - now) * p7CascadeRate / rate;
+    else { const c = p7MonthCursor(key); ph.fromC = c; ph.start = now; }
+  }
+  p7CascadeRate = rate;
+}
+
+// Called once per orchestration tick: rate = 1 unless the longest queued wait
+// (in cursor-ms) would exceed P7_CHAIN_MAX_WAIT_MS of wall time.
+function p7UpdateCascadeRate() {
+  const now = performance.now();
+  let waitC = 0;
+  for (const key in p7MonthPhase) {
+    const ph = p7MonthPhase[key];
+    if (ph.start > now) waitC = Math.max(waitC, (ph.start - now) * p7CascadeRate);
+  }
+  p7SetCascadeRate(Math.max(1, waitC / P7_CHAIN_MAX_WAIT_MS));
 }
 
 // Point a month at a new cursor target, starting from wherever it is now (0 for a
 // month being reached for the first time). Idempotent — re-aiming at the target
 // it's already heading for is a no-op, so this is safe to call every frame.
-// startOffset (ms, default 0) delays the start: used to chain months reached in
-// one tick so they play one after another instead of all at once.
-function p7MonthAim(k, toC, startOffset = 0) {
+// A month starting fresh toward full (cursor 0) is chained behind the month
+// before it (p7MonthChainStart); a mid-flight turn-around starts right now.
+function p7MonthAim(k, toC) {
   const ph = p7MonthPhase[k];
   if (ph !== undefined && ph.toC === toC) return false;
   const fromC = p7MonthCursor(k) ?? 0;
-  p7MonthPhase[k] = { fromC, toC, start: performance.now() + startOffset };
+  const now = performance.now();
+  const start = (toC === P7_ANIM_TOTAL_DURATION && fromC === 0) ? p7MonthChainStart(k, now) : now;
+  p7MonthPhase[k] = { fromC, toC, start };
   return true;
 }
 
@@ -506,6 +550,7 @@ let p7EntryAnim = null;
 function p7ResetForReplay() {
   for (const k in p7MonthPhase) delete p7MonthPhase[k];
   p7MonthMaxReached = -1;
+  p7CascadeRate = 1;
 }
 
 // True once fold 9's own title card (#page-7 .text-card, page7TitleCardEl in
@@ -1066,12 +1111,11 @@ function p7DrawTimelineSquares(ctx, W, H) {
     // backfilling every skipped month here, each one falls straight into
     // "settled" below (no phase of its own at all) and pops in
     // instantly, fully-formed, with no cascade — the exact "instant jump"
-    // this loop exists to prevent. Backfilled months are chained: each starts
-    // P7_MONTH_CHAIN_MS after the previous one, so a fast scroll still reads
-    // top → bottom instead of the whole span filling at once.
-    const firstQueued = Math.max(p7MonthMaxReached + 1, p7MonthKeyOf(p7.minDate));
-    for (let k = firstQueued; k <= curMonthKey; k++) {
-      if (p7MonthPhase[k] === undefined) p7MonthAim(k, P7_ANIM_TOTAL_DURATION, (k - firstQueued) * P7_MONTH_CHAIN_MS); // from cursor 0
+    // this loop exists to prevent. Aimed in ascending order so each month chains
+    // behind the one before it (p7MonthAim → p7MonthChainStart); the rate
+    // controller below then compresses the whole queue to P7_CHAIN_MAX_WAIT_MS.
+    for (let k = Math.max(p7MonthMaxReached + 1, p7MonthKeyOf(p7.minDate)); k <= curMonthKey; k++) {
+      if (p7MonthPhase[k] === undefined) p7MonthAim(k, P7_ANIM_TOTAL_DURATION); // from cursor 0
     }
     p7StartAnimLoop();
   } else if (p7HasEngaged && p7MonthPhase[curMonthKey] === undefined) {
@@ -1090,8 +1134,8 @@ function p7DrawTimelineSquares(ctx, W, H) {
     // under the user. Aiming is enough to make each square resume growing from
     // the exact presence it had — that's the whole point of the shared cursor;
     // there is no snapshot to take and no "was it mid-flight?" case to special-case.
-    for (const key in p7MonthPhase) {
-      const k = Number(key);
+    // Ascending so a month retreated to 0 chains behind its (re-aimed) predecessor.
+    for (const k of Object.keys(p7MonthPhase).map(Number).sort((a, b) => a - b)) {
       if (k <= curMonthKey && p7MonthAim(k, P7_ANIM_TOTAL_DURATION)) p7StartAnimLoop();
     }
   } else if (p7MonthMaxReached > -1) {
@@ -1105,6 +1149,7 @@ function p7DrawTimelineSquares(ctx, W, H) {
   }
 
   if (p7HasEngaged && curMonthKey > p7MonthMaxReached) p7MonthMaxReached = curMonthKey;
+  p7UpdateCascadeRate();
 
   // Scrolled backward past months that were previously reached: start their retreat
   // (each flies back out the same way it flew in) unless it's already retreating.

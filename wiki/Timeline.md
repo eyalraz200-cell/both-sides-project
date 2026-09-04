@@ -131,15 +131,32 @@ where it was. **Don't reintroduce separate forward/reverse start timestamps** �
 independent clocks can't express "half-grown, now shrinking", so every interrupted
 direction change snapped the month to full (or empty) for a frame.
 
+### Months are chained, and the chain sets the tempo
+
+A month starting fresh toward full (cursor 0) does not start the instant the fill edge
+reaches it: `p7MonthAim` gives it `p7MonthChainStart(k)` — the wall-clock moment month
+`k−1`'s cursor reaches `stagger` (its last row begins popping). Until then its cursor
+reads `fromC` (`p7MonthCursor` clamps `t` to `[0, 1]`). So rows fire strictly top → bottom
+across month boundaries as well as inside a month; without this, two or three months
+cascaded at once at a normal scroll pace, each from its own top, and rows lower on the
+page filled before rows above them. A mid-flight turn-around (cursor > 0) still starts
+immediately.
+
+When the scroll outruns the chain, the queue would grow without bound, so the whole
+cascade speeds up instead of overlapping: `p7CascadeRate` (≥ 1, cursor-ms per wall-ms)
+multiplies every phase's clock, and `p7UpdateCascadeRate` (once per orchestration tick)
+sets it so the longest queued wait is at most `P7_CHAIN_MAX_WAIT_MS` (700 ms) of wall
+time, returning to 1 when nothing is queued. `p7SetCascadeRate` re-times every phase so
+no cursor jumps (in-flight months rebase at their current cursor; queued months keep
+their wait in cursor-time). At a fast pace the pops get proportionally quicker; order is
+never traded for speed. `p7ResetForReplay` resets the rate to 1.
+
 Orchestration lives in `p7DrawTimelineSquares`:
 
 - **Forward into new territory** (`curMonthKey > p7MonthMaxReached`): every *skipped*
   month with no phase yet is aimed at full from cursor 0, so a fast scroll doesn't make
-  months pop in instantly. The queued months are **chained**: each starts
-  `P7_MONTH_CHAIN_MS` (500 ms) after the previous one (`p7MonthAim`'s `startOffset`; the
-  cursor reads `fromC` until its start), so the scrolled span still fills top → bottom
-  instead of all at once. 500 is deliberately far below one full cascade so a many-month
-  jump overlaps rather than taking 2.2 s per month.
+  months pop in instantly. Aimed in ascending order so each chains behind the previous
+  one (below).
 - **Landing on a month while scrolling backward**: `p7MonthSettle(k, TOTAL)` — it appears
   already settled rather than firing a fresh entrance.
 - **Retreat**: months above the current one are aimed at 0. Fully-retreated months
