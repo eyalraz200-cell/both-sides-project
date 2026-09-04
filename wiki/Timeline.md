@@ -77,8 +77,8 @@ resize/relayout reproduces itself.
 The tunables live in `P7_VERT` (`page7.js`): `corridorPx` (band), `eventMode`, `eventLine`,
 `bandPx` 60, `wideCorridorPx` 200, `fillRatio` 1, `daysPerRow` 8, `yearGapPad` 3,
 `yearRing` false, `yearSide`/`eventSide` `'center'`, `dateSide` `'with'`, `dateAbove` false,
-`sideGap` 8, `firstOnlyBelow` true, `card` null (headline card, see the `_debug-axis-cards.js`
-compare in [Dev-Workflow](Dev-Workflow.md)) — shipped defaults are **widen mode, line off, everything centred on the line**
+`sideGap` 8, `firstOnlyBelow` true, `card` `{ style 'bar', padX 10, padTop 0, padBottom 0,
+radius 0, gap 4, stem false }` (the headline block, see "Headlines" below) — shipped defaults are **widen mode, line off, everything centred on the line**
 (compare/ "version 1", picked 2026-09-04). The side/alternate/split placements
 (`yearSide`/`eventSide` `'left'`/`'right'`, `eventSide` `'alternate'`, `dateSide` `'left'`/`'right'`)
 are live but unused code paths kept for a later compare; the band branch stays too. Changing
@@ -372,7 +372,7 @@ over `totalRows × CELL`:
   would move it between title and date, the date `bar.dateGap` under it). The bar counts
   toward the block's height for the year dodge. Each line's ink is centred in its line box (`p7VertLineText`, measured on a fixed reference with an alphabetic baseline), so a card pads the text equally above and below. **Type** is `P7_VERT.type` (desktop only;
   mobile keeps the `P7_AXIS_*_FONT` constants): title 500 14px, line height 19, black;
-  date 400 14px, line height 19, black at 0.3; `gap` 0 extra px between title and date. The dot-to-block gap is `card.gap` 4. **Default side** (`P7_VERT.firstOnlyBelow` true): the first
+  date 400 14px, line height 19, black at 0.3; `gap` 0 extra px between title and date. The dot-to-block gap is `card.gap` 4 plus whichever card pad faces the dot (`card.padTop` / `card.padBottom`, both 0). **Default side** (`P7_VERT.firstOnlyBelow` true): the first
   headline hangs under its dot; every later one sits **above** its dot (bottom edge
   `P7_VERT_EVENT_TEXT_GAP` above the dot, punch from the block's top down to the dot's
   edge). The only dodge: if the default side would overlap a year label (`yearSpans`,

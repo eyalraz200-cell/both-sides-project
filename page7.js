@@ -249,10 +249,10 @@ const P7_VERT = {
   // background. Shipped: style 'bar' — bare text with an accent bar under it
   // (geometry in `bar` below). The other styles ('outline'|'fill'|'dashed'|
   // 'shadow'|'accent' = card + bar) are kept as unused code paths.
-  // { style, padX, padY, radius, gap (px from the dot's edge to the block),
+  // { style, padX, padTop, padBottom, radius, gap (px from the dot's edge to the block),
   //   stem (true = the line stays visible between dot and card; 'bar' always
   //   clears that gap) }.
-  card: { style: 'bar', padX: 10, padY: 0, radius: 0, gap: 4, stem: false },
+  card: { style: 'bar', padX: 10, padTop: 0, padBottom: 0, radius: 0, gap: 4, stem: false },
   // The accent bar under a headline: h px tall, `gap` px below the text's
   // last line, `padX` px wider than the text on each side, `alpha` opacity of
   // `color`, `round` = rounded ends.
@@ -2546,7 +2546,8 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     const dateFirst = !split && P7_VERT.dateAbove;
     const onSide = evSideI !== 'center';
     const card = !onSide && P7_VERT.card ? P7_VERT.card : null;
-    const cpx = card ? Math.max(card.padX, card.style === 'bar' ? P7_VERT.bar.padX : 0) : 0, cpy = card ? card.padY : 0;
+    const cpx = card ? Math.max(card.padX, card.style === 'bar' ? P7_VERT.bar.padX : 0) : 0;
+    const cpt = card ? card.padTop : 0, cpb = card ? card.padBottom : 0;
     const barExtra = card && (card.style === 'bar' || card.style === 'accent') ? P7_VERT.bar.gap + P7_VERT.bar.h : 0;
     // Bar between title and date: the card (and its bar) covers the title
     // only; the date hangs `dateGap` px under the bar, punched separately.
@@ -2559,11 +2560,14 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     // Side placement: the block sits beside the dot, its first line centred
     // on the dot, aligned toward the line; it only dodges year labels that
     // live on the same side (or on the line itself, whose span is below the ring).
-    const textGap = card ? card.gap + cpy : P7_VERT_EVENT_TEXT_GAP;
+    // Dot-to-text gap: the card's own gap plus whichever pad faces the dot.
+    const textGapBelow = card ? card.gap + cpt : P7_VERT_EVENT_TEXT_GAP;
+    const textGapAbove = card ? card.gap + cpb : P7_VERT_EVENT_TEXT_GAP;
+    const textGap = textGapBelow;
     const spans = (yearSpans || []).filter(s => !(onSide && s.side !== 'center' && s.side !== evSideI));
-    const hits = (top) => spans.some(s => top - 2 - cpy < s.bottom && top + blockH + 2 + cpy > s.top);
+    const hits = (top) => spans.some(s => top - 2 - cpt < s.bottom && top + blockH + 2 + cpb > s.top);
     const below = onSide ? evY[i] - lh / 2 : evY[i] + P7_AXIS_MARKER_RADIUS + textGap;
-    const above = evY[i] - P7_AXIS_MARKER_RADIUS - textGap - blockH;
+    const above = evY[i] - P7_AXIS_MARKER_RADIUS - textGapAbove - blockH;
     // Default: under the dot. If that runs into a year label the block flips
     // ABOVE its dot; only if both sides collide is it pushed down past the year.
     // Default side: under the dot for the first headline, above for the rest
@@ -2589,10 +2593,10 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
         ctx.fillRect(axisX - 2, Math.min(a, b), 4, Math.abs(b - a));
       }
       const cardH = dateBelowBar ? lines.length * lh + barExtra : blockH;
-      p7DrawHeadlineCard(ctx, card, axisX - tw / 2 - cpx, y0 - cpy, tw + cpx * 2, cardH + cpy * 2);
+      p7DrawHeadlineCard(ctx, card, axisX - tw / 2 - cpx, y0 - cpt, tw + cpx * 2, cardH + cpt + cpb);
       if (dateBelowBar) {
         ctx.fillStyle = "#FDFCFF";
-        ctx.fillRect(axisX - tw / 2 - 4, y0 + cardH + cpy, tw + 8, blockH - cardH + 2);
+        ctx.fillRect(axisX - tw / 2 - 4, y0 + cardH + cpb, tw + 8, blockH - cardH + 2);
       }
     } else if (flipped) {
       // Above the dot: punch from the block's top edge down to the dot's edge.
