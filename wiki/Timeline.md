@@ -28,8 +28,7 @@ whose widest label ends ~250px; `right` is a slim margin from the right edge, so
 mobile box is symmetric so there the centre is `W/2`) plus the centre gap: `p7CenterGap()` is
 `P7_AXIS_CORRIDOR_PX = 64` on desktop (the vertical axis's corridor — line, rings and
 18px year labels) and `CENTER_GAP = 4` on mobile. `SBB` itself belongs to page9, **not**
-here. The right camp's origin is `p7BoxCenterX + gap/2` inside `p7GridGeometry` — there
-is no `right` field.
+here. The right camp's origin is `p7BoxCenterX + gap/2` inside `p7GridGeometry`.
 
 `P7_SQ = 3.5`, `P7_GAP = 1.5`, `P7_CELL = 5` are the *ceiling*: on desktop the square is
 **solved per viewport** like mobile (`p7SolveVerticalSq` → `p7DesktopSq`, read through

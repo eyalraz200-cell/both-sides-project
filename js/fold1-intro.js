@@ -211,12 +211,17 @@ function playPage0Entrance() {
 // the page sits idle at scrollY 0 nothing else repaints those dots, and the
 // first scroll event both cancels the loop and restores the at-rest transform
 // before updateGroups runs. Each dot's own pulse is p9Ease up then p9Ease back
-// down (no new curve), row-staggered so the crest travels upward. ──
+// down (no new curve), row-staggered so the trough travels upward. ──
 const PAGE0_CUE_IDLE_MS = 3500;       // quiet time after the entrance before the first pulse
 const PAGE0_CUE_REPEAT_MS = 5000;     // between pulses while still idle
 const PAGE0_CUE_ROW_STAGGER_MS = 30;  // per row, bottom → top
-const PAGE0_CUE_DOT_MS = 520;         // one dot's grow-and-settle
-const PAGE0_CUE_SCALE = 1.6;          // peak scale of a 7px dot (≈11px)
+const PAGE0_CUE_DOT_MS = 520;         // one dot's shrink-and-settle
+// The pulse SHRINKS rather than grows (explicit instruction): a value below 1
+// dips each dot inward at the crest instead of swelling it. 0.6 mirrors the
+// old 1.6 in magnitude, taking a 7px dot down to ~4px. The lerp below is
+// `1 + (SCALE - 1) * bump`, which runs in either direction unchanged — this
+// is the only number to turn, and >1 restores the grow.
+const PAGE0_CUE_SCALE = 0.6;          // trough scale of a 7px dot (≈4px)
 let page0CueTimer = null;
 let page0CueCancelled = false;
 let page0CueRunning = false;
