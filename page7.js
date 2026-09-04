@@ -473,6 +473,8 @@ function p7ResetForReplay() {
   for (const k in p7MonthPhase) delete p7MonthPhase[k];
   p7MonthMaxReached = -1;
   p7SweepRow = 0; p7SweepLast = 0;
+  if (p7.leftPres)  p7.leftPres.fill(0);
+  if (p7.rightPres) p7.rightPres.fill(0);
 }
 
 // Desktop (vertical axis) reveal: ONE sweep edge, measured in grid rows, chases the
@@ -480,21 +482,28 @@ function p7ResetForReplay() {
 // purely how far the edge is past its own row, so no matter how fast the user
 // scrolls, rows pop strictly top -> bottom (and retreat bottom -> top on the way
 // back). Replaces the per-month cascade on desktop; mobile keeps the month cursors.
-const P7_SWEEP_ROWS_PER_S = 40; // rows/s the edge travels when the fill edge outruns it
-const P7_SWEEP_POP_ROWS   = 4;  // rows over which a square grows in as the edge passes
+const P7_SWEEP_ROWS_PER_S = 12; // rows/s the edge travels when the fill edge outruns it
 let p7SweepRow  = 0;            // the edge, in rows (0 = nothing shown)
 let p7SweepLast = 0;            // performance.now() of the last tick
-let p7SweepMoving = false;
+let p7SweepDtMs = 0;            // this frame's clock step, read by p7DrawSideSquares' pops
+let p7SweepMoving = false;      // edge still travelling toward its target
+let p7PopActive   = false;      // some square still mid-pop this frame
 
+// The edge only decides WHEN a square is due (rows strictly in order); each square
+// then pops on its own wall clock — presence 0..1 travelling at 1/P7_POP_DURATION
+// per ms toward 1 (edge past its row) or 0 (edge back above it), so a square keeps
+// animating after the scroll stops and a reversal resumes from its current size.
+// p7.leftPres / p7.rightPres hold that per-square presence (allocated in p7UpdateLayout).
 function p7SweepTick() {
   const now = performance.now();
-  const dt  = p7SweepLast ? Math.min(0.1, (now - p7SweepLast) / 1000) : 0;
+  p7SweepDtMs = p7SweepLast ? Math.min(100, now - p7SweepLast) : 0;
   p7SweepLast = now;
   const target = p7HasEngaged ? p7CurRow() : 0;
-  const step   = P7_SWEEP_ROWS_PER_S * dt;
+  const step   = P7_SWEEP_ROWS_PER_S * p7SweepDtMs / 1000;
   if (Math.abs(target - p7SweepRow) <= step) p7SweepRow = target;
   else p7SweepRow += Math.sign(target - p7SweepRow) * step;
   p7SweepMoving = p7SweepRow !== target;
+  p7PopActive = false; // p7DrawSideSquares raises it while any square is mid-pop
   if (p7SweepMoving) p7StartAnimLoop();
 }
 
@@ -616,7 +625,7 @@ function p7AnyAnimActive() {
   for (const k in p7MonthPhase) {
     if (p7MonthCursor(k) !== p7MonthPhase[k].toC) return true; // still travelling
   }
-  if (p7SweepMoving) return true;
+  if (p7SweepMoving || p7PopActive) return true;
   if (p7AxisEventsAnimActive()) return true;
   if (p7AxisIntroStart !== null && p7AxisIntroT() < 1) return true;
   if (p7AxisOutroStart !== null && p7AxisIntroT() > 0) return true;
@@ -729,8 +738,17 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     if (p7VerticalAxis()) {
       // Desktop: presence is the sweep edge's distance past this square's row
       // (fractional by column, so a row itself fills outward from the axis).
-      const k = events === p7.rightEvents ? col : cols - 1 - col;
-      const presence = p7Ease(Math.min(1, Math.max(0, (p7SweepRow - (row + k / cols)) / P7_SWEEP_POP_ROWS)));
+      const k    = events === p7.rightEvents ? col : cols - 1 - col;
+      const pres = events === p7.rightEvents ? p7.rightPres : p7.leftPres;
+      const want = p7SweepRow >= row + k / cols ? 1 : 0;
+      let v = pres[i];
+      if (v !== want) {
+        const d = p7SweepDtMs / P7_POP_DURATION;
+        v = want > v ? Math.min(1, v + d) : Math.max(0, v - d);
+        pres[i] = v;
+        p7PopActive = true;
+      }
+      const presence = p7Ease(v);
       if (presence <= 0) continue;
       scale = 0.5 + 0.5 * presence;
       alpha = presence;
@@ -810,6 +828,8 @@ function p7UpdateLayout(W, H) {
   if (W === p7.lastW && H === p7.lastH && maxEvents === p7.lastMaxEvents && p7.lastVertical === p7VerticalAxis()) return;
   p7.lastVertical = p7VerticalAxis();
   p7.lastMaxEvents = maxEvents;
+  if (!p7.leftPres  || p7.leftPres.length  !== p7.leftEvents.length)  p7.leftPres  = new Float32Array(p7.leftEvents.length);
+  if (!p7.rightPres || p7.rightPres.length !== p7.rightEvents.length) p7.rightPres = new Float32Array(p7.rightEvents.length);
 
   const box    = sbbTimeline(H);
   const topY   = Math.round(H * box.top);
