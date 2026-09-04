@@ -77,8 +77,8 @@ resize/relayout reproduces itself.
 The tunables live in `P7_VERT` (`page7.js`): `corridorPx` (band), `eventMode`, `eventLine`,
 `bandPx` 60, `wideCorridorPx` 200, `fillRatio` 1, `daysPerRow` 8, `yearGapPad` 3,
 `yearRing` false, `yearSide`/`eventSide` `'center'`, `dateSide` `'with'`, `dateAbove` false,
-`sideGap` 8, `firstOnlyBelow` true, `card` `{ style 'fill', fill #f5f5f5, padX 10, padTop 4,
-padBottom 4, radius 8, radiusBottom 0, gap 0, stem false, bar true, anchor 'center' }` (the headline block, see "Headlines" below) — shipped defaults are **widen mode, line off, everything centred on the line**
+`sideGap` 8, `firstOnlyBelow` true, `card` `{ style 'outline', fill #f5f5f5, padX 16, padTop 6,
+padBottom 6, radius 4, radiusBottom 0, gap 0, stem false, bar true, anchor 'center' }` (the headline block, see "Headlines" below) — shipped defaults are **widen mode, line off, everything centred on the line**
 (compare/ "version 1", picked 2026-09-04). The side/alternate/split placements
 (`yearSide`/`eventSide` `'left'`/`'right'`, `eventSide` `'alternate'`, `dateSide` `'left'`/`'right'`)
 are live but unused code paths kept for a later compare; the band branch stays too. Changing
@@ -321,8 +321,11 @@ axis so the first event's label can center over its own circle).
 - **Intro wipe** — `P7_AXIS_INTRO_DURATION` 2800 ms, a right-to-left `ctx.clip()` reveal
   covering line, rings, labels and events alike. Gated by `p7AxisShouldShow()` =
   `fold9FlyTrigger.currentRaw() > 0`, falling back to `p7HasEngaged`. Scrolling back above
-  the trigger plays the same wipe in reverse, quickly (`P7_AXIS_OUTRO_DURATION` 500 ms
-  full-scale; an interrupted intro reverses over only its remaining distance —
+  the trigger plays the same wipe in reverse, at the **same speed as the build-in**
+  (`P7_AXIS_OUTRO_DURATION` is set to `P7_AXIS_INTRO_DURATION`, so the two can't drift;
+  explicit instruction — at the old 500 ms the axis snapped away the moment @fold10's title
+  block hit and read as a glitch. Full-scale; an interrupted intro reverses over only its
+  remaining distance —
   `p7AxisOutroStart`/`p7AxisOutroFromT`), then the axis is gone and the build-in replays
   from scratch on the next forward crossing. Re-crossing forward mid-reverse resumes the
   build-in from wherever the reverse wipe currently is — no snap in either direction.
@@ -367,14 +370,14 @@ over `totalRows × CELL`:
   a punched background drawn at the label's opacity; the punch runs from the dot's edge (or
   the year label's bottom when pushed past one) to the block's far edge, so no line shows
   between dot and text. **Card** (`P7_VERT.card`, `p7DrawHeadlineCard`): a
-  `#f5f5f5` filled tab, 10px side / 4px top and bottom padding, 8px top corners and square
-  bottom corners (`radiusBottom` 0), with a `bar.h` 1.5px black rounded-end accent bar along
-  its whole bottom edge (`card.bar` true; the bar's `gap`/`padX` only apply to the bare
-  `'bar'` style). `anchor 'center'`: the card's dot-facing edge runs through the dot's
-  centre — the bar passes through the circle — and the dot is redrawn on top of the card
-  (`p7DrawAxisMarker`). The other styles (`'bar'` bare text + bar, `'outline'`, `'dashed'`,
-  `'shadow'`, `'accent'`, plain) and `anchor 'edge'` (card `gap` px past the dot's edge) stay
-  as code paths. Each line's ink is centred in its line box (`p7VertLineText`, measured on a fixed reference with an alphabetic baseline), so a card pads the text equally above and below. **Type** is `P7_VERT.type` (desktop only;
+  white (`#FDFCFF`) card with a 1px `rgba(0,0,0,0.3)` outline, 16px side / 6px top and
+  bottom padding, 4px top corners and square bottom corners (`radiusBottom` 0), with a
+  `bar.h` 1.5px black rounded-end accent bar along its whole bottom edge (`card.bar` true;
+  the bar's `gap`/`padX` only apply to the bare `'bar'` style). `anchor 'center'`: the
+  card's dot-facing edge runs through the dot's centre — the bar passes through the circle —
+  and the dot is redrawn on top of the card (`p7DrawAxisMarker`). The other styles (`'bar'`
+  bare text + bar, `'fill'` (`card.fill` #f5f5f5), `'dashed'`, `'shadow'`, `'accent'`,
+  plain) and `anchor 'edge'` (card `gap` px past the dot's edge) stay as code paths. Each line's ink is centred in its line box (`p7VertLineText`, measured on a fixed reference with an alphabetic baseline), so a card pads the text equally above and below. **Type** is `P7_VERT.type` (desktop only;
   mobile keeps the `P7_AXIS_*_FONT` constants): title 500 14px, line height 19, black;
   date 400 14px, line height 19, black at 0.3; `gap` 0 extra px between title and date. With `anchor 'edge'` the dot-to-block gap would be `card.gap` plus whichever card pad faces the dot. **Default side** (`P7_VERT.firstOnlyBelow` true): the first
   headline hangs under its dot; every later one sits **above** its dot (bottom edge
