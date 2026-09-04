@@ -311,11 +311,10 @@ over `totalRows × CELL`:
   `p7CurRow() ≥ events[i].reachRow`. Title lines (`p7WrapLabel`, `maxWidth` 320 in band
   mode, `p7CenterGap() − 16` in widen mode) and the date hang under the dot
   (`P7_VERT_EVENT_TEXT_GAP` 6), centred on the axis, on a punched background drawn at the
-  label's opacity; the punch runs from the dot's edge (or the year label's bottom when pushed past one) to the block's far edge, so no line shows between dot and text. The only dodge: if hanging below would overlap a year ring or its label
-  (`yearSpans`, collected while the rings are drawn), the whole block flips to sit **above**
-  the dot instead; if above is not free either or would rise past the axis's top (the
-  04.01.2023 event under the 2023 ring), it stays below, pushed down just past the year
-  label — a headline never touches a year. No other de-collision — the layout
+  label's opacity; the punch runs from the dot's edge (or the year label's bottom when pushed past one) to the block's far edge, so no line shows between dot and text. The dot is **always above its text**. The only dodge: if hanging below would overlap a
+  year ring or its label (`yearSpans`, collected while the rings are drawn), the block is
+  pushed down to just past that label (the 04.01.2023 event under the 2023 ring) — a
+  headline never touches a year and never moves above its dot. No other de-collision — the layout
   reserves the space.
 - **Hover:** the hovered square's date marks the axis at `p7AxisY(date, H)` in its actor
   colour; `p7.axisEventPositions` is filled with `{x: axisX, y, radius}` so the existing

@@ -2267,35 +2267,20 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     ctx.font = p7AxisDateFont();
     tw = Math.max(tw, ctx.measureText(dateLabel).width);
     const blockH = lines.length * lh + lh;
-    // The block hangs under the dot unless that would run into a year ring or
-    // its label — then it sits above the dot instead. Never both at once.
+    // The block always hangs UNDER the dot (the dot is always above its text).
+    // If it would run into a year ring or its label, it is pushed down to just
+    // past that label instead.
     const below = evY[i] + P7_AXIS_MARKER_RADIUS + P7_VERT_EVENT_TEXT_GAP;
-    const above = evY[i] - P7_AXIS_MARKER_RADIUS - P7_VERT_EVENT_TEXT_GAP - blockH;
-    const spans = yearSpans || [];
-    const hits = (top) => spans.some(s => top - 2 < s.bottom && top + blockH + 2 > s.top);
     let y0 = below;
-    if (hits(below)) {
-      if (!hits(above) && above >= p7VertTopY(H)) {
-        y0 = above;
-      } else {
-        // Nowhere to go above (e.g. the 04.01.2023 event right under the 2023
-        // ring at the axis's top): stay below, just past the year label.
-        let bottom = below;
-        spans.forEach(s => { if (below - 2 < s.bottom && below + blockH + 2 > s.top) bottom = Math.max(bottom, s.bottom); });
-        y0 = bottom + P7_VERT_EVENT_TEXT_GAP;
-      }
-    }
+    (yearSpans || []).forEach(s => {
+      if (y0 - 2 < s.bottom && y0 + blockH + 2 > s.top) y0 = s.bottom + P7_VERT_EVENT_TEXT_GAP;
+    });
     ctx.globalAlpha = opacity;
     // Punch from the dot's edge (or, when pushed past a year label, from that
     // label's bottom) to the block's far edge — no line between dot and text.
     ctx.fillStyle = "#FDFCFF";
-    if (y0 >= evY[i]) {
-      const punchTop = y0 - P7_VERT_EVENT_TEXT_GAP;
-      ctx.fillRect(axisX - tw / 2 - 4, punchTop, tw + 8, y0 + blockH - punchTop);
-    } else {
-      const punchBot = evY[i] - P7_AXIS_MARKER_RADIUS;
-      ctx.fillRect(axisX - tw / 2 - 4, y0 - 2, tw + 8, punchBot - (y0 - 2));
-    }
+    const punchTop = y0 - P7_VERT_EVENT_TEXT_GAP;
+    ctx.fillRect(axisX - tw / 2 - 4, punchTop, tw + 8, y0 + blockH - punchTop);
     const isHoverHighlighted = hoverActive && highlightY !== null && Math.abs(evY[i] - highlightY) < 0.5;
     const labelAlpha = (hoverActive && !isHoverHighlighted) ? P7_AXIS_ROSTER_LABEL_ALPHA : 1;
     ctx.font = p7AxisEventFont();
