@@ -179,6 +179,29 @@ body {
   margin-bottom: 0;
 }
 
+/* @fold11's question must read as ONE line (explicit instruction). It is the
+   longest title in the piece — "מה נחשב בעיניכם לפעולה לגיטימית, ומה לפעולה
+   קיצונית?" measures 26.49em in the Thin face, i.e. 530px at the shared 20px,
+   which overflows the 480px --card-w and wraps to two.
+   The fix is a WIDTH override, never a font-size one: .section-title is a
+   single shared rule and a per-page size is a documented regression (see
+   CLAUDE.md). So the card is let off --card-w and sized to its content
+   instead — 530px of text + 29px frame padding either side + the 2px border
+   = ~592px, which any desktop viewport clears.
+   `max-content` (not `fit-content`) is what actually defeats the wrap: it
+   asks for the natural single-line width and ignores the available space,
+   the same reason the mobile .group-label block needs it. nowrap is belt and
+   braces so a future longer string can't quietly wrap instead of widening.
+   Desktop only — see the ≤600px block, where this all reverts to wrapping. */
+.page9-title-row .section-title {
+  white-space: nowrap;
+}
+.page9-title-row .text-card,
+.page9-title-row .text-card.is-stuck {
+  width: max-content;
+  max-width: calc(100vw - 48px);
+}
+
 .page9-title-row .page9-header-subtitle {
   opacity: 0;
   pointer-events: none;
@@ -2530,6 +2553,19 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      dot grid. */
   #page9ZoneAbove {
     display: none;
+  }
+
+  /* Undo the desktop one-line treatment (see .page9-title-row .section-title
+     above). At the mobile 16px the question still measures ~424px, wider than
+     a 393px phone, so nowrap would push it off the edge — it wraps here, and
+     the card goes back to the shared --card-w instead of sizing to content. */
+  .page9-title-row .section-title {
+    white-space: normal;
+  }
+  .page9-title-row .text-card,
+  .page9-title-row .text-card.is-stuck {
+    width: var(--card-w);
+    max-width: var(--card-w);
   }
 
   /* Figma node 294-1272 flushes @fold11's title and subtitle to the RIGHT edge
