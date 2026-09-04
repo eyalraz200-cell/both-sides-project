@@ -472,39 +472,48 @@ let p7EntryAnim = null;
 function p7ResetForReplay() {
   for (const k in p7MonthPhase) delete p7MonthPhase[k];
   p7MonthMaxReached = -1;
-  p7SweepRow = 0; p7SweepLast = 0;
-  if (p7.leftPres)  p7.leftPres.fill(0);
-  if (p7.rightPres) p7.rightPres.fill(0);
+  if (p7RowCur) p7RowCur.fill(0);
+  p7RowLast = 0;
 }
 
-// Desktop (vertical axis) reveal: ONE sweep edge, measured in grid rows, chases the
-// fill edge (p7CurRow) at a bounded speed — it never jumps. A square's presence is
-// purely how far the edge is past its own row, so no matter how fast the user
-// scrolls, rows pop strictly top -> bottom (and retreat bottom -> top on the way
-// back). Replaces the per-month cascade on desktop; mobile keeps the month cursors.
-const P7_SWEEP_ROWS_PER_S = 12; // rows/s the edge travels when the fill edge outruns it
-let p7SweepRow  = 0;            // the edge, in rows (0 = nothing shown)
-let p7SweepLast = 0;            // performance.now() of the last tick
-let p7SweepDtMs = 0;            // this frame's clock step, read by p7DrawSideSquares' pops
-let p7SweepMoving = false;      // edge still travelling toward its target
-let p7PopActive   = false;      // some square still mid-pop this frame
+// Desktop (vertical axis) reveal: each grid ROW is its own cascade. A row is armed the
+// instant the fill edge (p7CurRow) reaches it, and then plays centre -> side on its own
+// wall clock: cursor c in ms from 0 (row absent) to P7_ROW_TOTAL_MS (row settled), each
+// square popping over P7_POP_DURATION once c passes its slot k/cols * P7_ROW_WAVE_MS
+// (k = distance from the corridor). Rows armed in the same scroll tick (a fast scroll)
+// start P7_ROW_STAGGER_MS apart, top first, so a jumped span still reads top -> bottom.
+// Scrolling back above a row aims its cursor at 0 — same shared-cursor reversal as the
+// mobile month cascade: the cursor falling retracts outer squares first. Mobile keeps
+// the per-month cursors below.
+const P7_ROW_WAVE_MS    = 600;                          // centre -> side spread within a row
+const P7_ROW_TOTAL_MS   = P7_ROW_WAVE_MS + P7_POP_DURATION;
+const P7_ROW_STAGGER_MS = 40;                           // between rows armed in one tick
+let p7RowCur   = null;  // Float32Array(rows): each row's cursor (ms, may sit < 0 while queued)
+let p7RowLast  = 0;     // performance.now() of the last tick
+let p7RowsMoving = false;
 
-// The edge only decides WHEN a square is due (rows strictly in order); each square
-// then pops on its own wall clock — presence 0..1 travelling at 1/P7_POP_DURATION
-// per ms toward 1 (edge past its row) or 0 (edge back above it), so a square keeps
-// animating after the scroll stops and a reversal resumes from its current size.
-// p7.leftPres / p7.rightPres hold that per-square presence (allocated in p7UpdateLayout).
-function p7SweepTick() {
+function p7RowCascadeTick() {
   const now = performance.now();
-  p7SweepDtMs = p7SweepLast ? Math.min(100, now - p7SweepLast) : 0;
-  p7SweepLast = now;
-  const target = p7HasEngaged ? p7CurRow() : 0;
-  const step   = P7_SWEEP_ROWS_PER_S * p7SweepDtMs / 1000;
-  if (Math.abs(target - p7SweepRow) <= step) p7SweepRow = target;
-  else p7SweepRow += Math.sign(target - p7SweepRow) * step;
-  p7SweepMoving = p7SweepRow !== target;
-  p7PopActive = false; // p7DrawSideSquares raises it while any square is mid-pop
-  if (p7SweepMoving) p7StartAnimLoop();
+  const dt  = p7RowLast ? Math.min(100, now - p7RowLast) : 0;
+  p7RowLast = now;
+  const rows = p7.vert ? p7.vert.rows : 0;
+  if (!p7RowCur || p7RowCur.length !== rows) p7RowCur = new Float32Array(rows);
+  const edge = p7HasEngaged ? p7CurRow() : -1;
+  p7RowsMoving = false;
+  let queued = 0;
+  for (let r = 0; r < rows; r++) {
+    const due = edge >= r + 0.5;
+    let c = p7RowCur[r];
+    if (due) {
+      if (c === 0) { c = -queued * P7_ROW_STAGGER_MS; queued++; }
+      c = Math.min(P7_ROW_TOTAL_MS, c + dt);
+    } else {
+      c = Math.max(0, Math.min(c, P7_ROW_TOTAL_MS) - dt);
+    }
+    if (c !== p7RowCur[r]) p7RowCur[r] = c;
+    if (due ? c < P7_ROW_TOTAL_MS : c > 0) p7RowsMoving = true;
+  }
+  if (p7RowsMoving) p7StartAnimLoop();
 }
 
 // True once fold 9's own title card (#page-7 .text-card, page7TitleCardEl in
@@ -625,7 +634,7 @@ function p7AnyAnimActive() {
   for (const k in p7MonthPhase) {
     if (p7MonthCursor(k) !== p7MonthPhase[k].toC) return true; // still travelling
   }
-  if (p7SweepMoving || p7PopActive) return true;
+  if (p7RowsMoving) return true;
   if (p7AxisEventsAnimActive()) return true;
   if (p7AxisIntroStart !== null && p7AxisIntroT() < 1) return true;
   if (p7AxisOutroStart !== null && p7AxisIntroT() > 0) return true;
@@ -736,19 +745,10 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
 
     let scale = 1, alpha = 1;
     if (p7VerticalAxis()) {
-      // Desktop: presence is the sweep edge's distance past this square's row
-      // (fractional by column, so a row itself fills outward from the axis).
-      const k    = events === p7.rightEvents ? col : cols - 1 - col;
-      const pres = events === p7.rightEvents ? p7.rightPres : p7.leftPres;
-      const want = p7SweepRow >= row + k / cols ? 1 : 0;
-      let v = pres[i];
-      if (v !== want) {
-        const d = p7SweepDtMs / P7_POP_DURATION;
-        v = want > v ? Math.min(1, v + d) : Math.max(0, v - d);
-        pres[i] = v;
-        p7PopActive = true;
-      }
-      const presence = p7Ease(v);
+      // Desktop: this square's row plays centre -> side off its own cursor.
+      const k = events === p7.rightEvents ? col : cols - 1 - col;
+      const c = p7RowCur ? p7RowCur[row] : 0;
+      const presence = p7Ease(Math.min(1, Math.max(0, (c - (k / cols) * P7_ROW_WAVE_MS) / P7_POP_DURATION)));
       if (presence <= 0) continue;
       scale = 0.5 + 0.5 * presence;
       alpha = presence;
@@ -828,8 +828,6 @@ function p7UpdateLayout(W, H) {
   if (W === p7.lastW && H === p7.lastH && maxEvents === p7.lastMaxEvents && p7.lastVertical === p7VerticalAxis()) return;
   p7.lastVertical = p7VerticalAxis();
   p7.lastMaxEvents = maxEvents;
-  if (!p7.leftPres  || p7.leftPres.length  !== p7.leftEvents.length)  p7.leftPres  = new Float32Array(p7.leftEvents.length);
-  if (!p7.rightPres || p7.rightPres.length !== p7.rightEvents.length) p7.rightPres = new Float32Array(p7.rightEvents.length);
 
   const box    = sbbTimeline(H);
   const topY   = Math.round(H * box.top);
@@ -1027,7 +1025,7 @@ function p7DrawTimelineSquares(ctx, W, H) {
   // loop's upper bound must cover the *whole* centered month (monthEndL/monthEndR),
   // not just events whose date has already been reached, so the full cascade can play.
   if (p7VerticalAxis()) {
-    p7SweepTick();
+    p7RowCascadeTick();
     const posMap = new Map();
     p7DrawSideSquares(ctx, p7.leftEvents,  p7.leftPos,  leftX0,  topY, cols, CELL, SQ, p7.leftEvents.length,  0, posMap);
     p7DrawSideSquares(ctx, p7.rightEvents, p7.rightPos, rightX0, topY, cols, CELL, SQ, p7.rightEvents.length, 0, posMap);
