@@ -1,7 +1,10 @@
 # Drag-and-drop categorization — `@fold11` (`#page-10`, `page9.js`)
 
-"איפה עובר הגבול בעיניכם?" — the reader drags category pills into an "extreme" zone and
-the matching event dots migrate above the divider line.
+"מה נחשב בעיניכם לפעולה לגיטימית, ומה לפעולה קיצונית?" — the reader drags category pills into an "extreme" zone and
+the matching event dots migrate above the divider line. The title is held to a single
+line on desktop by widening the card off `--card-w` (`width: max-content` on
+`.page9-title-row .text-card`), never by shrinking the shared `.section-title` size;
+under 600px it reverts to the normal wrapped card.
 
 > **Two desktop layouts.** The section below describes the *legacy* desktop layout
 > (bottom tray, tall legit shuffle). The layout actually shipping on desktop today is

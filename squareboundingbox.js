@@ -15,7 +15,10 @@ const SBB = {
 // of W at typical desktop widths, so 0.18 leaves a comfortable margin. The right edge
 // mirrors left automatically (see p7GridGeometry), so no `right` field.
 const SBB_TIMELINE = {
-  left:   0.18,   // fraction of W
+  left:   0.18,   // fraction of W — clears the left-pinned legend (its widest label ends ~250px)
+  right:  0.06,   // fraction of W from the RIGHT edge — nothing lives there, so it is
+                  // much tighter than `left`; the axis is centred between the two
+                  // (p7BoxCenterX), not at W/2
   top:    0.13,   // fraction of H
   bottom: 0.81,   // fraction of H
 };
@@ -68,6 +71,7 @@ function sbbTimeline(H) {
   const h = H || window.innerHeight;
   return {
     left:   SBB_TIMELINE_MOBILE_LEFT,
+    right:  SBB_TIMELINE_MOBILE_LEFT, // symmetric on mobile → centre stays W/2
     top:    SBB_TIMELINE_MOBILE_TOP_PX / h,
     bottom: (P7_AXIS_Y_FRAC_MOBILE * h - SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX) / h,
   };

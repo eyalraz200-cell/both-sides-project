@@ -67,12 +67,18 @@ function p7Cell() { return isMobile() ? p7MobileSq * (1 + P7_MOBILE_GAP_RATIO) :
 // AXIS block below), so the centre gap is the wider P7_AXIS_CORRIDOR_PX
 // corridor rather than CENTER_GAP. Mobile keeps CENTER_GAP + the horizontal axis.
 function p7VerticalAxis() { return !isMobile(); }
+// The box's right edge and its centre: the desktop box is asymmetric (a wide
+// left margin for the legend, a slim right one), so the axis sits at the middle
+// of the box rather than W/2. Mobile's box is symmetric → this IS W/2 there.
+function p7BoxRightX(W, H) { return Math.round(W * (1 - sbbTimeline(H).right)); }
+function p7BoxCenterX(W, H) { return (Math.round(W * sbbTimeline(H).left) + p7BoxRightX(W, H)) / 2; }
 function p7CenterGap()    { return p7VerticalAxis() ? (P7_VERT.eventMode === "widen" ? P7_VERT.wideCorridorPx : P7_VERT.corridorPx) : CENTER_GAP; }
 function p7GridGeometry(W, H) {
   const leftX0  = Math.round(W * sbbTimeline(H).left);
   const gap     = p7CenterGap();
-  const rightX0 = W / 2 + gap / 2;
-  const sideW   = W / 2 - gap / 2 - leftX0;
+  const cx      = p7BoxCenterX(W, H);
+  const rightX0 = cx + gap / 2;
+  const sideW   = cx - gap / 2 - leftX0;
   const CELL    = p7Cell();
   const cols    = Math.floor(sideW / CELL);
   return { leftX0, rightX0, cols, CELL };
@@ -814,10 +820,10 @@ function p7UpdateLayout(W, H) {
   // size, so there's no circularity — sideW is the same measurement
   // p7GridGeometry makes.
   if (isMobile()) {
-    const sideW = W / 2 - CENTER_GAP / 2 - Math.round(W * box.left);
+    const sideW = p7BoxCenterX(W, H) - CENTER_GAP / 2 - Math.round(W * box.left);
     p7MobileSq = p7SolveMobileSq(sideW, sideH, maxEvents);
   } else {
-    const sideW = W / 2 - p7CenterGap() / 2 - Math.round(W * box.left);
+    const sideW = p7BoxCenterX(W, H) - p7CenterGap() / 2 - Math.round(W * box.left);
     p7DesktopSq = p7.ready ? p7SolveVerticalSq(sideW, sideH, maxEvents) : P7_SQ;
   }
   const { leftX0, cols, CELL } = p7GridGeometry(W, H);
@@ -1146,7 +1152,7 @@ function p7DrawTimelineSquares(ctx, W, H) {
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(leftX0, y);
-      ctx.lineTo(W - leftX0, y);
+      ctx.lineTo(p7BoxRightX(W, H), y);
       ctx.stroke();
     });
     ctx.restore();
@@ -1869,7 +1875,7 @@ function p7DrawAxisEvents(ctx, W, axisY, curX, hoverActive, highlightX) {
       visible.push(best);
     }
     visible.forEach((e) => {
-      e.lineX = W / 2;
+      e.lineX = W / 2; // mobile box is symmetric → W/2 is the box centre
       e.left  = W / 2 - e.textWidth / 2;
       e.right = W / 2 + e.textWidth / 2;
     });
@@ -2129,7 +2135,7 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   const ticks  = p7AxisYearTicks();
   const axisDpr = window.devicePixelRatio || 1;
   const axisQ   = x => Math.round(x * axisDpr) / axisDpr;
-  const axisX   = axisQ(W / 2);
+  const axisX   = axisQ(p7BoxCenterX(W, H));
   const topY    = p7VertTopY(H);
   const len     = v.totalRows * p7.CELL;
   const botY    = topY + len;
