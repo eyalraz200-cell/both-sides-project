@@ -2127,6 +2127,7 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   if (!p7.vert) return;
   const v      = p7.vert;
   const ticks  = p7AxisYearTicks();
+  const yearSpans = []; // filled below; the headline blocks dodge these
   const axisDpr = window.devicePixelRatio || 1;
   const axisQ   = x => Math.round(x * axisDpr) / axisDpr;
   const axisX   = axisQ(W / 2);
@@ -2178,6 +2179,8 @@ function p7DrawYearAxisVertical(ctx, W, H) {
     const label = String(tick.year);
     const tw = ctx.measureText(label).width;
     const ly = y + P7_AXIS_MARKER_RADIUS + P7_VERT_YEAR_LABEL_GAP;
+    // Ring + label as one vertical span, for the headline blocks to dodge.
+    yearSpans.push({ top: y - P7_AXIS_MARKER_RADIUS, bottom: ly + 21 });
     ctx.fillStyle = "#FDFCFF";
     ctx.fillRect(axisX - tw / 2 - 3, ly - 1, tw + 6, 22);
     ctx.fillStyle = hoverActive
@@ -2187,7 +2190,7 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   }
   ctx.restore();
 
-  p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, hoverAxisY);
+  p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, hoverAxisY, yearSpans);
 
   if (hoverActive) {
     ctx.save();
@@ -2199,7 +2202,7 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   }
 }
 
-function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlightY) {
+function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlightY, yearSpans) {
   p7UpdateAxisEventTriggers(W);
   const now = performance.now();
   const v = p7.vert;
@@ -2256,13 +2259,18 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     ctx.font = p7AxisEventFont();
     const lines = p7WrapLabel(ctx, ev.label, maxWidth);
     const lh = p7AxisEventLineHeight();
-    const y0 = evY[i] + P7_AXIS_MARKER_RADIUS + P7_VERT_EVENT_TEXT_GAP;
     const dateLabel = p7FormatDateDMY(ev.date, ".");
     let tw = 0;
     lines.forEach(t => { tw = Math.max(tw, ctx.measureText(t).width); });
     ctx.font = p7AxisDateFont();
     tw = Math.max(tw, ctx.measureText(dateLabel).width);
     const blockH = lines.length * lh + lh;
+    // The block hangs under the dot unless that would run into a year ring or
+    // its label — then it sits above the dot instead. Never both at once.
+    const below = evY[i] + P7_AXIS_MARKER_RADIUS + P7_VERT_EVENT_TEXT_GAP;
+    const above = evY[i] - P7_AXIS_MARKER_RADIUS - P7_VERT_EVENT_TEXT_GAP - blockH;
+    const hits = (top) => (yearSpans || []).some(s => top - 2 < s.bottom && top + blockH + 2 > s.top);
+    const y0 = hits(below) && !hits(above) ? above : below;
     ctx.globalAlpha = opacity;
     ctx.fillStyle = "#FDFCFF";
     ctx.fillRect(axisX - tw / 2 - 4, y0 - 2, tw + 8, blockH + 2);
