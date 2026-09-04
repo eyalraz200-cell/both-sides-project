@@ -99,7 +99,7 @@ body {
    would place the card at 50vh inside the section, requiring ~50vh of extra
    scrolling after the timeline fills before any text appears. Aligning to the
    top means the card enters the viewport the instant the scrub section ends. */
-#page-8 {
+#page-9 {
   align-items: flex-start;
   padding-top: 48px;
 }
@@ -111,7 +111,7 @@ body {
      so that when .page9-sticky.frozen switches sticky→fixed (removing it from
      flow), min-height still dominates and the section height stays at 200vh.
      If min-height < 200vh, the section shrinks when frozen fires, shifting
-     #page-10 up into the viewport and bypassing the gate. */
+     #page-11 up into the viewport and bypassing the gate. */
   min-height: 200vh;
   display: block;
   padding: 0;
@@ -144,7 +144,7 @@ body {
 }
 
 /* Once the card has reached its sticky position, switch to fixed so it stays
-   pinned for the entire @fold10 scroll range — not just while .page9-title-row
+   pinned for the entire @fold11 scroll range — not just while .page9-title-row
    is in view. Width/centering must be re-stated since fixed is viewport-relative. */
 .page9-title-row .text-card.is-stuck {
   position: fixed;
@@ -210,8 +210,8 @@ body {
   user-select: none;
 }
 
-/* Switched to fixed once the user scrolls into @fold11 (#page-10), keeping
-   the tray/zones visually frozen in place even though #page-9 has ended.
+/* Switched to fixed once the user scrolls into @fold12 (#page-11), keeping
+   the tray/zones visually frozen in place even though #page-10 has ended.
    Width must be explicit — fixed elements size relative to the viewport, not
    their DOM parent, so the implicit 100% no longer covers the full width. */
 .page9-sticky.frozen {
@@ -257,7 +257,7 @@ body {
   opacity: 0;
   pointer-events: none;
   /* Slowed from 0.5s per explicit feedback — the engage fade read a touch
-     quick right when @fold10's title hits the top and the interaction state
+     quick right when @fold11's title hits the top and the interaction state
      kicks in. Kept matched with .page9-zone-wrap-extreme below. */
   transition: opacity 0.7s ease-out;
 }
@@ -458,7 +458,7 @@ body {
   display: none;
 }
 
-/* ── @fold10 desktop layout V2 ────────────────────────────────────────────────
+/* ── @fold11 desktop layout V2 ────────────────────────────────────────────────
    Scoped entirely under .page9-sticky.page9-layout-v2, a class JS puts on the
    panel when P9_LAYOUT_V2 is on AND we're above the 600px breakpoint (see
    p9SyncLayoutV2Class, page9.js) — so nothing here can reach the mobile layout,
@@ -1059,7 +1059,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      selection (with handles and the Copy bar) over the drag instead of picking
      the pill up. -webkit-touch-callout kills the callout menu the same gesture
      summons. Same suppression the graphic column already carries for the
-     @fold8 loupe. */
+     @fold9 loupe. */
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
@@ -1132,7 +1132,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   background: rgba(0, 0, 0, 0.4);
 }
 
-/* Hover tooltip for a single event dot in page-9's extreme/legit grid (Figma
+/* Hover tooltip for a single event dot in page-10's extreme/legit grid (Figma
    node 158:41181) — date + short Hebrew description. Stroke color is set
    per-hover in JS (p9HoverInit, page9.js) to match the hovered dot's own
    group color, so the `color` value here is just a fallback/default. The
@@ -1166,7 +1166,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   padding: 7px 10px;
   /* Widened from 222px at the same time the text went to 14px — a bigger face
      in the old box wrapped the descriptions onto more lines. 275px (≈251px of
-     text after the 10px side padding + 2px borders) is sized so @fold6's demo
+     text after the 10px side padding + 2px borders) is sized so @fold7's demo
      description — row-34, 109 characters, FOLD6_TOOLTIP_ROW_ID in js/groups.js —
      lands on exactly 3 lines. Mobile keeps 222 (it clamps against the viewport
      anyway, see the ≤600px block). */
@@ -1190,7 +1190,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   border-radius: 8px 8px 0 8px;
 }
 
-/* Flipped variant (desktop @fold10 only, p9HoverInit): when opening upward
+/* Flipped variant (desktop @fold11 only, p9HoverInit): when opening upward
    would poke above the column area's ceiling, the box hangs BELOW the dot, so
    the square anchor corner moves to the top edge — top-left normally,
    top-right when also mirrored. updateTooltipDash squares the same corner in
@@ -1243,7 +1243,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 .p7-tip-more,
 .p7-loupe { display: none; }
 
-/* Hover tooltip for a category pill in page-9's tray (#page9ZoneBelow only —
+/* Hover tooltip for a category pill in page-10's tray (#page9ZoneBelow only —
    dropped pills in the extreme zone get a different hover treatment, see
    .page9-pill.is-hover-highlighted above) — a short description of what the
    category covers. The arrow (.page9-cat-tooltip-arrow) is a separate element
@@ -1327,9 +1327,22 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    wedge) back when .section-title asked for a faked 600. At 300 the title
    renders the real Thin face with no synthesis at all, so there is no
    artifact to dodge — and a 400 acronym would now sit HEAVIER than the Hebrew
-   around it. Only ever applied to the ACLED acronym (project.html:98). */
+   around it. Only ever applied to the ACLED acronym on the @fold6 card. */
 .latin-acronym {
   font-weight: inherit;
+}
+
+/* The ACLED acronym on the @fold6 card is a real external link (teacher review
+   2026-09-03, E2): visibly underlined so it signals "go check the source". */
+.card-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+  text-decoration-thickness: 1px;
+}
+.card-link:hover,
+.card-link:focus-visible {
+  text-decoration-thickness: 2px;
 }
 
 /* Normal-flow, horizontally-centered text block for every page's scrolled
@@ -1380,7 +1393,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      instead let the parent's text-align:right (set for the RTL text inside)
      also flush the box itself to the right edge, which is invisible for
      titles long enough to wrap near the card's full 480px width but visibly
-     off-center for short, single-line titles (e.g. @fold10's "איפה עובר
+     off-center for short, single-line titles (e.g. @fold11's "איפה עובר
      הגבול בעיניכם"). Inner text stays right-aligned since text-align is
      inherited independent of the box's own display/positioning. */
   display: block;
@@ -1540,7 +1553,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   padding: 0;
 }
 
-/* @fold11's outro section — exactly one viewport, matching the sticky
+/* @fold12's outro section — exactly one viewport, matching the sticky
    wrapper's own height (below): the wrapper pins the instant it arrives (see
    checkFold13/main.js, which fires right at that same moment) and there's no
    extra section height left over past that point for the page to keep
@@ -1548,7 +1561,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    this is where the document ends. Previously 200vh (an extra full viewport
    of "hold the card centered" room past the pin point) — per explicit
    feedback that read as dead/null scroll once the title had already arrived. */
-#page-10 {
+#page-11 {
   min-height: 100vh;
   display: block;
   padding: 0;
@@ -1566,7 +1579,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   direction: rtl;
 }
 
-/* Forced invisible while @fold11's scroll gate (main.js, p13GateLocked) is
+/* Forced invisible while @fold12's scroll gate (main.js, p13GateLocked) is
    locked — momentum-phase wheel events are non-cancelable in some browsers,
    so the page can genuinely scroll past the gate for a paint or two before
    the safety net corrects scrollY back. Since this wrapper is position:sticky,
@@ -1578,7 +1591,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   pointer-events: none;
 }
 
-#page-10 .text-card-frame {
+#page-11 .text-card-frame {
   width: 450px;
   padding: 40px 40px 48px;
   box-sizing: border-box;
@@ -1587,28 +1600,28 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 
 /* On shorter laptop viewports the card's height (title + body copy) leaves
    almost no gap from the screen's top/bottom edges — the sticky wrapper is a
-   fixed 100vh with no scroll room of its own to compensate (see #page-10's
+   fixed 100vh with no scroll room of its own to compensate (see #page-11's
    min-height comment above), so trim the card's own padding here instead. */
 @media (max-height: 920px) {
-  #page-10 .text-card-frame {
+  #page-11 .text-card-frame {
     padding: 24px 28px 28px;
   }
   /* id-scoped: the base .page12-share/.page12-credits rules sit later in the file */
-  #page-10 .page12-share {
+  #page-11 .page12-share {
     margin-top: 12px;
     padding-top: 10px;
   }
-  #page-10 .page12-credits {
+  #page-11 .page12-credits {
     margin-top: 8px;
   }
 }
 @media (max-height: 820px) {
-  #page-10 .text-card-frame {
+  #page-11 .text-card-frame {
     padding: 18px 22px 22px;
   }
 }
 
-#page-10 .section-title {
+#page-11 .section-title {
   font-size: 40px;
   text-align: center;
   line-height: 1.2;
@@ -1998,7 +2011,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   }
 
   /* The outro card carries its own fixed width instead of --card-w. */
-  #page-10 .text-card-frame {
+  #page-11 .text-card-frame {
     width: min(450px, 100vw - 48px);
     padding: 24px 22px 28px;
   }
@@ -2006,7 +2019,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   /* 40px over 3-4 Hebrew words overflows a 393px card; this is the one
      documented per-page title size (the shared .section-title 20px base is
      untouched — see the hard rule in CLAUDE.md). */
-  #page-10 .section-title {
+  #page-11 .section-title {
     font-size: 28px;
     margin-bottom: 20px;
   }
@@ -2014,14 +2027,14 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   /* The outro is the one fold whose height is set by its own copy, not by the
      canvas: ~1400 characters of methodology text at 16px in a ~300px-wide card
      is taller than a phone viewport no matter how the padding is trimmed. So
-     mobile drops the desktop "exactly one viewport" rule (see #page-10's
+     mobile drops the desktop "exactly one viewport" rule (see #page-11's
      min-height comment above) rather than clipping the text:
 
        - the wrapper stops being sticky and grows to its content, so the card
          scrolls past normally instead of being pinned inside a 100vh box with
          no scroll room of its own;
        - min-height: 100vh is kept so short-content/large-phone cases still
-         center the card, and so #page-10 still occupies a full viewport —
+         center the card, and so #page-11 still occupies a full viewport —
          p13GateMax() and fold13ScrollT() both measure off offsetTop and one
          innerHeight, and shrinking the section would move the gate line.
 
@@ -2065,7 +2078,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     font-size: 15px;
   }
 
-  /* The DOCKED tooltip — @fold6, @fold7 and the real timeline (#page-7) on
+  /* The DOCKED tooltip — @fold7, @fold8 and the real timeline (#page-8) on
      mobile only. Instead of a callout hung off the dot it describes (which on
      a 393px screen covers that dot, and half the timeline grid with it), the
      tooltip is one designated frame in a fixed spot: same position, same size,
@@ -2075,7 +2088,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 
      `top` is a FALLBACK only — tooltipDockTopPx writes it inline every tick,
      because the frame has two spots: just above the 8 sample squares at
-     @fold6, gliding up to this one as the real timeline arrives
+     @fold7, gliding up to this one as the real timeline arrives
      (fold9FlyTrigger). The value below is that final spot, and the two must
      stay in sync with TOOLTIP_DOCK_TOP_PX.
 
@@ -2083,7 +2096,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      (~160px on a 844px phone) and the מקרא bar ends around 46px
      (FOLD6_MLEGEND_TOP_MOBILE_PX + its own height), so 62px + this height
      clears both. It's a flat px, not a fraction of the viewport, so the frame
-     doesn't drift between @fold6 (no grid on screen yet) and the timeline.
+     doesn't drift between @fold7 (no grid on screen yet) and the timeline.
 
      The height is FIXED and the box clips: the frame must not resize as a
      longer or shorter description swaps in — that's the whole point of a
@@ -2115,10 +2128,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     border-radius: 8px;
     justify-content: flex-start;
     /* JS owns transform here: `translateX(-50%) scale(g)` — the centering
-       first, then @fold6's grow-in pop about the centered box (the same
+       first, then @fold7's grow-in pop about the centered box (the same
        fold8TooltipGrowEase desktop uses). The scale is the ENTRANCE only; the
        frame's resting size never changes, and unlike desktop it is not
-       multiplied by fold9TooltipShrinkTrigger — at @fold7's end the frame
+       multiplied by fold9TooltipShrinkTrigger — at @fold8's end the frame
        stays put and empties instead of shrinking away. */
   }
 
@@ -2252,13 +2265,13 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      the source. Mobile-only and scoped to the column: the text column keeps
      normal selection, and desktop is untouched.
 
-     `#page-7` is in the list because the scroll column's own (transparent)
+     `#page-8` is in the list because the scroll column's own (transparent)
      section sits ON TOP of the canvas — that's the element the finger actually
      lands on, so suppressing it on the canvas alone isn't enough. It's the only
      section listed; the rest of the article keeps normal selection. */
   .graphic-col,
   #canvas,
-  #page-7 {
+  #page-8 {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
@@ -2348,7 +2361,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     min-width: 0;
   }
 
-  /* Figma node 294-1279 ("dragcard" in the full @fold10 frame): 16px Assistant
+  /* Figma node 294-1279 ("dragcard" in the full @fold11 frame): 16px Assistant
      SemiBold, a uniform 10px padding, 6px gap, 32px tall. The height only lands
      on 32 because the text box is trimmed to its cap height — `line-height:
      12px` reproduces that (the glyphs simply paint outside their 12px line box,
@@ -2451,11 +2464,11 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     display: none;
   }
 
-  /* Figma node 294-1272 flushes @fold10's title and subtitle to the RIGHT edge
+  /* Figma node 294-1272 flushes @fold11's title and subtitle to the RIGHT edge
      rather than centering them. `text-align` can't do it: .text-card already
      inherits `text-align: right`, and what centers the title is the *box* —
      .text-card-frame is `width: fit-content; margin: 0 auto`. Scoped to
-     .page9-title-row: every other fold's title stays centered. Only @fold10's
+     .page9-title-row: every other fold's title stays centered. Only @fold11's
      is specified this way.
 
      The flush is a STUCK-STATE look, not the card's look: while the card is
@@ -2471,7 +2484,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      it depends on the wrapped title's own width, which CSS can't express. */
   .page9-title-row .text-card .text-card-frame {
     transform: translateX(0);
-    /* @fold10's title is a single short line; the shared 16px vertical padding
+    /* @fold11's title is a single short line; the shared 16px vertical padding
        read as an oversized fill around it, so this one frame runs slimmer
        top/bottom (width untouched). The subtitle's negative margin below is
        derived from this value — change one, change both. */
@@ -2707,22 +2720,22 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      the bar doesn't exist above the breakpoint. */
   .section-text.text-card { z-index: 4; }
   /* Only the plain sections' cards need to be positioned for that z-index to
-     bite — @fold10's and @fold11's are already sticky/fixed inside their own
+     bite — @fold11's and @fold12's are already sticky/fixed inside their own
      wrappers, and the child combinator keeps this rule from clobbering that. */
   .text-section > .section-text.text-card { position: relative; }
 
-  /* @fold6, @fold7 and @fold9: their title blocks paint over the docked
+  /* @fold7, @fold8 and @fold10: their title blocks paint over the docked
      tooltip, not under it. The docked tooltip is `position: fixed;
      z-index: 1000` (it has to beat everything on the pinned timeline, where
-     there is no card at all — #page-7 is an empty scrub spacer), so every fold
+     there is no card at all — #page-8 is an empty scrub spacer), so every fold
      whose card shares the screen with it needs to out-stack that 1000
-     explicitly. @fold9's card (#page-8) is the one that reads as "the fold8
+     explicitly. @fold10's card (#page-9) is the one that reads as "the fold8
      title" on device: it scrolls up over the still-docked frame while the
      timeline is pinned behind it, and its --card-top (48px) sits above the
      frame's 62px, so without this it slid underneath. */
-  #page-5 > .section-text.text-card,
   #page-6 > .section-text.text-card,
-  #page-8 > .section-text.text-card,
+  #page-7 > .section-text.text-card,
+  #page-9 > .section-text.text-card,
   .page9-title-row .text-card { z-index: 1001; }
   /* …and the open מקרא panel still wins over that, keeping the rule above
      (.fold6-mlegend-layer.is-open beats the card) true on this fold too. */
@@ -2884,7 +2897,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   .section-text.text-card,
   .page9-title-row .text-card { z-index: 1004; }
   /* The plain sections' cards need a position for that z-index to bite —
-     @fold10's and @fold11's are already sticky/fixed inside their own wrappers,
+     @fold11's and @fold12's are already sticky/fixed inside their own wrappers,
      and the child combinator keeps this from clobbering that. */
   .text-section > .section-text.text-card { position: relative; }
   /* The dragged pill's ghost is NOT a tooltip — it rides the cursor and must

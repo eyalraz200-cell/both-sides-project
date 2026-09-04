@@ -4,7 +4,7 @@ const sections = Array.from(document.querySelectorAll(".text-section"));
 function setActivePage(page) {
   if (page === currentPage) return;
   // Scrolling back out of the timeline toward a fold that doesn't draw the
-  // per-event squares at all (anything before drawFold7, i.e. currentPage < 5)
+  // per-event squares at all (anything before drawFold7, i.e. currentPage < 6)
   // — wipe all per-month animation state so the next entry replays from
   // scratch instead of showing the previously-settled dots hanging around.
   //
@@ -14,7 +14,7 @@ function setActivePage(page) {
   // made every dot vanish in one frame the instant the IntersectionObserver
   // crossed. Those two draw functions run the wipe themselves once the retreat
   // has actually finished.
-  if (currentPage >= 5 && page < 5) p7ResetForReplay();
+  if (currentPage >= 6 && page < 6) p7ResetForReplay();
 
   // Continuing into page9 (fold12) while page8's own timeline->legit-grid
   // glide (p8CurrentT, page8.js) hasn't actually finished yet — the
@@ -35,7 +35,7 @@ function setActivePage(page) {
   // *scroll-dependent* moment, that showed up as the glide stuttering and
   // landing differently depending on whether the user kept scrolling through
   // it. Replaying the same global 0..1 clock makes the handoff invisible.
-  if (currentPage === 8 && page === 9 && typeof p8CurrentT === "function" && p8Engaged && p8CurrentT() < 1) {
+  if (currentPage === 9 && page === 10 && typeof p8CurrentT === "function" && p8Engaged && p8CurrentT() < 1) {
     const W = canvas.clientWidth, H = canvas.clientHeight;
     p9.anim = {
       from: p8CaptureBlendedPositions(W, H, 0),
@@ -52,13 +52,13 @@ function setActivePage(page) {
   }
 
   // Mirror of the above, the other direction: leaving page8's bridge back
-  // toward the real timeline (#page-7, drawPage7) while page8's reverse glide
+  // toward the real timeline (#page-8, drawPage7) while page8's reverse glide
   // (p8CurrentT decreasing toward 0) hasn't finished yet. drawPage7 has no
   // notion of that glide's progress on its own — every square would
   // otherwise teleport straight to its resting timeline cell the instant
   // this section starts drawing instead of page8. See p7EntryAnim's own
   // comment (page7.js) for the full rationale.
-  if (currentPage === 8 && page === 7 && typeof p8CurrentT === "function" && p8CurrentT() > 0) {
+  if (currentPage === 9 && page === 8 && typeof p8CurrentT === "function" && p8CurrentT() > 0) {
     const W = canvas.clientWidth, H = canvas.clientHeight;
     // Same back-dating as the forward handoff above, mirrored: this direction
     // runs t: p8CurrentT() -> 0 and its target IS the timeline layout, so the
@@ -85,10 +85,10 @@ function setActivePage(page) {
   // whatever incidental draw() calls scroll/hover happened to trigger, i.e.
   // it would stall the instant the user stopped scrolling and lurch forward
   // again on the next unrelated redraw, instead of playing smoothly.
-  if (currentPage === 9 && p9.anim) p9RunAnimLoop();
+  if (currentPage === 10 && p9.anim) p9RunAnimLoop();
 
   // Same reasoning, for p7EntryAnim's own continuous loop.
-  if (currentPage === 7 && p7EntryAnim) p7StartAnimLoop();
+  if (currentPage === 8 && p7EntryAnim) p7StartAnimLoop();
 }
 
 const sectionObserver = new IntersectionObserver(entries => {

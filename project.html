@@ -15,7 +15,7 @@
     <div class="graphic-col">
       <canvas id="canvas"></canvas>
       <!-- Single persistent overlay for the 6 camp groups from @fold2's
-           two-camp columns through @fold5's mini-legend glide — one set of
+           two-camp columns through @fold6's mini-legend glide — one set of
            DOM nodes that's continuously repositioned/restyled as the user
            scrolls, rather than separate per-fold overlays crossfading into
            each other (see GROUPS in js/groups.js, updateGroups in js/update-groups.js). -->
@@ -36,12 +36,12 @@
          child, NOT nested in .graphic-col: that column is its own stacking
          context (position:fixed + z-index:0), which traps any z-index inside
          it below .text-col's full-viewport sections — on mobile that made the
-         docked frame untappable, every touch landing on section#page-7. -->
+         docked frame untappable, every touch landing on section#page-8. -->
     <div class="page9-tooltip" id="page9Tooltip" aria-hidden="true">
       <div class="page9-tooltip-date"></div>
       <div class="page9-tooltip-desc"></div>
     </div>
-    <!-- Hover tooltip for a category pill in page-9's tray (#page9ZoneBelow
+    <!-- Hover tooltip for a category pill in page-10's tray (#page9ZoneBelow
          only — see p9CategoryTooltipInit in page9.js). Same reasoning as
          #page9Tooltip above: a direct .layout child, not nested in
          .graphic-col, so its z-index actually stacks above .text-col's tray/
@@ -95,26 +95,31 @@
       </section>
       <section class="text-section" data-page="4" id="page-4">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">אספנו תיעודים של פעולות פוליטיות משני צדי המפה, מתחילת 2023 ועד היום. הנתונים לקוחים מגוף המחקר הבינלאומי <span class="latin-acronym">ACLED</span>, המתעד וממפה אירועי מחאה ואלימות פוליטית על בסיס דיווחים מכלי תקשורת ומקורות מקומיים.</h2>
+          <h2 class="section-title text-card-frame">אספנו תיעודים של פעולות פוליטיות משני צדי המפה, מתחילת 2023 ועד היום.</h2>
         </div>
       </section>
       <section class="text-section" data-page="5" id="page-5">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">כל ריבוע מייצג פעולה פוליטית בשטח - כזו שהתרחשה ותועדה במרחב הציבורי.</h2>
+          <h2 class="section-title text-card-frame">הנתונים לקוחים מגוף המחקר הבינלאומי <a class="latin-acronym card-link" href="https://acleddata.com/" target="_blank" rel="noopener">ACLED</a>, המתעד וממפה אירועי מחאה ואלימות פוליטית על בסיס דיווחים מכלי תקשורת ומקורות מקומיים.</h2>
         </div>
       </section>
       <section class="text-section" data-page="6" id="page-6">
         <div class="section-text text-card">
+          <h2 class="section-title text-card-frame">כל ריבוע מייצג פעולה פוליטית בשטח - כזו שהתרחשה ותועדה במרחב הציבורי.</h2>
+        </div>
+      </section>
+      <section class="text-section" data-page="7" id="page-7">
+        <div class="section-text text-card">
           <h2 class="section-title text-card-frame">צבע הריבוע מציין את הקבוצה שביצעה את הפעולה.</h2>
         </div>
       </section>
-      <section class="text-section page7-scrub" data-page="7" id="page-7"></section>
-      <section class="text-section" data-page="8" id="page-8">
+      <section class="text-section page7-scrub" data-page="8" id="page-8"></section>
+      <section class="text-section" data-page="9" id="page-9">
         <div class="section-text text-card">
           <h2 class="section-title text-card-frame">פעולות פוליטיות נבדלות זו מזו במטרה, באמצעים ובאופן הפעולה. אבל הגבול בין פעולה לגיטימית לפעולה קיצונית אינו תמיד מוסכם.</h2>
         </div>
       </section>
-      <section class="text-section page9-panel" data-page="9" id="page-9">
+      <section class="text-section page9-panel" data-page="10" id="page-10">
         <div class="page9-title-row">
           <div class="section-text text-card">
             <h2 class="section-title text-card-frame">איפה עובר הגבול בעיניכם?</h2>
@@ -133,7 +138,7 @@
           </div>
         </div>
       </section>
-      <section class="text-section" data-page="10" id="page-10">
+      <section class="text-section" data-page="11" id="page-11">
         <div class="page12-sticky-center">
           <div class="section-text text-card">
             <div class="text-card-frame page12-card">

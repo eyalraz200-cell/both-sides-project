@@ -1,5 +1,5 @@
 // _debug-glide-perf.js — TEMPORARY instrumentation, never ships.
-// Measures where frame time goes during @fold9's bridge glide (p8CurrentT
+// Measures where frame time goes during @fold10's bridge glide (p8CurrentT
 // mid-flight) so the "dots stutter while scrolling" report can be attributed
 // instead of guessed at. Wraps the per-scroll-tick handlers + updateGroups +
 // draw with self-time accounting, samples rAF frame deltas for the whole

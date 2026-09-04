@@ -68,7 +68,7 @@ numbers in the source.
 
 ## Currently in the repo
 
-`_debug-glide-perf.js` — `@fold9` glide-stutter attribution. `project.html` loads it last.
+`_debug-glide-perf.js` — `@fold10` glide-stutter attribution. `project.html` loads it last.
 Delete the file **and** its `<script>` tag when it is no longer wanted.
 
 *(`_debug-fold-badge.js`, the ≤600px chip printing the active `@foldN`, and
@@ -80,7 +80,7 @@ work was done.)*
 The tuning harnesses that existed are gone; what's worth keeping is what each one *baked into*, so a rebuilt
 version knows where its numbers land:
 
-- **@fold8/@fold10 loupe marker** (`compare/`: crosshair vs halo-by-subtraction vs
+- **@fold9/@fold11 loupe marker** (`compare/`: crosshair vs halo-by-subtraction vs
   grow-the-selection) — halo won, and it moved out of the loupe onto the main canvas:
   `P7_INSPECT_SCRIM` / `P7_INSPECT_HOLE_DOTS` + `p7DrawInspectScrim` in `page7.js`.
 - **@fold2 dot colours/positions** — group colours → `GROUPS[].color` **plus** the
@@ -94,7 +94,7 @@ version knows where its numbers land:
   decorative rows are skipped and rejoin the palette), and palette dedup being **one
   shared `claimed` set**, not one per column — otherwise an arranged colour carried across
   columns gets dealt twice.
-- **@fold10 row picking** — not a tuning harness: it collected `rowId`s off the page to
+- **@fold11 row picking** — not a tuning harness: it collected `rowId`s off the page to
   paste back into `full_v3.xlsx`. Its two reusable tricks: hit-test by coordinate against
   `p9.lastPositions` on `window` listeners (both dot layers are `pointer-events: none`),
   and overdraw by **wrapping the global `draw`**, which is a writable property of

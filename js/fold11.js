@@ -1,8 +1,8 @@
-// ── @fold11 animations ───────────────────────────────────────────────────────
-// Two independently-driven progress values, per explicit feedback: @fold10
+// ── @fold12 animations ───────────────────────────────────────────────────────
+// Two independently-driven progress values, per explicit feedback: @fold11
 // is "in position" the instant its interaction state is reached (the gate
 // line) — from there, scrolling in *either* direction must visibly move
-// @fold10's own panel/frame and @fold11's title with no dead scroll space,
+// @fold11's own panel/frame and @fold12's title with no dead scroll space,
 // but the *extreme dots'* spread into freeform must still only play once the
 // title fully stops at the top, as a proper animated flourish rather than
 // something scroll-scrubbed.
@@ -44,7 +44,7 @@ function updateFold13() {
 
   // When fully reversed (eScroll=0) clear inline opacity so CSS class rules
   // (engaged, is-active, etc.) take over — inline "1" would otherwise
-  // override them and freeze elements in their @fold11 state.
+  // override them and freeze elements in their @fold12 state.
   const opacityVal = eScroll > 0 ? String(1 - eScroll) : '';
   // The tray (the pills' frame) fades out in place with everything else —
   // it used to slide off (up on mobile/V2, down in the old bottom-sheet
@@ -59,7 +59,7 @@ function updateFold13() {
   groupsOverlayEl.style.opacity = opacityVal;
   // fold6NoteLayerEl (the ACLED source-credit note) lives outside
   // groupsOverlayEl now (see project.html) so it needs the same fade
-  // explicitly — otherwise it stays visible through @fold11 while the rest
+  // explicitly — otherwise it stays visible through @fold12 while the rest
   // of the legend fades out.
   fold6NoteLayerEl.style.opacity = opacityVal;
   // Same for the mobile מקרא bar: it is the legend's *control* on a phone, in
@@ -68,7 +68,7 @@ function updateFold13() {
   // Fading the whole layer takes the panel with it if it happens to be open.
   if (fold6MobileLegendLayerEl) fold6MobileLegendLayerEl.style.opacity = opacityVal;
   // The shared #page9Tooltip too — on mobile it's the docked event frame,
-  // which sat fully visible through @fold11 while everything around it faded.
+  // which sat fully visible through @fold12 while everything around it faded.
   // Inline opacity only (the base rule has no opacity transition), cleared at
   // eScroll=0 like the rest so its normal show/hide styling takes back over.
   if (fold8TooltipEl) fold8TooltipEl.style.opacity = opacityVal;
@@ -77,20 +77,20 @@ function updateFold13() {
   // above to fade a still-legit square out with the rest of the legit grid —
   // without this call it would only pick that up next time something else
   // happens to invoke updateGroups (e.g. a fold9 trigger tick), not on every
-  // fold13ScrollT-driven scroll tick like every other @fold11 element here.
+  // fold13ScrollT-driven scroll tick like every other @fold12 element here.
   updateGroups();
   draw();
 }
 
-// Fraction of the way through @fold10's unavoidable one-viewport hand-off to
-// @fold11 (the gate can't unlock any later than one viewport before #page-10
+// Fraction of the way through @fold11's unavoidable one-viewport hand-off to
+// @fold12 (the gate can't unlock any later than one viewport before #page-11
 // arrives, and the sticky wrapper needs that same one viewport of scroll to
-// finish pinning — see p13GateMax and #page-10's own min-height comment in
+// finish pinning — see p13GateMax and #page-11's own min-height comment in
 // style.css) — 0 at the gate line, 1 once fully arrived. A plain scroll
 // readout, not a makeTrigger, since this half must move continuously with
 // scroll in both directions rather than play out over fixed real time.
 function fold13ScrollT() {
-  const page12 = document.getElementById("page-10");
+  const page12 = document.getElementById("page-11");
   if (!page12) return 0;
   const start = p13GateMax();
   const end   = page12.offsetTop;
@@ -98,21 +98,21 @@ function fold13ScrollT() {
   return Math.max(0, Math.min(1, (window.scrollY - start) / (end - start)));
 }
 
-// ── @fold11 scroll gate ──────────────────────────────────────────────────────
-// #page-10 is locked until at least one @dragcard has been dropped into the
+// ── @fold12 scroll gate ──────────────────────────────────────────────────────
+// #page-11 is locked until at least one @dragcard has been dropped into the
 // extreme zone. p9.sides (page9.js) is the source of truth.
 function p13GateLocked() {
   return !p9.sides.some(s => s === "above");
 }
 
-// The gate position: keep #page-10's top at the viewport bottom (scrollY max =
-// gateEl.offsetTop - innerHeight). Beyond this, #page-10 enters the viewport.
+// The gate position: keep #page-11's top at the viewport bottom (scrollY max =
+// gateEl.offsetTop - innerHeight). Beyond this, #page-11 enters the viewport.
 function p13GateMax() {
-  const gateEl = document.getElementById("page-10");
+  const gateEl = document.getElementById("page-11");
   return gateEl ? gateEl.offsetTop - window.innerHeight : Infinity;
 }
 
-// #page-10's title sits in a position:sticky wrapper, so the *instant* real
+// #page-11's title sits in a position:sticky wrapper, so the *instant* real
 // scrollY crosses the gate — even for a single momentum-phase wheel tick that
 // ignores preventDefault (some browsers mark those non-cancelable, so the
 // wheel handler below can't stop them) — it genuinely pins into view for at
@@ -130,7 +130,7 @@ p13SyncGateVisibility();
 // Desktop: block downward mouse-wheel past the gate. Must also catch the
 // single wheel tick that *crosses* the gate, not just ticks that land on/past
 // it — checking only `scrollY >= max` let one large-delta tick scroll clean
-// past the threshold (revealing #page-10's title for a frame until the
+// past the threshold (revealing #page-11's title for a frame until the
 // scroll-event safety net below caught up), instead of ever actually stopping
 // right at the line.
 window.addEventListener("wheel", (e) => {
@@ -170,7 +170,7 @@ window.addEventListener("touchmove", (e) => {
 // wheel events that ignore preventDefault, scrollbar drags, etc). Corrects
 // synchronously in the scroll handler itself rather than deferring to the next
 // requestAnimationFrame — that extra frame of delay is exactly the window
-// during which #page-10's title was visibly peeking up before snapping back.
+// during which #page-11's title was visibly peeking up before snapping back.
 window.addEventListener("scroll", () => {
   if (!p13GateLocked()) return;
   const max = p13GateMax();
@@ -179,13 +179,13 @@ window.addEventListener("scroll", () => {
   }
 }, { passive: true });
 
-// Freeze the page9 sticky panel in place while scrolled into @fold11 — once
-// the user passes #page-10's scroll context, position:sticky releases and the
+// Freeze the page9 sticky panel in place while scrolled into @fold12 — once
+// the user passes #page-11's scroll context, position:sticky releases and the
 // panel would drift off. Switching to position:fixed keeps it locked at top:0.
-// The sticky element unpins at scrollY = #page-10.offsetTop - window.innerHeight
-// (one full viewport before #page-10 starts), so freeze at that same threshold,
-// not at #page-10.offsetTop itself (that would be too late by a full vh).
-const p13GateEl = document.getElementById("page-10");
+// The sticky element unpins at scrollY = #page-11.offsetTop - window.innerHeight
+// (one full viewport before #page-11 starts), so freeze at that same threshold,
+// not at #page-11.offsetTop itself (that would be too late by a full vh).
+const p13GateEl = document.getElementById("page-11");
 window.addEventListener("scroll", () => {
   if (!p13GateEl) return;
   page9StickyEl.classList.toggle("frozen", window.scrollY >= p13GateEl.offsetTop - window.innerHeight);

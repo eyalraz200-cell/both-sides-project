@@ -1,4 +1,4 @@
-# Drag-and-drop categorization — `@fold10` (`#page-9`, `page9.js`)
+# Drag-and-drop categorization — `@fold11` (`#page-10`, `page9.js`)
 
 "איפה עובר הגבול בעיניכם?" — the reader drags category pills into an "extreme" zone and
 the matching event dots migrate above the divider line.
@@ -10,7 +10,7 @@ the matching event dots migrate above the divider line.
 
 ## Layout
 
-`<section class="text-section page9-panel" data-page="9" id="page-9">`, `min-height: 200vh`
+`<section class="text-section page9-panel" data-page="10" id="page-10">`, `min-height: 200vh`
 = 100vh scrolling title row + 100vh sticky panel.
 
 - `.page9-title-row` — the normal scrolling title card plus `.page9-header-subtitle`
@@ -36,7 +36,7 @@ the matching event dots migrate above the divider line.
   `.engaged` over `0.85s cubic-bezier(0.22, 1, 0.36, 1)`. Holds `.page9-tray-title`
   ("סוגי פעולות") and `#page9ZoneBelow`, whose two `.page9-tray-row` grids are built in
   JS. On mobile it is instead a **band at `top: 108px`**, under the title card and above the
-  docked tooltip frame (which has already dropped clear of it back at @fold9's title crossing,
+  docked tooltip frame (which has already dropped clear of it back at @fold10's title crossing,
   `p9TooltipDropTrigger`), sliding in from *above*, with `.page9-tray-title` hidden and a rule on
   its bottom edge only; the two wrappers are `display: contents` and
   `#page9ZoneBelow` is one `nowrap`, horizontally-scrolling flex row of all 10 pills, one pill
@@ -77,7 +77,7 @@ or `"below"` (legit). `p9.sides` starts all `"below"`. An unknown category yield
 
 > Renaming a pill in `P9_CATEGORIES` must also update `FOLD6_SQUARE_LABELS` in `js/groups.js`.
 
-`page12.js` reads the same lookup to decide which events join @fold11's freeform
+`page12.js` reads the same lookup to decide which events join @fold12's freeform
 spread (`p12EnsureFreeformTargets` keeps only events whose category is `"above"`).
 Its old name `CATEGORY_EN_TO_IDX` is gone — a stale reference there throws a
 `ReferenceError` inside `drawPage12` and the extreme dots silently never spread.
@@ -214,18 +214,18 @@ left the numbers on screen ~4 s past the drop.
 Scroll-driven reset/restore (`p9ResetDrops` / `p9RestoreDrops`, driven from
 `page9UpdateFromScroll` with `page9SavedAboveIdxs`) both seed a plain 3000 ms glide.
 
-**Scrolling into @fold11 does not freeze a running migration.** Every page9 animation
+**Scrolling into @fold12 does not freeze a running migration.** Every page9 animation
 loop (`p9RunAnimLoop`, `p9LineRunLoop`, both count loops, the count-position animator)
 paints while `p9PageVisible()` — currentPage 9 **or** 10 — because `drawPage12` renders
-through `drawPage9`, so a mid-flight drop keeps flying and finishes on @fold11's canvas.
-If @fold11's title block reaches the top mid-flight, `fold13Trigger`'s morph wins
+through `drawPage9`, so a mid-flight drop keeps flying and finishes on @fold12's canvas.
+If @fold12's title block reaches the top mid-flight, `fold13Trigger`'s morph wins
 regardless: `updateFold13` snapshots the live `p9.lastPositions` (mid-flight spots) as
 the scatter's start, and `drawBandedCols` stops painting the clustered/flying extreme
 dots the moment `fold13ExtremeMorphT > 0`, so the dots scatter from wherever they were.
 
 ## Hover
 
-**Dot hover** (`p9HoverInit`): bails when `currentPage !== 9` or an animation is running;
+**Dot hover** (`p9HoverInit`): bails when `currentPage !== 10` or an animation is running;
 brute-force scans `p9.lastPositions` with `HIT_PAD` 3 and **skips any dot at or below
 `p9.midY`** — legit dots are not hoverable. A hit highlights the matching dropped pill
 (`.is-hover-highlighted`) and shows `#page9Tooltip` with the date, `descHeMedium`, and
@@ -250,7 +250,7 @@ hoverDimT` over `HOVER_DIM_MS` 80 with no easing curve at all — at `hoverDimT 
 hover kinds dim identically. `p9HoverDimAnimate` also calls `updateGroups()` so the fold-6
 squares dim in step (their parity branch in `js/update-groups.js` mirrors the same formula).
 A fold-6 DOM square whose event's category is currently classified extreme is hidden
-outright on this fold (`opacity = 0` in that same branch, `currentPage >= 9`, also while any
+outright on this fold (`opacity = 0` in that same branch, `currentPage >= 10`, also while any
 `p9.anim` runs) — the square only ever blends to its `p9LegitPosOf` band spot, so when its
 canvas twin flies to the extreme column it otherwise stays parked on the band as one
 permanently-bright dot (exempt from both the pill-hover dim and fold13's legit fade). The
@@ -506,14 +506,14 @@ again, for its own hit area) carry `-webkit-touch-callout: none` +
 half** — iOS WebKit ignores the unprefixed property alone, so a press-and-hold on a pill
 used to raise selection handles and the Copy bar *over* the drag. Nothing in the tray is
 reading material; the title card lives in `.text-col`, outside it, and stays selectable.
-This is the same suppression the graphic column carries for @fold8's loupe.
+This is the same suppression the graphic column carries for @fold9's loupe.
 
 - `p9Metrics()` → `{ SQ: 1, CELL: 2, legitCell: 1.5, legitSq: 1 }` with the spread flag on
   (bar mode: `legitCell`/`legitSq` both `LEGIT_CELL_M` 1; desktop `{3, 4, LEGIT_CELL, 3}`).
   `legitSq` is the legit grid's own dot size — `drawJumbledBot` passes it through
   `p9PlaceDot`'s `sizeOverride`, and page8's glide lands its dots on it.
 - `p9ExtremeTopY(H)` → `p9DockTopM() + P9_TOOLTIP_COLLAPSED_H (100) + P9_TOOLTIP_GRID_GAP_M (20) + P9_COUNT_LABEL_ROOM_M (35)`,
-  trailing the docked tooltip frame in its dropped-for-@fold10 spot. The frame's expanded
+  trailing the docked tooltip frame in its dropped-for-@fold11 spot. The frame's expanded
   state overlays this grid rather than moving it (hence the *collapsed* height) — see
   [Timeline](Timeline.md).
 - `p9DockTopM()` → `P9_TRAY_TOP_M (104) + p9TrayH() + P9_TRAY_TOOLTIP_GAP_M (20)` — where the
@@ -628,9 +628,9 @@ the fold9 square lerp, fold11's outro) keeps calling the same two functions.
   only ever runs while `p9.anim` is live, where motion masks it; `p9RunAnimLoop` nulls
   `p9.anim` on completion and redraws, so the handoff back to rects is automatic and lands
   on the dots' exact footprint. `drawPage8` calls the same `p9DrawBarRects` once its glide
-  lands (`ease >= 1` in bar mode) — it keeps painting until `@fold10`'s `drawPage9` takes
+  lands (`ease >= 1` in bar mode) — it keeps painting until `@fold11`'s `drawPage9` takes
   over, and its landed per-dot frame would otherwise show the ragged seams again — so the
-  @fold9→@fold10 handoff is pixel-identical.
+  @fold10→@fold11 handoff is pixel-identical.
 - **Shared cells resolve by rank, not by date.** `drawJumbledBot` iterates
   `p9.legitRank[side].keys()` in bar mode instead of the chronological pool array. Whichever
   event draws last owns a shared cell; in pool order that winner was effectively random with
@@ -689,11 +689,11 @@ go through it — querying `#page9ZoneAbove` directly would silently no-op on mo
 The **divider stroke draws on mobile too** (same right-to-left grow-in via
 `p9TriggerLine`/`page9LineT`), sitting at `p9MidY` on the top edge of the legit strip.
 `p9HoverInit` is off; the touch equivalent is the
-same press-and-hold loupe as `@fold8`, generalized from fold-8-only via `p7InspectPage()`
+same press-and-hold loupe as `@fold9`, generalized from fold-8-only via `p7InspectPage()`
 (pages 7 **and** 9) and `p7InspectSource()` (which positions/half-size/`maxY` to read).
 `drawPage9` therefore ends with `p7InspectSync?.()`, and `keepEmptyFrame` in
-`js/update-groups.js` is `currentPage <= 9` so the docked empty tooltip frame carries through
-the bridge fold into `@fold10`.
+`js/update-groups.js` is `currentPage <= 10` so the docked empty tooltip frame carries through
+the bridge fold into `@fold11`.
 
 ## Removed — don't reintroduce
 
