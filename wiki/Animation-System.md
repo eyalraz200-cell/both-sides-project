@@ -105,7 +105,8 @@ Named exceptions, each because the shared tempo read wrong for that specific bea
 | `PAGE0_TITLE_MS` / `PAGE0_POP_MS` / `PAGE0_LOGO_FADE_MS` | 1700 / 280 / 900 | Cover entrance |
 
 **Bigger canvas glides:** `P7_ANIM_TOTAL_DURATION` 2200 (one month's cascade),
-`P7_POP_DURATION` 220 (one square), `P8_TRANSITION_DURATION` 3000 (full blend into
+`P7_POP_DURATION` 220 (one square), `P7_MONTH_CHAIN_MS` 500 (gap between the starts of
+months reached in one tick — see [Timeline](Timeline.md)), `P8_TRANSITION_DURATION` 3000 (full blend into
 page9's grid — forward only; the reverse runs on `P8_REVERSE_DURATION` 700, because it
 fires while the reader is already flicking back up @fold9's scrub and at 3000 ms the
 canvas showed a crushed page9-blend band several folds away), `P9_LINE_DURATION` 800, page9's dot migration (600 ms travel per dot plus
