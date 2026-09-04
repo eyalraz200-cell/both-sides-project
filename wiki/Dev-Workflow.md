@@ -77,9 +77,11 @@ live knobs for `P7_AXIS_CORRIDOR_PX` and the `P7_VERT` tunables (each change rel
 grid). Copy emits mode + line + values. Delete it, its `<script>` tag and the losing
 `eventMode` branch in `page7.js` once the placement is picked.
 
+
 *(`_debug-fold-badge.js`, the ≤600px chip printing the active `@foldN`, and
-`_debug-fold4-handoff.js`, the `@fold4` hand-off compare, were both deleted once their
-work was done.)*
+`_debug-fold4-handoff.js`, the `@fold4` hand-off compare, and `_debug-edge.js`, the `@fold9`
+outer-dot-edge `manual/` slider that picked `SBB_TIMELINE_LEFT_PX`, were all deleted once
+their work was done.)*
 
 ## Previously-built harnesses (all deleted)
 

@@ -22,7 +22,9 @@ mid-animation blends), `hoveredEvent`, `axisEventPositions`, `hoveredAxisEvent`.
 ## The square grid
 
 Geometry comes from `SBB_TIMELINE` in `squareboundingbox.js`
-(`left 0.18, top 0.07, bottom 0.93`) plus the centre gap: `p7CenterGap()` is
+(`top 0.07, bottom 0.93` as fractions of H; the outer x edge is the fixed
+`SBB_TIMELINE_LEFT_PX` = **200px** on desktop, read via `sbbTimelineLeftX(W, H)` and mirrored
+at `W − 200` on the right — an exact px picked by eye, never a fraction of W) plus the centre gap: `p7CenterGap()` is
 `P7_AXIS_CORRIDOR_PX = 64` on desktop (the vertical axis's corridor — line, rings and
 18px year labels) and `CENTER_GAP = 4` on mobile. `SBB` itself belongs to page9, **not**
 here. The right camp's origin is mirrored (`W/2 + gap/2`) inside `p7GridGeometry` — there
@@ -543,7 +545,7 @@ no extra invalidation; desktop rendering is untouched.
 | | Desktop | Mobile | Why |
 |---|---|---|---|
 | Square / gap (pitch) | 3.5 / 1.5 (5) | **solved per viewport**, gap = half the square | See "The solved square size" below |
-| Box `left` | 0.18 | 0.03 | The 0.18 exists only to clear the *left*-pinned desktop legend; on mobile the legend is top-pinned, so this becomes a plain screen-edge inset (≈12px at 393, matching `FOLD6_LEGEND_INSET_MOBILE`) |
+| Box `left` | **200px** (`SBB_TIMELINE_LEFT_PX`) | 0.03 | The desktop px exists only to clear the *left*-pinned desktop legend; on mobile the legend is top-pinned, so this becomes a plain screen-edge inset (≈12px at 393, matching `FOLD6_LEGEND_INSET_MOBILE`) |
 | Box `top` | 0.07 | **180px** (`SBB_TIMELINE_MOBILE_TOP_PX`) | The docked tooltip's bottom edge + `SBB_TIMELINE_MOBILE_GAP_PX` (18): `TOOLTIP_DOCK_TOP_PX` 62 + the frame's fixed 100px collapsed height (the expanded state is deliberately not counted — it overlays the grid). A px clearance, not a fraction — the thing being cleared is fixed-px, so a fraction wasted a band on a tall phone and collided on a short one |
 | Box `bottom` | 0.93 | **axis − 64px** (`SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX`) | `P7_AXIS_Y_FRAC_MOBILE`×H minus the tallest label block that can print above the axis — sized for what really prints: at the 220px wrap all seven titles fit on **one line**, so the block is offset 36 + ~10px cap height = 46 — minus the *same* 18px `SBB_TIMELINE_MOBILE_GAP_PX` used at the top, so the dots clear the labels by exactly as much as they clear the tooltip. Reserving spare lines left every real block floating in a hole; a longer title added later would wrap and eat 18px per extra line out of the gap. Three lines is the worst case |
 | `P7_AXIS_MARGIN` | 120 | 28 | At 120 a 393px screen would leave ~150px of axis; 28 gives ~337px, year ticks ~90px apart |
