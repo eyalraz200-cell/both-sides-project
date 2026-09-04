@@ -236,7 +236,7 @@ const P7_VERT = {
   yearSide:  'center',
   eventSide: 'center',
   dateSide:  'with',   // 'with' = in the title block
-  dateAbove: true,     // the date line sits ABOVE the title (only when dateSide is 'with')
+  dateAbove: false,    // true = the date line sits ABOVE the title; false = under it (and under the bar, see bar.dateBelow) (only when dateSide is 'with')
   sideGap:   8,        // px between the line's marker edge and side-placed text
   // px of breathing room above and below the year digits inside the line's
   // break. The line breaks at every 1 January (and at the top, above the first
@@ -252,11 +252,14 @@ const P7_VERT = {
   // { style, padX, padY, radius, gap (px from the dot's edge to the block),
   //   stem (true = the line stays visible between dot and card; 'bar' always
   //   clears that gap) }.
-  card: { style: 'bar', padX: 10, padY: 0, radius: 0, gap: 6, stem: false },
+  card: { style: 'bar', padX: 10, padY: 0, radius: 0, gap: 4, stem: false },
   // The accent bar under a headline: h px tall, `gap` px below the text's
   // last line, `padX` px wider than the text on each side, `alpha` opacity of
   // `color`, `round` = rounded ends.
-  bar: { h: 2, gap: 0, padX: 10, color: '#000000', alpha: 1, round: false },
+  // `dateBelow` = the bar sits between the title and the date (title, bar,
+  // then the date `dateGap` px under the bar); false = the bar closes the
+  // whole block under the date.
+  bar: { h: 1.5, gap: 1, padX: 6, color: '#000000', alpha: 1, round: true, dateBelow: true, dateGap: 3 },
   // Which headlines hang UNDER their dot by default: the first one only; every
   // later headline sits ABOVE its dot (the year dodge can still flip either).
   firstOnlyBelow: true,
@@ -2520,7 +2523,11 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     const card = !onSide && P7_VERT.card ? P7_VERT.card : null;
     const cpx = card ? Math.max(card.padX, card.style === 'bar' ? P7_VERT.bar.padX : 0) : 0, cpy = card ? card.padY : 0;
     const barExtra = card && (card.style === 'bar' || card.style === 'accent') ? P7_VERT.bar.gap + P7_VERT.bar.h : 0;
-    const blockH = lines.length * lh + (split ? 0 : lh) + barExtra;
+    // Bar between title and date: the card (and its bar) covers the title
+    // only; the date hangs `dateGap` px under the bar, punched separately.
+    const dateBelowBar = !!(barExtra && !split && !dateFirst && P7_VERT.bar.dateBelow);
+    const dateGap = dateBelowBar ? P7_VERT.bar.dateGap : 0;
+    const blockH = lines.length * lh + (split ? 0 : lh) + barExtra + dateGap;
     // The block always hangs UNDER the dot (the dot is always above its text).
     // If it would run into a year ring or its label, it is pushed down to just
     // past that label instead.
@@ -2556,7 +2563,12 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
         const b = flipped ? evY[i] - P7_AXIS_MARKER_RADIUS : y0;
         ctx.fillRect(axisX - 2, Math.min(a, b), 4, Math.abs(b - a));
       }
-      p7DrawHeadlineCard(ctx, card, axisX - tw / 2 - cpx, y0 - cpy, tw + cpx * 2, blockH + cpy * 2);
+      const cardH = dateBelowBar ? lines.length * lh + barExtra : blockH;
+      p7DrawHeadlineCard(ctx, card, axisX - tw / 2 - cpx, y0 - cpy, tw + cpx * 2, cardH + cpy * 2);
+      if (dateBelowBar) {
+        ctx.fillStyle = "#FDFCFF";
+        ctx.fillRect(axisX - tw / 2 - 4, y0 + cardH + cpy, tw + 8, blockH - cardH + 2);
+      }
     } else if (flipped) {
       // Above the dot: punch from the block's top edge down to the dot's edge.
       ctx.fillRect(axisX - tw / 2 - 4, y0 - 2, tw + 8, evY[i] - P7_AXIS_MARKER_RADIUS - y0 + 2);
@@ -2576,7 +2588,7 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     ctx.font = p7AxisDateFont();
     ctx.fillStyle = (hoverActive && !isHoverHighlighted) ? `rgba(0, 0, 0, ${P7_AXIS_ROSTER_LABEL_ALPHA})` : P7_AXIS_LABEL_COLOR;
     if (!split) {
-      ctx.fillText(dateLabel, tx, dateFirst ? y0 : y0 + lines.length * lh);
+      ctx.fillText(dateLabel, tx, dateFirst ? y0 : y0 + lines.length * lh + (dateBelowBar ? barExtra + dateGap : 0));
     } else {
       // Split date: its own side, centred on the dot, dodging same-side year labels.
       const dOn  = dateSide !== 'center';
