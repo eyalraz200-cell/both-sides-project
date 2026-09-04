@@ -258,7 +258,7 @@ const P7_VERT = {
   //   the card sits `gap` past the dot's edge; 'center' = the card's
   //   dot-facing edge runs through the dot's centre and the dot is redrawn
   //   on top of it).
-  card: { style: 'outline', fill: '#f5f5f5', stroke: 'rgba(0, 0, 0, 0.3)', strokeWidth: 1, padX: 16, padTop: 6, padBottom: 6, radius: 4, radiusBottom: 0,
+  card: { style: 'outline', fill: '#FDFCFF', stroke: 'rgba(0, 0, 0, 0.3)', strokeWidth: 1, padX: 16, padTop: 6, padBottom: 6, radius: 4, radiusBottom: 0,
           gap: 0, stem: false, bar: true, anchor: 'center' },
   // The accent bar under a headline: h px tall, `gap` px below the text's
   // last line, `padX` px wider than the text on each side, `alpha` opacity of
@@ -2483,14 +2483,11 @@ function p7DrawHeadlineCard(ctx, card, x, y, w, h) {
   if (card.style === 'bar') {
     // No card: bare punched text with the accent bar under it.
     ctx.fillStyle = '#FDFCFF'; ctx.fillRect(x, y, w, h);
-  } else if (card.style === 'shadow') {
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.14)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 3;
-    ctx.fillStyle = '#FDFCFF'; path(); ctx.fill();
-    ctx.shadowColor = 'transparent';
-  } else if (card.style === 'fill') {
-    ctx.fillStyle = card.fill || '#F1F0F5'; path(); ctx.fill();
   } else {
-    ctx.fillStyle = '#FDFCFF'; path(); ctx.fill();
+    // Every card style paints card.fill; 'shadow' adds the drop shadow.
+    if (card.style === 'shadow') { ctx.shadowColor = 'rgba(0, 0, 0, 0.14)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 3; }
+    ctx.fillStyle = card.fill || '#FDFCFF'; path(); ctx.fill();
+    ctx.shadowColor = 'transparent';
   }
   if (card.style === 'outline' || card.style === 'dashed' || card.style === 'accent') {
     ctx.lineWidth = card.strokeWidth || 1;
