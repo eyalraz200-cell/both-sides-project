@@ -236,7 +236,7 @@ const P7_VERT = {
   yearSide:  'center',
   eventSide: 'center',
   dateSide:  'with',   // 'with' = in the title block
-  dateAbove: false,    // true = the date line sits ABOVE the title; false = under it (and under the bar, see bar.dateBelow) (only when dateSide is 'with')
+  dateAbove: false,    // compare/ candidate: true = the date line sits ABOVE the title; false = under it (and under the bar, see bar.dateBelow) (only when dateSide is 'with')
   sideGap:   8,        // px between the line's marker edge and side-placed text
   // px of breathing room above and below the year digits inside the line's
   // break. The line breaks at every 1 January (and at the top, above the first
@@ -259,7 +259,15 @@ const P7_VERT = {
   // `dateBelow` = the bar sits between the title and the date (title, bar,
   // then the date `dateGap` px under the bar); false = the bar closes the
   // whole block under the date.
-  bar: { h: 1.5, gap: 1, padX: 6, color: '#000000', alpha: 1, round: true, dateBelow: true, dateGap: 3 },
+  bar: { h: 1.5, gap: 1, padX: 6, color: '#000000', alpha: 1, round: true, dateBelow: false, dateGap: 3 },
+  // Type of the centred headline block (desktop only — the mobile axis keeps
+  // the P7_AXIS_*_FONT constants). `lh` = line height of each face's lines;
+  // `color` may carry alpha. `gap` = extra px between the title and the date.
+  type: {
+    title: { size: 14, weight: 500, lh: 19, color: 'rgba(0, 0, 0, 1)' },
+    date:  { size: 14, weight: 400, lh: 19, color: 'rgba(0, 0, 0, 0.65)' },
+    gap: 0,
+  },
   // Which headlines hang UNDER their dot by default: the first one only; every
   // later headline sits ABOVE its dot (the year dodge can still flip either).
   firstOnlyBelow: true,
@@ -1638,6 +1646,8 @@ const P7_AXIS_EVENT_LINE_HEIGHT_MOBILE  = 18;
 const P7_AXIS_EVENT_MAXWIDTH_MOBILE     = 220;
 
 function p7AxisEventFont()       { return isMobile() ? P7_AXIS_EVENT_FONT_MOBILE : P7_AXIS_EVENT_FONT; }
+// The vertical (desktop) headline faces come from P7_VERT.type instead.
+function p7VertFont(t)           { return `${t.weight} ${t.size}px 'Assistant', sans-serif`; }
 function p7AxisDateFont()        { return isMobile() ? P7_AXIS_DATE_FONT_MOBILE  : P7_AXIS_DATE_FONT; }
 function p7AxisEventLabelOffset(){ return isMobile() ? P7_AXIS_EVENT_LABEL_OFFSET_MOBILE : P7_AXIS_EVENT_LABEL_OFFSET; }
 function p7AxisDateOffset()      { return isMobile() ? P7_AXIS_DATE_OFFSET_MOBILE : P7_AXIS_DATE_OFFSET; }
@@ -2503,13 +2513,14 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     const rosterOn = st.triggeredAt !== null && st.leavingAt === null;
     const opacity = Math.max(p7AxisEventOpacity(i, now), st.hoverT, rosterOn ? p7AxisRosterT : 0);
     if (opacity <= 0) return;
-    ctx.font = p7AxisEventFont();
+    const TY = P7_VERT.type;
+    ctx.font = p7VertFont(TY.title);
     const lines = p7WrapLabel(ctx, ev.label, maxWidth);
-    const lh = p7AxisEventLineHeight();
+    const lh = TY.title.lh, dlh = TY.date.lh;
     const dateLabel = p7FormatDateDMY(ev.date, ".");
     let tw = 0;
     lines.forEach(t => { tw = Math.max(tw, ctx.measureText(t).width); });
-    ctx.font = p7AxisDateFont();
+    ctx.font = p7VertFont(TY.date);
     tw = Math.max(tw, ctx.measureText(dateLabel).width);
     // The date can sit on its own side of the line (split): then the title
     // block loses its date line and the date is drawn beside the dot alone.
@@ -2527,7 +2538,7 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     // only; the date hangs `dateGap` px under the bar, punched separately.
     const dateBelowBar = !!(barExtra && !split && !dateFirst && P7_VERT.bar.dateBelow);
     const dateGap = dateBelowBar ? P7_VERT.bar.dateGap : 0;
-    const blockH = lines.length * lh + (split ? 0 : lh) + barExtra + dateGap;
+    const blockH = lines.length * lh + (split ? 0 : dlh + TY.gap) + barExtra + dateGap;
     // The block always hangs UNDER the dot (the dot is always above its text).
     // If it would run into a year ring or its label, it is pushed down to just
     // past that label instead.
@@ -2579,16 +2590,17 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
       ctx.fillRect(axisX - tw / 2 - 4, punchTop, tw + 8, y0 + blockH - punchTop);
     }
     ctx.textAlign = onSide ? (evDirI > 0 ? "left" : "right") : "center";
-    const titleY0 = y0 + (dateFirst ? lh : 0);
+    const titleY0 = y0 + (dateFirst ? dlh + TY.gap : 0);
     const isHoverHighlighted = hoverActive && highlightY !== null && Math.abs(evY[i] - highlightY) < 0.5;
     const labelAlpha = (hoverActive && !isHoverHighlighted) ? P7_AXIS_ROSTER_LABEL_ALPHA : 1;
-    ctx.font = p7AxisEventFont();
-    ctx.fillStyle = `rgba(0, 0, 0, ${labelAlpha})`;
+    const dimmed = hoverActive && !isHoverHighlighted;
+    ctx.font = p7VertFont(TY.title);
+    ctx.fillStyle = dimmed ? `rgba(0, 0, 0, ${labelAlpha})` : TY.title.color;
     lines.forEach((text, li) => ctx.fillText(text, tx, titleY0 + li * lh));
-    ctx.font = p7AxisDateFont();
-    ctx.fillStyle = (hoverActive && !isHoverHighlighted) ? `rgba(0, 0, 0, ${P7_AXIS_ROSTER_LABEL_ALPHA})` : P7_AXIS_LABEL_COLOR;
+    ctx.font = p7VertFont(TY.date);
+    ctx.fillStyle = dimmed ? `rgba(0, 0, 0, ${P7_AXIS_ROSTER_LABEL_ALPHA})` : TY.date.color;
     if (!split) {
-      ctx.fillText(dateLabel, tx, dateFirst ? y0 : y0 + lines.length * lh + (dateBelowBar ? barExtra + dateGap : 0));
+      ctx.fillText(dateLabel, tx, dateFirst ? y0 : y0 + lines.length * lh + TY.gap + (dateBelowBar ? barExtra + dateGap : 0));
     } else {
       // Split date: its own side, centred on the dot, dodging same-side year labels.
       const dOn  = dateSide !== 'center';
