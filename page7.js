@@ -220,16 +220,67 @@ const P7_VERT = {
   eventMode:  "widen", // picked 2026-09-04 (harness deleted; band code kept, unused)
   eventLine:  false,
   bandPx:     60,    // band mode: height reserved per headline (title line(s) + date)
-  wideCorridorPx: 180, // widen mode: the corridor, full height
+  wideCorridorPx: 200, // widen mode: the corridor, full height
   fillRatio:  1,     // no permanent gaps — picked 2026-09-04
   // What one grid row stands for: a fixed span of this many days, counted
   // from minDate — picked 2026-09-04 (8 days: 160 rows fit the box at 3.3px;
   // one-week rows needed 183 and shrank the square to 2.9px). A day with more
   // events than its row holds spills DOWN into the next row, never up.
   daysPerRow: 8,
+  // Where the year digits and the headline blocks sit relative to the axis
+  // line — picked 2026-09-04 (compare/ "version 1", everything centred on the
+  // line). The alternatives are kept as live code paths for a later compare:
+  // yearSide / eventSide 'left' | 'right' = beside the line, text aligned
+  // toward it; eventSide 'alternate' = flips per event; dateSide 'left' |
+  // 'right' = the date on its own side of the line.
+  yearSide:  'center',
+  eventSide: 'center',
+  dateSide:  'with',   // 'with' = in the title block
+  dateAbove: true,     // the date line sits ABOVE the title (only when dateSide is 'with')
+  sideGap:   8,        // px between the line's marker edge and side-placed text
+  // px reserved OUTSIDE the time count for each year marker: the line breaks
+  // at every 1 January (and above the first year), the digits sit in the
+  // break and the segment between two breaks is exactly one year. 4px rounds
+  // up to one empty row — a hairline break, not a slot the digits fit in;
+  // the digits' punch covers the line ends. 0 = continuous line.
+  yearSlotPx: 4,
+  yearRing:   false,   // no ring on the line — the digits alone mark the year
 };
-// Rows the fixed-span layout needs (ignores `rows`, the viewport's count).
-function p7VertFixedRows(nDays) { return Math.ceil(nDays / P7_VERT.daysPerRow); }
+// The row plan of the fixed-span layout: every P7_VERT.daysPerRow days take
+// one row, counted afresh from each 1 January; with yearSlotPx > 0 a slot of
+// `slotRows` empty rows precedes each year (the first one included). Shared by
+// the solver (row count) and the layout builder (row of each day).
+function p7VertRowPlan(CELL) {
+  const minMs = p7DayMs(p7.minDate), maxMs = p7DayMs(p7.maxDate);
+  const nDays = Math.max(1, Math.round((maxMs - minMs) / 86400000) + 1);
+  const dpr   = P7_VERT.daysPerRow;
+  const slotRows = P7_VERT.yearSlotPx > 0 ? Math.ceil(P7_VERT.yearSlotPx / CELL) : 0;
+  const rowStart = new Float64Array(nDays + 1);
+  const rowsOf   = new Float64Array(nDays);
+  const slots = [];            // {start, end, year} in rows — the year markers' homes
+  const yearRow = new Map();   // year -> the row (fractional) its ring sits on
+  let cursor = 0, segDay = 0, segStart = 0;
+  for (let d = 0; d < nDays; d++) {
+    const date = new Date(minMs + d * 86400000);
+    const jan1 = date.getUTCMonth() === 0 && date.getUTCDate() === 1;
+    if (d === 0 || jan1) {
+      if (d > 0) cursor = segStart + Math.ceil((segDay) / dpr);
+      const year = date.getUTCFullYear();
+      if (slotRows > 0) {
+        slots.push({ start: cursor, end: cursor + slotRows, year });
+        yearRow.set(year, cursor + slotRows / 2);
+        cursor += slotRows;
+      }
+      segStart = cursor; segDay = 0;
+    }
+    rowStart[d] = segStart + Math.floor(segDay / dpr) + (segDay % dpr) / dpr;
+    rowsOf[d]   = 1 / dpr;
+    segDay++;
+  }
+  const totalRows = Math.ceil(rowStart[nDays - 1] + rowsOf[nDays - 1]);
+  rowStart[nDays] = totalRows;
+  return { nDays, minMs, maxMs, rowStart, rowsOf, slots, slotRows, yearRow, totalRows };
+}
 // Vertical layout result (p7.vert) — null on mobile / before layout.
 function p7DayMs(dateStr) { return new Date(dateStr + "T00:00:00Z").getTime(); }
 
@@ -247,9 +298,8 @@ function p7SolveVerticalSq(sideW, sideH, maxEvents) {
     const cols = Math.floor(sideW / CELL), rows = Math.floor(sideH / CELL);
     const cap  = Math.max(1, Math.floor(cols * P7_VERT.fillRatio));
     const avail = rows - bands * Math.ceil(P7_VERT.bandPx / CELL);
-    // Every fixed-span row must fit the box (the row count is set by the dates).
-    const nDays = Math.round((p7DayMs(p7.maxDate) - p7DayMs(p7.minDate)) / 86400000) + 1;
-    if (rows < p7VertFixedRows(nDays)) continue;
+    // Every fixed-span row (plus the year slots) must fit the box.
+    if (rows < p7VertRowPlan(CELL).totalRows) continue;
     if (avail * cap >= maxEvents * 1.06) return sq;
   }
   return 1.5;
@@ -275,8 +325,9 @@ function p7BuildVerticalLayout(rows, cols, CELL) {
     bandDay.get(d).push(i);
   });
   const bandRows  = band ? p7VertBandRows(CELL) : 0;
-  const rowStart = new Float64Array(nDays + 1);
-  const rowsOf   = new Float64Array(nDays);
+  const plan     = p7VertRowPlan(CELL);
+  const rowStart = plan.rowStart;
+  const rowsOf   = plan.rowsOf;
   const events   = P7_AXIS_EVENTS.map(() => ({ row: 0, reachRow: 0, bandStart: 0, bandEnd: 0 }));
   let cursor = 0;
   const placeBands = (d) => {
@@ -286,16 +337,10 @@ function p7BuildVerticalLayout(rows, cols, CELL) {
       cursor += bandRows;
     });
   };
-  // One row per P7_VERT.daysPerRow days: rowStart = row index + the day's
-  // fraction inside its row. NOTE: the unused "band" eventMode reserves no
-  // rows here any more (placeBands is not called) — bands would overlap dots.
-  const dpr = P7_VERT.daysPerRow;
-  for (let d = 0; d < nDays; d++) {
-    rowStart[d] = Math.floor(d / dpr) + (d % dpr) / dpr;
-    rowsOf[d]   = 1 / dpr;
-  }
-  cursor = Math.ceil(rowStart[nDays - 1] + rowsOf[nDays - 1]);
-  rowStart[nDays] = cursor;
+  // Rows come from p7VertRowPlan (one row per P7_VERT.daysPerRow days, year
+  // slots optional). NOTE: the unused "band" eventMode reserves no rows here
+  // any more (placeBands is not called) — bands would overlap dots.
+  cursor = plan.totalRows;
   const totalRows = cursor;
 
   const rowMid = (d) => rowStart[d] + rowsOf[d] / 2;
@@ -368,6 +413,7 @@ function p7BuildVerticalLayout(rows, cols, CELL) {
   const right = placeSide(p7.rightEvents, 99999, "right");
   return {
     rows, cols, totalRows, nDays, minMs, maxMs, rowStart, rowsOf, dayOf, events,
+    slots: plan.slots, slotRows: plan.slotRows, yearRow: plan.yearRow,
     leftPos: left.positions, rightPos: right.positions, left, right,
   };
 }
@@ -2250,42 +2296,79 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   const hoverActive  = !!hoveredEvent;
   const hoverAxisY   = hoverActive ? axisQ(p7AxisY(hoveredEvent.date, H)) : null;
 
-  // Base line + filled portion from the top.
+  // Base line + filled portion from the top. With year slots the line is
+  // drawn only between slots — a slot is outside the time count.
   const lineLeft = axisX - P7_AXIS_LINE_THICKNESS / 2;
-  ctx.fillStyle = hoverActive ? `rgba(0, 0, 0, ${P7_AXIS_UNFILLED_HOVER_ALPHA})` : P7_AXIS_BG_COLOR;
-  ctx.fillRect(lineLeft, topY, P7_AXIS_LINE_THICKNESS, len);
-  ctx.fillStyle = hoverActive ? `rgba(0, 0, 0, ${P7_AXIS_ROSTER_LABEL_ALPHA})` : P7_AXIS_FILLED_COLOR;
-  ctx.fillRect(lineLeft, topY, P7_AXIS_LINE_THICKNESS, curY - topY);
+  const segs = [];
+  let segTop = topY;
+  (v.slots || []).forEach(sl => {
+    const a = p7RowY(sl.start, H), b = p7RowY(sl.end, H);
+    if (a > segTop) segs.push([segTop, a]);
+    segTop = b;
+  });
+  if (botY > segTop) segs.push([segTop, botY]);
+  segs.forEach(([a, b]) => {
+    ctx.fillStyle = hoverActive ? `rgba(0, 0, 0, ${P7_AXIS_UNFILLED_HOVER_ALPHA})` : P7_AXIS_BG_COLOR;
+    ctx.fillRect(lineLeft, a, P7_AXIS_LINE_THICKNESS, b - a);
+    if (curY > a) {
+      ctx.fillStyle = hoverActive ? `rgba(0, 0, 0, ${P7_AXIS_ROSTER_LABEL_ALPHA})` : P7_AXIS_FILLED_COLOR;
+      ctx.fillRect(lineLeft, a, P7_AXIS_LINE_THICKNESS, Math.min(curY, b) - a);
+    }
+  });
 
   // Year rings + labels. A tick is reached once the fill edge is past its row.
   ctx.font = `18px 'Assistant', sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   for (const tick of ticks) {
-    const row = p7RowOfDate(tick.dateStr);
-    const y   = axisQ(p7RowY(row, H));
+    // In a slot the ring sits mid-slot (ring + digits centred as one block);
+    // on a continuous line it sits at the year's first day.
+    const inSlot = v.slotRows > 0 && v.yearRow.has(tick.year);
+    const row = inSlot ? v.yearRow.get(tick.year) : p7RowOfDate(tick.dateStr);
+    // With the ring off, the digits alone form the block: R shrinks to 0 so
+    // the label maths below (which hang the digits off the ring's edge) still hold.
+    const ring = P7_VERT.yearRing;
+    const R = ring ? P7_AXIS_MARKER_RADIUS : 0;
+    const blockH = inSlot ? R * 2 + (ring ? P7_VERT_YEAR_LABEL_GAP : 0) + 21 : 0;
+    const y   = axisQ(p7RowY(row, H) - (inSlot && P7_VERT.yearSide === 'center' ? blockH / 2 - R : 0));
     const reached = row <= curRow;
     const ringColor = hoverActive ? P7_AXIS_BG_COLOR : (reached ? P7_AXIS_FILLED_COLOR : P7_AXIS_BG_COLOR);
-    ctx.fillStyle = "#FDFCFF";
-    ctx.beginPath(); ctx.arc(axisX, y, P7_AXIS_MARKER_RADIUS, 0, Math.PI * 2); ctx.fill();
-    ctx.lineWidth = P7_AXIS_MARKER_STROKE;
-    ctx.strokeStyle = ringColor;
-    ctx.beginPath(); ctx.arc(axisX, y, P7_AXIS_MARKER_RADIUS, 0, Math.PI * 2); ctx.stroke();
-    // Label under the ring, on a punched background so the line doesn't run
-    // through the digits.
+    if (ring) {
+      ctx.fillStyle = "#FDFCFF";
+      ctx.beginPath(); ctx.arc(axisX, y, P7_AXIS_MARKER_RADIUS, 0, Math.PI * 2); ctx.fill();
+      ctx.lineWidth = P7_AXIS_MARKER_STROKE;
+      ctx.strokeStyle = ringColor;
+      ctx.beginPath(); ctx.arc(axisX, y, P7_AXIS_MARKER_RADIUS, 0, Math.PI * 2); ctx.stroke();
+    }
     const label = String(tick.year);
     const tw = ctx.measureText(label).width;
-    const ly = y + P7_AXIS_MARKER_RADIUS + P7_VERT_YEAR_LABEL_GAP;
-    // Ring + label as one vertical span, for the headline blocks to dodge.
-    yearSpans.push({ top: y - P7_AXIS_MARKER_RADIUS, bottom: ly + 21 });
-    // The punch starts at the ring's edge so no sliver of line shows between
-    // the ring and its digits.
-    ctx.fillStyle = "#FDFCFF";
-    ctx.fillRect(axisX - tw / 2 - 3, y + P7_AXIS_MARKER_RADIUS, tw + 6, ly + 21 - (y + P7_AXIS_MARKER_RADIUS));
-    ctx.fillStyle = hoverActive
+    const labelColor = hoverActive
       ? `rgba(0, 0, 0, ${P7_AXIS_BG_ALPHA})`
       : (reached ? P7_AXIS_LABEL_COLOR : P7_AXIS_LABEL_FAINT_COLOR);
-    ctx.fillText(label, axisX, ly);
+    if (P7_VERT.yearSide === 'center') {
+      // Label under the ring, on a punched background so the line doesn't run
+      // through the digits.
+      const ly = ring ? y + R + P7_VERT_YEAR_LABEL_GAP : y - 10.5; // ring off: digits centred on y
+      // Ring + label as one vertical span, for the headline blocks to dodge.
+      yearSpans.push({ top: ring ? y - R : ly, bottom: ly + 21, side: 'center' });
+      // The punch starts at the ring's edge so no sliver of line shows between
+      // the ring and its digits.
+      ctx.fillStyle = "#FDFCFF";
+      ctx.fillRect(axisX - tw / 2 - 3, ring ? y + R : ly - 2, tw + 6, ly + 21 - (ring ? y + R : ly - 2));
+      ctx.textAlign = "center"; ctx.textBaseline = "top";
+      ctx.fillStyle = labelColor;
+      ctx.fillText(label, axisX, ly);
+    } else {
+      // Label beside the ring, vertically centred on it, aligned toward the line.
+      const dir = P7_VERT.yearSide === 'right' ? 1 : -1;
+      const lx  = axisX + dir * (R + P7_VERT.sideGap);
+      yearSpans.push({ top: y - 11, bottom: y + 11, side: P7_VERT.yearSide });
+      ctx.fillStyle = "#FDFCFF";
+      ctx.fillRect(dir > 0 ? lx - 2 : lx - tw - 2, y - 11, tw + 4, 22);
+      ctx.textAlign = dir > 0 ? "left" : "right"; ctx.textBaseline = "middle";
+      ctx.fillStyle = labelColor;
+      ctx.fillText(label, lx, y);
+    }
   }
   ctx.restore();
 
@@ -2311,7 +2394,11 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
 
   // Width available to a headline block: the whole band in band mode, the
   // corridor (minus a margin) in widen mode.
-  const maxWidth = P7_VERT.eventMode === "band" ? 320 : p7CenterGap() - 16;
+  const evSide = P7_VERT.eventSide;
+  const evDir  = evSide === 'right' ? 1 : -1;
+  const maxWidth = P7_VERT.eventMode === "band" ? 320
+    : evSide === 'center' ? p7CenterGap() - 16
+    : p7CenterGap() / 2 - P7_AXIS_MARKER_RADIUS - P7_VERT.sideGap - 8;
 
   p7.axisEventPositions = new Map();
   const hoveredAxisEvent = p7.hoveredAxisEvent;
@@ -2363,29 +2450,69 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     lines.forEach(t => { tw = Math.max(tw, ctx.measureText(t).width); });
     ctx.font = p7AxisDateFont();
     tw = Math.max(tw, ctx.measureText(dateLabel).width);
-    const blockH = lines.length * lh + lh;
+    // The date can sit on its own side of the line (split): then the title
+    // block loses its date line and the date is drawn beside the dot alone.
+    // 'alternate' flips the side per event (even index left, odd right).
+    const evSideI = P7_VERT.eventSide === 'alternate' ? (i % 2 ? 'right' : 'left') : evSide;
+    const evDirI  = evSideI === 'right' ? 1 : -1;
+    const dateSide = P7_VERT.dateSide === 'with' ? evSideI : P7_VERT.dateSide;
+    const split = dateSide !== evSideI;
+    const dateFirst = !split && P7_VERT.dateAbove;
+    const blockH = lines.length * lh + (split ? 0 : lh);
     // The block always hangs UNDER the dot (the dot is always above its text).
     // If it would run into a year ring or its label, it is pushed down to just
     // past that label instead.
-    const below = evY[i] + P7_AXIS_MARKER_RADIUS + P7_VERT_EVENT_TEXT_GAP;
+    // Side placement: the block sits beside the dot, its first line centred
+    // on the dot, aligned toward the line; it only dodges year labels that
+    // live on the same side (or on the line itself, whose span is below the ring).
+    const onSide = evSideI !== 'center';
+    const below = onSide ? evY[i] - lh / 2 : evY[i] + P7_AXIS_MARKER_RADIUS + P7_VERT_EVENT_TEXT_GAP;
     let y0 = below;
     (yearSpans || []).forEach(s => {
+      if (onSide && s.side !== 'center' && s.side !== evSideI) return;
       if (y0 - 2 < s.bottom && y0 + blockH + 2 > s.top) y0 = s.bottom + P7_VERT_EVENT_TEXT_GAP;
     });
     ctx.globalAlpha = opacity;
-    // Punch from the dot's edge (or, when pushed past a year label, from that
-    // label's bottom) to the block's far edge — no line between dot and text.
     ctx.fillStyle = "#FDFCFF";
-    const punchTop = y0 - P7_VERT_EVENT_TEXT_GAP;
-    ctx.fillRect(axisX - tw / 2 - 4, punchTop, tw + 8, y0 + blockH - punchTop);
+    const tx = onSide ? axisX + evDirI * (P7_AXIS_MARKER_RADIUS + P7_VERT.sideGap) : axisX;
+    if (onSide) {
+      ctx.fillRect(evDirI > 0 ? tx - 3 : tx - tw - 3, y0 - 2, tw + 6, blockH + 4);
+    } else {
+      // Punch from the dot's edge (or, when pushed past a year label, from that
+      // label's bottom) to the block's far edge — no line between dot and text.
+      const punchTop = y0 - P7_VERT_EVENT_TEXT_GAP;
+      ctx.fillRect(axisX - tw / 2 - 4, punchTop, tw + 8, y0 + blockH - punchTop);
+    }
+    ctx.textAlign = onSide ? (evDirI > 0 ? "left" : "right") : "center";
+    const titleY0 = y0 + (dateFirst ? lh : 0);
     const isHoverHighlighted = hoverActive && highlightY !== null && Math.abs(evY[i] - highlightY) < 0.5;
     const labelAlpha = (hoverActive && !isHoverHighlighted) ? P7_AXIS_ROSTER_LABEL_ALPHA : 1;
     ctx.font = p7AxisEventFont();
     ctx.fillStyle = `rgba(0, 0, 0, ${labelAlpha})`;
-    lines.forEach((text, li) => ctx.fillText(text, axisX, y0 + li * lh));
+    lines.forEach((text, li) => ctx.fillText(text, tx, titleY0 + li * lh));
     ctx.font = p7AxisDateFont();
     ctx.fillStyle = (hoverActive && !isHoverHighlighted) ? `rgba(0, 0, 0, ${P7_AXIS_ROSTER_LABEL_ALPHA})` : P7_AXIS_LABEL_COLOR;
-    ctx.fillText(dateLabel, axisX, y0 + lines.length * lh);
+    if (!split) {
+      ctx.fillText(dateLabel, tx, dateFirst ? y0 : y0 + lines.length * lh);
+    } else {
+      // Split date: its own side, centred on the dot, dodging same-side year labels.
+      const dOn  = dateSide !== 'center';
+      const dDir = dateSide === 'right' ? 1 : -1;
+      const dw   = ctx.measureText(dateLabel).width;
+      let dy = dOn ? evY[i] - lh / 2 : evY[i] + P7_AXIS_MARKER_RADIUS + P7_VERT_EVENT_TEXT_GAP;
+      (yearSpans || []).forEach(s => {
+        if (dOn && s.side !== 'center' && s.side !== dateSide) return;
+        if (dy - 2 < s.bottom && dy + lh + 2 > s.top) dy = s.bottom + P7_VERT_EVENT_TEXT_GAP;
+      });
+      const dx = dOn ? axisX + dDir * (P7_AXIS_MARKER_RADIUS + P7_VERT.sideGap) : axisX;
+      const fill = ctx.fillStyle;
+      ctx.fillStyle = "#FDFCFF";
+      if (dOn) ctx.fillRect(dDir > 0 ? dx - 3 : dx - dw - 3, dy - 2, dw + 6, lh + 4);
+      else ctx.fillRect(axisX - dw / 2 - 4, dy - P7_VERT_EVENT_TEXT_GAP, dw + 8, lh + P7_VERT_EVENT_TEXT_GAP + 2);
+      ctx.fillStyle = fill;
+      ctx.textAlign = dOn ? (dDir > 0 ? "left" : "right") : "center";
+      ctx.fillText(dateLabel, dx, dy);
+    }
     ctx.globalAlpha = 1;
   });
   ctx.restore();
