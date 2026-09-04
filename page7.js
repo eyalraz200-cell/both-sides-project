@@ -2269,8 +2269,20 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     // its label — then it sits above the dot instead. Never both at once.
     const below = evY[i] + P7_AXIS_MARKER_RADIUS + P7_VERT_EVENT_TEXT_GAP;
     const above = evY[i] - P7_AXIS_MARKER_RADIUS - P7_VERT_EVENT_TEXT_GAP - blockH;
-    const hits = (top) => (yearSpans || []).some(s => top - 2 < s.bottom && top + blockH + 2 > s.top);
-    const y0 = hits(below) && !hits(above) ? above : below;
+    const spans = yearSpans || [];
+    const hits = (top) => spans.some(s => top - 2 < s.bottom && top + blockH + 2 > s.top);
+    let y0 = below;
+    if (hits(below)) {
+      if (!hits(above) && above >= p7VertTopY(H)) {
+        y0 = above;
+      } else {
+        // Nowhere to go above (e.g. the 04.01.2023 event right under the 2023
+        // ring at the axis's top): stay below, just past the year label.
+        let bottom = below;
+        spans.forEach(s => { if (below - 2 < s.bottom && below + blockH + 2 > s.top) bottom = Math.max(bottom, s.bottom); });
+        y0 = bottom + P7_VERT_EVENT_TEXT_GAP;
+      }
+    }
     ctx.globalAlpha = opacity;
     ctx.fillStyle = "#FDFCFF";
     ctx.fillRect(axisX - tw / 2 - 4, y0 - 2, tw + 8, blockH + 2);
