@@ -2328,7 +2328,9 @@ function p7DrawYearAxisVertical(ctx, W, H) {
     const { tick, row } = m;
     // Ring (when on) at the top of the centred block; with the ring off R is
     // 0 so the label maths below (digits hung off the ring's edge) still hold.
-    const y   = P7_VERT.yearSide === 'center' ? axisQ(m.yc - blockH / 2 + R) : m.yc;
+    // Ring on: the ring sits at the top of the centred block; ring off: the
+    // digits alone are centred on the boundary.
+    const y   = ring && P7_VERT.yearSide === 'center' ? axisQ(m.yc - blockH / 2 + R) : m.yc;
     const reached = row <= curRow;
     const ringColor = hoverActive ? P7_AXIS_BG_COLOR : (reached ? P7_AXIS_FILLED_COLOR : P7_AXIS_BG_COLOR);
     if (ring) {
@@ -2339,23 +2341,30 @@ function p7DrawYearAxisVertical(ctx, W, H) {
       ctx.beginPath(); ctx.arc(axisX, y, P7_AXIS_MARKER_RADIUS, 0, Math.PI * 2); ctx.stroke();
     }
     const label = String(tick.year);
-    const tw = ctx.measureText(label).width;
+    const met = ctx.measureText(label);
+    const tw = met.width;
+    // Ink box of the digits (cap height, no descenders): the digits are
+    // centred by their ink, not by the font's line box, so they sit exactly
+    // mid-break — the line box would leave them riding high.
+    const inkA = met.actualBoundingBoxAscent || 13, inkD = met.actualBoundingBoxDescent || 0;
+    const inkH = inkA + inkD;
     const labelColor = hoverActive
       ? `rgba(0, 0, 0, ${P7_AXIS_BG_ALPHA})`
       : (reached ? P7_AXIS_LABEL_COLOR : P7_AXIS_LABEL_FAINT_COLOR);
     if (P7_VERT.yearSide === 'center') {
       // Label under the ring, on a punched background so the line doesn't run
       // through the digits.
-      const ly = ring ? y + R + P7_VERT_YEAR_LABEL_GAP : y - 10.5; // ring off: digits centred on y
+      // `ly` is the top of the digits' ink: under the ring, or centred on y.
+      const ly = ring ? y + R + P7_VERT_YEAR_LABEL_GAP : y - inkH / 2;
       // Ring + label as one vertical span, for the headline blocks to dodge.
-      yearSpans.push({ top: ring ? y - R : ly, bottom: ly + 21, side: 'center' });
+      yearSpans.push({ top: ring ? y - R : ly - 2, bottom: ly + inkH + 2, side: 'center' });
       // The punch starts at the ring's edge so no sliver of line shows between
       // the ring and its digits.
       ctx.fillStyle = "#FDFCFF";
-      ctx.fillRect(axisX - tw / 2 - 3, ring ? y + R : ly - 2, tw + 6, ly + 21 - (ring ? y + R : ly - 2));
-      ctx.textAlign = "center"; ctx.textBaseline = "top";
+      ctx.fillRect(axisX - tw / 2 - 3, ring ? y + R : ly - 2, tw + 6, ly + inkH + 2 - (ring ? y + R : ly - 2));
+      ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
       ctx.fillStyle = labelColor;
-      ctx.fillText(label, axisX, ly);
+      ctx.fillText(label, axisX, ly + inkA);
     } else {
       // Label beside the ring, vertically centred on it, aligned toward the line.
       const dir = P7_VERT.yearSide === 'right' ? 1 : -1;
