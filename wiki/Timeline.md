@@ -101,7 +101,9 @@ still present but unused — the `_debug-axis.js` harness that compared them is 
 ### `p7TargetCellCache`
 
 `Map` keyed `actor + "|" + occurrence` → `{side, cell}`, used by
-`p7TargetForActorOccurrence` to tell @fold8's flying squares where to land.
+`p7TargetForActorOccurrence` to tell @fold8's flying squares where to land. The occurrence
+comes from each square's pinned row id via `p7OccurrenceOfRowId` (`fold6SquareOccurrence`),
+not from its position in the actor list.
 **It is cleared in exactly one place** — `p7UpdateLayout`, whenever `leftPos`/`rightPos`
 are recomputed. Cell numbers are meaningless across a differently-sized grid, so a
 missing clear here is what made those squares land outside the grid on other viewports.
@@ -358,10 +360,11 @@ over `totalRows × CELL`:
   widen mode) — hangs under the dot (`P7_VERT_EVENT_TEXT_GAP` 6), centred on the axis, on
   a punched background drawn at the label's opacity; the punch runs from the dot's edge (or
   the year label's bottom when pushed past one) to the block's far edge, so no line shows
-  between dot and text. The dot is **always above its text**. The only dodge: if hanging
-  below would overlap a year label (`yearSpans`, collected while the years are drawn), the
-  block is pushed down to just past that label — a headline never touches a year and never
-  moves above its dot. No other de-collision — the layout reserves the space.
+  between dot and text. The only dodge: if hanging below would overlap a year label
+  (`yearSpans`, collected while the years are drawn), the block **flips above its dot**
+  (bottom edge `P7_VERT_EVENT_TEXT_GAP` above the dot, punch from the block's top down to
+  the dot's edge); only if above collides too is it pushed down to just past the year — a
+  headline never touches a year. No other de-collision — the layout reserves the space.
   *Unused alternatives (kept):* `eventSide` `'left'`/`'right'`/`'alternate'` puts the block
   beside the line, first line centred on the dot, text aligned toward the line, wrapping in
   half the corridor; `dateSide` `'left'`/`'right'` draws the date alone on its own side.

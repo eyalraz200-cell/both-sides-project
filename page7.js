@@ -833,7 +833,7 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
       }
     }
 
-    // Claimed events (FOLD6_SQUARE_ACTORS/OCCURRENCE, main.js) are never
+    // Claimed events (FOLD6_SQUARE_ROW_IDS, js/groups.js) are never
     // drawn here at all — the fold-9 flying square *is* this dot, permanently,
     // not a stand-in for a separate real one. Still recorded in posMap (full
     // alpha, no animation) so downstream consumers that look up an event's
@@ -1067,7 +1067,7 @@ function p7EventForActorOccurrence(actor, n) {
 // own stable `rowId`: returns which occurrence (0-based) of its actor that event
 // is, within its own side's date-sorted list — i.e. exactly the `n` the two
 // lookups above expect. -1 if the data isn't loaded or no row carries that id.
-// Lets a curated pin (FOLD6_TOOLTIP_ROW_ID, js/groups.js) name an event by id and
+// Lets the curated roster (FOLD6_SQUARE_ROW_IDS, js/groups.js) name events by id and
 // have the fragile positional number derived at runtime, so editing the xlsx
 // can't silently repoint it at a neighbouring event.
 function p7OccurrenceOfRowId(rowId) {
@@ -1082,7 +1082,7 @@ function p7OccurrenceOfRowId(rowId) {
   return -1;
 }
 
-// The 8 real events @fold10's fold-6 squares fly to/become (FOLD6_SQUARE_ACTORS/
+// The 8 real events @fold10's fold-6 squares fly to/become (FOLD6_SQUARE_ROW_IDS/
 // fold6SquareOccurrence, js/groups.js — referenced here only inside this function
 // body, never at load time, since page7.js loads before main.js in
 // project.html) are never drawn by the real per-event cascade below — the
@@ -2466,17 +2466,25 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     // on the dot, aligned toward the line; it only dodges year labels that
     // live on the same side (or on the line itself, whose span is below the ring).
     const onSide = evSideI !== 'center';
+    const spans = (yearSpans || []).filter(s => !(onSide && s.side !== 'center' && s.side !== evSideI));
+    const hits = (top) => spans.some(s => top - 2 < s.bottom && top + blockH + 2 > s.top);
     const below = onSide ? evY[i] - lh / 2 : evY[i] + P7_AXIS_MARKER_RADIUS + P7_VERT_EVENT_TEXT_GAP;
-    let y0 = below;
-    (yearSpans || []).forEach(s => {
-      if (onSide && s.side !== 'center' && s.side !== evSideI) return;
-      if (y0 - 2 < s.bottom && y0 + blockH + 2 > s.top) y0 = s.bottom + P7_VERT_EVENT_TEXT_GAP;
-    });
+    const above = evY[i] - P7_AXIS_MARKER_RADIUS - P7_VERT_EVENT_TEXT_GAP - blockH;
+    // Default: under the dot. If that runs into a year label the block flips
+    // ABOVE its dot; only if both sides collide is it pushed down past the year.
+    let y0 = below, flipped = false;
+    if (hits(below)) {
+      if (!hits(above)) { y0 = above; flipped = true; }
+      else spans.forEach(s => { if (hits(y0)) y0 = s.bottom + P7_VERT_EVENT_TEXT_GAP; });
+    }
     ctx.globalAlpha = opacity;
     ctx.fillStyle = "#FDFCFF";
     const tx = onSide ? axisX + evDirI * (P7_AXIS_MARKER_RADIUS + P7_VERT.sideGap) : axisX;
     if (onSide) {
       ctx.fillRect(evDirI > 0 ? tx - 3 : tx - tw - 3, y0 - 2, tw + 6, blockH + 4);
+    } else if (flipped) {
+      // Above the dot: punch from the block's top edge down to the dot's edge.
+      ctx.fillRect(axisX - tw / 2 - 4, y0 - 2, tw + 8, evY[i] - P7_AXIS_MARKER_RADIUS - y0 + 2);
     } else {
       // Punch from the dot's edge (or, when pushed past a year label, from that
       // label's bottom) to the block's far edge — no line between dot and text.
