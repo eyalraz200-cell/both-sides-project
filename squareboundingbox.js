@@ -77,3 +77,10 @@ function sbbTimeline(H) {
 // left-side and right-side event/action grid (timeline + page9's grids) — keeps them
 // visually consistent as one continuous two-sided dataset.
 const CENTER_GAP = 4;
+
+// DESKTOP ONLY (page7.js's p7VerticalAxis branch): the year axis runs
+// VERTICALLY down the centre of the timeline, so the centre gap there is a
+// corridor wide enough for the line, its year rings and the year labels
+// (18px "2026" ≈ 40px) — replaces CENTER_GAP in p7GridGeometry on desktop.
+// Mobile keeps CENTER_GAP and the horizontal bottom axis.
+const P7_AXIS_CORRIDOR_PX = 64;
