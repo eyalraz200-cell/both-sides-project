@@ -327,6 +327,8 @@ function p7BuildVerticalLayout(rows, cols, CELL) {
     const used = []; // row -> Uint8Array(cols), lazily
     const cellRow = (r) => used[r] || (used[r] = new Uint8Array(cols));
     const positions = new Array(evs.length);
+    const rowRank   = new Int32Array(evs.length); // rank within the row, corridor-first
+    const rowCount  = new Int32Array(rows);
     // Tries to claim a free k in `row` walking outward from the corridor;
     // returns k or -1. Cells rolled as permanent gaps are marked used (2).
     function claim(row) {
@@ -354,13 +356,24 @@ function p7BuildVerticalLayout(rows, cols, CELL) {
       const col = side === "right" ? k : cols - 1 - k;
       positions[i] = row * cols + col;
     });
-    return positions;
+    // Row cascade order (p7DrawSideSquares): rank by distance from the corridor
+    // within each row, date order as the tiebreak.
+    const byRow = [];
+    positions.forEach((cell, i) => { const r = Math.floor(cell / cols); (byRow[r] || (byRow[r] = [])).push(i); });
+    byRow.forEach((idxs, r) => {
+      const kOf = i => { const c = positions[i] % cols; return side === "right" ? c : cols - 1 - c; };
+      idxs.sort((a, b) => kOf(a) - kOf(b) || a - b);
+      idxs.forEach((i, rank) => { rowRank[i] = rank; });
+      rowCount[r] = idxs.length;
+    });
+    return { positions, rowRank, rowCount };
   }
 
+  const left  = placeSide(p7.leftEvents,  11111, "left");
+  const right = placeSide(p7.rightEvents, 99999, "right");
   return {
     rows, cols, totalRows, nDays, minMs, maxMs, rowStart, rowsOf, dayOf, events,
-    leftPos:  placeSide(p7.leftEvents,  11111, "left"),
-    rightPos: placeSide(p7.rightEvents, 99999, "right"),
+    leftPos: left.positions, rightPos: right.positions, left, right,
   };
 }
 
@@ -446,15 +459,6 @@ function p7MonthKeyToStartStr(monthKey) {
 // snapping them away.
 const P7_ANIM_TOTAL_DURATION = 2200; // ms — full span of a month's staggered cascade
 const P7_POP_DURATION        = 220;  // ms — each individual square's own pop in/out
-// Months are CHAINED: a month reached fresh (cursor 0) starts only when the month
-// before it has begun its last row (its cursor reached `stagger`), so the rows fire
-// strictly top → bottom across month boundaries too (desktop rows share a boundary
-// row; mobile just inherits the same chain). When the scroll outruns the chain the
-// queued wait would grow without bound, so instead the whole cascade runs faster:
-// p7CascadeRate multiplies every cursor's clock so that the longest queued wait is
-// at most P7_CHAIN_MAX_WAIT_MS of wall time. Order is never traded for speed.
-const P7_CHAIN_MAX_WAIT_MS   = 700;
-let p7CascadeRate = 1;          // cursor-ms per wall-ms, >= 1
 const p7MonthPhase = {};        // monthKey -> { fromC, toC, start } | undefined (never reached)
 let p7MonthMaxReached = -1;     // highest monthKey ever reached, forward
 let p7AnimRunning = false;
@@ -467,61 +471,18 @@ function p7MonthCursor(k) {
   if (ph === undefined) return undefined;
   const span = ph.toC - ph.fromC;
   if (span === 0) return ph.toC;
-  // Clamped below 0 too: a chained month with a future start reads fromC until
-  // its turn.
-  const t = Math.min(1, Math.max(0, (performance.now() - ph.start) * p7CascadeRate / Math.abs(span)));
+  const t = Math.min(1, (performance.now() - ph.start) / Math.abs(span));
   return ph.fromC + span * t;
-}
-
-// Wall-clock moment a fresh cascade of month k may begin: when month k-1's
-// cursor reaches `stagger` (its last square starts popping). `now` if there is
-// no such month or it isn't heading to full.
-function p7MonthChainStart(k, now) {
-  const prev = p7MonthPhase[k - 1];
-  if (prev === undefined || prev.toC !== P7_ANIM_TOTAL_DURATION) return now;
-  const stagger = P7_ANIM_TOTAL_DURATION - P7_POP_DURATION;
-  const reach = prev.start + Math.max(0, stagger - prev.fromC) / p7CascadeRate;
-  return Math.max(now, reach);
-}
-
-// Re-times every phase for a new global rate so no cursor jumps: in-flight
-// months rebase at their current cursor, queued months keep their remaining
-// wait in cursor-time (so it shrinks in wall time as the rate rises).
-function p7SetCascadeRate(rate) {
-  if (rate === p7CascadeRate) return;
-  const now = performance.now();
-  for (const key in p7MonthPhase) {
-    const ph = p7MonthPhase[key];
-    if (ph.start > now) ph.start = now + (ph.start - now) * p7CascadeRate / rate;
-    else { const c = p7MonthCursor(key); ph.fromC = c; ph.start = now; }
-  }
-  p7CascadeRate = rate;
-}
-
-// Called once per orchestration tick: rate = 1 unless the longest queued wait
-// (in cursor-ms) would exceed P7_CHAIN_MAX_WAIT_MS of wall time.
-function p7UpdateCascadeRate() {
-  const now = performance.now();
-  let waitC = 0;
-  for (const key in p7MonthPhase) {
-    const ph = p7MonthPhase[key];
-    if (ph.start > now) waitC = Math.max(waitC, (ph.start - now) * p7CascadeRate);
-  }
-  p7SetCascadeRate(Math.max(1, waitC / P7_CHAIN_MAX_WAIT_MS));
 }
 
 // Point a month at a new cursor target, starting from wherever it is now (0 for a
 // month being reached for the first time). Idempotent — re-aiming at the target
 // it's already heading for is a no-op, so this is safe to call every frame.
-// A month starting fresh toward full (cursor 0) is chained behind the month
-// before it (p7MonthChainStart); a mid-flight turn-around starts right now.
 function p7MonthAim(k, toC) {
   const ph = p7MonthPhase[k];
   if (ph !== undefined && ph.toC === toC) return false;
   const fromC = p7MonthCursor(k) ?? 0;
-  const now = performance.now();
-  const start = (toC === P7_ANIM_TOTAL_DURATION && fromC === 0) ? p7MonthChainStart(k, now) : now;
-  p7MonthPhase[k] = { fromC, toC, start };
+  p7MonthPhase[k] = { fromC, toC, start: performance.now() };
   return true;
 }
 
@@ -543,14 +504,71 @@ function p7MonthSettle(k, c) {
 // per-frame system.
 let p7EntryAnim = null;
 
+// ---- Desktop: one cursor per ROW, gated by the visible axis edge ----
+// On the vertical axis the animation unit is a grid row, not a month. A row's
+// cascade starts the moment the axis's visible fill edge (the lagged one the
+// user actually sees, p7AxisLaggedFillFrac) passes its middle, and plays its
+// squares centre → side over P7_ANIM_TOTAL_DURATION; rows overlap freely — a
+// row never waits for the one above it to finish, it waits for the axis. The
+// edge moves monotonically with scroll, so rows fire strictly top → bottom, and
+// a jump sweeps the (damped) edge through the rows in order instead of lighting
+// the whole span at once. Same cursor shape and reversibility as the month
+// phases: rows the edge has left aim back at 0 and retract mirrored.
+const p7RowPhase = {};          // row -> { fromC, toC, start } | undefined (never reached)
+
+function p7RowCursor(r) {
+  const ph = p7RowPhase[r];
+  if (ph === undefined) return undefined;
+  const span = ph.toC - ph.fromC;
+  if (span === 0) return ph.toC;
+  const t = Math.min(1, (performance.now() - ph.start) / Math.abs(span));
+  return ph.fromC + span * t;
+}
+
+function p7RowAim(r, toC) {
+  const ph = p7RowPhase[r];
+  if (ph !== undefined && ph.toC === toC) return false;
+  const fromC = p7RowCursor(r) ?? 0;
+  p7RowPhase[r] = { fromC, toC, start: performance.now() };
+  return true;
+}
+
+// The row the visible axis edge has reached (fractional). Reads the lagged
+// fill so the dots follow the edge the user sees, not the raw scroll readout.
+function p7EdgeRow() {
+  const v = p7.vert; if (!v) return 0;
+  const frac = p7AxisLaggedFillFrac ?? p7AxisFillFracTarget();
+  return frac * v.totalRows;
+}
+
+// Per-tick orchestration for the row system (desktop). Rows whose middle the
+// edge has passed aim at full while engaged; every other row (and every row
+// once disengaged) aims at 0. Fully-retreated rows are dropped so the phase
+// table stays small and p7AnyAnimActive stays cheap.
+function p7OrchestrateRows() {
+  const v = p7.vert; if (!v) return;
+  const edge = p7HasEngaged ? p7EdgeRow() : -1;
+  const reachedThrough = Math.min(v.rows - 1, Math.floor(edge - 0.5));
+  for (let r = 0; r <= reachedThrough; r++) {
+    if (p7RowAim(r, P7_ANIM_TOTAL_DURATION)) p7StartAnimLoop();
+  }
+  for (const key in p7RowPhase) {
+    const r = Number(key);
+    if (r > reachedThrough) {
+      if (p7RowAim(r, 0)) p7StartAnimLoop();
+      if (p7RowCursor(r) <= 0) delete p7RowPhase[r];
+    }
+  }
+}
+
 // Wipes all per-month animation state so the next entry into the timeline
 // replays the cascade from scratch instead of showing settled dots.
 // Called from setActivePage (main.js) when the user scrolls back out of
 // @fold11 toward an earlier fold.
 function p7ResetForReplay() {
   for (const k in p7MonthPhase) delete p7MonthPhase[k];
+  for (const r in p7RowPhase) delete p7RowPhase[r];
   p7MonthMaxReached = -1;
-  p7CascadeRate = 1;
 }
 
 // True once fold 9's own title card (#page-7 .text-card, page7TitleCardEl in
@@ -671,6 +689,9 @@ function p7AnyAnimActive() {
   for (const k in p7MonthPhase) {
     if (p7MonthCursor(k) !== p7MonthPhase[k].toC) return true; // still travelling
   }
+  for (const r in p7RowPhase) {
+    if (p7RowCursor(r) !== p7RowPhase[r].toC) return true;
+  }
   if (p7AxisEventsAnimActive()) return true;
   if (p7AxisIntroStart !== null && p7AxisIntroT() < 1) return true;
   if (p7AxisOutroStart !== null && p7AxisIntroT() > 0) return true;
@@ -721,35 +742,14 @@ function p7StartAnimLoop() {
 // back. A cursor sliding backward retracts the month's squares in mirrored order (the
 // last to arrive is the first to leave) simply because they're the ones with the
 // largest delay.
-// Desktop cascade order within one month (see the slot comment inside
-// p7DrawSideSquares): rank of each square in the month's index range sorted by
-// (row, distance from the corridor). Sorted once per side+month and cached —
-// cleared in p7UpdateLayout whenever leftPos/rightPos are rebuilt.
-const p7MonthRankCache = new Map();
-function p7MonthRank(side, mk, positions, start, end, cols) {
-  const key = `${side}:${mk}`;
-  let rank = p7MonthRankCache.get(key);
-  if (rank) return rank;
-  const n = end - start;
-  const order = Array.from({ length: n }, (_, j) => j);
-  const sortKey = j => {
-    const cell = positions[start + j];
-    const col  = cell % cols;
-    return Math.floor(cell / cols) * cols + (side === "right" ? col : cols - 1 - col);
-  };
-  order.sort((a, b) => sortKey(a) - sortKey(b) || a - b);
-  rank = new Int32Array(n);
-  order.forEach((j, r) => { rank[j] = r; });
-  p7MonthRankCache.set(key, rank);
-  return rank;
-}
-
 function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, monthEnd, settledCount, posMap) {
   const stagger = Math.max(0, P7_ANIM_TOTAL_DURATION - P7_POP_DURATION);
   let groupMonthKey = null, groupStart = 0, groupEnd = 0;
   let groupCursor = P7_ANIM_TOTAL_DURATION; // months with no phase at all read as settled
-  let groupRank = null;                     // desktop: per-month (row, corridor-distance) rank
-  const side = positions === p7.rightPos ? "right" : "left";
+  // Desktop: per-event rank within its row + per-row counts (p7BuildVerticalLayout).
+  const vertSide = p7.vert ? (positions === p7.rightPos ? p7.vert.right : p7.vert.left) : null;
+  const rowRank  = vertSide ? vertSide.rowRank  : null;
+  const rowCount = vertSide ? vertSide.rowCount : null;
   const claimedEvents = p7GetClaimedEvents();
   // Mobile squares are ~1.25–3 CSS px (p7SolveMobileSq) sitting at fractional
   // positions, so on a DPR>1 phone every edge lands mid-device-pixel and the
@@ -805,7 +805,19 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     }
 
     let scale = 1, alpha = 1;
-    if (i >= settledCount) {
+    if (rowRank) {
+      // Desktop row system (p7RowPhase): presence is a pure function of the
+      // row's cursor; the slot is the square's rank within its row by distance
+      // from the corridor, so each row plays centre → side.
+      const rowCursor = p7RowCursor(row);
+      if (rowCursor === undefined) continue;          // row never reached
+      const n = rowCount[row];
+      const delay = n > 1 ? (rowRank[i] / (n - 1)) * stagger : 0;
+      const presence = p7Ease(Math.min(1, Math.max(0, (rowCursor - delay) / P7_POP_DURATION)));
+      if (presence <= 0) continue;
+      scale = 0.5 + 0.5 * presence;
+      alpha = presence;
+    } else if (i >= settledCount) {
       const mk = p7MonthKeyOf(events[i].date);
       if (mk !== groupMonthKey) {
         groupMonthKey  = mk;
@@ -813,23 +825,15 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
         groupEnd       = p7BisectBefore(events, p7MonthKeyToStartStr(mk + 1));
         // No phase at all = a month below the animated range, i.e. long settled.
         groupCursor    = p7MonthCursor(mk) ?? P7_ANIM_TOTAL_DURATION;
-        groupRank      = p7VerticalAxis() ? p7MonthRank(side, mk, positions, groupStart, groupEnd, cols) : null;
       }
 
       const countInGroup = groupEnd - groupStart;
+      const localIdx = i - groupStart;
       // Each square's own slot in the month's cascade. Because presence is read off
       // the shared cursor rather than off "time since the cascade started", a square
       // is wherever the cursor says — mid-grow, mid-shrink or settled — no matter how
       // many times the user reversed direction on the way here.
-      //
-      // Mobile: the slot is the date index within the month. Desktop: the vertical
-      // layout jitters a day's dots across neighbouring rows and orders columns from
-      // the corridor out, so consecutive date indices land on different rows and the
-      // month would fill "everywhere at once". The slot there is the square's rank
-      // within the month sorted by (row, distance from corridor) — the top row plays
-      // centre → side, then the next row, over the same P7_ANIM_TOTAL_DURATION wave.
-      const slot = groupRank ? groupRank[i - groupStart] : i - groupStart;
-      const delay = countInGroup > 1 ? (slot / (countInGroup - 1)) * stagger : 0;
+      const delay = countInGroup > 1 ? (localIdx / (countInGroup - 1)) * stagger : 0;
       const presence = p7Ease(Math.min(1, Math.max(0, (groupCursor - delay) / P7_POP_DURATION)));
       if (presence <= 0) continue; // not popped in yet, or fully retreated
       // Nothing pops from nothing: start at a visible (if small) size rather than 0.
@@ -936,7 +940,6 @@ function p7UpdateLayout(W, H) {
   // current, instead of handing back a stale cell number sized for whatever
   // viewport was active the first time it was ever resolved.
   p7TargetCellCache.clear();
-  p7MonthRankCache.clear(); // ranks are read off leftPos/rightPos too
 
   p7.lastW = W;
   p7.lastH = H;
@@ -1067,6 +1070,28 @@ function p7GetClaimedEvents() {
 // reverse cascade like they do while scrolling backward *within* #page-8
 // itself. Callers must call p7UpdateEngagement() themselves first (drawPage7/
 // drawFold9 both already do, since the axis needs a fresh p7HasEngaged too).
+// A2 (desktop vertical axis): a faint full-width rule across both camps at
+// each REACHED headline event's row, drawn under the dots. Persistent like
+// the event's own dot (reachedT), not tied to the label's crossfade — the
+// rule is a landmark that stays once passed. Wiped in by the axis intro.
+function p7DrawVertEventLines(ctx, W, H, leftX0) {
+  if (!(p7VerticalAxis() && P7_VERT.eventLine && p7.vert && p7AxisTriggerIfNeeded())) return;
+  const introT = p7AxisIntroT();
+  ctx.save();
+  P7_AXIS_EVENTS.forEach((ev, i) => {
+    const t = P7_AXIS_EVENT_STATE[i].reachedT * p7Ease(introT);
+    if (t <= 0.001) return;
+    const y = Math.round(p7RowY(p7.vert.events[i].row, H)) + 0.5;
+    ctx.strokeStyle = `rgba(90, 90, 90, ${P7_VERT_EVENT_LINE_ALPHA * t})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(leftX0, y);
+    ctx.lineTo(W - leftX0, y);
+    ctx.stroke();
+  });
+  ctx.restore();
+}
+
 function p7DrawTimelineSquares(ctx, W, H) {
   p7UpdateLayout(W, H);
 
@@ -1088,6 +1113,18 @@ function p7DrawTimelineSquares(ctx, W, H) {
   // not just events whose date has already been reached, so the full cascade can play.
   const { y: curY, m: curM } = p7DateDayFrac(p7.currentDate);
   const curMonthKey = curY * 12 + curM;
+
+  if (p7VerticalAxis() && p7.vert) {
+    // Desktop: rows, gated by the axis edge — see p7RowPhase. Every event is
+    // handed to p7DrawSideSquares; presence comes from its row's cursor.
+    p7OrchestrateRows();
+    const posMap = new Map();
+    p7DrawVertEventLines(ctx, W, H, leftX0);
+    p7DrawSideSquares(ctx, p7.leftEvents,  p7.leftPos,  leftX0,  topY, cols, CELL, SQ, p7.leftEvents.length,  0, posMap);
+    p7DrawSideSquares(ctx, p7.rightEvents, p7.rightPos, rightX0, topY, cols, CELL, SQ, p7.rightEvents.length, 0, posMap);
+    p7.lastPositions = posMap;
+    return;
+  }
 
   // Only a month that's genuinely beyond anything reached before gets a fresh forward
   // cascade. A month can have no forward-start yet without being new territory — e.g.
@@ -1111,9 +1148,10 @@ function p7DrawTimelineSquares(ctx, W, H) {
     // backfilling every skipped month here, each one falls straight into
     // "settled" below (no phase of its own at all) and pops in
     // instantly, fully-formed, with no cascade — the exact "instant jump"
-    // this loop exists to prevent. Aimed in ascending order so each month chains
-    // behind the one before it (p7MonthAim → p7MonthChainStart); the rate
-    // controller below then compresses the whole queue to P7_CHAIN_MAX_WAIT_MS.
+    // this loop exists to prevent. All backfilled months start their cursor at
+    // the same instant (simpler than staggering month-to-month, and each month's
+    // own events still cascade individually within it via p7DrawSideSquares'
+    // own per-event delay), rather than one after another.
     for (let k = Math.max(p7MonthMaxReached + 1, p7MonthKeyOf(p7.minDate)); k <= curMonthKey; k++) {
       if (p7MonthPhase[k] === undefined) p7MonthAim(k, P7_ANIM_TOTAL_DURATION); // from cursor 0
     }
@@ -1134,8 +1172,8 @@ function p7DrawTimelineSquares(ctx, W, H) {
     // under the user. Aiming is enough to make each square resume growing from
     // the exact presence it had — that's the whole point of the shared cursor;
     // there is no snapshot to take and no "was it mid-flight?" case to special-case.
-    // Ascending so a month retreated to 0 chains behind its (re-aimed) predecessor.
-    for (const k of Object.keys(p7MonthPhase).map(Number).sort((a, b) => a - b)) {
+    for (const key in p7MonthPhase) {
+      const k = Number(key);
       if (k <= curMonthKey && p7MonthAim(k, P7_ANIM_TOTAL_DURATION)) p7StartAnimLoop();
     }
   } else if (p7MonthMaxReached > -1) {
@@ -1149,7 +1187,6 @@ function p7DrawTimelineSquares(ctx, W, H) {
   }
 
   if (p7HasEngaged && curMonthKey > p7MonthMaxReached) p7MonthMaxReached = curMonthKey;
-  p7UpdateCascadeRate();
 
   // Scrolled backward past months that were previously reached: start their retreat
   // (each flies back out the same way it flew in) unless it's already retreating.
@@ -1216,27 +1253,6 @@ function p7DrawTimelineSquares(ctx, W, H) {
   const monthEndR = p7BisectBefore(p7.rightEvents, nextMonthStartStr);
 
   const posMap = new Map();
-
-  // A2 (desktop vertical axis): a faint full-width rule across both camps at
-  // each REACHED headline event's row, drawn under the dots. Persistent like
-  // the event's own dot (reachedT), not tied to the label's crossfade — the
-  // rule is a landmark that stays once passed. Wiped in by the axis intro.
-  if (p7VerticalAxis() && P7_VERT.eventLine && p7.vert && p7AxisTriggerIfNeeded()) {
-    const introT = p7AxisIntroT();
-    ctx.save();
-    P7_AXIS_EVENTS.forEach((ev, i) => {
-      const t = P7_AXIS_EVENT_STATE[i].reachedT * p7Ease(introT);
-      if (t <= 0.001) return;
-      const y = Math.round(p7RowY(p7.vert.events[i].row, H)) + 0.5;
-      ctx.strokeStyle = `rgba(90, 90, 90, ${P7_VERT_EVENT_LINE_ALPHA * t})`;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(leftX0, y);
-      ctx.lineTo(W - leftX0, y);
-      ctx.stroke();
-    });
-    ctx.restore();
-  }
 
   // Draw left events.
   p7DrawSideSquares(ctx, p7.leftEvents, p7.leftPos, leftX0, topY, cols, CELL, SQ, monthEndL, settledL, posMap);
