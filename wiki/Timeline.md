@@ -94,14 +94,39 @@ still present but unused — the `_debug-axis.js` harness that compared them is 
 are recomputed. Cell numbers are meaningless across a differently-sized grid, so a
 missing clear here is what made those squares land outside the grid on other viewports.
 
-## The month-by-month cascade
+## The cascade: rows on desktop, months on mobile
+
+Both share the same pop (`P7_POP_DURATION` 220 ms, `p7Ease`, `scale = 0.5 + 0.5*presence`,
+`alpha = presence`), the same wave length (`P7_ANIM_TOTAL_DURATION` 2200 ms per unit) and
+the same reversible one-number-per-unit cursor. They differ in what the unit is and what
+starts it.
+
+### Desktop: one cursor per row, started by the axis edge
+
+On the vertical axis (`p7VerticalAxis()`) the unit is a grid **row** (`p7RowPhase[row] =
+{fromC, toC, start}`, `p7RowCursor`, `p7RowAim`). A row's cascade starts the moment the
+axis's *visible* fill edge passes the row's middle — `p7EdgeRow()` reads the lagged fill
+`p7AxisLaggedFillFrac`, i.e. the edge the reader sees, not the raw scroll readout — and
+plays the row's squares **centre → side** (slot = rank within the row by distance from
+the corridor, `rowRank`/`rowCount` built per side in `p7BuildVerticalLayout`). Rows
+overlap freely: a row never waits for the one above it to finish, it waits for the axis,
+so at a normal pace several rows are mid-wave at once as a diagonal, and because the edge
+is monotonic in scroll they always *start* strictly top → bottom. A jump sweeps the damped
+edge through the rows in order (~0.6 s) instead of lighting the whole span at once.
+
+`p7OrchestrateRows` runs every tick from `p7DrawTimelineSquares`: rows at or above the
+edge aim at full while `p7HasEngaged`; every other row (and every row once disengaged)
+aims at 0 and retracts mirrored (last in, first out); rows back at cursor 0 are dropped.
+There is no settled/draw range on desktop — every event is handed to `p7DrawSideSquares`
+and its presence is a pure function of its row's cursor (`undefined` row = never reached
+= not drawn). `p7ResetForReplay` clears the row phases too.
+
+### Mobile: one cursor per month
 
 `p7DrawSideSquares` animates one month's worth of squares at a time:
 `stagger = P7_ANIM_TOTAL_DURATION - P7_POP_DURATION` (2200 − 220 = 1980 ms) spread across
 the month's events, each popping over `P7_POP_DURATION` with `p7Ease`
 (`scale = 0.5 + 0.5*presence`, `alpha = presence`).
-
-### One cursor per month
 
 Each month owns a single number — a **cascade cursor** `c`, in ms, from 0 (month
 entirely absent) to `P7_ANIM_TOTAL_DURATION` (every square settled). State lives in
@@ -110,14 +135,7 @@ entirely absent) to `P7_ANIM_TOTAL_DURATION` (every square settled). State lives
 reached (or was fully retreated and cleaned up) — distinct from a cursor of 0.
 
 A square's presence is a **pure function of the cursor**:
-`p7Ease(clamp((c - delay) / P7_POP_DURATION))`, `delay = (slot/(count-1)) * stagger`.
-The **slot** is the square's place in the month's order: on mobile it is the date index
-within the month (`localIdx`); on desktop it is the square's rank within the month sorted
-by `(row, distance from the corridor)` (`p7MonthRank`, cached per side+month in
-`p7MonthRankCache`, cleared in `p7UpdateLayout`). Desktop needs the rank because
-`p7BuildVerticalLayout` jitters a day's dots across neighbouring rows and orders columns
-from the corridor out, so date order would fill every row of the month at once; ranked,
-the top row plays centre → side, then the next row, over the same 1980 ms wave.
+`p7Ease(clamp((c - delay) / P7_POP_DURATION))`, `delay = (localIdx/(count-1)) * stagger`.
 So there is no forward path and no reverse path — the cursor rising plays the month in,
 the cursor falling plays it out, and mirrored order (last in, first out) falls out for
 free because the last squares are the ones with the largest `delay`.
@@ -131,32 +149,11 @@ where it was. **Don't reintroduce separate forward/reverse start timestamps** �
 independent clocks can't express "half-grown, now shrinking", so every interrupted
 direction change snapped the month to full (or empty) for a frame.
 
-### Months are chained, and the chain sets the tempo
-
-A month starting fresh toward full (cursor 0) does not start the instant the fill edge
-reaches it: `p7MonthAim` gives it `p7MonthChainStart(k)` — the wall-clock moment month
-`k−1`'s cursor reaches `stagger` (its last row begins popping). Until then its cursor
-reads `fromC` (`p7MonthCursor` clamps `t` to `[0, 1]`). So rows fire strictly top → bottom
-across month boundaries as well as inside a month; without this, two or three months
-cascaded at once at a normal scroll pace, each from its own top, and rows lower on the
-page filled before rows above them. A mid-flight turn-around (cursor > 0) still starts
-immediately.
-
-When the scroll outruns the chain, the queue would grow without bound, so the whole
-cascade speeds up instead of overlapping: `p7CascadeRate` (≥ 1, cursor-ms per wall-ms)
-multiplies every phase's clock, and `p7UpdateCascadeRate` (once per orchestration tick)
-sets it so the longest queued wait is at most `P7_CHAIN_MAX_WAIT_MS` (700 ms) of wall
-time, returning to 1 when nothing is queued. `p7SetCascadeRate` re-times every phase so
-no cursor jumps (in-flight months rebase at their current cursor; queued months keep
-their wait in cursor-time). At a fast pace the pops get proportionally quicker; order is
-never traded for speed. `p7ResetForReplay` resets the rate to 1.
-
 Orchestration lives in `p7DrawTimelineSquares`:
 
 - **Forward into new territory** (`curMonthKey > p7MonthMaxReached`): every *skipped*
   month with no phase yet is aimed at full from cursor 0, so a fast scroll doesn't make
-  months pop in instantly. Aimed in ascending order so each chains behind the previous
-  one (below).
+  months pop in instantly.
 - **Landing on a month while scrolling backward**: `p7MonthSettle(k, TOTAL)` — it appears
   already settled rather than firing a fresh entrance.
 - **Retreat**: months above the current one are aimed at 0. Fully-retreated months
@@ -363,10 +360,7 @@ onto a moving target. Otherwise it runs
 The tooltip is `#page9Tooltip`, **shared with page9 and @fold7's demo** — which is why
 `hideSquare()` (clears only the square tooltip, guarded on `p7.hoveredEvent` being set)
 is separate from `hide()` (clears both targets). `tooltipEl.style.color` is set to the
-actor color, which on **desktop fills the box** (`background: currentColor`, white text, no
-stroke at all — the dash `<svg>` is still built but `display:none`) and on **mobile** still
-strokes the dashed SVG border; the date sits at weight 700 and the description at **550**,
-both real instances of the `Assistant` variable font (`wght@300..800`); `.is-mirrored` flips the
+actor color and the dashed SVG border strokes `currentColor`; `.is-mirrored` flips the
 box for `side === "left"` — except outside the two horizontal flip lines, which keep the
 box off the mini-legends: a dot left of `P7_TIP_FLIP_L` (**475 px from the left edge**)
 always opens rightward (`mirrored = false`), a dot within `P7_TIP_FLIP_R_INSET`
