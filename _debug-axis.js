@@ -23,7 +23,7 @@
     sliders: [
       { key: 'corridorPx', label: 'corridor px (band)',  min: 40, max: 160, step: 2,    value: 64,   source: 'squareboundingbox.js:86 P7_AXIS_CORRIDOR_PX' },
       { key: 'bandPx',     label: 'band px',      min: 24, max: 120, step: 2,    value: 60,   source: 'page7.js P7_VERT.bandPx (band mode)' },
-      { key: 'wideCorridorPx', label: 'wide corridor px', min: 120, max: 400, step: 5, value: 170, source: 'page7.js P7_VERT.wideCorridorPx (widen mode, full height)' },
+      { key: 'wideCorridorPx', label: 'wide corridor px', min: 120, max: 400, step: 5, value: 180, source: 'page7.js P7_VERT.wideCorridorPx (widen mode, full height)' },
       { key: 'fillRatio',  label: 'fill ratio',   min: 0.5, max: 1,  step: 0.02, value: 1, source: 'page7.js:224 P7_VERT.fillRatio' },
       { key: 'rowJitter',  label: 'row jitter',   min: 0,  max: 6,   step: 0.5,  value: 0,    source: 'page7.js:225 P7_VERT.rowJitter' },
     ],
