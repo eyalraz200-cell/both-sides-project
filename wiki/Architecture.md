@@ -84,7 +84,7 @@ Two places load order does matter:
 | `page7.js` | The pinned real timeline: per-event square cascade + canvas year axis + hover |
 | `page8.js` | Bridge glide from timeline layout → page9's legit grid |
 | `page9.js` | Drag-and-drop categorization + dot-migration animation |
-| `page12.js` | `drawPage12` outro background |
+| `page12.js` | `drawPage12` outro background; `p12ShareInit` fills the outro card's share links (called from `js/bootstrap.js` after fonts load) |
 | `squareboundingbox.js` | Shared grid geometry (`SBB` — only `.top` is read, `SBB_TIMELINE`, `CENTER_GAP`) |
 | `reload.js` | Dev-only mtime poll → auto page reload |
 | `server.py` | Local dev server + xlsx → `events.json` generation |
@@ -138,10 +138,15 @@ silent, a mid-stuck re-bake (iOS address-bar `resize`) froze the stuck-size view
 and on scroll-back-up the dash faded back in stretched across the wider un-stuck frame
 while the white fill tracked the real box — fill leaking outside a distorted stroke.
 
-`.section-title`'s base rule (20px, Hadassah Friedlaender, `font-weight: 600` faking
-Medium — there is no true Medium OTF in `fonts/`) is shared by **every** card. No page
-should override its font-size or weight; if one title looks differently sized, that's a
-regression. The 600px breakpoint drops it to **16px** — that's a width override applied
+`.section-title`'s base rule (`font: 300 20px/1.5 'HadassahFriedlaender'`) is shared by
+**every** card. No page should override its font-size or weight; if one title looks
+differently sized, that's a regression. Only two faces exist in `fonts/` — Regular (400)
+and Thin (100) — so **300 resolves down to the real Thin file** while anything from 500
+up is browser-synthesized thickening of Regular. That is why 300 was picked over the
+300-700 sweep: the synthesized weights read as one muddy face, 300 is genuinely drawn.
+It also retires the `.latin-acronym` workaround, which now inherits the base weight
+instead of forcing 400 — with no synthesis there is no filled-apex artifact to dodge,
+and a 400 acronym would sit heavier than the Hebrew around it. The 600px breakpoint drops it to **16px** — that's a width override applied
 to the same shared rule, so the titles stay uniform with each other at any given width;
 it is not the per-page kind the rule forbids.
 

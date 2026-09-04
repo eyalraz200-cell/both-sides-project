@@ -21,7 +21,7 @@ HTML id: `@foldN` = `id="page-(N-1)"`.** Verified against `project.html`'s secti
 | `@fold8` | `page-7` | `drawPage7` | *(no title — `page7-scrub`)* | The pinned real timeline — see [Timeline](Timeline.md) |
 | `@fold9` | `page-8` | `drawPage8` | פעולות פוליטיות נבדלות זו מזו… | Bridge glide from timeline layout into page9's legit grid (`page8.js`) |
 | `@fold10` | `page-9` | `drawPage9` | איפה עובר הגבול בעיניכם? | Drag-and-drop categorization. Desktop runs **layout V2** (`P9_LAYOUT_V2`): bare pill band on top, horizontal drop zone under it, legit dots denser in a 150px bottom strip — see [Drag-and-Drop](Drag-and-Drop.md#desktop-layout-v2) |
-| `@fold11` | `page-10` | `drawPage12` | קיצוניים משני הצדדים (outro) | Scroll-gated outro card; `fold13Trigger`/`updateFold13` morph |
+| `@fold11` | `page-10` | `drawPage12` | קיצוניים משני הצדדים (outro) | Scroll-gated outro card; `fold13Trigger`/`updateFold13` morph. Under the methodology the card carries a share row (`.page12-share`: WhatsApp / X / Facebook intent links + copy-link, wired by `p12ShareInit` in page12.js) and a one-line credits paragraph (`.page12-credits`). Both are single lines on purpose — the card already fills a 900px-tall viewport, so `@media (max-height: 920px)` also trims their spacing |
 
 Symbol names (`fold6Trigger`, `drawFold7`, `page7TitleCardEl`…) carry **older, unrelated
 numberings** and do not line up with `@foldN`. Don't infer a fold from a symbol name.
