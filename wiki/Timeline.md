@@ -110,7 +110,14 @@ entirely absent) to `P7_ANIM_TOTAL_DURATION` (every square settled). State lives
 reached (or was fully retreated and cleaned up) — distinct from a cursor of 0.
 
 A square's presence is a **pure function of the cursor**:
-`p7Ease(clamp((c - delay) / P7_POP_DURATION))`, `delay = (localIdx/(count-1)) * stagger`.
+`p7Ease(clamp((c - delay) / P7_POP_DURATION))`, `delay = (slot/(count-1)) * stagger`.
+The **slot** is the square's place in the month's order: on mobile it is the date index
+within the month (`localIdx`); on desktop it is the square's rank within the month sorted
+by `(row, distance from the corridor)` (`p7MonthRank`, cached per side+month in
+`p7MonthRankCache`, cleared in `p7UpdateLayout`). Desktop needs the rank because
+`p7BuildVerticalLayout` jitters a day's dots across neighbouring rows and orders columns
+from the corridor out, so date order would fill every row of the month at once; ranked,
+the top row plays centre → side, then the next row, over the same 1980 ms wave.
 So there is no forward path and no reverse path — the cursor rising plays the month in,
 the cursor falling plays it out, and mirrored order (last in, first out) falls out for
 free because the last squares are the ones with the largest `delay`.
@@ -128,7 +135,11 @@ Orchestration lives in `p7DrawTimelineSquares`:
 
 - **Forward into new territory** (`curMonthKey > p7MonthMaxReached`): every *skipped*
   month with no phase yet is aimed at full from cursor 0, so a fast scroll doesn't make
-  months pop in instantly.
+  months pop in instantly. The queued months are **chained**: each starts
+  `P7_MONTH_CHAIN_MS` (500 ms) after the previous one (`p7MonthAim`'s `startOffset`; the
+  cursor reads `fromC` until its start), so the scrolled span still fills top → bottom
+  instead of all at once. 500 is deliberately far below one full cascade so a many-month
+  jump overlaps rather than taking 2.2 s per month.
 - **Landing on a month while scrolling backward**: `p7MonthSettle(k, TOTAL)` — it appears
   already settled rather than firing a fresh entrance.
 - **Retreat**: months above the current one are aimed at 0. Fully-retreated months
@@ -335,7 +346,10 @@ onto a moving target. Otherwise it runs
 The tooltip is `#page9Tooltip`, **shared with page9 and @fold7's demo** — which is why
 `hideSquare()` (clears only the square tooltip, guarded on `p7.hoveredEvent` being set)
 is separate from `hide()` (clears both targets). `tooltipEl.style.color` is set to the
-actor color and the dashed SVG border strokes `currentColor`; `.is-mirrored` flips the
+actor color, which on **desktop fills the box** (`background: currentColor`, white text, no
+stroke at all — the dash `<svg>` is still built but `display:none`) and on **mobile** still
+strokes the dashed SVG border; the date sits at weight 700 and the description at **550**,
+both real instances of the `Assistant` variable font (`wght@300..800`); `.is-mirrored` flips the
 box for `side === "left"` — except outside the two horizontal flip lines, which keep the
 box off the mini-legends: a dot left of `P7_TIP_FLIP_L` (**475 px from the left edge**)
 always opens rightward (`mirrored = false`), a dot within `P7_TIP_FLIP_R_INSET`
