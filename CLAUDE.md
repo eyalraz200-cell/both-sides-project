@@ -73,7 +73,7 @@ Figma source: file `QASHSt1u7b6m6ASgrUPswf` ("Design"). Screens are revised one 
 `GROUPS` in `js/groups.js` is **6 groups** — camp groups only (the old no-camp groups were removed on v2 and never appear anywhere):
 
 - **מחנה הימין (coalition):** תנועות התנחלות באיו״ש `#F9B624` (`settlers`), קבוצות ימין לאומיות `#F024FF` (`right wing protesters`), מפגינים חרדים `#454545` (`haredi jews`) (top→bottom)
-- **גוש השינוי (change):** ארגוני מחאה נגד הממשלה `#6B89FF` (`protesters against government`), מפגינים ערבים ישראלים `#31CE1C` (`arab israelis`), ארגוני שמאל `#FF1A94` (`peace movements`) (top→bottom)
+- **גוש השינוי (change):** מתנגדי הרפורמה ותומכי עסקת החטופים `#6B89FF` (`protesters against government`), מפגינים ערבים ישראלים `#31CE1C` (`arab israelis`), ארגוני שמאל `#FF1A94` (`peace movements`) (top→bottom)
 
 Row order is the sort of each camp's `fold6.y` (`legendRow`), not the `FOLD4_*_ROWS` declaration order — see [Groups-and-Legend](wiki/Groups-and-Legend.md).
 

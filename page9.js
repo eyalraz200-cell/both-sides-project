@@ -91,6 +91,11 @@ function p9TrayGrid() {
 // empty (all 10 pills sit in row 1), and `.page9-tray-row:empty` hides it. That
 // keeps a resize across the 600px breakpoint from having to rebuild the DOM.
 
+// A pointer press on a pill that moves less than this before release counts
+// as a click (desktop click-to-classify, see the pointerdown handler in
+// p9BuildPanel) rather than a drag.
+const P9_CLICK_SLOP_PX = 4;
+
 const P9_SQ      = 3;
 const P9_GAP  = 1;
 const P9_CELL = P9_SQ + P9_GAP;
@@ -2016,6 +2021,12 @@ function p9BuildPanel() {
     // order (V2's single-row column order), per explicit instruction; both
     // desktop grids ignore it because every pill is explicitly placed.
     pill.style.order = String(P9_TRAY_GRID_V2[idx].col);
+    // Desktop V2 pop-in index (teacher review 2026-09-03, H2): the pills pop
+    // in one after another from the RIGHT end of the band (col 1, the first
+    // in RTL reading order) to the left, the band's rule drawing under them
+    // in step — see the .page9-layout-v2.engaged rules in style.css, which
+    // read this as the per-pill transition delay.
+    pill.style.setProperty("--p9-pop-i", String(P9_TRAY_GRID_V2[idx].col - 1));
 
     // Handle first, label second: per explicit request, the grip dots sit on
     // the right edge of the pill — in this RTL flex row that means the handle
@@ -2068,7 +2079,8 @@ function p9BuildPanel() {
 
     pill.addEventListener("pointerdown", e => {
       if (e.button !== 0) return;
-      // Drag is desktop-only — see the click handler above.
+      // Drag (and desktop click — see `moved` below) is desktop-only; the
+      // click handler above owns mobile.
       if (isMobile()) return;
       e.preventDefault();
 
@@ -2123,8 +2135,15 @@ function p9BuildPanel() {
       document.getElementById("page9CatTooltip")?.classList.remove("is-visible");
 
       let activeDropTarget = null;
+      // Click-to-classify (teacher review 2026-09-03, I1): a press that never
+      // travels more than P9_CLICK_SLOP_PX before release is a click, not a
+      // drag, and classifies the pill into the OTHER zone through the exact
+      // same commitDrop path a drop takes — the finalized state-1 animation
+      // is reached identically. Both gestures stay supported.
+      let moved = false;
 
       function onMove(e2) {
+        if (!moved && Math.hypot(e2.clientX - e.clientX, e2.clientY - e.clientY) > P9_CLICK_SLOP_PX) moved = true;
         ghost.style.left = `${e2.clientX - offsetX}px`;
         ghost.style.top  = `${e2.clientY - offsetY}px`;
 
@@ -2155,8 +2174,11 @@ function p9BuildPanel() {
         pill.classList.remove("dragging");
         panel.classList.remove("dragging");
         panel.classList.remove("dragging-from-above");
-        if (activeDropTarget) {
-          activeDropTarget.el.classList.remove(activeDropTarget.overClass);
+        if (activeDropTarget) activeDropTarget.el.classList.remove(activeDropTarget.overClass);
+        if (!moved) {
+          // A click: flip the pill to the opposite zone (see `moved` above).
+          commitDrop(pill, draggingFromAbove ? zoneBelow : zoneAbove);
+        } else if (activeDropTarget) {
           commitDrop(pill, activeDropTarget.targetZone);
         }
         // Release the held hover-dim from drag-start (extreme-origin drags

@@ -20,7 +20,7 @@ hero dots included. Any doc claiming 8/10/12 groups is stale.
 
 | Color | Label | `actor` |
 |---|---|---|
-| `#6B89FF` | ארגוני מחאה נגד הממשלה | `protesters against government` |
+| `#6B89FF` | מתנגדי הרפורמה ותומכי עסקת החטופים | `protesters against government` |
 | `#31CE1C` | מפגינים ערבים ישראלים | `arab israelis` |
 | `#FF1A94` | ארגוני שמאל | `peace movements` |
 

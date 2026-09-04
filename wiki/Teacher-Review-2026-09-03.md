@@ -110,13 +110,18 @@ Legend: 🔴 must · 🟡 should · 🟢 nice-to-have / "not critical" · 📱 m
   key question and the interactive pivot of the whole piece — rewrite so it is self-contained
   and concrete, e.g. **"מתי פעולת מחאה הופכת לבלתי לגיטימית?"** / "מה הופך מחאה ציבורית ללא
   לגיטימית?".
-- [ ] **H2. @fold10→@fold11 transition 🟢.** "A bit clumsy but livable." Idea: pills enter from
+- [x] **H2. @fold10→@fold11 transition 🟢.** "A bit clumsy but livable." Idea: pills enter from
   the side and the previous text turns into the title (there is something nice in that).
+  → Done: title as before; the V2 band no longer slides down — its pills pop in right → left
+  (280ms each, 60ms stagger) and the band's rule draws right → left in step (820ms linear).
 
 ## I. @fold11 drag-and-drop (`page-10`, `page9.js`)
 
-- [ ] **I1. Click as well as drag 🔴 🖥.** Keep dragging, but a click on a pill should also
+- [x] **I1. Click as well as drag 🔴 🖥.** Keep dragging, but a click on a pill should also
   classify it and run the move animation automatically. Support both.
+  → Done: a press that moves <4px is a click and flips the pill to the other zone through
+  the same `commitDrop` path as a drop (`P9_CLICK_SLOP_PX`). The «גררו» subtitle copy is
+  unchanged — it should probably mention clicking too.
 - [ ] **I2. Three visual hierarchies look the same 🔴.** Storytelling text, data tooltips, and
   *system messages* (usage hints like «לחצו והחזיקו על נקודה להצגת פרטי האירוע») all look alike,
   so the eye filters the hint out ("the gorilla"). Give usage hints their own, lower, visual
