@@ -956,11 +956,14 @@ function updateGroups() {
       : null;
     // Figma node 258:2159: every square except the one with a tooltip (index
     // 0, kept at full opacity) renders at ~46% opacity while still gray —
-    // only within @fold9's own trigger window (tooltipT, same value gating
-    // the tooltip below): before that window starts, all 8 squares are still
+    // only from @fold7's trigger #1 (the 0.5 crossing, fold8SquareDimTrigger —
+    // the tooltip itself follows on trigger #2): before that, all 8 squares are still
     // uniform (as in @fold6's own Figma frame, 258:2206, where none of this
     // dimming shows).
-    const tooltipT = e7Label; // tooltip stays once shown — see fold8TooltipEl's own comment below
+    // @fold7 trigger #2 — the tooltip's own, later crossing (fold8TooltipTrigger,
+    // js/groups.js), no longer the labels' e7Label. Tooltip stays once shown —
+    // see fold8TooltipEl's own comment below.
+    const tooltipT = fold8TooltipTrigger.currentT();
     // Dim opacity lowered (0.46 -> 0.3) and driven by its own trigger
     // (fold8SquareDimTrigger, FOLD8_SQUARE_DIM_MS = FOLD8_GROW_MS) timed to
     // finish exactly as the tooltip reaches max scale, not the shared
@@ -1043,7 +1046,7 @@ function updateGroups() {
     sq.style.opacity = String(opacity);
 
     // Real-event tooltip (shared #page9Tooltip, see fold8TooltipEl above),
-    // shown unconditionally once @fold9's own window starts (e7Label ramping
+    // shown unconditionally once @fold7's trigger #2 fires (tooltipT ramping
     // in) — no hover required — until it shrinks away once its own square
     // arrives at its real dot (fold9TooltipShrinkTrigger, see above). Only
     // square 0 currently drives it; if more squares are ever added back,
@@ -1091,7 +1094,7 @@ function updateGroups() {
         fold8SeqElapsed = 0;
         fold8SeqDirection = 1;
         fold8SeqLastFrameTime = null;
-        fold8PrevTooltipRaw = fold7LabelTrigger.currentRaw();
+        fold8PrevTooltipRaw = fold8TooltipTrigger.currentRaw();
         fold8DateSpans = fold8SetupTypewriter(fold8TooltipDateEl, p7FormatDateDMY(event.date));
         fold8DescSpans = fold8SetupTypewriter(fold8TooltipDescEl, event.descHeMedium || "");
       }
