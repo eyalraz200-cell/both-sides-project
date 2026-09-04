@@ -104,6 +104,25 @@ body {
   padding-top: 48px;
 }
 
+/* Desktop dead-scroll trims (teacher review 2026-09-03, G1/G2). Mobile keeps
+   the house geometry — its own pass (G3) is separate.
+   G1: @fold2's card is pulled up from its centered 50vh resting spot so it
+   enters the viewport while the hero title is still leaving, instead of ~40vh
+   of empty text column after the hero (see js/groups.js FOLD2_CARD_FRAC for
+   the matching earlier crossing).
+   G2: the bridge section shrinks from 100vh to 60vh so @fold11's title card
+   is already rising in while the bridge card leaves — the 100vh section left
+   ~70vh of nothing but the glide's small grid on screen. */
+@media (min-width: 601px) {
+  #page-1 {
+    align-items: flex-start;
+    padding-top: 32vh;
+  }
+  #page-9 {
+    min-height: 60vh;
+  }
+}
+
 
 
 .text-section.page9-panel {
@@ -2636,7 +2655,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   }
 
   /* @fold3's group labels. At the desktop 18px/nowrap the longest label
-     ("ארגוני מחאה נגד הממשלה") runs ~170px, so the two camps' label runs
+     ("מתנגדי הרפורמה ותומכי עסקת החטופים") runs ~260px, so the two camps' label runs
      collide across center well before 393px — the labels are what @fold3's
      rect column is centered against (campFold3X, js/update-groups.js), so
      this is a real overlap, not just tight spacing. Smaller type plus a

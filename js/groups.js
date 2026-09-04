@@ -16,7 +16,7 @@ const GROUPS_FRAME_H = 982; // Figma frame height the y-coordinates below are au
 // groups split into two clean top-aligned columns, hand-placed per explicit
 // written spec (not a Figma frame): coalition trio (מפגינים חרדים/תנועות
 // התנחלות/קבוצות ימין לאומיות) at x=887 (screen-right), change trio (תנועות
-// ארגוני שמאל/ארגוני מחאה נגד הממשלה/מפגינים ערבים ישראלים) at x=725
+// ארגוני שמאל/מתנגדי הרפורמה ותומכי עסקת החטופים/מפגינים ערבים ישראלים) at x=725
 // (screen-left), both starting
 // at y=443 with a 40-unit row gap. The two columns are placed with enough
 // clearance on each side of the frame's own horizontal center (x=756, i.e.
@@ -41,7 +41,7 @@ const GROUPS = [
     fold4: { x: 887,  y: 488, swatchFirst: true }, fold6: { x: 31, y: 512 } },
   { color: "#F024FF", label: "קבוצות ימין לאומיות",      actor: "right wing protesters",
     fold4: { x: 887,  y: 514, swatchFirst: true }, fold6: { x: 31, y: 536 } },
-  { color: "#6B89FF", label: "ארגוני מחאה נגד הממשלה", actor: "protesters against government",
+  { color: "#6B89FF", label: "מתנגדי הרפורמה ותומכי עסקת החטופים", actor: "protesters against government",
     fold4: { x: 725,  y: 488, swatchFirst: true }, fold6: { x: 31, y: 512 } },
   { color: "#FF1A94", label: "ארגוני שמאל",            actor: "peace movements",
     fold4: { x: 725,  y: 462, swatchFirst: true }, fold6: { x: 31, y: 560 } },
@@ -150,7 +150,7 @@ const FOLD2_GROUP_CELL = [
   { row: 0, col: 1 },  // #31CE1C  מפגינים ערבים ישראלים   (change)
   { row: 0, col: 3 },  // #F9B624  תנועות התנחלות          (coalition)
   { row: 2, col: 0 },  // #F024FF  קבוצות ימין לאומיות     (coalition)
-  { row: 2, col: 0 },  // #6B89FF  ארגוני מחאה נגד הממשלה  (change)
+  { row: 2, col: 0 },  // #6B89FF  מתנגדי הרפורמה ותומכי עסקת החטופים (change)
   { row: 0, col: 0 },  // #FF1A94  ארגוני שמאל             (change)
   { row: 1, col: 1 },  // #454545  מפגינים חרדים           (coalition)
 ];
@@ -891,7 +891,14 @@ function watchCardThreshold(cardEl, frac, trigger, instantReverse = false) {
 // card directly — same 0.5 convention and makeTrigger/watchCardThreshold
 // machinery as every other fold — so the legend's appearance stays in sync
 // with its own title and gives it a t (below) to stagger the rows' entrance.
-const checkFold2      = watchCardThreshold(page2TitleCardEl, 0.5, fold2Trigger);
+// Desktop fires EARLIER than the house 0.5 (teacher review 2026-09-03, G1):
+// with #page-1's card pulled up (style.css) the dots start flying into the
+// camp grids as the card is still coming up, right as the hero title leaves,
+// so the very first scroll gets a response instead of ~40vh of nothing.
+// Mobile keeps 0.5 — its hero→first-card fix (G3) is a separate item.
+const FOLD2_CARD_FRAC = 0.75;
+const checkFold2      = watchCardThreshold(
+  page2TitleCardEl, () => (isMobile() ? 0.5 : FOLD2_CARD_FRAC), fold2Trigger);
 // @fold3 fires earlier than the house 0.5 on mobile, same reason as @fold4
 // below: the shrink + the labels typing in need more of the fold still on
 // screen there. A bigger fraction = an earlier crossing. Desktop keeps 0.5.

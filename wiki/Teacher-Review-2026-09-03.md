@@ -51,9 +51,12 @@ Legend: 🔴 must · 🟡 should · 🟢 nice-to-have / "not critical" · 📱 m
   plain political-bloc label rather than either anti-occupation candidate, mirroring the
   right-side «קבוצות ימין לאומיות». The `actor` key stays `peace movements` (it is the xlsx's
   own `main_actor` string and is not display text).
-- [ ] **C2. Sharpen "ארגוני מחאה נגד הממשלה".** Too vague — every group here is "against the
-  government". It spans the judicial-overhaul protests and the hostages movement. Candidates:
-  «מחאת הדמוקרטיה והחטופים» or similar. Distinguish it from C1.
+- [x] **C2. Sharpened "ארגוני מחאה נגד הממשלה" → «מתנגדי הרפורמה ותומכי עסקת החטופים».** Too
+  vague — every group here is "against the government". The new name spells out both strands it
+  spans, the judicial-overhaul protests and the hostages movement, and reads as distinct from
+  C1's «ארגוני שמאל». The `actor` key stays `protesters against government` (xlsx `main_actor`
+  string, not display text). It is now by far the longest label in `GROUPS` — see the width
+  note in the mobile `.group-label` block of `style.css`.
 - Sync: renaming touches `GROUPS`, `FOLD6_SQUARE_LABELS` if any label references them, the
   @fold3 typed labels, and the wiki roster in CLAUDE.md + [Groups-and-Legend](Groups-and-Legend.md).
 
@@ -90,10 +93,10 @@ Legend: 🔴 must · 🟡 should · 🟢 nice-to-have / "not critical" · 📱 m
 
 ## G. Empty / dead-scroll states 🟡
 
-- [ ] **G1. Between-fold voids.** Mushon hit a state after @fold1 where "I don't know what's
+- [x] **G1. Between-fold voids.** *(Desktop: `#page-1` card pulled up to 32vh, `fold2Trigger` crosses at 0.75.)* Mushon hit a state after @fold1 where "I don't know what's
   happening and there's no reason for me to be here". Whatever fold/trigger was late there
   should fire earlier so the user always sees a response to scrolling.
-- [ ] **G2. @fold10 bridge (`page-9`)** shows a mostly empty screen ("70–80% blank"). Reduce the
+- [x] **G2. @fold10 bridge (`page-9`)** *(Desktop: `#page-9` is 60vh.)* shows a mostly empty screen ("70–80% blank"). Reduce the
   dead run before the card arrives.
 - [ ] **G3. 📱 Hero → first bubble.** On mobile, "the moment I start scrolling, bring me the
   bubble" — the first card should already be waiting right there so even an accidental scroll
