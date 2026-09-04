@@ -2,10 +2,12 @@
 
 `@foldN` is the canonical, 1-indexed on-screen numbering. **It is off by one from the
 HTML id: `@foldN` = `id="page-(N-1)"`.** Verified against `project.html`'s sections and
-`PAGES[]` in `js/core.js` — there are **11 folds** (`page-0` … `page-11`).
+`PAGES[]` in `js/core.js` — there are **12 folds** (`page-0` … `page-11`), matching the
+12 entries in `PAGES[]` and the 12 `.text-section`s in `project.html`.
 
-> Older notes (including CLAUDE.md's own table) describe 12 folds ending at `#page-12`.
-> That is stale — the code has 11. This page is the source of truth.
+> Older notes describe 12 folds ending at `#page-12`, and an earlier revision of this
+> page said 11. Both are stale — the code has 12, ending at `#page-11`. This page is the
+> source of truth.
 
 ## The table
 
@@ -19,8 +21,8 @@ HTML id: `@foldN` = `id="page-(N-1)"`.** Verified against `project.html`'s secti
 | `@fold6` | `page-5` | `drawBackground` | הנתונים לקוחים מגוף המחקר… (ACLED, with a visible external link in the card) | `acledNoteTrigger`: the ACLED source note + its divider fade into the mini-legend (on mobile: into the מקרא panel) |
 | `@fold7` | `page-6` | `drawFold7` | כל ריבוע מייצג פעולה פוליטית בשטח | Two crossings on desktop: at 0.5 `fold7LabelTrigger` types the square labels in and `fold8SquareDimTrigger` dims the 7 non-demo squares (square 0 stands out); 400px later `fold8TooltipTrigger` grows + types the demo tooltip, once the card has cleared the squares (**mobile:** the tooltip is a docked frame above the timeline instead — see [Timeline](Timeline.md#hover)) |
 | `@fold8` | `page-7` | `drawFold9` | צבע הריבוע מציין את הקבוצה… | `fold9Trigger` colors square 0 + its tooltip border; `fold9FlyTrigger` colors all 8 and flies them to their real per-event dots |
-| `@fold9` | `page-8` | `drawPage7` | *(no title — `page7-scrub`)* | The pinned real timeline — see [Timeline](Timeline.md) |
-| `@fold10` | `page-9` | `drawPage8` | פעולות פוליטיות נבדלות זו מזו… | Bridge glide from timeline layout into page9's legit grid (`page8.js`). Card sits at the section top (`padding-top: 48px`); on desktop the section is **60vh** (not the house 100vh) so @fold11's card is already rising while this one leaves — no dead run |
+| `@fold9` | `page-8` | `drawPage7` | *(no title — `page7-scrub`)* | The pinned real timeline — desktop: vertical centre axis, rows are dates; mobile: horizontal bottom axis — see [Timeline](Timeline.md) |
+| `@fold10` | `page-9` | `drawPage8` | מה נחשב בעיניכם לפעולה לגיטימית, ומה לפעולה קיצונית? | Bridge glide from timeline layout into page9's legit grid (`page8.js`). Card sits at the section top (`padding-top: 48px`); on desktop the section is **60vh** (not the house 100vh) so @fold11's card is already rising while this one leaves — no dead run |
 | `@fold11` | `page-10` | `drawPage9` | איפה עובר הגבול בעיניכם? | Drag-and-drop categorization. Desktop runs **layout V2** (`P9_LAYOUT_V2`): bare pill band on top (its pills **pop in right → left** on `.engaged`, the band's rule drawing under them in step), horizontal drop zone under it, pills classified by **drag or click**, legit dots denser in a 150px bottom strip — see [Drag-and-Drop](Drag-and-Drop.md#desktop-layout-v2) |
 | `@fold12` | `page-11` | `drawPage12` | קיצוניים משני הצדדים (outro) | Scroll-gated outro card; `fold13Trigger`/`updateFold13` morph. Under the methodology the card carries a share row (`.page12-share`: WhatsApp / X / Facebook intent links + copy-link, wired by `p12ShareInit` in page12.js) and a one-line credits paragraph (`.page12-credits`). Both are single lines on purpose — the card already fills a 900px-tall viewport, so `@media (max-height: 920px)` also trims their spacing |
 

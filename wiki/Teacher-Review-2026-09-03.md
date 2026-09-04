@@ -13,7 +13,7 @@ Legend: 🔴 must · 🟡 should · 🟢 nice-to-have / "not critical" · 📱 m
 
 ## A. The big one — @fold9 timeline layout 🔴
 
-- [ ] **A1. Move the year axis vertically between the two camps.** Instead of the horizontal
+- [x] **A1. Move the year axis vertically between the two camps.** Instead of the horizontal
   axis under two side-by-side grids, the axis runs top→bottom down the centre gap and the two
   camps sit on either side of it. Fill each camp's dots **by date along the axis** (outward from
   the centre), not randomly from the middle. Rationale: right now the fill "has aesthetic beauty
@@ -22,10 +22,15 @@ Legend: 🔴 must · 🟡 should · 🟢 nice-to-have / "not critical" · 📱 m
   Files: `page7.js` (grid + axis), `squareboundingbox.js` (`SBB_TIMELINE`, `CENTER_GAP`),
   `page8.js` (bridge glide targets), `js/page8-9-scroll.js`. Wiki: [Timeline](Timeline.md),
   [Folds](Folds.md). Check edge cases + whether the pattern reads as time-based.
-- [ ] **A2. Axis events become full-width bars.** Once the axis is vertical the "axis events"
+  *Done (desktop only, branch `vertical-axis`): axis at `W/2` inside a 64px corridor, rows
+  are dates (`p7BuildVerticalLayout`), jumble kept, dense days stretch, square size solved
+  per viewport. Headline placement (band vs widen) is behind `_debug-axis.js` for the user
+  to pick. Mobile untouched.*
+- [x] **A2. Axis events become full-width bars.** Once the axis is vertical the "axis events"
   (headline labels, `P7_AXIS_EVENTS`) may stop being ticks and become horizontal bands across
   the whole width, so the dots on both sides can be compared against each event directly.
-  Explore, not mandated.
+  Explore, not mandated. *Done as a toggle (`P7_VERT.eventLine`, key `L` in the harness):
+  a faint 1px rule across both camps at each reached event's row.*
 - [ ] **A3. Legend placement under the new layout.** With the camps flanking a centre axis the
   two-sided @legend may not have room — consider moving it to the top (the mobile מקרא bar
   approach was "a nice solution"). Could also be collapsible behind a button, but people

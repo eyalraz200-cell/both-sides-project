@@ -23,7 +23,13 @@ them). **Not** the per-event canvas dots.
 **"Axis appearing" vs "axis filling up"** — two distinct behaviors, easy to confuse:
 *appearing* is the 2800 ms build-in wipe (`p7AxisIntroT`); *filling up* is the dark
 "reached" bar growing as `p7.currentDate` advances. Both are currently gated off the same
-crossing.
+crossing. On desktop both run **top → bottom** down the vertical centre axis; on mobile
+right → left along the bottom axis.
+
+**"Band" / "widen"** — the two headline placements under comparison on the desktop
+vertical axis (`P7_VERT.eventMode`): *band* pauses the dot flow and prints the headline
+across the reserved rows; *widen* opens the centre corridor around the event's rows.
+See [Timeline](Timeline.md#the-vertical-layout-desktop--p7buildverticallayoutrows-cols-cell--p7vert).
 
 **"State 1" / "state 2" — page9** — the two extreme-drop animation modes.
 State 1 = non-interrupting (reposition, *then* new dots fly, 2200 ms).

@@ -1,7 +1,9 @@
 # The real timeline — `@fold9` (`#page-8`, `page7.js`)
 
-The pinned, scroll-scrubbed section that renders all 14,451 events as per-event squares
-with a canvas year axis along the bottom.
+The pinned, scroll-scrubbed section that renders all 14,451 events as per-event squares.
+**Desktop:** the canvas year axis runs **vertically down the centre** between the two camps
+and every dot's row is its date (see "The vertical axis" below). **Mobile:** the axis is
+horizontal along the bottom and the fill order is the free `p7OrderFromCenter` jumble.
 
 ## Data and state
 
@@ -20,22 +22,67 @@ mid-animation blends), `hoveredEvent`, `axisEventPositions`, `hoveredAxisEvent`.
 ## The square grid
 
 Geometry comes from `SBB_TIMELINE` in `squareboundingbox.js`
-(`left 0.18, top 0.13, bottom 0.81`) plus `CENTER_GAP = 4`.
-`SBB` itself belongs to page9, **not** here. The right camp's origin is mirrored
-(`W/2 + CENTER_GAP/2`) at each call site — there is no `right` field.
+(`left 0.18, top 0.13, bottom 0.81`) plus the centre gap: `p7CenterGap()` is
+`P7_AXIS_CORRIDOR_PX = 64` on desktop (the vertical axis's corridor — line, rings and
+18px year labels) and `CENTER_GAP = 4` on mobile. `SBB` itself belongs to page9, **not**
+here. The right camp's origin is mirrored (`W/2 + gap/2`) inside `p7GridGeometry` — there
+is no `right` field.
 
-`P7_SQ = 3.5`, `P7_GAP = 1.5`, `P7_CELL = 5`. (page9 uses `P9_SQ 3 / P9_GAP 1` —
+`P7_SQ = 3.5`, `P7_GAP = 1.5`, `P7_CELL = 5` are the *ceiling*: on desktop the square is
+**solved per viewport** like mobile (`p7SolveVerticalSq` → `p7DesktopSq`, read through
+`p7Sq()`/`p7Cell()`, gap ratio kept at 1.5/3.5) — the largest square whose grid still holds
+the busier camp once each day's events must sit in that day's rows (6% slack for the jitter
+spill; band mode also gives whole rows to the headlines, so it solves smaller). At 1440×900
+that is ~2.7px in widen mode, ~1.8px in band mode. (page9 uses `P9_SQ 3 / P9_GAP 1` —
 deliberately different; page8 lerps between them.)
 
-`p7UpdateLayout(W, H)` early-returns unless the viewport changed, then recomputes
-`rows`, `cols`, and both `leftPos`/`rightPos` orderings. A "cell" is an integer index:
-`col = cell % cols`, `row = floor(cell / cols)`.
+`p7UpdateLayout(W, H)` early-returns unless the viewport (or the desktop/mobile branch)
+changed, then recomputes `rows`, `cols`, and both `leftPos`/`rightPos` orderings. A "cell" is
+an integer index: `col = cell % cols`, `row = floor(cell / cols)` — the contract every
+reader (`p7DrawSideSquares`, `p7TargetForActorOccurrence`, page8's glide/capture) relies
+on, unchanged by the vertical layout.
 
-`p7OrderFromCenter(total, cols, seed, side, maxEvents)` builds the fill order with a
-seeded Park–Miller RNG (seeds 11111 left, 99999 right): distance from the center gap,
+**Mobile fill order:** `p7OrderFromCenter(total, cols, seed, side, maxEvents)` builds it with
+a seeded Park–Miller RNG (seeds 11111 left, 99999 right): distance from the center gap,
 jittered by up to `P7_ORDER_JUMBLE_COLS = 14` columns, then sliced to
 `min(total, maxEvents)` — so the fill grows outward from the center and permanently-empty
 gaps remain at the edges.
+
+### The vertical layout (desktop) — `p7BuildVerticalLayout(rows, cols, CELL)` → `p7.vert`
+
+Rows are dates. Events are bucketed per **day** (`dayOf`, 1279 days for the current data);
+each day gets `need[d] = max(rowsAvail / nDays, max(countL, countR) / cap)` fractional rows
+(`cap = floor(cols × fillRatio)`), normalised so days (+ bands) exactly fill `rows`. So the
+axis is linear in time except where a day has more events than one row holds (Oct 7 and its
+week), which stretches taller. `rowStart[d]`/`rowsOf[d]` are the cumulative map;
+`p7RowOfDate` (middle of the day's rows — ticks, hover marker, widen-mode dots),
+`p7RowEndOfDate` (bottom — the fill edge, `p7CurRow()` for `currentDate`), `p7RowY(row, H)`
+and `p7AxisY(dateStr, H)` read it. A date past `maxDate` clamps to the end.
+
+Placement per side (same seeds): `row = round(rowStart + rng × rowsOf ± rowJitter)`, then the
+first free cell walking **outward from the corridor** (`k` → `col = right ? k : cols−1−k`);
+each cell is rolled a permanent gap with probability `1 − fillRatio` on first visit; a full
+row spills to row±1, ±2… That keeps the old jumble — ragged outer edges, holes — while the
+inner edge hugs the axis. Deterministic, so a resize/relayout reproduces itself.
+
+The tunables live in `P7_VERT` (`page7.js`): `corridorPx`, `eventMode`, `eventLine`,
+`bandPx` 60, `widenPx` 110, `widenRows` 12, `fillRatio` 0.86, `rowJitter` 1.5. Changing
+one needs a relayout (`p7.lastW = 0; draw()`), which also clears `p7TargetCellCache`.
+
+**Headline placement is under comparison** (`_debug-axis.js`, review item A1/A2 — the
+losing mode is deleted once picked):
+- `eventMode: "band"` — `ceil(bandPx / CELL)` empty rows are reserved just *before* the
+  event's day (the past-the-end event's band goes after the last day); the dot sits 1.5 rows
+  into the band (`events[i].row`) and the headline + date hang under it, centred on the axis.
+  `reachRow` = the band's top.
+- `eventMode: "widen"` — no rows reserved; the cells nearest the corridor are blocked
+  around the event (`bump = widenPx × p9Ease(1 − |row − centre| / widenRows)`, centre a
+  few rows below the dot where the text block sits; `blockedCols[row] = ceil(bump / CELL)`)
+  so the two camps part around the headline. Dot at the middle of the day's rows
+  (past-the-end: `totalRows − 3`); `reachRow` = the dot's row.
+- `eventLine` (A2) — a 1px `rgba(90,90,90,0.18)` rule from `leftX0` to `W − leftX0` at each
+  event's dot row, drawn in `p7DrawTimelineSquares` *under* the dots. Persistent like the
+  event's dot (`reachedT`, × the intro wipe), not tied to the label's crossfade.
 
 ### `p7TargetCellCache`
 
@@ -133,8 +180,10 @@ While `!p7HasEngaged`, `currentDate` is hard-pinned to `minDate`.
 
 ## The year axis
 
-Canvas-drawn along the bottom (`p7DrawYearAxis`), called from `drawPage7` and
-`drawFold9`. **Time runs right → left**: `p7.minDate` at `W - P7_AXIS_MARGIN`,
+Canvas-drawn (`p7DrawYearAxis`), called from `drawPage7` and `drawFold9`. On desktop
+`p7DrawYearAxis` dispatches straight to **`p7DrawYearAxisVertical`** (see "The vertical
+axis" below); everything in this section describes the **mobile / horizontal** axis.
+**Time runs right → left**: `p7.minDate` at `W - P7_AXIS_MARGIN`,
 `p7.maxDate` at `P7_AXIS_MARGIN` (`P7_AXIS_MARGIN = 120`, widened from 48 to shorten the
 axis so the first event's label can center over its own circle).
 
@@ -244,6 +293,28 @@ There is no dot-snapping anymore (`p7AxisEventX` caches each event's true date p
 dashed-line helpers were removed when the line went solid. **The design reference is the
 user's flat-line screenshot** — smooth line, rings above the years, filled current-edge
 dot.
+
+## The vertical axis (desktop) — `p7DrawYearAxisVertical`, `p7DrawAxisEventsVertical`
+
+The same colours, radii, fonts, fill lag, hover states (state 1/2/3) and headline fade
+logic as the horizontal axis, laid out **top → bottom at `x = W/2`** from the grid's `topY`
+over `totalRows × CELL`:
+- **Fill:** `p7AxisFillFracTarget()` is `p7CurRow() / totalRows` (the bottom of
+  `currentDate`'s rows, so the dark span always covers that day's own dots), through the
+  same `p7AxisUpdateFillLag` damping. Reached test for a tick: `p7RowOfDate(tick) ≤ p7CurRow()`.
+- **Build-in wipe:** the intro clips to `rect(0, 0, W, topY + p7Ease(introT) × len)` — the
+  axis (and its headlines) reveal downward; the reverse wipe undraws upward.
+- **Year labels** sit directly under their ring, centred on the line (18px, `P7_VERT_YEAR_LABEL_GAP`
+  6), on a punched `#FDFCFF` rect so the line doesn't run through the digits.
+- **Headlines:** dot on the line at `p7RowY(events[i].row)`; "reached" = its y ≤ the fill
+  edge. `p7UpdateAxisEventTriggers` uses one rule for all seven on desktop:
+  `p7CurRow() ≥ events[i].reachRow`. Title lines (`p7WrapLabel`, `maxWidth` 320 in band
+  mode, `corridor + 2 × widenPx − 24` in widen mode) and the date hang under the dot
+  (`P7_VERT_EVENT_TEXT_GAP` 6), centred on the axis, on a punched background drawn at the
+  label's opacity. **No de-collision** — the layout reserves the space.
+- **Hover:** the hovered square's date marks the axis at `p7AxisY(date, H)` in its actor
+  colour; `p7.axisEventPositions` is filled with `{x: axisX, y, radius}` so the existing
+  circle hit-test works unchanged.
 
 ## Hover
 

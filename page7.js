@@ -51,18 +51,28 @@ function p7SolveMobileSq(sideW, sideH, maxEvents) {
 }
 
 // Live reads (isMobile() reads innerWidth), same convention as sbbTimeline().
-function p7Sq()   { return isMobile() ? p7MobileSq : P7_SQ; }
-function p7Cell() { return isMobile() ? p7MobileSq * (1 + P7_MOBILE_GAP_RATIO) : P7_CELL; }
+// Desktop's square is solved too now that rows are dates (p7SolveVerticalSq):
+// null until the first layout, then whatever size lets every day's events fit
+// their rows — P7_SQ when the box is big enough.
+let p7DesktopSq = null;
+function p7Sq()   { return isMobile() ? p7MobileSq : (p7DesktopSq || P7_SQ); }
+function p7Cell() { return isMobile() ? p7MobileSq * (1 + P7_MOBILE_GAP_RATIO) : p7Sq() * (1 + P7_GAP / P7_SQ); }
 // ─────────────────────────────────────────
 
 // Shared left-grid geometry — leftX0 is rounded (not raw W*SBB_TIMELINE.left) because that raw
 // float can land just under a whole px (e.g. 392.00000000000006 on some widths), which
 // previously made Math.floor(sideW/CELL) silently drop a whole column and leave the
 // grid's near-center edge a few px further from center than intended.
+// DESKTOP: the year axis runs vertically down the centre (see the VERTICAL
+// AXIS block below), so the centre gap is the wider P7_AXIS_CORRIDOR_PX
+// corridor rather than CENTER_GAP. Mobile keeps CENTER_GAP + the horizontal axis.
+function p7VerticalAxis() { return !isMobile(); }
+function p7CenterGap()    { return p7VerticalAxis() ? P7_VERT.corridorPx : CENTER_GAP; }
 function p7GridGeometry(W, H) {
   const leftX0  = Math.round(W * sbbTimeline(H).left);
-  const rightX0 = W / 2 + CENTER_GAP / 2;
-  const sideW   = W / 2 - CENTER_GAP / 2 - leftX0;
+  const gap     = p7CenterGap();
+  const rightX0 = W / 2 + gap / 2;
+  const sideW   = W / 2 - gap / 2 - leftX0;
   const CELL    = p7Cell();
   const cols    = Math.floor(sideW / CELL);
   return { leftX0, rightX0, cols, CELL };
@@ -98,8 +108,9 @@ const p7 = {
   leftPos:  [],
   rightPos: [],
   CELL: 6, SQ: 4,
-  cols: 0,
-  lastW: 0, lastH: 0, lastMaxEvents: -1,
+  cols: 0, rows: 0,
+  vert: null,   // p7BuildVerticalLayout result on desktop (see VERTICAL AXIS), null on mobile
+  lastW: 0, lastH: 0, lastMaxEvents: -1, lastVertical: null,
   // Per-event {x,y,alpha} from the most recently drawn frame (page9.js's
   // p9.lastPositions pattern) — built fresh in drawPage7 every frame, read by
   // p7HoverInit below to hit-test the mouse against the real timeline's
@@ -177,6 +188,225 @@ function p7OrderFromCenter(total, cols, seed, side, maxEvents) {
   usable.sort((a, b) => a.key - b.key);
   return usable.map(o => o.c);
 }
+
+/* =========================================================================
+   VERTICAL AXIS (desktop, p7VerticalAxis) — date-driven row layout
+   =========================================================================
+   The year axis is a vertical line at W/2 running top → bottom through the
+   corridor between the two camps. Every dot's ROW is its date, and each camp
+   grows OUTWARD from the axis along that row, so the dots follow the axis's
+   fill edge down the screen. Rows are handed out per DAY: a day gets its
+   linear share of the rows (span/days), stretched to more rows when either
+   camp has more events that day than one row holds (Oct 2023 needs ~3× its
+   linear share) — dense periods read taller, the axis stays monotonic.
+
+   Within a row the placement keeps the old p7OrderFromCenter texture: the
+   fill starts at the corridor and walks outward, a random roll leaves
+   permanent gaps (1 − fillRatio of the cells) and the day's events are
+   spread over the day's rows with ±jitter, so the outer edge stays ragged
+   rather than a neat bar chart. Deterministic (p7Rng) so the layout is stable
+   across frames and resizes.
+
+   P7_VERT is the tunable bundle (edited live by _debug-axis.js while the
+   headline placement is being compared — see wiki/Timeline.md):
+     eventMode "band"  — the dot flow pauses at each headline event: bandRows
+                          empty rows are reserved and the headline + date sit
+                          in that band, centred on the axis.
+     eventMode "widen" — no rows reserved; instead the corridor opens wider
+                          around the event's rows (widenPx at the peak,
+                          p9Ease'd over ±widenRows) and the headline sits in
+                          the opened space.
+     eventLine         — A2: a faint full-width line at each reached event's row.
+   ------------------------------------------------------------------------- */
+const P7_VERT = {
+  corridorPx: P7_AXIS_CORRIDOR_PX,
+  eventMode:  "band",
+  eventLine:  true,
+  bandPx:     60,    // band mode: height reserved per headline (title line(s) + date)
+  widenPx:    110,
+  widenRows:  12,
+  fillRatio:  0.86,
+  rowJitter:  1.5,   // ± rows a dot may drift from its day's own rows
+};
+// Vertical layout result (p7.vert) — null on mobile / before layout.
+function p7DayMs(dateStr) { return new Date(dateStr + "T00:00:00Z").getTime(); }
+
+function p7VertBandRows(CELL) { return Math.ceil(P7_VERT.bandPx / CELL); }
+
+// Largest square (≤ P7_SQ, the mobile-style solve) whose grid holds the
+// busier camp once each day's events must sit in that day's rows: a date-
+// driven layout cannot pack as tightly as the old free permutation, and band
+// mode gives whole rows away to the headlines. 6% slack for the jitter spill.
+function p7SolveVerticalSq(sideW, sideH, maxEvents) {
+  const gapRatio = P7_GAP / P7_SQ;
+  const bands = P7_VERT.eventMode === "band" ? P7_AXIS_EVENTS.length : 0;
+  for (let sq = P7_SQ; sq >= 1.5; sq -= 0.1) {
+    const CELL = sq * (1 + gapRatio);
+    const cols = Math.floor(sideW / CELL), rows = Math.floor(sideH / CELL);
+    const cap  = Math.max(1, Math.floor(cols * P7_VERT.fillRatio));
+    const avail = rows - bands * Math.ceil(P7_VERT.bandPx / CELL);
+    if (avail * cap >= maxEvents * 1.06) return sq;
+  }
+  return 1.5;
+}
+
+function p7BuildVerticalLayout(rows, cols, CELL) {
+  const minMs  = p7DayMs(p7.minDate);
+  const maxMs  = p7DayMs(p7.maxDate);
+  const nDays  = Math.max(1, Math.round((maxMs - minMs) / 86400000) + 1);
+  const dayOf  = (dateStr) => Math.min(nDays - 1, Math.max(0, Math.round((p7DayMs(dateStr) - minMs) / 86400000)));
+  const countL = new Int32Array(nDays), countR = new Int32Array(nDays);
+  p7.leftEvents.forEach(e => countL[dayOf(e.date)]++);
+  p7.rightEvents.forEach(e => countR[dayOf(e.date)]++);
+
+  const band   = P7_VERT.eventMode === "band";
+  const cap    = Math.max(1, Math.floor(cols * P7_VERT.fillRatio));
+  // Band reservations: the band for an event sits just BEFORE that day's rows;
+  // an event dated past the data (the last one) gets its band after the last day.
+  const bandDay = new Map(); // dayIndex (or nDays for "after the end") -> [eventIdx]
+  P7_AXIS_EVENTS.forEach((ev, i) => {
+    const d = p7DayMs(ev.date) > maxMs ? nDays : dayOf(ev.date);
+    if (!bandDay.has(d)) bandDay.set(d, []);
+    bandDay.get(d).push(i);
+  });
+  const bandRows  = band ? p7VertBandRows(CELL) : 0;
+  const rowsAvail = Math.max(1, rows - bandRows * P7_AXIS_EVENTS.length);
+  const linear    = rowsAvail / nDays;
+  const need      = new Float64Array(nDays);
+  let sum = 0;
+  for (let d = 0; d < nDays; d++) {
+    // Fractional rows: there are ~10× more days than rows, so quiet days
+    // share a row and only a day with more events than one row holds
+    // (Oct 7th and its week) stretches beyond its linear share.
+    need[d] = Math.max(linear, Math.max(countL[d], countR[d]) / cap);
+    sum += need[d];
+  }
+  // Normalise so the days + bands exactly fill `rows`. Days that needed more
+  // than their linear share keep proportionally more; the squeeze lands on the
+  // sparse days.
+  const scale = rowsAvail / sum;
+  const rowStart = new Float64Array(nDays + 1);
+  const rowsOf   = new Float64Array(nDays);
+  const events   = P7_AXIS_EVENTS.map(() => ({ row: 0, reachRow: 0, bandStart: 0, bandEnd: 0 }));
+  let cursor = 0;
+  const placeBands = (d) => {
+    (bandDay.get(d) || []).forEach((i) => {
+      events[i].bandStart = cursor;
+      events[i].bandEnd   = cursor + bandRows;
+      cursor += bandRows;
+    });
+  };
+  for (let d = 0; d < nDays; d++) {
+    placeBands(d);
+    rowStart[d] = cursor;
+    rowsOf[d]   = need[d] * scale;
+    cursor     += rowsOf[d];
+  }
+  placeBands(nDays);
+  rowStart[nDays] = cursor;
+  const totalRows = cursor;
+
+  const rowMid = (d) => rowStart[d] + rowsOf[d] / 2;
+  P7_AXIS_EVENTS.forEach((ev, i) => {
+    const past = p7DayMs(ev.date) > maxMs;
+    const e = events[i];
+    if (band) {
+      // Dot 1.5 rows into the band, text below it; reached once the fill edge
+      // enters the band.
+      e.row      = e.bandStart + 1.5;
+      e.reachRow = e.bandStart;
+    } else {
+      // Past-the-end event parks a few rows short of the bottom (the vertical
+      // counterpart of the horizontal +26px xOffset) so it can still be reached.
+      e.row      = past ? totalRows - 3 : rowMid(dayOf(ev.date));
+      e.reachRow = e.row;
+    }
+  });
+
+  // Widen: cells nearest the corridor are blocked around each event's rows so
+  // the camps part around the headline. The bump is centred a few rows below
+  // the dot (where the text block actually sits).
+  const blockedCols = new Int32Array(Math.ceil(totalRows) + 2);
+  if (!band) {
+    const blockTextRows = Math.ceil(46 / CELL) / 2; // half of dot-radius + title + date (px) in rows
+    events.forEach((e) => {
+      const centre = e.row + blockTextRows;
+      for (let r = Math.floor(centre - P7_VERT.widenRows); r <= Math.ceil(centre + P7_VERT.widenRows); r++) {
+        if (r < 0 || r >= blockedCols.length) continue;
+        const t = 1 - Math.abs(r - centre) / P7_VERT.widenRows;
+        if (t <= 0) continue;
+        const bump = P7_VERT.widenPx * p9Ease(t);
+        blockedCols[r] = Math.max(blockedCols[r], Math.ceil(bump / CELL));
+      }
+    });
+  }
+
+  const lastRow = rows - 1;
+  function placeSide(evs, seed, side) {
+    const rng  = p7Rng(seed);
+    const used = []; // row -> Uint8Array(cols), lazily
+    const cellRow = (r) => used[r] || (used[r] = new Uint8Array(cols));
+    const positions = new Array(evs.length);
+    // Tries to claim a free k in `row` walking outward from the corridor;
+    // returns k or -1. Cells rolled as permanent gaps are marked used (2).
+    function claim(row) {
+      const u = cellRow(row);
+      const usable = cols - (blockedCols[row] || 0);
+      for (let k = blockedCols[row] || 0; k < usable; k++) {
+        if (u[k]) continue;
+        if (rng() > P7_VERT.fillRatio) { u[k] = 2; continue; } // permanent gap
+        u[k] = 1;
+        return k;
+      }
+      return -1;
+    }
+    evs.forEach((e, i) => {
+      const d = dayOf(e.date);
+      const want = rowStart[d] + rng() * rowsOf[d] + (rng() * 2 - 1) * P7_VERT.rowJitter;
+      const base = Math.min(lastRow, Math.max(0, Math.round(want)));
+      let k = -1, row = base;
+      // Spill outward: base, base+1, base-1, base+2, ...
+      for (let step = 0; k < 0 && step <= lastRow; step++) {
+        const cand = step === 0 ? base : (step % 2 ? base + (step + 1) / 2 : base - step / 2);
+        if (cand < 0 || cand > lastRow) continue;
+        k = claim(cand); row = cand;
+      }
+      if (k < 0) { k = 0; row = base; } // grid genuinely full — overlap rather than drop
+      const col = side === "right" ? k : cols - 1 - k;
+      positions[i] = row * cols + col;
+    });
+    return positions;
+  }
+
+  return {
+    rows, cols, totalRows, nDays, minMs, maxMs, rowStart, rowsOf, dayOf, events,
+    leftPos:  placeSide(p7.leftEvents,  11111, "left"),
+    rightPos: placeSide(p7.rightEvents, 99999, "right"),
+  };
+}
+
+// Fractional row of a date on the vertical axis — the MIDDLE of that day's
+// rows (ticks, hover marker, widen-mode event dots); p7RowEndOfDate is the
+// bottom of the day's rows (the fill edge, so it covers the day's own dots).
+// A date past the data clamps to the end. Both fall back to 0 before layout.
+function p7RowOfDate(dateStr) {
+  const v = p7.vert; if (!v) return 0;
+  if (p7DayMs(dateStr) > v.maxMs) return v.totalRows;
+  const d = v.dayOf(dateStr);
+  return v.rowStart[d] + v.rowsOf[d] / 2;
+}
+function p7RowEndOfDate(dateStr) {
+  const v = p7.vert; if (!v) return 0;
+  if (p7DayMs(dateStr) > v.maxMs) return v.totalRows;
+  const d = v.dayOf(dateStr);
+  return v.rowStart[d] + v.rowsOf[d];
+}
+// Row → canvas y (top of that row) and the axis line's own extent.
+function p7VertTopY(H) { return Math.round(H * sbbTimeline(H).top); }
+function p7RowY(row, H) { return p7VertTopY(H) + row * p7.CELL; }
+function p7AxisY(dateStr, H) { return p7RowY(p7RowOfDate(dateStr), H); }
+// The fill edge in rows — the bottom of currentDate's rows.
+function p7CurRow() { return p7RowEndOfDate(p7.currentDate); }
 
 // Binary search: how many events have date < target
 function p7BisectBefore(events, target) {
@@ -367,6 +597,7 @@ const P7_AXIS_FILL_LAG_DAMPING = 0.12;
 let p7AxisLaggedFillFrac = null;
 
 function p7AxisFillFracTarget() {
+  if (p7VerticalAxis()) return p7.vert ? p7CurRow() / p7.vert.totalRows : 0;
   const minMs = new Date(p7.minDate + "T00:00:00Z").getTime();
   const maxMs = new Date(p7.maxDate + "T00:00:00Z").getTime();
   const curMs = new Date(p7.currentDate + "T00:00:00Z").getTime();
@@ -590,7 +821,8 @@ function p7UpdateLayout(W, H) {
   // (counts 0 → the floor size), and without this the solved size would stay
   // at that floor for the whole session on an unchanged viewport.
   const maxEvents = Math.max(p7.leftEvents.length, p7.rightEvents.length);
-  if (W === p7.lastW && H === p7.lastH && maxEvents === p7.lastMaxEvents) return;
+  if (W === p7.lastW && H === p7.lastH && maxEvents === p7.lastMaxEvents && p7.lastVertical === p7VerticalAxis()) return;
+  p7.lastVertical = p7VerticalAxis();
   p7.lastMaxEvents = maxEvents;
 
   const box    = sbbTimeline(H);
@@ -604,6 +836,9 @@ function p7UpdateLayout(W, H) {
   if (isMobile()) {
     const sideW = W / 2 - CENTER_GAP / 2 - Math.round(W * box.left);
     p7MobileSq = p7SolveMobileSq(sideW, sideH, maxEvents);
+  } else {
+    const sideW = W / 2 - p7CenterGap() / 2 - Math.round(W * box.left);
+    p7DesktopSq = p7.ready ? p7SolveVerticalSq(sideW, sideH, maxEvents) : P7_SQ;
   }
   const { leftX0, cols, CELL } = p7GridGeometry(W, H);
   p7.leftX0 = leftX0;
@@ -612,9 +847,19 @@ function p7UpdateLayout(W, H) {
   p7.cols = cols;
 
   const rows  = Math.floor(sideH / CELL);
-  const total = p7.cols * rows;
-  p7.leftPos  = p7OrderFromCenter(total, p7.cols, 11111, "left",  p7.leftEvents.length);
-  p7.rightPos = p7OrderFromCenter(total, p7.cols, 99999, "right", p7.rightEvents.length);
+  p7.rows = rows;
+  if (p7VerticalAxis() && p7.ready) {
+    // Desktop: rows are dates (see VERTICAL AXIS above).
+    const v = p7BuildVerticalLayout(rows, p7.cols, CELL);
+    p7.vert     = v;
+    p7.leftPos  = v.leftPos;
+    p7.rightPos = v.rightPos;
+  } else {
+    p7.vert = null;
+    const total = p7.cols * rows;
+    p7.leftPos  = p7OrderFromCenter(total, p7.cols, 11111, "left",  p7.leftEvents.length);
+    p7.rightPos = p7OrderFromCenter(total, p7.cols, 99999, "right", p7.rightEvents.length);
+  }
 
   // p7ResolveActorOccurrenceCell's own cache (p7TargetCellCache) maps an
   // event to a *cell number* within p7.leftPos/p7.rightPos — meaningless on
@@ -906,6 +1151,26 @@ function p7DrawTimelineSquares(ctx, W, H) {
 
   const posMap = new Map();
 
+  // A2 (desktop vertical axis): a faint full-width rule across both camps at
+  // each REACHED headline event's row, drawn under the dots. Persistent like
+  // the event's own dot (reachedT), not tied to the label's crossfade — the
+  // rule is a landmark that stays once passed. Wiped in by the axis intro.
+  if (p7VerticalAxis() && P7_VERT.eventLine && p7.vert && p7AxisTriggerIfNeeded()) {
+    const introT = p7AxisIntroT();
+    ctx.save();
+    P7_AXIS_EVENTS.forEach((ev, i) => {
+      const t = P7_AXIS_EVENT_STATE[i].reachedT * p7Ease(introT);
+      if (t <= 0.001) return;
+      const y = Math.round(p7RowY(p7.vert.events[i].row, H)) + 0.5;
+      ctx.strokeStyle = `rgba(90, 90, 90, ${P7_VERT_EVENT_LINE_ALPHA * t})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(leftX0, y);
+      ctx.lineTo(W - leftX0, y);
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
 
   // Draw left events.
   p7DrawSideSquares(ctx, p7.leftEvents, p7.leftPos, leftX0, topY, cols, CELL, SQ, monthEndL, settledL, posMap);
@@ -1393,7 +1658,12 @@ function p7UpdateAxisEventTriggers(W) {
     const state = P7_AXIS_EVENT_STATE[i];
     const evMs = new Date(ev.date + "T00:00:00Z").getTime();
     let reached;
-    if (evMs > maxMs) {
+    if (p7VerticalAxis()) {
+      // Vertical: one rule for every event — the fill edge (bottom of
+      // currentDate's rows) has come down to the event's own reach row (the
+      // band's top in band mode, the dot's row in widen mode).
+      reached = hasScrolled && !!p7.vert && p7CurRow() >= p7.vert.events[i].reachRow;
+    } else if (evMs > maxMs) {
       // An event dated past the dataset's end has no date the scrub can ever
       // reach — clamping its compare date to maxDate fired it only on the one
       // final frame where currentDate === maxDate exactly, so in practice it
@@ -1719,6 +1989,7 @@ function p7AxisEventTrueX(ev, i, W) {
 }
 
 function p7DrawYearAxis(ctx, W, H) {
+  if (p7VerticalAxis()) return p7DrawYearAxisVertical(ctx, W, H);
   const ticks = p7AxisYearTicks();
   const rawCurX = p7AxisX(p7.currentDate, W);
 
@@ -1858,6 +2129,176 @@ function p7DrawYearAxis(ctx, W, H) {
     ctx.fill();
     ctx.restore();
   }
+}
+
+/* ---- VERTICAL AXIS drawing (desktop) ---------------------------------------
+   The vertical counterpart of p7DrawYearAxis above: same colours, radii,
+   fonts, fill lag, hover states and headline fade logic, laid out top → bottom
+   at x = W/2. Year labels sit directly under their ring, centred on the line;
+   headline blocks (title lines + date) hang under their dot, centred on the
+   line, in the band / opened corridor. No de-collision — the layout already
+   reserves the space (bands are empty rows; widen blocks the inner cells).
+   ------------------------------------------------------------------------- */
+const P7_VERT_EVENT_LINE_ALPHA  = 0.18; // A2 rule across the camps
+const P7_VERT_EVENT_TEXT_GAP    = 6;    // px between the dot's edge and the title's first line
+const P7_VERT_YEAR_LABEL_GAP    = 6;    // px between a year ring and its label
+
+function p7DrawYearAxisVertical(ctx, W, H) {
+  if (!p7.vert) return;
+  const v      = p7.vert;
+  const ticks  = p7AxisYearTicks();
+  const axisDpr = window.devicePixelRatio || 1;
+  const axisQ   = x => Math.round(x * axisDpr) / axisDpr;
+  const axisX   = axisQ(W / 2);
+  const topY    = p7VertTopY(H);
+  const len     = v.totalRows * p7.CELL;
+  const botY    = topY + len;
+  ctx.save();
+
+  // Build-in wipe, top → bottom (same clock as the horizontal wipe).
+  const introT = p7AxisIntroT();
+  if (introT < 1) {
+    const revealY = topY + p7Ease(introT) * len;
+    ctx.beginPath();
+    ctx.rect(0, 0, W, revealY);
+    ctx.clip();
+  }
+
+  const fillFrac = p7AxisUpdateFillLag();
+  const curY     = topY + fillFrac * len;
+  const curRow   = p7CurRow();
+
+  const hoveredEvent = p7.hoveredEvent || (p7Inspect.dragging ? p7Inspect.event : null);
+  const hoverActive  = !!hoveredEvent;
+  const hoverAxisY   = hoverActive ? axisQ(p7AxisY(hoveredEvent.date, H)) : null;
+
+  // Base line + filled portion from the top.
+  const lineLeft = axisX - P7_AXIS_LINE_THICKNESS / 2;
+  ctx.fillStyle = hoverActive ? `rgba(0, 0, 0, ${P7_AXIS_UNFILLED_HOVER_ALPHA})` : P7_AXIS_BG_COLOR;
+  ctx.fillRect(lineLeft, topY, P7_AXIS_LINE_THICKNESS, len);
+  ctx.fillStyle = hoverActive ? `rgba(0, 0, 0, ${P7_AXIS_ROSTER_LABEL_ALPHA})` : P7_AXIS_FILLED_COLOR;
+  ctx.fillRect(lineLeft, topY, P7_AXIS_LINE_THICKNESS, curY - topY);
+
+  // Year rings + labels. A tick is reached once the fill edge is past its row.
+  ctx.font = `18px 'Assistant', sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  for (const tick of ticks) {
+    const row = p7RowOfDate(tick.dateStr);
+    const y   = axisQ(p7RowY(row, H));
+    const reached = row <= curRow;
+    const ringColor = hoverActive ? P7_AXIS_BG_COLOR : (reached ? P7_AXIS_FILLED_COLOR : P7_AXIS_BG_COLOR);
+    ctx.fillStyle = "#FDFCFF";
+    ctx.beginPath(); ctx.arc(axisX, y, P7_AXIS_MARKER_RADIUS, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = P7_AXIS_MARKER_STROKE;
+    ctx.strokeStyle = ringColor;
+    ctx.beginPath(); ctx.arc(axisX, y, P7_AXIS_MARKER_RADIUS, 0, Math.PI * 2); ctx.stroke();
+    // Label under the ring, on a punched background so the line doesn't run
+    // through the digits.
+    const label = String(tick.year);
+    const tw = ctx.measureText(label).width;
+    const ly = y + P7_AXIS_MARKER_RADIUS + P7_VERT_YEAR_LABEL_GAP;
+    ctx.fillStyle = "#FDFCFF";
+    ctx.fillRect(axisX - tw / 2 - 3, ly - 1, tw + 6, 22);
+    ctx.fillStyle = hoverActive
+      ? `rgba(0, 0, 0, ${P7_AXIS_BG_ALPHA})`
+      : (reached ? P7_AXIS_LABEL_COLOR : P7_AXIS_LABEL_FAINT_COLOR);
+    ctx.fillText(label, axisX, ly);
+  }
+  ctx.restore();
+
+  p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, hoverAxisY);
+
+  if (hoverActive) {
+    ctx.save();
+    ctx.fillStyle = "#FDFCFF";
+    ctx.beginPath(); ctx.arc(axisX, hoverAxisY, P7_AXIS_MARKER_RADIUS + 1, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = p7ActorColor(hoveredEvent.actor);
+    ctx.beginPath(); ctx.arc(axisX, hoverAxisY, P7_AXIS_MARKER_RADIUS, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+}
+
+function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlightY) {
+  p7UpdateAxisEventTriggers(W);
+  const now = performance.now();
+  const v = p7.vert;
+  ctx.save();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+
+  // Width available to a headline block: the whole band in band mode, the
+  // opened corridor (minus a margin) in widen mode.
+  const maxWidth = P7_VERT.eventMode === "band"
+    ? 320
+    : P7_VERT.corridorPx + 2 * P7_VERT.widenPx - 24;
+
+  p7.axisEventPositions = new Map();
+  const hoveredAxisEvent = p7.hoveredAxisEvent;
+  const rosterTarget = hoverActive ? 1 : 0;
+  p7AxisRosterT += (rosterTarget - p7AxisRosterT) * P7_AXIS_HOVER_ANIM_SPEED;
+  if (Math.abs(rosterTarget - p7AxisRosterT) < 0.001) p7AxisRosterT = rosterTarget;
+
+  // Persistent dots (same easing as the horizontal pass).
+  const evY = P7_AXIS_EVENTS.map((ev, i) => p7RowY(v.events[i].row, H));
+  P7_AXIS_EVENTS.forEach((ev, i) => {
+    const y = evY[i];
+    const reached = y <= curY;
+    const state = P7_AXIS_EVENT_STATE[i];
+    const reachedTarget = reached ? 1 : 0;
+    state.reachedT += (reachedTarget - state.reachedT) * P7_AXIS_HOVER_ANIM_SPEED;
+    if (Math.abs(reachedTarget - state.reachedT) < 0.001) state.reachedT = reachedTarget;
+    if (!reached) state.hoverT = 0;
+    if (state.reachedT <= 0.001) return;
+    const isAxisHovered = hoveredAxisEvent === ev;
+    const hoverTarget = isAxisHovered ? 1 : 0;
+    state.hoverT += (hoverTarget - state.hoverT) * P7_AXIS_HOVER_ANIM_SPEED;
+    if (Math.abs(hoverTarget - state.hoverT) < 0.001) state.hoverT = hoverTarget;
+    const prominence = Math.max(p7AxisEventOpacity(i, now), state.hoverT) * (1 - p7AxisRosterT);
+    const markerRadius = (P7_AXIS_MARKER_RADIUS_FADED +
+      (P7_AXIS_MARKER_RADIUS - P7_AXIS_MARKER_RADIUS_FADED) * prominence) * state.reachedT;
+    p7.axisEventPositions.set(ev, { x: axisX, y, radius: markerRadius });
+    ctx.fillStyle = "#FDFCFF";
+    ctx.beginPath(); ctx.arc(axisX, y, markerRadius + state.reachedT, 0, Math.PI * 2); ctx.fill();
+    const isHighlighted = highlightY !== null && Math.abs(y - highlightY) < 0.5;
+    ctx.fillStyle = hoverActive
+      ? (isHighlighted ? P7_AXIS_HOVER_COLOR : P7_AXIS_BG_COLOR)
+      : (isAxisHovered ? P7_AXIS_HOVER_COLOR : P7_AXIS_FILLED_COLOR);
+    ctx.beginPath(); ctx.arc(axisX, y, markerRadius, 0, Math.PI * 2); ctx.fill();
+  });
+
+  // Labels: title lines then the date, hanging under the dot, centred on the
+  // line. The block's background is punched so the line (and, in widen mode,
+  // any stray dot) doesn't run through the text.
+  P7_AXIS_EVENTS.forEach((ev, i) => {
+    const st = P7_AXIS_EVENT_STATE[i];
+    const rosterOn = st.triggeredAt !== null && st.leavingAt === null;
+    const opacity = Math.max(p7AxisEventOpacity(i, now), st.hoverT, rosterOn ? p7AxisRosterT : 0);
+    if (opacity <= 0) return;
+    ctx.font = p7AxisEventFont();
+    const lines = p7WrapLabel(ctx, ev.label, maxWidth);
+    const lh = p7AxisEventLineHeight();
+    const y0 = evY[i] + P7_AXIS_MARKER_RADIUS + P7_VERT_EVENT_TEXT_GAP;
+    const dateLabel = p7FormatDateDMY(ev.date, ".");
+    let tw = 0;
+    lines.forEach(t => { tw = Math.max(tw, ctx.measureText(t).width); });
+    ctx.font = p7AxisDateFont();
+    tw = Math.max(tw, ctx.measureText(dateLabel).width);
+    const blockH = lines.length * lh + lh;
+    ctx.globalAlpha = opacity;
+    ctx.fillStyle = "#FDFCFF";
+    ctx.fillRect(axisX - tw / 2 - 4, y0 - 2, tw + 8, blockH + 2);
+    const isHoverHighlighted = hoverActive && highlightY !== null && Math.abs(evY[i] - highlightY) < 0.5;
+    const labelAlpha = (hoverActive && !isHoverHighlighted) ? P7_AXIS_ROSTER_LABEL_ALPHA : 1;
+    ctx.font = p7AxisEventFont();
+    ctx.fillStyle = `rgba(0, 0, 0, ${labelAlpha})`;
+    lines.forEach((text, li) => ctx.fillText(text, axisX, y0 + li * lh));
+    ctx.font = p7AxisDateFont();
+    ctx.fillStyle = (hoverActive && !isHoverHighlighted) ? `rgba(0, 0, 0, ${P7_AXIS_ROSTER_LABEL_ALPHA})` : P7_AXIS_LABEL_COLOR;
+    ctx.fillText(dateLabel, axisX, y0 + lines.length * lh);
+    ctx.globalAlpha = 1;
+  });
+  ctx.restore();
 }
 
 // Exposed so scroll and animation-loop redraws can re-test the cursor against
