@@ -17,7 +17,7 @@ HTML id: `@foldN` = `id="page-(N-1)"`.** Verified against `project.html`'s secti
 | `@fold4` | `page-3` | `drawFoldSplit` | בשל פעילותן בשטח… | `fold6Trigger`: the 6 groups glide into the persistent two-column mini-legend; the camp headers **un-type** (see below) |
 | `@fold5` | `page-4` | `drawBackground` | אספנו תיעודים… | `squaresRevealTrigger`: 8 grey sample squares grow in at center |
 | `@fold6` | `page-5` | `drawBackground` | הנתונים לקוחים מגוף המחקר… (ACLED, with a visible external link in the card) | `acledNoteTrigger`: the ACLED source note + its divider fade into the mini-legend (on mobile: into the מקרא panel) |
-| `@fold7` | `page-6` | `drawFold7` | כל ריבוע מייצג פעולה פוליטית בשטח | `fold7LabelTrigger`: square labels appear; `fold8SquareDimTrigger` dims the rest while the fold-8 tooltip grows + types (**mobile:** the tooltip is a docked frame above the timeline instead — see [Timeline](Timeline.md#hover)) |
+| `@fold7` | `page-6` | `drawFold7` | כל ריבוע מייצג פעולה פוליטית בשטח | Two crossings on desktop: at 0.5 `fold7LabelTrigger` types the square labels in and `fold8SquareDimTrigger` dims the 7 non-demo squares (square 0 stands out); 400px later `fold8TooltipTrigger` grows + types the demo tooltip, once the card has cleared the squares (**mobile:** the tooltip is a docked frame above the timeline instead — see [Timeline](Timeline.md#hover)) |
 | `@fold8` | `page-7` | `drawFold9` | צבע הריבוע מציין את הקבוצה… | `fold9Trigger` colors square 0 + its tooltip border; `fold9FlyTrigger` colors all 8 and flies them to their real per-event dots |
 | `@fold9` | `page-8` | `drawPage7` | *(no title — `page7-scrub`)* | The pinned real timeline — see [Timeline](Timeline.md) |
 | `@fold10` | `page-9` | `drawPage8` | פעולות פוליטיות נבדלות זו מזו… | Bridge glide from timeline layout into page9's legit grid (`page8.js`). Card sits at the section top (`padding-top: 48px`); on desktop the section is **60vh** (not the house 100vh) so @fold11's card is already rising while this one leaves — no dead run |
@@ -42,7 +42,8 @@ crossing point differs by viewport.
 | `squaresRevealTrigger` | `#page-4 .text-card` | 0.5 |
 | `acledNoteTrigger` | `#page-5 .text-card` | 0.5 |
 | `fold7LabelTrigger` | `#page-6 .text-card` | 0.5 |
-| `fold8SquareDimTrigger` | `#page-6 .text-card` | 0.5 |
+| `fold8SquareDimTrigger` | `#page-6 .text-card` | 0.5 — @fold7 trigger #1: only dims the 7 non-demo squares so square 0 stands out |
+| `fold8TooltipTrigger` | `#page-6 .text-card` | **desktop: `0.5 − 400px/vh`** (`FOLD8_TOOLTIP_ABOVE_PX`, i.e. the card has climbed 400px past the 0.5 line before the tooltip grows + types); 0.5 mobile. @fold7 trigger #2 — the tooltip demo used to share the labels' crossing and collided with the card |
 | `fold9Trigger` | `#page-7 .text-card` | 0.5 |
 | `fold9FlyTrigger` | `#page-7 .text-card` | 0 (card fully offscreen) |
 | `fold13Trigger` | `#page-11 .page12-sticky-center` | 0 |

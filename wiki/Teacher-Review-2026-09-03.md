@@ -82,10 +82,10 @@ Legend: 🔴 must · 🟡 should · 🟢 nice-to-have / "not critical" · 📱 m
 
 ## F. @fold7 tooltip demo (`page-6`, `js/fold8-tooltip.js`) 🟡
 
-- [ ] **F1. Tooltip fires exactly when the card covers the squares** — they collide graphically.
+- [x] **F1. Tooltip fires exactly when the card covers the squares** — they collide graphically.
   Fix options discussed (pick one, test): (a) fire earlier so the tooltip is already waiting
   before the card arrives; (b) split into two triggers — first just darkens square 0, then a
-  second trigger slightly higher pops the tooltip; (c) move the bubble further from the squares.
+  second trigger slightly higher pops the tooltip; (c) move the bubble further from the squares. *(Done: (b), desktop trigger #2 is 400px above — `fold8TooltipTrigger`.)*
 - [ ] **F2. Tooltip style 🟢.** Options: bubble in *negative* (fill = the group colour, white
   text) if it stays accessible; or drop the dashed border for a thin light-grey / translucent
   solid line. Eyal already tried solid and disliked it in the regular tooltip — revisit but

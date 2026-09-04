@@ -743,6 +743,17 @@ const fold7LabelTrigger = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateGroup
 // reaches max scale, instead of tracking the shared GROUP_TRANSITION_MS tempo.
 const FOLD8_SQUARE_DIM_MS = FOLD8_GROW_MS;
 const fold8SquareDimTrigger = makeTrigger(FOLD8_SQUARE_DIM_MS, (...a) => updateGroups(...a));
+// @fold7 trigger #2 (teacher review 2026-09-03, F1): the tooltip demo used to
+// ride fold7LabelTrigger, so it grew + typed at the very moment the title
+// card was passing over the squares — the two collided. It now has its own
+// trigger, crossed FOLD8_TOOLTIP_ABOVE_PX higher up the viewport than the
+// house 0.5 (see checkFold8Tooltip below), i.e. the card has moved on above
+// the squares before the tooltip pops. Trigger #1 (the 0.5 crossing shared
+// with the labels) only dims the 7 non-demo squares so square 0 stands out.
+// The eased t gates the tooltip; its raw progress is what the reversible
+// grow-then-type sequence senses direction from (fold8AdvanceSequence).
+const FOLD8_TOOLTIP_ABOVE_PX = 400;
+const fold8TooltipTrigger = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateGroups(...a));
 // @fold10 trigger #1 — its title card's ordinary midpoint crossing. Colors in
 // only the highlighted square (index 0) and its tooltip's border; the other
 // 7 squares are untouched by this trigger.
@@ -920,6 +931,13 @@ const checkSquaresReveal = watchCardThreshold(squaresRevealCardEl, 0.5, squaresR
 const checkAcledNote     = watchCardThreshold(acledNoteCardEl, 0.5, acledNoteTrigger);
 const checkFold7Label = watchCardThreshold(fold7LabelCardEl, 0.5, fold7LabelTrigger);
 const checkFold8SquareDim = watchCardThreshold(fold7LabelCardEl, 0.5, fold8SquareDimTrigger);
+// Desktop: the same card, FOLD8_TOOLTIP_ABOVE_PX above the 0.5 line (a
+// smaller frac = a later crossing). Mobile keeps 0.5: its tooltip is docked
+// at a fixed spot, nothing for the card to collide with.
+const checkFold8Tooltip = watchCardThreshold(
+  fold7LabelCardEl,
+  () => (isMobile() ? 0.5 : 0.5 - FOLD8_TOOLTIP_ABOVE_PX / window.innerHeight),
+  fold8TooltipTrigger);
 const checkFold9 = watchCardThreshold(page7TitleCardEl, 0.5, fold9Trigger);
 // Same crossing as p7AxisShouldShow (page7.js) — title card fully offscreen,
 // top <= 0. Used to instant-reverse (snap straight back to rest on scroll-up
@@ -940,7 +958,7 @@ const checkFold9Fly = watchCardThreshold(page7TitleCardEl, 0, fold9FlyTrigger);
 const checkFold13 = watchCardThreshold(page12StickyEl, 0, fold13Trigger);
 
 function checkGroupTriggers() {
-  checkFold2(); checkFold3(); checkFold6(); checkSquaresReveal(); checkAcledNote(); checkFold7Label(); checkFold8SquareDim(); checkFold9(); checkFold9Fly(); checkFold13();
+  checkFold2(); checkFold3(); checkFold6(); checkSquaresReveal(); checkAcledNote(); checkFold7Label(); checkFold8SquareDim(); checkFold8Tooltip(); checkFold9(); checkFold9Fly(); checkFold13();
 }
 
 // Default (camp-column) swatch size + the swatch-to-label gap

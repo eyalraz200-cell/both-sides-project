@@ -27,7 +27,7 @@ let fold8TooltipOwnsIt = false;
 // (untype, then shrink) rather than freezing until the forward sequence
 // finishes or hard-snapping to hidden. fold8SeqElapsed (0..total) is the
 // single source of truth; fold8SeqDirection (+1/-1) flips the instant
-// fold7LabelTrigger's own raw progress changes direction (sensed each tick
+// fold8TooltipTrigger's own raw progress changes direction (sensed each tick
 // by comparing to its previous value, fold8PrevTooltipRaw) — not tied to
 // tooltipT's eased value, so the grow/type rate itself never speeds up or
 // slows down with scroll speed, same "guaranteed rate regardless of scroll"
@@ -48,7 +48,7 @@ const FOLD8_TYPE_MS_PER_CHAR = 15;  // typewriter speed — tuned snappy, not sl
 // sequence loop (fold8SequenceTick, needed because makeTrigger's runLoop
 // stops firing once a trigger phase settles — see its own comment — leaving
 // nothing to drive the grow/type sequence during the "resting" window after
-// fold7LabelTrigger's own animation has already finished) can call it. Box
+// fold8TooltipTrigger's own animation has already finished) can call it. Box
 // size no longer changes once grown (see fold8SetupTypewriter's own comment
 // on why), so in practice this only needs to run once the grow-in finishes —
 // still called every frame regardless, it's cheap.
@@ -233,7 +233,7 @@ let fold8DescSpans = null;
 // Advances (or reverses) the grow-then-type sequence by one frame — shared by
 // updateGroups' own per-frame call and this function's own self-rescheduling
 // (see fold8PositionTooltip's comment on why the latter is needed at all).
-// Direction is resolved fresh every call from fold7LabelTrigger's raw scroll
+// Direction is resolved fresh every call from fold8TooltipTrigger's raw scroll
 // progress (see fold8SeqDirection's own comment above), so a scroll reversal
 // mid-grow or mid-typing takes effect on the very next frame, not just once
 // the forward sequence happens to finish. shrinkT/shrinkRaw (fold 9's own,
@@ -257,7 +257,7 @@ function fold8AdvanceSequence() {
   const dt = fold8SeqLastFrameTime === null ? 0 : now - fold8SeqLastFrameTime;
   fold8SeqLastFrameTime = now;
 
-  const raw = fold7LabelTrigger.currentRaw();
+  const raw = fold8TooltipTrigger.currentRaw();
   if (raw !== fold8PrevTooltipRaw) fold8SeqDirection = raw > fold8PrevTooltipRaw ? 1 : -1;
   // A SNAPPED trigger (watchCardThreshold's over-a-viewport jump path — e.g.
   // iOS status-bar tap back to the hero) lands raw at 0 in one tick instead of
@@ -375,7 +375,7 @@ let fold8AnchorSquareEl = null;
 
 // Bespoke back-out curve for the fold-8 tooltip's grow-in (main.js
 // only — page7.js/page9.js's own p7Ease/p9Ease are both monotonic and gentler),
-// applied on top of tooltipT (itself already p9Ease'd via fold7LabelTrigger)
+// applied on top of tooltipT (itself already p9Ease'd via fold8TooltipTrigger)
 // for a punchier, more dynamic "pop" than a plain scale-from-0
 // tween — cubic back-ease-out formula, but c1 is turned way down from its
 // standard 1.70158 (which overshoots ~10%) to just a few percent, a subtle
