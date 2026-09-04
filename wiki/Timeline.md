@@ -34,8 +34,7 @@ is no `right` field.
 **solved per viewport** like mobile (`p7SolveVerticalSq` → `p7DesktopSq`, read through
 `p7Sq()`/`p7Cell()`, gap ratio kept at 1.5/3.5) — the largest square whose grid still holds
 the busier camp once each day's events must sit in that day's rows (6% slack for the jitter
-spill; band mode gives whole rows to the headlines, widen mode gives the corridor more
-width, so both solve smaller than the ceiling). (page9 uses `P9_SQ 3 / P9_GAP 1` —
+spill; the 180px corridor takes width from the grid, so it solves smaller than the ceiling). (page9 uses `P9_SQ 3 / P9_GAP 1` —
 deliberately different; page8 lerps between them.)
 
 `p7UpdateLayout(W, H)` early-returns unless the viewport (or the desktop/mobile branch)
@@ -56,7 +55,7 @@ Rows are dates. Events are bucketed per **day** (`dayOf`, 1279 days for the curr
 each day's rows are **water-filled**: a day whose events don't fit an even share
 (`max(countL, countR) / cap > linear`, `cap = floor(cols × fillRatio)`) takes exactly the rows
 it needs, and the remaining days split what's left evenly (iterated until no more days cross
-the line; days + bands sum to `rows` exactly, nothing is scaled). So the axis is linear in
+the line; days sum to `rows` exactly, nothing is scaled). So the axis is linear in
 time except where a day has more events than one row holds (Oct 7 and its week), which
 stretches taller — and a dense day is never squeezed below its own count, so the grid can't
 overflow its bottom. `rowStart[d]`/`rowsOf[d]` are the cumulative map;
@@ -69,29 +68,24 @@ the day**, `row = floor(rowStart + (j + 0.5) / countInDay × rowsOf ± rowJitter
 random pick — then the first free cell walking **outward from the corridor** (`k` →
 `col = right ? k : cols−1−k`); each cell is rolled a permanent gap with probability
 `1 − fillRatio` on first visit; a full row spills **downward** first (row+1, +2…), upward
-only if everything below is full. Both rules exist for the month cascade
-(`p7DrawSideSquares`), which pops squares in index order: rows therefore fill **top → bottom**
-within a day, never shuffling between a busy day's rows. Deterministic, so a resize/relayout
+only if everything below is full. Both rules keep a day's dots in row order, so the cascade's
+top → bottom row sweep (below) and the date order agree. Deterministic, so a resize/relayout
 reproduces itself.
 
-The tunables live in `P7_VERT` (`page7.js`): `corridorPx` (band), `eventMode`, `eventLine`,
-`bandPx` 60, `wideCorridorPx` 180, `fillRatio` 1, `rowJitter` 0 — shipped defaults are
-**widen mode, line off** (picked 2026-09-04); the harness and the band branch stay for now. Changing
-one needs a relayout (`p7.lastW = 0; draw()`), which also clears `p7TargetCellCache`.
+The tunables live in `P7_VERT` (`page7.js`): `corridorPx` (= `P7_AXIS_CORRIDOR_PX` **180**,
+`squareboundingbox.js`), `fillRatio` 1, `rowJitter` 0 — all picked by eye on 2026-09-04
+(review item A1/A2). Changing one needs a relayout (`p7.lastW = 0; draw()`), which also
+clears `p7TargetCellCache`.
 
-**Headline placement is under comparison** (`_debug-axis.js`, review item A1/A2 — the
-losing mode is deleted once picked):
-- `eventMode: "band"` — `ceil(bandPx / CELL)` empty rows are reserved just *before* the
-  event's day (the past-the-end event's band goes after the last day); the dot sits 1.5 rows
-  into the band (`events[i].row`) and the headline + date hang under it, centred on the axis.
-  `reachRow` = the band's top.
-- `eventMode: "widen"` — no rows reserved and no per-event bump: the centre corridor is
-  simply wider over its whole height (`p7CenterGap()` returns `wideCorridorPx` instead of
-  `corridorPx`) so every headline block fits inside it beside the axis. Dot at the middle
-  of the day's rows (past-the-end: `totalRows − 3`); `reachRow` = the dot's row.
-- `eventLine` (A2) — a 1px `rgba(90,90,90,0.18)` rule from `leftX0` to `W − leftX0` at each
-  event's dot row, drawn in `p7DrawTimelineSquares` *under* the dots. Persistent like the
-  event's dot (`reachedT`, × the intro wipe), not tied to the label's crossfade.
+**Headline placement:** the centre corridor is simply wider over its whole height so every
+headline block fits inside it beside the axis; no rows are reserved and there is no
+per-event bump. Dot at the middle of the day's rows (past-the-end: `totalRows − 3`);
+`reachRow` = the dot's row.
+
+> **Removed — don't reintroduce:** the "band" placement (empty rows reserved at each
+> headline's date with the headline printed across them) and the A2 full-width rule at each
+> headline's row. Both were compared against the wide corridor with `_debug-axis.js` on
+> 2026-09-04 and lost; the harness is gone too.
 
 ### `p7TargetCellCache`
 
@@ -117,7 +111,14 @@ entirely absent) to `P7_ANIM_TOTAL_DURATION` (every square settled). State lives
 reached (or was fully retreated and cleaned up) — distinct from a cursor of 0.
 
 A square's presence is a **pure function of the cursor**:
-`p7Ease(clamp((c - delay) / P7_POP_DURATION))`, `delay = (localIdx/(count-1)) * stagger`.
+`p7Ease(clamp((c - delay) / P7_POP_DURATION))`. The slot `delay`:
+- **Desktop (vertical axis):** `delay = clamp((row + k/cols − monthRowTop) / (monthRowBot − monthRowTop)) × stagger`,
+  where `row` is the square's grid row, `k` its distance from the corridor and the month's row
+  span comes from `p7.vert.rowStart` at the month's first day / the next month's first day
+  (date-based, so **both camps share it**). The month is a single top → bottom sweep at one
+  speed on both sides, inner → outer within each row, regardless of how many events each camp
+  has that month.
+- **Mobile:** `delay = (localIdx/(count-1)) × stagger` — index order within the month.
 So there is no forward path and no reverse path — the cursor rising plays the month in,
 the cursor falling plays it out, and mirrored order (last in, first out) falls out for
 free because the last squares are the ones with the largest `delay`.
@@ -317,8 +318,8 @@ over `totalRows × CELL`:
   6), on a punched `#FDFCFF` rect that starts at the ring's edge, so no line shows between the ring and the digits or through them.
 - **Headlines:** dot on the line at `p7RowY(events[i].row)`; "reached" = its y ≤ the fill
   edge. `p7UpdateAxisEventTriggers` uses one rule for all seven on desktop:
-  `p7CurRow() ≥ events[i].reachRow`. Title lines (`p7WrapLabel`, `maxWidth` 320 in band
-  mode, `p7CenterGap() − 16` in widen mode) and the date hang under the dot
+  `p7CurRow() ≥ events[i].reachRow`. Title lines (`p7WrapLabel`, `maxWidth`
+  `p7CenterGap() − 16`) and the date hang under the dot
   (`P7_VERT_EVENT_TEXT_GAP` 6), centred on the axis, on a punched background drawn at the
   label's opacity; the punch runs from the dot's edge (or the year label's bottom when pushed past one) to the block's far edge, so no line shows between dot and text. The dot is **always above its text**. The only dodge: if hanging below would overlap a
   year ring or its label (`yearSpans`, collected while the rings are drawn), the block is

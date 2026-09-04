@@ -92,7 +92,7 @@ const CENTER_GAP = 4;
 
 // DESKTOP ONLY (page7.js's p7VerticalAxis branch): the year axis runs
 // VERTICALLY down the centre of the timeline, so the centre gap there is a
-// corridor wide enough for the line, its year rings and the year labels
-// (18px "2026" ≈ 40px) — replaces CENTER_GAP in p7GridGeometry on desktop.
-// Mobile keeps CENTER_GAP and the horizontal bottom axis.
-const P7_AXIS_CORRIDOR_PX = 64;
+// corridor wide enough for the line, its year rings/labels AND every headline
+// block beside it (picked by eye 2026-09-04) — replaces CENTER_GAP in
+// p7GridGeometry on desktop. Mobile keeps CENTER_GAP and the horizontal axis.
+const P7_AXIS_CORRIDOR_PX = 180;
