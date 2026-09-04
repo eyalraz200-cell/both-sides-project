@@ -66,7 +66,7 @@ function p7Cell() { return isMobile() ? p7MobileSq * (1 + P7_MOBILE_GAP_RATIO) :
 // AXIS block below), so the centre gap is the wider P7_AXIS_CORRIDOR_PX
 // corridor rather than CENTER_GAP. Mobile keeps CENTER_GAP + the horizontal axis.
 function p7VerticalAxis() { return !isMobile(); }
-function p7CenterGap()    { return p7VerticalAxis() ? P7_VERT.corridorPx : CENTER_GAP; }
+function p7CenterGap()    { return p7VerticalAxis() ? (P7_VERT.eventMode === "widen" ? P7_VERT.wideCorridorPx : P7_VERT.corridorPx) : CENTER_GAP; }
 function p7GridGeometry(W, H) {
   const leftX0  = sbbTimelineLeftX(W, H);
   const gap     = p7CenterGap();
@@ -206,30 +206,43 @@ function p7OrderFromCenter(total, cols, seed, side, maxEvents) {
    rather than a neat bar chart. Deterministic (p7Rng) so the layout is stable
    across frames and resizes.
 
-   P7_VERT is the tunable bundle (picked by eye with the A1/A2 harness on
-   2026-09-04; the band placement and the A2 line lost and were deleted):
-     corridorPx — the centre corridor, full height, wide enough for every
-                  headline block to sit inside it beside the axis.
+   P7_VERT is the tunable bundle (edited live by _debug-axis.js while the
+   headline placement is being compared — see wiki/Timeline.md):
+     eventMode "band"  — the dot flow pauses at each headline event: bandRows
+                          empty rows are reserved and the headline + date sit
+                          in that band, centred on the axis.
+     eventMode "widen" — no rows reserved; instead the whole corridor is
+                          wider (wideCorridorPx, top to bottom) so every
+                          headline fits inside it beside the axis.
+     eventLine         — A2: a faint full-width line at each reached event's row.
    ------------------------------------------------------------------------- */
 const P7_VERT = {
-  corridorPx: P7_AXIS_CORRIDOR_PX, // full-height corridor (180) — picked 2026-09-04
+  corridorPx: P7_AXIS_CORRIDOR_PX,
+  eventMode:  "widen", // picked 2026-09-04 (harness deleted; band code kept, unused)
+  eventLine:  false,
+  bandPx:     60,    // band mode: height reserved per headline (title line(s) + date)
+  wideCorridorPx: 180, // widen mode: the corridor, full height
   fillRatio:  1,     // no permanent gaps — picked 2026-09-04
   rowJitter:  0,     // picked 2026-09-04 — ± rows a dot may drift from its day's own rows
 };
 // Vertical layout result (p7.vert) — null on mobile / before layout.
 function p7DayMs(dateStr) { return new Date(dateStr + "T00:00:00Z").getTime(); }
 
+function p7VertBandRows(CELL) { return Math.ceil(P7_VERT.bandPx / CELL); }
+
 // Largest square (≤ P7_SQ, the mobile-style solve) whose grid holds the
 // busier camp once each day's events must sit in that day's rows: a date-
-// driven layout cannot pack as tightly as the old free permutation. 6% slack
-// for the jitter spill.
+// driven layout cannot pack as tightly as the old free permutation, and band
+// mode gives whole rows away to the headlines. 6% slack for the jitter spill.
 function p7SolveVerticalSq(sideW, sideH, maxEvents) {
   const gapRatio = P7_GAP / P7_SQ;
+  const bands = P7_VERT.eventMode === "band" ? P7_AXIS_EVENTS.length : 0;
   for (let sq = P7_SQ; sq >= 1.5; sq -= 0.1) {
     const CELL = sq * (1 + gapRatio);
     const cols = Math.floor(sideW / CELL), rows = Math.floor(sideH / CELL);
     const cap  = Math.max(1, Math.floor(cols * P7_VERT.fillRatio));
-    if (rows * cap >= maxEvents * 1.06) return sq;
+    const avail = rows - bands * Math.ceil(P7_VERT.bandPx / CELL);
+    if (avail * cap >= maxEvents * 1.06) return sq;
   }
   return 1.5;
 }
@@ -243,40 +256,50 @@ function p7BuildVerticalLayout(rows, cols, CELL) {
   p7.leftEvents.forEach(e => countL[dayOf(e.date)]++);
   p7.rightEvents.forEach(e => countR[dayOf(e.date)]++);
 
+  const band   = P7_VERT.eventMode === "band";
   const cap    = Math.max(1, Math.floor(cols * P7_VERT.fillRatio));
-  const rowsAvail = rows;
-  // Rows per day, water-filled: a day whose events don't fit its linear share
-  // (Oct 7th and its week) takes exactly the rows it needs; every other day
-  // splits what's left evenly. Iterated because taking rows from the sparse
-  // days lowers their share, which can push more days over the line. Days
-  // always sum to rows exactly, so a dense day is never squeezed below
-  // its own count — that squeeze is what used to overflow the last weeks and
-  // spill their dots UPWARD, out of date order.
-  const need   = new Float64Array(nDays);
-  const perDay = new Float64Array(nDays);
-  for (let d = 0; d < nDays; d++) perDay[d] = Math.max(countL[d], countR[d]) / cap;
-  const dense  = new Uint8Array(nDays);
-  let linear = rowsAvail / nDays;
-  for (let pass = 0; pass < 50; pass++) {
-    let denseRows = 0, nSparse = 0, changed = false;
-    for (let d = 0; d < nDays; d++) {
-      if (!dense[d] && perDay[d] > linear) { dense[d] = 1; changed = true; }
-      if (dense[d]) denseRows += perDay[d]; else nSparse++;
-    }
-    linear = nSparse ? Math.max(0, rowsAvail - denseRows) / nSparse : 0;
-    if (!changed) break;
+  // Band reservations: the band for an event sits just BEFORE that day's rows;
+  // an event dated past the data (the last one) gets its band after the last day.
+  const bandDay = new Map(); // dayIndex (or nDays for "after the end") -> [eventIdx]
+  P7_AXIS_EVENTS.forEach((ev, i) => {
+    const d = p7DayMs(ev.date) > maxMs ? nDays : dayOf(ev.date);
+    if (!bandDay.has(d)) bandDay.set(d, []);
+    bandDay.get(d).push(i);
+  });
+  const bandRows  = band ? p7VertBandRows(CELL) : 0;
+  const rowsAvail = Math.max(1, rows - bandRows * P7_AXIS_EVENTS.length);
+  const linear    = rowsAvail / nDays;
+  const need      = new Float64Array(nDays);
+  let sum = 0;
+  for (let d = 0; d < nDays; d++) {
+    // Fractional rows: there are ~10× more days than rows, so quiet days
+    // share a row and only a day with more events than one row holds
+    // (Oct 7th and its week) stretches beyond its linear share.
+    need[d] = Math.max(linear, Math.max(countL[d], countR[d]) / cap);
+    sum += need[d];
   }
-  for (let d = 0; d < nDays; d++) need[d] = dense[d] ? perDay[d] : linear;
-  const scale = 1;
+  // Normalise so the days + bands exactly fill `rows`. Days that needed more
+  // than their linear share keep proportionally more; the squeeze lands on the
+  // sparse days.
+  const scale = rowsAvail / sum;
   const rowStart = new Float64Array(nDays + 1);
   const rowsOf   = new Float64Array(nDays);
-  const events   = P7_AXIS_EVENTS.map(() => ({ row: 0, reachRow: 0 }));
+  const events   = P7_AXIS_EVENTS.map(() => ({ row: 0, reachRow: 0, bandStart: 0, bandEnd: 0 }));
   let cursor = 0;
+  const placeBands = (d) => {
+    (bandDay.get(d) || []).forEach((i) => {
+      events[i].bandStart = cursor;
+      events[i].bandEnd   = cursor + bandRows;
+      cursor += bandRows;
+    });
+  };
   for (let d = 0; d < nDays; d++) {
+    placeBands(d);
     rowStart[d] = cursor;
     rowsOf[d]   = need[d] * scale;
     cursor     += rowsOf[d];
   }
+  placeBands(nDays);
   rowStart[nDays] = cursor;
   const totalRows = cursor;
 
@@ -284,10 +307,17 @@ function p7BuildVerticalLayout(rows, cols, CELL) {
   P7_AXIS_EVENTS.forEach((ev, i) => {
     const past = p7DayMs(ev.date) > maxMs;
     const e = events[i];
-    // Past-the-end event parks a few rows short of the bottom (the vertical
-    // counterpart of the horizontal +26px xOffset) so it can still be reached.
-    e.row      = past ? totalRows - 3 : rowMid(dayOf(ev.date));
-    e.reachRow = e.row;
+    if (band) {
+      // Dot 1.5 rows into the band, text below it; reached once the fill edge
+      // enters the band.
+      e.row      = e.bandStart + 1.5;
+      e.reachRow = e.bandStart;
+    } else {
+      // Past-the-end event parks a few rows short of the bottom (the vertical
+      // counterpart of the horizontal +26px xOffset) so it can still be reached.
+      e.row      = past ? totalRows - 3 : rowMid(dayOf(ev.date));
+      e.reachRow = e.row;
+    }
   });
 
 
@@ -309,21 +339,17 @@ function p7BuildVerticalLayout(rows, cols, CELL) {
       }
       return -1;
     }
-    // Row inside a day follows the event's index within that day (not a random
-    // pick): the month cascade pops squares in index order, so this is what
-    // makes a busy day (Oct 7th) fill top → bottom instead of shuffling
-    // between its rows. Spill goes DOWNWARD first for the same reason.
-    const seenInDay = new Int32Array(nDays);
-    const sideCount = side === "right" ? countR : countL;
     evs.forEach((e, i) => {
       const d = dayOf(e.date);
-      const j = seenInDay[d]++;
-      const want = rowStart[d] + (j + 0.5) / sideCount[d] * rowsOf[d] + (rng() * 2 - 1) * P7_VERT.rowJitter;
-      const base = Math.min(lastRow, Math.max(0, Math.floor(want)));
+      const want = rowStart[d] + rng() * rowsOf[d] + (rng() * 2 - 1) * P7_VERT.rowJitter;
+      const base = Math.min(lastRow, Math.max(0, Math.round(want)));
       let k = -1, row = base;
-      // Spill: base, base+1, base+2, ... then base-1, base-2, ... if the bottom is full.
-      for (let cand = base; k < 0 && cand <= lastRow; cand++) { k = claim(cand); row = cand; }
-      for (let cand = base - 1; k < 0 && cand >= 0; cand--)   { k = claim(cand); row = cand; }
+      // Spill outward: base, base+1, base-1, base+2, ...
+      for (let step = 0; k < 0 && step <= lastRow; step++) {
+        const cand = step === 0 ? base : (step % 2 ? base + (step + 1) / 2 : base - step / 2);
+        if (cand < 0 || cand > lastRow) continue;
+        k = claim(cand); row = cand;
+      }
       if (k < 0) { k = 0; row = base; } // grid genuinely full — overlap rather than drop
       const col = side === "right" ? k : cols - 1 - k;
       positions[i] = row * cols + col;
@@ -472,48 +498,6 @@ let p7EntryAnim = null;
 function p7ResetForReplay() {
   for (const k in p7MonthPhase) delete p7MonthPhase[k];
   p7MonthMaxReached = -1;
-  if (p7RowCur) p7RowCur.fill(0);
-  p7RowLast = 0;
-}
-
-// Desktop (vertical axis) reveal: each grid ROW is its own cascade. A row is armed the
-// instant the fill edge (p7CurRow) reaches it, and then plays centre -> side on its own
-// wall clock: cursor c in ms from 0 (row absent) to P7_ROW_TOTAL_MS (row settled), each
-// square popping over P7_POP_DURATION once c passes its slot k/cols * P7_ROW_WAVE_MS
-// (k = distance from the corridor). Rows armed in the same scroll tick (a fast scroll)
-// start P7_ROW_STAGGER_MS apart, top first, so a jumped span still reads top -> bottom.
-// Scrolling back above a row aims its cursor at 0 — same shared-cursor reversal as the
-// mobile month cascade: the cursor falling retracts outer squares first. Mobile keeps
-// the per-month cursors below.
-const P7_ROW_WAVE_MS    = 600;                          // centre -> side spread within a row
-const P7_ROW_TOTAL_MS   = P7_ROW_WAVE_MS + P7_POP_DURATION;
-const P7_ROW_STAGGER_MS = 40;                           // between rows armed in one tick
-let p7RowCur   = null;  // Float32Array(rows): each row's cursor (ms, may sit < 0 while queued)
-let p7RowLast  = 0;     // performance.now() of the last tick
-let p7RowsMoving = false;
-
-function p7RowCascadeTick() {
-  const now = performance.now();
-  const dt  = p7RowLast ? Math.min(100, now - p7RowLast) : 0;
-  p7RowLast = now;
-  const rows = p7.vert ? p7.vert.rows : 0;
-  if (!p7RowCur || p7RowCur.length !== rows) p7RowCur = new Float32Array(rows);
-  const edge = p7HasEngaged ? p7CurRow() : -1;
-  p7RowsMoving = false;
-  let queued = 0;
-  for (let r = 0; r < rows; r++) {
-    const due = edge >= r + 0.5;
-    let c = p7RowCur[r];
-    if (due) {
-      if (c === 0) { c = -queued * P7_ROW_STAGGER_MS; queued++; }
-      c = Math.min(P7_ROW_TOTAL_MS, c + dt);
-    } else {
-      c = Math.max(0, Math.min(c, P7_ROW_TOTAL_MS) - dt);
-    }
-    if (c !== p7RowCur[r]) p7RowCur[r] = c;
-    if (due ? c < P7_ROW_TOTAL_MS : c > 0) p7RowsMoving = true;
-  }
-  if (p7RowsMoving) p7StartAnimLoop();
 }
 
 // True once fold 9's own title card (#page-7 .text-card, page7TitleCardEl in
@@ -634,7 +618,6 @@ function p7AnyAnimActive() {
   for (const k in p7MonthPhase) {
     if (p7MonthCursor(k) !== p7MonthPhase[k].toC) return true; // still travelling
   }
-  if (p7RowsMoving) return true;
   if (p7AxisEventsAnimActive()) return true;
   if (p7AxisIntroStart !== null && p7AxisIntroT() < 1) return true;
   if (p7AxisOutroStart !== null && p7AxisIntroT() > 0) return true;
@@ -744,15 +727,7 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     }
 
     let scale = 1, alpha = 1;
-    if (p7VerticalAxis()) {
-      // Desktop: this square's row plays centre -> side off its own cursor.
-      const k = events === p7.rightEvents ? col : cols - 1 - col;
-      const c = p7RowCur ? p7RowCur[row] : 0;
-      const presence = p7Ease(Math.min(1, Math.max(0, (c - (k / cols) * P7_ROW_WAVE_MS) / P7_POP_DURATION)));
-      if (presence <= 0) continue;
-      scale = 0.5 + 0.5 * presence;
-      alpha = presence;
-    } else if (i >= settledCount) {
+    if (i >= settledCount) {
       const mk = p7MonthKeyOf(events[i].date);
       if (mk !== groupMonthKey) {
         groupMonthKey  = mk;
@@ -1024,15 +999,6 @@ function p7DrawTimelineSquares(ctx, W, H) {
   // keep animating on their own clock — see p7DrawSideSquares/p7MonthCursor. The
   // loop's upper bound must cover the *whole* centered month (monthEndL/monthEndR),
   // not just events whose date has already been reached, so the full cascade can play.
-  if (p7VerticalAxis()) {
-    p7RowCascadeTick();
-    const posMap = new Map();
-    p7DrawSideSquares(ctx, p7.leftEvents,  p7.leftPos,  leftX0,  topY, cols, CELL, SQ, p7.leftEvents.length,  0, posMap);
-    p7DrawSideSquares(ctx, p7.rightEvents, p7.rightPos, rightX0, topY, cols, CELL, SQ, p7.rightEvents.length, 0, posMap);
-    p7.lastPositions = posMap;
-    return;
-  }
-
   const { y: curY, m: curM } = p7DateDayFrac(p7.currentDate);
   const curMonthKey = curY * 12 + curM;
 
@@ -1164,6 +1130,26 @@ function p7DrawTimelineSquares(ctx, W, H) {
 
   const posMap = new Map();
 
+  // A2 (desktop vertical axis): a faint full-width rule across both camps at
+  // each REACHED headline event's row, drawn under the dots. Persistent like
+  // the event's own dot (reachedT), not tied to the label's crossfade — the
+  // rule is a landmark that stays once passed. Wiped in by the axis intro.
+  if (p7VerticalAxis() && P7_VERT.eventLine && p7.vert && p7AxisTriggerIfNeeded()) {
+    const introT = p7AxisIntroT();
+    ctx.save();
+    P7_AXIS_EVENTS.forEach((ev, i) => {
+      const t = P7_AXIS_EVENT_STATE[i].reachedT * p7Ease(introT);
+      if (t <= 0.001) return;
+      const y = Math.round(p7RowY(p7.vert.events[i].row, H)) + 0.5;
+      ctx.strokeStyle = `rgba(90, 90, 90, ${P7_VERT_EVENT_LINE_ALPHA * t})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(leftX0, y);
+      ctx.lineTo(W - leftX0, y);
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
 
   // Draw left events.
   p7DrawSideSquares(ctx, p7.leftEvents, p7.leftPos, leftX0, topY, cols, CELL, SQ, monthEndL, settledL, posMap);
@@ -1653,7 +1639,8 @@ function p7UpdateAxisEventTriggers(W) {
     let reached;
     if (p7VerticalAxis()) {
       // Vertical: one rule for every event — the fill edge (bottom of
-      // currentDate's rows) has come down to the event's own row.
+      // currentDate's rows) has come down to the event's own reach row (the
+      // band's top in band mode, the dot's row in widen mode).
       reached = hasScrolled && !!p7.vert && p7CurRow() >= p7.vert.events[i].reachRow;
     } else if (evMs > maxMs) {
       // An event dated past the dataset's end has no date the scrub can ever
@@ -2128,9 +2115,10 @@ function p7DrawYearAxis(ctx, W, H) {
    fonts, fill lag, hover states and headline fade logic, laid out top → bottom
    at x = W/2. Year labels sit directly under their ring, centred on the line;
    headline blocks (title lines + date) hang under their dot, centred on the
-   line, inside the corridor, which is wide enough for every block by design
-   (P7_VERT.corridorPx). Only year labels are dodged (yearSpans).
+   line, in the band / opened corridor. No de-collision — the layout already
+   reserves the space (bands are empty rows; widen blocks the inner cells).
    ------------------------------------------------------------------------- */
+const P7_VERT_EVENT_LINE_ALPHA  = 0.18; // A2 rule across the camps
 const P7_VERT_EVENT_TEXT_GAP    = 6;    // px between the dot's edge and the title's first line
 const P7_VERT_YEAR_LABEL_GAP    = 6;    // px between a year ring and its label
 
@@ -2223,8 +2211,9 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
 
-  // Width available to a headline block: the corridor minus a margin.
-  const maxWidth = p7CenterGap() - 16;
+  // Width available to a headline block: the whole band in band mode, the
+  // corridor (minus a margin) in widen mode.
+  const maxWidth = P7_VERT.eventMode === "band" ? 320 : p7CenterGap() - 16;
 
   p7.axisEventPositions = new Map();
   const hoveredAxisEvent = p7.hoveredAxisEvent;
