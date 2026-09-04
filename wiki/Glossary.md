@@ -26,9 +26,9 @@ them). **Not** the per-event canvas dots.
 crossing. On desktop both run **top → bottom** down the vertical centre axis; on mobile
 right → left along the bottom axis.
 
-**"Widen" / the corridor** — the desktop vertical axis's centre gap (`P7_VERT.corridorPx`,
-180px, full height), wide enough for the headline blocks to sit beside the axis. ("Band",
-the rejected alternative that reserved rows for each headline, is gone.)
+**"Band" / "widen"** — the two headline placements under comparison on the desktop
+vertical axis (`P7_VERT.eventMode`): *band* pauses the dot flow and prints the headline
+across the reserved rows; *widen* makes the whole centre corridor wider (top to bottom) so the headlines fit inside it.
 See [Timeline](Timeline.md#the-vertical-layout-desktop--p7buildverticallayoutrows-cols-cell--p7vert).
 
 **"State 1" / "state 2" — page9** — the two extreme-drop animation modes.
@@ -46,11 +46,8 @@ See [Animation-System](Animation-System.md).
 must always animate continuously, while color/opacity/label visibility may move on their
 own timing.
 
-**Camp headers** — מחנה הימין / גוש השינוי (`.camp-header`). They type in at
+**Camp headers** — מחנה הימין / גוש השינוי (`.fold4-column-title`). They type in at
 `@fold2` and un-type in place at `@fold4`; they never travel into the legend.
-The class was `.fold4-column-title` until it misled a reader into thinking the
-headers were a fold-4-only element — don't reintroduce a fold-numbered name for
-something that spans three folds.
 
 **The 8 squares** — `#fold6SquaresOverlay`'s sample squares, which grow in at `@fold6`,
 gain labels at `@fold7`, and gain colors + fly to their real per-event dots at `@fold8`.
