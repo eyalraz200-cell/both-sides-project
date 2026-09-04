@@ -472,6 +472,30 @@ let p7EntryAnim = null;
 function p7ResetForReplay() {
   for (const k in p7MonthPhase) delete p7MonthPhase[k];
   p7MonthMaxReached = -1;
+  p7SweepRow = 0; p7SweepLast = 0;
+}
+
+// Desktop (vertical axis) reveal: ONE sweep edge, measured in grid rows, chases the
+// fill edge (p7CurRow) at a bounded speed — it never jumps. A square's presence is
+// purely how far the edge is past its own row, so no matter how fast the user
+// scrolls, rows pop strictly top -> bottom (and retreat bottom -> top on the way
+// back). Replaces the per-month cascade on desktop; mobile keeps the month cursors.
+const P7_SWEEP_ROWS_PER_S = 40; // rows/s the edge travels when the fill edge outruns it
+const P7_SWEEP_POP_ROWS   = 4;  // rows over which a square grows in as the edge passes
+let p7SweepRow  = 0;            // the edge, in rows (0 = nothing shown)
+let p7SweepLast = 0;            // performance.now() of the last tick
+let p7SweepMoving = false;
+
+function p7SweepTick() {
+  const now = performance.now();
+  const dt  = p7SweepLast ? Math.min(0.1, (now - p7SweepLast) / 1000) : 0;
+  p7SweepLast = now;
+  const target = p7HasEngaged ? p7CurRow() : 0;
+  const step   = P7_SWEEP_ROWS_PER_S * dt;
+  if (Math.abs(target - p7SweepRow) <= step) p7SweepRow = target;
+  else p7SweepRow += Math.sign(target - p7SweepRow) * step;
+  p7SweepMoving = p7SweepRow !== target;
+  if (p7SweepMoving) p7StartAnimLoop();
 }
 
 // True once fold 9's own title card (#page-7 .text-card, page7TitleCardEl in
@@ -592,6 +616,7 @@ function p7AnyAnimActive() {
   for (const k in p7MonthPhase) {
     if (p7MonthCursor(k) !== p7MonthPhase[k].toC) return true; // still travelling
   }
+  if (p7SweepMoving) return true;
   if (p7AxisEventsAnimActive()) return true;
   if (p7AxisIntroStart !== null && p7AxisIntroT() < 1) return true;
   if (p7AxisOutroStart !== null && p7AxisIntroT() > 0) return true;
@@ -645,7 +670,6 @@ function p7StartAnimLoop() {
 function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, monthEnd, settledCount, posMap) {
   const stagger = Math.max(0, P7_ANIM_TOTAL_DURATION - P7_POP_DURATION);
   let groupMonthKey = null, groupStart = 0, groupEnd = 0;
-  let groupSpanKey = null, groupRowTop = 0, groupRowBot = 0; // desktop row-sweep span
   let groupCursor = P7_ANIM_TOTAL_DURATION; // months with no phase at all read as settled
   const claimedEvents = p7GetClaimedEvents();
   // Mobile squares are ~1.25–3 CSS px (p7SolveMobileSq) sitting at fractional
@@ -702,7 +726,15 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     }
 
     let scale = 1, alpha = 1;
-    if (i >= settledCount) {
+    if (p7VerticalAxis()) {
+      // Desktop: presence is the sweep edge's distance past this square's row
+      // (fractional by column, so a row itself fills outward from the axis).
+      const k = events === p7.rightEvents ? col : cols - 1 - col;
+      const presence = p7Ease(Math.min(1, Math.max(0, (p7SweepRow - (row + k / cols)) / P7_SWEEP_POP_ROWS)));
+      if (presence <= 0) continue;
+      scale = 0.5 + 0.5 * presence;
+      alpha = presence;
+    } else if (i >= settledCount) {
       const mk = p7MonthKeyOf(events[i].date);
       if (mk !== groupMonthKey) {
         groupMonthKey  = mk;
@@ -974,6 +1006,15 @@ function p7DrawTimelineSquares(ctx, W, H) {
   // keep animating on their own clock — see p7DrawSideSquares/p7MonthCursor. The
   // loop's upper bound must cover the *whole* centered month (monthEndL/monthEndR),
   // not just events whose date has already been reached, so the full cascade can play.
+  if (p7VerticalAxis()) {
+    p7SweepTick();
+    const posMap = new Map();
+    p7DrawSideSquares(ctx, p7.leftEvents,  p7.leftPos,  leftX0,  topY, cols, CELL, SQ, p7.leftEvents.length,  0, posMap);
+    p7DrawSideSquares(ctx, p7.rightEvents, p7.rightPos, rightX0, topY, cols, CELL, SQ, p7.rightEvents.length, 0, posMap);
+    p7.lastPositions = posMap;
+    return;
+  }
+
   const { y: curY, m: curM } = p7DateDayFrac(p7.currentDate);
   const curMonthKey = curY * 12 + curM;
 

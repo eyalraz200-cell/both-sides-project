@@ -72,15 +72,11 @@ numbers in the source.
 Delete the file **and** its `<script>` tag when it is no longer wanted.
 
 
-*(`_debug-fold-badge.js`, the ≤600px chip printing the active `@foldN`, and
-`_debug-fold4-handoff.js`, the `@fold4` hand-off compare, and `_debug-edge.js`, the `@fold9`
-outer-dot-edge `manual/` slider that picked `SBB_TIMELINE_LEFT_PX`, were all deleted once
-their work was done.)*
-
-`_debug-axis.js` — `@fold9` **vertical-axis knobs** (desktop-gated): live sliders for
-`P7_VERT.corridorPx` (= `P7_AXIS_CORRIDOR_PX`), `fillRatio` and `rowJitter`, each change
-relayouts the grid. Copy emits every value with its file:line. The band/A2-line compare it
-started as is gone with that code. Delete it and its `<script>` tag when done.
+*(`_debug-fold-badge.js`, the ≤600px chip printing the active `@foldN`,
+`_debug-fold4-handoff.js`, the `@fold4` hand-off compare, `_debug-edge.js`, the `@fold9`
+outer-dot-edge `manual/` slider that picked `SBB_TIMELINE_LEFT_PX`, and `_debug-axis.js`,
+the `@fold9` vertical-axis knobs that picked `P7_VERT`, were all deleted once their work was
+done.)*
 
 ## Previously-built harnesses (all deleted)
 

@@ -68,14 +68,14 @@ the day**, `row = floor(rowStart + (j + 0.5) / countInDay × rowsOf ± rowJitter
 random pick — then the first free cell walking **outward from the corridor** (`k` →
 `col = right ? k : cols−1−k`); each cell is rolled a permanent gap with probability
 `1 − fillRatio` on first visit; a full row spills **downward** first (row+1, +2…), upward
-only if everything below is full. Both rules keep a day's dots in row order, so the cascade's
-top → bottom row sweep (below) and the date order agree. Deterministic, so a resize/relayout
+only if everything below is full. Both rules keep a day's dots in row order, so the row sweep
+(below) and the date order agree. Deterministic, so a resize/relayout
 reproduces itself.
 
 The tunables live in `P7_VERT` (`page7.js`): `corridorPx` (= `P7_AXIS_CORRIDOR_PX` **180**,
 `squareboundingbox.js`), `fillRatio` 1, `rowJitter` 0 — all picked by eye on 2026-09-04
-(review item A1/A2). Changing one needs a relayout (`p7.lastW = 0; draw()`), which also
-clears `p7TargetCellCache`.
+(review item A1/A2; the `_debug-axis.js` harness that picked them is deleted). Changing one
+needs a relayout (`p7.lastW = 0; draw()`), which also clears `p7TargetCellCache`.
 
 **Headline placement:** the centre corridor is simply wider over its whole height so every
 headline block fits inside it beside the axis; no rows are reserved and there is no
@@ -95,9 +95,22 @@ per-event bump. Dot at the middle of the day's rows (past-the-end: `totalRows �
 are recomputed. Cell numbers are meaningless across a differently-sized grid, so a
 missing clear here is what made those squares land outside the grid on other viewports.
 
-## The month-by-month cascade
+## The reveal: desktop row sweep, mobile month cascade
 
-`p7DrawSideSquares` animates one month's worth of squares at a time:
+**Desktop (vertical axis)** — `p7DrawSideSquares` reads one number, the **sweep edge**
+`p7SweepRow` (in grid rows, 0 = nothing shown). Each frame `p7SweepTick`
+(`p7DrawTimelineSquares`) moves it toward the fill edge `p7CurRow()` (or toward 0 once
+disengaged) at a bounded `P7_SWEEP_ROWS_PER_S` **40** rows/s — it never jumps, so a fast
+scroll queues up a continuous top → bottom sweep instead of several months popping at once.
+A square's presence is `p7Ease(clamp((p7SweepRow − (row + k/cols)) / P7_SWEEP_POP_ROWS))`,
+`P7_SWEEP_POP_ROWS` **4**, `k` = distance from the corridor (a row fills outward from the
+axis); `scale = 0.5 + 0.5*presence`, `alpha = presence`. Rows appear strictly top → bottom
+and retreat strictly bottom → top; reversing mid-sweep simply turns the edge around from
+where it is. The per-month state below is untouched on desktop (the desktop branch returns
+before the month orchestration) and `p7ResetForReplay` zeroes the edge alongside it.
+
+**Mobile** keeps the month cascade: `p7DrawSideSquares` animates one month's worth of
+squares at a time:
 `stagger = P7_ANIM_TOTAL_DURATION - P7_POP_DURATION` (2200 − 220 = 1980 ms) spread across
 the month's events, each popping over `P7_POP_DURATION` with `p7Ease`
 (`scale = 0.5 + 0.5*presence`, `alpha = presence`).
@@ -111,14 +124,8 @@ entirely absent) to `P7_ANIM_TOTAL_DURATION` (every square settled). State lives
 reached (or was fully retreated and cleaned up) — distinct from a cursor of 0.
 
 A square's presence is a **pure function of the cursor**:
-`p7Ease(clamp((c - delay) / P7_POP_DURATION))`. The slot `delay`:
-- **Desktop (vertical axis):** `delay = clamp((row + k/cols − monthRowTop) / (monthRowBot − monthRowTop)) × stagger`,
-  where `row` is the square's grid row, `k` its distance from the corridor and the month's row
-  span comes from `p7.vert.rowStart` at the month's first day / the next month's first day
-  (date-based, so **both camps share it**). The month is a single top → bottom sweep at one
-  speed on both sides, inner → outer within each row, regardless of how many events each camp
-  has that month.
-- **Mobile:** `delay = (localIdx/(count-1)) × stagger` — index order within the month.
+`p7Ease(clamp((c - delay) / P7_POP_DURATION))`, with `delay = (localIdx/(count-1)) × stagger`
+— index order within the month.
 So there is no forward path and no reverse path — the cursor rising plays the month in,
 the cursor falling plays it out, and mirrored order (last in, first out) falls out for
 free because the last squares are the ones with the largest `delay`.
