@@ -77,7 +77,7 @@ resize/relayout reproduces itself.
 The tunables live in `P7_VERT` (`page7.js`): `corridorPx` (band), `eventMode`, `eventLine`,
 `bandPx` 60, `wideCorridorPx` 200, `fillRatio` 1, `daysPerRow` 8, `yearGapPad` 3,
 `yearRing` false, `yearSide`/`eventSide` `'center'`, `dateSide` `'with'`, `dateAbove` false,
-`sideGap` 8, `firstOnlyBelow` true, `card` `{ style 'outline', fill #f5f5f5, padX 16, padTop 6,
+`sideGap` 8, `firstOnlyBelow` true, `card` `{ style 'outline', fill #f5f5f5, stroke rgba(0,0,0,0.3), strokeWidth 1, padX 16, padTop 6,
 padBottom 6, radius 4, radiusBottom 0, gap 0, stem false, bar true, anchor 'center' }` (the headline block, see "Headlines" below) — shipped defaults are **widen mode, line off, everything centred on the line**
 (compare/ "version 1", picked 2026-09-04). The side/alternate/split placements
 (`yearSide`/`eventSide` `'left'`/`'right'`, `eventSide` `'alternate'`, `dateSide` `'left'`/`'right'`)
@@ -332,7 +332,17 @@ axis so the first event's label can center over its own circle).
   The same reverse wipe (`p7AxisReverseOut()`) also fires the moment @fold10's bridge glide
   starts: drawPage8's `t > 0` branch keeps drawing the axis itself (currentDate forced to
   maxDate) until the reverse wipe reaches 0, so the axis undraws right-to-left rather than
-  vanishing with the timeline frame.
+  vanishing with the timeline frame. At the build-in's speed that wipe **outlives @fold10** —
+  `currentPage` flips to @fold11 when @fold10's title block reaches the top, well before it
+  finishes — so `drawPage9` carries it to the end with the identical forced-date branch at its
+  tail, and `p7ShouldRedrawForAnim` admits `currentPage === 10` while `p7AxisOutroStart` is
+  non-null. Without both, the axis stopped being drawn at that flip and snapped away.
+- **Headline events collapse with the undraw** — while `p7AxisOutroStart` is non-null,
+  `p7UpdateAxisEventTriggers` skips its reach test entirely and instead sets `leavingAt` on
+  every still-triggered event, so each fades out over `P7_AXIS_EVENT_FADE_OUT_MS` (including
+  the last one, which would otherwise stay fully typed until the wipe's clip cut it off). The
+  reach test has to be skipped, not merely overridden: the exit branches force `currentDate` to
+  `maxDate`, which reads as "reached" and would cancel the fade the frame after it began.
 
 There is no dot-snapping anymore (`p7AxisEventX` caches each event's true date position), and the old
 dashed-line helpers were removed when the line went solid. **The design reference is the
@@ -362,7 +372,8 @@ over `totalRows × CELL`:
   below it, punch from the ring's edge. `yearSide` `'left'`/`'right'` puts the digits
   beside the line instead, vertically centred on the year row, aligned toward the line
   (`sideGap` 8 from the ring's edge).
-- **Headlines:** dot on the line at `p7RowY(events[i].row)`; "reached" = its y ≤ the fill
+- **Headlines:** dot on the line at `p7RowY(events[i].row)` (`p7DrawAxisMarker`: the bare
+  coloured disc, no white halo); "reached" = its y ≤ the fill
   edge. `p7UpdateAxisEventTriggers` uses one rule for all seven on desktop:
   `p7CurRow() ≥ events[i].reachRow`. The block — **title lines first, then the date line, then
   the accent bar** (`dateAbove` false, `bar.dateBelow` false; `p7WrapLabel`, `maxWidth` 320 in band mode, `p7CenterGap() − 16` in
@@ -370,7 +381,7 @@ over `totalRows × CELL`:
   a punched background drawn at the label's opacity; the punch runs from the dot's edge (or
   the year label's bottom when pushed past one) to the block's far edge, so no line shows
   between dot and text. **Card** (`P7_VERT.card`, `p7DrawHeadlineCard`): a
-  white (`#FDFCFF`) card with a 1px `rgba(0,0,0,0.3)` outline, 16px side / 6px top and
+  white (`#FDFCFF`) card with a `strokeWidth` 1px `stroke` `rgba(0,0,0,0.3)` outline, 16px side / 6px top and
   bottom padding, 4px top corners and square bottom corners (`radiusBottom` 0), with a
   `bar.h` 1.5px black rounded-end accent bar along its whole bottom edge (`card.bar` true;
   the bar's `gap`/`padX` only apply to the bare `'bar'` style). `anchor 'center'`: the

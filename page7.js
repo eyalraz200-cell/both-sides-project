@@ -258,7 +258,7 @@ const P7_VERT = {
   //   the card sits `gap` past the dot's edge; 'center' = the card's
   //   dot-facing edge runs through the dot's centre and the dot is redrawn
   //   on top of it).
-  card: { style: 'outline', fill: '#f5f5f5', padX: 16, padTop: 6, padBottom: 6, radius: 4, radiusBottom: 0,
+  card: { style: 'outline', fill: '#f5f5f5', stroke: 'rgba(0, 0, 0, 0.3)', strokeWidth: 1, padX: 16, padTop: 6, padBottom: 6, radius: 4, radiusBottom: 0,
           gap: 0, stem: false, bar: true, anchor: 'center' },
   // The accent bar under a headline: h px tall, `gap` px below the text's
   // last line, `padX` px wider than the text on each side, `alpha` opacity of
@@ -779,7 +779,10 @@ function p7AnyAnimActive() {
 // flag's own comment) — a fast enough scroll-up can carry the user past
 // #page-7 into this fold within a single continuous motion while squares are
 // still mid-retreat.
-function p7ShouldRedrawForAnim() { return currentPage === 6 || currentPage === 7 || currentPage === 8 || currentPage === 9; }
+// ...plus @fold11 (currentPage 10) while the axis's reverse wipe is still
+// running: it can outlive @fold10 now that it runs at the build-in's speed, and
+// drawPage9 finishes drawing it (see the tail of drawPage9, page9.js).
+function p7ShouldRedrawForAnim() { return currentPage === 6 || currentPage === 7 || currentPage === 8 || currentPage === 9 || (currentPage === 10 && p7AxisOutroStart !== null); }
 
 function p7StartAnimLoop() {
   if (p7AnimRunning) return;
@@ -1818,6 +1821,26 @@ function p7AxisEventBounds(ctx, ev, i, W) {
 // has caught up to the drawn (xOffset-nudged) position — see the comment at
 // the x test below. No special-cased extra delay for the first one.
 function p7UpdateAxisEventTriggers(W) {
+  const now0 = performance.now();
+  // While the axis is UNDRAWING, every headline event that is still up is
+  // leaving — including the last one, which would otherwise sit there fully
+  // typed until the wipe's clip happened to cut it off (explicit instruction:
+  // it should collapse). The reach test is skipped entirely on this path, since
+  // the exit branches force currentDate to maxDate, which reads as "reached"
+  // and would cancel the fade the frame after it started.
+  if (p7AxisOutroStart !== null) {
+    P7_AXIS_EVENT_STATE.forEach((state) => {
+      if (state.triggeredAt !== null && state.leavingAt === null) {
+        state.leavingAt = now0;
+        p7StartAnimLoop();
+      }
+      if (state.leavingAt !== null && now0 - state.leavingAt >= P7_AXIS_EVENT_FADE_OUT_MS) {
+        state.triggeredAt = null;
+        state.leavingAt = null;
+      }
+    });
+    return;
+  }
   const curMs = new Date(p7.currentDate + "T00:00:00Z").getTime();
   const minMs = new Date(p7.minDate + "T00:00:00Z").getTime();
   const maxMs = new Date(p7.maxDate + "T00:00:00Z").getTime();
@@ -2444,10 +2467,9 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   }
 }
 
-// One axis-event dot: a white halo ring then the marker itself.
-function p7DrawAxisMarker(ctx, x, y, radius, halo, color) {
-  ctx.fillStyle = "#FDFCFF";
-  ctx.beginPath(); ctx.arc(x, y, radius + halo, 0, Math.PI * 2); ctx.fill();
+// One axis-event dot: the bare marker, no halo — the card (or the punch) is
+// what separates it from the line.
+function p7DrawAxisMarker(ctx, x, y, radius, color) {
   ctx.fillStyle = color;
   ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill();
 }
@@ -2471,7 +2493,7 @@ function p7DrawHeadlineCard(ctx, card, x, y, w, h) {
     ctx.fillStyle = '#FDFCFF'; path(); ctx.fill();
   }
   if (card.style === 'outline' || card.style === 'dashed' || card.style === 'accent') {
-    ctx.lineWidth = 1;
+    ctx.lineWidth = card.strokeWidth || 1;
     ctx.strokeStyle = card.style === 'accent' ? 'rgba(0, 0, 0, 0.12)' : (card.stroke || 'rgba(0, 0, 0, 0.3)');
     if (card.style === 'dashed') ctx.setLineDash([3, 3]);
     ctx.beginPath(); ctx.roundRect(x + 0.5, y + 0.5, w - 1, h - 1, [r, r, rb, rb]); ctx.stroke();
@@ -2534,8 +2556,8 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     const markerColor = hoverActive
       ? (isHighlighted ? P7_AXIS_HOVER_COLOR : P7_AXIS_BG_COLOR)
       : (isAxisHovered ? P7_AXIS_HOVER_COLOR : P7_AXIS_FILLED_COLOR);
-    p7.axisEventPositions.set(ev, { x: axisX, y, radius: markerRadius, halo: state.reachedT, color: markerColor });
-    p7DrawAxisMarker(ctx, axisX, y, markerRadius, state.reachedT, markerColor);
+    p7.axisEventPositions.set(ev, { x: axisX, y, radius: markerRadius, color: markerColor });
+    p7DrawAxisMarker(ctx, axisX, y, markerRadius, markerColor);
   });
 
   // Labels: title lines then the date, hanging under the dot, centred on the
@@ -2622,7 +2644,7 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
       if (centred) {
         // The card overlaps the dot — put the dot back on top of it.
         const mk = p7.axisEventPositions.get(ev);
-        if (mk) p7DrawAxisMarker(ctx, mk.x, mk.y, mk.radius, mk.halo, mk.color);
+        if (mk) p7DrawAxisMarker(ctx, mk.x, mk.y, mk.radius, mk.color);
       }
     } else if (flipped) {
       // Above the dot: punch from the block's top edge down to the dot's edge.
