@@ -95,22 +95,21 @@ per-event bump. Dot at the middle of the day's rows (past-the-end: `totalRows �
 are recomputed. Cell numbers are meaningless across a differently-sized grid, so a
 missing clear here is what made those squares land outside the grid on other viewports.
 
-## The reveal: desktop row sweep, mobile month cascade
+## The reveal: desktop per-row cascade, mobile month cascade
 
-**Desktop (vertical axis)** — two layers. The **sweep edge** `p7SweepRow` (in grid rows,
-0 = nothing shown) decides *when* each square is due: every frame `p7SweepTick`
-(`p7DrawTimelineSquares`) moves it toward the fill edge `p7CurRow()` (or toward 0 once
-disengaged) at a bounded `P7_SWEEP_ROWS_PER_S` **12** rows/s — it never jumps, so a fast
-scroll queues up a continuous top → bottom sweep instead of several months popping at once.
-A square is due once `p7SweepRow ≥ row + k/cols` (`k` = distance from the corridor, so a
-row fills outward from the axis). Each square then **pops on its own wall clock**: its
-presence (`p7.leftPres` / `p7.rightPres`, per event) travels toward 1 when due and back
-toward 0 when not at `1/P7_POP_DURATION` (220 ms) per ms, drawn as `p7Ease(presence)`,
-`scale = 0.5 + 0.5*presence`, `alpha = presence`. So squares keep animating after the
-scroll stops, rows appear strictly top → bottom and retreat strictly bottom → top, and a
-reversal turns each square around from its current size. The per-month state below is
-untouched on desktop (the desktop branch returns before the month orchestration);
-`p7ResetForReplay` zeroes the edge and both presence arrays.
+**Desktop (vertical axis)** — every grid **row is its own cascade** (`p7RowCascadeTick`,
+called from `p7DrawTimelineSquares`; state `p7RowCur`, a `Float32Array(rows)` of cursors in
+ms). A row is **armed the instant the fill edge reaches it** (`p7CurRow() ≥ row + 0.5`) and
+then plays **centre → side on its own wall clock**: cursor 0 → `P7_ROW_TOTAL_MS`
+(`P7_ROW_WAVE_MS` **600** + `P7_POP_DURATION` 220), and a square at distance `k` from the
+corridor has presence `p7Ease(clamp((c − k/cols × P7_ROW_WAVE_MS) / P7_POP_DURATION))`
+(`scale = 0.5 + 0.5*presence`, `alpha = presence`). Rows armed in the same scroll tick (a
+fast scroll or jump) start `P7_ROW_STAGGER_MS` **40** ms apart, top first, so a jumped span
+still reads top → bottom. Scrolling back above a row aims its cursor at 0 — the cursor
+falling retracts the outer squares first, and a reversal mid-flight continues from the
+row's current cursor (same shared-cursor idea as the mobile month cascade, per row instead
+of per month). The month state below is untouched on desktop (the desktop branch returns
+before the month orchestration); `p7ResetForReplay` zeroes the row cursors.
 
 **Mobile** keeps the month cascade: `p7DrawSideSquares` animates one month's worth of
 squares at a time:
