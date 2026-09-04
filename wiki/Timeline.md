@@ -366,7 +366,10 @@ over `totalRows × CELL`:
   widen mode) — hangs under the dot (`P7_VERT_EVENT_TEXT_GAP` 6), centred on the axis, on
   a punched background drawn at the label's opacity; the punch runs from the dot's edge (or
   the year label's bottom when pushed past one) to the block's far edge, so no line shows
-  between dot and text. **Default side** (`P7_VERT.firstOnlyBelow` true): the first
+  between dot and text. **Accent bar** (`P7_VERT.card` style `'bar'`, `p7DrawHeadlineCard`):
+  a `bar.h` 2px black bar along the bottom of the text, `bar.gap` 0 below the last line,
+  `bar.padX` 10 wider than the text on each side; it counts toward the block's height for
+  the year dodge. The dot-to-block gap is `card.gap` 6. **Default side** (`P7_VERT.firstOnlyBelow` true): the first
   headline hangs under its dot; every later one sits **above** its dot (bottom edge
   `P7_VERT_EVENT_TEXT_GAP` above the dot, punch from the block's top down to the dot's
   edge). The only dodge: if the default side would overlap a year label (`yearSpans`,
