@@ -238,40 +238,33 @@ const P7_VERT = {
   dateSide:  'with',   // 'with' = in the title block
   dateAbove: true,     // the date line sits ABOVE the title (only when dateSide is 'with')
   sideGap:   8,        // px between the line's marker edge and side-placed text
-  // px reserved OUTSIDE the time count for each year marker: the line breaks
-  // at every 1 January (and above the first year), the digits sit in the
-  // break and the segment between two breaks is exactly one year. 4px rounds
-  // up to one empty row — a hairline break, not a slot the digits fit in;
-  // the digits' punch covers the line ends. 0 = continuous line.
-  yearSlotPx: 4,
+  // px of breathing room above and below the year digits inside the line's
+  // break. The line breaks at every 1 January (and at the top, above the first
+  // year); the break is centred on the year boundary and the digits (plus the
+  // ring when on) sit centred in it. Purely visual: the dot rows run on
+  // unbroken and the break eats the ends of the neighbouring line segments.
+  yearGapPad: 3,
   yearRing:   false,   // no ring on the line — the digits alone mark the year
 };
 // The row plan of the fixed-span layout: every P7_VERT.daysPerRow days take
-// one row, counted afresh from each 1 January; with yearSlotPx > 0 a slot of
-// `slotRows` empty rows precedes each year (the first one included). Shared by
+// one row, counted afresh from each 1 January (the rows themselves run on
+// unbroken — the year marker is a break in the drawn line only). Shared by
 // the solver (row count) and the layout builder (row of each day).
 function p7VertRowPlan(CELL) {
   const minMs = p7DayMs(p7.minDate), maxMs = p7DayMs(p7.maxDate);
   const nDays = Math.max(1, Math.round((maxMs - minMs) / 86400000) + 1);
   const dpr   = P7_VERT.daysPerRow;
-  const slotRows = P7_VERT.yearSlotPx > 0 ? Math.ceil(P7_VERT.yearSlotPx / CELL) : 0;
   const rowStart = new Float64Array(nDays + 1);
   const rowsOf   = new Float64Array(nDays);
-  const slots = [];            // {start, end, year} in rows — the year markers' homes
-  const yearRow = new Map();   // year -> the row (fractional) its ring sits on
-  let cursor = 0, segDay = 0, segStart = 0;
+  const yearRow = new Map();   // year -> the integer row its 1 January starts (the line break)
+  let segDay = 0, segStart = 0;
   for (let d = 0; d < nDays; d++) {
     const date = new Date(minMs + d * 86400000);
     const jan1 = date.getUTCMonth() === 0 && date.getUTCDate() === 1;
     if (d === 0 || jan1) {
-      if (d > 0) cursor = segStart + Math.ceil((segDay) / dpr);
-      const year = date.getUTCFullYear();
-      if (slotRows > 0) {
-        slots.push({ start: cursor, end: cursor + slotRows, year });
-        yearRow.set(year, cursor + slotRows / 2);
-        cursor += slotRows;
-      }
-      segStart = cursor; segDay = 0;
+      if (d > 0) segStart = segStart + Math.ceil(segDay / dpr);
+      yearRow.set(date.getUTCFullYear(), segStart);
+      segDay = 0;
     }
     rowStart[d] = segStart + Math.floor(segDay / dpr) + (segDay % dpr) / dpr;
     rowsOf[d]   = 1 / dpr;
@@ -279,7 +272,7 @@ function p7VertRowPlan(CELL) {
   }
   const totalRows = Math.ceil(rowStart[nDays - 1] + rowsOf[nDays - 1]);
   rowStart[nDays] = totalRows;
-  return { nDays, minMs, maxMs, rowStart, rowsOf, slots, slotRows, yearRow, totalRows };
+  return { nDays, minMs, maxMs, rowStart, rowsOf, yearRow, totalRows };
 }
 // Vertical layout result (p7.vert) — null on mobile / before layout.
 function p7DayMs(dateStr) { return new Date(dateStr + "T00:00:00Z").getTime(); }
@@ -298,7 +291,7 @@ function p7SolveVerticalSq(sideW, sideH, maxEvents) {
     const cols = Math.floor(sideW / CELL), rows = Math.floor(sideH / CELL);
     const cap  = Math.max(1, Math.floor(cols * P7_VERT.fillRatio));
     const avail = rows - bands * Math.ceil(P7_VERT.bandPx / CELL);
-    // Every fixed-span row (plus the year slots) must fit the box.
+    // Every fixed-span row must fit the box.
     if (rows < p7VertRowPlan(CELL).totalRows) continue;
     if (avail * cap >= maxEvents * 1.06) return sq;
   }
@@ -337,8 +330,8 @@ function p7BuildVerticalLayout(rows, cols, CELL) {
       cursor += bandRows;
     });
   };
-  // Rows come from p7VertRowPlan (one row per P7_VERT.daysPerRow days, year
-  // slots optional). NOTE: the unused "band" eventMode reserves no rows here
+  // Rows come from p7VertRowPlan (one row per P7_VERT.daysPerRow days, counted
+  // afresh each year). NOTE: the unused "band" eventMode reserves no rows here
   // any more (placeBands is not called) — bands would overlap dots.
   cursor = plan.totalRows;
   const totalRows = cursor;
@@ -413,7 +406,7 @@ function p7BuildVerticalLayout(rows, cols, CELL) {
   const right = placeSide(p7.rightEvents, 99999, "right");
   return {
     rows, cols, totalRows, nDays, minMs, maxMs, rowStart, rowsOf, dayOf, events,
-    slots: plan.slots, slotRows: plan.slotRows, yearRow: plan.yearRow,
+    yearRow: plan.yearRow,
     leftPos: left.positions, rightPos: right.positions, left, right,
   };
 }
@@ -2296,15 +2289,26 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   const hoverActive  = !!hoveredEvent;
   const hoverAxisY   = hoverActive ? axisQ(p7AxisY(hoveredEvent.date, H)) : null;
 
-  // Base line + filled portion from the top. With year slots the line is
-  // drawn only between slots — a slot is outside the time count.
+  // Year marker geometry: each year's block (digits, plus ring above them when
+  // on) is centred on the line at its 1 January row boundary, and the line
+  // breaks around it by `yearGapPad` on both sides.
+  const ring   = P7_VERT.yearRing;
+  const R      = ring ? P7_AXIS_MARKER_RADIUS : 0;
+  const blockH = (ring ? R * 2 + P7_VERT_YEAR_LABEL_GAP : 0) + 21;
+  const pad    = P7_VERT.yearGapPad;
+  const marks  = ticks.filter(t => v.yearRow.has(t.year)).map(t => {
+    const row = v.yearRow.get(t.year);
+    const yc  = axisQ(p7RowY(row, H));
+    return { tick: t, row, yc, top: yc - blockH / 2 - pad, bottom: yc + blockH / 2 + pad };
+  });
+
+  // Base line + filled portion from the top, drawn only between the year breaks.
   const lineLeft = axisX - P7_AXIS_LINE_THICKNESS / 2;
   const segs = [];
   let segTop = topY;
-  (v.slots || []).forEach(sl => {
-    const a = p7RowY(sl.start, H), b = p7RowY(sl.end, H);
-    if (a > segTop) segs.push([segTop, a]);
-    segTop = b;
+  marks.forEach(m => {
+    if (m.top > segTop) segs.push([segTop, m.top]);
+    segTop = Math.max(segTop, m.bottom);
   });
   if (botY > segTop) segs.push([segTop, botY]);
   segs.forEach(([a, b]) => {
@@ -2320,17 +2324,11 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   ctx.font = `18px 'Assistant', sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
-  for (const tick of ticks) {
-    // In a slot the ring sits mid-slot (ring + digits centred as one block);
-    // on a continuous line it sits at the year's first day.
-    const inSlot = v.slotRows > 0 && v.yearRow.has(tick.year);
-    const row = inSlot ? v.yearRow.get(tick.year) : p7RowOfDate(tick.dateStr);
-    // With the ring off, the digits alone form the block: R shrinks to 0 so
-    // the label maths below (which hang the digits off the ring's edge) still hold.
-    const ring = P7_VERT.yearRing;
-    const R = ring ? P7_AXIS_MARKER_RADIUS : 0;
-    const blockH = inSlot ? R * 2 + (ring ? P7_VERT_YEAR_LABEL_GAP : 0) + 21 : 0;
-    const y   = axisQ(p7RowY(row, H) - (inSlot && P7_VERT.yearSide === 'center' ? blockH / 2 - R : 0));
+  for (const m of marks) {
+    const { tick, row } = m;
+    // Ring (when on) at the top of the centred block; with the ring off R is
+    // 0 so the label maths below (digits hung off the ring's edge) still hold.
+    const y   = P7_VERT.yearSide === 'center' ? axisQ(m.yc - blockH / 2 + R) : m.yc;
     const reached = row <= curRow;
     const ringColor = hoverActive ? P7_AXIS_BG_COLOR : (reached ? P7_AXIS_FILLED_COLOR : P7_AXIS_BG_COLOR);
     if (ring) {

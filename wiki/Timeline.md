@@ -57,11 +57,11 @@ picked 2026-09-04), counted afresh from each 1 January** (and from `minDate` for
 first year). Events are bucketed per **day** (`dayOf`, 1279 days for the current data);
 `p7VertRowPlan(CELL)` builds `rowStart[d]` = the year's first row + `floor(k / 8) + (k % 8) / 8`
 (`k` = day index within its year) and `rowsOf[d] = 1/8`, so each year's segment is exactly
-linear in time and a row's fill width *is* its event count. **Year slots:** with
-`P7_VERT.yearSlotPx` > 0, `ceil(yearSlotPx / CELL)` empty rows precede every year
-(`plan.slots`, `plan.yearRow`); they are outside the time count — the axis line breaks
-there and the year digits sit in the break. Shipped: `yearSlotPx` 4 → one empty row per
-year, 165 rows total. `p7SolveVerticalSq` shrinks the square until the plan's rows fit the
+linear in time and a row's fill width *is* its event count. The dot rows run on
+**unbroken** across year boundaries — no empty rows for the year markers. `plan.yearRow`
+maps each year to the integer row its 1 January starts on; that row's top edge is where the
+drawn line breaks for the year digits (a px break only, see below). 161 rows total at
+1440×900. `p7SolveVerticalSq` shrinks the square until the plan's rows fit the
 box (3.3 px at 1440×900; one-week rows needed 183 and 2.9 px, which is why 8 days won).
 `p7RowOfDate` (middle of the day's slice — ticks, hover marker, widen-mode dots),
 `p7RowEndOfDate` (bottom — the fill edge, `p7CurRow()` for `currentDate`), `p7RowY(row, H)`
@@ -75,7 +75,7 @@ The inner edge hugs the axis, the outer edge is the count. Deterministic, so a
 resize/relayout reproduces itself.
 
 The tunables live in `P7_VERT` (`page7.js`): `corridorPx` (band), `eventMode`, `eventLine`,
-`bandPx` 60, `wideCorridorPx` 200, `fillRatio` 1, `daysPerRow` 8, `yearSlotPx` 4,
+`bandPx` 60, `wideCorridorPx` 200, `fillRatio` 1, `daysPerRow` 8, `yearGapPad` 3,
 `yearRing` false, `yearSide`/`eventSide` `'center'`, `dateSide` `'with'`, `dateAbove` true,
 `sideGap` 8 — shipped defaults are **widen mode, line off, everything centred on the line**
 (compare/ "version 1", picked 2026-09-04). The side/alternate/split placements
@@ -345,12 +345,16 @@ over `totalRows × CELL`:
   same `p7AxisUpdateFillLag` damping. Reached test for a tick: `p7RowOfDate(tick) ≤ p7CurRow()`.
 - **Build-in wipe:** the intro clips to `rect(0, 0, W, topY + p7Ease(introT) × len)` — the
   axis (and its headlines) reveal downward; the reverse wipe undraws upward.
-- **The line is drawn per year segment** (between the slots of `p7.vert.slots`), unfilled
-  colour first, then the filled colour up to the fill edge; a slot itself has no line.
+- **The line breaks at every year boundary** (`p7RowY(p7.vert.yearRow.get(year))`, the
+  top too): the break is the year block's height (21px digits, plus ring + 6 when the ring
+  is on) plus `yearGapPad` 3 above and below, **centred on the boundary**, so the digits sit
+  exactly mid-gap. The break is visual only — it eats the ends of the two neighbouring line
+  segments; time and the dot rows are continuous. Each segment is drawn unfilled first, then
+  filled up to the fill edge.
 - **Year digits** (18px, `P7_AXIS_LABEL_COLOR`, faint until reached) are centred on the line
-  at the slot's middle (`p7.vert.yearRow`), on a punched `#FDFCFF` rect, with **no ring**
-  (`yearRing` false). Ring on: hollow ring at that y with the digits `P7_VERT_YEAR_LABEL_GAP`
-  6 below it, punch from the ring's edge. `yearSide` `'left'`/`'right'` puts the digits
+  in the break, on a punched `#FDFCFF` rect, with **no ring** (`yearRing` false). Ring on:
+  hollow ring at the top of the centred block with the digits `P7_VERT_YEAR_LABEL_GAP` 6
+  below it, punch from the ring's edge. `yearSide` `'left'`/`'right'` puts the digits
   beside the line instead, vertically centred on the year row, aligned toward the line
   (`sideGap` 8 from the ring's edge).
 - **Headlines:** dot on the line at `p7RowY(events[i].row)`; "reached" = its y ≤ the fill
