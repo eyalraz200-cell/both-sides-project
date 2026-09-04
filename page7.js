@@ -2516,6 +2516,10 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     const dateSide = P7_VERT.dateSide === 'with' ? evSideI : P7_VERT.dateSide;
     const split = dateSide !== evSideI;
     const dateFirst = !split && P7_VERT.dateAbove;
+    const onSide = evSideI !== 'center';
+    const card = !onSide && P7_VERT.card ? P7_VERT.card : null;
+    const cpx = card ? Math.max(card.padX, card.style === 'bar' ? P7_VERT.bar.padX : 0) : 0, cpy = card ? card.padY : 0;
+    const barExtra = card && (card.style === 'bar' || card.style === 'accent') ? P7_VERT.bar.gap + P7_VERT.bar.h : 0;
     const blockH = lines.length * lh + (split ? 0 : lh) + barExtra;
     // The block always hangs UNDER the dot (the dot is always above its text).
     // If it would run into a year ring or its label, it is pushed down to just
@@ -2523,10 +2527,6 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     // Side placement: the block sits beside the dot, its first line centred
     // on the dot, aligned toward the line; it only dodges year labels that
     // live on the same side (or on the line itself, whose span is below the ring).
-    const onSide = evSideI !== 'center';
-    const card = !onSide && P7_VERT.card ? P7_VERT.card : null;
-    const cpx = card ? Math.max(card.padX, card.style === 'bar' ? P7_VERT.bar.padX : 0) : 0, cpy = card ? card.padY : 0;
-    const barExtra = card && (card.style === 'bar' || card.style === 'accent') ? P7_VERT.bar.gap + P7_VERT.bar.h : 0;
     const textGap = card ? card.gap + cpy : P7_VERT_EVENT_TEXT_GAP;
     const spans = (yearSpans || []).filter(s => !(onSide && s.side !== 'center' && s.side !== evSideI));
     const hits = (top) => spans.some(s => top - 2 - cpy < s.bottom && top + blockH + 2 + cpy > s.top);
