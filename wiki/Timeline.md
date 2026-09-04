@@ -77,7 +77,8 @@ resize/relayout reproduces itself.
 The tunables live in `P7_VERT` (`page7.js`): `corridorPx` (band), `eventMode`, `eventLine`,
 `bandPx` 60, `wideCorridorPx` 200, `fillRatio` 1, `daysPerRow` 8, `yearGapPad` 3,
 `yearRing` false, `yearSide`/`eventSide` `'center'`, `dateSide` `'with'`, `dateAbove` true,
-`sideGap` 8 — shipped defaults are **widen mode, line off, everything centred on the line**
+`sideGap` 8, `firstOnlyBelow` true, `card` null (headline card, see the `_debug-axis-cards.js`
+compare in [Dev-Workflow](Dev-Workflow.md)) — shipped defaults are **widen mode, line off, everything centred on the line**
 (compare/ "version 1", picked 2026-09-04). The side/alternate/split placements
 (`yearSide`/`eventSide` `'left'`/`'right'`, `eventSide` `'alternate'`, `dateSide` `'left'`/`'right'`)
 are live but unused code paths kept for a later compare; the band branch stays too. Changing
@@ -365,11 +366,13 @@ over `totalRows × CELL`:
   widen mode) — hangs under the dot (`P7_VERT_EVENT_TEXT_GAP` 6), centred on the axis, on
   a punched background drawn at the label's opacity; the punch runs from the dot's edge (or
   the year label's bottom when pushed past one) to the block's far edge, so no line shows
-  between dot and text. The only dodge: if hanging below would overlap a year label
-  (`yearSpans`, collected while the years are drawn), the block **flips above its dot**
-  (bottom edge `P7_VERT_EVENT_TEXT_GAP` above the dot, punch from the block's top down to
-  the dot's edge); only if above collides too is it pushed down to just past the year — a
-  headline never touches a year. No other de-collision — the layout reserves the space.
+  between dot and text. **Default side** (`P7_VERT.firstOnlyBelow` true): the first
+  headline hangs under its dot; every later one sits **above** its dot (bottom edge
+  `P7_VERT_EVENT_TEXT_GAP` above the dot, punch from the block's top down to the dot's
+  edge). The only dodge: if the default side would overlap a year label (`yearSpans`,
+  collected while the years are drawn) the block flips to the other side of its dot; only
+  if both sides collide is it pushed down to just past the year — a headline never touches
+  a year. No other de-collision — the layout reserves the space.
   *Unused alternatives (kept):* `eventSide` `'left'`/`'right'`/`'alternate'` puts the block
   beside the line, first line centred on the dot, text aligned toward the line, wrapping in
   half the corridor; `dateSide` `'left'`/`'right'` draws the date alone on its own side.
