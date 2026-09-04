@@ -53,11 +53,16 @@ gaps remain at the edges.
 ### The vertical layout (desktop) — `p7BuildVerticalLayout(rows, cols, CELL)` → `p7.vert`
 
 Rows are dates, and **every row stands for the same span: `P7_VERT.daysPerRow` days (8,
-picked 2026-09-04) counted from `minDate`**. Events are bucketed per **day** (`dayOf`, 1279
-days for the current data → 160 rows); `rowStart[d] = floor(d / 8) + (d % 8) / 8`,
-`rowsOf[d] = 1/8`, so the axis is exactly linear in time and a row's fill width *is* its
-event count. `p7SolveVerticalSq` shrinks the square until all the rows fit the box
-(3.3 px at 1440×900; one-week rows needed 183 and 2.9 px, which is why 8 days won).
+picked 2026-09-04), counted afresh from each 1 January** (and from `minDate` for the
+first year). Events are bucketed per **day** (`dayOf`, 1279 days for the current data);
+`p7VertRowPlan(CELL)` builds `rowStart[d]` = the year's first row + `floor(k / 8) + (k % 8) / 8`
+(`k` = day index within its year) and `rowsOf[d] = 1/8`, so each year's segment is exactly
+linear in time and a row's fill width *is* its event count. **Year slots:** with
+`P7_VERT.yearSlotPx` > 0, `ceil(yearSlotPx / CELL)` empty rows precede every year
+(`plan.slots`, `plan.yearRow`); they are outside the time count — the axis line breaks
+there and the year digits sit in the break. Shipped: `yearSlotPx` 4 → one empty row per
+year, 165 rows total. `p7SolveVerticalSq` shrinks the square until the plan's rows fit the
+box (3.3 px at 1440×900; one-week rows needed 183 and 2.9 px, which is why 8 days won).
 `p7RowOfDate` (middle of the day's slice — ticks, hover marker, widen-mode dots),
 `p7RowEndOfDate` (bottom — the fill edge, `p7CurRow()` for `currentDate`), `p7RowY(row, H)`
 and `p7AxisY(dateStr, H)` read the map. A date past `maxDate` clamps to the end.
@@ -70,8 +75,12 @@ The inner edge hugs the axis, the outer edge is the count. Deterministic, so a
 resize/relayout reproduces itself.
 
 The tunables live in `P7_VERT` (`page7.js`): `corridorPx` (band), `eventMode`, `eventLine`,
-`bandPx` 60, `wideCorridorPx` 180, `fillRatio` 1, `daysPerRow` 8 — shipped defaults are
-**widen mode, line off** (picked 2026-09-04); the harness and the band branch stay for now. Changing
+`bandPx` 60, `wideCorridorPx` 200, `fillRatio` 1, `daysPerRow` 8, `yearSlotPx` 4,
+`yearRing` false, `yearSide`/`eventSide` `'center'`, `dateSide` `'with'`, `dateAbove` true,
+`sideGap` 8 — shipped defaults are **widen mode, line off, everything centred on the line**
+(compare/ "version 1", picked 2026-09-04). The side/alternate/split placements
+(`yearSide`/`eventSide` `'left'`/`'right'`, `eventSide` `'alternate'`, `dateSide` `'left'`/`'right'`)
+are live but unused code paths kept for a later compare; the band branch stays too. Changing
 one needs a relayout (`p7.lastW = 0; draw()`), which also clears `p7TargetCellCache`.
 
 **Headline placement** (review item A1/A2; `widen` is the picked default, the `band` code is
@@ -334,18 +343,29 @@ over `totalRows × CELL`:
   same `p7AxisUpdateFillLag` damping. Reached test for a tick: `p7RowOfDate(tick) ≤ p7CurRow()`.
 - **Build-in wipe:** the intro clips to `rect(0, 0, W, topY + p7Ease(introT) × len)` — the
   axis (and its headlines) reveal downward; the reverse wipe undraws upward.
-- **Year labels** sit directly under their ring, centred on the line (18px, `P7_VERT_YEAR_LABEL_GAP`
-  6), on a punched `#FDFCFF` rect that starts at the ring's edge, so no line shows between the ring and the digits or through them.
+- **The line is drawn per year segment** (between the slots of `p7.vert.slots`), unfilled
+  colour first, then the filled colour up to the fill edge; a slot itself has no line.
+- **Year digits** (18px, `P7_AXIS_LABEL_COLOR`, faint until reached) are centred on the line
+  at the slot's middle (`p7.vert.yearRow`), on a punched `#FDFCFF` rect, with **no ring**
+  (`yearRing` false). Ring on: hollow ring at that y with the digits `P7_VERT_YEAR_LABEL_GAP`
+  6 below it, punch from the ring's edge. `yearSide` `'left'`/`'right'` puts the digits
+  beside the line instead, vertically centred on the year row, aligned toward the line
+  (`sideGap` 8 from the ring's edge).
 - **Headlines:** dot on the line at `p7RowY(events[i].row)`; "reached" = its y ≤ the fill
   edge. `p7UpdateAxisEventTriggers` uses one rule for all seven on desktop:
-  `p7CurRow() ≥ events[i].reachRow`. Title lines (`p7WrapLabel`, `maxWidth` 320 in band
-  mode, `p7CenterGap() − 16` in widen mode) and the date hang under the dot
-  (`P7_VERT_EVENT_TEXT_GAP` 6), centred on the axis, on a punched background drawn at the
-  label's opacity; the punch runs from the dot's edge (or the year label's bottom when pushed past one) to the block's far edge, so no line shows between dot and text. The dot is **always above its text**. The only dodge: if hanging below would overlap a
-  year ring or its label (`yearSpans`, collected while the rings are drawn), the block is
-  pushed down to just past that label (the 04.01.2023 event under the 2023 ring) — a
-  headline never touches a year and never moves above its dot. No other de-collision — the layout
-  reserves the space.
+  `p7CurRow() ≥ events[i].reachRow`. The block — **date line first (`dateAbove` true), then
+  the title lines** (`p7WrapLabel`, `maxWidth` 320 in band mode, `p7CenterGap() − 16` in
+  widen mode) — hangs under the dot (`P7_VERT_EVENT_TEXT_GAP` 6), centred on the axis, on
+  a punched background drawn at the label's opacity; the punch runs from the dot's edge (or
+  the year label's bottom when pushed past one) to the block's far edge, so no line shows
+  between dot and text. The dot is **always above its text**. The only dodge: if hanging
+  below would overlap a year label (`yearSpans`, collected while the years are drawn), the
+  block is pushed down to just past that label — a headline never touches a year and never
+  moves above its dot. No other de-collision — the layout reserves the space.
+  *Unused alternatives (kept):* `eventSide` `'left'`/`'right'`/`'alternate'` puts the block
+  beside the line, first line centred on the dot, text aligned toward the line, wrapping in
+  half the corridor; `dateSide` `'left'`/`'right'` draws the date alone on its own side.
+  Side blocks dodge centred year labels and same-side ones only.
 - **Hover:** the hovered square's date marks the axis at `p7AxisY(date, H)` in its actor
   colour; `p7.axisEventPositions` is filled with `{x: axisX, y, radius}` so the existing
   circle hit-test works unchanged.
