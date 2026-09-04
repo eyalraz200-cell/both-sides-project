@@ -53,19 +53,26 @@ gaps remain at the edges.
 ### The vertical layout (desktop) — `p7BuildVerticalLayout(rows, cols, CELL)` → `p7.vert`
 
 Rows are dates. Events are bucketed per **day** (`dayOf`, 1279 days for the current data);
-each day gets `need[d] = max(rowsAvail / nDays, max(countL, countR) / cap)` fractional rows
-(`cap = floor(cols × fillRatio)`), normalised so days (+ bands) exactly fill `rows`. So the
-axis is linear in time except where a day has more events than one row holds (Oct 7 and its
-week), which stretches taller. `rowStart[d]`/`rowsOf[d]` are the cumulative map;
+each day's rows are **water-filled**: a day whose events don't fit an even share
+(`max(countL, countR) / cap > linear`, `cap = floor(cols × fillRatio)`) takes exactly the rows
+it needs, and the remaining days split what's left evenly (iterated until no more days cross
+the line; days + bands sum to `rows` exactly, nothing is scaled). So the axis is linear in
+time except where a day has more events than one row holds (Oct 7 and its week), which
+stretches taller — and a dense day is never squeezed below its own count, so the grid can't
+overflow its bottom. `rowStart[d]`/`rowsOf[d]` are the cumulative map;
 `p7RowOfDate` (middle of the day's rows — ticks, hover marker, widen-mode dots),
 `p7RowEndOfDate` (bottom — the fill edge, `p7CurRow()` for `currentDate`), `p7RowY(row, H)`
 and `p7AxisY(dateStr, H)` read it. A date past `maxDate` clamps to the end.
 
-Placement per side (same seeds): `row = round(rowStart + rng × rowsOf ± rowJitter)`, then the
-first free cell walking **outward from the corridor** (`k` → `col = right ? k : cols−1−k`);
-each cell is rolled a permanent gap with probability `1 − fillRatio` on first visit; a full
-row spills to row±1, ±2… That keeps the old jumble — ragged outer edges, holes — while the
-inner edge hugs the axis. Deterministic, so a resize/relayout reproduces itself.
+Placement per side (same seeds): an event's row inside its day follows its **index within
+the day**, `row = floor(rowStart + (j + 0.5) / countInDay × rowsOf ± rowJitter)` — not a
+random pick — then the first free cell walking **outward from the corridor** (`k` →
+`col = right ? k : cols−1−k`); each cell is rolled a permanent gap with probability
+`1 − fillRatio` on first visit; a full row spills **downward** first (row+1, +2…), upward
+only if everything below is full. Both rules exist for the month cascade
+(`p7DrawSideSquares`), which pops squares in index order: rows therefore fill **top → bottom**
+within a day, never shuffling between a busy day's rows. Deterministic, so a resize/relayout
+reproduces itself.
 
 The tunables live in `P7_VERT` (`page7.js`): `corridorPx` (band), `eventMode`, `eventLine`,
 `bandPx` 60, `wideCorridorPx` 180, `fillRatio` 1, `rowJitter` 0 — shipped defaults are
