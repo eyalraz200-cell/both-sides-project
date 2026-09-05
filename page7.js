@@ -2386,8 +2386,8 @@ function p7DrawYearAxis(ctx, W, H) {
    ------------------------------------------------------------------------- */
 const P7_VERT_EVENT_LINE_ALPHA  = 0.18; // A2 rule across the camps
 const P7_VERT_EVENT_TEXT_GAP    = 6;    // px between the dot's edge and the title's first line
-const P7_VERT_YEAR_LABEL_GAP    = 6;
-const P7_VERT_YEAR_BREAK_CATCHUP_PX = 80; // px of axis over which the fill edge, having skipped a year break, eases back into step with the true edge    // px between a year ring and its label
+const P7_VERT_YEAR_LABEL_GAP    = 6;    // px between a year ring and its label
+const P7_AXIS_DOT_CATCHUP_PX    = 80;   // px of axis over which the fill edge, having skipped a headline dot, eases back into step with the true edge
 
 function p7DrawYearAxisVertical(ctx, W, H) {
   if (!p7.vert) return;
@@ -2413,6 +2413,7 @@ function p7DrawYearAxisVertical(ctx, W, H) {
 
   const fillFrac = p7AxisUpdateFillLag();
   const curY     = topY + fillFrac * len;
+  const curRow   = p7CurRow();
 
   const hoveredEvent = p7.hoveredEvent || (p7Inspect.dragging ? p7Inspect.event : null);
   const hoverActive  = !!hoveredEvent;
@@ -2444,24 +2445,18 @@ function p7DrawYearAxisVertical(ctx, W, H) {
     segTop = Math.max(segTop, m.bottom);
   });
   if (botY > segTop) segs.push([segTop, botY]);
-  // Year breaks are not axis length either: the instant the true edge enters
-  // a break the DRAWN edge appears at the break's bottom and keeps moving, so
-  // no scroll is spent inside the digits. It then eases back into step with
-  // the true edge over the next P7_VERT_YEAR_BREAK_CATCHUP_PX (running at
-  // catchup/(gap+catchup) of scroll speed), so nothing below is offset for
-  // good. Pure function of curY — reverse scroll retraces it exactly.
+  // The headline-event circles are not axis length: the instant the true
+  // edge touches a circle's top the DRAWN edge appears at its bottom and
+  // keeps moving, so no scroll is spent crossing the diameter. It then eases
+  // back into step with the true edge over the next P7_AXIS_DOT_CATCHUP_PX
+  // (running at catchup/(2R+catchup) of scroll speed), so nothing below is
+  // offset for good. Pure function of curY — reverse scroll retraces it
+  // exactly, jumping back out at the top the same way.
   let fillY = curY;
-  marks.forEach(m => {
-    const gap = m.bottom - m.top, C = P7_VERT_YEAR_BREAK_CATCHUP_PX;
-    if (fillY > m.top && fillY < m.top + gap + C) fillY = m.top + gap + (fillY - m.top) * C / (gap + C);
-  });
-  // The headline dots are not axis length: the drawn edge never creeps across
-  // a dot's diameter — top edge until the dot is reached (edge past its
-  // centre, the moment the dot appears), then bottom edge at once.
-  const dotR = P7_AXIS_MARKER_RADIUS;
+  const dotR = P7_AXIS_MARKER_RADIUS, C = P7_AXIS_DOT_CATCHUP_PX;
   P7_AXIS_EVENTS.forEach((ev, i) => {
-    const y = p7RowY(v.events[i].row, H);
-    if (fillY > y - dotR && fillY < y + dotR) fillY = fillY >= y ? y + dotR : y - dotR;
+    const top = p7RowY(v.events[i].row, H) - dotR, gap = 2 * dotR;
+    if (fillY > top && fillY < top + gap + C) fillY = top + gap + (fillY - top) * C / (gap + C);
   });
   segs.forEach(([a, b]) => {
     ctx.fillStyle = hoverActive ? `rgba(0, 0, 0, ${P7_AXIS_UNFILLED_HOVER_ALPHA})` : P7_AXIS_BG_COLOR;
@@ -2487,9 +2482,7 @@ function p7DrawYearAxisVertical(ctx, W, H) {
     // Ring on: the ring sits at the top of the centred block; ring off: the
     // digits alone are centred on the boundary.
     const y   = ring && P7_VERT.yearSide === 'center' ? axisQ(m.yc - blockH / 2 + R) : m.yc;
-    // Reached when the drawn fill is past the break — the same instant the
-    // fill snaps below it, so digits and line flip together.
-    const reached = row === 0 || fillY >= m.bottom;
+    const reached = row <= curRow;
     const ringColor = hoverActive ? P7_AXIS_BG_COLOR : (reached ? P7_AXIS_FILLED_COLOR : P7_AXIS_BG_COLOR);
     if (ring) {
       ctx.fillStyle = "#FDFCFF";
@@ -2537,8 +2530,8 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   }
   ctx.restore();
 
-  // Dots pop on the DRAWN edge (fillY), so a dot never sits on unfilled line
-  // or gets overrun by fill before it appears.
+  // Dots pop on the DRAWN edge (fillY): the circle appears the instant the
+  // fill reaches its top, never sitting on unfilled line.
   p7DrawAxisEventsVertical(ctx, W, H, axisX, fillY, hoverActive, hoverAxisY, yearSpans);
 
   if (hoverActive) {
