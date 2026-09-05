@@ -389,7 +389,7 @@ over `totalRows × CELL`:
   `P7_VERT.bar` accent bar along its whole bottom edge **and** its top edge (`card.bar` +
   `card.barTop`, drawn by `p7DrawAccentBar`) in the year-axis line's own style: `h`
   `P7_AXIS_LINE_THICKNESS` (1px), `color` #000000, `alpha` 1 (shared) times a per-edge
-  `alphaTop` / `alphaBottom` (1 each; beat 2's lone bar uses the dot-facing edge's value),
+  `alphaTop` / `alphaBottom` (0.3 each, tuned by eye 2026-09-05; beat 2's lone bar uses the dot-facing edge's value),
   square ends (`round` false),
   `inset` 0 (px shorter than the card each side), `dash` 0 / `dashGap` 0 (dash > 0 =
   dashed line of that dash length); the bar's `gap`/`padX`/`dateBelow`/`dateGap` only apply

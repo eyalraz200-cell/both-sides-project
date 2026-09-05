@@ -269,7 +269,7 @@ const P7_VERT = {
   // whole block under the date.
   // Same style as the year axis line: 1px (= P7_AXIS_LINE_THICKNESS, declared
   // further down so it can't be referenced here), solid black, square ends.
-  bar: { h: 1, gap: 1, padX: 6, color: '#000000', alpha: 1, alphaTop: 1, alphaBottom: 1, round: false, dateBelow: false, dateGap: 3,
+  bar: { h: 1, gap: 1, padX: 6, color: '#000000', alpha: 1, alphaTop: 0.3, alphaBottom: 0.3, round: false, dateBelow: false, dateGap: 3,
          inset: 0, dash: 0, dashGap: 0 }, // inset = px shorter than the card, each side; dash > 0 = dash length (dashGap px between)
   // Type of the centred headline block (desktop only — the mobile axis keeps
   // the P7_AXIS_*_FONT constants). `lh` = line height of each face's lines;
