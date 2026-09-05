@@ -174,8 +174,11 @@ The wrap cap is the real lever on the row gap: `fold6RowPitchPx` is
 `max(24, tallest measured label + FOLD6_ROW_LABEL_GAP_PX)` with the gap at **6**, so at
 @fold3's 100px cap the longest labels wrapped to **three** lines and every row inherited
 that height. 150px (each legend column owns a half-width — @fold3's 100px exists because
-both camps must fit side by side) drops them to two. The cap is **lerped from 100 → 150
-over `e6`** on the label's inline `max-width` (`js/update-groups.js`), alongside the
+both camps must fit side by side) drops them to two. One group overrides the column cap:
+מתנגדי הרפורמה ותומכי עסקת החטופים carries `labelCapMobile: 140` on its `GROUPS` entry,
+read by `groupLabelColumnMaxWidth(g)` (per-group, always pass the group) and applied inline
+by `updateGroups` and by the hidden measurer, so it lands on two lines at @fold3 instead of
+three. The cap is **lerped from the column cap → 150 over `e6`** on the label's inline `max-width` (`js/update-groups.js`), alongside the
 16 → 12 font-size lerp, so the text reflows gradually through the glide rather than
 dropping a line all at once at the end.
 
@@ -183,10 +186,15 @@ dropping a line all at once at the end.
 (`js/update-groups.js`). Desktop: a flat `FOLD3_ROW_PITCH_DESKTOP_PX` = **34px** (a 23px
 visible gap around the 11px swatch) — no `max()` against label heights, because desktop
 labels are nowrap one-liners and the old `max()` meant editing the pitch constant silently
-did nothing whenever tallest-label + gap outvoted it. Mobile keeps
-`max(FOLD3_MIN_ROW_PITCH_MOBILE_PX = 32, tallest label + FOLD3_ROW_LABEL_GAP_PX = 12)`,
-since its labels wrap to 2-3 lines; there, anything that changes line count changes every
-row.
+did nothing whenever tallest-label + gap outvoted it. Mobile has no flat pitch at all:
+its labels wrap to 1-3 lines with the **first line** on the row y and the rest hanging
+below it (`firstLineShift`), so the **visible gap** is the constant instead. Each step
+from row *k* to *k+1* is
+`max(FOLD3_MIN_ROW_PITCH_MOBILE_PX = 32, rowH(k) + FOLD3_ROW_LABEL_GAP_PX = 12)`
+(`fold3RowStep`), where `rowH(k)` is the tallest label at row index *k* across **both**
+camps — so the two side-by-side columns keep their rows on shared lines, and the gap
+between any two rows is the same whatever their line counts. `fold3RowY` is the prefix
+sum of those steps.
 
 **Both folds share one fixed top anchor** — `fold3TopRowY === fold2TopRowY`; each pitch
 only spaces its own rows downward from it. **Removed — don't reintroduce:** the old
@@ -467,13 +475,25 @@ note and changes its height; the legend rows no longer move with it (the old
 persistent bar pinned to the top of the viewport (`js/groups.js`, `.fold6-mlegend`):
 
 ```
-        [ מקרא ]          ← button, centered
-מחנה הימין        גוש השינוי   ← the REAL @fold2 camp headers, risen into place
-┌───────────────────────────┐  ← the panel, only while open
+          ╭ מקרא ╮                    ← closed: the title row alone, a tinted card
+          ╰──────╯                      centred on the bar (no chevron)
+
+╭──────────────────────────────────╮  ← open: the SAME card, stretched to the bar's
+│                       מקרא       │     full width (step 1) and then down (step 2)
+│ מחנה הימין          גוש השינוי  │
 │ 3 coalition rows │ 3 change rows │
-│ איסוף הנתונים / ACLED note …          │
-└───────────────────────────┘
+│ איסוף הנתונים / ACLED note …     │
+╰──────────────────────────────────╯
 ```
+
+**The bar is styled as the desktop ACLED note card** (per explicit instruction) — the same
+tinted, borderless, 16px-radius card (`.fold6-mlegend-card` reads the `--note-card-*`
+tokens `.fold6-note-card` uses) and the same 14px/600/`#767676` title type. It carries **no
+chevron** (explicit instruction) — unlike the desktop note, this bar is the only thing on
+screen at its fold and its own opening is the affordance, so the button is the bare title and
+centring the button centres the title. The **title is part of the card**: the מקרא
+button is the collapsed pose's whole content, and opening stretches that card around
+it — **width first, then height** — exactly as the desktop note opens.
 
 - It lives in its **own** layer, `#fold6MobileLegendLayer` (a direct `.layout` child, like
   `#fold6NoteLayer` and `#page9CatTooltip`). It is *not* in `#fold6NoteLayer`: that one is
@@ -494,16 +514,42 @@ persistent bar pinned to the top of the viewport (`js/groups.js`, `.fold6-mlegen
   `.fold6-mlegend-layer.is-open` goes to `z-index: 5` — over the card, since the reader
   just asked to see the panel. It must be the layer: the layer is the stacking context, so
   a z-index on `.fold6-mlegend` could never climb past its 3.
-- **The button's only state is `.is-open`'s filled chip.** Being a real `<button>`, it also
-  got the UA's tap highlight — a grey halo overflowing the 999px pill shape — plus a focus
-  ring that outlived the tap. Both are cancelled explicitly
-  (`-webkit-tap-highlight-color: transparent`, and `outline: none` on `:focus`/`:focus-visible`),
-  the same treatment the pill ⓘ needs — see [Drag-and-Drop](Drag-and-Drop.md#the-pill-ⓘ-button).
+- **The card is a sibling painted behind the content, sized by JS** — the desktop
+  construction (`fold6NoteCardEl`) carried over. `fold6MobileCardEl` is the bar's first
+  child, `position: absolute`, and `fold6MLegendPaintCard(raw)` (`js/groups.js`) writes its
+  `left/width/height` per frame of an open or close. It measures only the **button** and
+  the **bar**: the bar's own `padding` is the card's outset (`FOLD6_CARD_PAD` = 8, the
+  desktop card's number), so the collapsed pose is the button plus that outset, centred
+  on the bar, and the open pose is simply the bar's box. At rest open the card is pinned to
+  the bar's four edges rather than sized, so the ACLED note flowing into the panel at
+  `@fold6` grows it for free. It is first painted when the bar arrives
+  (`fold6SetMobileLegendVisible`) and repainted on `resize` — never per scroll frame.
+- **Opening: width, then height. Closing: height, then width.** `fold6SetMobileLegendOpen
+  (open, {instant, onDone})` drives one raw progress `fold6MLegendOpenRaw` (0 closed … 1
+  open) toward its target over `FOLD6_MLEGEND_OPEN_MS` (**550**) for the full trip, sliced
+  into `FOLD6_MLEGEND_OPEN` = `{ w: {0, 0.45}, h: {0.45, 0.55} }` and re-eased with `p9Ease`
+  per window (house rule: raw slices, eased fresh). A reversal mid-flight — a second tap, a
+  scroll back over `@fold4` — turns the raw value around from wherever it is at the same
+  rate, so closing walks the same path backwards. **The panel's opacity rides the height
+  step** (`hT`): the rows fade in as the card makes room for them and are gone before it
+  shrinks back to the title; `pointer-events` is off on the panel until the step lands.
+  `fold6MLegendOpenWant` (the *target*) is the "is the panel open" truth for every guard —
+  the tap toggle, the outside tap, Escape, the fly reopen; `panel.hidden` is only flipped
+  at the ends (unhidden at once on open, so the card can measure the height it is opening to
+  and the fly hand-off can measure its targets; hidden when the close lands). `.is-open` on
+  the bar and the layer follow the same ends.
+- **There is no pressed chip any more** — the card opening *is* the open state. Being a
+  real `<button>`, it still gets the UA's tap highlight and a focus ring that outlives the
+  tap; both are cancelled explicitly (`-webkit-tap-highlight-color: transparent`, and
+  `outline: none` on `:focus`/`:focus-visible`), the same treatment the pill ⓘ needs — see
+  [Drag-and-Drop](Drag-and-Drop.md#the-pill-ⓘ-button).
 - **The panel spans the bar's full width** — the screen less `.fold6-mlegend`'s 12px
-  insets (per explicit instruction; it was briefly shrink-wrapped to the mini-legend).
-- **Scroll cost while open — keep both guards.** The open panel is a full-width white card
-  with a 20px-blur `box-shadow`, sitting in a `position: fixed` full-viewport layer over a
-  canvas that repaints every frame; scrolling with it down used to stutter. Two things fix
+  insets (per explicit instruction; it was briefly shrink-wrapped to the mini-legend). It
+  carries **no frame of its own** (no background, border or shadow — the card behind the
+  bar is the frame); just the 8px gap under the title row and `padding: 2px 4px 0`.
+- **Scroll cost while open — keep both guards.** The open panel sits in a
+  `position: fixed` full-viewport layer over a canvas that repaints every frame; scrolling
+  with it down used to stutter. Two things fix
   it and both are load-bearing: `.fold6-mlegend-panel` carries `transform: translateZ(0)`
   + `contain: paint` so it is composited rather than re-rasterised with the canvas, and
   `fold6SetMobileLegendVisible` caches its last `vis` and skips the write when unchanged —
@@ -516,10 +562,12 @@ persistent bar pinned to the top of the viewport (`js/groups.js`, `.fold6-mlegen
   column's start (right, under `dir: rtl`) edge, swatches in one vertical run and labels
   right-aligned, exactly as `updateGroups` leaves them at `@fold3`. The two columns sit
   `justify-content: space-around` — one per half of the full-width panel — with a 12px gap.
-  Labels are `white-space: nowrap` and each column is `flex: none`, so a column widens to
-  its longest group name instead of wrapping (explicit instruction; the on-canvas rows still
-  wrap at their 120px cap). `.fold6-mlegend-rows` is `overflow-x: auto` as a guard for the
-  narrowest phones, where the two unwrapped columns can out-measure the panel.
+  **Labels wrap as necessary** (explicit instruction, replacing an earlier one-line-per-group
+  rule): each column is `flex: 1 1 0` + `min-width: 0`, i.e. half the panel, and a long group
+  name stacks lines inside that half instead of widening the column and squeezing the other
+  camp. The swatch stays on the label's **first** line (`.fold6-mlegend-row` is
+  `align-items: flex-start`), exactly as the canvas rows sit at `@fold3`. No
+  `overflow-x` guard is needed any more — nothing can out-measure the panel.
 - **The six `groupItems` don't go anywhere** *(typed hand-off only — with `FOLD4_FLY` on,
   the default, they fly into the panel instead; see the two-versions bullet below)*. At
   `@fold4` they leave from exactly where
@@ -552,8 +600,9 @@ persistent bar pinned to the top of the viewport (`js/groups.js`, `.fold6-mlegen
 - **The button arrives early and pops.** It does *not* ride `fold6Trigger`'s full ~1.9s ramp
   — fading one small button over that long reads as never arriving. `fold6SetMobileLegendVisible`
   re-maps the progress onto a front-loaded slice, `FOLD6_MLEGEND_IN_SPAN` (**0.3**), and
-  scales the **button** (not the bar — the bar contains the panel) in with
-  `fold8TooltipGrowEase`, the same pop the panel and the `@fold7` tooltip use. So it lands
+  scales the **button and the collapsed card** (not the bar — the bar contains the panel;
+  an open or opening card is left alone) in with
+  `fold8TooltipGrowEase`, the same pop the `@fold7` tooltip uses. So it lands
   while the on-canvas rows are still leaving behind it. The `@fold4` intro below still waits
   for the *unmapped* progress to reach 1.
 - The panel's rows are a **separate static copy** of the six groups, not the animated
@@ -598,8 +647,11 @@ persistent bar pinned to the top of the viewport (`js/groups.js`, `.fold6-mlegen
     label's cap is frozen at the rest cap for the whole flight. The
     first-line shift fades out over the same `flyT`. The label keeps **every character**:
     no un-typing, it is the same row arriving somewhere else.
-  - **The frame fades in, it does not scale in** (`FOLD6_MFLY_FRAME_MS` = 350) — a scaled
-    frame reports scaled rects, so the rows would be aiming at a moving target.
+  - **The frame opens with the card's own two-step open** (`fold6SetMobileLegendOpen(true)`
+    — width, then height, `FOLD6_MLEGEND_OPEN_MS`); it is never scaled — a scaled frame
+    reports scaled rects, so the rows would be aiming at a moving target. The panel is at
+    its final layout (unhidden, rows at opacity 0) from the first frame, which is what the
+    targets are measured off.
   - The panel's own rows are built at full size and full text from the first frame at
     **opacity 0** (`fold6MFlySetRowsShown`) and appear in **one frame** when the flight
     lands, as the travelling row disappears in the same frame (`fold6MFlyArriveT` is a
@@ -738,31 +790,31 @@ persistent bar pinned to the top of the viewport (`js/groups.js`, `.fold6-mlegen
     original geometry. (The quantisations themselves are gone — the cap is frozen and the
     font lerp is continuous — but the gate stays: the fly branch still swaps in stand-ins
     and freezes the cap, both wrong at rest.)
-  - The **arrival** starts the hold-then-close (`fold6MFlyArrive`, called once per frame
-    from `updateGroups`), not a rAF clock of its own: the flight rides `fold6Trigger`'s
-    `e6Fly`, so it lands when the scroll animation lands. The same function **cancels the
-    pending close if the arrival progress drops back below 1** — a reader scrolling up
-    mid-hold takes the rows back off, and the close must not fire under that reverse
-    flight.
+  - **Nothing follows the arrival.** `fold6MFlyArrive` (called once per frame from
+    `updateGroups`) only fades the panel's own rows in on the landing frame — the panel is
+    **left open** at `@fold4` (explicit instruction) and is the legend from there on.
+  - A wrapped panel label is aimed at its **first line's** middle, not the box's:
+    `fold6MFlyMeasure`'s `ly` is `min(height, line-height) / 2`, which is the box middle for
+    a one-liner and the first line for a wrapped one — the line the swatch and the (still
+    one-line) stand-in both sit on.
   - **The hand-off plays in REVERSE on scrolling back up** (`js/groups.js`,
     `fold6MFlyMaybeReopen` / `fold6FadeOutMLegendFlyIntro`, wired in
     `fold6SetMobileLegendVisible`):
-    - Mid-flight or mid-hold, the trigger's own reversal already flies the rows back
+    - Mid-flight, the trigger's own reversal already flies the rows back
       (every lerp rides `e6Fly`, and `makeTrigger` reverses over the remaining
       distance); the panel frame stays open under them.
-    - **After the close** (panel already shrunk into the button), a *decreasing* `vis`
+    - **After a tap-dismissed demo** (panel shrunk into the button), a *decreasing* `vis`
       reopens the frame first (`fold6MFlyMaybeReopen` → the intro's own
-      `fold6PlayMLegendFlyIntro` fade-in, rows at opacity 0) so the reverse flight has a
+      `fold6PlayMLegendFlyIntro` card open, rows at opacity 0) so the reverse flight has a
       panel to fly out of. Decreasing-only is binding: riding downward past a
       tap-dismissed demo must not resurrect it, and a hand-opened panel is left alone
-      (`fold6MobilePanelEl.hidden` guard).
-    - Once `vis` is back at 0 the empty frame **fades out** over the same
-      `FOLD6_MFLY_FRAME_MS` (350) — `fold6FadeOutMLegendFlyIntro`, the mirror of the
-      fade-in, not the close's shrink — then the panel closes and the intro state rests.
-      The fade-out picks up the frame's current opacity (a fast flick can reverse while
-      the fade-in is still running), self-terminates via the `fold6MFlyFadeOut` flag if
-      a re-entering fade-in or `fold6StopMLegendIntro` interrupts it, and the instant
-      `vis <= 0` close is suppressed while it runs.
+      (`fold6MLegendOpenWant` guard).
+    - Once `vis` is back at 0 the empty frame **closes** — `fold6FadeOutMLegendFlyIntro`,
+      which is just the card's own close (height, then width) with an `onDone` that rests
+      the intro state. The close picks up from wherever the card is (a fast flick can
+      reverse while the open is still running), the `fold6MFlyFadeOut` flag marks it so the
+      instant `vis <= 0` close is suppressed while it runs, and a re-entering open or
+      `fold6StopMLegendIntro` clears the flag.
 - **The `@fold4` typed hand-off intro** (`fold6PlayMLegendIntro`, `js/groups.js`): the on-canvas
   rows leave by shrinking and un-typing *in place*, which reads as "gone" but not as "gone
   **there**". So the moment `fold6SetMobileLegendVisible` is handed any `vis > 0` — i.e.
@@ -772,9 +824,8 @@ persistent bar pinned to the top of the viewport (`js/groups.js`, `.fold6-mlegen
   put a ~1.9s gap in the middle of the hand-off, so it read as two unrelated events instead
   of one move seen at both ends at once.
 - **It all runs on one clock** (per explicit instruction) — no per-row stagger, and the rows
-  do not wait for the frame. From a single `t0`: the panel scales `0 → 1` over
-  `FOLD6_MLEGEND_INTRO_GROW_MS` (350) **from its top edge**
-  (`transform-origin: top center`, since it hangs off the button and must grow downward),
+  do not wait for the frame. The frame is the card's own open (width, then height, over
+  `FOLD6_MLEGEND_OPEN_MS` — exactly the move a tap makes) started on the same frame; then
   every swatch pops `scale(0 → 1)` over `FOLD6_MLEGEND_INTRO_POP_MS` (400), and every label
   types in over `FOLD6_MLEGEND_INTRO_TYPE_MS` — which **is** `GROUP_TRANSITION_MS`, so the
   panel's rows finish typing on the same frame the on-canvas rows finish un-typing. The two
@@ -793,40 +844,30 @@ persistent bar pinned to the top of the viewport (`js/groups.js`, `.fold6-mlegen
 - **`@fold4` itself fires earlier on mobile** — `FOLD6_CARD_FRAC` (**0.8**, vs the house
   0.5; bigger is earlier) — so the whole hand-off, hold and shrink fit while the fold is
   still on screen. Desktop keeps 0.5.
-- Then it holds the finished legend for `FOLD6_MLEGEND_INTRO_HOLD_MS` (**300**) and
-  **shrinks back up into the button** over `FOLD6_MLEGEND_INTRO_CLOSE_MS` (300) —
-  `fold6CloseMLegendIntro`, same top-edge origin, so the demo visibly returns the legend to
-  the control that now holds it instead of blinking out. The close uses plain `p9Ease`, not
-  the back-out curve: overshoot belongs to things appearing, and on the way out it would
-  push the frame briefly *bigger* as it leaves. Rows are restored to full size only after
-  the panel is hidden, so a hand-opened panel always comes back whole.
-- **The ACLED note never joins the panel mid-demo.** `fold6MLegendIntroActive` is true for
-  the whole intro (grow + hold + shrink), and `updateGroups` keeps the note + rule
-  `hidden` — out of layout, not just transparent — while it is. On a fast scroll @fold6
-  (`acledNoteTrigger`) can be crossed while the demo is still playing, and the note
-  flowing in would grow the frame taller under rows that are still typing. It first appears
-  when the reader **taps מקרא**: any tap aborts the intro, and both the abort and the
-  natural end go through `fold6EndMLegendIntro`, which un-hides it by hand — `updateGroups`
-  only runs on scroll frames, and the demo usually ends with the page standing still. The
-  note's own @fold6 ramp still gates it, so tapping before @fold6 shows no credit.
-- **The מקרא button un-fills *with* that shrink, not after it.** `fold6CloseMLegendIntro`
-  removes `.is-open` from the bar at the *start* of the close, and `.fold6-mlegend-btn`
-  carries a 300ms `background`/`border-color`/`color` transition matching
-  `FOLD6_MLEGEND_INTRO_CLOSE_MS`, so black→white and the frame leaving are one move. The
-  `.is-open` rule sets `transition: none`, so *pressing* the button still fills it
-  instantly — a transition declared on the base state only runs when the element returns
-  to it. Keep the two durations in step if either changes.
-- **The frame's curve is `fold8TooltipGrowEase`** (`js/fold8-tooltip.js`), the same subtle
-  back-out pop `@fold7`'s tooltip grows with — the panel should read as the same kind of
-  object the reader met one fold earlier. The rows use the house `p9Ease`. The inline
-  transform the intro writes **replaces** the stylesheet's `translateZ(0)` compositor-layer
-  promotion, so it repeats it (`translateZ(0) scale(g)`) and clears the property outright at
-  rest rather than writing `scale(1)`.
+- **Then it stays open** (explicit instruction). There is no hold and no close: the rows
+  land, `fold6MLegendRestRows` hands them back to CSS, and the panel remains the legend for
+  the rest of the page. `FOLD6_MLEGEND_INTRO_HOLD_MS` and `fold6CloseMLegendIntro` are gone.
+- **The ACLED note is ADDED to the open panel one fold later.** On mobile `acledNoteTrigger`
+  is crossed on `@fold5`'s card (`#page-4`) at `FOLD3_CARD_FRAC` (**0.6**) instead of on its
+  own `@fold6` card at 0.5 — `checkAcledNote` passes `watchCardThreshold` a **function
+  cardEl** as well as a function frac (explicit instruction: "same trigger point as fold 3,
+  respective to the page"). Desktop is unchanged. Because the panel is already open, the
+  reader watches the credit arrive and the card grow to take it, instead of meeting it
+  inside a panel they have to open first.
+  `fold6MLegendIntroActive` no longer gates it — that flag now stays true for as long as the
+  rows can still fly back out. `updateGroups` keeps the note + rule `hidden` (out of layout,
+  not just transparent) only while `fold6MLegendOpenRaw < 1`, i.e. while the card is still
+  opening: the one moment the note could grow the frame under rows that are still arriving,
+  reachable only on a fast scroll that lands both crossings at once.
+- The rows use the house `p9Ease`; the card's steps do too. The panel's stylesheet
+  `translateZ(0)` is never overwritten — the intro never writes a transform on the panel.
 - It is **one-shot per crossing**: the `fold6MLegendIntroPlayed` flag clears when `vis`
   returns to 0 (scrolled back above `@fold4`), so coming down again replays it. Any tap —
   the button, outside, Escape — calls `fold6StopMLegendIntro()`, which cancels the rAF and
-  the hold timer and restores every row to full text and an unscaled swatch, so a panel
-  opened by hand is never caught mid-animation. Desktop never runs it (`isMobile()` guard).
+  restores every row to full text and an unscaled swatch, so a panel
+  opened by hand is never caught mid-animation; the card's own open/close is *not*
+  cancelled by it — the tap that follows just turns the card toward its new target.
+  Desktop never runs it (`isMobile()` guard).
 - `fold6NoteShiftPx` is **0** on mobile (no rows on screen to shift), which also makes
   `FOLD6_LEGEND_TOP_MOBILE` inert.
 

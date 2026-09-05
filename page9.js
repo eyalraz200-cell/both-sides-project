@@ -134,7 +134,7 @@ const LEGIT_CELL_M     = 1;   // legit-bar pitch: real dots, packed until they r
 const P9_EXTREME_GAP_M = 64;  // no floating pill labels on mobile, so the gap is purely visual (widened from 40 — one-column sides sat too close to center)
 // The tray band's top rule (Figma's Line 15) — must match `top` in .page9-tray's
 // ≤600px rule, which is the thing that actually positions it.
-const P9_TRAY_TOP_M          = 108; // 104 + 4: rode down with --card-top 48→52 (legend→title gap widened to 8px)
+const P9_TRAY_TOP_M          = 116; // rides with --card-top (60): the מקרא card's bottom (52) + the 8px legend→title gap
 const P9_TRAY_TOOLTIP_GAP_M  = 20; // band's bottom rule -> docked frame's top (Figma had 28; tightened by eye)
 const P9_TOOLTIP_COLLAPSED_H = 100; // the docked frame's collapsed height (`.page9-tooltip.is-docked` in style.css); the "עוד" expansion overlays rather than pushing
 const P9_TOOLTIP_GRID_GAP_M  = 20; // collapsed frame's bottom -> the count-label block (matches P9_TRAY_TOOLTIP_GAP_M — change them together)
@@ -1722,6 +1722,43 @@ function p9BuildPanel() {
     { el: zoneBelow, targetZone: zoneBelow, overClass: "dragover" },
   ];
 
+  // ── Keyboard / assistive-tech path ───────────────────────────────────────
+  // The pills are <div>s driven by pointerdown, so Tab skipped them and no key
+  // could trigger anything — and @fold12's scroll gate (p13GateLocked,
+  // js/fold11.js) won't unlock until one pill is classified, which made folds
+  // 12-13 unreachable without a pointer. The keyboard path deliberately reuses
+  // the SAME commit functions the pointer paths use rather than adding a
+  // second route into p9.sides, so the finalized state-1 drop animation is
+  // reached identically.
+
+  // Off-screen announcer: the visible result of a classification is a canvas
+  // animation and a count, neither of which is in the accessibility tree.
+  const liveEl = document.createElement("div");
+  liveEl.className = "a11y-only";
+  liveEl.setAttribute("aria-live", "polite");
+  liveEl.setAttribute("aria-atomic", "true");
+  document.body.appendChild(liveEl);
+
+  // Reads the pill's CURRENT placement rather than p9.sides, so it is correct
+  // the instant it's called from placePillInZone / the mobile class toggle —
+  // both run before commitDropState has written the side. Desktop moves the
+  // pill into #page9ZoneAbove; mobile leaves it in the tray and flags it
+  // .is-extreme in place (see the click handler below).
+  function pillIsExtreme(pill) {
+    return zoneAbove.contains(pill) || pill.classList.contains("is-extreme");
+  }
+
+  function syncPillA11y(pill) {
+    const extreme = pillIsExtreme(pill);
+    pill.setAttribute("aria-pressed", extreme ? "true" : "false");
+    const label = pill.querySelector(".page9-pill-label")?.textContent || "";
+    const total = Array.from(document.querySelectorAll(".page9-pill"))
+      .filter(pillIsExtreme).length;
+    liveEl.textContent =
+      `${label} — ${extreme ? "סווגה כפעולה קיצונית" : "הוחזרה לפעולות לגיטימיות"}. ` +
+      `${total} מתוך ${P9_CATEGORIES.length} מסווגות כקיצוניות.`;
+  }
+
   function resolveDropTarget(x, y) {
     const hit = document.elementFromPoint(x, y);
     const direct = hit && dropTargets.find(dt => dt.el === hit || dt.el.contains(hit));
@@ -1771,6 +1808,9 @@ function p9BuildPanel() {
       const idx = Number(pill.dataset.idx);
       trayRows[p9TrayGrid()[idx].row - 1].appendChild(pill);
     }
+    // Every desktop path (drag-drop AND click-to-classify) lands here, so this
+    // is the one place aria-pressed/the announcer need syncing for desktop.
+    syncPillA11y(pill);
   }
 
   // Drops that land while a previous drop's dot animation (p9.anim) is still
@@ -2034,6 +2074,15 @@ function p9BuildPanel() {
     const pill = document.createElement("div");
     pill.className = "page9-pill";
     pill.dataset.idx = idx;
+    // Still a <div>, not a <button>: a real button brings its own baseline
+    // styling, and its implicit form/activation behaviour would collide with
+    // the manual pointerdown drag below. role+tabIndex buy the same semantics
+    // without either. aria-pressed because the pill is a two-state toggle
+    // (legitimate / extreme), which is exactly how the commit path models it —
+    // kept in sync by syncPillA11y.
+    pill.tabIndex = 0;
+    pill.setAttribute("role", "button");
+    pill.setAttribute("aria-pressed", "false");
 
     // Permanent column within its own tray row (see P9_TRAY_GRID/trayRows
     // above) — applies only while the pill is actually inside its row
@@ -2127,7 +2176,32 @@ function p9BuildPanel() {
       if (!isMobile()) return;
       const goingExtreme = !pill.classList.contains("is-extreme");
       pill.classList.toggle("is-extreme", goingExtreme);
+      // Mobile never calls placePillInZone (the pill toggles in place), so the
+      // a11y sync has to happen here instead — before commitDropState, which
+      // is fine: syncPillA11y reads the class it just set, not p9.sides.
+      syncPillA11y(pill);
       commitDropState(pill, goingExtreme ? zoneAbove : zoneBelow);
+    });
+
+    // Enter/Space = the same toggle each viewport already performs by pointer.
+    // Desktop routes through commitDrop, the identical call the desktop
+    // click-to-classify branch makes (`if (!moved)` in the drag's onUp);
+    // mobile re-fires its own click handler rather than duplicating the
+    // in-place class toggle. Space is preventDefault'd because the page's
+    // default action for it is scrolling.
+    pill.addEventListener("keydown", e => {
+      if (e.key !== "Enter" && e.key !== " " && e.key !== "Spacebar") return;
+      // The ⓘ button is a real <button> inside the pill with its own activation
+      // — let it have its own keys instead of classifying the pill underneath.
+      if (e.target !== pill) return;
+      e.preventDefault();
+      if (isMobile()) { pill.click(); return; }
+      commitDrop(pill, zoneAbove.contains(pill) ? zoneBelow : zoneAbove);
+      // commitDrop re-parents the pill between the two zones, and moving a
+      // focused element in the DOM drops focus to <body> in some browsers —
+      // which would dump the user back at the top of the tab order after every
+      // single classification. Put it back on the pill they just acted on.
+      pill.focus();
     });
 
     pill.addEventListener("pointerdown", e => {
@@ -2643,7 +2717,7 @@ function p9HoverInit() {
     descEl.textContent = bestEvent.descHeMedium;
     // `color`, not `border-color`: the visible stroke is the dashed <svg>
     // overlay (updateTooltipDash, main.js), which strokes currentColor.
-    tooltipEl.style.color = p7ActorColor(bestEvent.actor);
+    setTooltipColor(tooltipEl, p7ActorColor(bestEvent.actor));
     tooltipEl.classList.add("is-visible");
 
     // Left-side events (event.side === "left", the grid's left column block)
@@ -2651,14 +2725,26 @@ function p9HoverInit() {
     // doesn't reach across the canvas's center gap into the opposite side's
     // column — mirrors which corner of the box anchors at the dot (see
     // .page9-tooltip.is-mirrored, style.css).
-    const mirrored = bestEvent.side === "left";
+    // Same two vertical screen-X lines @fold9's timeline hover uses, and the
+    // same constants (P7_TIP_FLIP_L / P7_TIP_FLIP_R_INSET, page7.js) so the
+    // two tooltips can never disagree about which way they open: a dot left of
+    // P7_TIP_FLIP_L always opens rightward, a dot within P7_TIP_FLIP_R_INSET
+    // of the RIGHT edge always opens leftward, and between them the data-side
+    // rule above holds. Each is a px distance from the edge its mini-legend
+    // hangs off, so both follow a window resize. Without them a side==="left"
+    // dot sitting near the left edge opened leftward into the legend and got
+    // shoved back by the Math.max(8, …) clamp below, landing the box on top of
+    // its own dot instead of beside it.
+    const dotClientX = rect.left + bestPos.x;
+    let mirrored = bestEvent.side === "left";
+    if (dotClientX < P7_TIP_FLIP_L) mirrored = false;
+    if (dotClientX > window.innerWidth - P7_TIP_FLIP_R_INSET) mirrored = true;
     tooltipEl.classList.toggle("is-mirrored", mirrored);
 
     // Anchor the box's square corner (bottom-left normally, bottom-right
     // when mirrored — the design's pointer corner, see style.css) a small
     // gap away from the dot on both axes, growing up and away from the
     // canvas's center gap, rather than flush against it.
-    const dotClientX = rect.left + bestPos.x;
     const dotClientY = rect.top  + bestPos.y;
     const rawLeft = mirrored
       ? dotClientX - TOOLTIP_GAP - tooltipEl.offsetWidth

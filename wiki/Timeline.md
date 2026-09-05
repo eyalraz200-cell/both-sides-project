@@ -483,8 +483,8 @@ strokes via `currentColor`, and `--tip-fill`, the contrast-floored version deskt
 box paints from. Four call sites write it — `p7HoverInit` and `p7InspectInit` (page7.js),
 `p9HoverInit` (page9.js) and @fold7's scripted demo (js/update-groups.js) — and the fill's
 first version missed two, leaving @fold9's timeline hover on the raw colour; hence the
-helper. Above 600px the box is
-instead **filled** from `--tip-fill`, which `setTooltipColor` derives via `tooltipFill()`:
+helper. At **every** width the box is
+**filled** from `--tip-fill`, which `setTooltipColor` derives via `tooltipFill()`:
 the fill carries white text, and two group
 colours — תנועות התנחלות `#F9B624` (~1.7:1 against white) and מפגינים ערבים ישראלים
 `#31CE1C` (~1.9:1) — are too light for that, so `tooltipFill` scales RGB down uniformly
@@ -505,9 +505,32 @@ in `tooltipFillScaled(r, g, b)`, which returns an `[r, g, b]` triple; `tooltipFi
 public entry point and still returns an `rgb()` string. Its bisection rounds to 8-bit
 **first and then verifies**, stepping the factor down until the rounded colour truly clears
 the ceiling — rounding a channel up used to push luminance back over it (yellow landed at
-4.48:1 against a 4.50 target). `color` deliberately stays the TRUE group colour —
-it strokes mobile's dashed frame, where the text is dark on white and the real hue should
-show. @fold7's demo feeds the lerped grey→colour value through it every frame, so the
+4.48:1 against a 4.50 target). `color` deliberately stays the TRUE group colour, kept in
+step by `setTooltipColor` even though nothing paints from it today.
+
+> **Mobile matches desktop (2026-09-05).** The docked mobile frame used to be white with a
+> dashed group-coloured stroke and dark text; it now takes the same group-colour fill and
+> white text as desktop, so the two fixtures differ only in SHAPE (desktop anchors a box to
+> the dot, mobile keeps the one docked frame). The fill / white-text /
+> `.page9-tooltip-dash { display: none }` rules moved out of the old
+> `@media (min-width: 601px)` wrapper in style.css and are now unconditional; mobile's own
+> two bits of type were re-toned to white alphas — `.p7-tip-more` 0.75. The dash `<svg>` is
+> still built by `updateTooltipDash()` on every hover, only hidden.
+
+> **The neutral frame has no card at all (2026-09-05).** Only the state *with an event in
+> it* is a filled box. `.page9-tooltip.is-docked.is-picker` sets `background: none` and
+> `border-color: transparent`, so while nothing is picked there is just the
+> `.p7-inspect-hint` line on the page background — an empty coloured box read as a control
+> waiting to be operated, the words alone read as the instruction they are. The hint takes
+> `color: currentColor` (it can no longer be white: there is no fill under it), which
+> resolves to the resting grey `FOLD8_TOOLTIP_REST_COLOR` `#858585` that
+> `updateGroups`' `keepEmptyFrame` branch writes — and `release()` (`p7InspectInit`) now
+> writes it too, so a released event's group colour can't be left tinting the instruction.
+> The `100px` height and the `.is-picker` centring are deliberately KEPT while empty: the
+> hint sits exactly where the filled frame's middle will be, so picking an event brings the
+> box back in place instead of jumping the text.
+
+@fold7's demo feeds the lerped grey→colour value through it every frame, so the
 darkening is continuous rather than a snap at the end; `.is-mirrored` flips the
 box for `side === "left"` — except outside the two horizontal flip lines, which keep the
 box off the mini-legends: a dot left of `P7_TIP_FLIP_L` (**327 px from the left edge**)
@@ -543,9 +566,9 @@ block), so every title block that shares the screen with the frame paints OVER i
 pinning at the top, so without it the frame's white fill swallowed the title mid-pass.
 The frame itself stays fully visible throughout that pass — the title simply paints over
 it (a transit-hide that faded the frame out for the overlap was tried and reverted per
-explicit instruction: nothing disappears). The frame keeps its white fill in every state,
-including the empty hint state (making the empty frame's fill transparent was tried and
-reverted per explicit instruction). @fold9
+explicit instruction: nothing disappears). The frame is filled — in the event's group
+colour — only while an event is actually in it; the empty hint state carries no fill and no
+border at all (see the 2026-09-05 note above). @fold9
 itself has no card to stack: `#page-8` is an empty scrub spacer. The final spot is above the timeline grid (`top: 62px`, centered, `width: min(300px, 100vw - 48px)`
 — 300px was chosen by eye after measurement: ~76% of descriptions fit the 3 clamped lines (measured at 14px; type since bumped to 15px) (320px bought 82%, the 342px title-block width 87.5%, but both read too wide) — **fixed** `height: 100px`, with the overflow clipped on `.page9-tooltip-desc` — **never on
 the frame**, whose dashed `<svg>` is inset `-2px` on every side and would be clipped clean
@@ -604,10 +627,11 @@ to the 3-line frame.
 
 **A reading lasts only as long as the gesture.** `onEnd` calls **`release()`**, so lifting
 the finger drops the selection entirely and the frame returns to its resting state: the
-`.p7-inspect-hint` line, the neutral gray stroke, no date, no description, `is-inspect` →
-`is-picker`. (The gray comes back on its own — `updateGroups`' `keepEmptyFrame` branch
-repaints `fold8TooltipEl.style.color` every frame it runs, and `release()` calls
-`updateGroups()`.) An event's text and its actor-colored stroke left standing after the finger
+`.p7-inspect-hint` line on the bare page — the fill and border go with `is-inspect` → 
+`is-picker` — no date, no description. (`release()` writes the neutral grey through
+`setTooltipColor` itself, and `updateGroups`' `keepEmptyFrame` branch repaints
+`fold8TooltipEl.style.color` every frame it runs; `release()` calls `updateGroups()` too.)
+An event's text and its actor-colored fill left standing after the finger
 lifts read as permanent page furniture, and kept covering the chart the gesture had just been
 used to explore.
 
@@ -709,6 +733,64 @@ stuttering and landing inconsistently *only when the user kept scrolling through
 
 ## Mobile
 
+> **In progress (2026-09-05): the vertical centre axis is being ported to mobile.**
+> `P7_VERT_MOBILE` (page7.js, merged over `P7_VERT` into `P7_VERT_M`; read via
+> `p7V()`) puts mobile on the vertical path when `enabled` is true — the default —
+> so `p7VerticalAxis()` is `!isMobile() || P7_VERT_M.enabled`. Everything the
+> vertical path needs on mobile lives there: `corridorPx` 44, a solved wide
+> corridor (`p7SolveMobileCorridor`: widest wrapped headline line at
+> `type.maxWidth` + card pads + side gaps, clamped so each camp keeps
+> `minSidePx` 96), `bottomInsetPx` 24 / `slotPx` 48 (the box's bottom is now `H − inset`, via
+> `sbbTimelineMobileBottomPx()` in squareboundingbox.js — the axis-clearance row
+> in the table below applies only with the vertical path off), 14px year labels
+> (`yearLabelPx`), 14px titles, and the square solve reusing `p7SolveVerticalSq`
+> with mobile bounds (`p7SqMax/p7SqMin/p7SqStep/p7GapRatio`; `p7.vert.overflowRows`
+> counts rows the box can't hold). The tooltip dodge spot follows
+> `sbbTimeline(H).bottom`.
+>
+> Three **headline placements** are candidates, switched by `P7_VERT_MOBILE.headline`
+> and picked by eye with `_debug-vert-mobile.js` (key `0` = the old horizontal axis):
+> `'band'` — a rule across both grids (`p7DrawVertEventLines`, forced on) with a
+> translucent band under it, copy right-aligned at the grids' edge; `'widen'` —
+> the desktop card in the solved corridor; `'slot'` — dots only in the corridor,
+> one headline (most recently triggered) centred in a `slotPx` band under the grid
+> (`p7DrawVertHeadlineSlot`; the box reserves it). Phase 2 bakes the pick, deletes
+> the other two, the horizontal axis, the month cascade and this note, and
+> rewrites this section.
+>
+> **Mobile prints its headline at the top of the screen, and docks the tooltip at the
+> bottom (2026-09-05).** The mobile stack, top to bottom, is **מקרא bar / axis headline /
+> dot grid / docked tooltip** — picked by eye against the other five candidate orders. The
+> mobile default is `headline: 'slot'` with `slotAnchor: 'top'` and `slotTopPx: 64`
+> (`FOLD6_MLEGEND_TOP_MOBILE_PX` 16 + the bar's 30px + one `SBB_TIMELINE_MOBILE_GAP_PX`): the
+> **axis itself carries only the event circles** (the label pass in
+> `p7DrawAxisEventsVertical` returns immediately for `'slot'`, so nothing prints beside a
+> dot, and — the half-dot card path being `'widen'`-only — no circle is ever split), and
+> `p7DrawVertHeadlineSlot` prints **one** line, **title only** (`type.showDate` is false),
+> **with no card of any kind** — no fill, no border, no rule — directly under the מקרא bar,
+> so the copy reads with the legend that colours it. `slotAnchor` is the knob: `'grid'`
+> (desktop default) centres the block in the `slotPx` band under the grid; `'top'` (mobile)
+> hangs it off the viewport's top edge at `slotTopPx`; `'bottom'` is its mirror
+> (`slotBottomPx` off the bottom edge) and is currently unused. **`slotPx` is reserved by
+> `sbbTimelineMobileBottomPx()` only under `'grid'`** — the viewport anchors take no band
+> out of the grid, because they sit outside it. `SBB_TIMELINE_MOBILE_TOP_PX` continues from
+> the headline instead: `64 + 19 + 18` = **101**.
+>
+> The docked tooltip is bottom-anchored to match: `tooltipDockRestPx()`
+> (`js/fold8-tooltip.js`) = `innerHeight − TOOLTIP_DOCK_BOTTOM_PX (24) − TOOLTIP_DOCK_H_PX
+> (100)`, read live so a bar-collapse resize moves it. The old `TOOLTIP_DOCK_TOP_PX` (62) is
+> **gone**; the `@fold7` spot's "can't climb off the top" clamp is its own
+> `TOOLTIP_DOCK_TOP_MIN_PX` (16), *not* the resting spot — clamping to a bottom rest would
+> have dragged every `@fold7` frame down there. The grid's bottom clearance is derived from
+> the frame (`24 + 100 + 18` = **142** off the bottom edge) rather than from a headline
+> band.
+> Which event prints: the most recently reached one still at non-zero opacity (ties → the
+> higher index); the others stay as circles on the axis. Because `p7CenterGap()` solves the
+> wide corridor only for `'widen'`, the corridor falls back to `corridorPx` (44) and both
+> camp grids get the width the copy used to take. Desktop is unchanged (`'widen'`,
+> straddling card). The older `'none'` value still exists and still skips the copy
+> entirely; nothing selects it now.
+
 Under the 600px breakpoint the fold keeps its shape — two camps mirrored around the
 center gap, same cascade, same scrub — and changes only scale. Every value below is a
 live `isMobile()` read at layout/draw time (`sbbTimeline()`, `p7Cell()`, `p7AxisMargin()`
@@ -719,7 +801,7 @@ no extra invalidation; desktop rendering is untouched.
 |---|---|---|---|
 | Square / gap (pitch) | 3.5 / 1.5 (5) | **solved per viewport**, gap = half the square | See "The solved square size" below |
 | Box `left` | **190px** (`SBB_TIMELINE_LEFT_PX`) | 0.03 | The desktop px exists only to clear the *left*-pinned desktop legend; on mobile the legend is top-pinned, so this becomes a plain screen-edge inset (≈12px at 393, matching `FOLD6_LEGEND_INSET_MOBILE`) |
-| Box `top` | 0.07 | **180px** (`SBB_TIMELINE_MOBILE_TOP_PX`) | The docked tooltip's bottom edge + `SBB_TIMELINE_MOBILE_GAP_PX` (18): `TOOLTIP_DOCK_TOP_PX` 62 + the frame's fixed 100px collapsed height (the expanded state is deliberately not counted — it overlays the grid). A px clearance, not a fraction — the thing being cleared is fixed-px, so a fraction wasted a band on a tall phone and collided on a short one |
+| Box `top` | 0.07 | **101px** (`SBB_TIMELINE_MOBILE_TOP_PX`) | The axis headline's bottom edge + `SBB_TIMELINE_MOBILE_GAP_PX` (18): `slotTopPx` 64 + one 19px title line. A px clearance, not a fraction — the thing being cleared is fixed-px, so a fraction wasted a band on a tall phone and collided on a short one |
 | Box `bottom` | 0.93 | **axis − 64px** (`SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX`) | `P7_AXIS_Y_FRAC_MOBILE`×H minus the tallest label block that can print above the axis — sized for what really prints: at the 220px wrap all seven titles fit on **one line**, so the block is offset 36 + ~10px cap height = 46 — minus the *same* 18px `SBB_TIMELINE_MOBILE_GAP_PX` used at the top, so the dots clear the labels by exactly as much as they clear the tooltip. Reserving spare lines left every real block floating in a hole; a longer title added later would wrap and eat 18px per extra line out of the gap. Three lines is the worst case |
 | `P7_AXIS_MARGIN` | 120 | 28 | At 120 a 393px screen would leave ~150px of axis; 28 gives ~337px, year ticks ~90px apart |
 | Year label | 18px | 14px | 4-digit years fit at that tick pitch — no 2-digit fallback needed |
@@ -846,7 +928,7 @@ states, both classes on `#page9Tooltip`:
 
 | Class | Shows |
 |---|---|
-| `.is-picker` | `.p7-inspect-hint`, centered at the same 15px as the description it's replaced by, reading `לחצו והחזיקו על נקודה להצגת פרטי האירוע` — long enough to wrap to two lines in the 222px box, which the fixed frame height absorbs. At `rgba(0,0,0,0.8)`, darker than `.p7-tip-more`'s 0.55: it *is* the frame's content here, not chrome beside it. A label, not a control: the frame stays `pointer-events: none` and keeps its fixed 100px height |
+| `.is-picker` | `.p7-inspect-hint`, centered at the same 15px as the description it's replaced by, reading `לחצו והחזיקו על נקודה להצגת פרטי האירוע` — long enough to wrap to two lines in the 222px box, which the fixed frame height absorbs. In `currentColor` — the resting grey `#858585` — since this state has no fill to print white on. A label, not a control: the frame stays `pointer-events: none`, and keeps its fixed 100px height (and its centring) even with the box itself invisible, so the hint sits where the filled frame's middle will be |
 | `.is-inspect` | The ordinary docked tooltip (date + description). There is no dismiss control — a selected event simply stays until the next hold replaces it, or until leaving `#page-8` releases the frame |
 
 While dragging, `.p7-loupe` — a 96px circular canvas — rides
@@ -859,32 +941,37 @@ blit scales to. The source rect is in device pixels (the main canvas is DPR-scal
 marked — snapped to the dot, not tracking the finger, so what the tooltip describes is
 unambiguous — and that event is pushed into the frame continuously.
 
-**Collision dodge — the frame gets out of the loupe's way.** A hold high on the chart runs
-the glass straight into the docked frame's spot, so while the finger is high enough that
-they'd overlap, the frame **snaps** to a dodge spot low on the viewport, and snaps back the
-moment the finger drops below the threshold or lifts. The snap is a deliberate, explicitly
-instructed exception to "position never snaps" — the dodge is a mode flip serving a live
-finger, and an animated frame would pass through the very glass it's dodging. Two pieces:
-`tooltipAvoidPx` (`js/fold8-tooltip.js`), which while `p7TipAvoidActive` overrides
-`tooltipDockMobile`'s `top` with a spot low on the viewport, built off the same clearance
-line the grid's bottom uses — the year-axis line (`P7_AXIS_Y_FRAC_MOBILE` of the viewport)
-minus `SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX` (squareboundingbox.js). The two folds anchor
-differently (explicit instruction, `@fold11` only): on **`@fold9`** the frame's bottom edge
-sits on that line, anchored off the **live** `offsetHeight`, so a hold-expanded description
-grows upward and never touches the axis text; on **`@fold11`** (`currentPage === 10`) the
-**collapsed** frame's bottom (`P9_TOOLTIP_COLLAPSED_H`, 100) sits `P7_TIP_AVOID_DROP_PX`
-(32) **lower** — deliberately eating into the clearance — and a hold-expanded description
-grows **downward** over the axis area instead of upward into the chart; and
-`syncTipAvoid` (`drawLoupe`, `page7.js`), which sets the flag by comparing the loupe's top
-edge (`fingerY − P7_LOUPE_LIFT_PX − P7_LOUPE_SIZE/2`) against the frame's **normal resting
-bottom** for the current fold (`TOOLTIP_DOCK_TOP_PX` + the 100px collapsed height on
-`@fold9`; `p9DockTopM()` + 100 on `@fold11`) plus a 24px margin (widened from 8 by
-explicit instruction — the snap-down fires from a slightly lower finger) — a per-fold
-constant, not
-the frame's live rect, so a frame already mid-dodge can't drag the threshold down with it
-and flip-flop — and re-docks the frame on every loupe frame (the dodge spot moves with the
-frame's height as selections swap and descriptions expand). `hideLoupe` clears the flag and
-re-docks, so releasing anywhere sends the frame straight home.
+**Collision dodge — the frame gets out of the loupe's way.** A hold that runs the glass
+into the docked frame's spot makes the frame **snap** clear of it, and snap back the moment
+the finger moves away or lifts. The snap is a deliberate, explicitly instructed exception to
+"position never snaps" — the dodge is a mode flip serving a live finger, and an animated
+frame would pass through the very glass it's dodging.
+
+**Which way it dodges follows where the frame rests on that fold**, and the two folds now
+rest at opposite ends of the screen:
+
+- **`@fold9`** — the frame rests at the **bottom** (`tooltipDockRestPx()`), so the collision
+  is a finger held **low**: `syncTipAvoid` (`drawLoupe`, `page7.js`) compares the loupe's
+  *bottom* edge (`fingerY − P7_LOUPE_LIFT_PX + P7_LOUPE_SIZE/2`) against the frame's resting
+  **top**, minus a 24px margin. It dodges **up** to the grid's top clearance line
+  (`sbbTimeline(H).top` × H — just under the axis headline), top-anchored, so a
+  hold-expanded description grows downward over the grid rather than up through the
+  headline. Testing the frame's *top* edge here the way `@fold11` tests its bottom would be
+  true for almost any finger and leave the frame permanently dodged.
+- **`@fold11`** (`currentPage === 10`) — the frame still rests **high** (`p9DockTopM()`), so
+  the collision is a finger held **high**: the loupe's *top* edge against the frame's
+  resting bottom + the same margin. It dodges **down** onto the grid's bottom clearance
+  line, with the **collapsed** frame's bottom (`P9_TOOLTIP_COLLAPSED_H`, 100) sitting
+  `P7_TIP_AVOID_DROP_PX` (32) lower still — deliberately eating into the clearance, by
+  explicit instruction — and a hold-expanded description grows **downward** from there.
+
+Both thresholds are per-fold constants, not the frame's live rect, so a frame already
+mid-dodge can't drag its own threshold with it and flip-flop. The 24px margin was widened
+from 8 by explicit instruction. `tooltipAvoidPx` (`js/fold8-tooltip.js`) is what overrides
+`tooltipDockMobile`'s `top` while `p7TipAvoidActive`, and the frame is re-docked on every
+loupe frame (the dodge spot moves with the frame's height as selections swap and
+descriptions expand). `hideLoupe` clears the flag and re-docks, so releasing anywhere sends
+the frame straight home.
 
 **The pick and blit re-run every frame while the hold is live** (`loupeTick`, a rAF loop
 started when the hold timer fires and self-stopping when `p7Inspect.dragging` drops), at the
@@ -966,27 +1053,40 @@ pushing the deadline back and is never interfered with; a scrolling finger that 
 rest *without lifting* fires the hold right where it stopped — essential on the pinned
 timeline, where the scrolling finger is what drives the month cascade, so "wait for the
 dots then hold" naturally happens mid-gesture. (It used to cancel outright, which made a
-mid-scroll hold impossible.) `touchstart` is therefore **passive**; only `touchmove` is
-non-passive, and it `preventDefault`s solely after the hold has completed. A touch landing
+mid-scroll hold impossible.) `touchstart` is therefore **passive**, and so is the
+always-on `touchmove` that does the re-anchoring. The half that `preventDefault`s is a
+**separate** handler, `loupeMove`, bound non-passively only for the life of a hold — added
+where `armTimer`'s timeout sets `p7Inspect.dragging`, removed in `hideLoupe`.
+
+> **Never leave a non-passive `touchmove` bound to `window` for the page's life
+> (2026-09-05).** Mobile browsers can't know in advance that such a handler won't cancel
+> the scroll, so they keep the URL/bottom bar pinned on *every* drag anywhere on the page —
+> the bar simply never collapses. Both offenders were fixed the same way: bind the
+> cancelling handler only while it can actually fire. The other one is @fold12's gate
+> (`p13TouchBlock` in js/fold11.js), now switched by `p13SyncTouchBlock` — attached only
+> while the gate is locked *and* `scrollY` is within one viewport of `p13GateMax()`, driven
+> by the gate's own passive `scroll` listener and by `p13SyncGateVisibility`.
+
+A touch landing
 inside the docked frame's own rect is ignored — it's reading the tooltip, not aiming at a
 dot behind it. On `touchend` the loupe hides and `release()` clears the selection.
 
-**Native momentum blocks the picker, so the picker folds don't use it.** While an iOS
+**Native momentum blocks the picker, and that is accepted.** While an iOS
 fling is coasting, WebKit delivers **no touch or pointer events at all** to the page —
 verified on-device with a trace harness: a finger planted on the coasting timeline and
 held for two seconds produced no `touchstart`, no `pointerdown`, and no `touchcancel`.
-There is nothing for `p7InspectInit` to hook during a native fling. The fix is
-`p7BrakeInit` (page7.js, mobile-only, gated on `p7InspectPage()` so it covers exactly
-@fold9 and @fold11): touch velocity is tracked through `touchmove`, and on a lift that
-still carries speed (fresher than `P7_BRAKE_STALE_MS` 80 and above `P7_BRAKE_MIN_V`
-0.05px/ms) the deceleration is taken over — the first programmatic `scrollTo` (to the
-position the page already holds) cancels the imminent native fling, then a rAF glide
-decays the velocity with `P7_BRAKE_FRICTION_MS` (260, e-folding) friction, far stronger
-than iOS's own. Because the coast is now script-driven, touch events keep arriving during
-it: a `touchstart` mid-glide cancels the glide (the page stops under the finger) and the
-picker arms normally — "touch stops the page, then picks". A hold's own `touchend`
-(`p7Inspect.dragging`) and multi-touch lifts never start a glide; every other fold keeps
-native momentum untouched.
+There is nothing for `p7InspectInit` to hook during a native fling, so **a hold cannot be
+started until the page settles on its own.** The reader flicks, waits for the coast to
+stop, then holds. Every fold, mobile included, uses plain native momentum.
+
+> **Removed — don't reintroduce: the momentum brake `p7BrakeInit` (2026-09-05).** It
+> covered exactly this gap on @fold9/@fold11 by cancelling the native fling on `touchend`
+> with a programmatic `scrollTo` and running its own faster rAF glide, so touch events kept
+> arriving through the coast ("touch stops the page, then picks"). The cost was the
+> browser's URL/bottom bar: a `scrollTo`-driven coast is not user-driven scrolling, so the
+> bar never collapsed on the two longest folds of the page. Removed by explicit decision —
+> **the bar won.** Any future attempt at the mid-coast hold must not move the page from
+> script.
 
 > **Removed — don't reintroduce:** a `touchcancel`-based "momentum steal" recovery
 > (`P7_COAST_MS`/`P7_STEAL_MS`/`P7_HOLD_GRACE_MS`, `p7LastScrollAt`, `armedAfterCancel`,

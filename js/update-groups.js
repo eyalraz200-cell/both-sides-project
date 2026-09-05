@@ -155,20 +155,34 @@ function updateGroups() {
   // flat pitch would let rows print over each other there.
   const FOLD3_ROW_PITCH_DESKTOP_PX = 34;
   const FOLD3_MIN_ROW_PITCH_MOBILE_PX = 32;
-  const fold3RowPitch = !isMobile() ? FOLD3_ROW_PITCH_DESKTOP_PX : Math.max(
+  // Mobile rows are NOT one flat pitch: the labels are 1-3 lines tall, and on
+  // mobile a label's FIRST line is what sits on the row y (firstLineShift,
+  // below) — any further lines hang down from there. So the space a row uses
+  // below its y is its whole wrapped height, and one pitch sized off the
+  // tallest label leaves a visibly bigger hole under a short label than under
+  // a tall one. Instead the VISIBLE gap is the constant — each step is this
+  // row's full label height + FOLD3_ROW_LABEL_GAP_PX, floored at the minimum
+  // pitch. A row's height is the tallest label AT THAT ROW INDEX across both
+  // camps, so the two side-by-side columns keep their rows on shared lines.
+  const fold3RowH = rowIdx => Math.max(...GROUPS
+    .filter(g => legendRow(g) === rowIdx)
+    .map(g => groupLabelHeight(g, groupLabelColumnFontSize(), groupLabelColumnMaxWidth(g))));
+  const fold3RowStep = rowIdx => !isMobile() ? FOLD3_ROW_PITCH_DESKTOP_PX : Math.max(
     FOLD3_MIN_ROW_PITCH_MOBILE_PX,
-    Math.max(...GROUPS.map(g =>
-      groupLabelHeight(g, groupLabelColumnFontSize(), groupLabelColumnMaxWidth())))
-      + FOLD3_ROW_LABEL_GAP_PX
+    fold3RowH(rowIdx) + FOLD3_ROW_LABEL_GAP_PX
   );
   // Both folds share ONE fixed top anchor; each pitch only spaces its own
   // rows downward from it. There used to be a re-centering term here
-  // (fold2TopRowY - (fold3RowPitch - fold2RowPitchPx()) * rows / 2) that made
+  // (fold2TopRowY - (fold3 pitch - fold2RowPitchPx()) * rows / 2) that made
   // fold3's whole column — and the header riding topRowYNow — move whenever
   // EITHER fold's pitch was edited. Don't reintroduce it: the anchor is a
   // position, the pitches are gaps, and they must never feed each other.
   const fold3TopRowY = fold2TopRowY;
-  const fold3RowY = rowIdx => fold3TopRowY + rowIdx * fold3RowPitch;
+  const fold3RowY = rowIdx => {
+    let y = fold3TopRowY;
+    for (let k = 0; k < rowIdx; k++) y += fold3RowStep(k);
+    return y;
+  };
   const fold2BlockW = (FOLD2_GRID_COLS - 1) * fold2ColPitchPx() + CLUSTER_SWATCH_SIZE;
   // Each camp's anchor — screen center ± FOLD2_CAMP_CENTER_GAP_PX. Its camp
   // title sits centered on it, and BOTH fold layouts are centered on it too:
@@ -461,7 +475,7 @@ function updateGroups() {
     // instead (fold6MFlyPaintClone in js/groups.js) — a cap lerp re-breaks the
     // text, and however the box is anchored a re-break hops a word to another
     // line in one frame, which is the stutter this replaced.
-    const capCol = groupLabelColumnMaxWidth(), capLegend = groupLabelLegendMaxWidth();
+    const capCol = groupLabelColumnMaxWidth(g), capLegend = groupLabelLegendMaxWidth();
     const capNow = capCol == null || capLegend == null ? null
       : flying ? capCol
       : capCol + (capLegend - capCol) * (g.fold6 && raw2 >= FOLD2_BEATS.move.start + MOVE_SPAN ? fold6ShapeT : 0);
@@ -482,7 +496,7 @@ function updateGroups() {
     // height is a step function of the line count, so the compensation is a step
     // function too and the label still visibly hops on every re-wrap.
     const firstLineShift = !isMobile() || flying ? 0
-      : ((groupLabelHeight(g, groupLabelColumnFontSize(), groupLabelColumnMaxWidth())
+      : ((groupLabelHeight(g, groupLabelColumnFontSize(), groupLabelColumnMaxWidth(g))
           - groupLabelHeight(g, groupLabelColumnFontSize(), 9999)) / 2) * (1 - fold6ShapeT) * (1 - flyT);
     // The fly variant lerps the last stretch onto the panel row's MEASURED
     // label offset (flyTgt.ly) instead of trusting the two constructions to
@@ -857,9 +871,10 @@ function updateGroups() {
   // the rule is trimmed by it at both ends — it should span the text's INK,
   // not its line boxes (1.4 must match .fold6-note's line-height in style.css).
   const fold6NoteLead = (1.4 * 14 - 14) / 2;
-  // Note + rule fade in on the ACLED fold (#page-5, @fold6) via
-  // acledNoteTrigger — its own fold, one after the squares' grow-in fold
-  // (#page-4, squaresRevealTrigger) and two after the split (fold6Trigger). The
+  // Note + rule fade in via acledNoteTrigger — on DESKTOP that is its own fold
+  // (#page-5, @fold6), one after the squares' grow-in fold (#page-4,
+  // squaresRevealTrigger) and two after the split (fold6Trigger); on MOBILE the
+  // same trigger is crossed a fold earlier, on #page-4 (see checkAcledNote). The
   // note POSITION is still anchored to fold6's settled mini-legend target
   // above; only its reveal is deferred.
   // The note now stays up for the rest of the page on both viewports. The extra
@@ -868,9 +883,9 @@ function updateGroups() {
   // does, so the fade went with the pin.
   //
   // Only the POSITION is desktop-only. On mobile the note flows inside the
-  // מקרא panel, so it needs no left/top — but it keeps the same reveal ramp, so
-  // opening the panel before @fold6 doesn't show a credit for squares that
-  // haven't appeared yet.
+  // מקרא panel, so it needs no left/top — and the panel is open by then, so the
+  // reader sees the credit being ADDED to the legend, the frame growing to
+  // take it.
   const noteRevealT = acledNoteTrigger.currentT();
   if (!fold6MobileLegend) {
     fold6NoteTitleEl.style.left = `${fold6X}px`;
@@ -1035,14 +1050,14 @@ function updateGroups() {
   // reveal starts, so the frame grows to fit the note only once it's there.
   // Desktop is absolutely positioned — nothing reserves space — so it stays
   // opacity-only.
-  // ...and likewise for the whole of @fold4's hand-off demo
-  // (fold6MLegendIntroActive): @fold6 can be crossed while that is still
-  // playing, and the note appearing then would push the frame taller under rows
-  // that are still typing. It joins the panel at the reader's first tap
-  // instead.
+  // ...and likewise while the card is still opening (fold6MLegendOpenRaw < 1):
+  // the note appearing then would push the frame taller under rows that are
+  // still arriving. On a normal read the two never overlap — the panel is left
+  // OPEN by @fold4's hand-off and the note's own crossing is a fold later — so
+  // this only catches a fast scroll that lands both at once.
   fold6NoteCardEl.hidden =
   fold6NoteRuleEl.hidden = fold6NoteEl.hidden = fold6NoteTitleEl.hidden =
-    fold6MobileLegend && (noteRevealT <= 0 || fold6MLegendIntroActive);
+    fold6MobileLegend && (noteRevealT <= 0 || fold6MLegendOpenRaw < 1);
 
   // The מקרא bar appears with the same crossing that dissolves the six rows
   // into it (e6), and stays for the rest of the page — it is the mini-legend
@@ -1322,9 +1337,12 @@ function updateGroups() {
         // timeline spot (fold9FlyT), the stroke fades back to the neutral
         // resting gray — the demo event's actor color leaves with the demo,
         // and the empty frame arrives neutral, ready for the picker.
-        fold8TooltipEl.style.color = lerpFold6SquareColor(
+        const tipColor = lerpFold6SquareColor(
           FOLD6_SQUARE_COLORS[0], colorT * (keepEmptyFrame ? 1 - fold9FlyT : 1),
           FOLD8_TOOLTIP_REST_COLOR);
+        // Fed the lerped value every frame, so the desktop fill's darkening
+        // rides the grey→group-colour transition instead of snapping at the end.
+        setTooltipColor(fold8TooltipEl, tipColor);
         fold8TooltipEl.classList.add("is-visible");
         // Opens toward the left of the square (mirrored corner, same convention
         // p9HoverInit/p7HoverInit use for left-side events), not the right —

@@ -235,7 +235,9 @@ function p7OrderFromCenter(total, cols, seed, side, maxEvents) {
 // Tooltip horizontal flip lines (screen px): a hovered dot left of P7_TIP_FLIP_L
 // never mirrors; one within P7_TIP_FLIP_R_INSET of the right edge always does.
 // One mirrored inset, picked by eye with _debug-corridor.js on 2026-09-05 —
-// exact px, never vw. Used in the hover closure (search "P7_TIP_FLIP_L").
+// exact px, never vw. Used in the hover closure (search "P7_TIP_FLIP_L") and,
+// deliberately shared rather than re-tuned, by @fold11's dot hover in page9.js
+// — the two tooltips must never disagree about which way they open.
 const P7_TIP_FLIP_L = 327;
 const P7_TIP_FLIP_R_INSET = 327;
 
@@ -246,6 +248,9 @@ const P7_VERT = {
   yearLabelPx: 18,     // the year label's font size (its block height is this + 3)
   bottomInsetPx: 0,    // mobile-only: px between the box's bottom and the viewport bottom
   slotPx: 0,           // 'slot' headline mode: band height reserved under the grid
+  slotAnchor: 'grid',  // 'slot' mode: where the line prints — 'grid' (centred in the reserved band under the grid) | 'bottom' (pinned to the viewport's bottom edge) | 'top' (pinned to the viewport's top edge)
+  slotBottomPx: 0,     // 'bottom' anchor only: px from the viewport bottom to the BOTTOM of the text block
+  slotTopPx: 0,        // 'top' anchor only: px from the viewport top to the TOP of the text block
   minSidePx: 96,       // mobile-only: a camp grid never gets narrower than this when the corridor is solved
   eventLine:  false,
   bandPx:     60,    // band mode: height reserved per headline (title line(s) + date)
@@ -313,6 +318,89 @@ const P7_VERT = {
   // an event with `above: true` in P7_AXIS_EVENTS opens upward instead
   // (the year dodge can still flip either).
 };
+// ── The mobile variant of the block above, and the one accessor both sides read ──
+// Every reader of the vertical-axis config goes through p7V(), never P7_VERT
+// directly, so one call decides which breakpoint's numbers apply. P7_VERT_MOBILE
+// holds ONLY what a phone needs different; p7VertMerge deep-merges it over a
+// clone of the desktop block to build P7_VERT_M, so every key exists on both
+// and a key added above needs no mirror here.
+//
+// Deep, not a spread: `card`, `bar` and `type` are nested objects, and a
+// shallow merge would replace them wholesale (losing every desktop key the
+// override doesn't restate) as well as leave the un-overridden ones pointing at
+// the SAME objects as desktop, so the harness dragging a mobile card knob would
+// silently retune the desktop card too.
+const P7_VERT_MOBILE = {
+  // Phase 1: the vertical axis is ON for mobile; _debug-vert-mobile.js's key 0
+  // flips it back to the old horizontal axis for comparison.
+  enabled:       true,
+  corridorPx:    44,   // 'band'/'slot': no room for the desktop corridor between two phone-width grids
+  bottomInsetPx: 24,   // no bottom axis to clear — the box just stops short of the screen edge
+  slotPx:        48,   // 'slot' with slotAnchor 'grid' ONLY — the reserved band under the grid. Mobile anchors 'top' instead, so nothing is reserved down there.
+  minSidePx:     96,   // a camp grid never gets narrower than this when 'widen' solves its corridor
+  yearLabelPx:   14,   // 4-digit years fit the mobile tick pitch at 14
+  card: { padX: 8 },
+  // On a phone the headline copy does NOT travel with its dot — there is no
+  // room beside a phone-width axis for a card, and one hung off the dot covers
+  // the grid it is describing. 'slot' prints ONE line instead, the most
+  // recently reached event, in a single fixed place; the axis itself carries
+  // only the circles, exactly as it did under 'none'. Anchored to the TOP of
+  // the VIEWPORT, directly under the מקרא bar: the mobile stack is bar /
+  // headline / grid / docked tooltip, so the copy reads with the legend that
+  // colours it and the frame closes the screen. No card, no date line
+  // (type.showDate is false) — just the title, on the page background.
+  headline: 'slot',
+  slotAnchor: 'top',
+  // 16 (FOLD6_MLEGEND_TOP_MOBILE_PX) + the bar's own 30px + one
+  // SBB_TIMELINE_MOBILE_GAP_PX. SBB_TIMELINE_MOBILE_TOP_PX continues from here.
+  slotTopPx: 64,
+  // maxWidth is mobile-only: 'widen' solves the corridor FROM the wrapped copy
+  // (p7SolveMobileCorridor), so the wrap width is the input, not the result.
+  // Desktop has no such key — it wraps to its fixed corridor instead.
+  type: { maxWidth: 220, title: { size: 14, lh: 19 }, date: { size: 14, lh: 19 } },
+};
+function p7VertMerge(base, over) {
+  const out = Array.isArray(base) ? base.slice() : {};
+  for (const k in base) out[k] = (base[k] && typeof base[k] === "object")
+    ? p7VertMerge(base[k], (over && over[k]) || {}) : base[k];
+  for (const k in over) {
+    if (!(k in out)) out[k] = over[k];
+    else if (!(over[k] && typeof over[k] === "object")) out[k] = over[k];
+  }
+  return out;
+}
+const P7_VERT_M = p7VertMerge(P7_VERT, P7_VERT_MOBILE);
+
+function p7V() { return isMobile() ? P7_VERT_M : P7_VERT; }
+
+// 'widen' on mobile can't use a fixed corridor: the desktop card's width is a
+// design constant, but a phone's is whatever is left after two camp grids, and
+// the copy has to fit it. So the corridor is SOLVED from the copy instead —
+// the widest wrapped headline line at type.maxWidth, plus the card's own side
+// padding and the gap to the dots on each side. Clamped so each camp still
+// keeps minSidePx: a corridor wide enough for the longest title is worth
+// nothing if it leaves two slivers of grid beside it.
+function p7SolveMobileCorridor(W, H) {
+  const V = P7_VERT_M;
+  const ctx2 = typeof ctx !== "undefined" ? ctx : null;
+  let widest = 0;
+  if (ctx2) {
+    ctx2.save();
+    ctx2.font = p7VertFont(V.type.title);
+    P7_AXIS_EVENTS.forEach((ev) => {
+      p7WrapLabel(ctx2, ev.label, V.type.maxWidth).forEach((line) => {
+        widest = Math.max(widest, ctx2.measureText(line).width);
+      });
+    });
+    ctx2.restore();
+  }
+  const want = Math.ceil(widest || V.type.maxWidth) + 2 * V.card.padX + 2 * V.sideGap;
+  // What's actually available: the full width minus both screen-edge insets
+  // minus the two grids at their floor.
+  const room = W - 2 * sbbTimelineLeftX(W, H) - 2 * V.minSidePx;
+  return Math.max(V.corridorPx, Math.min(want, room));
+}
+
 // The row plan of the fixed-span layout: every P7_VERT.daysPerRow days take
 // one row, counted afresh from each 1 January (the rows themselves run on
 // unbroken — the year marker is a break in the drawn line only). Shared by
@@ -1098,6 +1186,9 @@ function p7UpdateLayout(W, H) {
   if (p7VerticalAxis() && p7.ready) {
     // Desktop: rows are dates (see VERTICAL AXIS above).
     const v = p7BuildVerticalLayout(rows, p7.cols, CELL);
+    // Rows the box can't hold even at the solved size (0 when it fits) —
+    // read by _debug-vert-mobile.js's summary; the smallest phones hit it.
+    v.overflowRows = Math.max(0, Math.ceil((v.totalRows * CELL + p7VertYearHeaderH() - sideH) / CELL));
     p7.vert     = v;
     p7.leftPos  = v.leftPos;
     p7.rightPos = v.rightPos;
@@ -1253,7 +1344,8 @@ function p7GetClaimedEvents() {
 // the event's own dot (reachedT), not tied to the label's crossfade — the
 // rule is a landmark that stays once passed. Wiped in by the axis intro.
 function p7DrawVertEventLines(ctx, W, H, leftX0) {
-  if (!(p7VerticalAxis() && p7V().eventLine && p7.vert && p7AxisTriggerIfNeeded())) return;
+  // 'band' headline mode (mobile candidate A) needs the rule: the band hangs off it.
+  if (!(p7VerticalAxis() && (p7V().eventLine || p7V().headline === 'band') && p7.vert && p7AxisTriggerIfNeeded())) return;
   const introT = p7AxisIntroT();
   ctx.save();
   P7_AXIS_EVENTS.forEach((ev, i) => {
@@ -1752,7 +1844,7 @@ const P7_AXIS_EVENT_FADE_IN_MS  = 400;
 const P7_VERT_CARD_OPEN_MS = 900;
 function p7AxisFadeInMs() {
   const c = p7V().card;
-  return p7VerticalAxis() && c && c.halfDots && c.anchor === 'center' && p7V().eventSide === 'center'
+  return p7VerticalAxis() && p7V().headline === 'widen' && c && c.halfDots && c.anchor === 'center' && p7V().eventSide === 'center'
     ? P7_VERT_CARD_OPEN_MS : P7_AXIS_EVENT_FADE_IN_MS;
 }
 // Windows of the reveal's raw progress (p9Ease re-applied per window):
@@ -2579,7 +2671,7 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   });
 
   // Year rings + labels. A tick is reached once the fill edge is past its row.
-  ctx.font = `18px 'Assistant', sans-serif`;
+  ctx.font = `${p7V().yearLabelPx}px 'Assistant', sans-serif`;
   ctx.textAlign = "center";
   // measureText's ink boxes are relative to the CURRENT baseline — measure
   // under 'alphabetic' (under 'top' the first label's ascent came back wrong
@@ -2740,9 +2832,17 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
   // corridor (minus a margin) in widen mode.
   const evSide = p7V().eventSide;
   const evDir  = evSide === 'right' ? 1 : -1;
-  const maxWidth = p7V().eventMode === "band" ? 320
+  // Mobile candidates (P7_VERT_MOBILE.headline): 'widen' = the desktop card,
+  // 'band' = rule + band across both grids, 'slot' = one line under the grid.
+  const hl = p7V().headline;
+  const leftX0 = p7.leftX0;
+  const maxWidth = hl === 'band' ? W - 2 * leftX0 - 2 * p7V().card.padX
+    : isMobile() ? p7V().type.maxWidth
+    : p7V().eventMode === "band" ? 320
     : evSide === 'center' ? p7CenterGap() - 16
     : p7CenterGap() / 2 - P7_AXIS_MARKER_RADIUS - p7V().sideGap - 8;
+  // A mode switch (harness) must not leave a stale span from the other mode.
+  for (let i = 0; i < p7AxisEventSpans.length; i++) p7AxisEventSpans[i] = null;
 
   p7.axisEventPositions = new Map();
   const hoveredAxisEvent = p7.hoveredAxisEvent;
@@ -2786,7 +2886,8 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     p7.axisEventPositions.set(ev, { x: axisX, y, radius: markerRadius, color: markerColor });
     // Half-dot cards draw the dot themselves (only its inner half); the full
     // dot here fades out as the card fades in, so a faded event keeps its dot.
-    const halfCard = p7V().card && p7V().card.halfDots && p7V().card.anchor === 'center' && evSide === 'center';
+    // headline 'none': no card ever opens, so the dot is never cut in half.
+    const halfCard = hl === 'widen' && p7V().card && p7V().card.halfDots && p7V().card.anchor === 'center' && evSide === 'center';
     if (halfCard) {
       const st = P7_AXIS_EVENT_STATE[i], rosterOn = st.triggeredAt !== null && st.leavingAt === null;
       const labelOp = Math.min(1, Math.max(p7AxisEventOpacity(i, now), st.hoverT, rosterOn ? p7AxisRosterT : 0));
@@ -2807,10 +2908,37 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     const rosterOn = st.triggeredAt !== null && st.leavingAt === null;
     const opacity = Math.max(p7AxisEventOpacity(i, now), st.hoverT, rosterOn ? p7AxisRosterT : 0);
     p7AxisEventSpans[i] = null;
+    if (hl === 'none') return;          // circles only — no headline copy on the axis
+    if (hl === 'slot') return;          // drawn once, below the grid — p7DrawVertHeadlineSlot
     if (opacity <= 0) return;
     const TY = p7V().type;
     ctx.font = p7VertFont(TY.title);
     const lines = p7WrapLabel(ctx, ev.label, maxWidth);
+    if (hl === 'band') {
+      // Candidate A: a translucent band hanging under the event's rule
+      // (p7DrawVertEventLines), full grid width, copy right-aligned at the
+      // grids' right edge. Same crossfade as the card; the fill skips it.
+      const C = p7V().card;
+      const bandH = C.padTop + lines.length * TY.title.lh + (TY.showDate ? TY.date.lh + TY.gap : 0) + C.padBottom;
+      const y0 = Math.round(evY[i]) + 1;
+      ctx.globalAlpha = opacity;
+      ctx.fillStyle = 'rgba(253, 252, 255, 0.86)';
+      ctx.fillRect(leftX0, y0, W - 2 * leftX0, bandH);
+      p7AxisEventSpans[i] = { top: y0, bottom: y0 + bandH };
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'top';
+      const tx = W - leftX0 - C.padX;
+      let ty = y0 + C.padTop;
+      ctx.fillStyle = TY.title.color;
+      lines.forEach(t => { p7VertLineText(ctx, t, tx, ty, TY.title.lh); ty += TY.title.lh; });
+      if (TY.showDate) {
+        ctx.font = p7VertFont(TY.date); ctx.fillStyle = TY.date.color;
+        p7VertLineText(ctx, p7FormatDateDMY(ev.date, "."), tx, ty + TY.gap, TY.date.lh);
+      }
+      ctx.textAlign = 'center';
+      ctx.globalAlpha = 1;
+      return;
+    }
     const lh = TY.title.lh, dlh = TY.date.lh;
     const dateLabel = p7FormatDateDMY(ev.date, ".");
     let tw = 0;
@@ -2975,7 +3103,48 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     if (textClip) ctx.restore();
     ctx.globalAlpha = 1;
   });
+  if (hl === 'slot') p7DrawVertHeadlineSlot(ctx, W, H, now);
   ctx.restore();
+}
+
+// Candidate C ('slot'): the corridor holds only the dots; ONE headline prints
+// centred in the slotPx band under the grid (sbbTimeline reserves it). Like the
+// old mobile slot: the most recently triggered visible event wins (ties → the
+// higher index), older ones stay as dots. Reads reachedT, never eases it.
+function p7DrawVertHeadlineSlot(ctx, W, H, now) {
+  const V = p7V(), TY = V.type;
+  let best = -1, bestAt = -Infinity, bestOp = 0;
+  P7_AXIS_EVENTS.forEach((ev, i) => {
+    const st = P7_AXIS_EVENT_STATE[i];
+    const op = Math.max(p7AxisEventOpacity(i, now), st.hoverT);
+    if (op <= 0 || st.reachedT <= 0.001) return;
+    const at = st.triggeredAt === null ? -Infinity : st.triggeredAt;
+    if (at > bestAt || (at === bestAt && i > best)) { best = i; bestAt = at; bestOp = op; }
+  });
+  if (best < 0) return;
+  const ev = P7_AXIS_EVENTS[best];
+  ctx.font = p7VertFont(TY.title);
+  const lines = p7WrapLabel(ctx, ev.label, W - 2 * p7.leftX0);
+  const blockH = lines.length * TY.title.lh + (TY.showDate ? TY.date.lh + TY.gap : 0);
+  // Two anchors (V.slotAnchor): 'grid' centres the block in the slotPx band
+  // reserved under the grid (squareboundingbox.js:71 keeps that band clear);
+  // 'bottom' — mobile — ignores the grid entirely and hangs the block off the
+  // viewport's bottom edge, so the copy holds ONE screen position however the
+  // grid above it solves. slotPx is still reserved in that case: it is what
+  // keeps the grid's last row from reaching down into these lines.
+  let ty = V.slotAnchor === 'bottom' ? H - V.slotBottomPx - blockH
+    : V.slotAnchor === 'top'         ? V.slotTopPx
+    : Math.round(H * sbbTimeline(H).bottom) + Math.max(0, (V.slotPx - blockH) / 2);
+  ctx.globalAlpha = bestOp;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = TY.title.color;
+  lines.forEach(t => { p7VertLineText(ctx, t, W / 2, ty, TY.title.lh); ty += TY.title.lh; });
+  if (TY.showDate) {
+    ctx.font = p7VertFont(TY.date); ctx.fillStyle = TY.date.color;
+    p7VertLineText(ctx, p7FormatDateDMY(ev.date, "."), W / 2, ty + TY.gap, TY.date.lh);
+  }
+  ctx.globalAlpha = 1;
 }
 
 // Exposed so scroll and animation-loop redraws can re-test the cursor against
@@ -3406,6 +3575,7 @@ function p7InspectInit() {
 
   function hideLoupe() {
     p7Inspect.dragging = false;
+    window.removeEventListener("touchmove", loupeMove, { passive: false });
     // The dodge belongs to the live finger — lifting it snaps the frame
     // straight back to its resting spot.
     if (p7TipAvoidActive) {
@@ -3437,6 +3607,12 @@ function p7InspectInit() {
     collapseMore();
     dateEl.textContent = "";
     descEl.textContent = "";
+    // Back to the neutral resting grey. The picker state has no fill or border
+    // any more (style.css, `.is-docked.is-picker`) — the hint line prints on
+    // the bare page in `currentColor`, so whatever group colour the released
+    // event left on the element would tint the instruction text. updateGroups'
+    // keepEmptyFrame branch writes this same grey, but only while it runs.
+    setTooltipColor(tipEl, `rgb(${FOLD8_TOOLTIP_REST_COLOR.join(",")})`);
     // @fold9 only — page 9 has no scripted typewriter sequence sharing these
     // two elements, so there is nothing to hand the frame back to there.
     if (currentPage === 8 && typeof fold8SequenceEvent !== "undefined" && fold8SequenceEvent) {
@@ -3529,15 +3705,26 @@ function p7InspectInit() {
   // bottom-anchored on the frame's live height, which changes mid-hold as
   // selections swap and descriptions expand.
   function syncTipAvoid(fingerY) {
-    const frameTop = currentPage === 10 && typeof p9DockTopM === "function"
-      ? p9DockTopM() : TOOLTIP_DOCK_TOP_PX;
+    const onFold11 = currentPage === 10 && typeof p9DockTopM === "function";
+    const frameTop = onFold11 ? p9DockTopM() : tooltipDockRestPx();
     const frameBottom = frameTop + 100;
-    const loupeTop = fingerY - P7_LOUPE_LIFT_PX - P7_LOUPE_SIZE / 2;
-    // The threshold sits a bit lower than the frame's edge (explicit
-    // instruction, first on @fold11 then @fold9 too) — the finger doesn't have
-    // to climb as high before the frame snaps down.
+    // The threshold sits a bit past the frame's edge (explicit instruction,
+    // first on @fold11 then @fold9 too) — the finger doesn't have to travel as
+    // far before the frame snaps clear.
     const AVOID_MARGIN_PX = 24;
-    p7TipAvoidActive = loupeTop < frameBottom + AVOID_MARGIN_PX;
+    if (onFold11) {
+      // Frame high, loupe rising into it from below.
+      const loupeTop = fingerY - P7_LOUPE_LIFT_PX - P7_LOUPE_SIZE / 2;
+      p7TipAvoidActive = loupeTop < frameBottom + AVOID_MARGIN_PX;
+    } else {
+      // @fold9: the frame rests at the BOTTOM of the screen, so the collision
+      // is a finger held LOW — the loupe's bottom edge reaching down into the
+      // frame's top edge. Testing the top edge here (as the @fold11 branch
+      // does) would be true for almost any finger and leave the frame
+      // permanently dodged.
+      const loupeBottom = fingerY - P7_LOUPE_LIFT_PX + P7_LOUPE_SIZE / 2;
+      p7TipAvoidActive = loupeBottom > frameTop - AVOID_MARGIN_PX;
+    }
     tooltipDockMobile(tipEl);
   }
 
@@ -3664,6 +3851,7 @@ function p7InspectInit() {
     pendingTimer = setTimeout(() => {
       pendingTimer = null;
       p7Inspect.dragging = true;
+      window.addEventListener("touchmove", loupeMove, { passive: false });
       loupeX = startX;
       loupeY = startY;
       drawLoupe(loupeX, loupeY);
@@ -3718,6 +3906,14 @@ function p7InspectInit() {
     requestAnimationFrame(loupeTick);
   }
 
+  // Two listeners, deliberately: the always-on one is PASSIVE. A non-passive
+  // touchmove bound to window for the page's whole life stops mobile browsers
+  // from collapsing their URL/bottom bar (the browser can't know in advance
+  // that the handler won't cancel the scroll, so it treats every drag as
+  // possibly-cancelled and keeps the chrome pinned). The half that actually
+  // calls preventDefault is therefore attached only while a hold is live —
+  // added in armTimer's timeout, removed by hideLoupe — so outside the gesture
+  // the page scrolls with nothing non-passive listening.
   window.addEventListener("touchmove", (e) => {
     const t = e.touches[0];
     if (!t) return;
@@ -3732,12 +3928,18 @@ function p7InspectInit() {
         armTimer(t.clientX, t.clientY);
       return;
     }
+  }, { passive: true });
+
+  // The hold-time half: only bound while p7Inspect.dragging.
+  function loupeMove(e) {
+    const t = e.touches[0];
+    if (!t) return;
     if (!p7Inspect.dragging) return;
     e.preventDefault();
     loupeX = t.clientX;
     loupeY = t.clientY;
     drawLoupe(loupeX, loupeY);
-  }, { passive: false });
+  }
 
   // Release drops the selection entirely — the frame goes back to its resting
   // state: the "לחצו והחזיקו" hint, the neutral gray stroke (restored by
@@ -3766,91 +3968,22 @@ function p7InspectInit() {
   sync();
 }
 
-// --- The momentum brake ------------------------------------------------------
-// iOS delivers NO touch events while a native fling coasts (see the note above
-// p7InspectInit's pendingTimer), so a finger landing mid-coast is invisible to
-// the picker and the hold can't start until the page settles on its own. The
-// only way around it is to not let the native fling run: on the picker folds
-// (@fold9/@fold11, mobile only) a flick's deceleration is taken over the moment
-// the finger lifts — the first programmatic scrollTo cancels the imminent
-// native momentum, and a short rAF glide with much stronger friction plays out
-// instead. Because the motion is now script-driven, touch events keep arriving
-// during it: a finger landing mid-glide stops it dead (the touchstart below)
-// and the picker's own touchstart arms the hold — "touch stops the page, then
-// picks", which the native fling made impossible.
-function p7BrakeInit() {
-  // e-folding time of the glide's velocity. Native iOS friction is far weaker
-  // (a hard flick coasts for seconds); 180ms stops the same flick in well under
-  // half a second and a couple hundred px — enough drift to feel like throw,
-  // short enough that the picker is reachable almost immediately.
-  const P7_BRAKE_FRICTION_MS = 260;
-  // px/ms. Below this the glide ends (and a lift slower than it never starts
-  // one — a slow drag just stops where the finger left it, like native).
-  const P7_BRAKE_MIN_V = 0.05;
-  // A lift more than this after the last move means the finger came to rest
-  // first — the stored velocity is stale, not a throw.
-  const P7_BRAKE_STALE_MS = 80;
-
-  let lastY = 0, lastT = 0, vy = 0;
-  let raf = null;
-  const stopGlide = () => {
-    if (raf !== null) { cancelAnimationFrame(raf); raf = null; }
-  };
-
-  window.addEventListener("touchstart", (e) => {
-    stopGlide();
-    const t = e.touches[0];
-    if (!t) return;
-    lastY = t.clientY;
-    lastT = performance.now();
-    vy = 0;
-  }, { passive: true });
-
-  window.addEventListener("touchmove", (e) => {
-    const t = e.touches[0];
-    if (!t) return;
-    const now = performance.now();
-    const dt = now - lastT;
-    if (dt > 0) {
-      // Page velocity is opposite the finger's. Lightly smoothed so one jittery
-      // sample at the lift doesn't decide the whole throw.
-      const inst = (lastY - t.clientY) / dt;
-      vy = vy * 0.4 + inst * 0.6;
-    }
-    lastY = t.clientY;
-    lastT = now;
-  }, { passive: true });
-
-  window.addEventListener("touchend", (e) => {
-    if (p7InspectPage() === null) return;   // other folds keep native momentum
-    if (e.touches.length) return;           // another finger is still down
-    if (p7Inspect.dragging) return;         // that was a hold ending, not a throw
-    if (performance.now() - lastT > P7_BRAKE_STALE_MS) return;
-    if (Math.abs(vy) < P7_BRAKE_MIN_V) return;
-
-    let v = vy;
-    let y = window.scrollY;
-    let prev = performance.now();
-    const step = () => {
-      raf = null;
-      const now = performance.now();
-      const dt = now - prev;
-      prev = now;
-      y += v * dt;
-      v *= Math.exp(-dt / P7_BRAKE_FRICTION_MS);
-      window.scrollTo(0, y);
-      if (Math.abs(v) >= P7_BRAKE_MIN_V) raf = requestAnimationFrame(step);
-    };
-    // The first scrollTo — to the position the page already holds — is what
-    // cancels the native fling before it gets going; the glide owns it from here.
-    window.scrollTo(0, y);
-    raf = requestAnimationFrame(step);
-  }, { passive: true });
-}
+// --- Removed: the momentum brake (2026-09-05) --------------------------------
+// p7BrakeInit used to take over a flick's deceleration on the picker folds
+// (@fold9/@fold11, mobile): on touchend it cancelled the imminent native fling
+// with a programmatic scrollTo and ran its own faster rAF glide, so that touch
+// events kept arriving during the coast and a finger landing on the moving
+// timeline could stop it and start a hold (iOS delivers NO touch events while
+// a native fling coasts, so that gesture is impossible otherwise).
+//
+// It cost the browser's URL/bottom bar: a scrollTo-driven coast isn't
+// user-driven scrolling, so the bar never collapsed on the two longest folds
+// of the page. The bar won, by explicit decision. Don't reintroduce a
+// scroll-driving glide — if the mid-coast hold is ever wanted back, it needs a
+// mechanism that doesn't move the page from script.
 
 // page7.js is the FIRST script on the page (before js/core.js — see
 // project.html), so unlike p7HoverInit above this can't run inline: it reads
 // isMobile()/currentPage/tooltipDockMobile at init, none of which exist yet.
 // The scripts all sit at the end of <body>, so DOMContentLoaded is after them.
 document.addEventListener("DOMContentLoaded", p7InspectInit);
-document.addEventListener("DOMContentLoaded", p7BrakeInit);

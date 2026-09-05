@@ -46,7 +46,23 @@ Promise.all([
   };
   updateScrollAnchor();
   window.addEventListener("scroll", updateScrollAnchor, { passive: true });
+  // A phone fires `resize` continuously while its URL/bottom bar slides, and the
+  // full relayout below is heavy enough (a fresh full-viewport canvas backing
+  // store, every page-0 dot element rebuilt, six labels re-measured) that
+  // running it on those ticks stalls the main thread through the collapse —
+  // the browser gives up and snaps the bar back, so it "refuses to collapse"
+  // on every scroll after the first. Nothing in the relayout is needed for a
+  // bar slide anyway: all scroll geometry is `vh` (fixed on mobile, it does
+  // NOT track the bar), and draw() already re-syncs the canvas backing store
+  // to the CSS box on every single paint. So a height-only resize on mobile
+  // does nothing but repaint. A width change is a real rotation/breakpoint
+  // crossing and still runs the whole thing.
+  let lastResizeW = window.innerWidth;
   window.addEventListener("resize", () => {
+    const w = window.innerWidth;
+    const widthChanged = w !== lastResizeW;
+    lastResizeW = w;
+    if (isMobile() && !widthChanged) { draw(); return; }
     // buildPage0AllDots() must run before layoutGroups() — it repopulates
     // PAGE0_GROUP_DOT_ANCHORS (page1.js), which updateGroups() reads for the
     // fold1->fold2 legend entrance below.

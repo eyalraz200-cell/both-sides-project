@@ -73,8 +73,11 @@ const FOLD8_TYPE_MS_PER_CHAR = 15;  // typewriter speed — tuned snappy, not sl
 //     own rects, so it tracks them at any viewport height instead of being
 //     pinned to a guessed fraction). The tooltip belongs to one of those
 //     squares there, so it should read as sitting over them.
-//   @fold8 onward — TOOLTIP_DOCK_TOP_PX, its final spot above the timeline
-//     grid (SBB_TIMELINE_MOBILE_TOP_PX, which is derived from this constant plus the frame's own 100px collapsed height) and clear of the מקרא bar.
+//   @fold8 onward — tooltipDockRestPx(), hard against the BOTTOM of the
+//     viewport. The mobile stack is מקרא bar / axis headline / grid / frame
+//     (top to bottom), so the frame closes the screen rather than opening it,
+//     and the grid's bottom clearance (sbbTimelineMobileBottomPx,
+//     squareboundingbox.js) is derived from it instead of its top.
 //   @fold11 engaged — p9DockTopM() (page9.js): pushed further down to clear the
 //     pill tray band, which on mobile pins itself under the titles rather than
 //     sitting at the bottom of the screen. Runs on p9TooltipDropTrigger
@@ -87,8 +90,17 @@ const FOLD8_TYPE_MS_PER_CHAR = 15;  // typewriter speed — tuned snappy, not sl
 // so the frame animates up exactly as the timeline hits, and reverses back
 // down with it on a scroll up. Position, per the house rule, lerps
 // continuously; it never snaps.
-const TOOLTIP_DOCK_TOP_PX = 62;         // final spot: below the מקרא bar (~46), above the grid (SBB_TIMELINE_MOBILE_TOP_PX is derived from this)
+const TOOLTIP_DOCK_H_PX = 100;          // the collapsed frame's height (.page9-tooltip.is-docked, style.css)
+const TOOLTIP_DOCK_BOTTOM_PX = 24;      // px the frame keeps off the viewport's bottom edge
+const TOOLTIP_DOCK_TOP_MIN_PX = 16;     // the @fold7 spot can never climb above this
 const TOOLTIP_DOCK_SQUARES_GAP_PX = 16; // gap between the frame's bottom edge and the topmost sample square
+
+// The resting spot, bottom-anchored: measured off the LIVE innerHeight rather
+// than baked as one number, because the frame is the last thing in the stack
+// and a bar-collapse resize moves the edge it hangs from.
+function tooltipDockRestPx() {
+  return window.innerHeight - TOOLTIP_DOCK_BOTTOM_PX - TOOLTIP_DOCK_H_PX;
+}
 
 // Blends @fold11's drop onto whatever spot the earlier two produced, so the
 // three-way lerp stays continuous even if the user scrolls back up mid-drop.
@@ -109,7 +121,7 @@ let tooltipFold6TopFrozen = null;
 
 function tooltipDockTopPx(el) {
   const t = typeof fold9FlyTrigger === "undefined" ? 1 : fold9FlyTrigger.currentT();
-  if (t >= 1 || typeof fold6SquareEls === "undefined") return tooltipDockDropPx(TOOLTIP_DOCK_TOP_PX);
+  if (t >= 1 || typeof fold6SquareEls === "undefined") return tooltipDockDropPx(tooltipDockRestPx());
   if (t <= 0 || tooltipFold6TopFrozen === null) {
     // Measured off `sq`, NOT `wrap`: the wrap is a deliberately zero-size anchor
     // (its left/top IS the square's position — same convention as .group-item),
@@ -121,29 +133,35 @@ function tooltipDockTopPx(el) {
       if (r.height) squaresTop = Math.min(squaresTop, r.top);
     }
     // Nothing laid out yet — no squares to sit above.
-    if (squaresTop === Infinity) return tooltipDockDropPx(TOOLTIP_DOCK_TOP_PX);
+    if (squaresTop === Infinity) return tooltipDockDropPx(tooltipDockRestPx());
     // @fold7's spot can never push the frame off the top of the screen: on a
     // short phone the squares may sit high enough that there's no room above
-    // them, in which case the final spot is already the best available.
-    tooltipFold6TopFrozen = Math.max(TOOLTIP_DOCK_TOP_PX,
+    // them. The floor is its own small constant, NOT the resting spot — the
+    // rest is at the bottom of the screen now, and clamping to it would drag
+    // every @fold7 frame down there too.
+    tooltipFold6TopFrozen = Math.max(TOOLTIP_DOCK_TOP_MIN_PX,
       squaresTop - TOOLTIP_DOCK_SQUARES_GAP_PX - el.offsetHeight);
   }
   const fold6Top = tooltipFold6TopFrozen;
-  return tooltipDockDropPx(fold6Top + (TOOLTIP_DOCK_TOP_PX - fold6Top) * t);
+  const rest = tooltipDockRestPx();
+  return tooltipDockDropPx(fold6Top + (rest - fold6Top) * t);
 }
 
-// Picker collision dodge — while the loupe would overlap the docked frame
-// (finger held high on the chart), the frame SNAPS to a spot low on the
-// viewport, and snaps back when the finger drops below the threshold or lifts.
+// Picker collision dodge — while the loupe would overlap the docked frame, the
+// frame SNAPS clear of it and snaps back when the finger moves away or lifts.
+// Which WAY it dodges follows where the frame rests on that fold: on @fold9 it
+// rests at the bottom of the screen, so a finger held LOW is the collision and
+// the frame dodges UP to the grid's top clearance line; on @fold11 it still
+// rests high, so a finger held HIGH is the collision and it dodges DOWN.
 // A deliberate exception to "position never snaps", per explicit instruction —
 // the dodge is a mode flip serving a live finger, and an animated frame would
 // pass through the very glass it's dodging.
 //
-// The dodge spot sits on the clearance line the timeline grid's bottom uses:
-// the year-axis line (P7_AXIS_Y_FRAC_MOBILE of the viewport) minus
-// SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX (squareboundingbox.js — the one-line
-// axis-event label block plus the shared 18px gap), keeping the frame clear of
-// BOTH the axis and the event headline/date printed above it.
+// The dodge spot sits on the clearance line the timeline grid's bottom uses —
+// sbbTimeline(H).bottom (squareboundingbox.js): with the vertical axis on
+// mobile that's the box's bottom inset; with the old horizontal axis it's the
+// axis line (P7_AXIS_Y_FRAC_MOBILE) minus SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX,
+// keeping the frame clear of both the axis and the headline above it.
 //
 // The two folds anchor differently — explicit instruction, @fold11 ONLY:
 // - @fold9 (the real timeline): the frame's BOTTOM edge, off the LIVE
@@ -162,14 +180,21 @@ const P7_TIP_AVOID_DROP_PX = 32;
 
 function tooltipAvoidPx(el, top) {
   if (!p7TipAvoidActive) return top;
-  const frac = typeof P7_AXIS_Y_FRAC_MOBILE === "undefined" ? 0.94 : P7_AXIS_Y_FRAC_MOBILE;
-  const clear = typeof SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX === "undefined" ? 64 : SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX;
-  const line = window.innerHeight * frac - clear;
+  const H = window.innerHeight;
+  const box = typeof sbbTimeline === "function" ? sbbTimeline(H) : null;
   if (typeof currentPage !== "undefined" && currentPage === 10) {
+    // @fold11 — still docked high, so it dodges DOWN onto the grid's bottom
+    // clearance line, P7_TIP_AVOID_DROP_PX lower still (by instruction), and a
+    // hold-expanded description grows downward from there.
+    const line = box ? H * box.bottom : H * 0.94 - 64;
     const collapsedH = typeof P9_TOOLTIP_COLLAPSED_H === "undefined" ? 100 : P9_TOOLTIP_COLLAPSED_H;
     return line + P7_TIP_AVOID_DROP_PX - collapsedH;
   }
-  return line - el.offsetHeight;
+  // @fold9 — docked at the bottom, so it dodges UP to the grid's TOP clearance
+  // line: the first spot clear of the finger that is still under the axis
+  // headline. Top-anchored, so an expanded description grows downward over the
+  // grid rather than up through the headline it would otherwise cover.
+  return box ? H * box.top : TOOLTIP_DOCK_TOP_MIN_PX;
 }
 
 function tooltipDockMobile(el) {
@@ -362,6 +387,7 @@ function fold8ResetTooltip() {
   fold8TooltipEl.classList.remove("is-docked");
   fold8TooltipEl.style.opacity = "";
   fold8TooltipEl.style.color = "";
+  fold8TooltipEl.style.removeProperty("--tip-fill");
   fold8TooltipEl.style.transform = "";
   fold8TooltipEl.style.transformOrigin = "";
   fold8TooltipDateEl.style.opacity = "";

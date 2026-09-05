@@ -36,15 +36,20 @@ const SBB_TIMELINE = {
 // tall phone or collided on a short one. They're plain px clearances instead,
 // turned into fractions against the live H by sbbTimeline() below:
 //
-//   top    = the docked tooltip's own bottom edge + SBB_TIMELINE_MOBILE_GAP_PX
-//            (TOOLTIP_DOCK_TOP_PX 62 + its 100px collapsed height, see
-//            `.page9-tooltip.is-docked` in style.css) — read as constants here
-//            rather than measured, because the frame isn't in the DOM flow and
-//            its size is fixed by that rule. The frame's ONE growing state
+//   top    = the axis headline's own bottom edge + SBB_TIMELINE_MOBILE_GAP_PX.
+//            The headline prints in the 'slot', anchored to the top of the
+//            viewport under the מקרא bar (P7_VERT_MOBILE.slotTopPx 64 + one
+//            19px title line, page7.js) — read as constants here rather than
+//            measured, because it is canvas text with no DOM box to ask.
+//   bottom = the DOCKED TOOLTIP's top edge minus the same gap. The frame is the
+//            last thing in the mobile stack now (bar / headline / grid /
+//            frame), bottom-anchored by tooltipDockRestPx()
+//            (js/fold8-tooltip.js), so the clearance it needs is a plain inset
+//            from the screen's bottom edge. Its ONE growing state
 //            (.is-expanded, a reader opening a clipped description) is
-//            deliberately NOT accounted for here: it overlays the grid instead
-//            of moving it, so this clearance stays constant.
-//   bottom = the year axis line (P7_AXIS_Y_FRAC_MOBILE of H) minus the tallest
+//            deliberately NOT accounted for: it overlays the grid instead of
+//            moving it, so this clearance stays constant.
+//   (horizontal-axis fallback) = the year axis line (P7_AXIS_Y_FRAC_MOBILE of H) minus the tallest
 //            axis-event label block that can print above it, minus the SAME
 //            SBB_TIMELINE_MOBILE_GAP_PX. The grid is the middle of a three-part
 //            stack (tooltip / dots / axis labels) so it breathes equally on both
@@ -60,8 +65,23 @@ const SBB_TIMELINE = {
 //            (P7_AXIS_EVENT_LINE_HEIGHT_MOBILE) — check it by eye then.
 const SBB_TIMELINE_MOBILE_LEFT          = 0.03;  // fraction of W
 const SBB_TIMELINE_MOBILE_GAP_PX        = 18;    // shared clearance above AND below the grid
-const SBB_TIMELINE_MOBILE_TOP_PX        = 62 + 100 + SBB_TIMELINE_MOBILE_GAP_PX;
+const SBB_TIMELINE_MOBILE_TOP_PX        = 64 + 19 + SBB_TIMELINE_MOBILE_GAP_PX;
 const SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX = 36 + 10 + SBB_TIMELINE_MOBILE_GAP_PX;
+// Vertical axis on mobile (P7_VERT_MOBILE.enabled, page7.js): there is no
+// bottom axis to clear, so the box's bottom is a plain inset from the viewport
+// bottom — whatever the docked tooltip frame occupies down there, plus the
+// shared gap. The headline slot costs nothing here: it is anchored to the TOP
+// of the viewport (slotAnchor 'top'), and only the 'grid' anchor reserves a
+// band under the dots.
+function sbbTimelineMobileBottomPx() {
+  const V = typeof P7_VERT_M === "undefined" ? null : P7_VERT_M;
+  if (!V || !V.enabled) return null;
+  const slot = (V.headline === 'slot' && V.slotAnchor === 'grid') ? V.slotPx : 0;
+  const frame = (typeof TOOLTIP_DOCK_BOTTOM_PX === "undefined")
+    ? V.bottomInsetPx
+    : TOOLTIP_DOCK_BOTTOM_PX + TOOLTIP_DOCK_H_PX + SBB_TIMELINE_MOBILE_GAP_PX;
+  return Math.max(V.bottomInsetPx, frame) + slot;
+}
 
 
 // Live-read at layout/draw time (isMobile() reads innerWidth), so a resize
@@ -72,10 +92,12 @@ const SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX = 36 + 10 + SBB_TIMELINE_MOBILE_GAP_PX;
 function sbbTimeline(H) {
   if (!isMobile()) return SBB_TIMELINE;
   const h = H || window.innerHeight;
+  const vertBottom = sbbTimelineMobileBottomPx();
   return {
     left:   SBB_TIMELINE_MOBILE_LEFT,
     top:    SBB_TIMELINE_MOBILE_TOP_PX / h,
-    bottom: (P7_AXIS_Y_FRAC_MOBILE * h - SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX) / h,
+    bottom: vertBottom !== null ? (h - vertBottom) / h
+          : (P7_AXIS_Y_FRAC_MOBILE * h - SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX) / h,
   };
 }
 

@@ -40,7 +40,11 @@ const GROUPS = [
   { color: "#F024FF", label: "קבוצות ימין לאומיות",      actor: "right wing protesters",
     fold4: { x: 887,  y: 514, swatchFirst: true }, fold6: { x: 31, y: 560 } },
   { color: "#6B89FF", label: "מתנגדי הרפורמה ותומכי עסקת החטופים", actor: "protesters against government",
-    fold4: { x: 725,  y: 488, swatchFirst: true }, fold6: { x: 31, y: 512 } },
+    fold4: { x: 725,  y: 488, swatchFirst: true }, fold6: { x: 31, y: 512 },
+    // Per-group @fold3 wrap cap on mobile (see groupLabelColumnMaxWidth): at the
+    // shared 100px this 5-word label breaks into THREE lines; 140px lets it sit
+    // on two ("מתנגדי הרפורמה / ותומכי עסקת החטופים"). Only this label needs it.
+    labelCapMobile: 140 },
   { color: "#FF1A94", label: "פעילי שמאל",             actor: "peace movements",
     fold4: { x: 725,  y: 462, swatchFirst: true }, fold6: { x: 31, y: 536 } },
   { color: "#454545", label: "מפגינים חרדים",           actor: "haredi jews",
@@ -118,14 +122,14 @@ function fold2RowPitchPx() {
 const FOLD2_CAMP_CENTER_GAP_PX = 180;
 // Live gap for a given viewport width. Desktop keeps the Figma-measured 160px
 // flat; on mobile (isMobile, js/core.js) the flat 160 would need ~500-600px of
-// width, so the two blocks are instead set to a fixed 80px of VISIBLE space
+// width, so the two blocks are instead set to a fixed 90px of VISIBLE space
 // between their facing edges — chosen by eye on a 393px phone. It's a fixed px
 // gap rather than a fraction of W because the blocks themselves are fixed px:
 // a fraction made the visual gap drift against the grid's own 31px column
 // pitch, and once it got tight the pair read as one continuous 8-column band
 // instead of two camps. Both blocks plus the gap come to 288px, so it still
 // fits the narrowest phones.
-const FOLD2_CAMP_EDGE_GAP_MOBILE_PX = 80;
+const FOLD2_CAMP_EDGE_GAP_MOBILE_PX = 90;
 function campCenterGapPx(W) {
   if (!isMobile()) return FOLD2_CAMP_CENTER_GAP_PX;
   // The caller wants the HALF-gap (each camp anchors at W/2 ± this), and the
@@ -294,8 +298,15 @@ groupLabelMeasureEl.style.cssText = "visibility:hidden;left:-9999px;top:0";
 let groupLabelWidths = {};
 function groupLabelWidth(g) {
   if (groupLabelWidths[g.color] == null) {
+    // The measurer carries .group-label, so it inherits the stylesheet's
+    // mobile cap — but a group's own labelCapMobile override lives in JS only,
+    // so it has to be applied inline here or the width would be measured at
+    // a cap the live label doesn't use.
+    const cap = groupLabelColumnMaxWidth(g);
     groupLabelMeasureEl.textContent = g.label;
+    if (cap != null) groupLabelMeasureEl.style.maxWidth = `${cap}px`;
     groupLabelWidths[g.color] = groupLabelMeasureEl.offsetWidth;
+    groupLabelMeasureEl.style.maxWidth = "";
   }
   return groupLabelWidths[g.color];
 }
@@ -303,7 +314,7 @@ function groupLabelWidth(g) {
 // under the breakpoint: desktop labels are `white-space: nowrap` one-liners, so
 // this is a constant there. On mobile .group-label wraps inside a 100px cap, so
 // a label can be two or three lines tall and @fold3's row pitch has to be told
-// about it (see fold3RowPitch in update-groups.js).
+// about it (see fold3RowStep in update-groups.js).
 // Cached per color AND per font-size, because the two places that need it ask
 // at different sizes — @fold3's camp column and the smaller mini-legend.
 // maxWidth (px, or null for "whatever the stylesheet says") is part of the key
@@ -343,12 +354,18 @@ function groupLabelLegendFontSize() { return isMobile() ? 12 : 14; }
 // The wrap caps. null on desktop = "leave the stylesheet alone" (labels are
 // nowrap one-liners there). On mobile @fold3 is capped at 100px because the two
 // camps plus their outward-trailing labels must fit side by side across a 393px
-// phone; the mini-legend can afford 150px, since each legend column owns a half
+// phone; a group may raise its own cap with `labelCapMobile` on its GROUPS
+// entry (the one 5-word label does, to land on two lines instead of three).
+// The mini-legend can afford 150px, since each legend column owns a half
 // width on its own, and the extra room drops the longest labels from three lines
 // to two — which is what keeps the legend's rows tight (see fold6RowPitchPx).
+// Every caller passes the group: the column cap is per-group, and the caps
+// must be applied inline wherever a label (or its measurer) is laid out.
 const GROUP_LABEL_MAX_WIDTH_MOBILE = 100;   // must match .group-label's mobile cap in style.css
 const FOLD6_LABEL_MAX_WIDTH_MOBILE = 150;
-function groupLabelColumnMaxWidth() { return isMobile() ? GROUP_LABEL_MAX_WIDTH_MOBILE : null; }
+function groupLabelColumnMaxWidth(g) {
+  return isMobile() ? ((g && g.labelCapMobile) || GROUP_LABEL_MAX_WIDTH_MOBILE) : null;
+}
 function groupLabelLegendMaxWidth() { return isMobile() ? FOLD6_LABEL_MAX_WIDTH_MOBILE : null; }
 if (document.fonts && document.fonts.ready) {
   document.fonts.ready.then(() => { groupLabelWidths = {}; groupLabelHeights = {}; groupLabelInkShifts = {}; fold6MFlyLineCache.clear(); updateGroups(); });
@@ -611,15 +628,14 @@ const acledNoteCardEl     = document.querySelector("#page-5 .text-card");
 // Hoisted above checkFold13 (below), which needs it already resolved at
 // definition time — also reused by p13SyncGateVisibility further down.
 // #page-11 is @fold12, the closing statement — NOT the outro/credits card,
-// which sits behind it at #page-12 and shares the same wrapper class. The two
-// halves of the old single hand-off are split across them on purpose:
-//   - @fold12 (page12StickyEl) owns the scroll GATE and the scroll-linked fade
-//     (fold13ScrollT) — everything fades away, but the extreme dots stay in
-//     their columns;
-//   - @fold13 (fold13OutroStickyEl) owns the freeform MORPH — the dots only
-//     spread once the final card arrives.
+// which sits behind it at #page-12 and shares the same wrapper class. @fold12
+// owns the whole hand-off: the scroll GATE, the scroll-linked fade
+// (fold13ScrollT) and the freeform MORPH (checkFold13 below), the last two
+// sequenced back to back across its card's rise.
+//
+// > @fold13's own wrapper was once queried here as fold13OutroStickyEl, back
+// > when the morph fired on the credits card. Nothing reads it now.
 const page12StickyEl       = document.querySelector("#page-11 .page12-sticky-center");
-const fold13OutroStickyEl  = document.querySelector("#page-12 .page12-sticky-center");
 
 // Generic discrete trigger: a fixed-duration 0<->1 phase fired once by
 // crossing a scroll threshold (see watchCardThreshold below), exactly like
@@ -632,6 +648,19 @@ function makeTrigger(duration, onTick, onSettle) {
     if (phaseStart === null) return fromT;
     const span = toT - fromT;
     if (span === 0) return toT;
+    // The one place every fold beat's tempo is read, so it's the one place
+    // reduced motion has to act: duration 0 makes the division Infinity, the
+    // min clamps it to 1, and the beat lands on its end state on the very
+    // first frame. Nothing else changes — the same onTick/onSettle run, in the
+    // same order, so a fold reached with reduced motion on is in exactly the
+    // state it would have animated to. Read per frame (not captured at
+    // makeTrigger time) so flipping the OS setting mid-session takes effect.
+    // Returned early rather than by letting duration 0 fall through the
+    // division below: runLoop() is called synchronously from trigger(), so
+    // `performance.now() - phaseStart` can still be exactly 0 on that first
+    // frame, and 0/0 is NaN — which never equals toT, so the rAF loop would
+    // never settle.
+    if (prefersReducedMotion()) return toT;
     const localT = Math.min(1, (performance.now() - phaseStart) / (duration * Math.abs(span)));
     return fromT + span * localT;
   }
@@ -953,11 +982,13 @@ let   fold13MorphStarted      = false;
 function watchCardThreshold(cardEl, frac, trigger, instantReverse = false) {
   let isPast = null;
   return function check() {
-    if (!cardEl) return;
-    // frac may be a function, read fresh each check, for folds whose crossing
-    // point differs by viewport (see FOLD6_CARD_FRAC below).
+    // cardEl and frac may each be a function, read fresh every check, for folds
+    // that watch a different card or a different crossing point per viewport
+    // (see FOLD6_CARD_FRAC and checkAcledNote below).
+    const el = typeof cardEl === "function" ? cardEl() : cardEl;
+    if (!el) return;
     const f = typeof frac === "function" ? frac() : frac;
-    const cardTop = cardEl.getBoundingClientRect().top;
+    const cardTop = el.getBoundingClientRect().top;
     const threshold = window.innerHeight * f;
     const nowPast = cardTop <= threshold;
     if (isPast === null) { isPast = nowPast; trigger.set(nowPast ? 1 : 0); return; }
@@ -1010,7 +1041,15 @@ const FOLD6_CARD_FRAC = 0.7;
 const checkFold6      = watchCardThreshold(
   page6TitleCardEl, () => (isMobile() ? FOLD6_CARD_FRAC : 0.5), fold6Trigger);
 const checkSquaresReveal = watchCardThreshold(squaresRevealCardEl, 0.5, squaresRevealTrigger);
-const checkAcledNote     = watchCardThreshold(acledNoteCardEl, 0.5, acledNoteTrigger);
+// Desktop: the note's own fold (@fold6, #page-5) at the usual half-screen.
+// Mobile (explicit instruction): one fold EARLIER, on @fold5's card (#page-4),
+// at @fold3's own crossing point (FOLD3_CARD_FRAC) — the מקרא panel is left
+// open by the @fold4 hand-off, so the reader watches the ACLED credit being
+// ADDED to a legend that is already on screen, rather than meeting it inside a
+// panel they have to open first.
+const checkAcledNote     = watchCardThreshold(
+  () => (isMobile() ? squaresRevealCardEl : acledNoteCardEl),
+  () => (isMobile() ? FOLD3_CARD_FRAC : 0.5), acledNoteTrigger);
 // The note un-types on @fold7's crossing (explicit instruction) — the same
 // card and fraction as fold7LabelTrigger / fold8SquareDimTrigger below, so the
 // note clears exactly as the square labels fold takes over. Wrapped rather
@@ -1097,21 +1136,24 @@ const checkFold9Fly = watchCardThreshold(page7TitleCardEl, 0, fold9FlyTrigger);
 // the card is centred inside a 100vh wrapper flush with the section top, so
 // the wrapper's own top is the section's arrival.
 //
-// It watches @fold13's wrapper, not @fold12's: the freeform spread belongs to
-// the FINAL card. @fold12's own arrival fades everything out but deliberately
-// leaves the extreme dots standing in their columns — that half is
-// fold13ScrollT, which is scroll-linked and measured off #page-11 separately.
+// It watches **@fold12's** wrapper (page12StickyEl, #page-11) — the freeform
+// spread is the closing statement's flourish, firing as that card arrives
+// rather than waiting for the credits card behind it.
 //
-// frac 0.5, the house convention — NOT 0. @fold13 is the last section on the
-// page, exactly one viewport tall, so its wrapper's top reaches 0 only at
-// scrollY === document bottom: frac 0 made the spread (and with it the camp
-// divider's fade, which rides the same progress) fire at the very last
-// scrollable pixel, if subpixel rounding let it fire at all. Half a viewport
-// in is comfortably reachable and gives the morph its full
-// GROUP_TRANSITION_MS on screen. The gate physically can't be crossed while
-// locked (scrollY is capped a whole fold short of here — see p13GateMax/
-// p13GateLocked), so no extra lock check is needed.
-const checkFold13 = watchCardThreshold(fold13OutroStickyEl, 0.5, fold13Trigger);
+// frac 0.5 is the halfway point of the card's own rise: 0 puts its top at the
+// viewport bottom, 1 at the top, so 0.5 is the moment it reaches mid-screen.
+// The scroll-linked fade (fold13ScrollT + FOLD13_FADE_SPAN, js/fold11.js) is
+// deliberately compressed to finish at exactly that point, so everything else
+// is already gone when the dots start spreading — the two never overlap.
+// Change one and you must change the other.
+//
+// The gate physically can't be crossed while locked (scrollY is capped a whole
+// fold short of here — see p13GateMax/p13GateLocked), so no extra lock check
+// is needed.
+//
+// > Previously watched fold13OutroStickyEl (@fold13's wrapper) at the same
+// > frac. Don't restore that without also un-compressing the fade.
+const checkFold13 = watchCardThreshold(page12StickyEl, 0.5, fold13Trigger);
 
 function checkGroupTriggers() {
   checkFold2(); checkFold3(); checkFold6(); checkSquaresReveal(); checkAcledNote(); checkNoteUntype(); checkFold7Label(); checkFold8SquareDim(); checkFold8Tooltip(); checkFold9(); checkFold9Fly(); checkFold13();
@@ -1283,7 +1325,7 @@ function fold6RowY(g, H) {
 // one-liners well under that. On mobile .group-label wraps inside its 150px
 // legend cap, so a mini-legend row can be two lines tall and 24px printed the
 // rows on top of each other; widen to fit the tallest measured label.
-// Same shape as fold3RowPitch in update-groups.js — see that comment.
+// Same idea as fold3RowStep in update-groups.js (but a flat pitch, not per-row steps) — see that comment.
 const FOLD6_ROW_LABEL_GAP_PX = 6;
 function fold6RowPitchPx() {
   return Math.max(
@@ -1484,6 +1526,13 @@ const fold6MobileLegendLayerEl = document.getElementById("fold6MobileLegendLayer
 const fold6MobileLegendEl = document.createElement("div");
 fold6MobileLegendEl.className = "fold6-mlegend";
 const FOLD6_MOBILE_LEGEND_LABEL = "מקרא";
+// The tinted card behind the bar — the mobile twin of fold6NoteCardEl, and
+// like it a SIBLING painted under the content (first child), sized per frame by
+// fold6MLegendPaintCard rather than by layout, so it can open in two steps
+// (width, then height) while the button and panel stay in normal flow.
+const fold6MobileCardEl = document.createElement("div");
+fold6MobileCardEl.className = "fold6-mlegend-card";
+fold6MobileLegendEl.appendChild(fold6MobileCardEl);
 const fold6MobileLegendBtnEl = document.createElement("button");
 fold6MobileLegendBtnEl.type = "button";
 fold6MobileLegendBtnEl.className = "fold6-mlegend-btn";
@@ -1606,8 +1655,14 @@ function fold6SetMobileLegendVisible(vis) {
     fold6MobileLegendEl.style.pointerEvents = barT > 0.5 ? "auto" : "none";
     // The button, not the bar: the bar is also the panel's container, and
     // scaling it would scale an open panel along with it.
-    fold6MobileLegendBtnEl.style.transform =
-      barT >= 1 ? "" : `scale(${fold8TooltipGrowEase(barT)})`;
+    const pop = barT >= 1 ? "" : `scale(${fold8TooltipGrowEase(barT)})`;
+    fold6MobileLegendBtnEl.style.transform = pop;
+    // …and the collapsed card with it (it IS the button's frame); an open or
+    // opening card is left alone for the same reason the bar is.
+    fold6MobileCardEl.style.transform = fold6MLegendOpenRaw > 0 ? "" : pop;
+    // The card has no size of its own — its first paint happens here, as the
+    // bar arrives (and again on resize, below), never per scroll frame.
+    fold6MLegendPaintCard(fold6MLegendOpenRaw);
   }
   // Fired the INSTANT fold6Trigger starts, not when it finishes: the panel's
   // rows type in while the on-canvas rows are un-typing, which is the whole
@@ -1622,7 +1677,7 @@ function fold6SetMobileLegendVisible(vis) {
     // resurrect it.
     if (vis < fold6MFlyPrevVis && fold6MLegendIntroPlayed) fold6MFlyMaybeReopen();
   } else {
-    if (fold6MLegendIntroActive && fold6MFlyEnabled() && !fold6MobilePanelEl.hidden) {
+    if (fold6MLegendIntroActive && fold6MFlyEnabled() && fold6MLegendOpenWant) {
       // The reverse hand-off's last beat: the rows are back on the canvas,
       // the frame empties out the way it arrived (a fade, not the close's
       // shrink — mirror of fold6PlayMLegendFlyIntro).
@@ -1631,19 +1686,110 @@ function fold6SetMobileLegendVisible(vis) {
     fold6MLegendIntroPlayed = false;
   }
   fold6MFlyPrevVis = vis;
-  if (vis <= 0 && !fold6MobilePanelEl.hidden && !fold6MFlyFadeOut)
-    fold6SetMobileLegendOpen(false);
+  // The bar is invisible here, so a panel still open is shut without the
+  // animation (a closing fly hand-off finishes its own).
+  if (vis <= 0 && fold6MLegendOpenWant && !fold6MFlyFadeOut)
+    fold6SetMobileLegendOpen(false, { instant: true });
 }
 
-function fold6SetMobileLegendOpen(open) {
-  fold6MobilePanelEl.hidden = !open;
+/* Opening and closing the card — the desktop note's accordion, on a clock.
+   The frame opens in two steps, WIDTH first (the title row stretches to the
+   bar's full width, the chevron riding its left edge and turning as it goes),
+   then HEIGHT (the card grows down to hold the rows, which fade in with it).
+   Closing is the same path backwards: height, then width. One raw progress
+   (0 closed .. 1 open) is sliced into the two windows below and re-eased per
+   window, and a reversal mid-flight — a second tap, a scroll back over @fold4
+   — simply turns the raw value around from wherever it is, covering only the
+   remaining distance at the same rate. */
+const FOLD6_MLEGEND_OPEN_MS = 550; // the full closed -> open trip
+const FOLD6_MLEGEND_OPEN = {
+  w: { start: 0,    len: 0.45 },
+  h: { start: 0.45, len: 0.55 },
+};
+let fold6MLegendOpenRaw = 0;      // where the card IS
+let fold6MLegendOpenWant = false; // where it is going (also "is the panel open" for every check)
+let fold6MLegendOpenRaf = 0;
+let fold6MLegendOpenDone = null;  // one-shot callback for when the trip lands
+
+// Geometry for one raw value. Measures nothing but the button and the bar: the
+// bar's padding is the card's outset (FOLD6_CARD_PAD — see .fold6-mlegend), so
+// the collapsed pose is the button plus that outset, centred, and the open pose
+// is the bar's own box. At rest open the card is pinned to the bar's edges
+// instead of sized, so the ACLED note flowing into the panel later resizes it
+// for free. The panel's opacity rides the height step: the rows appear as the
+// card makes room for them and are gone before it shrinks back.
+function fold6MLegendPaintCard(raw) {
+  const slice = (win) => p9Ease(Math.max(0, Math.min(1, (raw - win.start) / win.len)));
+  const wT = slice(FOLD6_MLEGEND_OPEN.w);
+  const hT = slice(FOLD6_MLEGEND_OPEN.h);
+  const bar = fold6MobileLegendEl, btn = fold6MobileLegendBtnEl, card = fold6MobileCardEl;
+  const barW = bar.offsetWidth;
+  const closedW = btn.offsetWidth + 2 * FOLD6_CARD_PAD;
+  const closedH = btn.offsetHeight + 2 * FOLD6_CARD_PAD;
+  const w = closedW + (barW - closedW) * wT;
+  const left = (barW - w) / 2;
+  if (raw >= 1) {
+    card.style.left = card.style.top = card.style.right = card.style.bottom = "0";
+    card.style.width = card.style.height = "";
+  } else {
+    const h = closedH + (bar.offsetHeight - closedH) * hT;
+    card.style.right = card.style.bottom = "";
+    card.style.left = `${left}px`;
+    card.style.top = "0";
+    card.style.width = `${w}px`;
+    card.style.height = `${h}px`;
+  }
+  fold6MobilePanelEl.style.opacity = hT < 1 ? String(hT) : "";
+  fold6MobilePanelEl.style.pointerEvents = hT < 1 ? "none" : "";
+}
+
+function fold6SetMobileLegendOpen(open, opts) {
+  const instant = !!(opts && opts.instant);
+  fold6MLegendOpenWant = open;
+  fold6MLegendOpenDone = (opts && opts.onDone) || null;
   fold6MobileLegendBtnEl.setAttribute("aria-expanded", String(open));
-  fold6MobileLegendEl.classList.toggle("is-open", open);
-  // The LAYER (not the bar) carries the open flag too: it's the stacking
-  // context, so only lifting it can put the open panel above the title block —
-  // which it must be, since the panel is what the reader just asked to see.
-  // Closed, it drops back under the card again.
-  fold6MobileLegendLayerEl.classList.toggle("is-open", open);
+  if (open) {
+    // Unhidden at once, at its final layout, so the card can measure the
+    // height it is opening to (and the fly hand-off can measure its targets).
+    fold6MobilePanelEl.hidden = false;
+    fold6MobileLegendEl.classList.add("is-open");
+    // The LAYER (not the bar) carries the open flag too: it's the stacking
+    // context, so only lifting it can put the open panel above the title block
+    // — which it must be, since the panel is what the reader just asked to
+    // see. It drops back under the card when the close lands.
+    fold6MobileLegendLayerEl.classList.add("is-open");
+  }
+  if (fold6MLegendOpenRaf) cancelAnimationFrame(fold6MLegendOpenRaf);
+  fold6MLegendOpenRaf = 0;
+  const target = open ? 1 : 0;
+  const finish = () => {
+    fold6MLegendOpenRaw = target;
+    fold6MLegendPaintCard(target);
+    if (!open) {
+      fold6MobilePanelEl.hidden = true;
+      fold6MobileLegendEl.classList.remove("is-open");
+      fold6MobileLegendLayerEl.classList.remove("is-open");
+    }
+    const done = fold6MLegendOpenDone;
+    fold6MLegendOpenDone = null;
+    if (done) done();
+  };
+  if (instant || fold6MLegendOpenRaw === target) { finish(); return; }
+  const from = fold6MLegendOpenRaw;
+  const ms = Math.abs(target - from) * FOLD6_MLEGEND_OPEN_MS;
+  const t0 = performance.now();
+  const tick = () => {
+    fold6MLegendOpenRaf = 0;
+    const t = Math.min(1, (performance.now() - t0) / ms);
+    fold6MLegendOpenRaw = from + (target - from) * t;
+    if (t < 1) {
+      fold6MLegendPaintCard(fold6MLegendOpenRaw);
+      fold6MLegendOpenRaf = requestAnimationFrame(tick);
+      return;
+    }
+    finish();
+  };
+  tick();
 }
 /* The @fold4 hand-off intro.
    ---------------------------------------------------------------------------
@@ -1658,23 +1804,24 @@ function fold6SetMobileLegendOpen(open) {
    0 (scrolled back above @fold4), so coming down again replays it. Any tap
    aborts it — a reader who reaches for the button mid-demo wants the panel, not
    the show. */
-const FOLD6_MLEGEND_INTRO_GROW_MS = 350;  // panel scale 0 -> 1, from its top edge
+// The frame itself opens with the card's own open/close (FOLD6_MLEGEND_OPEN_MS,
+// width then height) — the intro only times the rows inside it.
 const FOLD6_MLEGEND_INTRO_POP_MS  = 400;  // swatch scale 0 -> 1
 // label 0 -> all characters. It is the fold's OWN tempo, so the panel's rows
 // finish typing on the same frame the on-canvas rows finish un-typing — the two
 // halves of the hand-off start together (vis > 0) and land together.
 const FOLD6_MLEGEND_INTRO_TYPE_MS = GROUP_TRANSITION_MS;
-const FOLD6_MLEGEND_INTRO_HOLD_MS = 300; // whole legend on screen before closing
-const FOLD6_MLEGEND_INTRO_CLOSE_MS = 300; // and the shrink back up into the button
 let fold6MLegendIntroRaf = 0;
 let fold6MLegendIntroTimer = 0;
 let fold6MLegendIntroPlayed = false;
-// True for the whole demo (grow + hold + shrink). @fold6's own reveal
-// (squaresRevealTrigger) can land in the middle of it on a fast scroll, and the
-// ACLED note flowing into the panel mid-demo would grow the frame under the
-// rows while they are still typing. updateGroups keeps the note + divider out
-// of the panel's layout entirely while this is set, so the credit first turns
-// up when the reader TAPS מקרא — which is also when it makes sense to read it.
+// True from the hand-off's first frame onward — it is never "over" while the
+// panel is the legend's home: the rows must be able to fly back OUT of it when
+// the reader scrolls up past @fold4, which rides the same flag. Only a tap on
+// מקרא (fold6StopMLegendIntro) or the reverse fade ends it. It no longer gates
+// the ACLED note: the note has its own crossing one fold later (checkAcledNote)
+// and updateGroups keeps it out of the panel's LAYOUT only while the card is
+// still opening (fold6MLegendOpenRaw < 1), which is the one moment it could
+// grow the frame under rows that are still arriving.
 let fold6MLegendIntroActive = false;
 
 // Clearing the flag alone isn't enough: updateGroups (which writes the note's
@@ -1694,14 +1841,10 @@ function fold6MLegendPaintRow(r, popT, typeT) {
   fold8UpdateTypewriter(r.spans, Math.round(typeT * r.spans.fullText.length));
 }
 
-// The panel at rest: full size, full text, unscaled swatches. Also the abort
-// target, so a panel opened by hand is never caught mid-animation. The panel's
-// transform is cleared rather than set to scale(1) so the stylesheet's
-// `translateZ(0)` (its compositor-layer promotion — see .fold6-mlegend-panel)
-// takes over again.
+// The rows at rest: full text, unscaled swatches, opacity back to CSS. Also
+// the abort target, so a panel opened by hand is never caught mid-animation.
+// The frame itself isn't touched — the card's own open/close owns it.
 function fold6MLegendRestRows() {
-  fold6MobilePanelEl.style.transform = "";
-  fold6MobilePanelEl.style.opacity = "";
   fold6MobileRowEls.forEach((r) => {
     r.swatch.style.transform = "";
     // The fly hand-off keeps the rows built but invisible until the flight
@@ -1732,7 +1875,7 @@ function fold6StopMLegendIntro() {
    in, the panel opens as an EMPTY frame and the six rows travel into it —
    each one flying from its @fold3 spot to the exact place it occupies in the
    panel, shrinking its swatch (13px → 6px), its type (18px → 14px) and
-   unwrapping to the panel's one-line labels on the way. The panel's own rows
+   unwrapping toward the panel's (now wrapping) labels on the way. The panel's own rows
    only fade up over the last sliver of the flight, so the reader never sees
    two copies of the same row at once.
 
@@ -1765,7 +1908,7 @@ const FOLD6_MFLY_HEAD_PX   = 14;  // .fold6-mlegend-camp
 // js/update-groups.js. Keep the two in sync; it's the one number here that is a
 // copy of a stylesheet value rather than the source of one.
 const FOLD6_MFLY_LINE_H    = 1.15;
-const FOLD6_MFLY_FRAME_MS  = 350; // empty frame fades in
+// The empty frame opens with the card's own two-step open (FOLD6_MLEGEND_OPEN_MS).
 
 function fold6MFlyEnabled() {
   return isMobile() && window.FOLD4_FLY !== false;
@@ -1798,10 +1941,15 @@ function fold6MFlyMeasure() {
     // the label on that edge instead of on `left` — see the is-mfly-topanchor
     // block in js/update-groups.js. `left` is derived from the box's measured
     // WIDTH, which jumps every time the opening wrap cap re-breaks the text.
+    // Panel labels wrap now (explicit instruction), so `height` can be two or
+    // three lines while the flying stand-in ends as one — aim at the FIRST
+    // line's middle, which is the line the swatch and the stand-in both sit on.
+    // For a one-line label this is the box's middle, exactly as before.
+    const lh = parseFloat(getComputedStyle(r.label).lineHeight) || l.height;
     m.set(r.g, {
       x: s.left, y: s.top,
       lx: l.left - s.left, lxRight: l.right - s.left,
-      ly: l.top + l.height / 2 - s.top,
+      ly: l.top + Math.min(l.height, lh) / 2 - s.top,
     });
   });
   fold6MFlyHeadTargets = new Map();
@@ -1960,7 +2108,7 @@ function fold6MFlyHideCloneEl(c) {
 // font; the paint scales it by the frame's lerped font-size.
 const fold6MFlyLineCache = new Map();
 function fold6MFlyRestLines(g) {
-  const fs = groupLabelColumnFontSize(), cap = groupLabelColumnMaxWidth();
+  const fs = groupLabelColumnFontSize(), cap = groupLabelColumnMaxWidth(g);
   const key = `${g.label}@${fs}@${cap}`;
   let v = fold6MFlyLineCache.get(key);
   if (v) return v;
@@ -2096,23 +2244,12 @@ function fold6MFlySetRowsShown(t) {
 }
 
 // Called every frame from updateGroups with the flight's arrival progress.
-// Owns the hold timer too — the flight's own end is the only moment that can
-// start it, and that moment is scroll-driven.
+// Nothing follows the landing any more (explicit instruction): the panel is
+// left OPEN at @fold4 and stays the legend from here on, so arriving is just
+// the last frame of the flight.
 function fold6MFlyArrive(t) {
   if (!fold6MLegendIntroActive) return;
   fold6MFlySetRowsShown(t);
-  if (t >= 1 && !fold6MLegendIntroTimer) {
-    fold6MLegendIntroTimer = setTimeout(() => {
-      fold6MLegendIntroTimer = 0;
-      fold6CloseMLegendIntro();
-    }, FOLD6_MLEGEND_INTRO_HOLD_MS);
-  } else if (t < 1 && fold6MLegendIntroTimer) {
-    // Scrolling back up mid-hold: the rows have taken off again (arriveT
-    // dropped to 0), so the pending close must not fire under the reverse
-    // flight. Scrolling down again re-lands and re-arms it above.
-    clearTimeout(fold6MLegendIntroTimer);
-    fold6MLegendIntroTimer = 0;
-  }
 }
 
 /* The hand-off played BACKWARDS — scroll back up and the legend visibly
@@ -2130,7 +2267,7 @@ let fold6MFlyPrevVis = 0;
 
 function fold6MFlyMaybeReopen() {
   if (!fold6MFlyEnabled() || fold6MLegendIntroActive) return;
-  if (!fold6MobilePanelEl.hidden) return; // hand-opened panel: leave it be
+  if (fold6MLegendOpenWant) return; // hand-opened panel: leave it be
   fold6MLegendIntroActive = true;
   fold6NoteRuleEl.hidden = fold6NoteEl.hidden = true;
   fold6PlayMLegendFlyIntro();
@@ -2142,50 +2279,28 @@ function fold6FadeOutMLegendFlyIntro() {
   if (fold6MLegendIntroRaf) cancelAnimationFrame(fold6MLegendIntroRaf);
   if (fold6MLegendIntroTimer) clearTimeout(fold6MLegendIntroTimer);
   fold6MLegendIntroRaf = fold6MLegendIntroTimer = 0;
-  // Picked up from wherever the frame currently is — the reverse can start
-  // while the fade-IN is still running on a fast flick back up.
-  const from = parseFloat(fold6MobilePanelEl.style.opacity);
-  const o0 = Number.isFinite(from) ? from : 1;
-  const t0 = performance.now();
-  const tick = () => {
-    fold6MLegendIntroRaf = 0;
-    if (!fold6MFlyFadeOut) return; // interrupted by a re-entering fade-in
-    const t = Math.min(1, (performance.now() - t0) / FOLD6_MFLY_FRAME_MS);
-    fold6MobilePanelEl.style.opacity = String(o0 * (1 - p9Ease(t)));
-    if (t < 1) { fold6MLegendIntroRaf = requestAnimationFrame(tick); return; }
+  // The card's close picks up from wherever the frame currently is — the
+  // reverse can start while the open is still running on a fast flick back up.
+  fold6SetMobileLegendOpen(false, { onDone: () => {
     fold6MFlyFadeOut = false;
-    fold6SetMobileLegendOpen(false);
     fold6EndMLegendIntro();
     fold6MLegendRestRows();
-  };
-  tick();
+  } });
 }
 
 function fold6PlayMLegendFlyIntro() {
-  // A reverse fade-out may still be mid-flight (scrolled up, then straight
-  // back down): its rAF is cancelled and its self-check flag cleared so the
-  // fade-in below owns the panel's opacity alone.
-  if (fold6MLegendIntroRaf) cancelAnimationFrame(fold6MLegendIntroRaf);
-  fold6MLegendIntroRaf = 0;
+  // A reverse close may still be mid-flight (scrolled up, then straight back
+  // down): the open below simply turns the card around from where it is.
   fold6MFlyFadeOut = false;
-  // Full text, final swatches, zero opacity: the panel must be at its FINAL
+  // Full text, final swatches, rows invisible: the panel must be at its FINAL
   // layout from the first frame or the targets measured off it are wrong —
-  // it's invisible, not unbuilt.
+  // it's invisible, not unbuilt. The card opens around it (width, then
+  // height) as the empty frame the rows fly into.
   fold6MobileRowEls.forEach((r) => fold8UpdateTypewriter(r.spans, r.spans.fullText.length));
   fold6MobileRowEls.forEach((r) => { r.swatch.style.transform = ""; });
   fold6MFlySetRowsShown(0);
-  fold6MobilePanelEl.style.transform = "translateZ(0)"; // no scale — see above
-  fold6MobilePanelEl.style.opacity = "0";
   fold6SetMobileLegendOpen(true);
   fold6MFlyTargets = null; // this panel has just been laid out — measure it fresh
-  const t0 = performance.now();
-  const tick = () => {
-    fold6MLegendIntroRaf = 0;
-    const t = Math.min(1, (performance.now() - t0) / FOLD6_MFLY_FRAME_MS);
-    fold6MobilePanelEl.style.opacity = String(p9Ease(t));
-    if (t < 1) fold6MLegendIntroRaf = requestAnimationFrame(tick);
-  };
-  tick();
 }
 
 function fold6PlayMLegendIntro() {
@@ -2202,10 +2317,9 @@ function fold6PlayMLegendIntro() {
   // has already revealed the note (scrolled back up and down again) would
   // otherwise leave it in the frame until the next updateGroups frame.
   fold6NoteRuleEl.hidden = fold6NoteEl.hidden = true;
-  // Zeroed BEFORE the panel is unhidden, so it never shows a full-size frame
-  // for the one frame between opening and the first tick.
-  fold6MobilePanelEl.style.transform = "translateZ(0) scale(0)";
-  fold6MobilePanelEl.style.opacity = "0";
+  // Rows zeroed BEFORE the card opens, so the frame never shows full rows for
+  // the one frame between opening and the first tick. The frame itself is the
+  // card's own open — width, then height — exactly the move a tap makes.
   fold6MobileRowEls.forEach((r) => fold6MLegendPaintRow(r, 0, 0));
   fold6SetMobileLegendOpen(true);
   const t0 = performance.now();
@@ -2213,19 +2327,11 @@ function fold6PlayMLegendIntro() {
   const tick = () => {
     fold6MLegendIntroRaf = 0;
     const el = performance.now() - t0;
-    // The frame grows from its TOP edge with @fold7's own tooltip curve
-    // (fold8TooltipGrowEase, the subtle back-out pop) — same gesture, so the
-    // panel dropping open reads as the same kind of object as the tooltip the
-    // reader met one fold earlier. transform-origin is set in CSS; translateZ(0)
-    // is repeated here because an inline transform replaces the stylesheet's.
-    const growT = fold8TooltipGrowEase(clamp(el / FOLD6_MLEGEND_INTRO_GROW_MS));
-    fold6MobilePanelEl.style.transform = `translateZ(0) scale(${growT})`;
-    fold6MobilePanelEl.style.opacity = String(Math.min(1, growT));
     // Everything runs on the SAME clock (per explicit instruction) — no per-row
-    // stagger and no wait for the frame: the panel opens, the dots pop and the
+    // stagger and no wait for the frame: the card opens, the dots pop and the
     // labels type all at once, which is what makes it read as the legend
     // arriving in one move rather than being rebuilt row by row.
-    let done = el >= FOLD6_MLEGEND_INTRO_GROW_MS;
+    let done = fold6MLegendOpenRaw >= 1;
     fold6MobileRowEls.forEach((r) => {
       const popT  = p9Ease(clamp(el / FOLD6_MLEGEND_INTRO_POP_MS));
       const typeT = p9Ease(clamp(el / FOLD6_MLEGEND_INTRO_TYPE_MS));
@@ -2233,60 +2339,34 @@ function fold6PlayMLegendIntro() {
       fold6MLegendPaintRow(r, popT, typeT);
     });
     if (!done) { fold6MLegendIntroRaf = requestAnimationFrame(tick); return; }
+    // …and there it stays: the panel is not closed again (explicit
+    // instruction). The ACLED note joins it one fold later, in view.
     fold6MLegendRestRows();
-    fold6MLegendIntroTimer = setTimeout(() => {
-      fold6MLegendIntroTimer = 0;
-      fold6CloseMLegendIntro();
-    }, FOLD6_MLEGEND_INTRO_HOLD_MS);
   };
   tick();
 }
 
-// Leaves the way it arrived: the frame shrinks back UP into the button (same
-// top-edge origin) instead of the panel blinking out of existence, so the demo
-// visibly returns the legend to the control that now holds it. Plain p9Ease —
-// the back-out pop belongs to things appearing, and overshooting on the way out
-// would push the frame briefly BIGGER as it leaves.
-function fold6CloseMLegendIntro() {
-  // Drop the pressed chip NOW, not when the panel finishes hiding: the button
-  // un-fills over the same 300ms as the shrink (the base .fold6-mlegend-btn
-  // rule carries that transition; the .is-open rule has none, so opening still
-  // flips instantly), so the black->white and the frame leaving are one move.
-  fold6MobileLegendEl.classList.remove("is-open");
-  const t0 = performance.now();
-  const tick = () => {
-    fold6MLegendIntroRaf = 0;
-    const t = Math.min(1, (performance.now() - t0) / FOLD6_MLEGEND_INTRO_CLOSE_MS);
-    const g = 1 - p9Ease(t);
-    fold6MobilePanelEl.style.transform = `translateZ(0) scale(${g})`;
-    fold6MobilePanelEl.style.opacity = String(g);
-    if (t < 1) { fold6MLegendIntroRaf = requestAnimationFrame(tick); return; }
-    fold6SetMobileLegendOpen(false);
-    // Only after it's hidden: a hand-opened panel must come back at full size,
-    // and the ACLED note is allowed back into the panel's layout (its own
-    // @fold6 ramp still decides whether it's actually visible).
-    fold6EndMLegendIntro();
-    fold6MLegendRestRows();
-  };
-  tick();
-}
+// The collapsed card is centred on the bar, so a width change moves it.
+window.addEventListener("resize", () => {
+  if (isMobile()) fold6MLegendPaintCard(fold6MLegendOpenRaw);
+});
 
 fold6MobileLegendBtnEl.addEventListener("click", (e) => {
   e.stopPropagation();
   fold6StopMLegendIntro();
-  fold6SetMobileLegendOpen(fold6MobilePanelEl.hidden);
+  fold6SetMobileLegendOpen(!fold6MLegendOpenWant);
 });
 // Tap anywhere else — including on the page behind the bar, which is why this
 // listens on the document rather than on a backdrop element (there is none; the
 // artwork stays visible and interactive while the panel is open).
 document.addEventListener("click", (e) => {
-  if (!fold6MobilePanelEl.hidden && !fold6MobileLegendEl.contains(e.target)) {
+  if (fold6MLegendOpenWant && !fold6MobileLegendEl.contains(e.target)) {
     fold6StopMLegendIntro();
     fold6SetMobileLegendOpen(false);
   }
 });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && !fold6MobilePanelEl.hidden) {
+  if (e.key === "Escape" && fold6MLegendOpenWant) {
     fold6StopMLegendIntro();
     fold6SetMobileLegendOpen(false);
   }

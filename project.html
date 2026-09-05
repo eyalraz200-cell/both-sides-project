@@ -1,5 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<!-- lang="he" so screen readers use a Hebrew voice. NOT dir="rtl" at the root:
+     the stylesheet declares `direction: rtl` per block, and the flex rows that
+     don't (the @fold11 pill tray, .page9-zone) would reverse their inline
+     order under a root RTL. Setting it is still the right end state — it needs
+     an eyeball pass over folds 10–12 first. -->
+<html lang="he">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,9 +16,25 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <!-- The page's one h1. Every visible heading is an <h2> inside a scrolling
+       title card, so without this the document has no top-level heading and
+       its outline starts at level 2. Off-screen, not display:none — the latter
+       is skipped by screen readers too. -->
+  <h1 class="a11y-only">אירועים קיצוניים — שני הצדדים</h1>
   <div class="layout">
     <div class="graphic-col">
-      <canvas id="canvas"></canvas>
+      <!-- The whole visualisation is painted here, so to assistive tech the
+           canvas is one unlabelled box. role/aria-label give it at least a
+           name; a real text alternative for the data is still owed. -->
+      <canvas id="canvas" role="img"
+              aria-label="הדמיה גרפית של אירועי מחאה בישראל, לפי מחנה, קבוצה ותאריך"></canvas>
+      <!-- The canvas is one opaque box to assistive tech, so everything the
+           visualisation contributes beyond the scrolling <h2> narration — the
+           camp/group roster, the totals, the date range, the categories — is
+           written here instead, off-screen. Built from the SAME events.json
+           the canvas draws (p7BuildDataSummary at the end of initPage7,
+           page7.js) rather than hardcoded, so it can't drift from the data. -->
+      <section id="canvasA11ySummary" class="a11y-only" aria-label="תיאור מילולי של הנתונים"></section>
       <!-- Single persistent overlay for the 6 camp groups from @fold2's
            two-camp columns through @fold6's mini-legend glide — one set of
            DOM nodes that's continuously repositioned/restyled as the user
@@ -200,5 +221,11 @@
   <script src="js/fold11.js"></script>
   <script src="js/bootstrap.js"></script>
   <script src="reload.js"></script>
+  <!-- TEMP: fold number chip; delete with _debug-fold-badge.js -->
+  <script src="_debug-fold-badge.js"></script>
+  <!-- TEMP: @fold13 credits text knobs; delete with _debug-credits-text.js -->
+  <script src="_debug-credits-text.js"></script>
+  <!-- TEMP: mobile מקרא groups-frame width knobs; delete with _debug-mlegend-width.js -->
+  <script src="_debug-mlegend-width.js"></script>
 </body>
 </html>

@@ -146,7 +146,18 @@ up is browser-synthesized thickening of Regular. That is why 300 was picked over
 300-700 sweep: the synthesized weights read as one muddy face, 300 is genuinely drawn.
 It also retires the `.latin-acronym` workaround, which now inherits the base weight
 instead of forcing 400 — with no synthesis there is no filled-apex artifact to dodge,
-and a 400 acronym would sit heavier than the Hebrew around it. The 600px breakpoint drops it to **16px** — that's a width override applied
+and a 400 acronym would sit heavier than the Hebrew around it.
+
+The same rule now covers **@fold1's hero title** (`.page0-title`, `style.css`): it asked
+for `600` — the last synthesized weight left on the site — and read as *changing weight
+during the reveal*. Synthetic bold is applied by the rasteriser at draw time rather than
+baked into the glyph outlines, so how much ink it lays down is free to differ between
+rendering paths (composited vs not, LCD vs grayscale AA) for the same element; a real
+drawn face has fixed outlines and no such freedom. It is `font: 400 42px` — Regular, a
+real file. **Don't set a HadassahFriedlaender weight that has no `@font-face` rule
+behind it.** Adding a licensed face is the only way to widen the range.
+
+The 600px breakpoint drops it to **16px** — that's a width override applied
 to the same shared rule, so the titles stay uniform with each other at any given width;
 it is not the per-page kind the rule forbids.
 
@@ -179,6 +190,17 @@ handler, after all re-layout has settled. Skipped under `isMobile()` — mobile 
 resize on plain scrolling (address-bar show/hide), and re-pinning there would fight the
 user's own scroll.
 
+**A height-only resize on mobile skips the relayout entirely (2026-09-05).** A phone fires
+`resize` continuously while its URL/bottom bar slides, and the handler's work — a fresh
+full-viewport canvas backing store, every page-0 dot element rebuilt, six labels
+re-measured — stalls the main thread long enough that the browser abandons the collapse and
+snaps the bar back, so it appeared to "refuse to collapse" on every scroll after the first.
+`js/bootstrap.js` compares `window.innerWidth` against the previous resize: under
+`isMobile()`, an unchanged width means bar movement and the handler does nothing but
+`draw()`. Nothing is lost — scroll geometry is `vh` (fixed on mobile, it does not track the
+bar) and `draw()` re-syncs the canvas backing store on every paint anyway. A width change
+is a real rotation/breakpoint crossing and still runs the full handler.
+
 **Canvas backing-store sync:** the canvas's pixel buffer is sized in `init()` (js/core.js)
 and *re-checked on every `draw()` frame* against `clientWidth/Height × dpr` (rounded ints,
 same basis in both places — a fractional `getBoundingClientRect` would disagree and
@@ -201,12 +223,12 @@ throughout. What the breakpoint actually changes:
 | `.page0-title` (hero) | 42px, `top: calc(50% - 276px)` | 32px, `top: calc(50% - 240px)` — the top compensates for the 3 lines shrinking ~36px, holding the tuned title/subtitle dot-column gaps |
 | `.text-card-frame` padding | `21px 29px` | `16px 22px` (holds the 1.38 h:v ratio); exception: @fold11's title frame (`.page9-title-row`) runs `padding-block: 8px` — its single short line read as an oversized fill at 16px. The subtitle's `-8px` margin-top is derived from it (gap − 10) |
 | camp header → top swatch row (`js/update-groups.js`) | `FOLD4_HEADER_GAP` 44 frame-units center-to-center, `H`-scaled | `FOLD4_HEADER_GAP_MOBILE_PX` — a flat **24px visible** gap, measured off the header's rendered height |
-| camp gap (`campCenterGapPx`, `js/groups.js`) | flat 160px half-gap | a fixed **80px visible** gap between the blocks' facing edges (`FOLD2_CAMP_EDGE_GAP_MOBILE_PX`), i.e. a 92px half-gap at the 4-wide shape — chosen by eye |
+| camp gap (`campCenterGapPx`, `js/groups.js`) | flat 160px half-gap | a fixed **90px visible** gap between the blocks' facing edges (`FOLD2_CAMP_EDGE_GAP_MOBILE_PX`), i.e. a 97px half-gap at the 4-wide shape — chosen by eye |
 | `.group-label` | 18px, `nowrap` | 16px, wraps, `width: max-content` + `max-width: 100px`, `direction: rtl` |
 | group-label font-size (inline, `js/update-groups.js`) | 18 column / 14 legend | 16 column / 12 legend — via `groupLabelColumnFontSize()` / `groupLabelLegendFontSize()` |
-| @fold3 row pitch (`fold3RowPitch`) | 32px | measured — tallest wrapped label + 14px (`FOLD3_ROW_LABEL_GAP_PX`, mobile only; desktop keeps 16) |
+| @fold3 row step (`fold3RowStep`) | 34px flat | per row: this row's tallest wrapped label + 12px (`FOLD3_ROW_LABEL_GAP_PX`), floored at 32 — equal visible gaps |
 | @fold7 legend row pitch (`fold6RowPitchPx()`) | 24px | measured — tallest wrapped legend label + 6px |
-| Mini-legend + ACLED note | Six DOM group rows over the canvas; the note sits above their top row | **Both collapse into the מקרא bar** — camp names pinned top, legend + note in a drop-down panel; the six rows fly into the button at `@fold4`. See [Groups-and-Legend](Groups-and-Legend.md#the-mobile-מקרא-bar) |
+| Mini-legend + ACLED note | Six DOM group rows over the canvas; the note sits above their top row | **Both collapse into the מקרא bar** — a card styled like the desktop note (tint, no border, no chevron, title row = the מקרא button) that opens width-then-height into the legend + note; the six rows fly into it at `@fold4` and it is **left open** from there on, the ACLED note joining it a fold later. See [Groups-and-Legend](Groups-and-Legend.md#the-mobile-מקרא-bar) |
 | `#page-12` (outro) frame / title | sized from the viewport edges: `height: calc(100vh - 96px)` (48px gap top and bottom), width 491px = the narrowest frame the copy fits at on a 982px-tall viewport, 40px side padding (`#page-12 .text-card` is `fit-content` so it stays centred) / 40px | `min(450px, 100vw-48px)` border-box, height auto / 28px |
 
 **The camp gap is the load-bearing one.** `FOLD2_CAMP_CENTER_GAP_PX` (160) puts two 104px
@@ -224,11 +246,12 @@ to three lines inside a 32px row pitch. Both sizes now come from
 single source of truth. Never re-inline the numbers at the call site.**
 
 **Wrapped labels need a measured row pitch.** Once labels wrap, the flat pitches
-(`FOLD3_MIN_ROW_PITCH_PX` 32, `FOLD6_ROW_PITCH` 24) print rows over each other. `fold3RowPitch`
-(`js/update-groups.js`) and `fold6RowPitchPx()` (`js/groups.js`) take `Math.max(flat,
-tallest measured label + gap)` and then re-center the row block on the span the *incoming*
-layout occupies (@fold2's own grid, in `fold3RowPitch`'s case) — rows grow downward off a
-top anchor, so a widened pitch would otherwise drag the whole group down. On desktop the
+(`FOLD3_MIN_ROW_PITCH_PX` 32, `FOLD6_ROW_PITCH` 24) print rows over each other. `fold6RowPitchPx()`
+(`js/groups.js`) takes `Math.max(flat, tallest measured label + gap)`; `fold3RowStep`
+(`js/update-groups.js`) goes one further and sizes each step off that row's own wrapped label (whose first line
+sits on the row y, the rest hanging below), so the visible gap is equal between every
+pair of rows. Rows grow downward off a
+fixed top anchor shared with @fold2 (no re-centering — see Groups-and-Legend). On desktop the
 labels measure under the flat value and @fold2's row pitch is the same 32, so `max` leaves
 both at exactly their tuned numbers and nothing shifts. On mobile @fold2's pitch is 29, so
 the column lifts by half the difference — the surviving rect must not appear to jump when
@@ -288,3 +311,48 @@ The article page is **RTL**, so its overflow ran off the *left* edge — `scroll
 catches it, but a check that only looks at `right > vw` does not.
 
 Folds 8–10 are **not** adapted yet — see [Folds](Folds.md).
+
+## Accessibility
+
+Audited 2026-09-05. What holds today:
+
+- **`project.html` is `lang="he"`, `index.html` is `lang="he" dir="rtl"`.** `project.html`
+  deliberately has **no root `dir="rtl"`** — the stylesheet declares `direction: rtl`
+  per block, and the flex rows that don't (`.page9-zone`, `.page9-tray-row`) would reverse
+  their inline order under a root RTL. Setting it is the right end state but needs an
+  eyeball pass over folds 10–12 first; the reason is commented at the `<html>` tag.
+- **One `<h1>` per document.** `project.html`'s is `.a11y-only` (every visible heading is an
+  `<h2>` in a scrolling title card). `index.html` runs h1 → h2s only; the small "עוד בשקוף"
+  heading is an `<h2>` styled down, not an `<h4>` — its rule is `.shk-more h2`.
+- **`.a11y-only`** (`style.css`, next to the `*` reset) is the off-screen utility: a clipped
+  1px box, **not** `display: none`/`visibility: hidden`, which would drop the element from
+  the accessibility tree too.
+- **`<canvas id="canvas">` carries `role="img"` + an `aria-label`**, and its text
+  alternative is `#canvasA11ySummary` — an `.a11y-only` `<section>` right after it, filled by
+  `p7BuildDataSummary(data)` at the end of `initPage7` (`page7.js`). The scrolling `<h2>`
+  cards are already real DOM, so the argument of the piece is readable for free; the summary
+  supplies only what the canvas draws — the camp/group roster (read off
+  `FOLD4_COALITION_ROWS`/`FOLD4_CHANGE_ROWS`, so it can't disagree with the legend), the
+  per-group and per-category counts, the total, and the date range. **Every figure is derived
+  from the loaded `events.json`, never hardcoded** — the xlsx is rebuilt on each server start,
+  so a hand-written number would go stale silently.
+- **Text contrast clears AA 4.5:1.** The three that didn't were fixed at the declaration and
+  carry their ratio in a comment: `.shk-photo-credits` `#70757a` (was `#9aa0a6`, 2.64:1), the
+  ACLED note title `#767676` (was `#949494`, 3.03:1), its chevron `#7a7a7a` (was `#919191`).
+  Tooltip fills go through `tooltipFill()` — see [Timeline](Timeline.md).
+
+- **@fold11 is keyboard-operable.** Pills are focusable `role="button"` toggles; Enter/Space
+  routes through the same `commitDrop`/`commitDropState` the pointer paths use, with an
+  `aria-live` announcer and a `:focus-visible` ring — see
+  [Drag-and-Drop](Drag-and-Drop.md#keyboard-path). This is also what makes @fold12 and
+  @fold13 reachable at all without a pointer, since `p13GateLocked()` (`js/fold11.js`) gates
+  scrolling on a pill being classified.
+
+Known open gaps, in severity order — **none of these are fixed**:
+
+1. **`index.html`'s six social links are `href="#"`** — placeholders, so they focus and
+   activate but go nowhere.
+
+**Removed — don't reintroduce:** `index.html`'s fixed ♿ `.shk-a11y-btn` (and its
+`trigger.css` rule). It had no handler on any page, so it advertised an accessibility panel
+that did not exist.

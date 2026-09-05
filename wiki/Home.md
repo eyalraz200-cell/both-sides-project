@@ -12,7 +12,7 @@ Everything here describes the **v2 branch as it is now** — no history narratio
 
 | Page | Covers |
 |---|---|
-| [Architecture](Architecture.md) | The two entry points, file roster, script loading & shared globals, dev server |
+| [Architecture](Architecture.md) | The two entry points, file roster, script loading & shared globals, dev server, accessibility |
 | [Folds](Folds.md) | The canonical `@foldN` table and what plays on each fold |
 | [Animation-System](Animation-System.md) | Easing curves, trigger architecture, duration tiers, beats, stagger, project-wide rules |
 | [Groups-and-Legend](Groups-and-Legend.md) | `GROUPS` roster, camp columns, the persistent mini-legend, camp headers |

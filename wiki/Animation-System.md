@@ -57,6 +57,20 @@ const check = watchCardThreshold(cardEl, frac, t, instantReverse = false);
   be deferred, letting the stale write win the frame (this is exactly how @fold1's
   entrance loop briefly broke the @fold2 dot shrink; it now stops writing a dot's
   transform once `popped`).
+- **Handing an element from a timed animation to a scroll-driven one needs a
+  position handover.** @fold1's title/subtitle are driven by the page-load entrance
+  (a timed slide from 100vh) until the first scroll, then permanently by
+  `page0ApplyTitleScrollLag`, whose position is a pure function of scroll fraction.
+  The two disagree about where the element is, so the switch used to snap the title
+  a full viewport in one frame. `page0BeginTitleHandover` (js/fold1-intro.js) records
+  the px gap between the two at the switch instant into `page0HandoverTitlePx` /
+  `page0HandoverSubtitlePx`, added to the driver's output and decayed by
+  `PAGE0_SCROLL_LAG_DAMPING` per frame (snapped to 0 under 0.5px). Separate values
+  per element: the parallax term pushes them opposite ways and the entrance adds the
+  subtitle's 107px alignment offset. **Guard:** above scroll fraction 0.5 the handover
+  is skipped and the old snap is kept on purpose — both positions are off-screen
+  there (a reload restoring a scrolled position), so easing between them would drag
+  the title back across the viewport.
 
 ## Beat windows
 
@@ -142,3 +156,26 @@ page9 stuck-state fades, `0.5s`/`0.7s ease-out` engage fades, and one bespoke
 elements JS already repaints every frame with a continuous value (`.fold6-square`,
 `.fold6-square-label`) deliberately have **no** CSS transition — one would lag behind or
 double up with the JS motion.
+
+## Reduced motion
+
+`prefersReducedMotion()` (`js/core.js`) reads a live `MediaQueryList`, so flipping the OS
+setting mid-session takes effect on the next beat. Two consumers:
+
+- **`makeTrigger`'s `currentRaw()`** (`js/groups.js`) returns `toT` immediately when it's
+  true, so the beat lands on its end state on the first frame. Same `onTick`/`onSettle`,
+  same order — a fold reached with reduced motion on is in exactly the state it would have
+  animated to. It returns early rather than dividing by a 0 duration: `runLoop()` is called
+  synchronously from `trigger()`, where `performance.now() - phaseStart` can still be 0, and
+  `0/0` is `NaN`, which never equals `toT` — the rAF loop would never settle.
+- **`page0CueSchedule`** (`js/fold1-intro.js`) skips the intro scroll cue.
+
+The CSS half is the blanket `@media (prefers-reduced-motion: reduce)` block in `style.css`,
+which collapses every transition/animation to `0.01ms` with `animation-iteration-count: 1`.
+Near-zero rather than `none` so `transitionend`/`animationend` still fire and the end state
+still lands. It's safe to apply that broadly only because of the rule above — JS-repainted
+elements carry no CSS transition to fight with.
+
+**Deliberately NOT reduced:** motion that *is* the scroll position — @fold9's scrubbed
+timeline and @fold10's glide are the content, not decoration around it, and freezing them
+would leave nothing to read. Nor page9.js's finalized state-1 drop animation.
