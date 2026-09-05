@@ -1967,9 +1967,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 
 .page12-credits {
   margin: 10px 0 0;
-  font: 400 12px/1.4 'Assistant', sans-serif;
-  color: rgba(0, 0, 0, 0.6);
-  text-align: right;
+  font: 400 11px/1.7 'Assistant', sans-serif;
+  letter-spacing: 0.04em;
+  color: rgba(0, 0, 0, 0.5);
+  text-align: center;
 }
 
 .page12-credits a {
