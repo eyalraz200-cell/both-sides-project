@@ -2458,12 +2458,25 @@ function p7DrawYearAxisVertical(ctx, W, H) {
     const top = p7RowY(v.events[i].row, H) - dotR, gap = 2 * dotR;
     if (fillY > top && fillY < top + gap + C) fillY = top + gap + (fillY - top) * C / (gap + C);
   });
+  // The filled line is never painted inside a circle's span: the circle grows
+  // in over a few frames after the fill reaches it, and a dark line showing
+  // through the half-grown dot read as the fill "running through" it. The
+  // grey base line stays continuous so unreached circles aren't given away.
+  const dotSpans = P7_AXIS_EVENTS.map((ev, i) => p7RowY(v.events[i].row, H)).sort((p, q) => p - q);
   segs.forEach(([a, b]) => {
     ctx.fillStyle = hoverActive ? `rgba(0, 0, 0, ${P7_AXIS_UNFILLED_HOVER_ALPHA})` : P7_AXIS_BG_COLOR;
     ctx.fillRect(lineLeft, a, P7_AXIS_LINE_THICKNESS, b - a);
     if (fillY > a) {
       ctx.fillStyle = hoverActive ? `rgba(0, 0, 0, ${P7_AXIS_ROSTER_LABEL_ALPHA})` : P7_AXIS_FILLED_COLOR;
-      ctx.fillRect(lineLeft, a, P7_AXIS_LINE_THICKNESS, Math.min(fillY, b) - a);
+      let from = a;
+      const to = Math.min(fillY, b);
+      dotSpans.forEach(yc => {
+        const t = yc - dotR, u = yc + dotR;
+        if (u <= from || t >= to) return;
+        if (t > from) ctx.fillRect(lineLeft, from, P7_AXIS_LINE_THICKNESS, t - from);
+        from = Math.max(from, u);
+      });
+      if (to > from) ctx.fillRect(lineLeft, from, P7_AXIS_LINE_THICKNESS, to - from);
     }
   });
 

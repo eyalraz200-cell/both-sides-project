@@ -327,7 +327,9 @@ axis so the first event's label can center over its own circle).
   keeps moving, then eases back into step with `curY` over `P7_AXIS_DOT_CATCHUP_PX` (80px,
   running at catchup/(2R+catchup) of scroll speed) so nothing below is offset for good;
   reverse scroll retraces it exactly. `p7DrawAxisEventsVertical` pops its dots on `fillY`, so a
-  circle appears the moment the fill reaches its top. Year labels still flip on the row
+  circle appears the moment the fill reaches its top. The filled line is never painted
+  inside a circle's ±R span (the grey base line stays continuous), so while the dot is still
+  growing in, no dark line shows through it. Year labels still flip on the row
   (`row <= p7CurRow()`) and the year breaks are ordinary axis length; the headline card
   triggers use the true edge.
   Below `reachedT` 0.001 the event stops drawing and stops registering in
