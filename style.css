@@ -1992,11 +1992,12 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   }
   /* id-scoped: the base .page12-share/.page12-credits rules sit later in the file */
   #page-12 .page12-share {
-    margin-top: 12px;
-    padding-top: 10px;
+    margin-top: 11px;
+    padding-top: 11px;
   }
   #page-12 .page12-credits {
-    margin-top: 8px;
+    margin-top: 9px;
+    padding-top: 9px;
   }
 }
 @media (max-height: 820px) {
@@ -2048,8 +2049,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  margin-top: 16px;
-  padding-top: 12px;
+  /* The hairline sits in the MIDDLE of the 38px gap between the copy and the
+     share row — half above the line (margin), half below it (padding). */
+  margin-top: 19px;
+  padding-top: 19px;
   border-top: 1px solid rgba(0, 0, 0, 0.15);
   font-family: 'Assistant', sans-serif;
 }
@@ -2083,8 +2086,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 .page12-credits {
   /* Same hairline as the share row's top border, so the share block is closed
      on both sides and the credits read as their own footer band. */
-  margin: 10px 0 0;
-  padding-top: 10px;
+  margin: 19px 0 0;   /* 38px gap, hairline centred in it — same as .page12-share */
+  padding-top: 19px;
   border-top: 1px solid rgba(0, 0, 0, 0.15);
   font: 400 14px/1.5 'Assistant', sans-serif;
   letter-spacing: 0.04em;
