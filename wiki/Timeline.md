@@ -462,7 +462,13 @@ over `totalRows × CELL`:
   Side blocks dodge centred year labels and same-side ones only.
 - **Hover:** the hovered square's date marks the axis at `p7AxisY(date, H)` in its actor
   colour; `p7.axisEventPositions` is filled with `{x: axisX, y, radius}` so the existing
-  circle hit-test works unchanged.
+  circle hit-test works unchanged. **Two hover rules for the half-dot cards:** (1) while a
+  square is hovered the roster reveal opens every reached card, and their split half-dots
+  stay at the full `P7_AXIS_MARKER_RADIUS` — `prominence` adds `p7AxisRosterT` back for
+  half-dot cards, so only bare (closed-card) dots shrink to the faded radius; (2) the hover
+  marker never lands inside an open card: when its `p7AxisY` falls within a card's
+  `p7AxisEventSpans[i]` it snaps to that card's top or bottom split dot — top if it was in
+  the upper half of the card, bottom otherwise — drawn whole, with its white halo.
 
 ## Hover
 

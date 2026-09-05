@@ -2738,11 +2738,21 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   p7DrawAxisEventsVertical(ctx, W, H, axisX, fillY, hoverActive, hoverAxisY, yearSpans);
 
   if (hoverActive) {
+    // The hovered square's mirror dot never lands inside an open headline
+    // card: when its date falls within a card's span it snaps to that card's
+    // top or bottom split dot — whichever half of the card it is in.
+    let hy = hoverAxisY;
+    for (let i = 0; i < p7AxisEventSpans.length; i++) {
+      const sp = p7AxisEventSpans[i];
+      if (!sp || hy < sp.top || hy > sp.bottom) continue;
+      hy = hy < (sp.top + sp.bottom) / 2 ? sp.top : sp.bottom;
+      break;
+    }
     ctx.save();
     ctx.fillStyle = "#FDFCFF";
-    ctx.beginPath(); ctx.arc(axisX, hoverAxisY, P7_AXIS_MARKER_RADIUS + 1, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(axisX, hy, P7_AXIS_MARKER_RADIUS + 1, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = p7ActorColor(hoveredEvent.actor);
-    ctx.beginPath(); ctx.arc(axisX, hoverAxisY, P7_AXIS_MARKER_RADIUS, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(axisX, hy, P7_AXIS_MARKER_RADIUS, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
 }
@@ -2868,7 +2878,14 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     const hoverTarget = isAxisHovered ? 1 : 0;
     state.hoverT += (hoverTarget - state.hoverT) * P7_AXIS_HOVER_ANIM_SPEED;
     if (Math.abs(hoverTarget - state.hoverT) < 0.001) state.hoverT = hoverTarget;
-    const prominence = Math.max(p7AxisEventOpacity(i, now), state.hoverT) * (1 - p7AxisRosterT);
+    // While a timeline square is hovered the roster reveal opens every reached
+    // card, and its split half-dots must stay at FULL size — the roster only
+    // shrinks bare (closed-card) dots, so p7AxisRosterT is added back for the
+    // half-dot cards below (same ease, so it grows with the reveal).
+    const halfCard = hl === 'widen' && p7V().card && p7V().card.halfDots && p7V().card.anchor === 'center' && evSide === 'center';
+    const prominence = Math.max(
+      Math.max(p7AxisEventOpacity(i, now), state.hoverT) * (1 - p7AxisRosterT),
+      halfCard ? p7AxisRosterT : 0);
     // While the axis is UNDRAWING (@fold10's glide, or scrolling back out)
     // every dot shrinks away on the cards' own fade clock (P7_AXIS_EVENT_FADE_OUT_MS
     // from the outro start — the same instant the cards' leavingAt is set)
@@ -2887,7 +2904,6 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     // Half-dot cards draw the dot themselves (only its inner half); the full
     // dot here fades out as the card fades in, so a faded event keeps its dot.
     // headline 'none': no card ever opens, so the dot is never cut in half.
-    const halfCard = hl === 'widen' && p7V().card && p7V().card.halfDots && p7V().card.anchor === 'center' && evSide === 'center';
     if (halfCard) {
       const st = P7_AXIS_EVENT_STATE[i], rosterOn = st.triggeredAt !== null && st.leavingAt === null;
       const labelOp = Math.min(1, Math.max(p7AxisEventOpacity(i, now), st.hoverT, rosterOn ? p7AxisRosterT : 0));
