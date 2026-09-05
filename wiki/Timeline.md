@@ -334,7 +334,9 @@ axis so the first event's label can center over its own circle).
   reverse scroll retraces it exactly. `p7DrawAxisEventsVertical` pops its dots on `fillY`, so a
   circle appears the moment the fill reaches its top. The filled line is never painted
   inside a span (the grey base line stays continuous), so while the dot is still
-  growing in, no dark line shows through it. Year labels still flip on the row
+  growing in, no dark line shows through it. While the axis undraws (`p7AxisOutroStart`
+  set) the spans shrink on the same `P7_AXIS_EVENT_FADE_OUT_MS` clock as the dots, so no
+  lighter gap is left where a circle was. Year labels still flip on the row
   (`row <= p7CurRow()`) and the year breaks are ordinary axis length; the headline card
   triggers use the true edge.
   Below `reachedT` 0.001 the event stops drawing and stops registering in
