@@ -70,6 +70,13 @@ numbers in the source.
 
 `_debug-glide-perf.js` — `@fold10` glide-stutter attribution.
 
+`_debug-corridor.js` — desktop-only `manual/` for `@fold9`'s horizontal geometry: the dots'
+outer reach (`SBB_TIMELINE_LEFT_PX`, mirrored right), the axis corridor width
+(`P7_VERT.wideCorridorPx`) and the tooltip flip line as one mirrored inset (`P7_TIP_FLIP_L` =
+`P7_TIP_FLIP_R_INSET`, module-level `let`s so the panel can drive them). Every change busts
+`p7UpdateLayout`'s W/H cache and relays out. Ticks in the top margin mark the flip lines
+(red when the hovered dot is past one), the corridor edges and the reach edges.
+
 `_debug-note-style.js`, the `manual/` for the @fold6 ACLED note's chevron and title, was
 deleted after its bake on 2026-09-04, as were `_debug-note-chevron.js` (rule vs chevron),
 `_debug-note-card.js` (the card-style `compare/`) and `_debug-pill-x.js` (the `compare/` for

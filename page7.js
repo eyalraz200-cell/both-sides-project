@@ -68,12 +68,16 @@ function p7Cell() { return isMobile() ? p7MobileSq * (1 + P7_MOBILE_GAP_RATIO) :
 function p7VerticalAxis() { return !isMobile(); }
 function p7CenterGap()    { return p7VerticalAxis() ? (P7_VERT.eventMode === "widen" ? P7_VERT.wideCorridorPx : P7_VERT.corridorPx) : CENTER_GAP; }
 function p7GridGeometry(W, H) {
-  const leftX0  = sbbTimelineLeftX(W, H);
+  const outerX  = sbbTimelineLeftX(W, H);
   const gap     = p7CenterGap();
   const rightX0 = W / 2 + gap / 2;
-  const sideW   = W / 2 - gap / 2 - leftX0;
+  const sideW   = W / 2 - gap / 2 - outerX;
   const CELL    = p7Cell();
   const cols    = Math.floor(sideW / CELL);
+  // Desktop: both grids HUG the corridor, so the corridor edges sit at exactly
+  // W/2 ± gap/2 and the floor()'s leftover px goes to the outer edge on both
+  // sides (mirror-symmetric). Mobile keeps the left grid anchored at outerX.
+  const leftX0  = p7VerticalAxis() ? W / 2 - gap / 2 - cols * CELL : outerX;
   return { leftX0, rightX0, cols, CELL };
 }
 

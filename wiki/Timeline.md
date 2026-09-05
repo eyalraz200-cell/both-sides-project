@@ -27,8 +27,11 @@ Geometry comes from `SBB_TIMELINE` in `squareboundingbox.js`
 at `W − 200` on the right — an exact px picked by eye, never a fraction of W) plus the centre gap: `p7CenterGap()` is
 `P7_AXIS_CORRIDOR_PX = 64` on desktop (the vertical axis's corridor — line, rings and
 18px year labels) and `CENTER_GAP = 4` on mobile. `SBB` itself belongs to page9, **not**
-here. The right camp's origin is mirrored (`W/2 + gap/2`) inside `p7GridGeometry` — there
-is no `right` field.
+here. On desktop **both grids hug the corridor** inside `p7GridGeometry`: the right camp's
+origin is `W/2 + gap/2`, the left camp's is `W/2 − gap/2 − cols·CELL`, so the corridor edges
+sit exactly at `W/2 ± gap/2` and the `floor(sideW / CELL)` leftover lands on the *outer* edge of
+both sides (mirror-symmetric; `leftX0` is therefore ≥ the 200px inset, not equal to it). Mobile
+keeps the left grid anchored at `sbbTimelineLeftX`. There is no `right` field.
 
 `P7_SQ = 3.5`, `P7_GAP = 1.5`, `P7_CELL = 5` are the *ceiling*: on desktop the square is
 **solved per viewport** like mobile (`p7SolveVerticalSq` → `p7DesktopSq`, read through
@@ -451,7 +454,17 @@ onto a moving target. Otherwise it runs
 The tooltip is `#page9Tooltip`, **shared with page9 and @fold7's demo** — which is why
 `hideSquare()` (clears only the square tooltip, guarded on `p7.hoveredEvent` being set)
 is separate from `hide()` (clears both targets). `tooltipEl.style.color` is set to the
-actor color and the dashed SVG border strokes `currentColor`; `.is-mirrored` flips the
+actor color and the dashed SVG border strokes `currentColor`. Above 600px the box is
+instead **filled**, and the fill comes from a second property, `--tip-fill`, set beside
+`color` from `tooltipFill()` (js/core.js): the fill carries white text, and two group
+colours — תנועות התנחלות `#F9B624` (~1.7:1 against white) and מפגינים ערבים ישראלים
+`#31CE1C` (~1.9:1) — are too light for that, so `tooltipFill` scales RGB down uniformly
+(hue untouched) until relative luminance clears `TOOLTIP_FILL_MAX_L` **0.28**. That
+ceiling is the luminance of `#6B89FF`, the lightest colour that already read fine, so the
+other four pass through byte-identical. `color` deliberately stays the TRUE group colour —
+it strokes mobile's dashed frame, where the text is dark on white and the real hue should
+show. @fold7's demo feeds the lerped grey→colour value through it every frame, so the
+darkening is continuous rather than a snap at the end; `.is-mirrored` flips the
 box for `side === "left"` — except outside the two horizontal flip lines, which keep the
 box off the mini-legends: a dot left of `P7_TIP_FLIP_L` (**475 px from the left edge**)
 always opens rightward (`mirrored = false`), a dot within `P7_TIP_FLIP_R_INSET`
