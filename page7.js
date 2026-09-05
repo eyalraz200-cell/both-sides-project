@@ -2445,7 +2445,11 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   // Year rings + labels. A tick is reached once the fill edge is past its row.
   ctx.font = `18px 'Assistant', sans-serif`;
   ctx.textAlign = "center";
-  ctx.textBaseline = "top";
+  // measureText's ink boxes are relative to the CURRENT baseline — measure
+  // under 'alphabetic' (under 'top' the first label's ascent came back wrong
+  // and it drew ~14px too high; later labels measured right only because the
+  // loop below had already switched the baseline).
+  ctx.textBaseline = "alphabetic";
   for (const m of marks) {
     const { tick, row } = m;
     // Ring (when on) at the top of the centred block; with the ring off R is
