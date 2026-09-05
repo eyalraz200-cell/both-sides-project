@@ -1961,7 +1961,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 /* The card's size is set from the VIEWPORT EDGES, not from its copy: a 48px
    gap above and below (height = 100vh − 2×48), and the width is the narrowest
    frame at which the copy fits that height — tuned by eye on a 982px-tall
-   viewport (407px of copy + 40px side padding + 2px borders = 491px). On a
+   viewport (440px of copy + 40px side padding + 2px borders = 522px) — re-solved
+   after the credits went to 14px, since the fixed height only keeps its
+   padding while the copy actually fits inside it. On a
    shorter viewport the copy needs more width than this; the max-height
    queries below trim the padding to buy some back. The .text-card wrapper
    is fit-content so the frame stays centred past the 480px --card-w column. */
@@ -1971,7 +1973,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 #page-12 .text-card-frame {
   width: 522px;
   height: calc(100vh - 96px);
-  padding: 40px 40px 48px;
+  padding: 40px;   /* even on all four sides — an uneven bottom read as a gap */
   box-sizing: border-box;
   direction: rtl;
 }
@@ -1982,7 +1984,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    min-height comment above), so trim the card's own padding here instead. */
 @media (max-height: 920px) {
   #page-12 .text-card-frame {
-    padding: 24px 28px 28px;
+    padding: 24px 28px;
   }
   /* id-scoped: the base .page12-share/.page12-credits rules sit later in the file */
   #page-12 .page12-share {
@@ -1995,7 +1997,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 }
 @media (max-height: 820px) {
   #page-12 .text-card-frame {
-    padding: 18px 22px 22px;
+    padding: 18px 22px;
   }
 }
 
