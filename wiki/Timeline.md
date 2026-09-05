@@ -357,6 +357,10 @@ axis so the first event's label can center over its own circle).
   the last one, which would otherwise stay fully typed until the wipe's clip cut it off). The
   reach test has to be skipped, not merely overridden: the exit branches force `currentDate` to
   `maxDate`, which reads as "reached" and would cancel the fade the frame after it began.
+  On desktop the **dots shrink out with the cards** on the same clock: `p7DrawAxisEventsVertical`
+  multiplies `markerRadius` by `1 − p9Ease((now − p7AxisOutroStart) / P7_AXIS_EVENT_FADE_OUT_MS)`
+  while the outro runs (the half-dots on an open card shrink with it, since they share
+  `markerRadius`). `reachedT` is untouched, so a cancelled outro resumes at full size.
 
 There is no dot-snapping anymore (`p7AxisEventX` caches each event's true date position), and the old
 dashed-line helpers were removed when the line went solid. **The design reference is the
@@ -472,7 +476,22 @@ colours — תנועות התנחלות `#F9B624` (~1.7:1 against white) and מ�
 `#31CE1C` (~1.9:1) — are too light for that, so `tooltipFill` scales RGB down uniformly
 (hue untouched) until relative luminance clears `TOOLTIP_FILL_MAX_L` **0.28**. That
 ceiling is the luminance of `#6B89FF`, the lightest colour that already read fine, so the
-other four pass through byte-identical. `color` deliberately stays the TRUE group colour —
+other four pass through byte-identical.
+
+**One hand-picked exception, `TOOLTIP_FILL_OVERRIDES`:** תנועות התנחלות `#F9B624` maps to
+`rgb(186, 92, 30)` (`#ba5c1e`, **4.53:1** — past AA 4.5) rather than to what the scaling
+gives it. Uniform scaling holds the hue angle, and #F9B624's ~40° darkened is olive/brown —
+brown *is* dark orange-yellow, so there is no dark yellow that still reads as yellow. The
+override rotates it to hue 24° at 84% saturation, the brightest value there still clearing
+AA, chosen by eye off a solved hue × saturation grid (2026-09-05). Matching is by proximity,
+not equality — within `TOOLTIP_OVERRIDE_NEAR` (**90**, Manhattan) the override is blended
+with the generic result by closeness, so @fold7's grey→colour lerp arrives at the picked
+hue continuously instead of popping to it on the last frame. The generic scaling now lives
+in `tooltipFillScaled(r, g, b)`, which returns an `[r, g, b]` triple; `tooltipFill` is the
+public entry point and still returns an `rgb()` string. Its bisection rounds to 8-bit
+**first and then verifies**, stepping the factor down until the rounded colour truly clears
+the ceiling — rounding a channel up used to push luminance back over it (yellow landed at
+4.48:1 against a 4.50 target). `color` deliberately stays the TRUE group colour —
 it strokes mobile's dashed frame, where the text is dark on white and the real hue should
 show. @fold7's demo feeds the lerped grey→colour value through it every frame, so the
 darkening is continuous rather than a snap at the end; `.is-mirrored` flips the

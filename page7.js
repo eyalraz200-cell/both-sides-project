@@ -2653,8 +2653,16 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     state.hoverT += (hoverTarget - state.hoverT) * P7_AXIS_HOVER_ANIM_SPEED;
     if (Math.abs(hoverTarget - state.hoverT) < 0.001) state.hoverT = hoverTarget;
     const prominence = Math.max(p7AxisEventOpacity(i, now), state.hoverT) * (1 - p7AxisRosterT);
+    // While the axis is UNDRAWING (@fold10's glide, or scrolling back out)
+    // every dot shrinks away on the cards' own fade clock (P7_AXIS_EVENT_FADE_OUT_MS
+    // from the outro start — the same instant the cards' leavingAt is set)
+    // instead of sitting at full size until the wipe's clip cuts it: the exit
+    // path forces currentDate to maxDate, which reads every dot as reached.
+    // reachedT itself is left alone so a cancelled outro resumes seamlessly.
+    const outroShrink = p7AxisOutroStart === null ? 1
+      : 1 - p9Ease(Math.min(1, (now - p7AxisOutroStart) / P7_AXIS_EVENT_FADE_OUT_MS));
     const markerRadius = (P7_AXIS_MARKER_RADIUS_FADED +
-      (P7_AXIS_MARKER_RADIUS - P7_AXIS_MARKER_RADIUS_FADED) * prominence) * state.reachedT;
+      (P7_AXIS_MARKER_RADIUS - P7_AXIS_MARKER_RADIUS_FADED) * prominence) * state.reachedT * outroShrink;
     const isHighlighted = highlightY !== null && Math.abs(y - highlightY) < 0.5;
     const markerColor = hoverActive
       ? (isHighlighted ? P7_AXIS_HOVER_COLOR : P7_AXIS_BG_COLOR)
