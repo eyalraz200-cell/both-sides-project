@@ -110,3 +110,37 @@ function p12ShareInit() {
     });
   });
 }
+
+// The @fold13 card's height comes from the viewport (100vh − 2×48px, style.css
+// #page-12 .text-card-frame). Its WIDTH is solved here, because CSS can't: a
+// narrower column is a taller one, so the narrowest width at which the copy
+// still clears the bottom padding is also the width that FILLS the card — any
+// wider and the leftover height opens as a void above and below the centred
+// copy. Searched between P12_CARD_MIN_W and P12_CARD_MAX_W; the CSS width is
+// the answer for a 982px-tall viewport and stands if this never runs.
+const P12_CARD_MIN_W = 320;
+const P12_CARD_MAX_W = 900;
+function p12CardWidthFit() {
+  const f = document.querySelector("#page-12 .text-card-frame");
+  if (!f) return;
+  if (window.innerWidth <= 600) { f.style.removeProperty("width"); return; }  // mobile card is height:auto
+  const fits = (w) => {
+    f.style.width = w + "px";
+    const fr = f.getBoundingClientRect();
+    const padB = parseFloat(getComputedStyle(f).paddingBottom);
+    const last = f.lastElementChild.getBoundingClientRect();
+    return last.bottom - fr.top <= fr.height - padB + 0.5;
+  };
+  if (fits(P12_CARD_MIN_W)) return;              // the copy fills even the narrowest card
+  let lo = P12_CARD_MIN_W, hi = P12_CARD_MAX_W;
+  if (!fits(hi)) return;                         // nothing in range holds the copy — keep the widest
+  while (hi - lo > 1) { const mid = Math.round((lo + hi) / 2); if (fits(mid)) hi = mid; else lo = mid; }
+  fits(hi);
+}
+// Web fonts land after bootstrap runs and change how the copy wraps, so solve again.
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => p12CardWidthFit());
+let p12CardFitT = null;
+window.addEventListener("resize", () => {
+  clearTimeout(p12CardFitT);
+  p12CardFitT = setTimeout(p12CardWidthFit, 120);
+});
