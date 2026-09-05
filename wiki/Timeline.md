@@ -384,7 +384,10 @@ over `totalRows × CELL`:
 - **Headlines:** dot on the line at `p7RowY(events[i].row)` (`p7DrawAxisMarker`: the bare
   coloured disc, no white halo); "reached" = its y ≤ the fill
   edge. `p7UpdateAxisEventTriggers` uses one rule for all seven on desktop:
-  `p7CurRow() ≥ events[i].reachRow`. The block — **the date line first, then the title lines**
+  `p7CurRow() ≥ events[i].reachRow` to open; **reverse hysteresis** — a headline that is
+  open stays open on the way back up until the fill edge retreats to the *previous* event's
+  `reachRow` (the first headline: its own row), then it closes and the previous one, still
+  reached by the same rule, crossfades back in. The block — **the date line first, then the title lines**
   (`dateAbove` true, `bar.dateBelow` false; `p7WrapLabel`, `maxWidth` 320 in band mode, `p7CenterGap() − 16` in
   widen mode) — hangs under the dot (`P7_VERT_EVENT_TEXT_GAP` 6), centred on the axis, on
   a punched background drawn at the label's opacity; the punch runs from the dot's edge (or
