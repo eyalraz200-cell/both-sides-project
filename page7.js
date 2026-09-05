@@ -981,9 +981,63 @@ async function initPage7() {
     p7.maxDate     = data[data.length - 1].date;
     p7.currentDate = p7.minDate;
     p7.ready       = true;
+    p7BuildDataSummary(data);
   } catch (err) {
     console.error("Failed to load events:", err);
   }
+}
+
+// Text alternative for <canvas> — see the #canvasA11ySummary comment in
+// project.html. The scrolling <h2> cards are already real DOM, so a screen
+// reader gets the argument of the piece for free; what it can't get is
+// anything the canvas draws. That's what this supplies: who the six groups
+// are and which camp each sits in, how many documented actions each has, the
+// date range, and the category breakdown.
+//
+// Derived from the events array, never hardcoded: the xlsx is regenerated on
+// every server start (load_events, server.py), so any figure written by hand
+// here would silently go stale the next time the data changes.
+function p7BuildDataSummary(data) {
+  const host = document.getElementById("canvasA11ySummary");
+  if (!host || typeof GROUPS === "undefined") return;
+
+  const he = (n) => n.toLocaleString("he-IL");
+  // events.json stores YYYY-MM-DD; the rest of the page shows DD-MM-YYYY.
+  const date = (iso) => iso.split("-").reverse().join("-");
+
+  const byActor    = new Map();
+  const byCategory = new Map();
+  for (const e of data) {
+    byActor.set(e.actor, (byActor.get(e.actor) || 0) + 1);
+    byCategory.set(e.category, (byCategory.get(e.category) || 0) + 1);
+  }
+
+  // FOLD4_COALITION_ROWS/FOLD4_CHANGE_ROWS are the same camp split the legend
+  // renders, so the spoken roster and the drawn one can't disagree.
+  const camps = [
+    { name: "מחנה הימין",  rows: FOLD4_COALITION_ROWS, side: "right" },
+    { name: "גוש השינוי", rows: FOLD4_CHANGE_ROWS,    side: "left"  },
+  ];
+
+  const campList = camps.map(c => {
+    const total = data.filter(e => e.side === c.side).length;
+    const items = c.rows.map(g =>
+      `<li>${g.label}: ${he(byActor.get(g.actor) || 0)} פעולות מתועדות</li>`).join("");
+    return `<h3>${c.name} — ${he(total)} פעולות מתועדות</h3><ul>${items}</ul>`;
+  }).join("");
+
+  const catList = [...byCategory.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([cat, n]) => `<li>${cat}: ${he(n)}</li>`)
+    .join("");
+
+  host.innerHTML =
+    `<h2>תיאור מילולי של הנתונים</h2>` +
+    `<p>הפרויקט מציג ${he(data.length)} פעולות פוליטיות מתועדות שהתרחשו במרחב הציבורי ` +
+    `בישראל ובשטחים, בין ${date(p7.minDate)} ל־${date(p7.maxDate)}. ` +
+    `הנתונים מגיעים מ־ACLED. כל ריבוע בהדמיה מייצג פעולה אחת, וצבעו מציין את הקבוצה שביצעה אותה.</p>` +
+    `<h3>חלוקה למחנות ולקבוצות</h3>` + campList +
+    `<h3>חלוקה לפי סוג הפעולה</h3><ul>${catList}</ul>`;
 }
 
 function p7UpdateLayout(W, H) {
@@ -2387,7 +2441,13 @@ function p7DrawYearAxis(ctx, W, H) {
 const P7_VERT_EVENT_LINE_ALPHA  = 0.18; // A2 rule across the camps
 const P7_VERT_EVENT_TEXT_GAP    = 6;    // px between the dot's edge and the title's first line
 const P7_VERT_YEAR_LABEL_GAP    = 6;    // px between a year ring and its label
-const P7_AXIS_DOT_CATCHUP_PX    = 80;   // px of axis over which the fill edge, having skipped a headline dot, eases back into step with the true edge
+const P7_AXIS_DOT_CATCHUP_PX    = 80;   // px of axis over which the fill edge, having skipped a headline circle/card, eases back into step with the true edge
+// Per headline event, the axis span its circle currently occupies — the dot
+// alone (±R) while closed, the whole open card while the circle has opened
+// into one (the card's dot-facing edge sits on the dot centre; its far edge
+// travels). Written by p7DrawAxisEventsVertical each frame, read by the next
+// frame's p7DrawYearAxisVertical so the fill skips it. null = dot only.
+const p7AxisEventSpans = [];
 
 function p7DrawYearAxisVertical(ctx, W, H) {
   if (!p7.vert) return;
@@ -2452,17 +2512,23 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   // (running at catchup/(2R+catchup) of scroll speed), so nothing below is
   // offset for good. Pure function of curY — reverse scroll retraces it
   // exactly, jumping back out at the top the same way.
+  // The span skipped is whatever the circle is right now: the dot alone, or
+  // the card it has opened into (p7AxisEventSpans) — the fill enters at the
+  // card's top edge and comes out under it at once, growing with the card.
   let fillY = curY;
   const dotR = P7_AXIS_MARKER_RADIUS, C = P7_AXIS_DOT_CATCHUP_PX;
-  P7_AXIS_EVENTS.forEach((ev, i) => {
-    const top = p7RowY(v.events[i].row, H) - dotR, gap = 2 * dotR;
+  const dotSpans = P7_AXIS_EVENTS.map((ev, i) => {
+    const y = p7RowY(v.events[i].row, H), sp = p7AxisEventSpans[i];
+    return sp ? [Math.min(sp.top, y - dotR), Math.max(sp.bottom, y + dotR)] : [y - dotR, y + dotR];
+  }).sort((p, q) => p[0] - q[0]);
+  dotSpans.forEach(([top, bottom]) => {
+    const gap = bottom - top;
     if (fillY > top && fillY < top + gap + C) fillY = top + gap + (fillY - top) * C / (gap + C);
   });
   // The filled line is never painted inside a circle's span: the circle grows
   // in over a few frames after the fill reaches it, and a dark line showing
   // through the half-grown dot read as the fill "running through" it. The
   // grey base line stays continuous so unreached circles aren't given away.
-  const dotSpans = P7_AXIS_EVENTS.map((ev, i) => p7RowY(v.events[i].row, H)).sort((p, q) => p - q);
   segs.forEach(([a, b]) => {
     ctx.fillStyle = hoverActive ? `rgba(0, 0, 0, ${P7_AXIS_UNFILLED_HOVER_ALPHA})` : P7_AXIS_BG_COLOR;
     ctx.fillRect(lineLeft, a, P7_AXIS_LINE_THICKNESS, b - a);
@@ -2470,8 +2536,7 @@ function p7DrawYearAxisVertical(ctx, W, H) {
       ctx.fillStyle = hoverActive ? `rgba(0, 0, 0, ${P7_AXIS_ROSTER_LABEL_ALPHA})` : P7_AXIS_FILLED_COLOR;
       let from = a;
       const to = Math.min(fillY, b);
-      dotSpans.forEach(yc => {
-        const t = yc - dotR, u = yc + dotR;
+      dotSpans.forEach(([t, u]) => {
         if (u <= from || t >= to) return;
         if (t > from) ctx.fillRect(lineLeft, from, P7_AXIS_LINE_THICKNESS, t - from);
         from = Math.max(from, u);
@@ -2708,6 +2773,7 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     const st = P7_AXIS_EVENT_STATE[i];
     const rosterOn = st.triggeredAt !== null && st.leavingAt === null;
     const opacity = Math.max(p7AxisEventOpacity(i, now), st.hoverT, rosterOn ? p7AxisRosterT : 0);
+    p7AxisEventSpans[i] = null;
     if (opacity <= 0) return;
     const TY = P7_VERT.type;
     ctx.font = p7VertFont(TY.title);
@@ -2789,6 +2855,7 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
       // Animated rect: the dot-facing edge stays put, the far edge travels.
       const chA = halfCard ? chF * openT : chF;
       const cyA = flipped ? cyF + chF - chA : cyF;
+      if (centred) p7AxisEventSpans[i] = { top: cyA, bottom: cyA + chA };
       if (halfCard) {
         ctx.globalAlpha = 1;
         if (openT <= 0) {
