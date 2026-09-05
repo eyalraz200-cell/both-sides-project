@@ -70,10 +70,6 @@ numbers in the source.
 
 `_debug-glide-perf.js` — `@fold10` glide-stutter attribution.
 
-`_debug-bar-opacity.js` — desktop-only `manual/` for the @fold9 headline card's two accent
-bars: one opacity slider each for the top bar (`P7_VERT.bar.alphaTop`) and the bottom bar
-(`alphaBottom`). Replaced `_debug-card-border.js` on 2026-09-05.
-
 `_debug-note-style.js`, the `manual/` for the @fold6 ACLED note's chevron and title, was
 deleted after its bake on 2026-09-04, as were `_debug-note-chevron.js` (rule vs chevron),
 `_debug-note-card.js` (the card-style `compare/`) and `_debug-pill-x.js` (the `compare/` for
