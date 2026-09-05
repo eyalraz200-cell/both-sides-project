@@ -328,8 +328,9 @@ function p7SolveVerticalSq(sideW, sideH, maxEvents) {
     const cols = Math.floor(sideW / CELL), rows = Math.floor(sideH / CELL);
     const cap  = Math.max(1, Math.floor(cols * P7_VERT.fillRatio));
     const avail = rows - bands * Math.ceil(P7_VERT.bandPx / CELL);
-    // Every fixed-span row must fit the box.
-    if (rows < p7VertRowPlan(CELL).totalRows) continue;
+    // Every fixed-span row, plus the first year's header label above row 0,
+    // must fit the box (so p7VertTopY can centre the axis in it).
+    if (sideH < p7VertRowPlan(CELL).totalRows * CELL + p7VertYearHeaderH()) continue;
     if (avail * cap >= maxEvents * 1.06) return sq;
   }
   return 1.5;
@@ -465,7 +466,23 @@ function p7RowEndOfDate(dateStr) {
   return v.rowStart[d] + v.rowsOf[d];
 }
 // Row → canvas y (top of that row) and the axis line's own extent.
-function p7VertTopY(H) { return Math.round(H * sbbTimeline(H).top); }
+// Row 0's y. Mobile: the box's top. Desktop (vertical axis): the axis — the
+// first year's header label above it plus totalRows of line — is centred
+// vertically in the box, so the slack between the solved cell size and the
+// box height splits evenly above and below instead of pooling at the bottom.
+// The dot grids share this origin (their rows are dates), so they move with it.
+function p7VertYearHeaderH() {
+  const ring = P7_VERT.yearRing;
+  return (ring ? P7_AXIS_MARKER_RADIUS * 2 + P7_VERT_YEAR_LABEL_GAP : 0) + 21 + P7_VERT.yearGapPad * 2;
+}
+function p7VertTopY(H) {
+  const box  = sbbTimeline(H);
+  const boxT = Math.round(H * box.top);
+  if (!p7VerticalAxis() || !p7.vert || !p7.CELL) return boxT;
+  const boxB = Math.round(H * box.bottom);
+  const len  = p7.vert.totalRows * p7.CELL + p7VertYearHeaderH();
+  return Math.round(boxT + Math.max(0, (boxB - boxT - len) / 2) + p7VertYearHeaderH());
+}
 function p7RowY(row, H) { return p7VertTopY(H) + row * p7.CELL; }
 function p7AxisY(dateStr, H) { return p7RowY(p7RowOfDate(dateStr), H); }
 // The fill edge in rows — the bottom of currentDate's rows.
@@ -1074,7 +1091,7 @@ function p7TargetForActorOccurrence(actor, n, W, H) {
   const resolved = p7ResolveActorOccurrenceCell(actor, n);
   if (!resolved) return null;
 
-  const topY = Math.round(H * sbbTimeline(H).top);
+  const topY = p7VertTopY(H);
   const x0  = resolved.side === "left" ? p7.leftX0 : p7GridGeometry(W, H).rightX0;
   const col = resolved.cell % p7.cols;
   const row = Math.floor(resolved.cell / p7.cols);
@@ -1176,7 +1193,7 @@ function p7DrawTimelineSquares(ctx, W, H) {
   if (p7EntryAnim && performance.now() - p7EntryAnim.start >= p7EntryAnim.duration) p7EntryAnim = null;
 
   const { CELL, SQ, cols, leftX0 } = p7;
-  const topY    = Math.round(H * sbbTimeline(H).top);
+  const topY    = p7VertTopY(H);
   const rightX0 = p7GridGeometry(W, H).rightX0;
 
   // Events from months whose cascade has already fully finished are settled (drawn

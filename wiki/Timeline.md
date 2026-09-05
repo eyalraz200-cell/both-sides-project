@@ -61,8 +61,14 @@ linear in time and a row's fill width *is* its event count. The dot rows run on
 **unbroken** across year boundaries — no empty rows for the year markers. `plan.yearRow`
 maps each year to the integer row its 1 January starts on; that row's top edge is where the
 drawn line breaks for the year digits (a px break only, see below). 161 rows total at
-1440×900. `p7SolveVerticalSq` shrinks the square until the plan's rows fit the
-box (3.3 px at 1440×900; one-week rows needed 183 and 2.9 px, which is why 8 days won).
+1440×900. `p7SolveVerticalSq` shrinks the square until the plan's rows **plus the first
+year's header label** (`p7VertYearHeaderH()`: 21px digits, ring + 6 when on, `yearGapPad`
+above and below) fit the box (3.3 px at 1440×900; one-week rows needed 183 and 2.9 px,
+which is why 8 days won). **Row 0's y is `p7VertTopY(H)`**: on desktop the whole span
+(header + `totalRows × CELL`) is centred vertically in the box, so the slack left by the
+solved cell size splits evenly above and below rather than pooling at the bottom; the dot
+grids, the axis, the headlines and page8's glide start all read this one origin (mobile:
+the box's top edge).
 `p7RowOfDate` (middle of the day's slice — ticks, hover marker, widen-mode dots),
 `p7RowEndOfDate` (bottom — the fill edge, `p7CurRow()` for `currentDate`), `p7RowY(row, H)`
 and `p7AxisY(dateStr, H)` read the map. A date past `maxDate` clamps to the end.
