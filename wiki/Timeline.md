@@ -86,7 +86,7 @@ resize/relayout reproduces itself.
 The tunables live in `P7_VERT` (`page7.js`): `corridorPx` (band), `eventMode`, `eventLine`,
 `bandPx` 60, `wideCorridorPx` 208, `fillRatio` 1, `daysPerRow` 8, `yearGapPad` 3,
 `yearRing` false, `yearSide`/`eventSide` `'center'`, `dateSide` `'with'`, `dateAbove` true,
-`sideGap` 8, `firstOnlyBelow` true, `card` `{ style 'plain', fill #FDFCFF, padX 16, padTop 6,
+`sideGap` 8, `card` `{ style 'plain', fill #FDFCFF, padX 16, padTop 6,
 padBottom 6, radius 4, radiusBottom 0, gap 0, stem false, bar true, barTop true, sides false, sidesAlpha 1, halfDots true, anchor 'center' }` (the headline block, see "Headlines" below) — shipped defaults are **widen mode, line off, everything centred on the line**
 (compare/ "version 1", picked 2026-09-04). The side/alternate/split placements
 (`yearSide`/`eventSide` `'left'`/`'right'`, `eventSide` `'alternate'`, `dateSide` `'left'`/`'right'`)
@@ -447,8 +447,8 @@ over `totalRows × CELL`:
   stay as code paths. Each line's ink is centred in its line box (`p7VertLineText`, measured on a fixed reference with an alphabetic baseline), so a card pads the text equally above and below. **Type** is `P7_VERT.type` (desktop only;
   mobile keeps the `P7_AXIS_*_FONT` constants): title 500 14px, line height 19, black;
   date 400 14px, line height 19, black at 0.3, **but `showDate` is false — the block is the title alone**
-  (no date line; the axis's years give the time). `gap` 0 extra px between title and date when a date is shown. With `anchor 'edge'` the dot-to-block gap would be `card.gap` plus whichever card pad faces the dot. **Default side** (`P7_VERT.firstOnlyBelow` true): the first
-  headline hangs under its dot; every later one sits **above** its dot (bottom edge
+  (no date line; the axis's years give the time). `gap` 0 extra px between title and date when a date is shown. With `anchor 'edge'` the dot-to-block gap would be `card.gap` plus whichever card pad faces the dot. **Default side**: a headline hangs under its dot (the card opens downward); an event
+  flagged `above: true` in `P7_AXIS_EVENTS` (currently only נפילת משטר אסד) sits **above** its dot (bottom edge
   `P7_VERT_EVENT_TEXT_GAP` above the dot, punch from the block's top down to the dot's
   edge). The only dodge: if the default side would overlap a year label (`yearSpans`,
   collected while the years are drawn) the block flips to the other side of its dot; only
