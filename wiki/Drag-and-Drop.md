@@ -11,14 +11,23 @@ the matching event dots migrate above the divider line.
 ## Layout
 
 `<section class="text-section page9-panel" data-page="10" id="page-10">`, `min-height: 200vh`
-= 100vh scrolling title row + 100vh sticky panel.
+= 100vh scrolling title row + 100vh sticky panel on mobile. **Desktop trims it to 150vh
+(`.page9-title-row` 50vh + `.page9-sticky` 100vh).** The panel engages when the title card
+sticks; the @fold12 gate is one viewport before `#page-11`, so with a 100vh row the card
+stuck ~42vh in and the gate sat at 100vh — ~55vh of pinned, engaged, motionless panel before
+the closing card could start rising. With the 50vh row the card centres 21vh in, sticks ~17vh
+in, and the gate is at 50vh. The trim comes off the **row, not the sticky**: the sticky must
+keep its full 100vh so it reaches `top: 0` at exactly the scroll position `.frozen` swaps it
+to fixed — a 50vh sticky was still mid-viewport at that moment and everything positioned
+inside it (the header) jumped to the top. The gate must stay *after* the stick point, or it
+would hold scroll where the card never pins and the fold deadlocks.
 
 - `.page9-title-row` — the normal scrolling title card plus `.page9-header-subtitle`
   — whose text is set from JS (`p9SyncSubtitle`, re-run on resize), because the gesture it
   names differs by breakpoint: `P9_SUBTITLE_DESKTOP` "גררו סוגי פעולות הנחשבות
   קיצוניות בעיניכם" / `P9_SUBTITLE_MOBILE` "בחרו סוגי פעולות הנחשבות קיצוניות בעיניכם". The desktop
   string is also `project.html`'s literal markup; JS overwrites it.
-- `.page9-sticky` — `position: sticky; top: 0; height: 100vh`. Gains `.engaged` once the
+- `.page9-sticky` — `position: sticky; top: 0; height: 100vh` at every width (see above — the desktop trim is on the title row). Gains `.engaged` once the
   title card sticks, `.dragging` during a pointer drag, and `.frozen`
   (`position: fixed`) at the outro fold.
 - `.page9-zone-wrap-extreme` — `position: fixed`, centered, `top: 14vh; bottom: 28.78vh`,
@@ -35,7 +44,7 @@ the matching event dots migrate above the divider line.
 - `.page9-tray` — `position: fixed; bottom: 0`, slides up from `translateY(100%)` under
   `.engaged` over `0.85s cubic-bezier(0.22, 1, 0.36, 1)`. Holds `.page9-tray-title`
   ("סוגי פעולות") and `#page9ZoneBelow`, whose two `.page9-tray-row` grids are built in
-  JS. On mobile it is instead a **band at `top: 108px`**, under the title card and above the
+  JS. On mobile it is instead a **band at `top: 116px`**, under the title card and above the
   docked tooltip frame (which has already dropped clear of it back at @fold10's title crossing,
   `p9TooltipDropTrigger`), sliding in from *above*, with `.page9-tray-title` hidden and a rule on
   its bottom edge only; the two wrappers are `display: contents` and
@@ -121,6 +130,39 @@ sets `p9.maxPillWidth`, per-row `gridTemplateColumns`, row heights, and the thre
 It is deferred rather than called inline because it now branches on `isMobile()`, which
 lives in `js/core.js` — a *later* `<script>` than `page9.js`, and function declarations
 don't hoist across separate classic scripts. Same reason for `p9SyncSubtitle`.
+
+### Keyboard path
+
+A third gesture, alongside drag and click: the pills are **focusable** (`tabIndex = 0`,
+`role="button"`, `aria-pressed`) and **Enter/Space toggles** the focused pill between the
+two zones. They stay `<div>`s — a real `<button>` brings baseline styling and an implicit
+activation that collides with the manual `pointerdown` drag; the ARIA pair buys the
+semantics without either.
+
+It routes through the **same** commit functions the pointer paths use — desktop calls
+`commitDrop`, exactly what the drag's `if (!moved)` click branch calls; mobile re-fires its
+own `click` handler — so the finalized state-1 drop animation is reached identically. There
+is no second writer of `p9.sides`.
+
+Two supporting pieces:
+
+- **`syncPillA11y(pill)`** keeps `aria-pressed` current and writes an off-screen
+  `aria-live="polite"` announcer (`.a11y-only`, appended to `<body>` in `p9BuildPanel`) —
+  the visible result of a classification is a canvas animation and a count, neither of
+  which is in the accessibility tree. It reads the pill's **current placement**, not
+  `p9.sides`, so it's correct when called from `placePillInZone` (every desktop path) and
+  from the mobile in-place class toggle, both of which run before `commitDropState`.
+- **`pill.focus()`** after the desktop commit: `commitDrop` re-parents the pill between
+  zones, and moving a focused element drops focus to `<body>` in some browsers, which would
+  reset the tab order after every classification.
+
+`.page9-pill:focus-visible` (`style.css`) is the ring — `outline` + `outline-offset`, never a
+border or box-shadow, because the tray's grid tracks are baked from measured pill widths
+(`p9MeasureTrayLayout`) and a focus style that changed the box would reflow the row.
+
+**This is what unlocks @fold12.** `p13GateLocked()` (`js/fold11.js`) blocks scrolling until a
+pill is classified; before the keyboard path existed, folds 12-13 were unreachable without a
+pointer.
 
 ## Canvas rendering — `drawPage9`
 
@@ -232,7 +274,7 @@ Scroll-driven reset/restore (`p9ResetDrops` / `p9RestoreDrops`, driven from
 loop (`p9RunAnimLoop`, `p9LineRunLoop`, both count loops, the count-position animator)
 paints while `p9PageVisible()` — currentPage 9 **or** 10 — because `drawPage12` renders
 through `drawPage9`, so a mid-flight drop keeps flying and finishes on @fold12's canvas.
-If @fold13's card reaches the top mid-flight, `fold13Trigger`'s morph wins
+If @fold12's card reaches mid-screen mid-flight, `fold13Trigger`'s morph wins
 regardless: `updateFold13` snapshots the live `p9.lastPositions` (mid-flight spots) as
 the scatter's start, and `drawBandedCols` stops painting the clustered/flying extreme
 dots the moment `fold13ExtremeMorphT > 0`, so the dots scatter from wherever they were.
@@ -251,7 +293,14 @@ stroke and the tooltip's `--tip-border-w` (the transparent CSS border holding th
 box-model space open), and derives the path inset/radius from it.
 
 The tooltip normally opens **upward** from the dot (square anchor corner bottom-left,
-bottom-right for left-side events via `.is-mirrored`). On desktop, when the upward box
+bottom-right for left-side events via `.is-mirrored`) — but the data-side rule is
+overridden at the screen edges by **the same two vertical flip lines @fold9's timeline
+hover uses, sharing its constants** (`P7_TIP_FLIP_L` / `P7_TIP_FLIP_R_INSET`, both 327,
+`page7.js`): a dot left of `P7_TIP_FLIP_L` always opens rightward, a dot within
+`P7_TIP_FLIP_R_INSET` of the right edge always opens leftward. Deliberately one shared
+pair of constants, not two tuned sets — the two tooltips must never disagree about which
+way they open, and each line is a px distance from the edge its mini-legend hangs off, so
+both follow a window resize. On desktop, when the upward box
 would poke above the column area's fixed ceiling (`p9ExtremeTopY(H)` — the same boundary
 the grid grows up to, under the drop zone / pill row), it **flips downward** instead:
 `.is-flipped` hangs the box below the dot and moves the square anchor corner to the top
@@ -541,7 +590,7 @@ This is the same suppression the graphic column carries for @fold9's loupe.
   trailing the docked tooltip frame in its dropped-for-@fold11 spot. The frame's expanded
   state overlays this grid rather than moving it (hence the *collapsed* height) — see
   [Timeline](Timeline.md).
-- `p9DockTopM()` → `P9_TRAY_TOP_M (104) + p9TrayH() + P9_TRAY_TOOLTIP_GAP_M (20)` — where the
+- `p9DockTopM()` → `P9_TRAY_TOP_M (116) + p9TrayH() + P9_TRAY_TOOLTIP_GAP_M (20)` — where the
   frame comes to rest below the pill band. (Matches `P9_TOOLTIP_GRID_GAP_M` (20) — one rhythm; change them together.) The extreme grid follows the frame since it derives from this. The tray height is read with `offsetHeight`, which
   is transform-independent, so this is right even while the band is still off-screen.
 - `p9MidY(H, W)` → `H - P9_LEGIT_H_M` (54) with `P9_LEGIT_SPREAD_M` on (the current state —

@@ -433,7 +433,9 @@ a {
   border-top: 1px solid var(--shk-divider);
 }
 
-.shk-more h4 {
+/* h2, not h4 — the article's outline is h1 then h2s; the size here is a style
+   choice and must not set the heading level. */
+.shk-more h2 {
   font-family: 'Rubik', sans-serif;
   font-size: 18px;
   color: var(--shk-secondary);
@@ -486,7 +488,8 @@ a {
   margin: 0 auto;
   padding: 0 24px 64px;
   font-size: 11px;
-  color: #9aa0a6;
+  /* 4.65:1 on white at 11px — #9aa0a6 was 2.64:1, under AA. */
+  color: #70757a;
   direction: rtl;
 }
 
@@ -525,23 +528,9 @@ a {
   white-space: nowrap;
 }
 
-.shk-a11y-btn {
-  position: fixed;
-  left: 16px;
-  bottom: 56px;
-  z-index: 21;
-  width: 36px;
-  height: 36px;
-  border-radius: 100%;
-  border: none;
-  background: var(--shk-primary);
-  color: #fff;
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
+/* Removed — don't reintroduce: the fixed ♿ .shk-a11y-btn that used to sit at
+   left:16px / bottom:56px. It had no JS handler on any page, so it promised an
+   accessibility panel that did not exist — worse than offering nothing. */
 
 /* Responsive */
 

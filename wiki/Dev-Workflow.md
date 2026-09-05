@@ -68,11 +68,24 @@ numbers in the source.
 
 ## Currently in the repo
 
-None — all harnesses were removed on 2026-09-05 (`_debug-fold-badge.js`, `_debug-glide-perf.js`,
+`_debug-fold-badge.js` — a bottom-left chip showing the active `@foldN` number only (same
+50%-viewport crossing as the real `IntersectionObserver`). Not a panel harness — no knobs.
+
+`_debug-mlegend-width.js` — a `manual/` panel for **how wide the groups frame is inside the
+mobile מקרא legend**, so the labels can be made to wrap by eye. Gated to ≤600px. Knobs:
+`.fold6-mlegend-rows` max-width and column gap, `.fold6-mlegend-row` bottom margin, and the
+label's line-height; toggles for "full width (shipped)" and "hold the panel open". It
+repaints `fold6MLegendPaintCard(fold6MLegendOpenRaw)` after every change, because the card
+behind the bar is JS-sized off the panel's measured box. Delete it and its `<script>` tag
+once the width is baked into `style.css`.
+
+Everything else was removed (`_debug-glide-perf.js`,
 `_debug-vert-mobile.js`, `_debug-fold5.js` and the `_debug-hero-*.html` probes). The mobile
 vertical-axis `compare/`+`manual/` (`_debug-vert-mobile.js`, modes band / widen / slot with
 `P7_VERT_MOBILE` knobs) was deleted before its bake; rebuild it from the template if the
-mobile axis is picked up again.
+mobile axis is picked up again. `_debug-vert-order.js` — the `compare/` panel that picked the
+mobile @fold9 vertical order (מקרא bar / axis headline / grid / docked tooltip) — was deleted
+on 2026-09-05 once that order was baked.
 
 Delete each file **and** its `<script>` tag when it is no longer wanted.
 

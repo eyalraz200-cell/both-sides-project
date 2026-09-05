@@ -49,6 +49,18 @@ const PAGE0_SCROLL_LAG_MAX_PX = 150; // caps how far the lag can trail behind th
 let page0LogoOpacity = null; // null until first driven, either by entrance or scroll fade
 let page0LaggedScrollFrac = null;
 let page0TitleTakenOver = false; // see playPage0Entrance below
+// Handover offsets (px), title and subtitle. When scroll interrupts the
+// entrance mid-slide, the entrance has the title parked up to a full viewport
+// below its resting place, while the scroll driver's position is a pure
+// function of scroll fraction and knows nothing about that. Handing over
+// directly snapped the title into place in one frame. These carry the exact
+// pixel gap between the two at the handover instant and decay to 0 on the
+// lag's own damping tempo, so the driver picks the title up where the
+// entrance actually left it and eases in. Title and subtitle need separate
+// values: the parallax term pushes them opposite ways, and the entrance
+// adds the subtitle's own 107px alignment offset on top.
+let page0HandoverTitlePx = 0;
+let page0HandoverSubtitlePx = 0;
 let page0EntranceDone = false;
 page0LogoEl.style.opacity = "0";
 // Starting position for the entrance below (full off-screen, same vh unit
@@ -78,8 +90,45 @@ function page0ApplyTitleScrollLag() {
   }
   const scrollDrivenPx = page0LaggedScrollFrac * window.innerHeight;
   const parallaxPx = page0LaggedScrollFrac * 60;
-  page0TitleEl.style.transform = `translateY(${-scrollDrivenPx + parallaxPx}px)`;
-  page0SubtitleEl.style.transform = `translateX(-100%) translateY(${-scrollDrivenPx - parallaxPx}px)`;
+  // Decay the handover offsets toward 0 on the lag's own tempo, so the
+  // catch-up reads as one motion with the lag rather than a second effect.
+  // Snapped to 0 under half a pixel — below that it's invisible and only
+  // costs a transform write every frame forever.
+  page0HandoverTitlePx *= 1 - PAGE0_SCROLL_LAG_DAMPING;
+  page0HandoverSubtitlePx *= 1 - PAGE0_SCROLL_LAG_DAMPING;
+  if (Math.abs(page0HandoverTitlePx) < 0.5) page0HandoverTitlePx = 0;
+  if (Math.abs(page0HandoverSubtitlePx) < 0.5) page0HandoverSubtitlePx = 0;
+  page0TitleEl.style.transform = `translateY(${-scrollDrivenPx + parallaxPx + page0HandoverTitlePx}px)`;
+  page0SubtitleEl.style.transform = `translateX(-100%) translateY(${-scrollDrivenPx - parallaxPx + page0HandoverSubtitlePx}px)`;
+}
+
+// Called once, at the instant scroll takes the title from the entrance. Seeds
+// the lagged scroll fraction (so the driver starts from the live scroll
+// rather than the null-branch's own implicit seed) and records how far the
+// entrance's current position sits from the driver's, in px, for each
+// element. titleT is the entrance's eased progress on that same frame.
+function page0BeginTitleHandover(titleT) {
+  const vh = window.innerHeight;
+  const entranceTitlePx = (1 - titleT) * vh;
+  const entranceSubtitlePx = entranceTitlePx - 107 * (1 - titleT);
+  const frac = page0ScrollFracTarget();
+  page0LaggedScrollFrac = frac;
+  // Past half a viewport the driver's own resting position is already off
+  // the top of the screen, and the entrance's is off the bottom — easing
+  // between two off-screen points would drag the title back across the
+  // viewport, which is worse than the snap this function exists to remove.
+  // The case is a reload that restores a scrolled position (takeover fires
+  // on frame one, with the title still parked below), where snapping
+  // straight to the driver is correct: the title belongs off-screen.
+  if (frac >= 0.5) {
+    page0HandoverTitlePx = 0;
+    page0HandoverSubtitlePx = 0;
+    return;
+  }
+  const scrollDrivenPx = frac * vh;
+  const parallaxPx = frac * 60;
+  page0HandoverTitlePx = entranceTitlePx - (-scrollDrivenPx + parallaxPx);
+  page0HandoverSubtitlePx = entranceSubtitlePx - (-scrollDrivenPx - parallaxPx);
 }
 
 function page0ApplyLogoScrollFade() {
@@ -143,7 +192,13 @@ function playPage0Entrance() {
   function frame() {
     const elapsed = performance.now() - start;
 
-    if (!page0TitleTakenOver && window.scrollY > 0) page0TitleTakenOver = true;
+    if (!page0TitleTakenOver && window.scrollY > 0) {
+      page0TitleTakenOver = true;
+      // Hand the title over from wherever the entrance currently has it —
+      // see page0BeginTitleHandover. Uses this frame's own eased progress,
+      // the same value the entrance branch below would have used.
+      page0BeginTitleHandover(p9Ease(Math.max(0, Math.min(1, elapsed / PAGE0_TITLE_MS))));
+    }
 
     if (!page0TitleTakenOver) {
       const titleT = p9Ease(Math.max(0, Math.min(1, elapsed / PAGE0_TITLE_MS)));
@@ -241,7 +296,7 @@ function page0CueTargets() {
 
 function page0CueSchedule(delayMs) {
   if (page0CueCancelled || window.scrollY > 0) return;
-  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (prefersReducedMotion()) return;
   clearTimeout(page0CueTimer);
   page0CueTimer = setTimeout(page0CueRun, delayMs);
 }

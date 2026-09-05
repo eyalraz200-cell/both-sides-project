@@ -16,6 +16,26 @@ function isMobile() {
   return window.innerWidth <= MOBILE_BP;
 }
 
+// ── Reduced motion ──
+// Read live off the MediaQueryList rather than cached, for the same reason
+// isMobile() is: the OS setting can flip mid-session, and every caller is
+// already inside a loop or a trigger that re-reads it on the next beat.
+//
+// What this DOES turn off: the fixed-duration fold beats (see makeTrigger in
+// js/groups.js, which collapses its duration to 0 and lands every fold on its
+// end state instantly) and CSS transitions (see the reduced-motion block in
+// style.css). What it deliberately does NOT turn off: motion that IS the
+// scroll position — @fold9's scrubbed timeline and @fold10's glide are the
+// content, not decoration around it, and freezing them would leave nothing to
+// read. Nor page9.js's drop animation, which is finalized.
+const REDUCED_MOTION_MQ =
+  typeof window.matchMedia === "function"
+    ? window.matchMedia("(prefers-reduced-motion: reduce)")
+    : null;
+function prefersReducedMotion() {
+  return !!REDUCED_MOTION_MQ && REDUCED_MOTION_MQ.matches;
+}
+
 // drawFoldSplit/drawFold7/drawFold9 are tiny inline background-only
 // functions (see below) — these folds' only visual content is the DOM overlay.
 // Folds whose canvas is *purely* background use drawBackground directly.
@@ -342,3 +362,126 @@ function updateTooltipDash(tip) {
   path.setAttribute("stroke-dasharray", fitDashArray(path));
 }
 
+
+// ── Event-tooltip fill contrast ──────────────────────────────────────────────
+// Above 600px the event tooltip is FILLED with the event's own group colour and
+// its text is white (style.css, the `min-width: 601px` block). Two of the six
+// group colours are simply too light for that: תנועות התנחלות #F9B624 gives
+// white ~1.7:1 and מפגינים ערבים ישראלים #31CE1C ~1.9:1 — legible-ish, but
+// visibly hazier than the other four, which is the reported symptom.
+//
+// Rather than hand-pick darker substitutes (six duplicate hexes to keep in sync
+// with GROUPS) or switch to dark text on two groups only (the tooltip would
+// change character depending on which dot you hover), scale any fill whose
+// relative luminance sits above TOOLTIP_FILL_MAX_L down until it doesn't. RGB
+// is scaled uniformly, so hue and saturation are untouched and the group stays
+// recognisable — only the value drops.
+//
+// 0.28 is the luminance of מתנגדי הרפורמה #6B89FF, the lightest colour that
+// already reads fine (white ~3.2:1). Using it as the ceiling means the four
+// acceptable colours pass through completely unchanged — this only ever bites
+// on the yellow and the green.
+//
+// Takes '#rrggbb' or 'rgb(r, g, b)' (lerpFold6SquareColor's output, so @fold7's
+// grey→colour tooltip transition darkens continuously along with it rather than
+// snapping at the end) and always returns 'rgb(r, g, b)'.
+const TOOLTIP_FILL_MAX_L = 0.28;
+
+function srgbLuminance(r, g, b) {
+  const lin = (c) => {
+    const s = c / 255;
+    return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+// One exception to the scale-only rule above: תנועות התנחלות #F9B624.
+//
+// It is the palette's lightest colour, so the ceiling costs it the most value —
+// and because uniform scaling holds the HUE ANGLE (~40°, a yellow), the result
+// is olive/brown. That isn't a dulled yellow, it's a different colour category:
+// brown simply IS dark orange-yellow, there is no dark yellow that still reads
+// as yellow. So this one is hand-picked instead, rotated down the hue wheel to
+// 24° where the same darkness reads as a deep orange — chosen by eye off a
+// solved hue x saturation grid (hue 24, sat 84%, brightest value clearing AA).
+// #ba5c1e is 4.53:1 against the white text, comfortably past AA 4.5 and well
+// clear of the ~3.2:1 the untouched colours sit at.
+//
+// Keyed by the raw group hex; the value is what the desktop box is painted.
+const TOOLTIP_FILL_OVERRIDES = { "#f9b624": [186, 92, 30] };
+// How near an incoming colour has to be (Manhattan, 0-765) to count as "that
+// group's colour". Not an equality test, because @fold7's demo feeds this
+// function a grey->colour LERP frame by frame: an exact match would leave the
+// whole transition on the generic path and then pop to the override on the
+// final frame. Inside the window the two are blended by closeness instead, so
+// the hand-picked hue arrives continuously, in step with the lerp.
+const TOOLTIP_OVERRIDE_NEAR = 90;
+
+function tooltipFill(color) {
+  if (!color) return color;
+  let r, g, b;
+  if (color[0] === "#") {
+    const n = parseInt(color.slice(1), 16);
+    r = (n >> 16) & 255; g = (n >> 8) & 255; b = n & 255;
+  } else {
+    const m = color.match(/-?\d+/g);
+    if (!m || m.length < 3) return color;
+    [r, g, b] = m.map(Number);
+  }
+  for (const hexKey in TOOLTIP_FILL_OVERRIDES) {
+    const n = parseInt(hexKey.slice(1), 16);
+    const tr = (n >> 16) & 255, tg = (n >> 8) & 255, tb = n & 255;
+    const d = Math.abs(r - tr) + Math.abs(g - tg) + Math.abs(b - tb);
+    if (d >= TOOLTIP_OVERRIDE_NEAR) continue;
+    const [or_, og, ob] = TOOLTIP_FILL_OVERRIDES[hexKey];
+    const k = 1 - d / TOOLTIP_OVERRIDE_NEAR;   // 1 on the exact hex, 0 at the edge
+    // The other end of the blend is the generic result for this same input, so
+    // a colour sitting on the window's edge is handled identically either way.
+    const base = tooltipFillScaled(r, g, b);
+    return `rgb(${Math.round(base[0] + (or_ - base[0]) * k)}, ` +
+           `${Math.round(base[1] + (og - base[1]) * k)}, ` +
+           `${Math.round(base[2] + (ob - base[2]) * k)})`;
+  }
+  const [sr, sg, sb] = tooltipFillScaled(r, g, b);
+  return `rgb(${sr}, ${sg}, ${sb})`;
+}
+
+// The generic path: scale RGB uniformly until luminance clears the ceiling.
+function tooltipFillScaled(r, g, b) {
+  if (srgbLuminance(r, g, b) <= TOOLTIP_FILL_MAX_L) return [r, g, b];
+  // Luminance is monotonic in the scale factor, so a short bisection lands on
+  // the brightest version that still clears the ceiling. 12 steps is well past
+  // 8-bit resolution.
+  let lo = 0, hi = 1;
+  for (let i = 0; i < 12; i++) {
+    const k = (lo + hi) / 2;
+    if (srgbLuminance(r * k, g * k, b * k) > TOOLTIP_FILL_MAX_L) hi = k; else lo = k;
+  }
+  // Round FIRST, then verify: rounding each channel up can push luminance back
+  // over the ceiling (yellow #F9B624 landed at 4.48:1 against a 4.50 target
+  // this way). Step the factor down until the integer result actually clears
+  // it, so the number the code produces is the number that was asked for.
+  let rr, gg, bb;
+  for (let k = lo; k >= 0; k -= 1 / 512) {
+    rr = Math.round(r * k); gg = Math.round(g * k); bb = Math.round(b * k);
+    if (srgbLuminance(rr, gg, bb) <= TOOLTIP_FILL_MAX_L) break;
+  }
+  return [rr, gg, bb];
+}
+
+// Every writer of the event tooltip's colour goes through this, never through a
+// bare `el.style.color =`. Two properties have to move together and they are
+// NOT the same value:
+//   color      — the true group colour. Strokes the dashed <svg> frame, which
+//                is what mobile (<=600px) shows, dark text on white.
+//   --tip-fill — the contrast-floored version above. Paints the desktop box,
+//                which carries white text.
+// Four call sites write it — p7HoverInit and p7InspectInit (page7.js),
+// p9HoverInit (page9.js) and @fold7's scripted demo (js/update-groups.js) —
+// and the first version of the fill missed two of them, so @fold9's timeline
+// hover silently kept the raw colour. Hence the helper.
+function setTooltipColor(el, color) {
+  if (!el) return;
+  el.style.color = color;
+  el.style.setProperty("--tip-fill", tooltipFill(color));
+}

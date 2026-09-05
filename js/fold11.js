@@ -16,7 +16,7 @@
 // title fully stops at the top, as a proper animated flourish rather than
 // something scroll-scrubbed.
 //   - eScroll (fold13ScrollT below): a plain scroll-position readout over the
-//     gate-line-to-fully-arrived range, 0..1, moving continuously with every
+//     card-enters-to-card-arrived range, 0..1, moving continuously with every
 //     scroll tick in both directions. Drives:
 //       - tray (the pills' frame) fades out in place (inline opacity, transition:none)
 //       - header title + subtitle fade out (page9HeaderEl opacity)
@@ -27,17 +27,23 @@
 //       - legend fades out (groupsOverlayEl opacity), and on mobile its מקרא
 //         button too (fold6MobileLegendLayerEl opacity)
 //       - fold12's own title card (frame included) fades out (page9TitleCardEl opacity)
-//   - eTrigger (fold13Trigger): fires once, only when a .page12-sticky-center
-//     wrapper reaches top<=0 (fully stopped), and plays out over a fixed
-//     GROUP_TRANSITION_MS regardless of further scroll. Drives only the extreme
-//     dots' morph to freeform (p9.fold13ExtremeMorphT) and, with it, the
-//     camp dividing line's fade-out.
+//   - eTrigger (fold13Trigger): fires once, when @fold12's own
+//     .page12-sticky-center reaches mid-viewport (checkFold13, frac 0.5,
+//     js/groups.js), and plays out over a fixed GROUP_TRANSITION_MS regardless
+//     of further scroll. Drives only the extreme dots' morph to freeform
+//     (p9.fold13ExtremeMorphT) and, with it, the camp dividing line's fade-out.
 //
-// The two halves land on DIFFERENT folds, per explicit feedback. eScroll runs
-// on @fold12's arrival: everything fades away, but the extreme dots are left
-// standing in their columns. eTrigger is watched on @fold13's wrapper
-// (fold13OutroStickyEl, js/groups.js) — the spread is the FINAL card's
-// flourish, not @fold12's.
+// Both halves now belong to @fold12 and run BACK TO BACK, not together: the
+// fade is compressed into the first half of the card's rise (FOLD13_FADE_SPAN)
+// so it has finished by the time the card is halfway up, and the spread fires
+// at exactly that point, onto an otherwise-clear screen. The two constants —
+// FOLD13_FADE_SPAN here and checkFold13's frac there — are one decision.
+// How much of the card's rise the fade-out occupies, as a fraction of
+// fold13ScrollT. 0.5 = done by the time the card is halfway up, which is where
+// the freeform spread fires (checkFold13's frac, js/groups.js). The two numbers
+// are one decision — raise this and the fade runs under the spread.
+const FOLD13_FADE_SPAN = 0.5;
+
 function updateFold13() {
   const tTrigger = fold13Trigger.currentT();
   const eTrigger = 1 - Math.pow(1 - tTrigger, 3); // ease-out cubic
@@ -55,8 +61,19 @@ function updateFold13() {
   }
   p9.fold13ExtremeMorphT = eTrigger; // lerps extreme dots to freeform in drawPage12
 
-  const tScroll = fold13ScrollT();
-  const eScroll = 1 - Math.pow(1 - tScroll, 3); // same ease-out cubic, scroll-driven
+  // The fade runs over the FIRST HALF of the card's rise and is fully done by
+  // the time the card reaches mid-screen — which is exactly where the freeform
+  // spread fires (checkFold13 watches @fold12's wrapper at frac 0.5,
+  // js/groups.js). So the sequence reads as: everything fades out as the
+  // closing statement climbs, and the instant it is halfway up — with the
+  // screen otherwise clear — the extreme dots spread. The two never overlap.
+  // FOLD13_FADE_SPAN and that 0.5 are one decision in two files.
+  const tScroll = Math.min(1, fold13ScrollT() / FOLD13_FADE_SPAN);
+  // p9Ease (sine in-out), NOT the ease-out cubic eTrigger uses: the cubic was
+  // ~90% done a third of the way in, so the fade finished long before the card
+  // it belongs to had arrived. Sine in-out finishes at t=1 — and t is the
+  // card's own rise (see fold13ScrollT), so the fade IS the card coming up.
+  const eScroll = p9Ease(tScroll);
 
   p9.fold13OutT = eScroll; // fades legit dots / counts in drawPage9 (not the divider)
 
@@ -100,19 +117,34 @@ function updateFold13() {
   draw();
 }
 
-// Fraction of the way through @fold11's unavoidable one-viewport hand-off to
-// @fold12 (the gate can't unlock any later than one viewport before #page-11
-// arrives — see p13GateMax) — 0 at the gate line, 1 at scrollY = #page-11's
-// offsetTop, which with the static wrapper is exactly where the card sits
-// centred. #page-11's extra height beyond that is trailing gap and doesn't
-// stretch this range. A plain scroll
-// readout, not a makeTrigger, since this half must move continuously with
-// scroll in both directions rather than play out over fixed real time.
+// The fade-out is the title block's ARRIVAL, not a separate scroll range
+// (explicit instruction): 0 the instant @fold12's card first pokes above the
+// viewport's bottom edge, 1 when it has finished rising to its resting spot
+// (scrollY = #page-11's offsetTop, where the static wrapper's padding-top
+// leaves it). So the panel is going out for exactly as long as the card is
+// coming up — no stretch of scroll where everything has faded and there is
+// nothing on screen yet. The card is flush with its section top at every width
+// (style.css), so that start lands exactly ON the gate line — the fade begins
+// the instant the gate releases. That pairing is the whole dead-space fix:
+// @fold11's panel is `.frozen` (motionless at top:0) through the hand-off, so
+// any scroll before the card appears is a crossfade on a still image and reads
+// as empty. Padding the card down inside its section re-opens that stretch.
+// #page-11's height beyond the resting spot is trailing gap and doesn't
+// stretch this range. A plain scroll readout, not a makeTrigger, since this
+// must move continuously with scroll in both directions rather than play out
+// over fixed real time.
 function fold13ScrollT() {
   const page12 = document.getElementById("page-11");
   if (!page12) return 0;
-  const start = p13GateMax();
-  const end   = page12.offsetTop;
+  const card = page12.querySelector(".page12-sticky-center");
+  const end  = page12.offsetTop;
+  // How far down the section the card rests — 0 at every width now that the
+  // trim (style.css) is unconditional. Still measured rather than assumed, so
+  // any future padding on the wrapper shows up here as the gap it re-opens.
+  const cardTop = card
+    ? card.getBoundingClientRect().top + window.scrollY
+    : end;
+  const start = cardTop - window.innerHeight;
   if (end <= start) return window.scrollY >= end ? 1 : 0;
   return Math.max(0, Math.min(1, (window.scrollY - start) / (end - start)));
 }
@@ -144,6 +176,7 @@ function p13GateMax() {
 // overscroll — no per-frame lag window for it to peek through.
 function p13SyncGateVisibility() {
   if (page12StickyEl) page12StickyEl.classList.toggle("gate-hidden", p13GateLocked());
+  p13SyncTouchBlock?.();
 }
 p13SyncGateVisibility();
 
@@ -178,13 +211,27 @@ let p13TouchStartY = 0;
 window.addEventListener("touchstart", (e) => {
   p13TouchStartY = e.touches[0].clientY;
 }, { passive: true });
-window.addEventListener("touchmove", (e) => {
+// Attached only while the gate is locked AND the reader is within a viewport of
+// it, never for the page's whole life: a non-passive touchmove on window keeps
+// mobile browsers from ever collapsing their URL/bottom bar (they can't know in
+// advance the handler won't cancel the scroll, so the chrome stays pinned for
+// every drag anywhere on the page). p13SyncTouchBlock is the single switch,
+// driven by the scroll listener below and by gate-state changes.
+function p13TouchBlock(e) {
   if (!p13GateLocked()) return;
   if (e.touches[0].clientY < p13TouchStartY &&
       window.scrollY >= p13GateMax() - 10) {
     e.preventDefault();
   }
-}, { passive: false });
+}
+let p13TouchBlockOn = false;
+function p13SyncTouchBlock() {
+  const want = p13GateLocked() && window.scrollY >= p13GateMax() - window.innerHeight;
+  if (want === p13TouchBlockOn) return;
+  p13TouchBlockOn = want;
+  if (want) window.addEventListener("touchmove", p13TouchBlock, { passive: false });
+  else window.removeEventListener("touchmove", p13TouchBlock, { passive: false });
+}
 
 // Safety net: snap back if scroll somehow lands past the gate (momentum-phase
 // wheel events that ignore preventDefault, scrollbar drags, etc). Corrects
@@ -192,6 +239,7 @@ window.addEventListener("touchmove", (e) => {
 // requestAnimationFrame — that extra frame of delay is exactly the window
 // during which #page-11's title was visibly peeking up before snapping back.
 window.addEventListener("scroll", () => {
+  p13SyncTouchBlock();
   if (!p13GateLocked()) return;
   const max = p13GateMax();
   if (window.scrollY > max) {
