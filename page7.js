@@ -2612,8 +2612,11 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
   const evY = P7_AXIS_EVENTS.map((ev, i) => p7RowY(v.events[i].row, H));
   P7_AXIS_EVENTS.forEach((ev, i) => {
     const y = evY[i];
-    const reached = y <= curY;
     const state = P7_AXIS_EVENT_STATE[i];
+    // The dot stays (so the open card keeps its split circle) while the
+    // headline is held open by the reverse hysteresis, even though the fill
+    // edge has already retreated above it.
+    const reached = y <= curY || (state.triggeredAt !== null && state.leavingAt === null);
     const reachedTarget = reached ? 1 : 0;
     state.reachedT += (reachedTarget - state.reachedT) * P7_AXIS_HOVER_ANIM_SPEED;
     if (Math.abs(reachedTarget - state.reachedT) < 0.001) state.reachedT = reachedTarget;
