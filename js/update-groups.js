@@ -54,7 +54,7 @@ function updateGroups() {
   // timeline, not 3 things happening at once — per explicit spec:
   // (1) the decorative dots shrink away, (2) THEN the 6 group dots fly/grow
   // into their two camp columns (top row first), (3) THEN the camp headers
-  // + divider fade in. The move beat (2) is the busiest (grow + fly, all
+  // + note fade in. The move beat (2) is the busiest (grow + fly, all
   // rows) so it gets the biggest share of FOLD2_ENTRANCE_MS rather than an
   // equal third; reversing (scrolling back up) runs the same 3 beats in
   // reverse, last-to-first.
@@ -111,15 +111,11 @@ function updateGroups() {
   let fold6NoteHeightPx = 0;
   if (!fold6MobileLegend) {
     fold6NoteEl.style.width = `${fold6NoteWidthPx}px`;
+    fold6NoteTitleEl.style.width = `${fold6NoteWidthPx}px`;
     fold6NoteHeightPx = fold6NoteEl.offsetHeight;
   }
 
-  // Divider spans the note's FULL frame width, not the widest wrapped line —
-  // the hairline reads as the note block's own edge, so it should match the
-  // box, and a text-width hairline made its right end wander every time the
-  // wrap changed. Both share the same left x (fold6X below), so they line up
-  // on the left and both end at noteRightEdge.
-  if (!fold6MobileLegend) fold6NoteDividerEl.style.width = `${fold6NoteWidthPx}px`;
+  if (!fold6MobileLegend) fold6NoteRuleEl.style.width = `${FOLD6_RULE_W}px`;
 
   // Beat 2 staggers the rows top-to-bottom within its own slice of the
   // timeline, same makeTrigger-style "reaches target exactly at local t=1"
@@ -387,8 +383,33 @@ function updateGroups() {
         item.labelSpans = fold8SetupTypewriter(item.label, g.label);
       fold8UpdateTypewriter(item.labelSpans, Math.round(labelCharT * g.label.length));
     } else {
+      // DESKTOP: once the glide has landed the label un-types away, leaving a
+      // bare swatch — and types back in while the pointer is over the legend
+      // (fold6LabelUntypeTrigger / fold6LabelHoverTrigger, js/groups.js).
+      // The two are combined with max(), not multiplied or summed, so grabbing
+      // the hover mid-un-type just re-fills from wherever the count already is
+      // instead of fighting it. Only rows that actually HAVE a legend seat
+      // (g.fold6) take part; the rest have shrunk to nothing by then anyway.
+      const untypeVisibleT = 1 - p9Ease(fold6LabelUntypeTrigger.currentRaw());
+      const hoverVisibleT   = p9Ease(fold6LabelHoverTrigger.currentRaw());
+      const restT = g.fold6 ? Math.max(untypeVisibleT, hoverVisibleT) : 1;
       item.labelSpans = null;
-      item.label.textContent = typedText(g.label, labelT);
+      // The two columns un-type from OPPOSITE ends (explicit instruction). The
+      // right column's label is right-aligned against the screen edge, so a
+      // head-first slice eats it from the left — away from its anchor, which
+      // reads correctly. The left column is anchored on its LEFT edge, so the
+      // same slice ate it *toward* its anchor and looked wrong; there the tail
+      // is dropped instead, so both columns dissolve away from their own edge.
+      // Only the UN-TYPE flips. The hover re-type runs head-first on both
+      // columns like everything else (explicit instruction), so the flip is
+      // gated on the un-type being the term that's actually showing —
+      // hoverVisibleT winning the max() means the reader is hovering.
+      // @fold3's type-in is unchanged either way.
+      const restChars = Math.min(labelT, restT);
+      const untypeIsDriving = untypeVisibleT >= hoverVisibleT;
+      item.label.textContent = (!isRightLegend && untypeIsDriving && restT < labelT)
+        ? g.label.slice(g.label.length - Math.round(restChars * g.label.length))
+        : typedText(g.label, restChars);
     }
     item.label.style.opacity = String(popT);
 
@@ -586,6 +607,13 @@ function updateGroups() {
 
     item.el.classList.toggle("is-emphasized", postFold2 && !postFold6);
 
+    // The opaque page-coloured plate behind the label (.is-plated, style.css).
+    // Desktop mini-legend rows only, and only once the glide has FULLY landed
+    // (e6 === 1, not postFold6's halfway mark — explicit instruction): for the
+    // whole flight the label is travelling over the dot grids, where a plate
+    // would punch a hole in the artwork it crosses.
+    item.label.classList.toggle("is-plated", !fold6MobileLegend && !!g.fold6 && e6 >= 1);
+
     // Last thing in the row, after every inline style is written: while flying,
     // the frame is handed to a stand-in living inside the מקרא layer, because
     // this element can't out-stack that panel from inside .graphic-col (see
@@ -674,7 +702,7 @@ function updateGroups() {
     -CLUSTER_SWATCH_SIZE / 2 + headerGapDesktop;
   const fold2HeaderY = isMobile()
     ? topRowYNow - headerGapMobile
-        - fold4ColumnTitleCoalitionEl.offsetHeight / 2
+        - campHeaderCoalitionEl.offsetHeight / 2
     : topRowYNow - fold2HeaderGapDesktop;
 
   // On DESKTOP they never leave that spot: the headers do NOT travel into the
@@ -690,7 +718,7 @@ function updateGroups() {
   // onto the panel's own camp headings (.fold6-mlegend-camp) exactly as the rows
   // fly onto its rows, shrinking 18px → FOLD6_MFLY_HEAD_PX on the way and
   // keeping every character (the un-typing below is suppressed for them). Both
-  // ends are center anchors — .fold4-column-title is translate(-50%, -50%) and
+  // ends are center anchors — .camp-header is translate(-50%, -50%) and
   // the target is the heading's measured center — so this is a plain lerp.
   // `e6 > 0`, never merely "a target exists" — binding, and for the same reason
   // as `flying` on the rows above. This branch is live from the moment @fold4's
@@ -701,7 +729,7 @@ function updateGroups() {
   // stylesheet) and swapped the live typing element for a stand-in via
   // .is-mfly-hidden. Both changed @fold2/@fold3's resting header-to-row gap.
   const headFlying = e6 > 0 && fold6MFlyEnabled()
-    && !!fold6MFlyHeadTargetOf(FOLD4_HEADER_TITLE_COALITION);
+    && !!fold6MFlyHeadTargetOf(CAMP_HEADER_TITLE_COALITION);
   const placeCampHeader = (el, fold2X, title) => {
     const tgt = headFlying ? fold6MFlyHeadTargetOf(title) : null;
     // Same e6Fly as the flying rows — the headers ride the flight's own
@@ -714,8 +742,8 @@ function updateGroups() {
     if (tgt) fold6MFlyPaintHeadClone(title, el, e6 >= 1);
     else if (fold6MFlyClones.size) fold6MFlyHideHeadClone(title, el);
   };
-  placeCampHeader(fold4ColumnTitleCoalitionEl, campAnchorX(true), FOLD4_HEADER_TITLE_COALITION);
-  placeCampHeader(fold4ColumnTitleChangeEl, campAnchorX(false), FOLD4_HEADER_TITLE_CHANGE);
+  placeCampHeader(campHeaderCoalitionEl, campAnchorX(true), CAMP_HEADER_TITLE_COALITION);
+  placeCampHeader(campHeaderChangeEl, campAnchorX(false), CAMP_HEADER_TITLE_CHANGE);
   if (isMobile()) fold6PlaceMobileLegend();
 
   // The two headers type on their OWN beats (FOLD2_BEATS.headerCoalition /
@@ -742,20 +770,20 @@ function updateGroups() {
   const untypeChange    = headFlying ? 1 : 1 - fold6BeatT("headerChange");
 
   fold8UpdateTypewriter(fold4HeaderSpansCoalition, Math.round(
-    headerCoalitionT * untypeCoalition * FOLD4_HEADER_TITLE_COALITION.length));
+    headerCoalitionT * untypeCoalition * CAMP_HEADER_TITLE_COALITION.length));
   fold8UpdateTypewriter(fold4HeaderSpansChange, Math.round(
-    headerChangeT * untypeChange * FOLD4_HEADER_TITLE_CHANGE.length));
+    headerChangeT * untypeChange * CAMP_HEADER_TITLE_CHANGE.length));
 
   // The reveal itself is the typing, so opacity only ramps over the beat's
   // first quarter (enough that the first characters don't pop) and holds —
   // then mirrors that on the way out, over the last quarter of the un-typing,
   // so the final couple of characters don't pop off either.
-  fold4ColumnTitleCoalitionEl.style.opacity =
+  campHeaderCoalitionEl.style.opacity =
     String(Math.min(1, headerCoalitionT * 4, untypeCoalition * 4));
-  fold4ColumnTitleChangeEl.style.opacity =
+  campHeaderChangeEl.style.opacity =
     String(Math.min(1, headerChangeT * 4, untypeChange * 4));
 
-  // The note and its divider just fade in at their final resting spot (same
+  // The note and its rule just appear at their final resting spot (same
   // e6 as the rows) rather than lerping in from anywhere — unlike the rows,
   // neither has an earlier fold to fly in from, so animating opacity alone
   // reads as part of the same settle instead of a second, separate motion.
@@ -776,7 +804,33 @@ function updateGroups() {
   // left inset, and the note box (RTL, right-aligned text) hugs that edge and
   // extends leftward — so it can't run off the right screen edge the way a
   // left-anchored box would here.
+  // Hover hit boxes over each legend column — the trigger for typing the
+  // labels back in. Sized to the rows' own vertical span plus a little slack,
+  // and running from each column's inset edge inward far enough to cover the
+  // longest label. Only live on desktop and only once the legend exists;
+  // before that they'd swallow clicks over an empty screen.
+  if (!fold6MobileLegend) {
+    const hoverTop = fold6RowIndexY(0, H) - FOLD6_LEGEND_HOVER_PAD;
+    const hoverBot = fold6RowIndexY(FOLD6_ROW_FRAME_YS.length - 1, H) + FOLD6_LEGEND_HOVER_PAD;
+    const live = fold6Trigger.currentRaw() > 0;
+    const boxes = [
+      { left: FOLD6_LEGEND_INSET_LEFT - FOLD6_LEGEND_HOVER_PAD },
+      { left: W - fold6LegendInsetRight() - FOLD6_LEGEND_HOVER_W + FOLD6_LEGEND_HOVER_PAD },
+    ];
+    fold6LegendHoverEls.forEach((el, i) => {
+      el.style.left = `${boxes[i].left}px`;
+      el.style.top = `${hoverTop}px`;
+      el.style.width = `${FOLD6_LEGEND_HOVER_W}px`;
+      el.style.height = `${hoverBot - hoverTop}px`;
+      el.style.display = live ? "block" : "none";
+    });
+  } else {
+    fold6LegendHoverEls.forEach((el) => { el.style.display = "none"; });
+  }
+
   const noteRightEdge = W - fold6LegendInsetRight();
+  // The note's TEXT takes the legend's right-edge alignment, same as the dot
+  // rows; the rule sits FOLD6_RULE_GAP outside that edge (see below).
   const fold6X = noteRightEdge - fold6NoteWidthPx;
   const fold6BottomAnchorY = fold6RowIndexY(FOLD6_ROW_FRAME_YS.length - 1, H);
   // The settled label's box center sits at anchor + half the 6px swatch +
@@ -785,24 +839,25 @@ function updateGroups() {
   // center plus half the measured label height.
   const lastRowLabelBottomTarget = fold6BottomAnchorY + LEFT_LEGEND_SWATCH_SIZE / 2
     + groupLabelInkShift(14) + fold6RowMeasureEl.offsetHeight / 2;
-  // The stack reads DOWNWARD from the bottom row: rows, then the note at
-  // GAP_TOP + divider + GAP_BOTTOM below, with the divider centered in the
-  // white between them (see fold6NoteInkTop below).
+  // The stack reads DOWNWARD from the bottom row: rows, then the note title
+  // FOLD6_NOTE_TOP_GAP below them, then the note body under that. The vertical
+  // rule runs down the block's right edge (see the rule block further down).
   //
   // On a narrow screen watch this against the title card: #fold6NoteLayer is a
   // direct .layout child stacked ABOVE .text-col (so its ACLED link stays
   // clickable), which means it prints *through* the card rather than behind it.
-  const noteY = lastRowLabelBottomTarget + FOLD6_DIVIDER_GAP_TOP
-    + FOLD6_DIVIDER_HEIGHT + FOLD6_DIVIDER_GAP_BOTTOM;
-  // The divider sits at the visual CENTER of the white between the rows and the
-  // note — not at GAP_TOP flat. The note's own box top isn't its ink top: its
-  // 14px/1.4 line box carries ~3px of transparent leading, so a box-edge
-  // midpoint reads high. Compensate by centering on the note's ink instead
-  // (1.4 must match .fold6-note's line-height in style.css).
-  const fold6NoteInkTop = noteY + (1.4 * 14 - 14) / 2;
-  const dividerY = (lastRowLabelBottomTarget + fold6NoteInkTop) / 2
-    - FOLD6_DIVIDER_HEIGHT / 2;
-  // Note + divider fade in on the ACLED fold (#page-5, @fold6) via
+  // The TITLE takes the note's old slot under the rows and the note hangs
+  // below it; both are the same 14px/1.4 box, so the rule's leading trim below
+  // holds for either end of the block.
+  const noteTitleY = lastRowLabelBottomTarget + FOLD6_NOTE_TOP_GAP;
+  const noteY = noteTitleY + (fold6MobileLegend ? 0 : fold6NoteTitleEl.offsetHeight)
+    + FOLD6_NOTE_TITLE_GAP;
+  // A line box's top isn't its ink top: the
+  // 14px/1.4 line box carries ~3px of transparent leading top and bottom, so
+  // the rule is trimmed by it at both ends — it should span the text's INK,
+  // not its line boxes (1.4 must match .fold6-note's line-height in style.css).
+  const fold6NoteLead = (1.4 * 14 - 14) / 2;
+  // Note + rule fade in on the ACLED fold (#page-5, @fold6) via
   // acledNoteTrigger — its own fold, one after the squares' grow-in fold
   // (#page-4, squaresRevealTrigger) and two after the split (fold6Trigger). The
   // note POSITION is still anchored to fold6's settled mini-legend target
@@ -818,13 +873,162 @@ function updateGroups() {
   // haven't appeared yet.
   const noteRevealT = acledNoteTrigger.currentT();
   if (!fold6MobileLegend) {
-    fold6NoteDividerEl.style.left = `${fold6X}px`;
-    fold6NoteDividerEl.style.top = `${dividerY}px`;
+    fold6NoteTitleEl.style.left = `${fold6X}px`;
+    fold6NoteTitleEl.style.top = `${noteTitleY}px`;
     fold6NoteEl.style.left = `${fold6X}px`;
     fold6NoteEl.style.top = `${noteY}px`;
   }
-  fold6NoteDividerEl.style.opacity = String(noteRevealT);
-  fold6NoteEl.style.opacity = String(noteRevealT);
+  // Neither fades any more (explicit instruction). The note TYPES in character
+  // by character (FOLD6_NOTE_BEATS / fold6UpdateNoteTypewriter, js/groups.js)
+  // and the vertical rule beside it is sized from that same character count
+  // below, so it grows with the text and shrinks back with the un-type.
+  // NO opacity ramp on the note — a min(1, t*4) guard like the camp headers'
+  // was tried and read as a fade (it spans ~600ms while only a few characters
+  // are typed). Opacity is a hard 0/1 gate; the typewriter is the whole
+  // reveal. Both reverse cleanly on scroll-up because the raw progress reverses.
+  const noteRaw = acledNoteTrigger.currentRaw();
+  const noteBeatRaw = b =>
+    Math.max(0, Math.min(1, (noteRaw - FOLD6_NOTE_BEATS[b].start) / FOLD6_NOTE_BEATS[b].len));
+  const noteTypeT    = p9Ease(noteBeatRaw("type"));
+  // Two seconds after it lands the note un-types itself from the end, and the
+  // legend hover types it back — the same max(1 - untype, hover) crossfade the
+  // group labels use, though on its own slower trigger (FOLD6_NOTE_HOVER_MS,
+  // 700ms against the labels' 420) so it isn't made to land with them, so grabbing the hover mid-un-type re-fills from wherever
+  // the count already is instead of fighting it. min() with the reveal keeps
+  // the first type-in unaffected. Un-typing from the END is just the count
+  // running back down, so no slice flip is needed here.
+  const noteRestT = Math.max(
+    1 - p9Ease(fold6NoteUntypeTrigger.currentRaw()),
+    p9Ease(fold6NoteHoverTrigger.currentRaw()));
+  const noteVisibleT = Math.min(noteTypeT, noteRestT);
+  // The title is driven by the REVEAL alone, so it survives the un-type; only
+  // the body follows noteVisibleT. Both are slices of the same running total,
+  // so the first type-in still reads as one continuous stream.
+  const noteTotalCount = Math.round(noteTypeT * FOLD6_NOTE_CHAR_COUNT);
+  // How far into the BODY's share of that stream we are, 0..1, before the card
+  // takes its cut.
+  const noteBodyRaw = Math.max(0, Math.min(1,
+    (noteVisibleT * FOLD6_NOTE_CHAR_COUNT - FOLD6_NOTE_TITLE_LEN) /
+    (FOLD6_NOTE_CHAR_COUNT - FOLD6_NOTE_TITLE_LEN)));
+  // The card gets the FIRST slice of the body's beat to itself, and the text
+  // types over what's left. Nothing else buys the opening any time: the card
+  // can't be wider than it is while text is in it (a body line is the full
+  // 155px, so text that arrives before the width has landed hangs outside the
+  // tint), and the width is the step that's meant to read as an opening. So the
+  // text waits instead.
+  // "First appearance": nothing has un-typed and nothing is being hovered back.
+  // The moment either is in play the card really is re-opening from the
+  // collapsed pose, and the accordion behaviour applies instead.
+  const noteCardIntro =
+    fold6NoteUntypeTrigger.currentRaw() === 0 && fold6NoteHoverTrigger.currentRaw() === 0;
+  const cardOpenP = Math.max(0, Math.min(1, noteBodyRaw / FOLD6_CARD_OPEN_SHARE));
+  const noteTextP = Math.max(0, Math.min(1,
+    (noteBodyRaw - FOLD6_CARD_OPEN_SHARE) / (1 - FOLD6_CARD_OPEN_SHARE)));
+  const noteBodyCount = Math.round(
+    noteTextP * (FOLD6_NOTE_CHAR_COUNT - FOLD6_NOTE_TITLE_LEN));
+  fold6UpdateNoteTypewriter(noteTotalCount, noteBodyCount);
+
+  // The vertical rule beside the note. Its length is measured GEOMETRICALLY, not
+  // as a share of the character count: the title's part is driven by the title's
+  // progress and the body's by the body's, so when the body un-types the rule
+  // shrinks back to exactly the title's height instead of vanishing. It runs
+  // FOLD6_RULE_OVERHANG past the last line so it sticks out at the bottom.
+  // How far the title and the body are typed, 0..1. Hoisted out of the
+  // desktop-only rule block below because the chevron (which exists on both
+  // breakpoints) reads the same two numbers.
+  const titleP = Math.max(0, Math.min(1, noteTotalCount / FOLD6_NOTE_TITLE_LEN));
+  const bodyP  = noteTextP;
+  // The card's two opening steps. Up here rather than with the rest of the
+  // card's geometry because the chevron, which exists on both breakpoints,
+  // turns on the width step.
+  // The first appearance runs the two the other way round — see
+  // FOLD6_CARD_INTRO — and takes its WIDTH from the TITLE typing (explicit
+  // instruction): the card widens as the title writes itself, so it arrives
+  // with the title rather than opening out of a pose nobody has seen. Only the
+  // height then belongs to the body's opening share.
+  const cardWindows = noteCardIntro ? FOLD6_CARD_INTRO : FOLD6_CARD_OPEN;
+  const cardOpen = (w) =>
+    p9Ease(Math.max(0, Math.min(1, (cardOpenP - w.start) / w.len)));
+  const cardHT = cardOpen(cardWindows.h);
+  const cardWT = noteCardIntro ? p9Ease(titleP) : cardOpen(cardWindows.w);
+
+  // The accordion chevron beside the title (.fold6-note-title::after) is pure
+  // CSS, so it can't read these directly — they're handed over as custom
+  // properties and the pseudo-element builds its own rotation/opacity from
+  // them. Written every frame like everything else here; no CSS transition,
+  // same reason as the rest of this function's output.
+  // The rotation runs on the card's WIDTH step and nothing else (explicit
+  // instruction): the chevron turns exactly while the card is widening, and is
+  // still while the height fills with text. It does NOT track the typing —
+  // that's what made it feel like a slow sweep, and why it was briefly a hard
+  // snap instead. Tying it to the width step is the middle ground: a real turn,
+  // over the one beat it belongs to.
+  fold6NoteTitleEl.style.setProperty("--note-open", cardWT.toFixed(3));
+  fold6NoteTitleEl.style.setProperty("--note-title-p", titleP.toFixed(3));
+
+  if (!fold6MobileLegend) {
+    const titleH = fold6NoteTitleEl.offsetHeight;
+    const bodyH  = FOLD6_NOTE_TITLE_GAP + fold6NoteHeightPx;
+    // The overhang scales in with the rule so it doesn't pop into existence
+    // before the block does, and rides along as the body types and un-types.
+    const ruleH = Math.max(0, titleH * titleP + bodyH * bodyP - 2 * fold6NoteLead
+      + FOLD6_RULE_OVERHANG * Math.min(1, titleP));
+    // The TEXT keeps the legend's right-edge alignment with the dots; the rule
+    // steps outside it, one FOLD6_RULE_GAP further right.
+    fold6NoteRuleEl.style.left = `${noteRightEdge + FOLD6_RULE_GAP}px`;
+    fold6NoteRuleEl.style.top = `${noteTitleY + fold6NoteLead}px`;
+    fold6NoteRuleEl.style.width = `${FOLD6_RULE_W}px`;
+    fold6NoteRuleEl.style.height = `${ruleH}px`;
+    fold6NoteRuleEl.style.opacity = ruleH > 0 ? "1" : "0";
+
+    // The CARD behind the note. One FOLD6_CARD_PAD outset on every side, and
+    // the same title*titleP + body*bodyP height — so it collapses to just the
+    // title row when the body un-types and grows back as it retypes, which is
+    // the whole accordion. No ink trim here (unlike the rule): the card frames
+    // the text BOX, so it wants the full line boxes.
+    // It opens in TWO STEPS — height first, then width (explicit instruction) —
+    // both sliced out of cardOpenP (the body beat's opening share, before any
+    // text) and each re-eased from its own raw slice, as everywhere else.
+    // The height step opens ONE LINE of body, not the whole block — the rest of
+    // the height then FITS THE TEXT (explicit instruction), growing with it as
+    // it types rather than waiting in an empty box. So: a line appears, the card
+    // widens to hold it, and from there the card and the text grow together.
+    const lineH = parseFloat(getComputedStyle(fold6NoteEl).lineHeight) || 20;
+    // On the first appearance the title's own height does NOT grow in as the
+    // title types (explicit instruction): the card takes its full title height
+    // the moment there is a character to hold, and only WIDENS from there, so
+    // the intro reads as width-then-height rather than as both at once. On the
+    // accordion path the title height is already settled, so titleP is 1 there
+    // whenever any of this matters and the ternary changes nothing.
+    const titleHP = noteCardIntro ? (titleP > 0 ? 1 : 0) : titleP;
+    const cardH = titleH * titleHP
+      + (FOLD6_NOTE_TITLE_GAP + lineH) * cardHT
+      + Math.max(0, fold6NoteHeightPx - lineH) * bodyP;
+    // It collapses on the OTHER axis too: closed it is only as wide as the
+    // title row — text, the gap, and the chevron — and it widens to the note's
+    // full 155px as the body types. Both ends are content widths; the padding
+    // is added once, after.
+    const chevStyle = getComputedStyle(fold6NoteTitleEl);
+    const chevSize = parseFloat(chevStyle.getPropertyValue("--note-chevron-size")) || 6;
+    const chevGap  = parseFloat(chevStyle.getPropertyValue("--note-chevron-gap")) || 7;
+    const chevInset = parseFloat(chevStyle.getPropertyValue("--note-chevron-inset")) || 0;
+    const closedW =
+      fold6NoteTitleMeasureEl.offsetWidth + chevGap + chevSize + chevInset;
+    const contentW = closedW + (fold6NoteWidthPx - closedW) * cardWT;
+    // The card hugs the legend's right edge, so it grows and shrinks leftward:
+    // the RIGHT edge is the fixed one.
+    fold6NoteCardEl.style.left = `${noteRightEdge - contentW - FOLD6_CARD_PAD}px`;
+    fold6NoteCardEl.style.top = `${noteTitleY - FOLD6_CARD_PAD}px`;
+    fold6NoteCardEl.style.width = `${contentW + 2 * FOLD6_CARD_PAD}px`;
+    fold6NoteCardEl.style.height = `${cardH + 2 * FOLD6_CARD_PAD}px`;
+    fold6NoteCardEl.style.opacity = cardH > 0 ? "1" : "0";
+    // The chevron rides the card's left edge (it is absolutely positioned
+    // inside the title box, which stays a fixed 155px wide however narrow the
+    // card gets) — so hand it that edge in the title's own coordinates.
+    fold6NoteTitleEl.style.setProperty("--note-chevron-x",
+      `${(fold6NoteWidthPx - contentW + chevInset).toFixed(1)}px`);
+  }
+  fold6NoteEl.style.opacity = fold6NoteTitleEl.style.opacity = noteTypeT > 0 ? "1" : "0";
   // In the panel the note FLOWS, so an opacity-0 note still takes up its full
   // height and the מקרא frame opens with an empty gap under the rows before
   // @fold6 has revealed anything. Take it out of layout entirely until the
@@ -836,7 +1040,8 @@ function updateGroups() {
   // playing, and the note appearing then would push the frame taller under rows
   // that are still typing. It joins the panel at the reader's first tap
   // instead.
-  fold6NoteDividerEl.hidden = fold6NoteEl.hidden =
+  fold6NoteCardEl.hidden =
+  fold6NoteRuleEl.hidden = fold6NoteEl.hidden = fold6NoteTitleEl.hidden =
     fold6MobileLegend && (noteRevealT <= 0 || fold6MLegendIntroActive);
 
   // The מקרא bar appears with the same crossing that dissolves the six rows
@@ -944,6 +1149,10 @@ function updateGroups() {
     const colorPhaseT = p7Ease(Math.max(0, Math.min(1, localRaw / FOLD9_FLY_COLOR_SPAN)));
     const resizeT = p7Ease(Math.max(0, Math.min(1, localRaw / FOLD9_FLY_RESIZE_SPAN)));
     const moveT = p7Ease(Math.max(0, Math.min(1, (localRaw - FOLD9_FLY_RESIZE_SPAN) / (1 - FOLD9_FLY_RESIZE_SPAN))));
+
+    // Square 0 carries the demo tooltip, whose "fly" hang angle swings with the
+    // travel itself — publish beat 2 rather than let it re-derive the stagger.
+    if (i === 0) fold8FlyMoveT = moveT;
 
     const colorT = i === 0 ? fold9Phase1T : colorPhaseT;
     sq.style.background = lerpFold6SquareColor(FOLD6_SQUARE_COLORS[i], colorT);

@@ -1,6 +1,6 @@
 # Drag-and-drop categorization — `@fold11` (`#page-10`, `page9.js`)
 
-"איפה עובר הגבול בעיניכם?" — the reader drags category pills into an "extreme" zone and
+"מה נחשב בעיניכם לפעולה לגיטימית, ומה לפעולה קיצונית?" — the reader drags category pills into an "extreme" zone and
 the matching event dots migrate above the divider line.
 
 > **Two desktop layouts.** The section below describes the *legacy* desktop layout
@@ -97,7 +97,14 @@ state-1 animation runs untouched. A press that does move is a normal drag.
 No HTML5 drag-and-drop — manual pointer events. `pointerdown` on a pill (left button
 only) clones it into a `.page9-pill-ghost` on `<body>`, hides the original with
 `.dragging`, sets `pointerCapture`, and registers `pointermove`/`pointerup` on `window`.
-Hit-testing is `document.elementFromPoint` with the ghost temporarily `display: none`.
+Hit-testing is `document.elementFromPoint` with the ghost temporarily `display: none`,
+**with a geometric fallback to the tray band's own rect** for `#page9ZoneBelow`: when every
+pill has been classified extreme, both `.page9-tray-row`s are `:empty` and hidden, so
+zoneBelow's content width is 0 and — the tray being `align-items: center` — the box collapses
+to zero WIDTH (its 44px `min-height` buys nothing). `elementFromPoint` can never hit it, and
+without the fallback the last pill to leave strands all ten with no way to drag one back. The
+band is the right stand-in: it's already what `.page9-tray:has(#page9ZoneBelow.dragover)`
+highlights, so the hit area matches the affordance shown.
 Legit→legit drops still commit but suppress the highlight.
 
 `commitDrop` = `placePillInZone` then `commitDropState`, in that order — **the chip always
@@ -225,7 +232,7 @@ Scroll-driven reset/restore (`p9ResetDrops` / `p9RestoreDrops`, driven from
 loop (`p9RunAnimLoop`, `p9LineRunLoop`, both count loops, the count-position animator)
 paints while `p9PageVisible()` — currentPage 9 **or** 10 — because `drawPage12` renders
 through `drawPage9`, so a mid-flight drop keeps flying and finishes on @fold12's canvas.
-If @fold12's title block reaches the top mid-flight, `fold13Trigger`'s morph wins
+If @fold13's card reaches the top mid-flight, `fold13Trigger`'s morph wins
 regardless: `updateFold13` snapshots the live `p9.lastPositions` (mid-flight spots) as
 the scatter's start, and `drawBandedCols` stops painting the clustered/flying extreme
 dots the moment `fold13ExtremeMorphT > 0`, so the dots scatter from wherever they were.
@@ -236,7 +243,9 @@ dots the moment `fold13ExtremeMorphT > 0`, so the dots scatter from wherever the
 brute-force scans `p9.lastPositions` with `HIT_PAD` 3 and **skips any dot at or below
 `p9.midY`** — legit dots are not hoverable. A hit highlights the matching dropped pill
 (`.is-hover-highlighted`) and shows `#page9Tooltip` with the date, `descHeMedium`, and
-the actor color driving the dashed SVG border. That border's width is one knob,
+the actor color driving the box — on desktop as the **fill** behind white text (no stroke;
+the dash `<svg>` is built as always but hidden), on mobile as the dashed SVG border. That
+border's width is one knob,
 `TOOLTIP_BORDER_W` (2, `js/core.js`): `updateTooltipDash` writes it to both the SVG
 stroke and the tooltip's `--tip-border-w` (the transparent CSS border holding the
 box-model space open), and derives the path inset/radius from it.
@@ -539,6 +548,41 @@ This is the same suppression the graphic column carries for @fold9's loupe.
   see the callout under "The legit bar"), or `H - p9LegitBarH(W)` in bar mode — either way
   flush with the viewport's bottom edge, floored so the extreme grid always keeps 8 cells of
   height.
+
+### The dropped pill's ✕ — PARKED (desktop)
+
+**Not live.** A dropped pill ships as it always has: 6-dot grip on the right, no ✕. The whole
+feature is built and kept behind one switch because the decision is deferred, not made.
+
+**To turn it on:** add `page9-x-affordance` to `.page9-sticky` (markup or a one-liner in
+page9.js). That is the only change — every pill already carries a
+`<span class="page9-pill-x">` (`p9BuildPanel`, page9.js), `display: none` until the gated
+rules match. See the `OPTIONAL` block in style.css.
+
+**What it does when on.** The ✕ **replaces the 6-dot grip** at the pill's right-hand end
+(`order: -1` — lower order = further right in this RTL row), chosen by eye with a `compare/`
+harness on 2026-09-04 over two left-hand placements. The reasoning: a dropped pill's one
+gesture is a click that returns it to the tray, which is what a ✕ announces and what a
+"drag me" grip does not — two icons at that end would say two different things. Dragging
+still works exactly as before; it just stops advertising itself.
+
+It is **decoration, not a control**, per explicit instruction: the whole pill stays the single
+click/drag target. Hence a `<span>` rather than a `<button>`, `aria-hidden`, and
+`pointer-events: none` — a real button would promise an action of its own and would swallow
+the pill's own `pointerdown`, which is what starts a drag.
+
+Its box is `--p9-x-size` (24px) wide and **zero** tall. The height is the subtle part: a
+dropped pill is auto-height, so it takes the height of its tallest item — and a 24px ✕ box is
+taller than the label's line box, which grew the whole pill. At `height: 0` it contributes
+nothing on the cross axis; the pill's `align-items: center` centres the empty box on the
+label's line and the glyph overflows it evenly. Width still counts, which is the point: the ✕
+takes horizontal room, never vertical. At rest it is `currentColor` at 0.55 opacity, so it
+follows the label through `.is-hover-highlighted`; hovering the pill takes it to `#000` at
+full opacity.
+
+**Desktop only** either way. Under 600px the pill's left slot belongs to the ⓘ below, the
+`#page9ZoneAbove` zone doesn't exist (mobile classifies in place), and the tray is a nowrap
+scrolling row where a ✕ appearing on tap would resize the chip mid-band.
 
 ### The pill ⓘ button
 

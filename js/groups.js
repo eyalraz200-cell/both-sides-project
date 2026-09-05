@@ -14,10 +14,8 @@ const GROUPS_FRAME_H = 982; // Figma frame height the y-coordinates below are au
 // fold4.x is always the SWATCH's own anchor point (matching every other
 // coordinate in this file) — NOT the container's left edge. The 6 camp
 // groups split into two clean top-aligned columns, hand-placed per explicit
-// written spec (not a Figma frame): coalition trio (מפגינים חרדים/תנועות
-// התנחלות/קבוצות ימין לאומיות) at x=887 (screen-right), change trio (תנועות
-// ארגוני שמאל/מתנגדי הרפורמה ותומכי עסקת החטופים/מפגינים ערבים ישראלים) at x=725
-// (screen-left), both starting
+// written spec (not a Figma frame): the coalition trio at x=887 (screen-right)
+// and the change trio at x=725 (screen-left), both starting
 // at y=443 with a 40-unit row gap. The two columns are placed with enough
 // clearance on each side of the frame's own horizontal center (x=756, i.e.
 // always screen-center regardless of viewport width). Only the y values are
@@ -36,17 +34,17 @@ const GROUPS_FRAME_H = 982; // Figma frame height the y-coordinates below are au
 // derives each event's `side` from them (full_v3.xlsx has no side column).
 const GROUPS = [
   { color: "#31CE1C", label: "מפגינים ערבים ישראלים",  actor: "arab israelis",
-    fold4: { x: 725,  y: 514, swatchFirst: true }, fold6: { x: 31, y: 536 } },
+    fold4: { x: 725,  y: 514, swatchFirst: true }, fold6: { x: 31, y: 560 } },
   { color: "#F9B624", label: "תנועות התנחלות באיו״ש",           actor: "settlers",
     fold4: { x: 887,  y: 488, swatchFirst: true }, fold6: { x: 31, y: 512 } },
   { color: "#F024FF", label: "קבוצות ימין לאומיות",      actor: "right wing protesters",
-    fold4: { x: 887,  y: 514, swatchFirst: true }, fold6: { x: 31, y: 536 } },
+    fold4: { x: 887,  y: 514, swatchFirst: true }, fold6: { x: 31, y: 560 } },
   { color: "#6B89FF", label: "מתנגדי הרפורמה ותומכי עסקת החטופים", actor: "protesters against government",
     fold4: { x: 725,  y: 488, swatchFirst: true }, fold6: { x: 31, y: 512 } },
-  { color: "#FF1A94", label: "ארגוני שמאל",            actor: "peace movements",
-    fold4: { x: 725,  y: 462, swatchFirst: true }, fold6: { x: 31, y: 560 } },
+  { color: "#FF1A94", label: "פעילי שמאל",             actor: "peace movements",
+    fold4: { x: 725,  y: 462, swatchFirst: true }, fold6: { x: 31, y: 536 } },
   { color: "#454545", label: "מפגינים חרדים",           actor: "haredi jews",
-    fold4: { x: 887,  y: 462, swatchFirst: true }, fold6: { x: 31, y: 560 } },
+    fold4: { x: 887,  y: 462, swatchFirst: true }, fold6: { x: 31, y: 536 } },
 ];
 
 // @fold1's dot columns (buildPage0AllDots, page1.js) read 12 of their 200 dot
@@ -111,7 +109,13 @@ function fold2RowPitchPx() {
 // center (Figma: block centers at x=590 and x=913 about the frame's own 756).
 // Symmetric on purpose — Figma's own two blocks are within ~5px of symmetric,
 // and at @fold2 neither block carries a label to unbalance it.
-const FOLD2_CAMP_CENTER_GAP_PX = 160;
+// 180, not Figma's measured 160 — widened by eye with the `manual/` @fold3
+// harness on 2026-09-04. @fold3's rows trail a LABEL out of each column, which
+// @fold2's bare rect blocks don't, so the Figma gap that reads right at @fold2
+// let the two camps' label runs close on each other at @fold3. One constant
+// anchors both folds (and the camp headers) on purpose, so this is the value
+// that has to satisfy the tighter of the two.
+const FOLD2_CAMP_CENTER_GAP_PX = 180;
 // Live gap for a given viewport width. Desktop keeps the Figma-measured 160px
 // flat; on mobile (isMobile, js/core.js) the flat 160 would need ~500-600px of
 // width, so the two blocks are instead set to a fixed 80px of VISIBLE space
@@ -151,7 +155,7 @@ const FOLD2_GROUP_CELL = [
   { row: 0, col: 3 },  // #F9B624  תנועות התנחלות          (coalition)
   { row: 2, col: 0 },  // #F024FF  קבוצות ימין לאומיות     (coalition)
   { row: 2, col: 0 },  // #6B89FF  מתנגדי הרפורמה ותומכי עסקת החטופים (change)
-  { row: 0, col: 0 },  // #FF1A94  ארגוני שמאל             (change)
+  { row: 0, col: 0 },  // #FF1A94  פעילי שמאל              (change)
   { row: 1, col: 1 },  // #454545  מפגינים חרדים           (coalition)
 ];
 // The scatter above is AUTHORED in the canonical 4-wide reading order; a cell's
@@ -441,92 +445,98 @@ const FOLD6_SQUARES_OFFSET = [
 ];
 // Not shown in Figma node 258:2206 (no label layers next to the squares) —
 // kept only as inert element text content (fold6-square-label stays
-// opacity:0); harmless if never revealed.
+// opacity:0); harmless if never revealed. Index-aligned with
+// FOLD6_SQUARE_ROW_IDS and carrying each pinned event's OWN category, so the
+// label can't contradict the dot the square becomes; every one is a real
+// P9_CATEGORIES pill (page9.js).
 const FOLD6_SQUARE_LABELS = [
-  "הפגנה לא אלימה",
-  "החזקה בכפייה",
-  "הפרות סדר",
-  "פוגרום", // was הטרדה ואיומים, retired from P9_CATEGORIES on the v3 dataset
-  "תקיפה פיזית",
-  "ניכוס שטח",
-  "פגיעה ברכוש",
-  "חסימת כביש",
+  "הפגנה לא אלימה",  // 0  row-11
+  "הפרות סדר",       // 1  row-5
+  "הפגנה לא אלימה",  // 2  row-7
+  "פגיעה ברכוש",     // 3  row-6
+  "חסימת כביש",      // 4  row-10
+  "ניכוס שטח",       // 5  row-6794
+  "הפגנה לא אלימה",  // 6  row-12
+  "פגיעה ברכוש",     // 7  row-6795
 ];
-// Not shown in Figma node 258:2206 either (all 8 squares render flat
-// #2d2d2d there — see lerpFold6SquareColor's own null-target case, same
-// value) — these actor assignments only matter once fold 9 recolors/flies
-// the squares out to their real per-event dots, a later beat this specific
-// Figma frame doesn't depict. Reads GROUPS' own `color` (by `actor`, the
-// same join key p7ActorColor in page7.js uses) rather than a second
-// hardcoded hex list, so a future color edit on GROUPS updates these
-// squares too.
+// Reads GROUPS' own `color` (by `actor`, the same join key p7ActorColor in
+// page7.js uses) rather than a second hardcoded hex list, so a future color
+// edit on GROUPS updates these squares too.
 function groupColorByActor(actor) {
   return GROUPS.find(g => g.actor === actor).color;
 }
-// Kept for the next @fold10 trigger to reuse: each square's actor is chosen to
-// match its own column's political side — left column (even indices, dx
-// -16.5) gets left-camp actors, right column (odd indices, dx +8.5, see
-// FOLD6_SQUARES_OFFSET) gets right-camp actors. Only 2 left-camp actors exist
-// vs 3 right-camp ones, so left alternates P/L twice each and right cycles
-// S/R/H/H (uneven, but there's no 4th right-camp actor to reach for — order
-// swapped from the original H/R/S/H per explicit instruction, so the
-// top-right square is now S/מתיישבים and the 3rd-from-top-right is
-// H/חרדים). Index 0 is unchanged ("protesters against government")
-// since @fold9's tooltip (below) targets that specific square/event, and
-// it's already a left-camp actor in the left column.
-// S=מתיישבים L=פעילי שמאל H=חרדים P=מתנגדי הרפורמה R=פעילי ימין
+// Each square stands in for ONE specific real event, named by the xlsx's own
+// stable row_id (passed through by server.py). The squares are the timeline's
+// VERY FIRST events (explicit instruction): the 4 earliest left-camp events go
+// in the left column (even indices, dx -16.5) and the 4 earliest right-camp
+// ones in the right column (odd indices, dx +8.5, see FOLD6_SQUARES_OFFSET), so
+// the two columns still read as the two camps.
+//   0  row-11    2023-01-06  protesters against government   ← the tooltip square
+//   1  row-5     2023-01-01  haredi jews
+//   2  row-7     2023-01-02  arab israelis
+//   3  row-6     2023-01-01  settlers
+//   4  row-10    2023-01-05  protesters against government
+//   5  row-6794  2023-01-01  settlers
+//   6  row-12    2023-01-06  arab israelis
+//   7  row-6795  2023-01-01  settlers
+// The earliest rows are lopsided, so this leaves the right column one grey and
+// three identical yellows, and neither פעילי שמאל (first event only 2023-02-27)
+// nor קבוצות ימין לאומיות (2023-01-10) appears among the squares at all — a fact
+// of the data, accepted. Swapping an id here is the whole edit; keep
+// FOLD6_SQUARE_ACTORS and FOLD6_SQUARE_LABELS in step with it.
+const FOLD6_SQUARE_ROW_IDS = [
+  "row-11", "row-5", "row-7", "row-6",
+  "row-10", "row-6794", "row-12", "row-6795",
+];
+// Index 0 is the tooltip square — @fold7's demo shows that one specific event
+// (chosen by eye: the 2023-01-06 lawyers' protest outside the justice
+// minister's Modi'in home, whose description fills the docked frame cleanly).
+const FOLD6_TOOLTIP_ROW_ID = FOLD6_SQUARE_ROW_IDS[0];
+// Not shown in Figma node 258:2206 either (all 8 squares render flat
+// #2d2d2d there — see lerpFold6SquareColor's own null-target case, same
+// value) — the actors only matter once @fold8 recolors/flies the squares out to
+// their real per-event dots, a later beat that Figma frame doesn't depict. This
+// list MUST mirror FOLD6_SQUARE_ROW_IDS' own rows: it can't be read off the
+// data, because FOLD6_SQUARE_COLORS is computed at parse time, long before
+// events.json has loaded.
+// S=מתיישבים A=ערבים ישראלים H=חרדים P=מתנגדי הרפורמה
 const FOLD6_SQUARE_ACTORS = [
   "protesters against government",       // 0 (L col) - P - blue
-  "settlers",                            // 1 (R col) - S - orange  (top-right; swapped with 5 per explicit instruction)
-  "peace movements",                     // 2 (L col) - L - pink
-  "right wing protesters",               // 3 (R col) - R - red
+  "haredi jews",                         // 1 (R col) - H - grey
+  "arab israelis",                       // 2 (L col) - A - green
+  "settlers",                            // 3 (R col) - S - yellow
   "protesters against government",       // 4 (L col) - P - blue
-  "haredi jews",                         // 5 (R col) - H - grey  (3rd from top-right; swapped with 1 per explicit instruction)
-  "peace movements",                     // 6 (L col) - L - pink
-  "haredi jews",                         // 7 (R col) - H - grey
+  "settlers",                            // 5 (R col) - S - yellow
+  "arab israelis",                       // 6 (L col) - A - green
+  "settlers",                            // 7 (R col) - S - yellow
 ];
 const FOLD6_SQUARE_COLORS = FOLD6_SQUARE_ACTORS.map(groupColorByActor);
-// Which occurrence (0 = first chronologically, 1 = second, ...) of its own
-// actor each square stands in for, among left-side events sorted by date
-// (p7.leftEvents' own order — see p7NthIndexOfActor/p7EventForActorOccurrence,
-// page7.js) — auto-derived from FOLD6_SQUARE_ACTORS' own position (count of
-// the same actor appearing earlier in the list), same as the original
-// 10-square design, except index 0 — see FOLD6_TOOLTIP_ROW_ID below.
-const FOLD6_SQUARE_OCCURRENCE = FOLD6_SQUARE_ACTORS.map((actor, i) =>
-  FOLD6_SQUARE_ACTORS.slice(0, i).filter(a => a === actor).length
-);
 
-// Square 0 is the tooltip square, so it must point at ONE chosen real event
-// rather than "whichever event happens to be first". It names that event by the
-// xlsx's own stable row_id (passed through by server.py) — "row-34", the
-// 2023-01-14 anti-government protest outside justice-minister Levin's Modi'in
-// home against the judicial reform (chosen for an early date and a description
-// that fills exactly 3 lines in the mobile docked frame).
-// The occurrence number the lookups actually need is derived from the loaded
-// data at first use (p7OccurrenceOfRowId, page7.js) and cached, so adding or
-// removing earlier events in the xlsx can no longer silently slide the tooltip
+// The lookups downstream (p7TargetForActorOccurrence / p7EventForActorOccurrence,
+// page7.js) address an event as (actor, occurrence) — which occurrence of its own
+// actor it is within its side's date-sorted list. That fragile positional number
+// is DERIVED from the row id at first use (p7OccurrenceOfRowId) and cached, so
+// adding or removing earlier events in the xlsx can't silently slide a square
 // onto a neighbouring event. Resolved lazily because events.json loads after
 // this file parses.
-const FOLD6_TOOLTIP_ROW_ID = "row-34";
-let fold6TooltipOccurrence = null;
-let fold6TooltipWarned = false;
+const fold6SquareOccurrences = new Array(FOLD6_SQUARE_ROW_IDS.length).fill(null);
+const fold6SquareWarned = new Set();
 function fold6SquareOccurrence(i) {
-  if (i !== 0) return FOLD6_SQUARE_OCCURRENCE[i];
-  if (fold6TooltipOccurrence === null) {
-    const n = p7OccurrenceOfRowId(FOLD6_TOOLTIP_ROW_ID);
-    if (n === -1) {
-      // Data not loaded yet (retry next frame), or the row is gone from the
-      // dataset — in which case fall back to the plain derived occurrence so
-      // the square still has *an* event, and say so once.
-      if (p7.ready && !fold6TooltipWarned) {
-        fold6TooltipWarned = true;
-        console.warn(`fold6 tooltip: row_id ${FOLD6_TOOLTIP_ROW_ID} not in events.json — pick a new one`);
-      }
-      return FOLD6_SQUARE_OCCURRENCE[0];
+  if (fold6SquareOccurrences[i] !== null) return fold6SquareOccurrences[i];
+  const rowId = FOLD6_SQUARE_ROW_IDS[i];
+  const n = p7OccurrenceOfRowId(rowId);
+  if (n === -1) {
+    // Data not loaded yet (retry next frame), or the row is gone from the
+    // dataset — in which case fall back to that actor's first event so the
+    // square still has *an* event, and say so once.
+    if (p7.ready && !fold6SquareWarned.has(rowId)) {
+      fold6SquareWarned.add(rowId);
+      console.warn(`fold6 square ${i}: row_id ${rowId} not in events.json — pick a new one`);
     }
-    fold6TooltipOccurrence = n;
+    return 0;
   }
-  return fold6TooltipOccurrence;
+  fold6SquareOccurrences[i] = n;
+  return n;
 }
 
 const fold6SquaresOverlayEl = document.getElementById("fold6SquaresOverlay");
@@ -600,7 +610,16 @@ const squaresRevealCardEl = document.querySelector("#page-4 .text-card");
 const acledNoteCardEl     = document.querySelector("#page-5 .text-card");
 // Hoisted above checkFold13 (below), which needs it already resolved at
 // definition time — also reused by p13SyncGateVisibility further down.
-const page12StickyEl    = document.querySelector("#page-11 .page12-sticky-center");
+// #page-11 is @fold12, the closing statement — NOT the outro/credits card,
+// which sits behind it at #page-12 and shares the same wrapper class. The two
+// halves of the old single hand-off are split across them on purpose:
+//   - @fold12 (page12StickyEl) owns the scroll GATE and the scroll-linked fade
+//     (fold13ScrollT) — everything fades away, but the extreme dots stay in
+//     their columns;
+//   - @fold13 (fold13OutroStickyEl) owns the freeform MORPH — the dots only
+//     spread once the final card arrives.
+const page12StickyEl       = document.querySelector("#page-11 .page12-sticky-center");
+const fold13OutroStickyEl  = document.querySelector("#page-12 .page12-sticky-center");
 
 // Generic discrete trigger: a fixed-duration 0<->1 phase fired once by
 // crossing a scroll threshold (see watchCardThreshold below), exactly like
@@ -731,11 +750,64 @@ const fold3Trigger      = makeTrigger(FOLD3_ENTRANCE_MS, (...a) => updateGroups(
 // @fold4 (#page-3): 2 sequential beats on one trigger — the split
 // merging back into one rect first, THEN the glide into the left mini-legend
 // (see the raw-slice spans in updateGroups).
-const fold6Trigger      = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateGroups(...a));
+// onSettle chains the desktop label un-type: the labels stay for the whole
+// glide (they ARE the thing being carried into the legend) and only spell
+// themselves away once the row has landed — @fold4's end state on desktop is
+// six bare swatches (explicit instruction). Reverses on a scroll back up,
+// because settling at 0 resets it.
+const fold6Trigger      = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateGroups(...a),
+  (target) => {
+    if (isMobile()) return;   // mobile already un-types inside the glide itself
+    if (target >= 1) fold6LabelUntypeTrigger.trigger(1);
+    else fold6LabelUntypeTrigger.set(0);
+  });
+// The un-type after the glide, and its counterpart: hovering anywhere over the
+// mini-legend types every label back in, BOTH columns at once (explicit
+// instruction — the legend is one object, so it answers as one). Separate
+// triggers so a hover part-way through the un-type still crossfades cleanly:
+// the visible character count is max(1 - untype, hover), never their sum.
+const FOLD6_LABEL_UNTYPE_MS = 900;
+const FOLD6_LABEL_HOVER_MS  = 420;
+const fold6LabelUntypeTrigger = makeTrigger(FOLD6_LABEL_UNTYPE_MS, (...a) => updateGroups(...a));
+const fold6LabelHoverTrigger  = makeTrigger(FOLD6_LABEL_HOVER_MS,  (...a) => updateGroups(...a));
+// Two invisible hit boxes, one per legend column, positioned per frame by
+// updateGroups (they can't be CSS-only: the rows are laid out in JS against
+// the live viewport). They live on .layout rather than inside .groups-overlay,
+// whose `pointer-events: none` would otherwise have to be undone per child.
+const fold6LegendHoverEls = [0, 1].map(() => {
+  const el = document.createElement("div");
+  el.className = "fold6-legend-hover";
+  el.addEventListener("mouseenter", () => {
+    fold6LabelHoverTrigger.trigger(1);
+    fold6NoteHoverTrigger.trigger(1);
+  });
+  el.addEventListener("mouseleave", () => {
+    fold6LabelHoverTrigger.trigger(0);
+    fold6NoteHoverTrigger.trigger(0);
+  });
+  document.querySelector(".layout").appendChild(el);
+  return el;
+});
 // Grey squares grow-in (@fold5, #page-4) and the ACLED bottom-legend note
 // fade-in (@fold6, #page-5) — see squaresRevealCardEl / acledNoteCardEl above.
 const squaresRevealTrigger = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateGroups(...a));
+// The note's own un-type: once @fold6's card has half left the top of the
+// screen the note spells itself away from the end, leaving the title and the
+// hairline behind. Hovering the legend types it back
+// (fold6NoteHoverTrigger, declared just below). Desktop only —
+// mobile has no hover, so an un-typed note there would be unrecoverable, so
+// checkNoteUntype simply doesn't run under the breakpoint.
+const FOLD6_NOTE_UNTYPE_MS = 900;
+// The note's hover-retype is its OWN trigger rather than riding the labels'
+// (explicit instruction): it doesn't have to land with them, and it wants more
+// breathing time — there is a great deal more text here than in a group label,
+// and the card is opening underneath it at the same time. Fired from exactly
+// the same two places as fold6LabelHoverTrigger, so hovering the legend or the
+// note itself still brings both back; only the tempo differs.
+const FOLD6_NOTE_HOVER_MS = 700;
+const fold6NoteHoverTrigger = makeTrigger(FOLD6_NOTE_HOVER_MS, (...a) => updateGroups(...a));
 const acledNoteTrigger     = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateGroups(...a));
+const fold6NoteUntypeTrigger = makeTrigger(FOLD6_NOTE_UNTYPE_MS, (...a) => updateGroups(...a));
 const fold7LabelTrigger = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateGroups(...a));
 // Matches FOLD8_GROW_MS (the tooltip's own wall-clock grow-to-full-scale
 // time, see its comment above) — not the typewriter that follows it — so the
@@ -746,12 +818,22 @@ const fold8SquareDimTrigger = makeTrigger(FOLD8_SQUARE_DIM_MS, (...a) => updateG
 // @fold7 trigger #2 (teacher review 2026-09-03, F1): the tooltip demo used to
 // ride fold7LabelTrigger, so it grew + typed at the very moment the title
 // card was passing over the squares — the two collided. It now has its own
-// trigger, crossed FOLD8_TOOLTIP_ABOVE_PX higher up the viewport than the
-// house 0.5 (see checkFold8Tooltip below), i.e. the card has moved on above
-// the squares before the tooltip pops. Trigger #1 (the 0.5 crossing shared
-// with the labels) only dims the 7 non-demo squares so square 0 stands out.
+// trigger, crossed once the card has cleared the tooltip's own top edge (see
+// fold8TooltipCardFrac below), i.e. the card has moved on above the tooltip
+// before it pops. Trigger #1 (the 0.5 crossing shared with the labels) only
+// dims the 7 non-demo squares so square 0 stands out.
 // The eased t gates the tooltip; its raw progress is what the reversible
 // grow-then-type sequence senses direction from (fold8AdvanceSequence).
+//
+// The gap the card keeps above the tooltip's measured top edge. This is the
+// only hand-tuned number left in this crossing — everything else is measured
+// off the real box, so the crossing tracks the tooltip's actual size and spot
+// on any viewport instead of assuming them.
+const FOLD8_TOOLTIP_CLEARANCE_PX = 30;
+// Fallback only, for the frames before events.json has loaded (the demo
+// event's text is what gives the box its height) or if the demo square isn't
+// built yet — the old fixed offset, kept so the crossing still has somewhere
+// sane to sit rather than snapping to the house 0.5 and colliding again.
 const FOLD8_TOOLTIP_ABOVE_PX = 400;
 const fold8TooltipTrigger = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateGroups(...a));
 // @fold10 trigger #1 — its title card's ordinary midpoint crossing. Colors in
@@ -763,7 +845,7 @@ const fold9Trigger = makeTrigger(FOLD9_COLOR_MS, (...a) => updateGroups(...a));
 // (its title card passing fully offscreen, top <= 0 — see p7AxisShouldShow/
 // p7HasEngaged, page7.js). Colors in all 8 fold-6 squares (in their own
 // actor's group color) and flies each one to the real per-event dot it's
-// standing in for (FOLD6_SQUARE_ACTORS/FOLD6_SQUARE_OCCURRENCE below,
+// standing in for (FOLD6_SQUARE_ROW_IDS/FOLD6_SQUARE_ACTORS below,
 // p7TargetForActorOccurrence, page7.js) — permanently; the real per-event
 // cascade never draws its own dot for these 8 events at all
 // (p7GetClaimedEvents, page7.js), so this DOM square just stays visible once
@@ -902,12 +984,12 @@ function watchCardThreshold(cardEl, frac, trigger, instantReverse = false) {
 // card directly — same 0.5 convention and makeTrigger/watchCardThreshold
 // machinery as every other fold — so the legend's appearance stays in sync
 // with its own title and gives it a t (below) to stagger the rows' entrance.
-// Desktop fires EARLIER than the house 0.5 (teacher review 2026-09-03, G1):
-// with #page-1's card pulled up (style.css) the dots start flying into the
-// camp grids as the card is still coming up, right as the hero title leaves,
-// so the very first scroll gets a response instead of ~40vh of nothing.
-// Mobile keeps 0.5 — its hero→first-card fix (G3) is a separate item.
-const FOLD2_CARD_FRAC = 0.75;
+// House 0.5, tuned by eye against a live harness AFTER #page-1's card was
+// pulled up + its section shortened (style.css, G1): the card now enters the
+// viewport early enough on its own that the earlier 0.75 crossing fired the
+// dot flight while the hero title was still on screen. The gap after @fold1
+// is closed by the card's position, not by an early trigger.
+const FOLD2_CARD_FRAC = 0.5;
 const checkFold2      = watchCardThreshold(
   page2TitleCardEl, () => (isMobile() ? 0.5 : FOLD2_CARD_FRAC), fold2Trigger);
 // @fold3 fires earlier than the house 0.5 on mobile, same reason as @fold4
@@ -929,15 +1011,80 @@ const checkFold6      = watchCardThreshold(
   page6TitleCardEl, () => (isMobile() ? FOLD6_CARD_FRAC : 0.5), fold6Trigger);
 const checkSquaresReveal = watchCardThreshold(squaresRevealCardEl, 0.5, squaresRevealTrigger);
 const checkAcledNote     = watchCardThreshold(acledNoteCardEl, 0.5, acledNoteTrigger);
+// The note un-types on @fold7's crossing (explicit instruction) — the same
+// card and fraction as fold7LabelTrigger / fold8SquareDimTrigger below, so the
+// note clears exactly as the square labels fold takes over. Wrapped rather
+// than chained off fold7LabelTrigger so mobile can opt out: there is no hover
+// there to type it back.
+const checkNoteUntype    = () => { if (!isMobile()) watchNoteUntype(); };
+const watchNoteUntype    = watchCardThreshold(
+  fold7LabelCardEl, 0.5, fold6NoteUntypeTrigger);
 const checkFold7Label = watchCardThreshold(fold7LabelCardEl, 0.5, fold7LabelTrigger);
 const checkFold8SquareDim = watchCardThreshold(fold7LabelCardEl, 0.5, fold8SquareDimTrigger);
-// Desktop: the same card, FOLD8_TOOLTIP_ABOVE_PX above the 0.5 line (a
-// smaller frac = a later crossing). Mobile keeps 0.5: its tooltip is docked
-// at a fixed spot, nothing for the card to collide with.
+// The demo tooltip's height, measured off a real (hidden, offscreen) copy of
+// #page9Tooltip carrying the demo event's own date + description — the box is
+// `display: none` until it's shown, so it can't be measured in place, and its
+// height depends on how many lines that description wraps to at this width.
+// Cached; invalidated on resize, since a width change can re-wrap the text.
+// Returns null while the data (or the element) isn't there yet.
+let fold8TooltipHeightCache = null;
+window.addEventListener("resize", () => { fold8TooltipHeightCache = null; });
+function fold8MeasureTooltipHeight() {
+  if (fold8TooltipHeightCache !== null) return fold8TooltipHeightCache;
+  if (typeof fold8TooltipEl === "undefined" || !fold8TooltipEl) return null;
+  const event = typeof p7EventForActorOccurrence === "function"
+    ? p7EventForActorOccurrence(FOLD6_SQUARE_ACTORS[0], fold6SquareOccurrence(0))
+    : null;
+  if (!event) return null;
+  const probe = fold8TooltipEl.cloneNode(true);
+  probe.removeAttribute("id");
+  // .is-visible is what flips it to display:flex; .is-mirrored matches the
+  // variant @fold7 actually shows (same border-radius, same box width).
+  probe.classList.add("is-visible", "is-mirrored");
+  probe.style.cssText += ";visibility:hidden;left:-9999px;top:-9999px;opacity:1;transform:none;";
+  const dateEl = probe.querySelector(".page9-tooltip-date");
+  const descEl = probe.querySelector(".page9-tooltip-desc");
+  if (dateEl) dateEl.textContent = p7FormatDateDMY(event.date);
+  if (descEl) descEl.textContent = event.descHeMedium || "";
+  document.body.appendChild(probe);
+  const h = probe.getBoundingClientRect().height;
+  probe.remove();
+  if (h > 0) fold8TooltipHeightCache = h;
+  return h > 0 ? h : null;
+}
+
+// Desktop: fire once the title card's BOTTOM has risen clear of the top edge
+// of where the demo tooltip is about to appear, plus FOLD8_TOOLTIP_CLEARANCE_PX
+// of breathing room. Both ends of that are measured rather than assumed — the
+// tooltip's top is derived from square 0's own live rect exactly the way
+// fold8PositionTooltip (js/fold8-tooltip.js) derives it, and the card's height
+// from the card itself — so the crossing follows the tooltip on any viewport
+// instead of riding a fixed 400px guess that only held at one window size.
+// watchCardThreshold compares the card's TOP against frac * innerHeight, hence
+// subtracting the card's own height here to express "the card's bottom".
+// Mobile keeps 0.5: its tooltip is docked at a fixed spot, nothing to collide.
+function fold8TooltipCardFrac() {
+  if (isMobile()) return 0.5;
+  const fallback = 0.5 - FOLD8_TOOLTIP_ABOVE_PX / window.innerHeight;
+  const entry = typeof fold6SquareEls !== "undefined" ? fold6SquareEls[0] : null;
+  const sq = entry ? entry.sq : null;
+  const tipH = fold8MeasureTooltipHeight();
+  if (!sq || tipH === null || !fold7LabelCardEl) return fallback;
+  const sqRect = sq.getBoundingClientRect();
+  if (!sqRect.height) return fallback;
+  // Mirrors fold8PositionTooltip's own math: the box's bottom edge sits
+  // TOOLTIP_GAP above the square's centre, clamped 8px off the viewport top.
+  const TOOLTIP_GAP = 5;
+  const tipTop = Math.max(sqRect.top + sqRect.height / 2 - TOOLTIP_GAP - tipH, 8);
+  const cardH = fold7LabelCardEl.getBoundingClientRect().height;
+  const frac = (tipTop - FOLD8_TOOLTIP_CLEARANCE_PX - cardH) / window.innerHeight;
+  // A frac at or below 0 would need the card fully offscreen to ever cross —
+  // on a short viewport the tooltip can sit that high. Clamp so the trigger
+  // stays reachable; it just fires as the card's top leaves the screen.
+  return Math.max(frac, 0);
+}
 const checkFold8Tooltip = watchCardThreshold(
-  fold7LabelCardEl,
-  () => (isMobile() ? 0.5 : 0.5 - FOLD8_TOOLTIP_ABOVE_PX / window.innerHeight),
-  fold8TooltipTrigger);
+  fold7LabelCardEl, fold8TooltipCardFrac, fold8TooltipTrigger);
 const checkFold9 = watchCardThreshold(page7TitleCardEl, 0.5, fold9Trigger);
 // Same crossing as p7AxisShouldShow (page7.js) — title card fully offscreen,
 // top <= 0. Used to instant-reverse (snap straight back to rest on scroll-up
@@ -946,19 +1093,28 @@ const checkFold9 = watchCardThreshold(page7TitleCardEl, 0.5, fold9Trigger);
 // up from @fold9 into @fold8 plays the same fly-out/color-in animation in
 // reverse, covering only the remaining distance, instead of snapping.
 const checkFold9Fly = watchCardThreshold(page7TitleCardEl, 0, fold9FlyTrigger);
-// Unlike every other fold trigger above, watches the *sticky wrapper*
-// (.page12-sticky-center) at frac 0 (top <= 0) rather than the title card at
-// its ordinary 0.5 — this fires exactly when the wrapper finishes sliding up
-// and pins in place (title block stops moving, having reached its maximum
-// point), not while it's still in transit and not late after it's already
-// been sitting there a while. The gate physically can't be crossed while
-// locked (scrollY is capped well short of this point until a pill's been
-// dropped — see p13GateMax/p13GateLocked below), so no extra lock check is
-// needed here.
-const checkFold13 = watchCardThreshold(page12StickyEl, 0, fold13Trigger);
+// Watches the *sticky wrapper* (.page12-sticky-center), not the title card —
+// the card is centred inside a 100vh wrapper flush with the section top, so
+// the wrapper's own top is the section's arrival.
+//
+// It watches @fold13's wrapper, not @fold12's: the freeform spread belongs to
+// the FINAL card. @fold12's own arrival fades everything out but deliberately
+// leaves the extreme dots standing in their columns — that half is
+// fold13ScrollT, which is scroll-linked and measured off #page-11 separately.
+//
+// frac 0.5, the house convention — NOT 0. @fold13 is the last section on the
+// page, exactly one viewport tall, so its wrapper's top reaches 0 only at
+// scrollY === document bottom: frac 0 made the spread (and with it the camp
+// divider's fade, which rides the same progress) fire at the very last
+// scrollable pixel, if subpixel rounding let it fire at all. Half a viewport
+// in is comfortably reachable and gives the morph its full
+// GROUP_TRANSITION_MS on screen. The gate physically can't be crossed while
+// locked (scrollY is capped a whole fold short of here — see p13GateMax/
+// p13GateLocked), so no extra lock check is needed.
+const checkFold13 = watchCardThreshold(fold13OutroStickyEl, 0.5, fold13Trigger);
 
 function checkGroupTriggers() {
-  checkFold2(); checkFold3(); checkFold6(); checkSquaresReveal(); checkAcledNote(); checkFold7Label(); checkFold8SquareDim(); checkFold8Tooltip(); checkFold9(); checkFold9Fly(); checkFold13();
+  checkFold2(); checkFold3(); checkFold6(); checkSquaresReveal(); checkAcledNote(); checkNoteUntype(); checkFold7Label(); checkFold8SquareDim(); checkFold8Tooltip(); checkFold9(); checkFold9Fly(); checkFold13();
 }
 
 // Default (camp-column) swatch size + the swatch-to-label gap
@@ -977,6 +1133,11 @@ const LEFT_LEGEND_SWATCH_SIZE = 6, LEFT_LEGEND_LABEL_GAP = 6;
 // read for row ORDER (via FOLD6_ROW_FRAME_YS below); the actual spacing all
 // comes from FOLD6_ROW_PITCH, so the three rows can never drift apart.
 const FOLD6_LEGEND_INSET_LEFT = 31, FOLD6_LEGEND_INSET_RIGHT = 31;
+// Hover hit box per legend column (see fold6LegendHoverEls). Wide enough to
+// cover the longest label plus its swatch; the pad gives the top/bottom rows
+// and the outer edge a little slack so the labels don't flicker off when the
+// pointer sits just outside the text.
+const FOLD6_LEGEND_HOVER_W = 230, FOLD6_LEGEND_HOVER_PAD = 14;
 // Mobile: 31px off each edge of a 393px phone spends 16% of the width on
 // margins the desktop frame could afford and a phone can't — the two columns
 // read as floating well inboard of the screen. Both columns use this instead.
@@ -997,8 +1158,8 @@ const FOLD6_LEGEND_TOP_MOBILE = 24;
 // above if it's ever tweaked.
 // (FOLD4_COALITION_ROWS/FOLD4_CHANGE_ROWS themselves are declared up by
 // GROUPS — @fold2's own grid roster needs them before this point.)
-const FOLD4_HEADER_TITLE_COALITION = "מחנה הימין";
-const FOLD4_HEADER_TITLE_CHANGE    = "גוש השינוי";
+const CAMP_HEADER_TITLE_COALITION = "מחנה הימין";
+const CAMP_HEADER_TITLE_CHANGE    = "גוש השינוי";
 // Plain px from each column's own top-row center up to its header's center —
 // fixed, NOT frame-scaled (it used to multiply by H/GROUPS_FRAME_H, which made
 // the gap breathe on window resize while everything around it held; per
@@ -1037,15 +1198,15 @@ const FOLD6_MLEGEND_TOP_MOBILE_PX = 16;
 // @fold3's typed-in label trails left off it, over the space the row's 3
 // filler rects vacate as they shrink.
 
-const fold4ColumnTitleCoalitionEl = document.createElement("div");
-fold4ColumnTitleCoalitionEl.className = "fold4-column-title";
-fold4ColumnTitleCoalitionEl.textContent = FOLD4_HEADER_TITLE_COALITION;
-groupsOverlayEl.appendChild(fold4ColumnTitleCoalitionEl);
+const campHeaderCoalitionEl = document.createElement("div");
+campHeaderCoalitionEl.className = "camp-header";
+campHeaderCoalitionEl.textContent = CAMP_HEADER_TITLE_COALITION;
+groupsOverlayEl.appendChild(campHeaderCoalitionEl);
 
-const fold4ColumnTitleChangeEl = document.createElement("div");
-fold4ColumnTitleChangeEl.className = "fold4-column-title";
-fold4ColumnTitleChangeEl.textContent = FOLD4_HEADER_TITLE_CHANGE;
-groupsOverlayEl.appendChild(fold4ColumnTitleChangeEl);
+const campHeaderChangeEl = document.createElement("div");
+campHeaderChangeEl.className = "camp-header";
+campHeaderChangeEl.textContent = CAMP_HEADER_TITLE_CHANGE;
+groupsOverlayEl.appendChild(campHeaderChangeEl);
 
 // Both camp headers TYPE in on @fold2's 3rd beat rather than just fading (same
 // spec as @fold3's labels). They reuse fold8's two-span typewriter, not the
@@ -1055,15 +1216,15 @@ groupsOverlayEl.appendChild(fold4ColumnTitleChangeEl);
 // full string out from the first frame and only moves characters between the
 // visible and the transparent span, so the header sits still.
 const fold4HeaderSpansCoalition = fold8SetupTypewriter(
-  fold4ColumnTitleCoalitionEl, FOLD4_HEADER_TITLE_COALITION);
+  campHeaderCoalitionEl, CAMP_HEADER_TITLE_COALITION);
 const fold4HeaderSpansChange = fold8SetupTypewriter(
-  fold4ColumnTitleChangeEl, FOLD4_HEADER_TITLE_CHANGE);
+  campHeaderChangeEl, CAMP_HEADER_TITLE_CHANGE);
 
 // Both headers are centered over their own camp block (Figma node 279:1342
-// centers each title on its grid), so they override .fold4-column-title's
+// centers each title on its grid), so they override .camp-header's
 // default right-edge translate(-100%, -50%) anchor.
-fold4ColumnTitleCoalitionEl.style.transform = "translate(-50%, -50%)";
-fold4ColumnTitleChangeEl.style.transform = "translate(-50%, -50%)";
+campHeaderCoalitionEl.style.transform = "translate(-50%, -50%)";
+campHeaderChangeEl.style.transform = "translate(-50%, -50%)";
 
 // @fold3's labels don't fade in — they TYPE in, character by character, over
 // fold3Trigger's own eased progress (per explicit spec). Reverses cleanly
@@ -1079,10 +1240,25 @@ function typedText(full, t) {
 // of the RIGHT (coalition) column — the column the note hangs below.
 const FOLD6_NOTE_TEXT = "הנתונים לקוחים מגוף המחקר הבינלאומי ACLED, המתעד וממפה אירועי מחאה ואלימות פוליטית על בסיס דיווחים מכלי תקשורת ומקורות מקומיים.";
 const FOLD6_NOTE_WIDTH = 155;
+// Heading over the note (explicit instruction). Same 14px/1.4 box as the note
+// so the divider's ink-top math below keeps working unchanged — only the
+// weight separates them.
+const FOLD6_NOTE_TITLE_TEXT = "איסוף הנתונים";
+const FOLD6_NOTE_TITLE_GAP = 4;   // px between the title's box and the note's
 // Divider (faint hairline) sits between the last row and the note. The two
 // gaps are EQUAL on purpose — that's what keeps the divider in the middle of
 // the rows→note gap (explicit instruction); widen/narrow them together.
-const FOLD6_DIVIDER_GAP_TOP = 8, FOLD6_DIVIDER_GAP_BOTTOM = 8, FOLD6_DIVIDER_HEIGHT = 1;
+// The horizontal hairline under the rows is GONE (explicit instruction),
+// replaced by a VERTICAL rule down the right (reading-start) edge of the note
+// block that grows and shrinks with the typing. FOLD6_NOTE_TOP_GAP is the old
+// 8+1+8 stack collapsed into one number so the note's distance from the rows
+// is unchanged.
+const FOLD6_NOTE_TOP_GAP = 17;
+const FOLD6_RULE_W = 1;      // the rule's thickness
+const FOLD6_RULE_GAP = 8;    // px between the rule and the text's right edge
+// The vertical rule runs a little past the note's last line so it sticks out at
+// the bottom rather than stopping flush with the ink (explicit instruction).
+const FOLD6_RULE_OVERHANG = 5;
 // Lowest fold6.y among the coalition (right-column) mini-legend rows —
 // computed rather than hardcoded so adding a row above the coalition bloc
 // re-anchors the note.
@@ -1135,12 +1311,124 @@ function fold6RowIndexY(rowIndex, H) {
 const fold6NoteEl = document.createElement("div");
 fold6NoteEl.className = "fold6-note";
 fold6NoteEl.style.width = `${FOLD6_NOTE_WIDTH}px`;
-fold6NoteEl.innerHTML = FOLD6_NOTE_TEXT.replace(
-  "ACLED",
-  '<a href="https://acleddata.com/" target="_blank" rel="noopener" class="fold6-note-link">ACLED</a>'
-);
+// The note TYPES in at @fold6 (explicit instruction — it used to fade), using
+// fold8's two-span typewriter so the wrapped 155px block keeps its final line
+// breaks from the first frame instead of re-flowing as characters arrive. The
+// one wrinkle is the live "ACLED" link in the middle of the string: a single
+// revealed/hidden span pair would flatten it, so the text is split into three
+// SEGMENTS (before / the <a> / after), each with its own span pair, and
+// fold6UpdateNoteTypewriter walks one running character count across them.
+const fold6NoteTitleEl = document.createElement("div");
+fold6NoteTitleEl.className = "fold6-note-title";
+const fold6NoteSegments = (() => {
+  const [before, after] = FOLD6_NOTE_TEXT.split("ACLED");
+  const mk = (tag, text, cls) => {
+    const el = document.createElement(tag);
+    if (cls) el.className = cls;
+    if (tag === "a") {
+      el.href = "https://acleddata.com/";
+      el.target = "_blank";
+      el.rel = "noopener";
+    }
+    fold6NoteEl.appendChild(el);
+    return fold8SetupTypewriter(el, text);
+  };
+  // The title is the FIRST segment, so the whole block types as one continuous
+  // stream — heading first, then the note under it — rather than two things
+  // typing at once.
+  return [
+    fold8SetupTypewriter(fold6NoteTitleEl, FOLD6_NOTE_TITLE_TEXT),
+    mk("span", before), mk("a", "ACLED", "fold6-note-link"), mk("span", after),
+  ];
+})();
+const FOLD6_NOTE_CHAR_COUNT = FOLD6_NOTE_TITLE_TEXT.length + FOLD6_NOTE_TEXT.length;
+// Two counts, not one: the title (segment 0) and the body (the rest) are fed
+// separately, because the later un-type takes only the body — the title STAYS
+// (explicit instruction). The initial reveal still reads as one stream: the
+// caller derives both counts from the same running total.
+function fold6UpdateNoteTypewriter(titleCount, bodyCount) {
+  const [title, ...body] = fold6NoteSegments;
+  fold8UpdateTypewriter(title, Math.max(0, Math.min(title.fullText.length, titleCount)));
+  let left = bodyCount;
+  for (const seg of body) {
+    const n = Math.max(0, Math.min(seg.fullText.length, left));
+    fold8UpdateTypewriter(seg, n);
+    left -= n;
+  }
+}
+const FOLD6_NOTE_TITLE_LEN = FOLD6_NOTE_TITLE_TEXT.length;
+// The reveal is two beats on acledNoteTrigger's RAW progress (same
+// {start,len} window shape as FOLD2_BEATS, p9Ease re-applied per window):
+// the divider DRAWS — a line growing right→left, the reading direction — and
+// the note types under it. Both START together (explicit instruction); the
+// line just finishes sooner.
+const FOLD6_NOTE_BEATS = {
+  type: { start: 0, len: 1 },  // 0 → 1900ms (GROUP_TRANSITION_MS)
+};
 const fold6NoteLayerEl = document.getElementById("fold6NoteLayer");
+// The CARD the note sits in. Deliberately a SIBLING drawn behind the title and
+// the body, not a wrapper around them: the two are absolutely positioned and
+// their left/top/width are written per frame by updateGroups, and on mobile
+// they are re-parented one by one into the מקרא panel (fold6SyncNoteHome) where
+// they flow instead. Reparenting them under a wrapper would have meant redoing
+// both of those; as a sibling the card just tracks the block it frames, sized
+// from the very numbers that already drive the vertical rule. Appended FIRST so
+// it paints underneath (these are all position:absolute in one layer, so DOM
+// order is paint order — no z-index needed).
+const fold6NoteCardEl = document.createElement("div");
+fold6NoteCardEl.className = "fold6-note-card";
+fold6NoteLayerEl.appendChild(fold6NoteCardEl);
 fold6NoteLayerEl.appendChild(fold6NoteEl);
+fold6NoteLayerEl.appendChild(fold6NoteTitleEl);
+// How much card there is around the text block, on each side. `let` rather
+// than `const` only so a manual/ harness can turn it live — updateGroups reads
+// it every frame, so an assignment shows up on the next repaint.
+let FOLD6_CARD_PAD = 8;
+
+// The card opens in two steps: HEIGHT first, then WIDTH. Both are windows into
+// the BODY's typing progress (0..1), not seconds — the card belongs to the
+// typewriter, so it opens at whatever speed the reader scrolls it at. See the
+// comment at the sizing code in js/update-groups.js for why they end this early.
+// The card opens BEFORE any body text exists: it takes this share of the body's
+// beat for itself, and the text types over the remaining 1 - share. That's what
+// buys the opening its duration — a body line is the full 155px, so text can't
+// arrive while the width is still travelling.
+const FOLD6_CARD_OPEN_SHARE = 0.3;
+// Within that share: height first, then width. The width gets the longer half —
+// the height step is a quick establishing beat (it opens one line's worth), the
+// width is the one that's meant to read as an opening.
+const FOLD6_CARD_OPEN = {
+  h: { start: 0,    len: 0.3 },
+  w: { start: 0.3,  len: 0.7 },
+};
+// ...except on the note's FIRST appearance at @fold6, where the order is
+// reversed: width first, then height (explicit instruction). Nothing has been
+// collapsed yet at that point — there is no earlier state for the card to be
+// opening OUT of — so leading with the height would show the title-only pose
+// as if it meant something, and the card would read as un-collapsing rather
+// than arriving. The width there isn't sliced out of the body's beat at all:
+// it runs on the TITLE's typing (see updateGroups), so the card widens as the
+// title writes itself and only the height is left for the body's share — hence
+// `w` below is unused on that path and `h` gets the whole window.
+const FOLD6_CARD_INTRO = {
+  w: { start: 0,    len: 1 },
+  h: { start: 0,    len: 1 },
+};
+
+// The card also collapses HORIZONTALLY, down to what the title row needs, which
+// means knowing how wide the title's TEXT actually is. It can't be read off
+// fold6NoteTitleEl: that box is a fixed 155px, and mid-type it holds only some
+// of the characters, so the card would breathe in and out one letter at a time.
+// So: an off-screen twin carrying the full title, styled by the same class, and
+// measured. Kept in the DOM (not created per call) and re-measured on demand so
+// that editing the title's font live still lands.
+const fold6NoteTitleMeasureEl = document.createElement("div");
+fold6NoteTitleMeasureEl.className = "fold6-note-title";
+fold6NoteTitleMeasureEl.setAttribute("aria-hidden", "true");
+fold6NoteTitleMeasureEl.style.cssText =
+  "position:absolute;left:-9999px;top:0;width:auto;white-space:nowrap;opacity:0;pointer-events:none";
+fold6NoteTitleMeasureEl.textContent = FOLD6_NOTE_TITLE_TEXT;
+fold6NoteLayerEl.appendChild(fold6NoteTitleMeasureEl);
 // Hidden, permanently off-screen clone of the TOP row's *settled* label
 // (fixed 14px/400, matching fold6's post-lerp end state) — measuring this
 // instead of the live groupItems[FOLD6_TOP_ROW_INDEX].label lets the
@@ -1154,9 +1442,24 @@ fold6RowMeasureEl.className = "group-label";
 fold6RowMeasureEl.style.cssText = "visibility:hidden; left:-9999px; top:-9999px; font-size:14px; font-weight:400;";
 fold6RowMeasureEl.textContent = FOLD6_TOP_ROW.label;
 groupsOverlayEl.appendChild(fold6RowMeasureEl);
-const fold6NoteDividerEl = document.createElement("div");
-fold6NoteDividerEl.className = "fold6-note-divider";
-fold6NoteLayerEl.appendChild(fold6NoteDividerEl);
+const fold6NoteRuleEl = document.createElement("div");
+fold6NoteRuleEl.className = "fold6-note-rule";
+fold6NoteLayerEl.appendChild(fold6NoteRuleEl);
+// Hovering the note block itself types the body back in, on the same trigger
+// as the legend rows (explicit instruction) — the note is part of the legend,
+// so it answers to a hover over either.
+[fold6NoteEl, fold6NoteTitleEl, fold6NoteCardEl].forEach((el) => {
+  el.addEventListener("mouseenter", () => {
+    if (isMobile()) return;
+    fold6LabelHoverTrigger.trigger(1);
+    fold6NoteHoverTrigger.trigger(1);
+  });
+  el.addEventListener("mouseleave", () => {
+    if (isMobile()) return;
+    fold6LabelHoverTrigger.trigger(0);
+    fold6NoteHoverTrigger.trigger(0);
+  });
+});
 
 /* ---------------------------------------------------------------------------
    Mobile mini-legend: camp names + a מקרא disclosure
@@ -1190,7 +1493,7 @@ fold6MobileLegendEl.appendChild(fold6MobileLegendBtnEl);
 
 // Nothing but the button shows on screen. The camp names are INSIDE the panel,
 // heading their own column (per explicit instruction) — the real @fold2 headers
-// (fold4ColumnTitleCoalitionEl / ChangeEl) un-type at @fold4 on mobile exactly
+// (campHeaderCoalitionEl / ChangeEl) un-type at @fold4 on mobile exactly
 // as they do on desktop, so these static copies can't double them.
 //
 // The panel. Two columns of rows, mirroring the desktop mini-legend's own
@@ -1205,8 +1508,8 @@ fold6MobileRowsEl.className = "fold6-mlegend-rows";
 const fold6MobileRowEls = [];
 const fold6MobileCampHeadEls = {};
 [
-  [FOLD4_COALITION_ROWS, FOLD4_HEADER_TITLE_COALITION],
-  [FOLD4_CHANGE_ROWS, FOLD4_HEADER_TITLE_CHANGE],
+  [FOLD4_COALITION_ROWS, CAMP_HEADER_TITLE_COALITION],
+  [FOLD4_CHANGE_ROWS, CAMP_HEADER_TITLE_CHANGE],
 ].forEach(([camp, campTitle]) => {
   const col = document.createElement("div");
   col.className = "fold6-mlegend-col";
@@ -1256,12 +1559,17 @@ function fold6SyncNoteHome() {
   if (want === fold6NoteHome) return;
   fold6NoteHome = want;
   const parent = want === "panel" ? fold6MobilePanelEl : fold6NoteLayerEl;
-  [fold6NoteDividerEl, fold6NoteEl].forEach((el) => {
+  // The card is NOT in this list — it stays in the layer. Inside the panel the
+  // note flows and the panel is its own frame already, so the card hides there
+  // (.fold6-note-card.is-in-panel), exactly as the rule does.
+  [fold6NoteRuleEl, fold6NoteTitleEl, fold6NoteEl].forEach((el) => {
     el.style.left = el.style.top = el.style.width = el.style.opacity = "";
     parent.appendChild(el);
   });
   fold6NoteEl.classList.toggle("is-in-panel", want === "panel");
-  fold6NoteDividerEl.classList.toggle("is-in-panel", want === "panel");
+  fold6NoteTitleEl.classList.toggle("is-in-panel", want === "panel");
+  fold6NoteRuleEl.classList.toggle("is-in-panel", want === "panel");
+  fold6NoteCardEl.classList.toggle("is-in-panel", want === "panel");
 }
 fold6SyncNoteHome();
 
@@ -1377,7 +1685,7 @@ let fold6MLegendIntroActive = false;
 function fold6EndMLegendIntro() {
   fold6MLegendIntroActive = false;
   if (isMobile() && acledNoteTrigger.currentT() > 0) {
-    fold6NoteDividerEl.hidden = fold6NoteEl.hidden = false;
+    fold6NoteRuleEl.hidden = fold6NoteEl.hidden = false;
   }
 }
 
@@ -1464,7 +1772,7 @@ function fold6MFlyEnabled() {
 }
 
 // Where each row and each camp heading lands, in viewport coordinates —
-// directly usable as a .group-item's / .fold4-column-title's left/top, since
+// directly usable as a .group-item's / .camp-header's left/top, since
 // .groups-overlay and .fold6-mlegend-layer are both `position: fixed; inset: 0`.
 // Measured once per viewport size (a dozen getBoundingClientRect reads per
 // scroll frame would be a dozen forced reflows on top of a canvas that already
@@ -1499,7 +1807,7 @@ function fold6MFlyMeasure() {
   fold6MFlyHeadTargets = new Map();
   Object.keys(fold6MobileCampHeadEls).forEach((title) => {
     const h = fold6MobileCampHeadEls[title].getBoundingClientRect();
-    // .fold4-column-title is translate(-50%, -50%) — its left/top IS its
+    // .camp-header is translate(-50%, -50%) — its left/top IS its
     // center, so the target is the heading's center too.
     fold6MFlyHeadTargets.set(title, { x: h.left + h.width / 2, y: h.top + h.height / 2 });
   });
@@ -1528,7 +1836,7 @@ function fold6MFlyArriveT(e6) {
   return e6 >= 1 ? 1 : 0;
 }
 
-/* The flight can't be drawn by the .group-item / .fold4-column-title elements
+/* The flight can't be drawn by the .group-item / .camp-header elements
    themselves: they live in .groups-overlay, inside .graphic-col, which is
    `position: fixed; z-index: 0` and therefore a stacking context — every
    z-index in it is trapped below BOTH the title block (z-index 4 on mobile)
@@ -1588,13 +1896,13 @@ function fold6MFlyRowCloneFor(g) {
 }
 
 // The camp headers fly too, onto the panel's own camp headings. Their stand-in
-// is a single element (no swatch), and .fold4-column-title's own
+// is a single element (no swatch), and .camp-header's own
 // translate(-50%, -50%) has to be reproduced by hand: updateGroups sets it as an
 // inline style on the real header, so it rides along in the copied cssText.
 function fold6MFlyHeadCloneFor(title) {
   return fold6MFlyCloneFor(title, () => {
     const el = document.createElement("div");
-    el.className = "fold4-column-title";
+    el.className = "camp-header";
     el.textContent = title;
     return { el };
   });
@@ -1824,7 +2132,7 @@ function fold6MFlyMaybeReopen() {
   if (!fold6MFlyEnabled() || fold6MLegendIntroActive) return;
   if (!fold6MobilePanelEl.hidden) return; // hand-opened panel: leave it be
   fold6MLegendIntroActive = true;
-  fold6NoteDividerEl.hidden = fold6NoteEl.hidden = true;
+  fold6NoteRuleEl.hidden = fold6NoteEl.hidden = true;
   fold6PlayMLegendFlyIntro();
 }
 
@@ -1885,7 +2193,7 @@ function fold6PlayMLegendIntro() {
   fold6MLegendIntroPlayed = true;
   fold6MLegendIntroActive = true;
   if (fold6MFlyEnabled()) {
-    fold6NoteDividerEl.hidden = fold6NoteEl.hidden = true;
+    fold6NoteRuleEl.hidden = fold6NoteEl.hidden = true;
     fold6PlayMLegendFlyIntro();
     return;
   }
@@ -1893,7 +2201,7 @@ function fold6PlayMLegendIntro() {
   // fold6EndMLegendIntro puts it back by hand: replaying the demo after @fold6
   // has already revealed the note (scrolled back up and down again) would
   // otherwise leave it in the frame until the next updateGroups frame.
-  fold6NoteDividerEl.hidden = fold6NoteEl.hidden = true;
+  fold6NoteRuleEl.hidden = fold6NoteEl.hidden = true;
   // Zeroed BEFORE the panel is unhidden, so it never shows a full-size frame
   // for the one frame between opening and the first tick.
   fold6MobilePanelEl.style.transform = "translateZ(0) scale(0)";

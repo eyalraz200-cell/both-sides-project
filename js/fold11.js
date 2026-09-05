@@ -1,4 +1,13 @@
 // ── @fold12 animations ───────────────────────────────────────────────────────
+// Throughout this file, #page-11 is @fold12 — the closing statement card; the
+// outro/credits card is @fold13 (#page-12) and follows it. Every *scroll*
+// threshold here (gate, hand-off, sticky freeze) is measured off @fold12's
+// offsetTop, so its own height never moves any of them. That height is 150vh
+// (style.css): one viewport to bring the card to centre, then half a viewport
+// of empty run so @fold13's near-full-height outro card doesn't rise into view
+// while this one is still mid-screen. That only reads as spacing because
+// #page-11's .page12-sticky-center is overridden to position:static — left
+// sticky, extra height pins the card at centre instead of scrolling it away.
 // Two independently-driven progress values, per explicit feedback: @fold11
 // is "in position" the instant its interaction state is reached (the gate
 // line) — from there, scrolling in *either* direction must visibly move
@@ -12,14 +21,23 @@
 //       - tray (the pills' frame) fades out in place (inline opacity, transition:none)
 //       - header title + subtitle fade out (page9HeaderEl opacity)
 //       - extreme zone + dropped pill labels fade out (page9ZoneWrapEl opacity)
-//       - canvas count numbers + dividing line + legit dots fade out (p9.fold13OutT)
+//       - canvas count numbers + legit dots fade out (p9.fold13OutT). The
+//         camp dividing line does NOT — it rides eTrigger instead, so it
+//         survives @fold12 under the standing dot columns (see page9.js).
 //       - legend fades out (groupsOverlayEl opacity), and on mobile its מקרא
 //         button too (fold6MobileLegendLayerEl opacity)
 //       - fold12's own title card (frame included) fades out (page9TitleCardEl opacity)
-//   - eTrigger (fold13Trigger, unchanged): fires once, only when the title
-//     card's wrapper (.page12-sticky-center) reaches top<=0 (fully stopped),
-//     and plays out over a fixed GROUP_TRANSITION_MS regardless of further
-//     scroll. Drives only the extreme dots' morph to freeform (p9.fold13ExtremeMorphT).
+//   - eTrigger (fold13Trigger): fires once, only when a .page12-sticky-center
+//     wrapper reaches top<=0 (fully stopped), and plays out over a fixed
+//     GROUP_TRANSITION_MS regardless of further scroll. Drives only the extreme
+//     dots' morph to freeform (p9.fold13ExtremeMorphT) and, with it, the
+//     camp dividing line's fade-out.
+//
+// The two halves land on DIFFERENT folds, per explicit feedback. eScroll runs
+// on @fold12's arrival: everything fades away, but the extreme dots are left
+// standing in their columns. eTrigger is watched on @fold13's wrapper
+// (fold13OutroStickyEl, js/groups.js) — the spread is the FINAL card's
+// flourish, not @fold12's.
 function updateFold13() {
   const tTrigger = fold13Trigger.currentT();
   const eTrigger = 1 - Math.pow(1 - tTrigger, 3); // ease-out cubic
@@ -40,7 +58,7 @@ function updateFold13() {
   const tScroll = fold13ScrollT();
   const eScroll = 1 - Math.pow(1 - tScroll, 3); // same ease-out cubic, scroll-driven
 
-  p9.fold13OutT = eScroll; // fades legit dots / dividing line / counts in drawPage9
+  p9.fold13OutT = eScroll; // fades legit dots / counts in drawPage9 (not the divider)
 
   // When fully reversed (eScroll=0) clear inline opacity so CSS class rules
   // (engaged, is-active, etc.) take over — inline "1" would otherwise
@@ -84,9 +102,10 @@ function updateFold13() {
 
 // Fraction of the way through @fold11's unavoidable one-viewport hand-off to
 // @fold12 (the gate can't unlock any later than one viewport before #page-11
-// arrives, and the sticky wrapper needs that same one viewport of scroll to
-// finish pinning — see p13GateMax and #page-11's own min-height comment in
-// style.css) — 0 at the gate line, 1 once fully arrived. A plain scroll
+// arrives — see p13GateMax) — 0 at the gate line, 1 at scrollY = #page-11's
+// offsetTop, which with the static wrapper is exactly where the card sits
+// centred. #page-11's extra height beyond that is trailing gap and doesn't
+// stretch this range. A plain scroll
 // readout, not a makeTrigger, since this half must move continuously with
 // scroll in both directions rather than play out over fixed real time.
 function fold13ScrollT() {
@@ -112,7 +131,8 @@ function p13GateMax() {
   return gateEl ? gateEl.offsetTop - window.innerHeight : Infinity;
 }
 
-// #page-11's title sits in a position:sticky wrapper, so the *instant* real
+// #page-11's title is centred in a 100vh wrapper flush with the section top, so
+// the *instant* real
 // scrollY crosses the gate — even for a single momentum-phase wheel tick that
 // ignores preventDefault (some browsers mark those non-cancelable, so the
 // wheel handler below can't stop them) — it genuinely pins into view for at

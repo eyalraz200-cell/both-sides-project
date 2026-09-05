@@ -207,7 +207,7 @@ throughout. What the breakpoint actually changes:
 | @fold3 row pitch (`fold3RowPitch`) | 32px | measured — tallest wrapped label + 14px (`FOLD3_ROW_LABEL_GAP_PX`, mobile only; desktop keeps 16) |
 | @fold7 legend row pitch (`fold6RowPitchPx()`) | 24px | measured — tallest wrapped legend label + 6px |
 | Mini-legend + ACLED note | Six DOM group rows over the canvas; the note sits above their top row | **Both collapse into the מקרא bar** — camp names pinned top, legend + note in a drop-down panel; the six rows fly into the button at `@fold4`. See [Groups-and-Legend](Groups-and-Legend.md#the-mobile-מקרא-bar) |
-| `#page-11` frame / title | 450px / 40px | `min(450px, 100vw-48px)` / 28px |
+| `#page-12` (outro) frame / title | 450px / 40px | `min(450px, 100vw-48px)` / 28px |
 
 **The camp gap is the load-bearing one.** `FOLD2_CAMP_CENTER_GAP_PX` (160) puts two 104px
 blocks *plus* @fold3's outward-trailing labels at ~500–600px of required width. Everything

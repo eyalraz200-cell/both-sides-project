@@ -51,15 +51,17 @@ Legend: 🔴 must · 🟡 should · 🟢 nice-to-have / "not critical" · 📱 m
 
 ## C. Group names (`GROUPS`, `js/groups.js`) 🟡
 
-- [x] **C1. Renamed "ארגוני שלום ודו קיום" → «ארגוני שמאל».** Reads as editorial approval
+- [x] **C1. Renamed "ארגוני שלום ודו קיום" → «פעילי שמאל».** Reads as editorial approval
   ("you're selling me too well") — the other five are neutral/identity labels. Settled on the
   plain political-bloc label rather than either anti-occupation candidate, mirroring the
-  right-side «קבוצות ימין לאומיות». The `actor` key stays `peace movements` (it is the xlsx's
-  own `main_actor` string and is not display text).
+  right-side «קבוצות ימין לאומיות». Landed first as «ארגוני שמאל», then narrowed to «פעילי
+  שמאל» — "activists" describes who actually shows up at these events, where "organisations"
+  implied a formal institutional actor the data doesn't support. The `actor` key stays
+  `peace movements` (it is the xlsx's own `main_actor` string and is not display text).
 - [x] **C2. Sharpened "ארגוני מחאה נגד הממשלה" → «מתנגדי הרפורמה ותומכי עסקת החטופים».** Too
   vague — every group here is "against the government". The new name spells out both strands it
   spans, the judicial-overhaul protests and the hostages movement, and reads as distinct from
-  C1's «ארגוני שמאל». The `actor` key stays `protesters against government` (xlsx `main_actor`
+  C1's «פעילי שמאל». The `actor` key stays `protesters against government` (xlsx `main_actor`
   string, not display text). It is now by far the longest label in `GROUPS` — see the width
   note in the mobile `.group-label` block of `style.css`.
 - Sync: renaming touches `GROUPS`, `FOLD6_SQUARE_LABELS` if any label references them, the
@@ -90,7 +92,7 @@ Legend: 🔴 must · 🟡 should · 🟢 nice-to-have / "not critical" · 📱 m
 - [x] **F1. Tooltip fires exactly when the card covers the squares** — they collide graphically.
   Fix options discussed (pick one, test): (a) fire earlier so the tooltip is already waiting
   before the card arrives; (b) split into two triggers — first just darkens square 0, then a
-  second trigger slightly higher pops the tooltip; (c) move the bubble further from the squares. *(Done: (b), desktop trigger #2 is 400px above — `fold8TooltipTrigger`.)*
+  second trigger slightly higher pops the tooltip; (c) move the bubble further from the squares. *(Done: (b), desktop trigger #2 fires once the card's bottom clears the tooltip's measured top edge by 30px — `fold8TooltipCardFrac`/`fold8TooltipTrigger`; it was a fixed 400px offset until 2026-09-04.)*
 - [ ] **F2. Tooltip style 🟢.** Options: bubble in *negative* (fill = the group colour, white
   text) if it stays accessible; or drop the dashed border for a thin light-grey / translucent
   solid line. Eyal already tried solid and disliked it in the regular tooltip — revisit but
@@ -98,7 +100,7 @@ Legend: 🔴 must · 🟡 should · 🟢 nice-to-have / "not critical" · 📱 m
 
 ## G. Empty / dead-scroll states 🟡
 
-- [x] **G1. Between-fold voids.** *(Desktop: `#page-1` card pulled up to 32vh, `fold2Trigger` crosses at 0.75.)* Mushon hit a state after @fold1 where "I don't know what's
+- [x] **G1. Between-fold voids.** *(Desktop: `#page-1`'s card pulled up to `padding-top: 10vh` and the section shortened to 67vh by the same amount, so later folds are unaffected. `fold2Trigger` crosses at the house 0.5.)* Mushon hit a state after @fold1 where "I don't know what's
   happening and there's no reason for me to be here". Whatever fold/trigger was late there
   should fire earlier so the user always sees a response to scrolling.
 - [x] **G2. @fold10 bridge (`page-9`)** *(Desktop: `#page-9` is 60vh.)* shows a mostly empty screen ("70–80% blank"). Reduce the
@@ -110,11 +112,13 @@ Legend: 🔴 must · 🟡 should · 🟢 nice-to-have / "not critical" · 📱 m
 
 ## H. @fold10 → @fold11 copy (`page-9`, `page-10`) 🔴
 
-- [ ] **H1. Make the question stand alone.** "איפה עובר הגבול בעיניכם?" currently depends on
+- [x] **H1. Make the question stand alone.** "איפה עובר הגבול בעיניכם?" currently depends on
   the previous card ("…הגבול אינו תמיד מוסכם") and reads as "the border passes here". It's the
   key question and the interactive pivot of the whole piece — rewrite so it is self-contained
   and concrete, e.g. **"מתי פעולת מחאה הופכת לבלתי לגיטימית?"** / "מה הופך מחאה ציבורית ללא
-  לגיטימית?".
+  לגיטימית?". *(Done: @fold11's headline is now "מה נחשב בעיניכם לפעולה לגיטימית, ומה לפעולה
+  קיצונית?" — self-contained, names both poles. @fold10's own card is unchanged and still
+  carries the "…הגבול אינו תמיד מוסכם" setup.)*
 - [x] **H2. @fold10→@fold11 transition 🟢.** "A bit clumsy but livable." Idea: pills enter from
   the side and the previous text turns into the title (there is something nice in that).
   → Done: title as before; the V2 band no longer slides down — its pills pop in right → left
