@@ -221,17 +221,17 @@ function p7OrderFromCenter(total, cols, seed, side, maxEvents) {
    ------------------------------------------------------------------------- */
 // Tooltip horizontal flip lines (screen px): a hovered dot left of P7_TIP_FLIP_L
 // never mirrors; one within P7_TIP_FLIP_R_INSET of the right edge always does.
-// Picked by eye with a `manual/` harness — exact px, never vw. Documented at
-// the use site in the hover closure (search "P7_TIP_FLIP_L").
-let P7_TIP_FLIP_L = 475;
-let P7_TIP_FLIP_R_INSET = 475;
+// One mirrored inset, picked by eye with _debug-corridor.js on 2026-09-05 —
+// exact px, never vw. Used in the hover closure (search "P7_TIP_FLIP_L").
+const P7_TIP_FLIP_L = 327;
+const P7_TIP_FLIP_R_INSET = 327;
 
 const P7_VERT = {
   corridorPx: P7_AXIS_CORRIDOR_PX,
   eventMode:  "widen", // picked 2026-09-04 (harness deleted; band code kept, unused)
   eventLine:  false,
   bandPx:     60,    // band mode: height reserved per headline (title line(s) + date)
-  wideCorridorPx: 200, // widen mode: the corridor, full height
+  wideCorridorPx: 208, // widen mode: the corridor, full height (by eye, 2026-09-05)
   fillRatio:  1,     // no permanent gaps — picked 2026-09-04
   // What one grid row stands for: a fixed span of this many days, counted
   // from minDate — picked 2026-09-04 (8 days: 160 rows fit the box at 3.3px;
@@ -2867,11 +2867,10 @@ function p7HoverInit() {
   // mirroring. Tuned by eye with _debug-tip-flip-x.js — exact px, see the
   // comment where they're used in doHitTest. Each line is measured from the
   // edge its legend hangs off: L from the left edge, R as an INSET from the
-  // right edge (475 = 1900 − the 1425 screen-X picked at the 1900px-wide
-  // tuning viewport). The R line used to be that absolute 1425 — on any
-  // window narrower than it no dot could ever cross the line, so the
-  // rightward flip silently died after a resize.
-  // Module-level `let` (declared next to P7_VERT) so a harness can drive them live.
+  // right edge — one mirrored 327px inset since 2026-09-05. The R line used to
+  // be an absolute screen-X — on any window narrower than it no dot could
+  // ever cross the line, so the rightward flip silently died after a resize.
+  // Declared at module level next to P7_VERT.
 
   // Last pointer position in client (viewport) coordinates — updated on every
   // pointermove, read by doHitTest so re-checks after redraws don't need an event.
@@ -2995,9 +2994,10 @@ function p7HoverInit() {
 
     dateEl.textContent = p7FormatDateDMY(bestEvent.date);
     descEl.textContent = bestEvent.descHeMedium;
-    // `color`, not `border-color`: the visible stroke is the dashed <svg>
-    // overlay (updateTooltipDash, main.js), which strokes currentColor.
-    tooltipEl.style.color = p7ActorColor(bestEvent.actor);
+    // setTooltipColor (js/core.js), not a bare style.color: the dashed <svg>
+    // overlay strokes currentColor, while desktop's filled box paints from
+    // --tip-fill, the contrast-floored version of the same colour.
+    setTooltipColor(tooltipEl, p7ActorColor(bestEvent.actor));
     tooltipEl.classList.add("is-visible");
 
     // Left-side events open the tooltip toward the left of the square instead
@@ -3321,9 +3321,11 @@ function p7InspectInit() {
     // picker just wrote is invisible.
     dateEl.style.opacity = "1";
     descEl.style.opacity = "1";
-    // `color`, not `border-color` — the dashed stroke is the <svg> overlay,
-    // which strokes currentColor (see .page9-tooltip in style.css).
-    tipEl.style.color = p7ActorColor(ev.actor);
+    // setTooltipColor (js/core.js) — the dashed stroke is the <svg> overlay on
+    // currentColor; --tip-fill rides along for the desktop filled box. This
+    // picker is mobile-only, so only the stroke is visible here, but the two
+    // properties are kept in step everywhere so no writer can drift.
+    setTooltipColor(tipEl, p7ActorColor(ev.actor));
     // Same fold13 factor as sync() below — every writer of this element's
     // opacity must agree during @fold12's scroll fade.
     tipEl.style.opacity =
