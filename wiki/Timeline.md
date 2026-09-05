@@ -359,8 +359,11 @@ over `totalRows × CELL`:
   same `p7AxisUpdateFillLag` damping. Reached test for a tick: `p7RowOfDate(tick) ≤ p7CurRow()`.
 - **Build-in wipe:** the intro clips to `rect(0, 0, W, topY + p7Ease(introT) × len)` — the
   axis (and its headlines) reveal downward; the reverse wipe undraws upward.
-- **The line breaks at every year boundary** (`p7RowY(p7.vert.yearRow.get(year))`, the
-  top too): the break is the year block's height (21px digits, plus ring + 6 when the ring
+- **The line breaks at every year boundary** (`p7RowY(p7.vert.yearRow.get(year))`) —
+  except the first year, whose 1 January is row 0, the line's top: that label sits as a
+  header **above** `topY` (its block hangs `yearGapPad` above the line's top) and the line
+  starts unbroken, so an event on the first days of the range lands on the line, not in a
+  label gap. The line alone is the time count. For every other year the break is the year block's height (21px digits, plus ring + 6 when the ring
   is on) plus `yearGapPad` 3 above and below, **centred on the boundary**, so the digits sit
   exactly mid-gap. The break is visual only — it eats the ends of the two neighbouring line
   segments; time and the dot rows are continuous. Each segment is drawn unfilled first, then
@@ -385,7 +388,9 @@ over `totalRows × CELL`:
   bottom padding, 4px top corners and square bottom corners (`radiusBottom` 0), with a
   `P7_VERT.bar` accent bar along its whole bottom edge **and** its top edge (`card.bar` +
   `card.barTop`, drawn by `p7DrawAccentBar`) in the year-axis line's own style: `h`
-  `P7_AXIS_LINE_THICKNESS` (1px), `color` #000000, `alpha` 1, square ends (`round` false),
+  `P7_AXIS_LINE_THICKNESS` (1px), `color` #000000, `alpha` 1 (shared) times a per-edge
+  `alphaTop` / `alphaBottom` (1 each; beat 2's lone bar uses the dot-facing edge's value),
+  square ends (`round` false),
   `inset` 0 (px shorter than the card each side), `dash` 0 / `dashGap` 0 (dash > 0 =
   dashed line of that dash length); the bar's `gap`/`padX`/`dateBelow`/`dateGap` only apply
   to the bare `'bar'` style. `card.sides` (false) swaps the two bars for a full border in the same line style, rounded
