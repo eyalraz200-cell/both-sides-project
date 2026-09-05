@@ -246,10 +246,11 @@ const P7_VERT = {
   yearGapPad: 3,
   yearRing:   false,   // no ring on the line — the digits alone mark the year
   // Headline card (centred blocks only). null = bare text on a punched
-  // background. Shipped: style 'outline' — white card, 1px 30%-black outline,
-  // accent bar along its bottom edge (geometry in `bar` below). The other
-  // styles ('bar' = bare text + bar, 'fill', 'dashed', 'shadow', 'accent' =
-  // card + bar) are kept as unused code paths.
+  // background. Shipped: style 'plain' — white card, no stroke, accent bar
+  // along its bottom AND top edge (`barTop`), the dot cut to its inner half on
+  // the dot-facing edge and a mirrored half-dot on the far edge (`halfDots`).
+  // The other styles ('bar' = bare text + bar, 'outline', 'fill', 'dashed',
+  // 'shadow', 'accent' = card + faint outline + bar) are kept as code paths.
   // { style, padX, padTop, padBottom, radius, gap (px from the dot's edge to the block),
   //   stem (true = the line stays visible between dot and card; 'bar' always
   //   clears that gap) }.
@@ -258,8 +259,8 @@ const P7_VERT = {
   //   the card sits `gap` past the dot's edge; 'center' = the card's
   //   dot-facing edge runs through the dot's centre and the dot is redrawn
   //   on top of it).
-  card: { style: 'outline', fill: '#FDFCFF', stroke: 'rgba(0, 0, 0, 0.3)', strokeWidth: 1, padX: 16, padTop: 6, padBottom: 6, radius: 4, radiusBottom: 0,
-          gap: 0, stem: false, bar: true, anchor: 'center' },
+  card: { style: 'plain', fill: '#FDFCFF', stroke: 'rgba(0, 0, 0, 0.3)', strokeWidth: 1, padX: 16, padTop: 6, padBottom: 6, radius: 4, radiusBottom: 0,
+          gap: 0, stem: false, bar: true, barTop: true, halfDots: true, anchor: 'center' },
   // The accent bar under a headline: h px tall, `gap` px below the text's
   // last line, `padX` px wider than the text on each side, `alpha` opacity of
   // `color`, `round` = rounded ends.
@@ -2505,6 +2506,8 @@ function p7DrawHeadlineCard(ctx, card, x, y, w, h) {
     ctx.globalAlpha *= b.alpha;
     ctx.fillStyle = b.color;
     ctx.beginPath(); ctx.roundRect(bx, by, bw, b.h, b.round ? b.h / 2 : 0); ctx.fill();
+    // card.barTop = the same bar along the card's top edge too.
+    if (card.bar && card.barTop) { ctx.beginPath(); ctx.roundRect(bx, y, bw, b.h, b.round ? b.h / 2 : 0); ctx.fill(); }
   }
   ctx.restore();
 }
@@ -2554,6 +2557,18 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
       ? (isHighlighted ? P7_AXIS_HOVER_COLOR : P7_AXIS_BG_COLOR)
       : (isAxisHovered ? P7_AXIS_HOVER_COLOR : P7_AXIS_FILLED_COLOR);
     p7.axisEventPositions.set(ev, { x: axisX, y, radius: markerRadius, color: markerColor });
+    // Half-dot cards draw the dot themselves (only its inner half); the full
+    // dot here fades out as the card fades in, so a faded event keeps its dot.
+    const halfCard = P7_VERT.card && P7_VERT.card.halfDots && P7_VERT.card.anchor === 'center' && evSide === 'center';
+    if (halfCard) {
+      const st = P7_AXIS_EVENT_STATE[i], rosterOn = st.triggeredAt !== null && st.leavingAt === null;
+      const labelOp = Math.min(1, Math.max(p7AxisEventOpacity(i, now), st.hoverT, rosterOn ? p7AxisRosterT : 0));
+      if (labelOp >= 1) return;
+      ctx.save(); ctx.globalAlpha *= 1 - labelOp;
+      p7DrawAxisMarker(ctx, axisX, y, markerRadius, markerColor);
+      ctx.restore();
+      return;
+    }
     p7DrawAxisMarker(ctx, axisX, y, markerRadius, markerColor);
   });
 
@@ -2641,7 +2656,17 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
       if (centred) {
         // The card overlaps the dot — put the dot back on top of it.
         const mk = p7.axisEventPositions.get(ev);
-        if (mk) p7DrawAxisMarker(ctx, mk.x, mk.y, mk.radius, mk.color);
+        const cx = axisX - tw / 2 - cpx, cy = y0 - cpt, cw = tw + cpx * 2, ch = cardH + cpt + cpb;
+        if (mk && card.halfDots) {
+          // Half dots: the dot's centre sits on the dot-facing edge, so
+          // clipping it to the card leaves the inner half; the far edge gets
+          // a matching half-dot of its own.
+          ctx.save();
+          ctx.beginPath(); ctx.rect(cx, cy, cw, ch); ctx.clip();
+          p7DrawAxisMarker(ctx, mk.x, mk.y, mk.radius, mk.color);
+          p7DrawAxisMarker(ctx, mk.x, flipped ? cy : cy + ch, mk.radius, mk.color);
+          ctx.restore();
+        } else if (mk) p7DrawAxisMarker(ctx, mk.x, mk.y, mk.radius, mk.color);
       }
     } else if (flipped) {
       // Above the dot: punch from the block's top edge down to the dot's edge.

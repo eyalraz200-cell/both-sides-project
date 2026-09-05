@@ -74,7 +74,7 @@ numbers in the source.
 groups: **bar** (`P7_VERT.bar` thickness, gap, width, opacity, colour, `R` rounded ends, `D`
 between title and date), **card** (keys `1`–`7` pick `P7_VERT.card.style`, `0` = bare text;
 fill/stroke colours + stroke alpha/width, paddings, radii, dot gap; `B` bar along the card
-bottom, `C` card edge on the dot centre, `S` stem) and **text** (`P7_VERT.type`: title and
+bottom, `T` bar along the top too, `K` half dots on both edges, `C` card edge on the dot centre, `S` stem) and **text** (`P7_VERT.type`: title and
 date size/weight/line height/colour/alpha, title-to-date gap, `A` date above the title).
 Replaced `_debug-card-bar.js` on 2026-09-04.
 
