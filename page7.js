@@ -1638,6 +1638,20 @@ const P7_AXIS_EVENTS = [
 // fade starts it plays out on its own clock (via p7StartAnimLoop/p7AnyAnimActive
 // below) even if the user stops scrolling entirely.
 const P7_AXIS_EVENT_FADE_IN_MS  = 400;
+// Desktop half-dot card: the label's fade-in clock is instead a 3-beat reveal
+// (dot pop → accent bar draws out → card opens, see P7_VERT_CARD_BEATS), so it
+// gets a longer clock. The fade-out (and the reverse scroll) plays the same
+// beats backwards over P7_AXIS_EVENT_FADE_OUT_MS.
+const P7_VERT_CARD_OPEN_MS = 900;
+function p7AxisFadeInMs() {
+  const c = P7_VERT.card;
+  return p7VerticalAxis() && c && c.halfDots && c.anchor === 'center' && P7_VERT.eventSide === 'center'
+    ? P7_VERT_CARD_OPEN_MS : P7_AXIS_EVENT_FADE_IN_MS;
+}
+// Windows of the reveal's raw progress (p9Ease re-applied per window):
+// bar = the accent bar grows out from the dot; open = the card unfolds from
+// the dot edge, carrying the far bar and the far half-dot with it.
+const P7_VERT_CARD_BEATS = { bar: { start: 0, len: 0.35 }, open: { start: 0.35, len: 0.65 } };
 const P7_AXIS_EVENT_FADE_OUT_MS = 1000;
 const P7_AXIS_EVENT_LABEL_OFFSET = 34; // px above the axis line (lifted to give date room below)
 const P7_AXIS_EVENT_FONT         = "500 14px 'Assistant', sans-serif";
@@ -1744,7 +1758,7 @@ function p7AxisEventsAnimActive() {
   if (Math.abs(((p7.hoveredEvent || (p7Inspect.dragging && p7Inspect.event)) ? 1 : 0) - p7AxisRosterT) > 0.001) return true;
   return P7_AXIS_EVENT_STATE.some((state, i) => {
     if (state.triggeredAt === null) return false;
-    if (now - state.triggeredAt < P7_AXIS_EVENT_FADE_IN_MS) return true;
+    if (now - state.triggeredAt < p7AxisFadeInMs()) return true;
     if (state.leavingAt !== null && now - state.leavingAt < P7_AXIS_EVENT_FADE_OUT_MS) return true;
     const next = P7_AXIS_EVENT_STATE[i + 1];
     return !!next && next.triggeredAt !== null && now - next.triggeredAt < P7_AXIS_EVENT_FADE_OUT_MS;
@@ -1911,7 +1925,7 @@ function p7UpdateAxisEventTriggers(W) {
 function p7AxisEventOpacity(i, now) {
   const state = P7_AXIS_EVENT_STATE[i];
   if (state.triggeredAt === null) return 0;
-  let opacity = Math.min(1, (now - state.triggeredAt) / P7_AXIS_EVENT_FADE_IN_MS);
+  let opacity = Math.min(1, (now - state.triggeredAt) / p7AxisFadeInMs());
   if (state.leavingAt !== null) {
     const fadeOut = 1 - (now - state.leavingAt) / P7_AXIS_EVENT_FADE_OUT_MS;
     opacity = Math.min(opacity, Math.max(0, fadeOut));
@@ -2615,6 +2629,7 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     // live on the same side (or on the line itself, whose span is below the ring).
     // Dot-to-text gap: the card's own gap plus whichever pad faces the dot.
     const centred = !!(card && card.anchor === 'center');
+    let textClip = null; // set by the animated card: text is clipped to the open part
     // anchor 'center': the dot-facing card edge sits ON the dot's centre.
     const textGapBelow = card ? (centred ? -P7_AXIS_MARKER_RADIUS : card.gap) + cpt : P7_VERT_EVENT_TEXT_GAP;
     const textGapAbove = card ? (centred ? -P7_AXIS_MARKER_RADIUS : card.gap) + cpb : P7_VERT_EVENT_TEXT_GAP;
@@ -2648,7 +2663,29 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
         ctx.fillRect(axisX - 2, Math.min(a, b), 4, Math.abs(b - a));
       }
       const cardH = dateBelowBar ? lines.length * lh + barExtra : blockH;
-      p7DrawHeadlineCard(ctx, card, axisX - tw / 2 - cpx, y0 - cpt, tw + cpx * 2, cardH + cpt + cpb);
+      const halfCard = centred && card.halfDots;
+      // 3-beat reveal (halfCard only): `opacity` is the raw progress; the
+      // geometry animates instead of the alpha, so reversing plays the same
+      // beats backwards. Dot pop = the marker's own reachedT, before this.
+      const win = (w) => p9Ease(Math.min(1, Math.max(0, (opacity - w.start) / w.len)));
+      const barT = halfCard ? win(P7_VERT_CARD_BEATS.bar) : 1;
+      const openT = halfCard ? win(P7_VERT_CARD_BEATS.open) : 1;
+      const cxF = axisX - tw / 2 - cpx, cyF = y0 - cpt, cwF = tw + cpx * 2, chF = cardH + cpt + cpb;
+      // Animated rect: the dot-facing edge stays put, the far edge travels.
+      const chA = halfCard ? chF * openT : chF;
+      const cyA = flipped ? cyF + chF - chA : cyF;
+      if (halfCard) {
+        ctx.globalAlpha = 1;
+        if (openT <= 0) {
+          // Beat 2: a single bar draws out from the dot along the card edge.
+          const B = P7_VERT.bar, bw = cwF * barT;
+          if (bw > 0) {
+            ctx.fillStyle = B.color;
+            ctx.beginPath(); ctx.roundRect(axisX - bw / 2, flipped ? cyF + chF - B.h : cyF, bw, B.h, B.round ? B.h / 2 : 0); ctx.fill();
+          }
+        } else p7DrawHeadlineCard(ctx, card, cxF, cyA, cwF, chA);
+        textClip = { x: cxF, y: cyA, w: cwF, h: chA, alpha: openT };
+      } else p7DrawHeadlineCard(ctx, card, cxF, cyF, cwF, chF);
       if (dateBelowBar) {
         ctx.fillStyle = "#FDFCFF";
         ctx.fillRect(axisX - tw / 2 - 4, y0 + cardH + cpb, tw + 8, blockH - cardH + 2);
@@ -2656,12 +2693,14 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
       if (centred) {
         // The card overlaps the dot — put the dot back on top of it.
         const mk = p7.axisEventPositions.get(ev);
-        const cx = axisX - tw / 2 - cpx, cy = y0 - cpt, cw = tw + cpx * 2, ch = cardH + cpt + cpb;
+        const cx = cxF, cy = cyA, cw = cwF, ch = chA;
         if (mk && card.halfDots) {
           // Half dots: the dot's centre sits on the dot-facing edge, so
           // clipping it to everything OUTSIDE the card leaves the outer half
           // (top half above the top bar, bottom half below the bottom bar);
-          // the far edge gets a matching outward half-dot of its own.
+          // the far edge gets a matching outward half-dot of its own. While
+          // the card is closed both halves coincide — one whole dot — and the
+          // far half rides out with the opening edge: the circle splits.
           ctx.save();
           ctx.beginPath();
           ctx.rect(cx - 20, cy - 20, cw + 40, 20);
@@ -2680,6 +2719,12 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
       // label's bottom) to the block's far edge — no line between dot and text.
       const punchTop = y0 - P7_VERT_EVENT_TEXT_GAP;
       ctx.fillRect(axisX - tw / 2 - 4, punchTop, tw + 8, y0 + blockH - punchTop);
+    }
+    if (textClip) {
+      if (textClip.alpha <= 0) { ctx.globalAlpha = 1; return; }
+      ctx.save();
+      ctx.beginPath(); ctx.rect(textClip.x, textClip.y, textClip.w, textClip.h); ctx.clip();
+      ctx.globalAlpha = textClip.alpha;
     }
     ctx.textAlign = onSide ? (evDirI > 0 ? "left" : "right") : "center";
     const titleY0 = y0 + (dateFirst ? dlh + TY.gap : 0);
@@ -2712,6 +2757,7 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
       ctx.textAlign = dOn ? (dDir > 0 ? "left" : "right") : "center";
       ctx.fillText(dateLabel, dx, dy);
     }
+    if (textClip) ctx.restore();
     ctx.globalAlpha = 1;
   });
   ctx.restore();

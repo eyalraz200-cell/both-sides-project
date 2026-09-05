@@ -389,7 +389,15 @@ over `totalRows × CELL`:
   dot is redrawn clipped to the outside of the card (`p7DrawAxisMarker` inside a clip of the
   strips just above and below the card), so only its outer half shows past the bar, and the
   far edge gets a mirrored outward half-dot in the same colour and radius (top half above the top bar,
-  bottom half below the bottom bar); the full dot of the marker pass fades out as
+  bottom half below the bottom bar). **Reveal** (desktop half-dot card only): the label's
+  fade clock (`p7AxisFadeInMs()` = `P7_VERT_CARD_OPEN_MS` 900 ms in, `P7_AXIS_EVENT_FADE_OUT_MS`
+  1000 ms out) is used as raw progress for three beats instead of an alpha fade — 1. the dot
+  pops (the marker's own `reachedT`, before the trigger); 2. `P7_VERT_CARD_BEATS.bar`
+  (0–0.35): one accent bar draws out from the dot along the dot-facing edge; 3. `.open`
+  (0.35–1): the card unfolds from that edge, the far bar and the far half-dot ride out with
+  the moving edge (the whole dot splits into its two halves) and the text fades in, clipped to
+  the open part. Each window re-applies `p9Ease`; the geometry, not the alpha, animates, so
+  the fade-out / reverse scroll plays the same beats backwards; the full dot of the marker pass fades out as
   the label fades in (so a not-yet-reached / faded event still shows its whole dot).
   The other styles (`'bar'` bare text + bar, `'outline'`/`'dashed'` with `stroke`/`strokeWidth`,
   `'fill'`, `'shadow'`, `'accent'`) and `anchor 'edge'` (card `gap` px past the dot's edge)
