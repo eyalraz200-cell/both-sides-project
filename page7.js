@@ -289,6 +289,7 @@ const P7_VERT = {
     title: { size: 14, weight: 500, lh: 19, color: 'rgba(0, 0, 0, 1)' },
     date:  { size: 14, weight: 400, lh: 19, color: 'rgba(0, 0, 0, 0.3)' },
     gap: 0,
+    showDate: false,  // false = the headline block is the title alone (no date line; the axis's own years give the time)
   },
   // Which headlines hang UNDER their dot by default: the first one only; every
   // later headline sits ABOVE its dot (the year dodge can still flip either).
@@ -2785,16 +2786,16 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     const dateLabel = p7FormatDateDMY(ev.date, ".");
     let tw = 0;
     lines.forEach(t => { tw = Math.max(tw, ctx.measureText(t).width); });
-    ctx.font = p7VertFont(TY.date);
-    tw = Math.max(tw, ctx.measureText(dateLabel).width);
+    const noDate = !TY.showDate;
+    if (!noDate) { ctx.font = p7VertFont(TY.date); tw = Math.max(tw, ctx.measureText(dateLabel).width); }
     // The date can sit on its own side of the line (split): then the title
     // block loses its date line and the date is drawn beside the dot alone.
     // 'alternate' flips the side per event (even index left, odd right).
     const evSideI = P7_VERT.eventSide === 'alternate' ? (i % 2 ? 'right' : 'left') : evSide;
     const evDirI  = evSideI === 'right' ? 1 : -1;
     const dateSide = P7_VERT.dateSide === 'with' ? evSideI : P7_VERT.dateSide;
-    const split = dateSide !== evSideI;
-    const dateFirst = !split && P7_VERT.dateAbove;
+    const split = !noDate && dateSide !== evSideI;
+    const dateFirst = !split && !noDate && P7_VERT.dateAbove;
     const onSide = evSideI !== 'center';
     const card = !onSide && P7_VERT.card ? P7_VERT.card : null;
     const cpx = card ? Math.max(card.padX, card.style === 'bar' ? P7_VERT.bar.padX : 0) : 0;
@@ -2804,7 +2805,7 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     // only; the date hangs `dateGap` px under the bar, punched separately.
     const dateBelowBar = !!(barExtra && !split && !dateFirst && P7_VERT.bar.dateBelow);
     const dateGap = dateBelowBar ? P7_VERT.bar.dateGap : 0;
-    const blockH = lines.length * lh + (split ? 0 : dlh + TY.gap) + barExtra + dateGap;
+    const blockH = lines.length * lh + (split || noDate ? 0 : dlh + TY.gap) + barExtra + dateGap;
     // The block always hangs UNDER the dot (the dot is always above its text).
     // If it would run into a year ring or its label, it is pushed down to just
     // past that label instead.
@@ -2919,7 +2920,9 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     lines.forEach((text, li) => p7VertLineText(ctx, text, tx, titleY0 + li * lh, lh));
     ctx.font = p7VertFont(TY.date);
     ctx.fillStyle = dimmed ? `rgba(0, 0, 0, ${P7_AXIS_ROSTER_LABEL_ALPHA})` : TY.date.color;
-    if (!split) {
+    if (noDate) {
+      // no date line
+    } else if (!split) {
       p7VertLineText(ctx, dateLabel, tx, dateFirst ? y0 : y0 + lines.length * lh + TY.gap + (dateBelowBar ? barExtra + dateGap : 0), dlh);
     } else {
       // Split date: its own side, centred on the dot, dodging same-side year labels.
