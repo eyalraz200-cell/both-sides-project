@@ -68,18 +68,11 @@ numbers in the source.
 
 ## Currently in the repo
 
-`_debug-glide-perf.js` — `@fold10` glide-stutter attribution.
-
-`_debug-corridor.js` (the @fold9 reach / corridor / tip-flip `manual/`) was deleted after its
-bake on 2026-09-05. `_debug-note-style.js`, the `manual/` for the @fold6 ACLED note's chevron and title, was
-deleted after its bake on 2026-09-04, as were `_debug-note-chevron.js` (rule vs chevron),
-`_debug-note-card.js` (the card-style `compare/`) and `_debug-pill-x.js` (the `compare/` for
-the dropped-pill ✕ placement). Baked values live in `style.css` and `js/groups.js`.
-
-`_debug-fold-badge.js` — all-viewport corner chip printing the active `@foldN`, its
-`#page-(N-1)` id and a one-line name for what plays there. Tracks the same 50%-viewport
-crossing the real `IntersectionObserver` uses, so it always agrees with `currentPage`.
-Click it or press `B` to collapse it to just `@foldN`. Not a panel harness — no knobs.
+None — all harnesses were removed on 2026-09-05 (`_debug-fold-badge.js`, `_debug-glide-perf.js`,
+`_debug-vert-mobile.js`, `_debug-fold5.js` and the `_debug-hero-*.html` probes). The mobile
+vertical-axis `compare/`+`manual/` (`_debug-vert-mobile.js`, modes band / widen / slot with
+`P7_VERT_MOBILE` knobs) was deleted before its bake; rebuild it from the template if the
+mobile axis is picked up again.
 
 Delete each file **and** its `<script>` tag when it is no longer wanted.
 
