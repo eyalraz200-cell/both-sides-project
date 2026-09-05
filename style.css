@@ -1959,21 +1959,20 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 }
 
 /* The card's size is set from the VIEWPORT EDGES, not from its copy: a 48px
-   gap above and below (height = 100vh − 2×48), and the width is the narrowest
-   frame at which the copy fits that height — tuned by eye on a 982px-tall
-   viewport (440px of copy + 40px side padding + 2px borders = 522px) — re-solved
-   after the credits went to 14px, since the fixed height only keeps its
-   padding while the copy actually fits inside it. Whatever height is
-   left over after the copy is split evenly above and below it (flex column,
-   centred), so the visible gap at the top and the bottom always read equal. On a
-   shorter viewport the copy needs more width than this; the max-height
-   queries below trim the padding to buy some back. The .text-card wrapper
-   is fit-content so the frame stays centred past the 480px --card-w column. */
+   gap above and below (height = 100vh − 2×48). The WIDTH is solved at load and
+   on resize by p12CardWidthFit() (page12.js) — the narrowest width in
+   320–900px at which the copy still clears the bottom padding, which is also
+   the width that fills the card, since a narrower column is a taller one. The
+   520px here is that answer for a 982px-tall viewport and is what stands if
+   the script never runs. Whatever height is left over is split evenly above
+   and below the copy (flex column, centred), so the top and bottom gaps read
+   equal. The .text-card wrapper is fit-content so the frame stays centred
+   past the 480px --card-w column. */
 #page-12 .text-card {
   width: fit-content;
 }
 #page-12 .text-card-frame {
-  width: 522px;
+  width: 520px;
   height: calc(100vh - 96px);
   padding: 42px 40px;   /* 42px top and bottom, 40px sides */
   box-sizing: border-box;
