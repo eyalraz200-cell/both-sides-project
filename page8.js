@@ -104,7 +104,7 @@ function drawPage8(ctx, W, H) {
   const legitGeom = p9LegitGeometry(W, H);
 
   const { CELL, SQ, cols, leftX0 } = p7;
-  const topY    = Math.round(H * sbbTimeline(H).top);
+  const topY    = p7VertTopY(H);
   const rightX0 = p7GridGeometry(W, H).rightX0;
 
   function blendAndDraw(events, indexOf, side, positions, x0) {
@@ -193,7 +193,7 @@ function p8CaptureBlendedPositions(W, H, tOverride) {
   const legitGeom = p9LegitGeometry(W, H);
 
   const { CELL, cols, leftX0 } = p7;
-  const topY    = Math.round(H * sbbTimeline(H).top);
+  const topY    = p7VertTopY(H);
   const rightX0 = p7GridGeometry(W, H).rightX0;
 
   const out = new Map();
