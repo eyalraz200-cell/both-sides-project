@@ -229,7 +229,7 @@ throughout. What the breakpoint actually changes:
 | @fold3 row step (`fold3RowStep`) | 34px flat | per row: this row's tallest wrapped label + 12px (`FOLD3_ROW_LABEL_GAP_PX`), floored at 32 — equal visible gaps |
 | @fold7 legend row pitch (`fold6RowPitchPx()`) | 24px | measured — tallest wrapped legend label + 6px |
 | Mini-legend + ACLED note | Six DOM group rows over the canvas; the note sits above their top row | **Both collapse into the מקרא bar** — a card styled like the desktop note (tint, no border, no chevron, title row = the מקרא button) that opens width-then-height into the legend + note; the six rows fly into it at `@fold4` and it is **left open** from there on, the ACLED note joining it a fold later. See [Groups-and-Legend](Groups-and-Legend.md#the-mobile-מקרא-bar) |
-| `#page-12` (outro) frame / title | sized from the viewport edges: `height: calc(100vh - 96px)` (48px gap top and bottom), width 520px = the narrowest frame the copy (padding included) fits at on a 982px-tall viewport, 40px side padding (`#page-12 .text-card` is `fit-content` so it stays centred) / 40px | `min(450px, 100vw-48px)` border-box, height auto / 28px |
+| `#page-12` (outro) frame / title | sized from the viewport edges: `height: calc(100vh - 96px)` (48px gap top and bottom), width 520px = the narrowest frame the copy (padding included) fits at on a 982px-tall viewport, 42px side padding (`#page-12 .text-card` is `fit-content` so it stays centred) / 40px | `min(450px, 100vw-48px)` border-box, height auto / 28px |
 
 **The camp gap is the load-bearing one.** `FOLD2_CAMP_CENTER_GAP_PX` (160) puts two 104px
 blocks *plus* @fold3's outward-trailing labels at ~500–600px of required width. Everything
