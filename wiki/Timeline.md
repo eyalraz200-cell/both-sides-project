@@ -321,11 +321,16 @@ axis so the first event's label can center over its own circle).
   (`P7_AXIS_EVENT_STATE[i].reachedT`, lerped at `P7_AXIS_HOVER_ANIM_SPEED` like `hoverT`)
   that multiplies `markerRadius`, so a dot grows out of the axis on the way down and
   shrinks back into it on the way **up** instead of vanishing in one frame mid-label-fade.
-- **Dots are not axis length** (desktop). The drawn fill never creeps across a dot's
-  diameter: while the fill edge is inside a dot's ±`P7_AXIS_MARKER_RADIUS` span it is drawn
-  to the dot's top edge until the edge passes the centre (the moment the dot appears), then
-  to its bottom edge at once — and back out the same way on reverse. Only the drawn fill
-  jumps; `curY`, row reach and headline triggers are unchanged.
+- **Year breaks and dots are not axis length** (desktop). The drawn fill edge `fillY` is a
+  pure function of the true edge `curY`: the instant `curY` enters a year's break (`m.top`)
+  the drawn edge appears at the break's bottom and keeps moving, then eases back into step
+  with `curY` over `P7_VERT_YEAR_BREAK_CATCHUP_PX` (80px, running at catchup/(gap+catchup)
+  of scroll speed) so nothing below is offset for good; reverse scroll retraces it exactly.
+  The year's reached colouring flips on that drawn edge (`fillY >= m.bottom`; the first
+  year's header is always reached). Then each headline dot: while the drawn edge is inside a
+  dot's ±`P7_AXIS_MARKER_RADIUS` it is held at the dot's top edge until past the centre, then
+  jumps to the bottom edge. `p7DrawAxisEventsVertical` pops its dots on `fillY`, not `curY`;
+  row reach and the headline card triggers still use the true edge.
   Below `reachedT` 0.001 the event stops drawing and stops registering in
   `p7.axisEventPositions` (so it is not hit-testable). `p7AxisEventsAnimActive` checks
   `reachedT` separately — a shrinking dot outlives its label's fade. The background wipe
