@@ -383,8 +383,11 @@ over `totalRows × CELL`:
   between dot and text. **Card** (`P7_VERT.card`, `p7DrawHeadlineCard`): a
   `card.fill` (#FDFCFF) filled card with no stroke (style `'plain'`), 16px side / 6px top and
   bottom padding, 4px top corners and square bottom corners (`radiusBottom` 0), with a
-  `bar.h` 1.5px black rounded-end accent bar along its whole bottom edge **and** its top edge
-  (`card.bar` + `card.barTop`; the bar's `gap`/`padX` only apply to the bare `'bar'` style).
+  `P7_VERT.bar` accent bar along its whole bottom edge **and** its top edge (`card.bar` +
+  `card.barTop`, drawn by `p7DrawAccentBar`): `h` 1.5px, `color` #000000, `alpha` 1, `round`
+  ends, `inset` 0 (px shorter than the card each side), `dash` 0 / `dashGap` 0 (dash > 0 =
+  dashed line of that dash length); the bar's `gap`/`padX`/`dateBelow`/`dateGap` only apply
+  to the bare `'bar'` style.
   `anchor 'center'`: the card's dot-facing edge runs through the dot's centre. `halfDots`: the
   dot is redrawn clipped to the outside of the card (`p7DrawAxisMarker` inside a clip of the
   strips just above and below the card), so only its outer half shows past the bar, and the

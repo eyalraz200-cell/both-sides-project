@@ -267,7 +267,8 @@ const P7_VERT = {
   // `dateBelow` = the bar sits between the title and the date (title, bar,
   // then the date `dateGap` px under the bar); false = the bar closes the
   // whole block under the date.
-  bar: { h: 1.5, gap: 1, padX: 6, color: '#000000', alpha: 1, round: true, dateBelow: false, dateGap: 3 },
+  bar: { h: 1.5, gap: 1, padX: 6, color: '#000000', alpha: 1, round: true, dateBelow: false, dateGap: 3,
+         inset: 0, dash: 0, dashGap: 0 }, // inset = px shorter than the card, each side; dash > 0 = dash length (dashGap px between)
   // Type of the centred headline block (desktop only — the mobile axis keeps
   // the P7_AXIS_*_FONT constants). `lh` = line height of each face's lines;
   // `color` may carry alpha. `gap` = extra px between the title and the date.
@@ -2516,12 +2517,29 @@ function p7DrawHeadlineCard(ctx, card, x, y, w, h) {
     // card.bar = along the card's whole bottom edge instead.
     const b = P7_VERT.bar;
     const bw = card.bar ? w : card.style === 'bar' ? w - (Math.max(card.padX, b.padX) - b.padX) * 2 : w - r * 2;
-    const bx = x + (w - bw) / 2, by = y + h - b.h;
-    ctx.globalAlpha *= b.alpha;
-    ctx.fillStyle = b.color;
-    ctx.beginPath(); ctx.roundRect(bx, by, bw, b.h, b.round ? b.h / 2 : 0); ctx.fill();
+    p7DrawAccentBar(ctx, x + w / 2, y + h - b.h, bw);
     // card.barTop = the same bar along the card's top edge too.
-    if (card.bar && card.barTop) { ctx.beginPath(); ctx.roundRect(bx, y, bw, b.h, b.round ? b.h / 2 : 0); ctx.fill(); }
+    if (card.bar && card.barTop) p7DrawAccentBar(ctx, x + w / 2, y, bw);
+  }
+  ctx.restore();
+}
+
+// One accent bar (P7_VERT.bar style) of width `w`, centred on `cx`, its top at
+// `y`: `inset` px trimmed each side, rounded or square ends, solid or dashed.
+function p7DrawAccentBar(ctx, cx, y, w) {
+  const b = P7_VERT.bar;
+  const bw = w - (b.inset || 0) * 2;
+  if (bw <= 0 || b.h <= 0) return;
+  ctx.save();
+  ctx.globalAlpha *= b.alpha;
+  if (b.dash > 0) {
+    ctx.strokeStyle = b.color; ctx.lineWidth = b.h;
+    ctx.lineCap = b.round ? 'round' : 'butt';
+    ctx.setLineDash([b.dash, b.dashGap]);
+    ctx.beginPath(); ctx.moveTo(cx - bw / 2, y + b.h / 2); ctx.lineTo(cx + bw / 2, y + b.h / 2); ctx.stroke();
+  } else {
+    ctx.fillStyle = b.color;
+    ctx.beginPath(); ctx.roundRect(cx - bw / 2, y, bw, b.h, b.round ? b.h / 2 : 0); ctx.fill();
   }
   ctx.restore();
 }
@@ -2678,11 +2696,8 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
         ctx.globalAlpha = 1;
         if (openT <= 0) {
           // Beat 2: a single bar draws out from the dot along the card edge.
-          const B = P7_VERT.bar, bw = cwF * barT;
-          if (bw > 0) {
-            ctx.fillStyle = B.color;
-            ctx.beginPath(); ctx.roundRect(axisX - bw / 2, flipped ? cyF + chF - B.h : cyF, bw, B.h, B.round ? B.h / 2 : 0); ctx.fill();
-          }
+          const B = P7_VERT.bar;
+          p7DrawAccentBar(ctx, axisX, flipped ? cyF + chF - B.h : cyF, cwF * barT);
         } else p7DrawHeadlineCard(ctx, card, cxF, cyA, cwF, chA);
         textClip = { x: cxF, y: cyA, w: cwF, h: chA, alpha: openT };
       } else p7DrawHeadlineCard(ctx, card, cxF, cyF, cwF, chF);
