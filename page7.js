@@ -2444,12 +2444,23 @@ function p7DrawYearAxisVertical(ctx, W, H) {
     segTop = Math.max(segTop, m.bottom);
   });
   if (botY > segTop) segs.push([segTop, botY]);
+  // The headline-event dots are not axis length: the fill never creeps across
+  // a dot's diameter. While the fill edge is inside a dot's span it is drawn
+  // to the dot's TOP edge until the dot is reached (edge past its centre —
+  // the same moment the dot appears), then to its BOTTOM edge at once. Both
+  // directions, so on the way back up it jumps back out the same way.
+  let fillY = curY;
+  const dotR = P7_AXIS_MARKER_RADIUS;
+  P7_AXIS_EVENTS.forEach((ev, i) => {
+    const y = p7RowY(v.events[i].row, H);
+    if (curY > y - dotR && curY < y + dotR) fillY = curY >= y ? y + dotR : y - dotR;
+  });
   segs.forEach(([a, b]) => {
     ctx.fillStyle = hoverActive ? `rgba(0, 0, 0, ${P7_AXIS_UNFILLED_HOVER_ALPHA})` : P7_AXIS_BG_COLOR;
     ctx.fillRect(lineLeft, a, P7_AXIS_LINE_THICKNESS, b - a);
-    if (curY > a) {
+    if (fillY > a) {
       ctx.fillStyle = hoverActive ? `rgba(0, 0, 0, ${P7_AXIS_ROSTER_LABEL_ALPHA})` : P7_AXIS_FILLED_COLOR;
-      ctx.fillRect(lineLeft, a, P7_AXIS_LINE_THICKNESS, Math.min(curY, b) - a);
+      ctx.fillRect(lineLeft, a, P7_AXIS_LINE_THICKNESS, Math.min(fillY, b) - a);
     }
   });
 
