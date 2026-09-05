@@ -1961,7 +1961,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 /* The card's size is set from the VIEWPORT EDGES, not from its copy: a 48px
    gap above and below (height = 100vh − 2×48), and the width is the narrowest
    frame at which the copy fits that height — tuned by eye on a 982px-tall
-   viewport (440px of copy + 42px side padding + 2px borders = 526px) — re-solved
+   viewport (440px of copy + 40px side padding + 2px borders = 522px) — re-solved
    after the credits went to 14px, since the fixed height only keeps its
    padding while the copy actually fits inside it. On a
    shorter viewport the copy needs more width than this; the max-height
@@ -1971,9 +1971,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   width: fit-content;
 }
 #page-12 .text-card-frame {
-  width: 526px;
+  width: 522px;
   height: calc(100vh - 96px);
-  padding: 40px 42px;   /* even top/bottom; 42px on the sides */
+  padding: 42px 40px;   /* 42px top and bottom, 40px sides */
   box-sizing: border-box;
   direction: rtl;
 }
