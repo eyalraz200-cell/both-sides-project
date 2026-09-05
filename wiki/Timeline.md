@@ -322,10 +322,12 @@ axis so the first event's label can center over its own circle).
   that multiplies `markerRadius`, so a dot grows out of the axis on the way down and
   shrinks back into it on the way **up** instead of vanishing in one frame mid-label-fade.
 - **The headline-event circles are not axis length** (desktop) — and neither is the card a
-  circle opens into. Each event's current axis span is the dot alone (±`P7_AXIS_MARKER_RADIUS`)
-  while closed, or the open card's rect (`p7AxisEventSpans[i]`, written by
+  circle opens into. Each event's current axis span runs from the dot's top
+  (`p7RowY(row) − P7_AXIS_MARKER_RADIUS`) to the dot's bottom, or to the open card's bottom
+  when the card hangs below the dot (`p7AxisEventSpans[i]`, written by
   `p7DrawAxisEventsVertical` each frame from the animated card rect, read by the next frame's
-  axis draw) unioned with the dot. The drawn fill edge `fillY` is a pure function of the true
+  axis draw). A card that opens above its dot sits on line the fill has already passed and
+  never moves the drawn edge. The drawn fill edge `fillY` is a pure function of the true
   edge `curY`: the instant `curY` touches a span's top the drawn edge appears at its bottom
   and keeps moving, then eases back into step with `curY` over `P7_AXIS_DOT_CATCHUP_PX` (80px,
   running at catchup/(2R+catchup) of scroll speed) so nothing below is offset for good;

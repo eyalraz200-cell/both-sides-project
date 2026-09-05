@@ -2519,7 +2519,10 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   const dotR = P7_AXIS_MARKER_RADIUS, C = P7_AXIS_DOT_CATCHUP_PX;
   const dotSpans = P7_AXIS_EVENTS.map((ev, i) => {
     const y = p7RowY(v.events[i].row, H), sp = p7AxisEventSpans[i];
-    return sp ? [Math.min(sp.top, y - dotR), Math.max(sp.bottom, y + dotR)] : [y - dotR, y + dotR];
+    // The span always starts at the dot's top: a card that opens ABOVE its
+    // dot sits on line the fill has already passed, so it must not shove the
+    // drawn edge forward when it appears — only card below the dot is skipped.
+    return [y - dotR, Math.max(sp ? sp.bottom : 0, y + dotR)];
   }).sort((p, q) => p[0] - q[0]);
   dotSpans.forEach(([top, bottom]) => {
     const gap = bottom - top;
