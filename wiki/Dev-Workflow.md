@@ -72,7 +72,7 @@ numbers in the source.
 
 `_debug-accent-bar.js` — desktop-only `manual/` for the @fold9 headline card's accent bars
 (`P7_VERT.bar`): thickness, inset (px shorter than the card each side), opacity, colour, dash
-length / gap (0 = solid), `R` rounded ends, `T` bar along the card top too. Replaced
+length / gap (0 = solid), `R` rounded ends, `T` bar along the card top too, `V` vertical borders on the card sides. Replaced
 `_debug-headline.js` on 2026-09-05.
 
 `_debug-note-style.js`, the `manual/` for the @fold6 ACLED note's chevron and title, was

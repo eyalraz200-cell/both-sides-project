@@ -260,14 +260,16 @@ const P7_VERT = {
   //   dot-facing edge runs through the dot's centre and the dot is redrawn
   //   on top of it).
   card: { style: 'plain', fill: '#FDFCFF', stroke: 'rgba(0, 0, 0, 0.3)', strokeWidth: 1, padX: 16, padTop: 6, padBottom: 6, radius: 4, radiusBottom: 0,
-          gap: 0, stem: false, bar: true, barTop: true, halfDots: true, anchor: 'center' },
+          gap: 0, stem: false, bar: true, barTop: true, sides: false, halfDots: true, anchor: 'center' }, // sides = vertical borders (bar style) on the card's left/right edges too
   // The accent bar under a headline: h px tall, `gap` px below the text's
   // last line, `padX` px wider than the text on each side, `alpha` opacity of
   // `color`, `round` = rounded ends.
   // `dateBelow` = the bar sits between the title and the date (title, bar,
   // then the date `dateGap` px under the bar); false = the bar closes the
   // whole block under the date.
-  bar: { h: 1.5, gap: 1, padX: 6, color: '#000000', alpha: 1, round: true, dateBelow: false, dateGap: 3,
+  // Same style as the year axis line: 1px (= P7_AXIS_LINE_THICKNESS, declared
+  // further down so it can't be referenced here), solid black, square ends.
+  bar: { h: 1, gap: 1, padX: 6, color: '#000000', alpha: 1, round: false, dateBelow: false, dateGap: 3,
          inset: 0, dash: 0, dashGap: 0 }, // inset = px shorter than the card, each side; dash > 0 = dash length (dashGap px between)
   // Type of the centred headline block (desktop only — the mobile axis keeps
   // the P7_AXIS_*_FONT constants). `lh` = line height of each face's lines;
@@ -2520,6 +2522,12 @@ function p7DrawHeadlineCard(ctx, card, x, y, w, h) {
     p7DrawAccentBar(ctx, x + w / 2, y + h - b.h, bw);
     // card.barTop = the same bar along the card's top edge too.
     if (card.bar && card.barTop) p7DrawAccentBar(ctx, x + w / 2, y, bw);
+    // card.sides = the same line down the card's left and right edges.
+    if (card.bar && card.sides) {
+      ctx.save(); ctx.globalAlpha *= b.alpha; ctx.fillStyle = b.color;
+      ctx.fillRect(x, y, b.h, h); ctx.fillRect(x + w - b.h, y, b.h, h);
+      ctx.restore();
+    }
   }
   ctx.restore();
 }

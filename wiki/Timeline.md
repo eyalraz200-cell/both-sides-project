@@ -78,7 +78,7 @@ The tunables live in `P7_VERT` (`page7.js`): `corridorPx` (band), `eventMode`, `
 `bandPx` 60, `wideCorridorPx` 200, `fillRatio` 1, `daysPerRow` 8, `yearGapPad` 3,
 `yearRing` false, `yearSide`/`eventSide` `'center'`, `dateSide` `'with'`, `dateAbove` true,
 `sideGap` 8, `firstOnlyBelow` true, `card` `{ style 'plain', fill #FDFCFF, padX 16, padTop 6,
-padBottom 6, radius 4, radiusBottom 0, gap 0, stem false, bar true, barTop true, halfDots true, anchor 'center' }` (the headline block, see "Headlines" below) — shipped defaults are **widen mode, line off, everything centred on the line**
+padBottom 6, radius 4, radiusBottom 0, gap 0, stem false, bar true, barTop true, sides false, halfDots true, anchor 'center' }` (the headline block, see "Headlines" below) — shipped defaults are **widen mode, line off, everything centred on the line**
 (compare/ "version 1", picked 2026-09-04). The side/alternate/split placements
 (`yearSide`/`eventSide` `'left'`/`'right'`, `eventSide` `'alternate'`, `dateSide` `'left'`/`'right'`)
 are live but unused code paths kept for a later compare; the band branch stays too. Changing
@@ -384,10 +384,12 @@ over `totalRows × CELL`:
   `card.fill` (#FDFCFF) filled card with no stroke (style `'plain'`), 16px side / 6px top and
   bottom padding, 4px top corners and square bottom corners (`radiusBottom` 0), with a
   `P7_VERT.bar` accent bar along its whole bottom edge **and** its top edge (`card.bar` +
-  `card.barTop`, drawn by `p7DrawAccentBar`): `h` 1.5px, `color` #000000, `alpha` 1, `round`
-  ends, `inset` 0 (px shorter than the card each side), `dash` 0 / `dashGap` 0 (dash > 0 =
+  `card.barTop`, drawn by `p7DrawAccentBar`) in the year-axis line's own style: `h`
+  `P7_AXIS_LINE_THICKNESS` (1px), `color` #000000, `alpha` 1, square ends (`round` false),
+  `inset` 0 (px shorter than the card each side), `dash` 0 / `dashGap` 0 (dash > 0 =
   dashed line of that dash length); the bar's `gap`/`padX`/`dateBelow`/`dateGap` only apply
-  to the bare `'bar'` style.
+  to the bare `'bar'` style. `card.sides` (false) adds the same line down the card's left and
+  right edges.
   `anchor 'center'`: the card's dot-facing edge runs through the dot's centre. `halfDots`: the
   dot is redrawn clipped to the outside of the card (`p7DrawAxisMarker` inside a clip of the
   strips just above and below the card), so only its outer half shows past the bar, and the
