@@ -260,7 +260,7 @@ const P7_VERT = {
   //   dot-facing edge runs through the dot's centre and the dot is redrawn
   //   on top of it).
   card: { style: 'plain', fill: '#FDFCFF', stroke: 'rgba(0, 0, 0, 0.3)', strokeWidth: 1, padX: 16, padTop: 6, padBottom: 6, radius: 4, radiusBottom: 0,
-          gap: 0, stem: false, bar: true, barTop: true, sides: false, halfDots: true, anchor: 'center' }, // sides = vertical borders (bar style) on the card's left/right edges too
+          gap: 0, stem: false, bar: true, barTop: true, sides: false, sidesAlpha: 1, halfDots: true, anchor: 'center' }, // sides = a full rounded border (bar line style, at sidesAlpha) instead of the two bars
   // The accent bar under a headline: h px tall, `gap` px below the text's
   // last line, `padX` px wider than the text on each side, `alpha` opacity of
   // `color`, `round` = rounded ends.
@@ -2514,7 +2514,7 @@ function p7DrawHeadlineCard(ctx, card, x, y, w, h) {
     ctx.beginPath(); ctx.roundRect(x + 0.5, y + 0.5, w - 1, h - 1, [r, r, rb, rb]); ctx.stroke();
     ctx.setLineDash([]);
   }
-  if (card.style === 'accent' || card.style === 'bar' || card.bar) {
+  if (card.style === 'accent' || card.style === 'bar' || (card.bar && !card.sides)) {
     // The accent bar, always along the bottom of the text (P7_VERT.bar).
     // card.bar = along the card's whole bottom edge instead.
     const b = P7_VERT.bar;
@@ -2522,12 +2522,16 @@ function p7DrawHeadlineCard(ctx, card, x, y, w, h) {
     p7DrawAccentBar(ctx, x + w / 2, y + h - b.h, bw);
     // card.barTop = the same bar along the card's top edge too.
     if (card.bar && card.barTop) p7DrawAccentBar(ctx, x + w / 2, y, bw);
-    // card.sides = the same line down the card's left and right edges.
-    if (card.bar && card.sides) {
-      ctx.save(); ctx.globalAlpha *= b.alpha; ctx.fillStyle = b.color;
-      ctx.fillRect(x, y, b.h, h); ctx.fillRect(x + w - b.h, y, b.h, h);
-      ctx.restore();
-    }
+  }
+  // card.sides = a full border in the bar's line style (rounded by the card's
+  // radii) instead of the two flat bars, at card.sidesAlpha.
+  if (card.bar && card.sides) {
+    const b = P7_VERT.bar;
+    ctx.save();
+    ctx.globalAlpha *= b.alpha * (card.sidesAlpha ?? 1);
+    ctx.strokeStyle = b.color; ctx.lineWidth = b.h;
+    ctx.beginPath(); ctx.roundRect(x + b.h / 2, y + b.h / 2, w - b.h, h - b.h, [r, r, rb, rb]); ctx.stroke();
+    ctx.restore();
   }
   ctx.restore();
 }
