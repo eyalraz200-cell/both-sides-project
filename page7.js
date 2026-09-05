@@ -1889,7 +1889,14 @@ function p7UpdateAxisEventTriggers(W) {
       // Vertical: one rule for every event — the fill edge (bottom of
       // currentDate's rows) has come down to the event's own reach row (the
       // band's top in band mode, the dot's row in widen mode).
-      reached = hasScrolled && !!p7.vert && p7CurRow() >= p7.vert.events[i].reachRow;
+      // Reverse hysteresis: an open headline stays open on the way back up
+      // until the fill edge has retreated to the PREVIOUS event's reach row —
+      // only then does it close (and the previous one, still reached by the
+      // same rule, fades back in). The first headline closes at its own row.
+      const rows = p7.vert ? p7.vert.events : null;
+      const shown = state.triggeredAt !== null && state.leavingAt === null;
+      const holdRow = rows ? rows[shown && i > 0 ? i - 1 : i].reachRow : 0;
+      reached = hasScrolled && !!p7.vert && p7CurRow() >= holdRow;
     } else if (evMs > maxMs) {
       // An event dated past the dataset's end has no date the scrub can ever
       // reach — clamping its compare date to maxDate fired it only on the one
