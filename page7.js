@@ -247,8 +247,8 @@ const P7_VERT = {
   yearRing:   false,   // no ring on the line — the digits alone mark the year
   // Headline card (centred blocks only). null = bare text on a punched
   // background. Shipped: style 'plain' — white card, no stroke, accent bar
-  // along its bottom AND top edge (`barTop`), the dot cut to its inner half on
-  // the dot-facing edge and a mirrored half-dot on the far edge (`halfDots`).
+  // along its bottom AND top edge (`barTop`), the dot cut to its outer half on
+  // the dot-facing edge and a mirrored outward half-dot on the far edge (`halfDots`).
   // The other styles ('bar' = bare text + bar, 'outline', 'fill', 'dashed',
   // 'shadow', 'accent' = card + faint outline + bar) are kept as code paths.
   // { style, padX, padTop, padBottom, radius, gap (px from the dot's edge to the block),
@@ -2659,10 +2659,14 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
         const cx = axisX - tw / 2 - cpx, cy = y0 - cpt, cw = tw + cpx * 2, ch = cardH + cpt + cpb;
         if (mk && card.halfDots) {
           // Half dots: the dot's centre sits on the dot-facing edge, so
-          // clipping it to the card leaves the inner half; the far edge gets
-          // a matching half-dot of its own.
+          // clipping it to everything OUTSIDE the card leaves the outer half
+          // (top half above the top bar, bottom half below the bottom bar);
+          // the far edge gets a matching outward half-dot of its own.
           ctx.save();
-          ctx.beginPath(); ctx.rect(cx, cy, cw, ch); ctx.clip();
+          ctx.beginPath();
+          ctx.rect(cx - 20, cy - 20, cw + 40, 20);
+          ctx.rect(cx - 20, cy + ch, cw + 40, 20);
+          ctx.clip();
           p7DrawAxisMarker(ctx, mk.x, mk.y, mk.radius, mk.color);
           p7DrawAxisMarker(ctx, mk.x, flipped ? cy : cy + ch, mk.radius, mk.color);
           ctx.restore();

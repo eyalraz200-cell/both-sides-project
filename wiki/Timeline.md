@@ -386,8 +386,10 @@ over `totalRows × CELL`:
   `bar.h` 1.5px black rounded-end accent bar along its whole bottom edge **and** its top edge
   (`card.bar` + `card.barTop`; the bar's `gap`/`padX` only apply to the bare `'bar'` style).
   `anchor 'center'`: the card's dot-facing edge runs through the dot's centre. `halfDots`: the
-  dot is redrawn clipped to the card (`p7DrawAxisMarker` inside a card-rect clip), so only its
-  inner half shows, and the far edge gets a mirrored half-dot in the same colour and radius; the full dot of the marker pass fades out as
+  dot is redrawn clipped to the outside of the card (`p7DrawAxisMarker` inside a clip of the
+  strips just above and below the card), so only its outer half shows past the bar, and the
+  far edge gets a mirrored outward half-dot in the same colour and radius (top half above the top bar,
+  bottom half below the bottom bar); the full dot of the marker pass fades out as
   the label fades in (so a not-yet-reached / faded event still shows its whole dot).
   The other styles (`'bar'` bare text + bar, `'outline'`/`'dashed'` with `stroke`/`strokeWidth`,
   `'fill'`, `'shadow'`, `'accent'`) and `anchor 'edge'` (card `gap` px past the dot's edge)
