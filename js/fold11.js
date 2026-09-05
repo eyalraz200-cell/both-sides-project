@@ -174,6 +174,13 @@ function p13GateMax() {
 // p9ResetDrops, the only two places that happens), so the title stays fully
 // invisible for the whole locked duration regardless of any transient
 // overscroll — no per-frame lag window for it to peek through.
+// Declared HERE, above the eager p13SyncGateVisibility() call below, not next
+// to p13SyncTouchBlock: that call reaches p13SyncTouchBlock at load, and a `let`
+// further down the file is still in its temporal dead zone at that moment — the
+// throw killed the rest of this script, so the gate's wheel/key/scroll listeners
+// were never registered and @fold12 could be scrolled past with no pill dropped.
+let p13TouchBlockOn = false;
+
 function p13SyncGateVisibility() {
   if (page12StickyEl) page12StickyEl.classList.toggle("gate-hidden", p13GateLocked());
   p13SyncTouchBlock?.();
@@ -224,7 +231,6 @@ function p13TouchBlock(e) {
     e.preventDefault();
   }
 }
-let p13TouchBlockOn = false;
 function p13SyncTouchBlock() {
   const want = p13GateLocked() && window.scrollY >= p13GateMax() - window.innerHeight;
   if (want === p13TouchBlockOn) return;
