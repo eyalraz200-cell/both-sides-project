@@ -76,7 +76,7 @@ resize/relayout reproduces itself.
 
 The tunables live in `P7_VERT` (`page7.js`): `corridorPx` (band), `eventMode`, `eventLine`,
 `bandPx` 60, `wideCorridorPx` 200, `fillRatio` 1, `daysPerRow` 8, `yearGapPad` 3,
-`yearRing` false, `yearSide`/`eventSide` `'center'`, `dateSide` `'with'`, `dateAbove` false,
+`yearRing` false, `yearSide`/`eventSide` `'center'`, `dateSide` `'with'`, `dateAbove` true,
 `sideGap` 8, `firstOnlyBelow` true, `card` `{ style 'plain', fill #FDFCFF, padX 16, padTop 6,
 padBottom 6, radius 4, radiusBottom 0, gap 0, stem false, bar true, barTop true, halfDots true, anchor 'center' }` (the headline block, see "Headlines" below) — shipped defaults are **widen mode, line off, everything centred on the line**
 (compare/ "version 1", picked 2026-09-04). The side/alternate/split placements
@@ -375,8 +375,8 @@ over `totalRows × CELL`:
 - **Headlines:** dot on the line at `p7RowY(events[i].row)` (`p7DrawAxisMarker`: the bare
   coloured disc, no white halo); "reached" = its y ≤ the fill
   edge. `p7UpdateAxisEventTriggers` uses one rule for all seven on desktop:
-  `p7CurRow() ≥ events[i].reachRow`. The block — **title lines first, then the date line, then
-  the accent bar** (`dateAbove` false, `bar.dateBelow` false; `p7WrapLabel`, `maxWidth` 320 in band mode, `p7CenterGap() − 16` in
+  `p7CurRow() ≥ events[i].reachRow`. The block — **the date line first, then the title lines**
+  (`dateAbove` true, `bar.dateBelow` false; `p7WrapLabel`, `maxWidth` 320 in band mode, `p7CenterGap() − 16` in
   widen mode) — hangs under the dot (`P7_VERT_EVENT_TEXT_GAP` 6), centred on the axis, on
   a punched background drawn at the label's opacity; the punch runs from the dot's edge (or
   the year label's bottom when pushed past one) to the block's far edge, so no line shows
