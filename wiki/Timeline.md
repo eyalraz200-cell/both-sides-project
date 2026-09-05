@@ -446,7 +446,8 @@ over `totalRows × CELL`:
   `'fill'`, `'shadow'`, `'accent'`) and `anchor 'edge'` (card `gap` px past the dot's edge)
   stay as code paths. Each line's ink is centred in its line box (`p7VertLineText`, measured on a fixed reference with an alphabetic baseline), so a card pads the text equally above and below. **Type** is `P7_VERT.type` (desktop only;
   mobile keeps the `P7_AXIS_*_FONT` constants): title 500 14px, line height 19, black;
-  date 400 14px, line height 19, black at 0.3; `gap` 0 extra px between title and date. With `anchor 'edge'` the dot-to-block gap would be `card.gap` plus whichever card pad faces the dot. **Default side** (`P7_VERT.firstOnlyBelow` true): the first
+  date 400 14px, line height 19, black at 0.3, **but `showDate` is false — the block is the title alone**
+  (no date line; the axis's years give the time). `gap` 0 extra px between title and date when a date is shown. With `anchor 'edge'` the dot-to-block gap would be `card.gap` plus whichever card pad faces the dot. **Default side** (`P7_VERT.firstOnlyBelow` true): the first
   headline hangs under its dot; every later one sits **above** its dot (bottom edge
   `P7_VERT_EVENT_TEXT_GAP` above the dot, punch from the block's top down to the dot's
   edge). The only dodge: if the default side would overlap a year label (`yearSpans`,
