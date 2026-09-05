@@ -18,7 +18,7 @@ const SBB = {
 // with the `manual/` edge harness on 2026-09-04 at 1920 wide (was 0.18 ≈ 346px there).
 // Read it through sbbTimelineLeftX(W, H), never W * box.left, so the exact px survives
 // every viewport width. Mobile stays a fraction (SBB_TIMELINE_MOBILE_LEFT).
-const SBB_TIMELINE_LEFT_PX = 200;
+let SBB_TIMELINE_LEFT_PX = 200; // `let` so a harness can drive it live
 const SBB_TIMELINE = {
   left:   0.18,   // fraction of W — MOBILE-ONLY fallback; desktop uses SBB_TIMELINE_LEFT_PX
   top:    0.07,   // fraction of H

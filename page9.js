@@ -1496,7 +1496,7 @@ function drawPage9(ctx, W, H) {
   // here on canvas.
   // Untapered per explicit request — one flat color/alpha along the whole
   // stroke (previously a linear gradient fading toward each end, still
-  // scaled by lineAlpha below for fold13's fade-out). Color matches the
+  // scaled by lineAlpha below for @fold13's fade-out). Color matches the
   // tray's own border (.page9-tray, style.css) exactly — rgba(90,90,90,0.45).
   // Drawn on both breakpoints. (It used to be skipped on mobile, back when the
   // tray sat immediately below midY and was itself the boundary — the tray now
@@ -1504,7 +1504,13 @@ function drawPage9(ctx, W, H) {
   // divider is the only edge between the two grids there, same as desktop.)
   {
     const dividerStartX = W * (1 - page9LineT);
-    const lineAlpha = 1 - (p9.fold13OutT ?? 0);
+    // Rides @fold13's morph, NOT @fold12's fade (p9.fold13OutT) like the
+    // counts and legit dots around it: per explicit request the divider is
+    // kept on @fold12, where everything else fades but the extreme dots stay
+    // standing in their columns — the line is what those columns sit on, so
+    // dropping it there would leave them floating. It goes on @fold13, in
+    // step with the dots leaving the columns for freeform.
+    const lineAlpha = 1 - (p9.fold13ExtremeMorphT ?? 0);
     // Mobile draws it a bit lighter (explicit request) — desktop keeps the
     // tray-border-matching 0.45.
     const baseAlpha = mobile ? 0.32 : 0.45;
@@ -1527,6 +1533,21 @@ function drawPage9(ctx, W, H) {
   // its state is kept in step from the owning fold's own draw, exactly as
   // @fold9 does it from doHitTest. Cheap and idempotent.
   p7InspectSync?.();
+
+  // The year axis's reverse wipe OUTLIVES @fold10. It starts when that fold's
+  // bridge glide starts (drawPage8) and now runs at the build-in's own speed,
+  // which is long enough that currentPage can flip here — the moment @fold10's
+  // title block reaches the top — while the axis is still undrawing. Without
+  // this the axis would simply stop being drawn at that instant and snap away,
+  // which is the very thing the slow reverse wipe exists to avoid. Same forcing
+  // of currentDate as drawPage8's branch. Returns false once the wipe hits 0,
+  // after which this costs one comparison a frame.
+  if (p7AxisReverseOut()) {
+    const saved = p7.currentDate;
+    p7.currentDate = p7.maxDate;
+    p7DrawYearAxis(ctx, W, H);
+    p7.currentDate = saved;
+  }
 }
 
 // The extreme-zone counts as currently *displayed* — mid-stagger this is the
@@ -1703,8 +1724,23 @@ function p9BuildPanel() {
 
   function resolveDropTarget(x, y) {
     const hit = document.elementFromPoint(x, y);
-    if (!hit) return null;
-    return dropTargets.find(dt => dt.el === hit || dt.el.contains(hit)) || null;
+    const direct = hit && dropTargets.find(dt => dt.el === hit || dt.el.contains(hit));
+    if (direct) return direct;
+    // FALLBACK — the tray band's own rect stands in for #page9ZoneBelow.
+    // Once EVERY pill has been classified extreme, both .page9-tray-row's are
+    // :empty and hidden (see the V2 rule in style.css), so zoneBelow's content
+    // width drops to 0. The tray is `align-items: center`, so a zero-content
+    // child collapses to zero WIDTH — its 44px min-height buys nothing, and
+    // elementFromPoint can never land on a 0px-wide box. Without this, the
+    // last pill to leave the tray strands all ten up top with no way to drag
+    // one back. The band is the right stand-in because it is already what the
+    // .dragover highlight paints (`.page9-tray:has(#page9ZoneBelow.dragover)`),
+    // so the target matches the affordance the user is shown.
+    const tray = document.querySelector(".page9-tray");
+    if (!tray) return null;
+    const r = tray.getBoundingClientRect();
+    if (!r.height || x < r.left || x > r.right || y < r.top || y > r.bottom) return null;
+    return dropTargets.find(dt => dt.targetZone === zoneBelow) || null;
   }
 
   // One independent grid per tray row (see P9_TRAY_GRID above for why) —
@@ -2055,6 +2091,23 @@ function p9BuildPanel() {
     infoEl.textContent = "i";
     infoEl.setAttribute("aria-label", `מידע על ${label}`);
     pill.appendChild(infoEl);
+
+    // DECORATIVE ✕ for a dropped (extreme) pill — currently PARKED and never
+    // visible: the CSS that reveals it is gated on `.page9-x-affordance`, a
+    // class nothing adds (see the "OPTIONAL" block in style.css for how to turn
+    // it on). The span is still built for every pill so turning it on is a
+    // pure CSS flip, the same way the ⓘ above is built on every viewport.
+    // If it is ever switched on: it is NOT a control, per explicit instruction.
+    // The WHOLE pill stays the one click target it already is, and the ✕ only
+    // advertises that clicking takes the pill back out. Hence a <span>, not a
+    // <button>, plus pointer-events:none and aria-hidden — a real button would
+    // promise an action of its own and would steal the pill's own pointerdown,
+    // which is what starts the drag.
+    const xEl = document.createElement("span");
+    xEl.className = "page9-pill-x";
+    xEl.textContent = "\u00D7";
+    xEl.setAttribute("aria-hidden", "true");
+    pill.appendChild(xEl);
 
     // Manual pointer-based dragging instead of native HTML5 drag-and-drop —
     // once a native drag starts, the OS/browser takes over rendering the

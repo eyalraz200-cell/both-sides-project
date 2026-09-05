@@ -13,16 +13,16 @@ hero dots included. Any doc claiming 8/10/12 groups is stale.
 | Color | Label | `actor` |
 |---|---|---|
 | `#F9B624` | תנועות התנחלות באיו״ש | `settlers` |
-| `#F024FF` | קבוצות ימין לאומיות | `right wing protesters` |
 | `#454545` | מפגינים חרדים | `haredi jews` |
+| `#F024FF` | קבוצות ימין לאומיות | `right wing protesters` |
 
 **גוש השינוי (change column, screen-left), top → bottom:**
 
 | Color | Label | `actor` |
 |---|---|---|
 | `#6B89FF` | מתנגדי הרפורמה ותומכי עסקת החטופים | `protesters against government` |
+| `#FF1A94` | פעילי שמאל | `peace movements` |
 | `#31CE1C` | מפגינים ערבים ישראלים | `arab israelis` |
-| `#FF1A94` | ארגוני שמאל | `peace movements` |
 
 Row order in **both** columns is the sort of that camp's `fold6.y` values (`legendRow` in
 `js/update-groups.js`), not the declaration order of `FOLD4_COALITION_ROWS` /
@@ -41,7 +41,7 @@ JS, resolved by color.
 **There is no `P7_COLORS` object.** The name survives only in stale comments. Colors come
 from `p7ActorColor(actor)` = `GROUPS.find(g => g.actor === actor)?.color || "#888"`, so
 editing a color in `GROUPS` updates the timeline dots, page8's glide, page9's grid and
-every tooltip border at once.
+every tooltip at once (its desktop fill, its mobile dashed border).
 
 ## One persistent DOM set
 
@@ -98,8 +98,25 @@ opacity every frame, so nothing has to switch it back on.
    3 rects line up in one vertical column, then the labels type in
    (`FOLD3_TYPE_ORDER`).
 4. **@fold4** — the 6 rects glide into the persistent two-column mini-legend at the screen
-   edges, and the camp headers un-type. This is the legend's final resting state for the
-   rest of the page.
+   edges, and the camp headers un-type. On **desktop** the group labels then un-type too,
+   chained off `fold6Trigger`'s `onSettle` (they are carried in by the glide, so they only
+   spell away once the row has landed): the legend's resting state is six bare swatches.
+   Hovering either column's hit box (`fold6LegendHoverEls`, geometry written per frame by
+   `updateGroups`, `FOLD6_LEGEND_HOVER_W`/`_PAD`) types **every** label back in, both
+   columns at once — the legend answers as one object. The two are combined as
+   `max(1 - untype, hover)`, never summed, so a hover part-way through the un-type re-fills
+   from the count already on screen. The **un-type** runs from opposite ends per column — the
+   right column drops its head, the left column its tail — so each dissolves away from the
+   screen edge it is anchored to. The **hover re-type** is head-first on both columns; the
+   flip is gated on the un-type term winning the `max()`. `FOLD6_LABEL_UNTYPE_MS` 900, `FOLD6_LABEL_HOVER_MS` 420.
+   Mobile is unaffected — it un-types inside the glide already. This is the legend's final
+   resting state for the rest of the page.
+   Once a row's glide has fully landed (`e6 === 1`, desktop only) its label carries `.is-plated`: an
+   opaque `var(--bg)` background plus a 4px `box-shadow` spread of the same colour. It is
+   the page's own background colour, so it changes nothing visually — it exists purely so a
+   label expanding back out on hover **occludes** whatever canvas content it lands on
+   instead of tangling with it. It is deliberately off for the whole flight into the legend,
+   where the labels travel over the dot grids and a plate would punch a hole in them.
 
 Camp x positions come from the @fold2 grid constants (`FOLD2_CAMP_CENTER_GAP_PX` etc.),
 placed symmetrically about screen center in plain px — so they hold at any viewport
@@ -185,7 +202,7 @@ right column at either breakpoint.
 
 ## Camp headers
 
-The two headers (`.fold4-column-title`, 18px Assistant 700, `direction: rtl`, base
+The two headers (`.camp-header`, 18px Assistant 660, `direction: rtl`, base
 `opacity: 0`, `transform: translate(-50%, -50%)` set once at creation) type in at @fold2
 and **un-type in place** at @fold4. They do **not** travel into the mini-legend — the
 legend's columns carry no camp titles. There is no `e6` lerp on their position, size or
@@ -218,7 +235,7 @@ are both fixed px, so on a phone an H-scaled distance would swing with the URL b
   `#page9Tooltip` with a real event's date + description, grown and typed on its own
   wall-clock sequence;
 - **gain colors and fly at @fold8** — `FOLD6_SQUARE_ACTORS` (via `groupColorByActor`) gives
-  each its group color, and `FOLD6_SQUARE_OCCURRENCE` says which chronological occurrence
+  each its group color, and `fold6SquareOccurrence(i)` says which chronological occurrence
   of that actor it stands in for. The real cascade never draws those 8 events
   (`p7GetClaimedEvents`), so the DOM square just stays once it lands.
 - **shrink with the @fold10 glide** — as page8's blend carries them down to the legit
@@ -228,18 +245,40 @@ are both fixed px, so on a phone an H-scaled distance would swing with the URL b
   timeline size); on ≤1600 desktop and mobile the squares used to stay at timeline size
   and read as oversized dots on the band.
 
-Square 0 is the tooltip square, and it's pinned to one chosen event **by id**:
-`FOLD6_TOOLTIP_ROW_ID = "row-34"` (`js/groups.js`) = 2023-01-14, מחאה מחוץ לביתו של שר
-המשפטים יריב לוין במודיעין נגד הרפורמה המשפטית — chosen for an early date and a
-description that fills exactly 3 lines in the mobile docked frame. The
-occurrence number the lookups need is derived
-from the loaded data at first use (`fold6SquareOccurrence(0)` → `p7OccurrenceOfRowId`,
-`page7.js`) and cached, so **editing the xlsx can no longer silently slide the tooltip onto a
-neighbouring event** — it follows the row. Every consumer must go through
-`fold6SquareOccurrence(i)`, never `FOLD6_SQUARE_OCCURRENCE[i]` directly (that array is the
-plain derived fallback), or `p7GetClaimedEvents` and the tooltip disagree and the real
-cascade draws a duplicate dot. If the row is deleted from the dataset the console warns once
-and square 0 falls back to the first event of its actor.
+**All 8 squares are pinned to specific events by id.** `FOLD6_SQUARE_ROW_IDS`
+(`js/groups.js`) is the roster — the xlsx's own `row_id` per square, in square order:
+
+| i | col | rowId | date | actor | color |
+|---|-----|-------|------|-------|-------|
+| 0 | left  | `row-11`   | 2023-01-06 | protesters against government | `#6B89FF` blue — **tooltip square** |
+| 1 | right | `row-5`    | 2023-01-01 | haredi jews    | `#454545` grey |
+| 2 | left  | `row-7`    | 2023-01-02 | arab israelis  | `#31CE1C` green |
+| 3 | right | `row-6`    | 2023-01-01 | settlers       | `#F9B624` yellow |
+| 4 | left  | `row-10`   | 2023-01-05 | protesters against government | `#6B89FF` blue |
+| 5 | right | `row-6794` | 2023-01-01 | settlers       | `#F9B624` yellow |
+| 6 | left  | `row-12`   | 2023-01-06 | arab israelis  | `#31CE1C` green |
+| 7 | right | `row-6795` | 2023-01-01 | settlers       | `#F9B624` yellow |
+
+They are **the timeline's 4 earliest events per side** — even indices are the left column,
+odd the right, the same convention `FOLD6_SQUARES_OFFSET` lays out. `FOLD6_TOOLTIP_ROW_ID`
+is just an alias for `FOLD6_SQUARE_ROW_IDS[0]`, whose text (עשרות פעילים ישראלים, בהם עורכי
+דין… פסקת ההתגברות) is what the @fold7 demo tooltip shows.
+
+**A consequence of the "earliest" rule, not a bug:** the opening days are lopsided, so the
+right column is 1 grey + 3 identical yellows, and two of the six group colors never appear
+among the squares at all — פעילי שמאל's first event is 2023-02-27 and קבוצות ימין לאומיות's
+is 2023-01-10. Swapping indices 5/7 for `row-22` / `row-377` is a one-line roster change if
+that ever reads badly.
+
+`FOLD6_SQUARE_ACTORS` must **mirror** the roster's rows: it stays a static array because
+`FOLD6_SQUARE_COLORS` is computed from it at parse time, before events.json exists. The
+occurrence number the lookups actually need is derived from the loaded data at first use
+(`fold6SquareOccurrence(i)` → `p7OccurrenceOfRowId`, `page7.js`) and cached per slot, so
+**editing the xlsx can no longer silently slide a square onto a neighbouring event** — it
+follows the row. Every consumer must go through `fold6SquareOccurrence(i)`, or
+`p7GetClaimedEvents` and the tooltip disagree and the real cascade draws a duplicate dot. If
+a row is deleted from the dataset the console warns once per id and that square falls back to
+the first event of its actor.
 
 `FOLD6_SQUARE_LABELS` must stay in sync with `P9_CATEGORIES` — renaming a category pill
 means renaming the label here too.
@@ -254,7 +293,7 @@ hover handlers to stay in sync — the squares are DOM, outside `draw()`.
 link. **On mobile the note is not positioned at all** — it is reparented into the מקרא
 panel (below) and flows there; everything in this section is the desktop layout.
 
-**Mobile also toggles `hidden` on the note and its divider** (`js/update-groups.js`, right
+**Mobile also toggles `hidden` on the note and its rule** (`js/update-groups.js`, right
 after the opacity write) while `acledNoteTrigger.currentT()` is 0. Flowing content at
 opacity 0 still occupies its full height, so the מקרא frame would open with an empty gap
 under the rows before @fold6 has revealed anything. Desktop is absolutely positioned and
@@ -265,19 +304,160 @@ instruction; mobile's bottom-of-viewport pin and its `fold9FlyTrigger` fade-out 
 gone). It's anchored to that column's **bottom** row target — the settled label's bottom
 edge is computed as `bottom anchor + LEFT_LEGEND_SWATCH_SIZE/2 + groupLabelInkShift(14) +
 fold6RowMeasureEl.offsetHeight/2` (the same swatch-half + ink-shift offset the live labels
-get) — at `noteRightEdge = W - FOLD6_LEGEND_INSET_RIGHT`, and fades in on
-`acledNoteTrigger.currentT()` (@fold6, the ACLED card; its divider, `fold6NoteDividerEl`, on the same t).
-The stack reads downward from the bottom row: the note sits
-`FOLD6_DIVIDER_GAP_TOP + 1 + FOLD6_DIVIDER_GAP_BOTTOM` (**8+1+8px**) below the rows, and
-the divider is placed at the visual **center** of that white (explicit instruction) —
-midpoint between the rows' bottom edge and the note's **ink** top, compensating the ~3px
-of transparent leading `.fold6-note`'s 14px/1.4 line box carries above its ink (the 1.4 in
-`js/update-groups.js`'s `fold6NoteInkTop` must match the CSS line-height).
+get) — at `noteRightEdge = W - FOLD6_LEGEND_INSET_RIGHT`, and reveals on
+`acledNoteTrigger` (@fold6, the ACLED card) by **typing in** character by character over the
+trigger's whole raw span (`FOLD6_NOTE_BEATS`, `js/groups.js`, `p9Ease`). The note is four typewriter
+segments (the title / text / the live `ACLED` link / text, `fold6NoteSegments`, each a `fold8SetupTypewriter`
+span pair) so the link survives and the 155px block keeps its final wrap from the first frame;
+one running character count is walked across all four, so the whole block types as a single
+continuous stream — heading first, then the note under it — rather than two things typing at once;
+opacity is a hard 0/1 gate (a `min(1, t·4)` ramp was tried and read as a fade). It never fades.
+
+The note sits inside a **card** (`fold6NoteCardEl`, `.fold6-note-card`) that **expands to
+the body text**: closed it is just the title row, and it grows as the body types in. The card
+is a **sibling painted behind** the title and the body, not a wrapper around them — those two
+are absolutely positioned with left/top/width written per frame, and on mobile
+`fold6SyncNoteHome()` re-parents them one by one into the מקרא panel, so wrapping them would
+have meant redoing both. It is appended **first** into `#fold6NoteLayer`, and since everything
+in that layer is `position: absolute`, DOM order is paint order — no z-index. Its rect comes
+from the same numbers the rule uses: `fold6X - FOLD6_CARD_PAD` / `noteTitleY - FOLD6_CARD_PAD`,
+with **no ink trim** (unlike the rule: the card frames the text *box*, so it wants the whole
+line boxes; the height itself is built below). It collapses **horizontally** too: closed its
+content width is the title row — the title's text, `--note-chevron-gap` (16px), the chevron, and `--note-chevron-inset` (6px) of room from
+the card's edge — and it widens to the note's full 155px.
+
+When it **re-opens** (after an un-type, or on hover) it opens in **two steps — height first,
+then width** (explicit instruction), and it opens **before any body text exists**. `FOLD6_CARD_OPEN_SHARE` (0.3) gives the card the first 30% of
+the body's beat to itself; the text types over the remaining 70%. That share is what buys the
+opening its duration, and nothing else can: a body line is the full 155px, so text arriving
+while the width is still travelling would hang outside the tint — so the text waits instead.
+Within the share, `FOLD6_CARD_OPEN` slices height over 0→0.3 and width over 0.3→1, each
+re-eased from its own raw slice; the width gets the longer half, since it is the step meant to
+read as an opening.
+
+**The first appearance is different** (`noteCardIntro` — nothing has un-typed and nothing is
+being hovered back, i.e. `fold6NoteUntypeTrigger` and `fold6NoteHoverTrigger` both at 0; the
+moment either is in play the card really is re-opening from the collapsed pose and the
+accordion behaviour above applies).
+
+It **reverses the two steps** — width first, then height (explicit instruction). Nothing has
+been collapsed yet at that point, so there is no earlier state for the card to be opening *out
+of*: leading with the height would show the title-only pose as though it meant something, and
+the card would read as un-collapsing rather than arriving.
+
+And the width there **runs on the title's typing**, not on the body's beat (explicit
+instruction): `cardWT` is `p9Ease(titleP)`, so the card widens as the title writes itself and
+arrives *with* it. Only the height is left for the body's opening share — which is why
+`FOLD6_CARD_INTRO.w` is unused on that path and `.h` gets the whole window. The title's own
+height does **not** grow in alongside that (explicit instruction): on this path `titleHP` is a
+`0`/`1` flip, so the card takes its full title height the moment there is a character to hold
+and does nothing but widen from there. Otherwise the intro would read as both axes at once
+rather than width-then-height.
+
+The height step opens **one line** of body, not the whole block. The rest of the height then
+**fits the text**, growing with it as it types rather than waiting in an empty box: a line
+appears, the card widens to hold it, and from there the card and the text grow together
+(`titleH·titleP + (titleGap + lineH)·heightT + (bodyH - lineH)·textP`). Reversed, the card
+shrinks back down with the un-typing text and closes on the last of it. The **right** edge is
+the fixed one (it hugs the legend's right edge at `noteRightEdge`), so it grows leftward.
+The collapsed width needs the title's real text width, which can't be read off
+`fold6NoteTitleEl` — that box is a fixed 155px and mid-type holds only some of the characters,
+so the card would breathe one letter at a time. An off-screen twin carrying the full title
+(`fold6NoteTitleMeasureEl`, same class, `left: -9999px`) is measured instead.
+`FOLD6_CARD_PAD` (8px, in `js/groups.js`) is a `let` purely so a `manual/` harness can turn it
+live. The look is three custom properties — `--note-card-radius` (16px), `--note-card-border`
+(**none**), `--note-card-bg` (`rgba(0,0,0,0.035)`): a `compare/` pass picked the plain tint
+over a dashed frame and two hairline-box variants, because a drawn frame competed with the
+legend rows above it. Inside the panel the panel is already the frame, so
+`.fold6-note-card.is-in-panel` is `display: none`. The card is part of the note's hover target
+along with the title and the body.
+
+**The horizontal hairline under the rows is gone** (explicit instruction), replaced by a
+**vertical rule** (`fold6NoteRuleEl`, `.fold6-note-rule`) in the same colour and 1px weight
+running down the **right** — reading-start — edge of the note block. The note's **text**
+takes the legend's right-edge alignment with the dot rows (`fold6X = noteRightEdge - 155`)
+and the rule steps **outside** that edge, `FOLD6_RULE_GAP` (8px) further right at
+`noteRightEdge + FOLD6_RULE_GAP` — chosen over the mirror arrangement (rule on the dots'
+edge, text pushed left) in a `compare/` pass, along with a horizontal-line family under the
+title, which lost. Its
+`height` is written per frame and **grows and shrinks with the typing**, measured
+geometrically rather than as a share of the character count: the title's height is filled by
+the title's progress and the body's by the body's, so when the body un-types away the rule
+shrinks back to exactly the title's height rather than to nothing. It also runs
+`FOLD6_RULE_OVERHANG` (5px) past the last line so it **sticks out at the bottom**; that
+overhang scales in with the title's progress so it never pops in ahead of the block. The top
+is deliberately NOT trimmed to the letters' cap — trimming to the cap was tried and reverted.
+Both ends are trimmed by
+the ~3px of transparent leading a 14px/1.4 line box carries, so it spans the text's **ink**
+(the 1.4 in `js/update-groups.js` must match `.fold6-note`'s line-height). Desktop only —
+in the מקרא panel the note flows full-width with no column edge to run down, so
+`.fold6-note-rule.is-in-panel` is `display: none`.
+
+**The rule is currently OFF** — `.fold6-note-rule` is `display: none`, superseded by the card
+plus the chevron below (a chevron says "this opens"; a hairline only says "this is a block").
+The whole mechanism above is kept intact and comes back by removing that one declaration.
+
+An **accordion chevron** on the title (`.fold6-note-title::after`) is the note's affordance.
+It is a pseudo-element so the title's typewriter, which rewrites
+the element's own spans every frame, can't disturb it. It is **absolutely positioned on the
+card's left edge**, not flowed after the text, so it stays on the frame as the card collapses
+and reopens: `--note-chevron-x` is that edge expressed in the title box's own coordinates
+(`155 - contentW + inset`), written per frame, and `top: 50%` plus a translate centres it on
+the title's line. `--note-chevron-gap` and `--note-chevron-inset` are therefore **not read by
+any declaration** — only `js/update-groups.js` uses them, since both decide how narrow the
+collapsed card may be. Its colour is its own grey, `#919191`, not `currentColor`: the chevron
+is the affordance and the title (`#949494`) is the label, and the two were tuned separately in
+a `manual/` pass. The
+shape is the two-border square — `border-left` + `border-bottom` rotated `-45deg` reads as a
+chevron pointing down; the centring translate and that rotation share one `transform`, since a
+second declaration would replace both. Both come from custom properties written per frame by
+`updateGroups`. The **rotation runs on the card's width step and nothing else** (explicit
+instruction): `--note-open` is `cardWT`, the eased progress of the width window, so the chevron
+turns exactly while the card is widening and is still while the height fills with text. It does
+*not* track the typing — that read as a slow sweep, and was briefly a hard `0`/`1` snap instead;
+tying it to the one beat it belongs to is the middle ground. Because the chevron exists on both
+breakpoints, `cardWindows`/`cardOpen`/`cardWT` are computed **above** the desktop-only card
+block in `updateGroups`, not inside it. The **fade** is still continuous, from `--note-title-p`
+(title typed 0..1), so the chevron doesn't show before its own title has typed.
+
+**Then it un-types itself** — on a scroll crossing, not a timer (explicit instruction): the
+note spells itself away **from the end** over `FOLD6_NOTE_UNTYPE_MS` = 900ms
+(`fold6NoteUntypeTrigger`, `checkNoteUntype`) on **@fold7's crossing** — the same card and
+0.5 fraction as `fold7LabelTrigger` and `fold8SquareDimTrigger` — so the note clears exactly
+as the square-labels fold takes over. **The title stays** (explicit instruction), and so does
+the rule, shrunk back to the title's height. `fold6UpdateNoteTypewriter` therefore takes
+**two** counts, title and body: the title follows the reveal alone, the body follows the
+un-type; both are slices of the same running total, so the first type-in still reads as one
+stream. **Hovering the mini-legend types the body back** — and so does hovering **the note or
+its title**, which are their own hit target (explicit instruction; `.fold6-note` /
+`.fold6-note-title` opt back into `pointer-events` inside the otherwise click-through note
+layer, and the typewriter keeps the block at full size so the hit area never shrinks; the
+**card** is part of that target too). It runs on its **own** trigger,
+`fold6NoteHoverTrigger` / `FOLD6_NOTE_HOVER_MS` = **700ms**, rather than the group labels'
+`fold6LabelHoverTrigger` (420ms) — explicit instruction: it doesn't have to land with them and
+wants more breathing time, there being far more text here than in a label and a card opening
+underneath it at the same time. Both triggers fire from exactly the same two places (the
+legend columns' hit boxes and the note itself), so hovering either still brings both back;
+only the tempo differs. It is combined the same way: the visible count is `min(reveal, max(1 - untype, hover))`, so a hover caught
+mid-un-type re-fills from where the count already is. Un-typing from the end is just the
+character count running back down — no slice flip (unlike the left legend column's labels).
+**Desktop only**: mobile has no hover, so an un-typed note there would be unrecoverable, and
+`checkNoteUntype` returns early under `isMobile()`. Scrolling back up re-crosses the
+threshold and types it back on its own.
+
+**A title sits over the note** (explicit instruction): `FOLD6_NOTE_TITLE_TEXT` = «איסוף הנתונים»,
+`fold6NoteTitleEl` / `.fold6-note-title`. It is deliberately the **same 14px/1.4 box** as
+`.fold6-note` — only `font-weight: 660` and a full-black colour separate them — because the
+rule's ink trim is measured against that line-height. It reparents into the מקרא panel
+with the note and the rule (`fold6SyncNoteHome`) and takes the same `hidden` gate on mobile.
+
+The stack reads downward from the bottom row: the **title** sits `FOLD6_NOTE_TOP_GAP`
+(**17px** — the old 8+1+8 collapsed into one number, so the distance is unchanged) below the
+rows with the note `FOLD6_NOTE_TITLE_GAP` (**4px**) under the title's measured box, and
+the rule runs alongside all of it.
 
 The note box is a fixed `FOLD6_NOTE_WIDTH` = **155px** wrap width (`js/groups.js`); in the
-mobile panel it has no width at all and fills the panel. It is RTL and right-aligned, so it hugs `noteRightEdge` and extends leftward. The hairline below it
-(`fold6NoteDividerEl`) spans that **full frame width** — same left x (`fold6X`) and same right
-edge as the note box, not the widest wrapped text line. Editing `FOLD6_NOTE_WIDTH` re-wraps the
+mobile panel it has no width at all and fills the panel. It is RTL and right-aligned, so it hugs the rule and extends leftward. Editing `FOLD6_NOTE_WIDTH` re-wraps the
 note and changes its height; the legend rows no longer move with it (the old
 `fold6NoteShiftPx` row pre-shift is gone) — the note just extends further down.
 
@@ -291,7 +471,7 @@ persistent bar pinned to the top of the viewport (`js/groups.js`, `.fold6-mlegen
 מחנה הימין        גוש השינוי   ← the REAL @fold2 camp headers, risen into place
 ┌───────────────────────────┐  ← the panel, only while open
 │ 3 coalition rows │ 3 change rows │
-│ ──────────  ACLED note …      │
+│ איסוף הנתונים / ACLED note …          │
 └───────────────────────────┘
 ```
 
@@ -361,8 +541,8 @@ persistent bar pinned to the top of the viewport (`js/groups.js`, `.fold6-mlegen
   `firstLineShift` fades over `fold6ShapeT` instead of `e6`, so on mobile it holds.
 - **The camp names live inside the panel** (per explicit instruction — they used to rise
   onto the screen). Each column is headed by a static `.fold6-mlegend-camp` carrying
-  `FOLD4_HEADER_TITLE_COALITION` / `_CHANGE`, with a **12px** gap below it (double the 6px
-  pitch between the group rows, so the camp → groups split reads at a glance). On screen, `fold4ColumnTitleCoalitionEl`/
+  `CAMP_HEADER_TITLE_COALITION` / `_CHANGE`, with a **12px** gap below it (double the 6px
+  pitch between the group rows, so the camp → groups split reads at a glance). On screen, `campHeaderCoalitionEl`/
   `ChangeEl` un-type at `@fold4` **exactly as on desktop** — there is no mobile branch on
   the untype factors and no mobile glide — so past `@fold4` the button is the only thing
   left of the camps.
@@ -379,7 +559,7 @@ persistent bar pinned to the top of the viewport (`js/groups.js`, `.fold6-mlegen
 - The panel's rows are a **separate static copy** of the six groups, not the animated
   `groupItems` — those are mid-flight whenever the panel is closed. Same two-column split,
   same sides (coalition right, by `dir: rtl` + source order), each column sorted by `fold6.y`.
-- The ACLED note and its divider are **moved**, not duplicated, into the panel by
+- The ACLED note and its title are **moved**, not duplicated, into the panel by
   `fold6SyncNoteHome()` — one set of nodes, one ACLED link. Crossing the breakpoint reparents
   them back; `.is-in-panel` undoes their `position: absolute`, and the inline
   `left/top/width/opacity` are cleared on the way in. They still fade on
@@ -438,7 +618,7 @@ persistent bar pinned to the top of the viewport (`js/groups.js`, `.fold6-mlegen
     onto the panel's own `.fold6-mlegend-camp` headings (kept in `fold6MobileCampHeadEls` as
     the panel is built), 18px → `FOLD6_MFLY_HEAD_PX` (14), keeping every character — the
     mirrored un-typing (`fold6BeatT("headerCoalition"/"headerChange")`) is suppressed while
-    flying. Both ends are center anchors (`.fold4-column-title` is `translate(-50%, -50%)`,
+    flying. Both ends are center anchors (`.camp-header` is `translate(-50%, -50%)`,
     the target is the heading's measured center), so it is a plain `e6Fly` lerp with the same
     stand-in + swap treatment as the rows. The panel's own headings are held at **opacity 0**
     alongside its rows (`fold6MFlySetRowsShown` covers both) and appear on the same landing
@@ -544,7 +724,7 @@ persistent bar pinned to the top of the viewport (`js/groups.js`, `.fold6-mlegen
   - **Every fly gate is `e6 > 0`, never "a target exists" — binding.** This holds for the
     rows (`flying`) *and* the camp headers (`headFlying`). The header gate is the one that
     actually moved `@fold2`: at `e6 = 0` it pinned an inline `font-size` on
-    `.fold4-column-title` (so its `offsetHeight`, half of which `fold2HeaderY` subtracts on
+    `.camp-header` (so its `offsetHeight`, half of which `fold2HeaderY` subtracts on
     mobile, stopped following the stylesheet) and swapped the live typing element for a
     stand-in via `.is-mfly-hidden`. Both are no-ops for the flight and both changed the
     resting header-to-row gap.
@@ -621,7 +801,7 @@ persistent bar pinned to the top of the viewport (`js/groups.js`, `.fold6-mlegen
   push the frame briefly *bigger* as it leaves. Rows are restored to full size only after
   the panel is hidden, so a hand-opened panel always comes back whole.
 - **The ACLED note never joins the panel mid-demo.** `fold6MLegendIntroActive` is true for
-  the whole intro (grow + hold + shrink), and `updateGroups` keeps the note + divider
+  the whole intro (grow + hold + shrink), and `updateGroups` keeps the note + rule
   `hidden` — out of layout, not just transparent — while it is. On a fast scroll @fold6
   (`acledNoteTrigger`) can be crossed while the demo is still playing, and the note
   flowing in would grow the frame taller under rows that are still typing. It first appears

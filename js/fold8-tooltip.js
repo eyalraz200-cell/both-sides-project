@@ -185,6 +185,17 @@ function tooltipDockMobile(el) {
   return docked;
 }
 
+// Square 0's own beat-2 "fly" progress, published each frame by updateGroups
+// (js/update-groups.js) rather than re-derived here. It is what swings the demo
+// callout from hanging ABOVE its square (@fold7) to hanging BELOW it, so it is
+// angled down by the time the square lands on the real timeline.
+//
+// fold9FlyTrigger's whole span is NOT the flight: its first
+// FOLD9_FLY_RESIZE_SPAN is beat 1 (color + resize), during which the square
+// hasn't moved at all — riding the whole trigger swung the callout down before
+// the flight had even started. Ride beat 2 only.
+let fold8FlyMoveT = 0;
+
 function fold8PositionTooltip(sq) {
   if (tooltipDockMobile(fold8TooltipEl)) return;
   const sqRect = sq.getBoundingClientRect();
@@ -193,7 +204,19 @@ function fold8PositionTooltip(sq) {
   const TOOLTIP_GAP = 5;
   const rawLeft = dotClientX - TOOLTIP_GAP - fold8TooltipEl.offsetWidth;
   const left = Math.max(8, Math.min(rawLeft, window.innerWidth - fold8TooltipEl.offsetWidth - 8));
-  const top  = Math.max(dotClientY - TOOLTIP_GAP - fold8TooltipEl.offsetHeight, 8);
+  // Position lerps continuously between the two hangs (house rule: position
+  // never snaps); the pointer CORNER is a secondary attribute, so it may snap,
+  // and does — at the halfway point, where the box straddles the dot anyway.
+  const downT   = fold8FlyMoveT;
+  const upTop   = dotClientY - TOOLTIP_GAP - fold8TooltipEl.offsetHeight;
+  const downTop = dotClientY + TOOLTIP_GAP;
+  const top = Math.max(upTop + (downTop - upTop) * downT, 8);
+  const flipped = downT >= 0.5;
+  fold8TooltipEl.classList.toggle("is-flipped", flipped);
+  // The grow-in scales from the pointer corner, which moves with the flip.
+  // Skipped while docked — that branch returned above — so this only ever
+  // overrides the "bottom right" updateGroups wrote for the floating callout.
+  fold8TooltipEl.style.transformOrigin = flipped ? "top right" : "bottom right";
   fold8TooltipEl.style.left = `${left}px`;
   fold8TooltipEl.style.top  = `${top}px`;
 }
@@ -345,6 +368,7 @@ function fold8ResetTooltip() {
   fold8TooltipDescEl.style.opacity = "";
   fold8SequenceEvent = null;
   fold8SeqElapsed = 0;
+  fold8FlyMoveT = 0;
   fold8SeqLastFrameTime = null;
   fold8AnchorSquareEl = null;
   fold8DateSpans = null;

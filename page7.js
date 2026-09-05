@@ -215,6 +215,13 @@ function p7OrderFromCenter(total, cols, seed, side, maxEvents) {
                           headline fits inside it beside the axis.
      eventLine         — A2: a faint full-width line at each reached event's row.
    ------------------------------------------------------------------------- */
+// Tooltip horizontal flip lines (screen px): a hovered dot left of P7_TIP_FLIP_L
+// never mirrors; one within P7_TIP_FLIP_R_INSET of the right edge always does.
+// Picked by eye with a `manual/` harness — exact px, never vw. Documented at
+// the use site in the hover closure (search "P7_TIP_FLIP_L").
+let P7_TIP_FLIP_L = 475;
+let P7_TIP_FLIP_R_INSET = 475;
+
 const P7_VERT = {
   corridorPx: P7_AXIS_CORRIDOR_PX,
   eventMode:  "widen", // picked 2026-09-04 (harness deleted; band code kept, unused)
@@ -2860,8 +2867,7 @@ function p7HoverInit() {
   // tuning viewport). The R line used to be that absolute 1425 — on any
   // window narrower than it no dot could ever cross the line, so the
   // rightward flip silently died after a resize.
-  const P7_TIP_FLIP_L = 475;
-  const P7_TIP_FLIP_R_INSET = 475;
+  // Module-level `let` (declared next to P7_VERT) so a harness can drive them live.
 
   // Last pointer position in client (viewport) coordinates — updated on every
   // pointermove, read by doHitTest so re-checks after redraws don't need an event.
