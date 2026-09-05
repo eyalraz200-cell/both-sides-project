@@ -236,7 +236,7 @@ const P7_VERT = {
   yearSide:  'center',
   eventSide: 'center',
   dateSide:  'with',   // 'with' = in the title block
-  dateAbove: false,    // compare/ candidate: true = the date line sits ABOVE the title; false = under it (and under the bar, see bar.dateBelow) (only when dateSide is 'with')
+  dateAbove: true,     // true = the date line sits ABOVE the title; false = under it (and under the bar, see bar.dateBelow) (only when dateSide is 'with')
   sideGap:   8,        // px between the line's marker edge and side-placed text
   // px of breathing room above and below the year digits inside the line's
   // break. The line breaks at every 1 January (and at the top, above the first
