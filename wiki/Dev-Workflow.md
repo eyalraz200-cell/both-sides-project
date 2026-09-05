@@ -11,6 +11,14 @@ Requires `openpyxl` (`pip install openpyxl`). The server sends no-cache headers,
 browser. It rebuilds `events.json` in memory from the xlsx at startup — but does **not**
 watch the xlsx, so spreadsheet edits need a restart.
 
+`reload.js` **self-gates to local hosts** (`localhost`, `127.0.0.1`, `[::1]`, `file://`,
+`*.local`) and returns immediately anywhere else. Only `server.py` serves `/__mtime__`, so
+on a deployed host every poll 404s — once per 800ms, forever, with no user action — which
+buried the deployed console's real errors under a climbing pile of identical 404s. The
+`.catch(() => {})` silences the promise rejection but **not** the browser's own
+network-error log line, so swallowing it is not enough: the poller itself must not run.
+Don't remove the gate.
+
 > **Never kill the dev server as a cleanup step.** Leave `:8080` running after verifying
 > something. Restarting it on explicit request is fine.
 
@@ -71,15 +79,7 @@ numbers in the source.
 `_debug-fold-badge.js` — a bottom-left chip showing the active `@foldN` number only (same
 50%-viewport crossing as the real `IntersectionObserver`). Not a panel harness — no knobs.
 
-`_debug-mlegend-width.js` — a `manual/` panel for **how wide the groups frame is inside the
-mobile מקרא legend**, so the labels can be made to wrap by eye. Gated to ≤600px. Knobs:
-`.fold6-mlegend-rows` max-width and column gap, `.fold6-mlegend-row` bottom margin, and the
-label's line-height; toggles for "full width (shipped)" and "hold the panel open". It
-repaints `fold6MLegendPaintCard(fold6MLegendOpenRaw)` after every change, because the card
-behind the bar is JS-sized off the panel's measured box. Delete it and its `<script>` tag
-once the width is baked into `style.css`.
-
-Everything else was removed (`_debug-glide-perf.js`,
+Everything else was removed (`_debug-glide-perf.js`, `_debug-mlegend-width.js`,
 `_debug-vert-mobile.js`, `_debug-fold5.js` and the `_debug-hero-*.html` probes). The mobile
 vertical-axis `compare/`+`manual/` (`_debug-vert-mobile.js`, modes band / widen / slot with
 `P7_VERT_MOBILE` knobs) was deleted before its bake; rebuild it from the template if the
