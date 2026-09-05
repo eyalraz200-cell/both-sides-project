@@ -131,9 +131,9 @@ body {
    at 55vh two title cards sit on screen together, which reads far worse than
    the gap. One card alone on screen needs a gap of a full viewport, i.e.
    min-height >= 100vh + card height, so 100vh is already at the tight end.
-   G2: the bridge section shrinks from 100vh to 60vh so @fold11's title card
-   is already rising in while the bridge card leaves — the 100vh section left
-   ~70vh of nothing but the glide's small grid on screen. */
+   G2 (reverted): the bridge section (#page-9) was trimmed to 60vh so @fold11's
+   card rose in while the bridge card left; that put both title blocks on
+   screen together, so it is back at 100vh — see the #page-9 rule below. */
 @media (min-width: 601px) {
   #page-1 {
     align-items: flex-start;
@@ -147,7 +147,12 @@ body {
     min-height: 67vh;
   }
   #page-9 {
-    min-height: 60vh;
+    /* Full fold height: the bridge card sits at the top of the section, and
+       @fold11's title card (centred in its 50vh title row) must not enter the
+       viewport until the bridge card has left. 100vh puts card-to-card at
+       ~1 viewport, so only one title block is on screen at a time. A shorter
+       section (60vh was tried) parks both cards on screen together. */
+    min-height: 100vh;
   }
 }
 
