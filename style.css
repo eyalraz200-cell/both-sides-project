@@ -1849,18 +1849,21 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   pointer-events: none;
 }
 
-/* content-box on purpose: `width` is the COPY's width (366px = the frame's
-   450px minus the 40px side padding and the 2px borders), so the frame is copy + padding and
-   widening the padding widens the frame instead of squeezing the text. The
-   .text-card wrapper is fit-content here so a wider frame stays centred
-   instead of overflowing the 480px --card-w column. */
+/* The card's size is set from the VIEWPORT EDGES, not from its copy: a 48px
+   gap above and below (height = 100vh − 2×48), and the width is the narrowest
+   frame at which the copy fits that height — tuned by eye on a 982px-tall
+   viewport (407px of copy + 40px side padding + 2px borders = 491px). On a
+   shorter viewport the copy needs more width than this; the max-height
+   queries below trim the padding to buy some back. The .text-card wrapper
+   is fit-content so the frame stays centred past the 480px --card-w column. */
 #page-12 .text-card {
   width: fit-content;
 }
 #page-12 .text-card-frame {
-  width: 366px;
+  width: 491px;
+  height: calc(100vh - 96px);
   padding: 40px 40px 48px;
-  box-sizing: content-box;
+  box-sizing: border-box;
   direction: rtl;
 }
 
@@ -2420,6 +2423,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     width: min(450px, 100vw - 48px);
     padding: 24px 22px 28px;
     box-sizing: border-box; /* the phone width is viewport-bound, not padding-bound */
+    height: auto;           /* the desktop 100vh-gap height would clip the copy here */
   }
 
   /* 40px over 3-4 Hebrew words overflows a 393px card; this is the one
