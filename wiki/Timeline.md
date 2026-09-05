@@ -321,14 +321,17 @@ axis so the first event's label can center over its own circle).
   (`P7_AXIS_EVENT_STATE[i].reachedT`, lerped at `P7_AXIS_HOVER_ANIM_SPEED` like `hoverT`)
   that multiplies `markerRadius`, so a dot grows out of the axis on the way down and
   shrinks back into it on the way **up** instead of vanishing in one frame mid-label-fade.
-- **The headline-event circles are not axis length** (desktop). The drawn fill edge `fillY` is
-  a pure function of the true edge `curY`: the instant `curY` touches a circle's top
-  (`p7RowY(row) − P7_AXIS_MARKER_RADIUS`) the drawn edge appears at the circle's bottom and
-  keeps moving, then eases back into step with `curY` over `P7_AXIS_DOT_CATCHUP_PX` (80px,
+- **The headline-event circles are not axis length** (desktop) — and neither is the card a
+  circle opens into. Each event's current axis span is the dot alone (±`P7_AXIS_MARKER_RADIUS`)
+  while closed, or the open card's rect (`p7AxisEventSpans[i]`, written by
+  `p7DrawAxisEventsVertical` each frame from the animated card rect, read by the next frame's
+  axis draw) unioned with the dot. The drawn fill edge `fillY` is a pure function of the true
+  edge `curY`: the instant `curY` touches a span's top the drawn edge appears at its bottom
+  and keeps moving, then eases back into step with `curY` over `P7_AXIS_DOT_CATCHUP_PX` (80px,
   running at catchup/(2R+catchup) of scroll speed) so nothing below is offset for good;
   reverse scroll retraces it exactly. `p7DrawAxisEventsVertical` pops its dots on `fillY`, so a
   circle appears the moment the fill reaches its top. The filled line is never painted
-  inside a circle's ±R span (the grey base line stays continuous), so while the dot is still
+  inside a span (the grey base line stays continuous), so while the dot is still
   growing in, no dark line shows through it. Year labels still flip on the row
   (`row <= p7CurRow()`) and the year breaks are ordinary axis length; the headline card
   triggers use the true edge.
