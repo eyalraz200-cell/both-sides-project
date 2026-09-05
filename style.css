@@ -1969,7 +1969,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   width: fit-content;
 }
 #page-12 .text-card-frame {
-  width: 520px;
+  width: 522px;
   height: calc(100vh - 96px);
   padding: 40px 40px 48px;
   box-sizing: border-box;
@@ -2075,7 +2075,11 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 }
 
 .page12-credits {
+  /* Same hairline as the share row's top border, so the share block is closed
+     on both sides and the credits read as their own footer band. */
   margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.15);
   font: 400 14px/1.5 'Assistant', sans-serif;
   letter-spacing: 0.04em;
   color: rgba(0, 0, 0, 0.7);
