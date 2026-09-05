@@ -321,6 +321,11 @@ axis so the first event's label can center over its own circle).
   (`P7_AXIS_EVENT_STATE[i].reachedT`, lerped at `P7_AXIS_HOVER_ANIM_SPEED` like `hoverT`)
   that multiplies `markerRadius`, so a dot grows out of the axis on the way down and
   shrinks back into it on the way **up** instead of vanishing in one frame mid-label-fade.
+- **Dots are not axis length** (desktop). The drawn fill never creeps across a dot's
+  diameter: while the fill edge is inside a dot's ±`P7_AXIS_MARKER_RADIUS` span it is drawn
+  to the dot's top edge until the edge passes the centre (the moment the dot appears), then
+  to its bottom edge at once — and back out the same way on reverse. Only the drawn fill
+  jumps; `curY`, row reach and headline triggers are unchanged.
   Below `reachedT` 0.001 the event stops drawing and stops registering in
   `p7.axisEventPositions` (so it is not hit-testable). `p7AxisEventsAnimActive` checks
   `reachedT` separately — a shrinking dot outlives its label's fade. The background wipe
