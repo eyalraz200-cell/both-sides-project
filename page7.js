@@ -2538,13 +2538,21 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   // the card it has opened into (p7AxisEventSpans) — the fill enters at the
   // card's top edge and comes out under it at once, growing with the card.
   let fillY = curY;
-  const dotR = P7_AXIS_MARKER_RADIUS, C = P7_AXIS_DOT_CATCHUP_PX;
+  const C = P7_AXIS_DOT_CATCHUP_PX;
+  // While the axis is UNDRAWING the dots shrink away on the cards' fade clock
+  // (outroShrink, same formula as the dot draw below). The skipped spans
+  // shrink with them: a full-size gap around a dot that is already gone left
+  // the grey base line showing through as a lighter patch where the circle was.
+  const spanShrink = p7AxisOutroStart === null ? 1
+    : 1 - p9Ease(Math.min(1, (performance.now() - p7AxisOutroStart) / P7_AXIS_EVENT_FADE_OUT_MS));
+  const dotR = P7_AXIS_MARKER_RADIUS * spanShrink;
   const dotSpans = P7_AXIS_EVENTS.map((ev, i) => {
     const y = p7RowY(v.events[i].row, H), sp = p7AxisEventSpans[i];
     // The span always starts at the dot's top: a card that opens ABOVE its
     // dot sits on line the fill has already passed, so it must not shove the
     // drawn edge forward when it appears — only card below the dot is skipped.
-    return [y - dotR, Math.max(sp ? sp.bottom : 0, y + dotR)];
+    const cardExtra = sp ? Math.max(0, sp.bottom - (y + P7_AXIS_MARKER_RADIUS)) * spanShrink : 0;
+    return [y - dotR, y + dotR + cardExtra];
   }).sort((p, q) => p[0] - q[0]);
   dotSpans.forEach(([top, bottom]) => {
     const gap = bottom - top;
