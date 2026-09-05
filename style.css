@@ -1963,7 +1963,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    frame at which the copy fits that height — tuned by eye on a 982px-tall
    viewport (440px of copy + 40px side padding + 2px borders = 522px) — re-solved
    after the credits went to 14px, since the fixed height only keeps its
-   padding while the copy actually fits inside it. On a
+   padding while the copy actually fits inside it. Whatever height is
+   left over after the copy is split evenly above and below it (flex column,
+   centred), so the visible gap at the top and the bottom always read equal. On a
    shorter viewport the copy needs more width than this; the max-height
    queries below trim the padding to buy some back. The .text-card wrapper
    is fit-content so the frame stays centred past the 480px --card-w column. */
@@ -1975,6 +1977,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   height: calc(100vh - 96px);
   padding: 42px 40px;   /* 42px top and bottom, 40px sides */
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   direction: rtl;
 }
 
