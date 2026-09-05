@@ -269,7 +269,7 @@ const P7_VERT = {
   // whole block under the date.
   // Same style as the year axis line: 1px (= P7_AXIS_LINE_THICKNESS, declared
   // further down so it can't be referenced here), solid black, square ends.
-  bar: { h: 1, gap: 1, padX: 6, color: '#000000', alpha: 1, round: false, dateBelow: false, dateGap: 3,
+  bar: { h: 1, gap: 1, padX: 6, color: '#000000', alpha: 1, alphaTop: 1, alphaBottom: 1, round: false, dateBelow: false, dateGap: 3,
          inset: 0, dash: 0, dashGap: 0 }, // inset = px shorter than the card, each side; dash > 0 = dash length (dashGap px between)
   // Type of the centred headline block (desktop only — the mobile axis keeps
   // the P7_AXIS_*_FONT constants). `lh` = line height of each face's lines;
@@ -2392,7 +2392,11 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   const pad    = P7_VERT.yearGapPad;
   const marks  = ticks.filter(t => v.yearRow.has(t.year)).map(t => {
     const row = v.yearRow.get(t.year);
-    const yc  = axisQ(p7RowY(row, H));
+    // The first year (its 1 January is row 0, the line's top) sits as a header
+    // ABOVE the line instead of breaking it: the line alone is the time count,
+    // so an event on the first days of the range lands on the line, not in a
+    // label gap. Its block hangs `yearGapPad` above topY.
+    const yc  = row === 0 ? axisQ(topY - pad - blockH / 2) : axisQ(p7RowY(row, H));
     return { tick: t, row, yc, top: yc - blockH / 2 - pad, bottom: yc + blockH / 2 + pad };
   });
 
@@ -2519,9 +2523,9 @@ function p7DrawHeadlineCard(ctx, card, x, y, w, h) {
     // card.bar = along the card's whole bottom edge instead.
     const b = P7_VERT.bar;
     const bw = card.bar ? w : card.style === 'bar' ? w - (Math.max(card.padX, b.padX) - b.padX) * 2 : w - r * 2;
-    p7DrawAccentBar(ctx, x + w / 2, y + h - b.h, bw);
+    p7DrawAccentBar(ctx, x + w / 2, y + h - b.h, bw, b.alphaBottom ?? 1);
     // card.barTop = the same bar along the card's top edge too.
-    if (card.bar && card.barTop) p7DrawAccentBar(ctx, x + w / 2, y, bw);
+    if (card.bar && card.barTop) p7DrawAccentBar(ctx, x + w / 2, y, bw, b.alphaTop ?? 1);
   }
   // card.sides = a full border in the bar's line style (rounded by the card's
   // radii) instead of the two flat bars, at card.sidesAlpha.
@@ -2538,12 +2542,14 @@ function p7DrawHeadlineCard(ctx, card, x, y, w, h) {
 
 // One accent bar (P7_VERT.bar style) of width `w`, centred on `cx`, its top at
 // `y`: `inset` px trimmed each side, rounded or square ends, solid or dashed.
-function p7DrawAccentBar(ctx, cx, y, w) {
+// `alpha` is the per-edge opacity (P7_VERT.bar.alphaTop / alphaBottom),
+// multiplied into the shared bar.alpha.
+function p7DrawAccentBar(ctx, cx, y, w, alpha = 1) {
   const b = P7_VERT.bar;
   const bw = w - (b.inset || 0) * 2;
   if (bw <= 0 || b.h <= 0) return;
   ctx.save();
-  ctx.globalAlpha *= b.alpha;
+  ctx.globalAlpha *= b.alpha * alpha;
   if (b.dash > 0) {
     ctx.strokeStyle = b.color; ctx.lineWidth = b.h;
     ctx.lineCap = b.round ? 'round' : 'butt';
@@ -2709,7 +2715,8 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
         if (openT <= 0) {
           // Beat 2: a single bar draws out from the dot along the card edge.
           const B = P7_VERT.bar;
-          p7DrawAccentBar(ctx, axisX, flipped ? cyF + chF - B.h : cyF, cwF * barT);
+          // Beat 2's lone bar is the dot-facing edge: bottom when flipped, else top.
+          p7DrawAccentBar(ctx, axisX, flipped ? cyF + chF - B.h : cyF, cwF * barT, (flipped ? B.alphaBottom : B.alphaTop) ?? 1);
         } else p7DrawHeadlineCard(ctx, card, cxF, cyA, cwF, chA);
         textClip = { x: cxF, y: cyA, w: cwF, h: chA, alpha: openT };
       } else p7DrawHeadlineCard(ctx, card, cxF, cyF, cwF, chF);
