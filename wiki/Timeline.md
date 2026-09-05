@@ -23,14 +23,14 @@ mid-animation blends), `hoveredEvent`, `axisEventPositions`, `hoveredAxisEvent`.
 
 Geometry comes from `SBB_TIMELINE` in `squareboundingbox.js`
 (`top 0.07, bottom 0.93` as fractions of H; the outer x edge is the fixed
-`SBB_TIMELINE_LEFT_PX` = **200px** on desktop, read via `sbbTimelineLeftX(W, H)` and mirrored
-at `W − 200` on the right — an exact px picked by eye, never a fraction of W) plus the centre gap: `p7CenterGap()` is
+`SBB_TIMELINE_LEFT_PX` = **190px** on desktop, read via `sbbTimelineLeftX(W, H)` and mirrored
+at `W − 190` on the right — an exact px picked by eye, never a fraction of W) plus the centre gap: `p7CenterGap()` is
 `P7_AXIS_CORRIDOR_PX = 64` on desktop (the vertical axis's corridor — line, rings and
 18px year labels) and `CENTER_GAP = 4` on mobile. `SBB` itself belongs to page9, **not**
 here. On desktop **both grids hug the corridor** inside `p7GridGeometry`: the right camp's
 origin is `W/2 + gap/2`, the left camp's is `W/2 − gap/2 − cols·CELL`, so the corridor edges
 sit exactly at `W/2 ± gap/2` and the `floor(sideW / CELL)` leftover lands on the *outer* edge of
-both sides (mirror-symmetric; `leftX0` is therefore ≥ the 200px inset, not equal to it). Mobile
+both sides (mirror-symmetric; `leftX0` is therefore ≥ the 190px inset, not equal to it). Mobile
 keeps the left grid anchored at `sbbTimelineLeftX`. There is no `right` field.
 
 `P7_SQ = 3.5`, `P7_GAP = 1.5`, `P7_CELL = 5` are the *ceiling*: on desktop the square is
@@ -84,7 +84,7 @@ The inner edge hugs the axis, the outer edge is the count. Deterministic, so a
 resize/relayout reproduces itself.
 
 The tunables live in `P7_VERT` (`page7.js`): `corridorPx` (band), `eventMode`, `eventLine`,
-`bandPx` 60, `wideCorridorPx` 200, `fillRatio` 1, `daysPerRow` 8, `yearGapPad` 3,
+`bandPx` 60, `wideCorridorPx` 208, `fillRatio` 1, `daysPerRow` 8, `yearGapPad` 3,
 `yearRing` false, `yearSide`/`eventSide` `'center'`, `dateSide` `'with'`, `dateAbove` true,
 `sideGap` 8, `firstOnlyBelow` true, `card` `{ style 'plain', fill #FDFCFF, padX 16, padTop 6,
 padBottom 6, radius 4, radiusBottom 0, gap 0, stem false, bar true, barTop true, sides false, sidesAlpha 1, halfDots true, anchor 'center' }` (the headline block, see "Headlines" below) — shipped defaults are **widen mode, line off, everything centred on the line**
@@ -453,10 +453,16 @@ onto a moving target. Otherwise it runs
 
 The tooltip is `#page9Tooltip`, **shared with page9 and @fold7's demo** — which is why
 `hideSquare()` (clears only the square tooltip, guarded on `p7.hoveredEvent` being set)
-is separate from `hide()` (clears both targets). `tooltipEl.style.color` is set to the
-actor color and the dashed SVG border strokes `currentColor`. Above 600px the box is
-instead **filled**, and the fill comes from a second property, `--tip-fill`, set beside
-`color` from `tooltipFill()` (js/core.js): the fill carries white text, and two group
+is separate from `hide()` (clears both targets). The colour is written by
+**`setTooltipColor(el, color)` (js/core.js) — never a bare `el.style.color =`**, because two
+properties have to move together: `color`, the true actor colour that the dashed SVG border
+strokes via `currentColor`, and `--tip-fill`, the contrast-floored version desktop's filled
+box paints from. Four call sites write it — `p7HoverInit` and `p7InspectInit` (page7.js),
+`p9HoverInit` (page9.js) and @fold7's scripted demo (js/update-groups.js) — and the fill's
+first version missed two, leaving @fold9's timeline hover on the raw colour; hence the
+helper. Above 600px the box is
+instead **filled** from `--tip-fill`, which `setTooltipColor` derives via `tooltipFill()`:
+the fill carries white text, and two group
 colours — תנועות התנחלות `#F9B624` (~1.7:1 against white) and מפגינים ערבים ישראלים
 `#31CE1C` (~1.9:1) — are too light for that, so `tooltipFill` scales RGB down uniformly
 (hue untouched) until relative luminance clears `TOOLTIP_FILL_MAX_L` **0.28**. That
@@ -466,9 +472,9 @@ it strokes mobile's dashed frame, where the text is dark on white and the real h
 show. @fold7's demo feeds the lerped grey→colour value through it every frame, so the
 darkening is continuous rather than a snap at the end; `.is-mirrored` flips the
 box for `side === "left"` — except outside the two horizontal flip lines, which keep the
-box off the mini-legends: a dot left of `P7_TIP_FLIP_L` (**475 px from the left edge**)
+box off the mini-legends: a dot left of `P7_TIP_FLIP_L` (**327 px from the left edge**)
 always opens rightward (`mirrored = false`), a dot within `P7_TIP_FLIP_R_INSET`
-(**475 px from the right edge**) always opens leftward (`mirrored = true`); only between
+(**327 px from the right edge**, the same inset mirrored — tuned by eye 2026-09-05) always opens leftward (`mirrored = true`); only between
 them does the data-side rule decide. Both hand-tuned by eye at a 1900px-wide viewport,
 exact px, not vw — but each is anchored to the edge its legend hangs off, so both lines
 track a window resize (the right line reads `window.innerWidth - P7_TIP_FLIP_R_INSET`
@@ -674,7 +680,7 @@ no extra invalidation; desktop rendering is untouched.
 | | Desktop | Mobile | Why |
 |---|---|---|---|
 | Square / gap (pitch) | 3.5 / 1.5 (5) | **solved per viewport**, gap = half the square | See "The solved square size" below |
-| Box `left` | **200px** (`SBB_TIMELINE_LEFT_PX`) | 0.03 | The desktop px exists only to clear the *left*-pinned desktop legend; on mobile the legend is top-pinned, so this becomes a plain screen-edge inset (≈12px at 393, matching `FOLD6_LEGEND_INSET_MOBILE`) |
+| Box `left` | **190px** (`SBB_TIMELINE_LEFT_PX`) | 0.03 | The desktop px exists only to clear the *left*-pinned desktop legend; on mobile the legend is top-pinned, so this becomes a plain screen-edge inset (≈12px at 393, matching `FOLD6_LEGEND_INSET_MOBILE`) |
 | Box `top` | 0.07 | **180px** (`SBB_TIMELINE_MOBILE_TOP_PX`) | The docked tooltip's bottom edge + `SBB_TIMELINE_MOBILE_GAP_PX` (18): `TOOLTIP_DOCK_TOP_PX` 62 + the frame's fixed 100px collapsed height (the expanded state is deliberately not counted — it overlays the grid). A px clearance, not a fraction — the thing being cleared is fixed-px, so a fraction wasted a band on a tall phone and collided on a short one |
 | Box `bottom` | 0.93 | **axis − 64px** (`SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX`) | `P7_AXIS_Y_FRAC_MOBILE`×H minus the tallest label block that can print above the axis — sized for what really prints: at the 220px wrap all seven titles fit on **one line**, so the block is offset 36 + ~10px cap height = 46 — minus the *same* 18px `SBB_TIMELINE_MOBILE_GAP_PX` used at the top, so the dots clear the labels by exactly as much as they clear the tooltip. Reserving spare lines left every real block floating in a hole; a longer title added later would wrap and eat 18px per extra line out of the gap. Three lines is the worst case |
 | `P7_AXIS_MARGIN` | 120 | 28 | At 120 a 393px screen would leave ~150px of axis; 28 gives ~337px, year ticks ~90px apart |
