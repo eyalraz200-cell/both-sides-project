@@ -1935,6 +1935,12 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   align-items: flex-start;
   padding-top: 0;
   box-sizing: border-box;
+  /* The shared wrapper is 100vh tall for the outro's sticky centring; here it
+     is static and would hold #page-11 open to a full viewport regardless of
+     the section's 45vh, keeping @fold13's share card a screen away. Let it
+     wrap the card only — the section's min-height is what spaces the folds.
+     checkFold13 / p13SyncGateVisibility only read its top / opacity. */
+  height: auto;
 }
 
 /* @fold12's card scrolls up and away like every other title fold's, rather
