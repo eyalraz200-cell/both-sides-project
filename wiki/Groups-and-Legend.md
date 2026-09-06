@@ -500,20 +500,28 @@ it — **width first, then height** — exactly as the desktop note opens.
   `aria-hidden` + `pointer-events: none`, which a button cannot be. The layer passes clicks
   through; only `.fold6-mlegend` takes pointer events, and only once `updateGroups` has
   faded it past halfway.
-- **Stacking — the title block wins, but the button stays tappable.** The layer is
-  `z-index: 3`: it *has* to out-stack the full-viewport `.text-section` boxes, or no tap
-  ever reaches the button. The title block still paints over the bar because
-  `.section-text.text-card` lifts itself to **4** (mobile only, with
-  `.text-section > .section-text.text-card` supplying the `position: relative` — the child
-  combinator leaves `@fold11`/`@fold12`'s sticky/fixed cards alone). That lift only escapes
-  because **`.text-col` deliberately carries no `z-index`** — giving it one re-opens a
-  stacking context and traps every descendant under the bar again. Side effect of the same
-  change: `.page9-tooltip`/`.page9-pill-ghost` (`z-index: 1000`) now really are above
-  everything, matching `#page9CatTooltip`. **While the panel is open that flips:**
-  `fold6SetMobileLegendOpen` puts `.is-open` on the **layer** as well as the bar, and
-  `.fold6-mlegend-layer.is-open` goes to `z-index: 5` — over the card, since the reader
-  just asked to see the panel. It must be the layer: the layer is the stacking context, so
-  a z-index on `.fold6-mlegend` could never climb past its 3.
+- **Stacking — the legend is ALWAYS above the title blocks** (explicit instruction), open or
+  closed. The layer is `z-index: 5`, over `.section-text.text-card`'s **4** (mobile only,
+  with `.text-section > .section-text.text-card` supplying the `position: relative` — the
+  child combinator leaves `@fold11`/`@fold12`'s sticky/fixed cards alone), and on the folds
+  whose cards climb to 1001 to clear the docked tooltip it climbs with them to **1002**.
+  Out-stacking the full-viewport `.text-section` boxes is also what keeps the button
+  tappable at all. The card's lift to 4 only counts because **`.text-col` deliberately
+  carries no `z-index`** — giving it one re-opens a stacking context and traps every
+  descendant. Side effect of the same change: `.page9-tooltip`/`.page9-pill-ghost`
+  (`z-index: 1000`) now really are above everything, matching `#page9CatTooltip`.
+  The number must live on the **layer**: it is the stacking context, so a z-index on
+  `.fold6-mlegend` inside it could never climb past it.
+  **And the panel card is opaque** (`.fold6-mlegend-card` background `#f4f3f6` — the note
+  card's 3.5% tint composited onto `--bg`). Stacking alone wasn't enough: with the desktop
+  card's translucent tint, a title block's text and dashed frame showed straight through the
+  open panel and read as the title being on top.
+  *Removed — don't reintroduce:* the `.fold6-mlegend-layer.is-open { z-index: 5 }` flip that
+  left the layer at 3 while closed and only lifted it while the panel was down. A title card
+  sliding over the מקרא button reads as the legend being gone. The layer's `is-open` class
+  went with it (the bar still gets its own).
+  **The one thing that still passes behind a title block is `@fold4`'s flight** — that is
+  `.fold6-mfly-layer-under`'s job (`z-index: 1`), not this layer's.
 - **The card is a sibling painted behind the content, sized by JS** — the desktop
   construction (`fold6NoteCardEl`) carried over. `fold6MobileCardEl` is the bar's first
   child, `position: absolute`, and `fold6MLegendPaintCard(raw)` (`js/groups.js`) writes its
@@ -563,9 +571,19 @@ it — **width first, then height** — exactly as the desktop note opens.
   right-aligned, exactly as `updateGroups` leaves them at `@fold3`. The two columns sit
   `justify-content: space-around` — one per half of the full-width panel — with a 12px gap.
   **Labels wrap as necessary** (explicit instruction, replacing an earlier one-line-per-group
-  rule): each column is `flex: 1 1 0` + `min-width: 0`, i.e. half the panel, and a long group
-  name stacks lines inside that half instead of widening the column and squeezing the other
-  camp. The swatch stays on the label's **first** line (`.fold6-mlegend-row` is
+  rule): each column is `flex: 0 1 auto` + `min-width: 0` under a **per-camp `max-width`** —
+  `.is-coalition` **124px**, `.is-change` **160px** (the modifier class is set in
+  `js/groups.js` when the column is built) — and a long group name stacks lines inside that
+  cap instead of widening the column and squeezing the other camp.
+  Which labels wrap was specified by hand: only «מתנגדי הרפורמה ותומכי עסקת החטופים» and
+  «תנועות התנחלות באיו״ש» do. **That cannot be done with one shared width**: at 14px
+  Assistant those measure 207px and 124.5px, but «מפגינים ערבים ישראלים» — which must stay on
+  one line — is 123.4px, ~1px under the settlers label. So each camp is capped on its own
+  longest *keeper* instead (coalition: קבוצות ימין לאומיות 101px; change: מפגינים ערבים
+  ישראלים 123px), which leaves both caps a wide, device-proof margin. Each cap is the label
+  width **+12px** for the 6px swatch and the 6px row gap. Retune a cap only against those
+  measured widths — a cap set by eye on one phone will flip a label on another.
+  The swatch stays on the label's **first** line (`.fold6-mlegend-row` is
   `align-items: flex-start`), exactly as the canvas rows sit at `@fold3`. No
   `overflow-x` guard is needed any more — nothing can out-measure the panel.
 - **The six `groupItems` don't go anywhere** *(typed hand-off only — with `FOLD4_FLY` on,
@@ -605,6 +623,19 @@ it — **width first, then height** — exactly as the desktop note opens.
   `fold8TooltipGrowEase`, the same pop the `@fold7` tooltip uses. So it lands
   while the on-canvas rows are still leaving behind it. The `@fold4` intro below still waits
   for the *unmapped* progress to reach 1.
+- **The panel's own beats after the hand-off** (`fold6MLegendAutoBeat`, called from
+  `updateGroups` right after `fold6SetMobileLegendVisible`). `@fold4` leaves the panel open;
+  **`@fold5` (`squaresRevealTrigger`) closes it** — the grey sample squares are that fold's
+  subject and an open panel covers them — and **`@fold6` (`acledNoteTrigger`) opens it
+  again**, which is what makes the ACLED note's arrival visible at all, the note living
+  inside the panel. `want` is *derived from the two triggers every frame*, not latched on a
+  crossing, so scrolling back up runs the same states in reverse; only the **changes** are
+  acted on, so a reader who taps the button mid-fold keeps what they chose until the next
+  beat. The memo (`fold6MLegendAutoWant`) clears whenever the bar is gone, which re-arms the
+  whole sequence. Because `@fold6` opens the card *and* reveals the note, the note's beats
+  are shifted on mobile by `FOLD6_MLEGEND_OPEN_MS / GROUP_TRANSITION_MS` (`noteOpenShift`,
+  `js/update-groups.js`) so the type-in starts when the card lands instead of appearing
+  already a third typed.
 - The panel's rows are a **separate static copy** of the six groups, not the animated
   `groupItems` — those are mid-flight whenever the panel is closed. Same two-column split,
   same sides (coalition right, by `dir: rtl` + source order), each column sorted by `fold6.y`.
@@ -613,6 +644,17 @@ it — **width first, then height** — exactly as the desktop note opens.
   them back; `.is-in-panel` undoes their `position: absolute`, and the inline
   `left/top/width/opacity` are cleared on the way in. They still fade on
   `acledNoteTrigger`, so opening the panel before `@fold6` shows no credit.
+  **No chevron in the panel** (explicit instruction): `.fold6-note-title.is-in-panel::after`
+  is `content: none`. On desktop the chevron is the note CARD's affordance and rides its
+  left edge; in the panel the card is hidden and the note flows into a legend that is
+  already open, so there is nothing for it to promise and no edge to ride.
+- **A hairline separates the rows from the note** (explicit instruction):
+  `.fold6-mlegend-divider`, a 1px `rgba(0,0,0,0.12)` rule built in `js/groups.js` and
+  appended to the panel *before* `fold6SyncNoteHome` re-parents the note in, so DOM order
+  puts it between the two blocks. Same hairline the note has on desktop as its vertical
+  rule, turned to lie across what it separates. `updateGroups` hides it whenever the note
+  title is hidden, and outright on desktop — a divider with nothing under it is a line to
+  nowhere.
 - Open/close: tap the button, tap outside, or Escape. Resizing to desktop closes it
   (`fold6SetMobileLegendVisible(0)`).
 - **The `@fold4` hand-off has two versions, switched by `window.FOLD4_FLY`** (default
@@ -637,15 +679,23 @@ it — **width first, then height** — exactly as the desktop note opens.
   - The row **reshapes on the way**, the same way the desktop row reshapes into the
     mini-legend, just toward the panel's own metrics: swatch 13px → `FOLD6_MFLY_SWATCH_PX`
     (6), gap → `FOLD6_MFLY_GAP_PX` (6), font 18px → `FOLD6_MFLY_FONT_PX` (14). The label
-    **unwraps continuously**: the stand-in's label is laid out `nowrap` as one span per
-    rest line (`fold6MFlyRestLines` reads the real wrap off the browser via a Range per
-    word), and each line after the first is translated from its wrapped rest spot (flush
-    right, `i` line-heights down) to its inline spot, lerped by `flyT` — the second line
-    visibly **slides up into the sentence** instead of re-breaking. There is no wrap-cap
-    lerp: a cap change re-breaks the text, and a re-break hops a word to another line in
-    one frame no matter how the box is anchored ("position never snaps"). The hidden real
-    label's cap is frozen at the rest cap for the whole flight. The
-    first-line shift fades out over the same `flyT`. The label keeps **every character**:
+    **does not unwrap at all** (explicit instruction, replacing an earlier sliding-line-span
+    animation that joined a wrapped label into one line over `flyT`): the stand-in is a plain
+    wrapping label, so it flies with one fixed shape and swaps into the panel row without
+    re-breaking. **That shape is the PANEL's, from the first frame** (explicit instruction —
+    "the wrapping should happen at the start not the end"): the cap is frozen for the whole
+    flight at `flyTgt.cap`, which `fold6MFlyMeasure` reads off the column's per-camp
+    `max-width` minus the swatch and the row gap — the width the panel label really wraps
+    inside. So a label that will be two lines in the panel re-breaks once, on the frame the
+    flight starts, under motion; at the landing nothing changes, where a re-break would be a
+    static snap with nothing to hide it. There is no cap LERP either — a sliding cap
+    re-breaks every few frames, and a re-break hops a word to another line in one frame no
+    matter how the box is anchored ("position never snaps"). What makes a same-shape flight land
+    correctly is that nothing reads a wrapped **height**: the flight aims the label's FIRST
+    LINE at the panel row's first line (`fold6MFlyMeasure`'s `ly`, the
+    `is-mfly-topanchor` block in `js/update-groups.js`), so either end may be one, two or
+    three lines and the line the swatch sits on still lands pixel-exact.
+    The first-line shift fades out over the same `flyT`. The label keeps **every character**:
     no un-typing, it is the same row arriving somewhere else.
   - **The frame opens with the card's own two-step open** (`fold6SetMobileLegendOpen(true)`
     — width, then height, `FOLD6_MLEGEND_OPEN_MS`); it is never scaled — a scaled frame
@@ -662,8 +712,8 @@ it — **width first, then height** — exactly as the desktop note opens.
     and `updateGroups` lerps the label's own `left`/`top` onto it over `flyT`. **`ly` is the
     panel label's CENTER, not its top**: `.group-label` is `translateY(-50%)`, so its `top`
     addresses the box's middle — aiming that at the target's top flew the text half a line
-    too high and snapped it down on the swap, and made the tallest (3-line) label crawl as
-    it unwrapped. The two
+    too high and snapped it down on the swap, and made the tallest (3-line) label crawl.
+    The two
     constructions otherwise disagree by a pixel or two (the canvas row centers its label on
     the swatch's middle; the panel centers the swatch on the line box).
   - **The two camp headers fly too** (`placeCampHeader`, `js/update-groups.js`): they travel
@@ -701,9 +751,9 @@ it — **width first, then height** — exactly as the desktop note opens.
     `getBoundingClientRect` on the stand-in — that would be a forced reflow per element per
     scroll frame.
   - **The stutter budget**: during the flight the hidden real label's wrap cap is
-    **frozen** (nothing reads its layout mid-flight) and the stand-in never wraps at all —
-    its sliding line spans (above) are the only re-layout the unwrap costs, and their
-    per-frame writes are two `transform` strings. The `fontSize` itself stays **continuous** (per
+    **frozen** (nothing reads its layout mid-flight) and the stand-in's text is written
+    once, not per frame — with no unwrap to animate, the flight costs no text re-layout at
+    all, only the `top`/`left`/`font-size` writes every row makes. The `fontSize` itself stays **continuous** (per
     explicit instruction): rounding it to whole px cut more re-layouts still, but 18 → 14
     in four steps reads as the text snapping down in size.
     **The anchors below only work if `.group-label.is-mfly-topanchor` actually parses.**
@@ -711,7 +761,7 @@ it — **width first, then height** — exactly as the desktop note opens.
     re-break, all labels sitting a full width right of their swatch) was ultimately a
     stray `*/` in the comment above that rule in `style.css`: CSS error recovery ate the
     junk *and the selector after it*, so `translateX(-100%)` never applied and every
-    re-break moved the visible text. If the unwrap ever stutters again, verify that rule
+    re-break moved the visible text. If the flight ever stutters again, verify that rule
     reaches the browser before redesigning the animation. And a stand-in's
     `cssText` copies are skipped when the string is unchanged (`fold6MFlyCopyStyle`,
     memoised on the clone) — assigning `cssText` re-parses and invalidates even when nothing
@@ -844,16 +894,19 @@ it — **width first, then height** — exactly as the desktop note opens.
 - **`@fold4` itself fires earlier on mobile** — `FOLD6_CARD_FRAC` (**0.8**, vs the house
   0.5; bigger is earlier) — so the whole hand-off, hold and shrink fit while the fold is
   still on screen. Desktop keeps 0.5.
-- **Then it stays open** (explicit instruction). There is no hold and no close: the rows
-  land, `fold6MLegendRestRows` hands them back to CSS, and the panel remains the legend for
-  the rest of the page. `FOLD6_MLEGEND_INTRO_HOLD_MS` and `fold6CloseMLegendIntro` are gone.
-- **The ACLED note is ADDED to the open panel one fold later.** On mobile `acledNoteTrigger`
-  is crossed on `@fold5`'s card (`#page-4`) at `FOLD3_CARD_FRAC` (**0.6**) instead of on its
-  own `@fold6` card at 0.5 — `checkAcledNote` passes `watchCardThreshold` a **function
-  cardEl** as well as a function frac (explicit instruction: "same trigger point as fold 3,
-  respective to the page"). Desktop is unchanged. Because the panel is already open, the
-  reader watches the credit arrive and the card grow to take it, instead of meeting it
-  inside a panel they have to open first.
+- **Then it stays open through `@fold4`** (explicit instruction). There is no hold and no
+  close *in the hand-off*: the rows land, `fold6MLegendRestRows` hands them back to CSS, and
+  the panel is the legend from here on. `FOLD6_MLEGEND_INTRO_HOLD_MS` and
+  `fold6CloseMLegendIntro` are gone. The later open/close beats are
+  `fold6MLegendAutoBeat`'s, not the hand-off's.
+- **The ACLED note is ADDED at `@fold6`, on its own card**, and `@fold6` is also the beat
+  that reopens the panel around it. `checkAcledNote` is a plain
+  `watchCardThreshold(acledNoteCardEl, 0.5, …)` on **both** viewports.
+  *Removed — don't reintroduce:* the mobile-only early wiring that crossed this trigger on
+  `@fold5`'s card (`#page-4`) at `FOLD3_CARD_FRAC`. It made sense only while the panel stayed
+  open from `@fold4` onward; now that `@fold5` closes it, firing there landed the credit
+  inside a closing panel — i.e. nowhere — and, because both triggers then read as "on" at the
+  same fold, it also wedged `fold6MLegendAutoBeat` so the panel never closed at all.
   `fold6MLegendIntroActive` no longer gates it — that flag now stays true for as long as the
   rows can still fly back out. `updateGroups` keeps the note + rule `hidden` (out of layout,
   not just transparent) only while `fold6MLegendOpenRaw < 1`, i.e. while the card is still

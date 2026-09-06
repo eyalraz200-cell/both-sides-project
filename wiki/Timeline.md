@@ -67,7 +67,15 @@ drawn line breaks for the year digits (a px break only, see below). 161 rows tot
 1440×900. `p7SolveVerticalSq` shrinks the square until the plan's rows **plus the first
 year's header label** (`p7VertYearHeaderH()`: 21px digits, ring + 6 when on, `yearGapPad`
 above and below) fit the box (3.3 px at 1440×900; one-week rows needed 183 and 2.9 px,
-which is why 8 days won). **Row 0's y is `p7VertTopY(H)`**: on desktop the whole span
+which is why 8 days won). **On mobile only**, the solved square is then multiplied by
+`P7_VERT_SQ_BOOST` (**1.12**, `p7VertSqBoost()`, picked by eye at 390×721 on 2026-09-05):
+the packed solve read too short against the docked tooltip. That deliberately overshoots
+the solver's own fit test, and the overshoot is **not** shared between the two ends — the
+grid spills past the box, so `p7VertTopY`'s `Math.max(0, …)` pins row 0 at the box top and
+every extra pixel lands at the BOTTOM. That is how it was tuned (top held, bottom pulled
+down 16px), so it is the chosen look, not a rounding artefact; don't reset it to 1.
+Desktop shares the solver and is boosted by 1 (2.18 px / 526 px of axis, top y 124 →
+bottom y 650 at 390×721; 3.2 px at 1440×900, unchanged). **Row 0's y is `p7VertTopY(H)`**: on desktop the whole span
 (header + `totalRows × CELL`) is centred vertically in the box, so the slack left by the
 solved cell size splits evenly above and below rather than pooling at the bottom; the dot
 grids, the axis, the headlines and page8's glide start all read this one origin (mobile:
@@ -450,7 +458,9 @@ over `totalRows × CELL`:
   mobile keeps the `P7_AXIS_*_FONT` constants): title 500 14px, line height 19, black;
   date 400 14px, line height 19, black at 0.3, **but `showDate` is false — the block is the title alone**
   (no date line; the axis's years give the time). `gap` 0 extra px between title and date when a date is shown. With `anchor 'edge'` the dot-to-block gap would be `card.gap` plus whichever card pad faces the dot. **Default side**: a headline hangs under its dot (the card opens downward); an event
-  flagged `above: true` in `P7_AXIS_EVENTS` (currently only נפילת משטר אסד) sits **above** its dot (bottom edge
+  flagged `above: true` in `P7_AXIS_EVENTS` (נפילת משטר אסד, and התפזרות הכנסת ה-25 — the
+  last event, parked at the axis's far end, where a downward card would open past that end)
+  sits **above** its dot (bottom edge
   `P7_VERT_EVENT_TEXT_GAP` above the dot, punch from the block's top down to the dot's
   edge). The only dodge: if the default side would overlap a year label (`yearSpans`,
   collected while the years are drawn) the block flips to the other side of its dot; only
@@ -462,7 +472,15 @@ over `totalRows × CELL`:
   Side blocks dodge centred year labels and same-side ones only.
 - **Hover:** the hovered square's date marks the axis at `p7AxisY(date, H)` in its actor
   colour; `p7.axisEventPositions` is filled with `{x: axisX, y, radius}` so the existing
-  circle hit-test works unchanged.
+  circle hit-test works unchanged. **Two hover rules for the half-dot cards:** (1) while a
+  square is hovered the roster reveal opens every reached card, and their split half-dots
+  stay at the full `P7_AXIS_MARKER_RADIUS` — `prominence` adds `p7AxisRosterT` back for
+  half-dot cards, so only bare (closed-card) dots shrink to the faded radius; (2) the hover
+  marker (`p7DrawHoverMarker`, white halo + actor colour) is whole and topmost while it is on
+  bare axis; when its `p7AxisY` falls inside an open card's `p7AxisEventSpans[i]` the card
+  pass draws it instead — over the card fill, under the text and split dots — at
+  `P7_AXIS_HOVER_MARKER_ALPHA` 0.5; likewise inside a year block (`marks[].top..bottom`) the
+  year loop draws it over the punch, under the digits, at 0.5. It never snaps to a card's dot.
 
 ## Hover
 
@@ -761,35 +779,63 @@ stuttering and landing inconsistently *only when the user kept scrolling through
 > **Mobile prints its headline at the top of the screen, and docks the tooltip at the
 > bottom (2026-09-05).** The mobile stack, top to bottom, is **מקרא bar / axis headline /
 > dot grid / docked tooltip** — picked by eye against the other five candidate orders. The
-> mobile default is `headline: 'slot'` with `slotAnchor: 'top'` and `slotTopPx: 64`
-> (`FOLD6_MLEGEND_TOP_MOBILE_PX` 16 + the bar's 30px + one `SBB_TIMELINE_MOBILE_GAP_PX`): the
+> mobile default is `headline: 'slot'` with `slotAnchor: 'top'` and `slotTopPx: 78`
+> (it started at `FOLD6_MLEGEND_TOP_MOBILE_PX` 16 + the bar's 30px + one
+> `SBB_TIMELINE_MOBILE_GAP_PX` = 64, then nudged by eye): the
 > **axis itself carries only the event circles** (the label pass in
 > `p7DrawAxisEventsVertical` returns immediately for `'slot'`, so nothing prints beside a
 > dot, and — the half-dot card path being `'widen'`-only — no circle is ever split), and
 > `p7DrawVertHeadlineSlot` prints **one** line, **title only** (`type.showDate` is false),
-> **with no card of any kind** — no fill, no border, no rule — directly under the מקרא bar,
-> so the copy reads with the legend that colours it. `slotAnchor` is the knob: `'grid'`
+> in a **black plaque with inverted type** (`P7_VERT_MOBILE.slotCard`: `fill #000000`,
+> `color #FDFCFF`, `padX 12` / `padY 8`, `radius 4` — 2026-09-05), directly under the מקרא
+> bar, so the copy reads with the legend that colours it. It is the only copy on a screen
+> that is otherwise a field of small coloured dots; bare text on the page background lost
+> against a dense run of them. The plaque is sized to the **wrapped lines**, not to
+> `slotPx`, centred on the same `W / 2` the text uses (so a one- and a three-line headline
+> stay centred and it only grows downward from `ty`), and painted inside the same
+> `globalAlpha`, so card and text crossfade as one when the headline swaps. `slotCard` is
+> declared on `P7_VERT` as a **full object with `fill: null`**, never as `null` —
+> `p7VertMerge` only recurses into keys the base already holds as objects, so a null base
+> silently swallows the mobile override. Desktop keeps `fill: null` (bare copy), and the
+> draw gates on `V.slotCard.fill`. `slotAnchor` is the knob: `'grid'`
 > (desktop default) centres the block in the `slotPx` band under the grid; `'top'` (mobile)
 > hangs it off the viewport's top edge at `slotTopPx`; `'bottom'` is its mirror
 > (`slotBottomPx` off the bottom edge) and is currently unused. **`slotPx` is reserved by
 > `sbbTimelineMobileBottomPx()` only under `'grid'`** — the viewport anchors take no band
-> out of the grid, because they sit outside it. `SBB_TIMELINE_MOBILE_TOP_PX` continues from
-> the headline instead: `64 + 19 + 18` = **101**.
+> out of the grid, because they sit outside it. `SBB_TIMELINE_MOBILE_TOP_PX` started from
+> the headline (`64 + 19 + 18` = **101**) and stays there: `slotTopPx` was nudged to **78**
+> on 2026-09-05 without moving the grid top with it, so the two are independent now — the
+> plaque's own `padY` eats into the same clearance, and there is room to spare.
 >
 > The docked tooltip is bottom-anchored to match: `tooltipDockRestPx()`
-> (`js/fold8-tooltip.js`) = `innerHeight − TOOLTIP_DOCK_BOTTOM_PX (24) − TOOLTIP_DOCK_H_PX
+> (`js/fold8-tooltip.js`) = `innerHeight − TOOLTIP_DOCK_BOTTOM_PX (−18) − TOOLTIP_DOCK_H_PX
 > (100)`, read live so a bar-collapse resize moves it. The old `TOOLTIP_DOCK_TOP_PX` (62) is
 > **gone**; the `@fold7` spot's "can't climb off the top" clamp is its own
 > `TOOLTIP_DOCK_TOP_MIN_PX` (16), *not* the resting spot — clamping to a bottom rest would
 > have dragged every `@fold7` frame down there. The grid's bottom clearance is derived from
-> the frame (`24 + 100 + 18` = **142** off the bottom edge) rather than from a headline
-> band.
+> the frame (`−18 + 100 + 18` = **100** off the bottom edge) rather than from a headline
+> band. `TOOLTIP_DOCK_BOTTOM_PX` is **−18** as of 2026-09-05 — negative on purpose: the
+> frame hangs 18px *past* the bottom edge so its border reads as an open bottom rather than
+> a floating box. Because the grid's clearance is derived from it, lowering the frame also
+> lengthens the axis; the two were tuned together in one harness.
 > Which event prints: the most recently reached one still at non-zero opacity (ties → the
 > higher index); the others stay as circles on the axis. Because `p7CenterGap()` solves the
 > wide corridor only for `'widen'`, the corridor falls back to `corridorPx` (44) and both
 > camp grids get the width the copy used to take. Desktop is unchanged (`'widen'`,
 > straddling card). The older `'none'` value still exists and still skips the copy
 > entirely; nothing selects it now.
+
+> **The 8 curated squares must be re-placed after a bar slide (2026-09-05).** `.graphic-col`
+> is `position: fixed; inset: 0`, so `canvas.clientHeight` **is** `innerHeight` and does move
+> when the phone's bar collapses — the canvas re-reads it every paint, so the vertical axis
+> re-centres itself (`p7VertTopY` centres the row block in the box, so half of any height
+> change lands in `topY`). The `@fold8` squares, though, are DOM elements: they move only
+> when `layoutGroups()` runs, and `js/bootstrap.js`'s mobile height-only resize path
+> deliberately skips it — the full relayout is what made the bar refuse to collapse. Left
+> alone they kept the position solved for the shorter viewport and ended up ~half a bar
+> above the axis top, printing **above the `2023` label**. The fix is a **debounced trailing
+> `layoutGroups()` + `draw()`, 180ms after the last resize tick**: nothing heavy runs during
+> the slide, and the squares snap into place once it settles. Don't make it un-debounced.
 
 Under the 600px breakpoint the fold keeps its shape — two camps mirrored around the
 center gap, same cascade, same scrub — and changes only scale. Every value below is a
@@ -801,7 +847,7 @@ no extra invalidation; desktop rendering is untouched.
 |---|---|---|---|
 | Square / gap (pitch) | 3.5 / 1.5 (5) | **solved per viewport**, gap = half the square | See "The solved square size" below |
 | Box `left` | **190px** (`SBB_TIMELINE_LEFT_PX`) | 0.03 | The desktop px exists only to clear the *left*-pinned desktop legend; on mobile the legend is top-pinned, so this becomes a plain screen-edge inset (≈12px at 393, matching `FOLD6_LEGEND_INSET_MOBILE`) |
-| Box `top` | 0.07 | **101px** (`SBB_TIMELINE_MOBILE_TOP_PX`) | The axis headline's bottom edge + `SBB_TIMELINE_MOBILE_GAP_PX` (18): `slotTopPx` 64 + one 19px title line. A px clearance, not a fraction — the thing being cleared is fixed-px, so a fraction wasted a band on a tall phone and collided on a short one |
+| Box `top` | 0.07 | **101px** (`SBB_TIMELINE_MOBILE_TOP_PX`) | The axis headline's bottom edge + `SBB_TIMELINE_MOBILE_GAP_PX` (18): `slotTopPx` (64 at the time it was derived, 78 now) + one 19px title line. It was NOT moved when `slotTopPx` was. A px clearance, not a fraction — the thing being cleared is fixed-px, so a fraction wasted a band on a tall phone and collided on a short one |
 | Box `bottom` | 0.93 | **axis − 64px** (`SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX`) | `P7_AXIS_Y_FRAC_MOBILE`×H minus the tallest label block that can print above the axis — sized for what really prints: at the 220px wrap all seven titles fit on **one line**, so the block is offset 36 + ~10px cap height = 46 — minus the *same* 18px `SBB_TIMELINE_MOBILE_GAP_PX` used at the top, so the dots clear the labels by exactly as much as they clear the tooltip. Reserving spare lines left every real block floating in a hole; a longer title added later would wrap and eat 18px per extra line out of the gap. Three lines is the worst case |
 | `P7_AXIS_MARGIN` | 120 | 28 | At 120 a 393px screen would leave ~150px of axis; 28 gives ~337px, year ticks ~90px apart |
 | Year label | 18px | 14px | 4-digit years fit at that tick pitch — no 2-digit fallback needed |

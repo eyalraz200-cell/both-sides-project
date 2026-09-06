@@ -67,9 +67,10 @@ body {
 
 /* No z-index on purpose. As a positioned element it already paints above
    .graphic-col (z-index 0) on tree order, and leaving it z-index:auto means it
-   does NOT open a stacking context — which is what lets .text-card lift itself
-   above the מקרא bar's layer (see .fold6-mlegend-layer). Giving this a z-index
-   would trap every descendant's z-index inside it again. */
+   does NOT open a stacking context — which is what lets .text-card's own lift
+   to 4 count against the page's other overlays at all (the מקרא legend layer
+   deliberately sits above it; the @fold4 flight's under-layer sits below).
+   Giving this a z-index would trap every descendant's z-index inside it. */
 .text-col {
   position: relative;
   width: 100%;
@@ -131,9 +132,9 @@ body {
    at 55vh two title cards sit on screen together, which reads far worse than
    the gap. One card alone on screen needs a gap of a full viewport, i.e.
    min-height >= 100vh + card height, so 100vh is already at the tight end.
-   G2: the bridge section shrinks from 100vh to 60vh so @fold11's title card
-   is already rising in while the bridge card leaves — the 100vh section left
-   ~70vh of nothing but the glide's small grid on screen. */
+   G2 (reverted): the bridge section (#page-9) was trimmed to 60vh so @fold11's
+   card rose in while the bridge card left; that put both title blocks on
+   screen together, so it is back at 100vh — see the #page-9 rule below. */
 @media (min-width: 601px) {
   #page-1 {
     align-items: flex-start;
@@ -147,7 +148,12 @@ body {
     min-height: 67vh;
   }
   #page-9 {
-    min-height: 60vh;
+    /* Full fold height: the bridge card sits at the top of the section, and
+       @fold11's title card (centred in its 50vh title row) must not enter the
+       viewport until the bridge card has left. 100vh puts card-to-card at
+       ~1 viewport, so only one title block is on screen at a time. A shorter
+       section (60vh was tried) parks both cards on screen together. */
+    min-height: 100vh;
   }
 }
 
@@ -369,7 +375,9 @@ body {
 
 .page9-header-subtitle {
   font: 600 16px 'Assistant', sans-serif;
-  color: rgba(0, 0, 0, 0.55);
+  /* Alpha, not the `opacity` property — that one is the stick reveal
+     (0 → 1 on .is-stuck, ~line 274) and overwriting it would kill the fade. */
+  color: rgba(0, 0, 0, 0.45);
   margin: 4px 0 0;
   white-space: nowrap;
 }
@@ -1959,21 +1967,20 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 }
 
 /* The card's size is set from the VIEWPORT EDGES, not from its copy: a 48px
-   gap above and below (height = 100vh − 2×48), and the width is the narrowest
-   frame at which the copy fits that height — tuned by eye on a 982px-tall
-   viewport (440px of copy + 40px side padding + 2px borders = 522px) — re-solved
-   after the credits went to 14px, since the fixed height only keeps its
-   padding while the copy actually fits inside it. Whatever height is
-   left over after the copy is split evenly above and below it (flex column,
-   centred), so the visible gap at the top and the bottom always read equal. On a
-   shorter viewport the copy needs more width than this; the max-height
-   queries below trim the padding to buy some back. The .text-card wrapper
-   is fit-content so the frame stays centred past the 480px --card-w column. */
+   gap above and below (height = 100vh − 2×48). The WIDTH is solved at load and
+   on resize by p12CardWidthFit() (page12.js) — the narrowest width in
+   320–900px at which the copy still clears the bottom padding, which is also
+   the width that fills the card, since a narrower column is a taller one. The
+   520px here is that answer for a 982px-tall viewport and is what stands if
+   the script never runs. Whatever height is left over is split evenly above
+   and below the copy (flex column, centred), so the top and bottom gaps read
+   equal. The .text-card wrapper is fit-content so the frame stays centred
+   past the 480px --card-w column. */
 #page-12 .text-card {
   width: fit-content;
 }
 #page-12 .text-card-frame {
-  width: 522px;
+  width: 520px;
   height: calc(100vh - 96px);
   padding: 42px 40px;   /* 42px top and bottom, 40px sides */
   box-sizing: border-box;
@@ -1993,11 +2000,12 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   }
   /* id-scoped: the base .page12-share/.page12-credits rules sit later in the file */
   #page-12 .page12-share {
-    margin-top: 12px;
-    padding-top: 10px;
+    margin-top: 11px;
+    padding-top: 11px;
   }
   #page-12 .page12-credits {
-    margin-top: 8px;
+    margin-top: 9px;
+    padding-top: 9px;
   }
 }
 @media (max-height: 820px) {
@@ -2049,8 +2057,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  margin-top: 16px;
-  padding-top: 12px;
+  /* The hairline sits in the MIDDLE of the 38px gap between the copy and the
+     share row — half above the line (margin), half below it (padding). */
+  margin-top: 19px;
+  padding-top: 19px;
   border-top: 1px solid rgba(0, 0, 0, 0.15);
   font-family: 'Assistant', sans-serif;
 }
@@ -2084,8 +2094,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 .page12-credits {
   /* Same hairline as the share row's top border, so the share block is closed
      on both sides and the credits read as their own footer band. */
-  margin: 10px 0 0;
-  padding-top: 10px;
+  margin: 19px 0 0;   /* 38px gap, hairline centred in it — same as .page12-share */
+  padding-top: 19px;
   border-top: 1px solid rgba(0, 0, 0, 0.15);
   font: 400 14px/1.5 'Assistant', sans-serif;
   letter-spacing: 0.04em;
@@ -2390,6 +2400,28 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   margin-top: 10px;
 }
 
+/* No chevron inside the מקרא panel (explicit instruction). On desktop the
+   chevron is the note CARD's affordance — it turns as the card opens, and
+   --note-chevron-x is that card's left edge. In the panel the card is hidden
+   (.fold6-note-card.is-in-panel) and the note simply flows into a legend that
+   is already open, so there is nothing for a chevron to promise and no edge for
+   it to ride. The divider below does the one job left: separating the note from
+   the rows. `content: none` removes the pseudo-element outright, so none of the
+   custom properties updateGroups keeps writing can bring it back. */
+.fold6-note-title.is-in-panel::after { content: none; }
+
+/* The hairline between the group rows and the ACLED note inside the panel
+   (built in js/groups.js, shown/hidden with the note by updateGroups). Same
+   1px / 12%-black as the note's vertical rule on desktop, turned to lie across
+   the block it separates. The margins are the note title's own 10px doubled on
+   the rows' side, so the note reads as attached to the rule below it rather
+   than floating between two equal gaps. */
+.fold6-mlegend-divider {
+  height: 1px;
+  margin: 14px 0 0;
+  background: rgba(0, 0, 0, 0.12);
+}
+
 
 .fold6-note-link {
   color: inherit;
@@ -2456,25 +2488,24 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    like the other .layout-level overlays, and passes clicks through; only the
    bar itself takes pointer events (and only once updateGroups fades it in).
 
-   z-index 3 keeps the button tappable — the .text-section boxes are
-   full-viewport, so anything painting under them can't be reached by a tap. The
-   title block still wins visually because .text-card lifts itself to 4 (see
-   .text-col, which deliberately has no z-index so that lift can escape it). So
-   the bar sits above the canvas and above the page's body text, but under the
-   card. */
+   z-index 5 keeps the button tappable — the .text-section boxes are
+   full-viewport, so anything painting under them can't be reached by a tap —
+   and puts the legend above the title blocks, which lift themselves to 4 (see
+   .text-col, which deliberately has no z-index so that lift can escape it).
+   ALWAYS above them, open or closed (explicit instruction): it is the page's
+   one persistent legend from @fold4 on, and a title card sliding over the מקרא
+   button reads as the legend being gone. It used to sit at 3 while closed and
+   only outrank the card while open.
+   The one thing that still passes BEHIND a title block is @fold4's flight —
+   that is .fold6-mfly-layer-under's job (z-index 1, below), not this layer's.
+   The z-index has to live on the layer: it is the stacking context, so nothing
+   inside it can ever climb past this number. */
 .fold6-mlegend-layer {
   position: fixed;
   inset: 0;
-  z-index: 3;
+  z-index: 5;
   pointer-events: none;
 }
-
-/* While the panel is DOWN it outranks the card (5 > 4) — the reader just asked
-   to see it, so nothing should overlap it. Closed, the layer drops back to 3 and
-   the title block wins again. The flag has to live on the layer, not on
-   .fold6-mlegend: the layer is the stacking context, so a z-index inside it can
-   never climb past its 3. */
-.fold6-mlegend-layer.is-open { z-index: 5; }
 
 /* Stand-ins for the six group rows and the two camp headers during @fold4's
    mobile FLY hand-off (see the block comment on fold6MFlyPark, js/groups.js).
@@ -3300,9 +3331,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   #page-7 > .section-text.text-card,
   #page-9 > .section-text.text-card,
   .page9-title-row .text-card { z-index: 1001; }
-  /* …and the open מקרא panel still wins over that, keeping the rule above
-     (.fold6-mlegend-layer.is-open beats the card) true on this fold too. */
-  .fold6-mlegend-layer.is-open { z-index: 1002; }
+  /* …and the מקרא legend still wins over that, keeping the rule above (the
+     legend layer beats the card) true on these folds too — open or closed, same
+     as everywhere else. */
+  .fold6-mlegend-layer { z-index: 1002; }
 
   /* The bar is the mobile twin of the desktop ACLED note: a tinted, borderless
      card (.fold6-mlegend-card, same radius/tint as .fold6-note-card) painted
@@ -3336,7 +3368,14 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     top: 0;
     border-radius: var(--note-card-radius, 16px);
     border: var(--note-card-border, none);
-    background: var(--note-card-bg, rgba(0, 0, 0, 0.035));
+    /* OPAQUE, unlike the desktop note card's 3.5% tint: this card is what
+       makes "the legend is above the title blocks" (explicit instruction)
+       visible. The layer already out-stacks the cards (z-index 1002), but a
+       translucent card let the title's text and dashed frame show straight
+       through the open panel, which reads as the title sitting on top. The
+       colour is that same tint composited onto --bg (#FDFCFF), so at rest it
+       looks identical to the desktop note card. */
+    background: var(--note-card-bg, #f4f3f6);
     pointer-events: none;
     /* The bar's arrival pop (fold6SetMobileLegendVisible) scales the collapsed
        card together with the button. */
@@ -3408,11 +3447,23 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    /* Half the panel each, and `min-width: 0` so a long label can't push the
-       column past its share — that share is what the labels wrap inside of. */
-    flex: 1 1 0;
+    /* Content-width columns capped per camp (below) — the cap is what the
+       labels wrap inside of. `min-width: 0` keeps a long label from pushing the
+       column past that cap instead of wrapping in it. */
+    flex: 0 1 auto;
     min-width: 0;
   }
+
+  /* Which labels wrap is a design call, and the two camps need different caps
+     to get it: «תנועות התנחלות באיו״ש» (≈124px at 14px Assistant) must wrap
+     while «מפגינים ערבים ישראלים» (≈123px) must not, so no single shared width
+     can separate them — they're ~1px apart. Capping each camp on its own longest
+     KEEPER instead gives both caps a wide, device-proof margin.
+     Widths are the label box; +12px for the 6px swatch and 6px row gap.
+     Coalition: keeps קבוצות ימין לאומיות (101px), wraps תנועות התנחלות (124px).
+     Change:    keeps מפגינים ערבים ישראלים (123px), wraps מתנגדי הרפורמה… (207px). */
+  .fold6-mlegend-col.is-coalition { max-width: 124px; }
+  .fold6-mlegend-col.is-change    { max-width: 160px; }
 
   /* The camp name heading each column — bold, so the panel keeps the same
      two-level read (camp → groups) the page had on screen at @fold3. */

@@ -248,6 +248,12 @@ const P7_VERT = {
   yearLabelPx: 18,     // the year label's font size (its block height is this + 3)
   bottomInsetPx: 0,    // mobile-only: px between the box's bottom and the viewport bottom
   slotPx: 0,           // 'slot' headline mode: band height reserved under the grid
+  // 'slot' mode: fill null = bare copy on the page background; a colour = a
+  // plaque behind the block, sized to the wrapped lines. Declared as a full
+  // object rather than null because p7VertMerge only recurses into keys the BASE
+  // already holds as objects — a null here would silently swallow the mobile
+  // override.
+  slotCard: { fill: null, color: '#000000', dateColor: 'rgba(0, 0, 0, 0.3)', padX: 12, padY: 8, radius: 4 },
   slotAnchor: 'grid',  // 'slot' mode: where the line prints — 'grid' (centred in the reserved band under the grid) | 'bottom' (pinned to the viewport's bottom edge) | 'top' (pinned to the viewport's top edge)
   slotBottomPx: 0,     // 'bottom' anchor only: px from the viewport bottom to the BOTTOM of the text block
   slotTopPx: 0,        // 'top' anchor only: px from the viewport top to the TOP of the text block
@@ -351,9 +357,18 @@ const P7_VERT_MOBILE = {
   // (type.showDate is false) — just the title, on the page background.
   headline: 'slot',
   slotAnchor: 'top',
-  // 16 (FOLD6_MLEGEND_TOP_MOBILE_PX) + the bar's own 30px + one
-  // SBB_TIMELINE_MOBILE_GAP_PX. SBB_TIMELINE_MOBILE_TOP_PX continues from here.
-  slotTopPx: 64,
+  // Started as 16 (FOLD6_MLEGEND_TOP_MOBILE_PX) + the bar's own 30px + one
+  // SBB_TIMELINE_MOBILE_GAP_PX = 64, then nudged to 78 by eye (2026-09-05) for
+  // the air it wanted under the מקרא bar. SBB_TIMELINE_MOBILE_TOP_PX no longer
+  // continues from this number — the grid top was NOT moved with it, and the
+  // slot has clearance to spare, so the two are independent now.
+  slotTopPx: 78,
+  // The mobile headline is the only copy on a screen that is otherwise a field
+  // of small coloured dots, so it gets a black plaque instead of sitting bare on
+  // the page: it reads as a label of the axis rather than as body text, and it
+  // stays legible when a dense run of dots crowds up under it. Inverted type,
+  // and the date line (unused here — type.showDate is false) would invert with it.
+  slotCard: { fill: '#000000', color: '#FDFCFF', dateColor: 'rgba(253, 252, 255, 0.6)', padX: 12, padY: 8, radius: 4 },
   // maxWidth is mobile-only: 'widen' solves the corridor FROM the wrapped copy
   // (p7SolveMobileCorridor), so the wrap width is the input, not the result.
   // Desktop has no such key — it wraps to its fixed corridor instead.
@@ -434,10 +449,23 @@ function p7DayMs(dateStr) { return new Date(dateStr + "T00:00:00Z").getTime(); }
 
 function p7VertBandRows(CELL) { return Math.ceil(p7V().bandPx / CELL); }
 
+// Deliberate overshoot of the solve below, tuned by eye at 390×721 (2026-09-05).
+// The solver returns the largest square that still PACKS; the axis it produces
+// read too short against the docked tooltip, so the result is stretched 12%.
+// That intentionally breaks the solver's own fit test (the grid spills past the
+// box, so p7VertTopY's Math.max(0, …) pins row 0 at the box top and the whole
+// overshoot lands at the BOTTOM end) — which is exactly how it was tuned: the
+// top of the axis stayed put and the bottom was pulled down 16px. It is the
+// look that was picked, not a rounding artefact. Don't "fix" it back to 1.
+// MOBILE ONLY — desktop shares this solver and was not part of that tuning.
+const P7_VERT_SQ_BOOST = 1.12;
+function p7VertSqBoost() { return isMobile() ? P7_VERT_SQ_BOOST : 1; }
+
 // Largest square (≤ P7_SQ, the mobile-style solve) whose grid holds the
 // busier camp once each day's events must sit in that day's rows: a date-
 // driven layout cannot pack as tightly as the old free permutation, and band
 // mode gives whole rows away to the headlines. 6% slack for the jitter spill.
+// The winner is scaled by P7_VERT_SQ_BOOST on the way out.
 function p7SolveVerticalSq(sideW, sideH, maxEvents) {
   const gapRatio = p7GapRatio();
   const bands = p7V().eventMode === "band" ? P7_AXIS_EVENTS.length : 0;
@@ -450,9 +478,9 @@ function p7SolveVerticalSq(sideW, sideH, maxEvents) {
     // Every fixed-span row, plus the first year's header label above row 0,
     // must fit the box (so p7VertTopY can centre the axis in it).
     if (sideH < p7VertRowPlan(CELL).totalRows * CELL + p7VertYearHeaderH()) continue;
-    if (avail * cap >= maxEvents * 1.06) return Math.round(sq * 100) / 100;
+    if (avail * cap >= maxEvents * 1.06) return Math.round(sq * p7VertSqBoost() * 100) / 100;
   }
-  return sqMin;
+  return Math.round(sqMin * p7VertSqBoost() * 100) / 100;
 }
 
 function p7BuildVerticalLayout(rows, cols, CELL) {
@@ -1720,7 +1748,9 @@ const P7_AXIS_Y_FRAC_MOBILE   = 0.94; // fraction of H — the axis sits lower o
 function p7AxisYFrac() { return isMobile() ? P7_AXIS_Y_FRAC_MOBILE : P7_AXIS_Y_FRAC; }
 const P7_AXIS_LINE_THICKNESS  = 1;     // px — the solid line's stroke height
 const P7_AXIS_MARKER_RADIUS   = 4;     // px — radius of the year-tick ring markers AND the headline-event dots at full size (shared so they read as one system)
-const P7_AXIS_MARKER_RADIUS_FADED = 2; // px — shrunk radius a headline-event dot settles to once its label has crossfaded away (grows back to _RADIUS on hover)
+const P7_AXIS_MARKER_RADIUS_FADED = 2;
+// Hovered square's mirror dot when it falls inside an open headline card (over the fill, under the text).
+const P7_AXIS_HOVER_MARKER_ALPHA = 0.5; // px — shrunk radius a headline-event dot settles to once its label has crossfaded away (grows back to _RADIUS on hover)
 const P7_AXIS_MARKER_STROKE   = 1;     // px — ring line width for the hollow year markers
 const P7_AXIS_YEAR_LABEL_OFFSET = 12;  // px gap from the marker's bottom edge down to the year label's top
 const P7_AXIS_YEAR_LABEL_OFFSET_MOBILE = 5; // px — the same gap tightened on a phone, so the year reads as attached to its own tick rather than floating below the axis
@@ -1828,7 +1858,10 @@ const P7_AXIS_EVENTS = [
   { date: "2025-10-13", label: "שחרור החטופים מעזה", maxWidth: null },
   // Past maxDate (2026-07-03) — parks at the axis's left end (see the clamp in
   // p7AxisEventTrueX); the +26 holds it clear of that end rather than flush to it.
-  { date: "2026-07-17", label: "התפזרות הכנסת ה-25", maxWidth: null, xOffset: 26 },
+  // `above` because it's the LAST event: parked at the axis's far end, a
+  // downward card would open into (and past) that end with nothing below it
+  // to hold it. Opening upward keeps the whole card on the axis.
+  { date: "2026-07-17", label: "התפזרות הכנסת ה-25", maxWidth: null, xOffset: 26, above: true },
 ];
 
 // Fixed real-time (wall-clock) fade durations — these only govern the crossfade
@@ -2716,6 +2749,11 @@ function p7DrawYearAxisVertical(ctx, W, H) {
       // the ring and its digits.
       ctx.fillStyle = "#FDFCFF";
       ctx.fillRect(axisX - tw / 2 - 3, ring ? y + R : ly - 2, tw + 6, ly + inkH + 2 - (ring ? y + R : ly - 2));
+      // Hover dot landing in this year's block: over the punch, under the
+      // digits, at half opacity — same treatment as inside a headline card.
+      if (hoverActive && hoverAxisY >= m.top && hoverAxisY <= m.bottom) {
+        p7DrawHoverMarker(ctx, axisX, hoverAxisY, p7ActorColor(hoveredEvent.actor), P7_AXIS_HOVER_MARKER_ALPHA);
+      }
       ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
       ctx.fillStyle = labelColor;
       ctx.fillText(label, axisX, ly + inkA);
@@ -2726,6 +2764,9 @@ function p7DrawYearAxisVertical(ctx, W, H) {
       yearSpans.push({ top: y - 11, bottom: y + 11, side: p7V().yearSide });
       ctx.fillStyle = "#FDFCFF";
       ctx.fillRect(dir > 0 ? lx - 2 : lx - tw - 2, y - 11, tw + 4, 22);
+      if (hoverActive && hoverAxisY >= m.top && hoverAxisY <= m.bottom) {
+        p7DrawHoverMarker(ctx, axisX, hoverAxisY, p7ActorColor(hoveredEvent.actor), P7_AXIS_HOVER_MARKER_ALPHA);
+      }
       ctx.textAlign = dir > 0 ? "left" : "right"; ctx.textBaseline = "middle";
       ctx.fillStyle = labelColor;
       ctx.fillText(label, lx, y);
@@ -2738,13 +2779,29 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   p7DrawAxisEventsVertical(ctx, W, H, axisX, fillY, hoverActive, hoverAxisY, yearSpans);
 
   if (hoverActive) {
-    ctx.save();
-    ctx.fillStyle = "#FDFCFF";
-    ctx.beginPath(); ctx.arc(axisX, hoverAxisY, P7_AXIS_MARKER_RADIUS + 1, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = p7ActorColor(hoveredEvent.actor);
-    ctx.beginPath(); ctx.arc(axisX, hoverAxisY, P7_AXIS_MARKER_RADIUS, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
+    // The hovered square's mirror dot: whole and on top of everything when it
+    // is on bare axis. Inside an open headline card it is drawn by the card
+    // pass instead — over the card's fill, under its text and split dots, at
+    // P7_AXIS_HOVER_MARKER_ALPHA — and inside a year block by the year loop
+    // above (over the punch, under the digits), so skip it here.
+    let inCard = marks.some(m => hoverAxisY >= m.top && hoverAxisY <= m.bottom);
+    for (let i = 0; i < p7AxisEventSpans.length; i++) {
+      const sp = p7AxisEventSpans[i];
+      if (sp && hoverAxisY >= sp.top && hoverAxisY <= sp.bottom) { inCard = true; break; }
+    }
+    if (!inCard) p7DrawHoverMarker(ctx, axisX, hoverAxisY, p7ActorColor(hoveredEvent.actor), 1);
   }
+}
+
+// The hovered square's axis dot (white halo + actor colour) at a given alpha.
+function p7DrawHoverMarker(ctx, x, y, color, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "#FDFCFF";
+  ctx.beginPath(); ctx.arc(x, y, P7_AXIS_MARKER_RADIUS + 1, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(x, y, P7_AXIS_MARKER_RADIUS, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
 }
 
 // One axis-event dot: the bare marker, no halo — the card (or the punch) is
@@ -2868,7 +2925,14 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     const hoverTarget = isAxisHovered ? 1 : 0;
     state.hoverT += (hoverTarget - state.hoverT) * P7_AXIS_HOVER_ANIM_SPEED;
     if (Math.abs(hoverTarget - state.hoverT) < 0.001) state.hoverT = hoverTarget;
-    const prominence = Math.max(p7AxisEventOpacity(i, now), state.hoverT) * (1 - p7AxisRosterT);
+    // While a timeline square is hovered the roster reveal opens every reached
+    // card, and its split half-dots must stay at FULL size — the roster only
+    // shrinks bare (closed-card) dots, so p7AxisRosterT is added back for the
+    // half-dot cards below (same ease, so it grows with the reveal).
+    const halfCard = hl === 'widen' && p7V().card && p7V().card.halfDots && p7V().card.anchor === 'center' && evSide === 'center';
+    const prominence = Math.max(
+      Math.max(p7AxisEventOpacity(i, now), state.hoverT) * (1 - p7AxisRosterT),
+      halfCard ? p7AxisRosterT : 0);
     // While the axis is UNDRAWING (@fold10's glide, or scrolling back out)
     // every dot shrinks away on the cards' own fade clock (P7_AXIS_EVENT_FADE_OUT_MS
     // from the outro start — the same instant the cards' leavingAt is set)
@@ -2887,7 +2951,6 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     // Half-dot cards draw the dot themselves (only its inner half); the full
     // dot here fades out as the card fades in, so a faded event keeps its dot.
     // headline 'none': no card ever opens, so the dot is never cut in half.
-    const halfCard = hl === 'widen' && p7V().card && p7V().card.halfDots && p7V().card.anchor === 'center' && evSide === 'center';
     if (halfCard) {
       const st = P7_AXIS_EVENT_STATE[i], rosterOn = st.triggeredAt !== null && st.leavingAt === null;
       const labelOp = Math.min(1, Math.max(p7AxisEventOpacity(i, now), st.hoverT, rosterOn ? p7AxisRosterT : 0));
@@ -3027,6 +3090,11 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
         } else p7DrawHeadlineCard(ctx, card, cxF, cyA, cwF, chA);
         textClip = { x: cxF, y: cyA, w: cwF, h: chA, alpha: openT };
       } else p7DrawHeadlineCard(ctx, card, cxF, cyF, cwF, chF);
+      if (centred && hoverActive && highlightY >= cyA && highlightY <= cyA + chA) {
+        // The hovered square's date falls inside this card: its dot goes over
+        // the fill, under the text and split dots, at half opacity.
+        p7DrawHoverMarker(ctx, axisX, highlightY, p7ActorColor((p7.hoveredEvent || p7Inspect.event).actor), P7_AXIS_HOVER_MARKER_ALPHA);
+      }
       if (dateBelowBar) {
         ctx.fillStyle = "#FDFCFF";
         ctx.fillRect(axisX - tw / 2 - 4, y0 + cardH + cpb, tw + 8, blockH - cardH + 2);
@@ -3138,10 +3206,31 @@ function p7DrawVertHeadlineSlot(ctx, W, H, now) {
   ctx.globalAlpha = bestOp;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  ctx.fillStyle = TY.title.color;
+  // V.slotCard (mobile): a black plaque behind the copy so the headline reads as
+  // a label of its own rather than page text that happens to sit above the grid.
+  // Sized to the WRAPPED lines, not to slotPx, and centred on the same W/2 the
+  // text uses — so a one-line and a three-line headline both stay centred and the
+  // card only ever grows downward from `ty`. Drawn inside the same globalAlpha,
+  // so card and text crossfade as one when the headline swaps.
+  const SC = V.slotCard && V.slotCard.fill ? V.slotCard : null;
+  if (SC) {
+    let tw = 0;
+    lines.forEach(t => { tw = Math.max(tw, ctx.measureText(t).width); });
+    if (TY.showDate) {
+      ctx.font = p7VertFont(TY.date);
+      tw = Math.max(tw, ctx.measureText(p7FormatDateDMY(ev.date, ".")).width);
+      ctx.font = p7VertFont(TY.title);
+    }
+    const cw = Math.round(tw) + SC.padX * 2, ch = blockH + SC.padY * 2;
+    const cx = Math.round(W / 2 - cw / 2), cy = Math.round(ty - SC.padY);
+    ctx.fillStyle = SC.fill;
+    ctx.beginPath(); ctx.roundRect(cx, cy, cw, ch, Math.min(SC.radius, cw / 2, ch / 2)); ctx.fill();
+  }
+  ctx.fillStyle = SC ? SC.color : TY.title.color;
   lines.forEach(t => { p7VertLineText(ctx, t, W / 2, ty, TY.title.lh); ty += TY.title.lh; });
   if (TY.showDate) {
-    ctx.font = p7VertFont(TY.date); ctx.fillStyle = TY.date.color;
+    ctx.font = p7VertFont(TY.date);
+    ctx.fillStyle = SC ? SC.dateColor : TY.date.color;
     p7VertLineText(ctx, p7FormatDateDMY(ev.date, "."), W / 2, ty + TY.gap, TY.date.lh);
   }
   ctx.globalAlpha = 1;

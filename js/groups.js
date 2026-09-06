@@ -368,7 +368,7 @@ function groupLabelColumnMaxWidth(g) {
 }
 function groupLabelLegendMaxWidth() { return isMobile() ? FOLD6_LABEL_MAX_WIDTH_MOBILE : null; }
 if (document.fonts && document.fonts.ready) {
-  document.fonts.ready.then(() => { groupLabelWidths = {}; groupLabelHeights = {}; groupLabelInkShifts = {}; fold6MFlyLineCache.clear(); updateGroups(); });
+  document.fonts.ready.then(() => { groupLabelWidths = {}; groupLabelHeights = {}; groupLabelInkShifts = {}; updateGroups(); });
 }
 
 // How far a label's INK center sits from its line box's own center, at a
@@ -1041,15 +1041,14 @@ const FOLD6_CARD_FRAC = 0.7;
 const checkFold6      = watchCardThreshold(
   page6TitleCardEl, () => (isMobile() ? FOLD6_CARD_FRAC : 0.5), fold6Trigger);
 const checkSquaresReveal = watchCardThreshold(squaresRevealCardEl, 0.5, squaresRevealTrigger);
-// Desktop: the note's own fold (@fold6, #page-5) at the usual half-screen.
-// Mobile (explicit instruction): one fold EARLIER, on @fold5's card (#page-4),
-// at @fold3's own crossing point (FOLD3_CARD_FRAC) — the מקרא panel is left
-// open by the @fold4 hand-off, so the reader watches the ACLED credit being
-// ADDED to a legend that is already on screen, rather than meeting it inside a
-// panel they have to open first.
-const checkAcledNote     = watchCardThreshold(
-  () => (isMobile() ? squaresRevealCardEl : acledNoteCardEl),
-  () => (isMobile() ? FOLD3_CARD_FRAC : 0.5), acledNoteTrigger);
+// The note's own fold (@fold6, #page-5) at the usual half-screen, on BOTH
+// viewports (explicit instruction). Mobile used to fire it a fold EARLY, on
+// @fold5's card, because the מקרא panel was left open from @fold4 onward and
+// the credit could simply appear in it. It no longer is: @fold5 closes the
+// panel and @fold6 opens it again around the note (fold6MLegendAutoBeat), so
+// the trigger has to be on the note's own fold — fired on @fold5 it landed
+// inside a panel that was closing, i.e. nowhere.
+const checkAcledNote     = watchCardThreshold(acledNoteCardEl, 0.5, acledNoteTrigger);
 // The note un-types on @fold7's crossing (explicit instruction) — the same
 // card and fraction as fold7LabelTrigger / fold8SquareDimTrigger below, so the
 // note clears exactly as the square labels fold takes over. Wrapped rather
@@ -1561,7 +1560,12 @@ const fold6MobileCampHeadEls = {};
   [FOLD4_CHANGE_ROWS, CAMP_HEADER_TITLE_CHANGE],
 ].forEach(([camp, campTitle]) => {
   const col = document.createElement("div");
-  col.className = "fold6-mlegend-col";
+  // The per-camp modifier carries the wrap cap: the two camps' labels are
+  // different lengths, and which of them wrap is a design call, not something a
+  // single shared column width can express (see style.css's .is-* rules).
+  col.className =
+    "fold6-mlegend-col " +
+    (campTitle === CAMP_HEADER_TITLE_COALITION ? "is-coalition" : "is-change");
   const head = document.createElement("p");
   head.className = "fold6-mlegend-camp";
   head.textContent = campTitle;
@@ -1593,6 +1597,20 @@ const fold6MobileCampHeadEls = {};
   fold6MobileRowsEl.appendChild(col);
 });
 fold6MobilePanelEl.appendChild(fold6MobileRowsEl);
+
+// The hairline between the six group rows and the ACLED note (explicit
+// instruction). The note is ADDED to an already-open panel a fold after the
+// rows land, so without a separator the two blocks read as one list that grew a
+// paragraph; the rule says "different kind of thing". Appended here, before the
+// note is re-parented in by fold6SyncNoteHome, so DOM order puts it between
+// them. Same 1px / rgba(0,0,0,0.12) as the note's own vertical rule on desktop
+// — the note keeps one hairline either way, it just turns to lie along the
+// block it separates. Hidden with the note (js/update-groups.js): a divider
+// with nothing under it is a line to nowhere.
+const fold6MobileNoteDividerEl = document.createElement("div");
+fold6MobileNoteDividerEl.className = "fold6-mlegend-divider";
+fold6MobileNoteDividerEl.hidden = true;
+fold6MobilePanelEl.appendChild(fold6MobileNoteDividerEl);
 fold6MobileLegendEl.appendChild(fold6MobilePanelEl);
 fold6MobileLegendLayerEl.appendChild(fold6MobileLegendEl);
 
@@ -1692,6 +1710,32 @@ function fold6SetMobileLegendVisible(vis) {
     fold6SetMobileLegendOpen(false, { instant: true });
 }
 
+/* The panel's own beats AFTER the @fold4 hand-off (explicit instruction).
+   The hand-off leaves the panel open; from there:
+     - @fold5 (squaresRevealTrigger) closes it back into the מקרא button — the
+       grey sample squares are the fold's subject and the open panel covers
+       them;
+     - @fold6 (acledNoteTrigger) opens it again, which is what makes the ACLED
+       note's arrival visible: the note lives INSIDE the panel on mobile
+       (fold6SyncNoteHome), so revealing it under a closed card would reveal
+       nothing.
+   Scrolling back up runs the same states in reverse — @fold6 back to @fold5
+   closes, @fold5 back to @fold4 reopens — because `want` is derived from the
+   two triggers every frame rather than latched on a crossing.
+   Only the CHANGES are acted on: a reader who taps the button mid-fold keeps
+   what they chose until the next beat, instead of the panel snapping back on
+   the very next scroll frame. */
+let fold6MLegendAutoWant = null;
+function fold6MLegendAutoBeat(vis) {
+  // Above @fold4 the bar isn't there yet and the hand-off owns the card —
+  // clearing the memo here is what re-arms the whole sequence on the way down.
+  if (!isMobile() || vis <= 0) { fold6MLegendAutoWant = null; return; }
+  const want = !(squaresRevealTrigger.currentT() > 0 && acledNoteTrigger.currentT() <= 0);
+  if (want === fold6MLegendAutoWant) return;
+  fold6MLegendAutoWant = want;
+  if (want !== fold6MLegendOpenWant) fold6SetMobileLegendOpen(want);
+}
+
 /* Opening and closing the card — the desktop note's accordion, on a clock.
    The frame opens in two steps, WIDTH first (the title row stretches to the
    bar's full width, the chevron riding its left edge and turning as it goes),
@@ -1753,11 +1797,9 @@ function fold6SetMobileLegendOpen(open, opts) {
     // height it is opening to (and the fly hand-off can measure its targets).
     fold6MobilePanelEl.hidden = false;
     fold6MobileLegendEl.classList.add("is-open");
-    // The LAYER (not the bar) carries the open flag too: it's the stacking
-    // context, so only lifting it can put the open panel above the title block
-    // — which it must be, since the panel is what the reader just asked to
-    // see. It drops back under the card when the close lands.
-    fold6MobileLegendLayerEl.classList.add("is-open");
+    // The LAYER no longer carries an open flag: it now outranks the title
+    // blocks at ALL times (style.css, .fold6-mlegend-layer), not only while the
+    // panel is down, so there is nothing left to toggle.
   }
   if (fold6MLegendOpenRaf) cancelAnimationFrame(fold6MLegendOpenRaf);
   fold6MLegendOpenRaf = 0;
@@ -1768,7 +1810,6 @@ function fold6SetMobileLegendOpen(open, opts) {
     if (!open) {
       fold6MobilePanelEl.hidden = true;
       fold6MobileLegendEl.classList.remove("is-open");
-      fold6MobileLegendLayerEl.classList.remove("is-open");
     }
     const done = fold6MLegendOpenDone;
     fold6MLegendOpenDone = null;
@@ -1874,8 +1915,9 @@ function fold6StopMLegendIntro() {
    rows un-typing where @fold3 left them while the panel types its own copies
    in, the panel opens as an EMPTY frame and the six rows travel into it —
    each one flying from its @fold3 spot to the exact place it occupies in the
-   panel, shrinking its swatch (13px → 6px), its type (18px → 14px) and
-   unwrapping toward the panel's (now wrapping) labels on the way. The panel's own rows
+   panel, shrinking its swatch (13px → 6px) and its type (18px → 14px) on the
+   way. Its wrap is not animated — it re-breaks once into its PANEL shape on the
+   flight's first frame and holds it from there (explicit instruction). The panel's own rows
    only fade up over the last sliver of the flight, so the reader never sees
    two copies of the same row at once.
 
@@ -1895,14 +1937,12 @@ const FOLD6_MFLY_SWATCH_PX = 6;   // .fold6-mlegend-swatch
 const FOLD6_MFLY_GAP_PX    = 6;   // .fold6-mlegend-row gap
 const FOLD6_MFLY_FONT_PX   = 14;  // .fold6-mlegend-label
 const FOLD6_MFLY_HEAD_PX   = 14;  // .fold6-mlegend-camp
-// There is no wrap-cap lerp anymore. The visible unwrap is done by the
-// stand-in: its label is laid out `nowrap` as one span per REST line, and each
-// line below the first is translated from its wrapped rest position (flush
-// right, i lines down) to its inline position, lerped by flyT — the line
-// SLIDES into the sentence instead of re-breaking. A cap lerp can't do that:
-// however the re-break is anchored, the moment the browser re-wraps, the words
-// that change line hop there in one frame ("position never snaps" says no).
-// See fold6MFlyRestLines/fold6MFlyPaintClone below.
+// There is no wrap-cap lerp, and no unwrap animation either (explicit
+// instruction): the label wraps once at the START of the flight, into the shape
+// it will rest in, and holds it — on the stand-in as on the hidden real row. Anything that re-shapes the text mid-flight —
+// a moving cap, or lines being joined into one — re-breaks it, and however the
+// re-break is anchored the words that change line hop there in one frame
+// ("position never snaps" says no). See fold6MFlyPaintClone below.
 // .group-label's mobile line-height (style.css). Used to place the label by its
 // FIRST LINE during the flight — see the is-mfly-topanchor block in
 // js/update-groups.js. Keep the two in sync; it's the one number here that is a
@@ -1929,6 +1969,13 @@ function fold6MFlyMeasure() {
   fold6MobileRowEls.forEach((r) => {
     const s = r.swatch.getBoundingClientRect();
     const l = r.label.getBoundingClientRect();
+    // The wrap cap this label rests at in the panel, read off the COLUMN's
+    // per-camp `max-width` (style.css) minus the swatch and the row gap — i.e.
+    // the width the label actually wraps inside, not its content width. The
+    // flight freezes the label at THIS cap from its first frame, so a label
+    // that will wrap in the panel is already wrapped when it takes off and
+    // nothing re-breaks at the landing (explicit instruction).
+    const colMax = parseFloat(getComputedStyle(r.label.parentElement.parentElement).maxWidth);
     // lx/ly are the label's offset from the swatch's top-left — exactly the
     // frame .group-item positions its own label in. Lerping toward them lands
     // the text on the panel row's pixels instead of merely near them, which is
@@ -1936,20 +1983,21 @@ function fold6MFlyMeasure() {
     // ly is the label's CENTER, not its top: .group-label is translateY(-50%),
     // so its `top` addresses the box's middle. Aiming its middle at the panel
     // label's TOP flew the text half a line too high and snapped down on the
-    // swap — and made the tallest label (the 3-line one) crawl as it unwrapped.
+    // swap, and made the tallest label (the 3-line one) crawl.
     // lxRight is the label's RIGHT edge in the same frame. The flight anchors
     // the label on that edge instead of on `left` — see the is-mfly-topanchor
     // block in js/update-groups.js. `left` is derived from the box's measured
     // WIDTH, which jumps every time the opening wrap cap re-breaks the text.
     // Panel labels wrap now (explicit instruction), so `height` can be two or
-    // three lines while the flying stand-in ends as one — aim at the FIRST
-    // line's middle, which is the line the swatch and the stand-in both sit on.
+    // three lines — aim at the FIRST line's middle, which is the line the swatch
+    // and the flying stand-in both sit on, whatever either end's line count is.
     // For a one-line label this is the box's middle, exactly as before.
     const lh = parseFloat(getComputedStyle(r.label).lineHeight) || l.height;
     m.set(r.g, {
       x: s.left, y: s.top,
       lx: l.left - s.left, lxRight: l.right - s.left,
       ly: l.top + Math.min(l.height, lh) / 2 - s.top,
+      cap: isFinite(colMax) ? colMax - s.width - Math.abs(s.left - l.right) : null,
     });
   });
   fold6MFlyHeadTargets = new Map();
@@ -2095,56 +2143,6 @@ function fold6MFlyHideCloneEl(c) {
   c._el = c._swatch = c._label = null;
 }
 
-// How the resting label actually breaks into lines, read off the browser's own
-// layout rather than re-implemented: the measure span is given the rest cap and
-// font, and a Range per word reports which line box each word landed in. Words
-// are the only break opportunities in these labels, so grouping words by line
-// reproduces the wrap exactly — if the two ever disagreed, the stand-in's
-// takeoff frame would differ from the real resting label by a word.
-// `dx[i]` is how far line i's right edge sits LEFT of the box's right edge once
-// the text is laid out on one line (= the nowrap width of everything before it,
-// separating space included — measured as full-width minus suffix-width so no
-// trailing-space collapse can skew it). Measured once per label at the rest
-// font; the paint scales it by the frame's lerped font-size.
-const fold6MFlyLineCache = new Map();
-function fold6MFlyRestLines(g) {
-  const fs = groupLabelColumnFontSize(), cap = groupLabelColumnMaxWidth(g);
-  const key = `${g.label}@${fs}@${cap}`;
-  let v = fold6MFlyLineCache.get(key);
-  if (v) return v;
-  const m = groupLabelMeasureEl;
-  m.textContent = g.label;
-  m.style.fontSize = `${fs}px`;
-  if (cap != null) m.style.maxWidth = `${cap}px`;
-  const node = m.firstChild;
-  const range = document.createRange();
-  const lines = [];
-  let idx = 0, lineTop = null;
-  for (const w of g.label.split(" ")) {
-    range.setStart(node, idx);
-    range.setEnd(node, idx + w.length);
-    const top = range.getBoundingClientRect().top;
-    if (lineTop == null || top - lineTop > fs * 0.5) { lines.push([w]); lineTop = top; }
-    else lines[lines.length - 1].push(w);
-    idx += w.length + 1;
-  }
-  const texts = lines.map(ws => ws.join(" "));
-  m.style.maxWidth = "none";
-  m.style.whiteSpace = "nowrap";
-  // Fractional widths on purpose (offsetWidth rounds): a whole-px error here
-  // seats the sliding line a pixel off the real rest layout on the swap frames.
-  const nowrapW = t => { m.textContent = t; return m.getBoundingClientRect().width; };
-  const fullW = nowrapW(g.label);
-  const dx = texts.map((t, i) => i === 0 ? 0 : fullW - nowrapW(texts.slice(i).join(" ")));
-  m.style.fontSize = "";
-  m.style.maxWidth = "";
-  m.style.whiteSpace = "";
-  m.textContent = "";
-  v = { texts, dx, fs };
-  fold6MFlyLineCache.set(key, v);
-  return v;
-}
-
 function fold6MFlyCopyStyle(dst, src, key, memo) {
   const s = src.style.cssText;
   if (memo[key] === s) return;
@@ -2152,48 +2150,23 @@ function fold6MFlyCopyStyle(dst, src, key, memo) {
   dst.style.cssText = s;
 }
 
-function fold6MFlyPaintClone(g, item, landed, flyT, fontPx) {
+function fold6MFlyPaintClone(g, item, landed) {
   const c = fold6MFlyRowCloneFor(g);
   item.el.classList.add("is-mfly-hidden");
   if (landed) { fold6MFlyHideCloneEl(c); return; }
   fold6MFlyCopyStyle(c.el,     item.el,     "_el",     c);
   fold6MFlyCopyStyle(c.swatch, item.swatch, "_swatch", c);
   fold6MFlyCopyStyle(c.label,  item.label,  "_label",  c);
-  // The continuous unwrap lives HERE, on the stand-in, because the stand-in is
-  // what's on screen. Its label never wraps: it holds one span per REST line
-  // (as the real resting label breaks them — fold6MFlyRestLines), laid out
-  // nowrap, and each line after the first is translated from its wrapped rest
-  // spot (right edge flush with the box, i line-heights down) to its inline
-  // spot (dx[i] left of the box's right edge, first line), lerped by flyT. At
-  // flyT≈0 that renders pixel-identically to the wrapped real label it
-  // replaces; at flyT=1 the transforms are 0 and it IS the panel's one-liner —
-  // and in between the second line visibly slides up into the sentence, which
-  // is the whole point: a wrap-cap lerp re-breaks, and a re-break hops a word
-  // to another line in one frame no matter how the box is anchored.
-  // The offsets scale with the frame's lerped font-size (widths are linear in
-  // it); the vertical stride is the same line-height the first-line anchor
-  // uses. The nowrap/maxWidth overrides are re-asserted every frame because the
-  // cssText copy above clobbers them whenever the real label's style changed.
-  const L = fold6MFlyRestLines(g);
-  if (c._lines !== L) {
-    c._lines = L;
-    c.label.textContent = "";
-    c.lineSpans = L.texts.map((t, i) => {
-      if (i) c.label.appendChild(document.createTextNode(" "));
-      const s = document.createElement("span");
-      s.textContent = t;
-      if (i) s.style.display = "inline-block"; // transform needs a box; line 0 never moves
-      c.label.appendChild(s);
-      return s;
-    });
-  }
-  c.label.style.whiteSpace = "nowrap";
-  c.label.style.maxWidth = "none";
-  const k = 1 - flyT, scale = fontPx / L.fs;
-  for (let i = 1; i < c.lineSpans.length; i++) {
-    c.lineSpans[i].style.transform =
-      `translate(${L.dx[i] * scale * k}px, ${fontPx * FOLD6_MFLY_LINE_H * i * k}px)`;
-  }
+  // The stand-in's label is a PLAIN wrapping label — the same text at the same
+  // frozen cap the hidden real label is holding (carried over by the cssText
+  // copy above, and frozen at the PANEL's cap, so the wrap happens on the
+  // flight's first frame and not at the landing — see js/update-groups.js). There is deliberately NO unwrap
+  // animation (explicit instruction): the label arrives with whatever wrap it
+  // took off with, and its FIRST LINE is what the flight aims at the panel
+  // row's first line (see fold6MFlyMeasure's `ly` and the is-mfly-topanchor
+  // block in js/update-groups.js). Nothing here reads a wrapped HEIGHT, which
+  // is what keeps the landing pixel-exact for one- and multi-line labels alike.
+  if (c._text !== g.label) { c._text = g.label; c.label.textContent = g.label; }
   // className, not just cssText. The stand-in is what is actually ON SCREEN
   // during the flight (the real row is visibility:hidden), so anything driven
   // by a CLASS rather than an inline style has to come across too — cssText
@@ -2245,8 +2218,9 @@ function fold6MFlySetRowsShown(t) {
 
 // Called every frame from updateGroups with the flight's arrival progress.
 // Nothing follows the landing any more (explicit instruction): the panel is
-// left OPEN at @fold4 and stays the legend from here on, so arriving is just
-// the last frame of the flight.
+// left OPEN at @fold4 — @fold5 closes it and @fold6 opens it again
+// (fold6MLegendAutoBeat), but that is a later beat, not this one — so arriving
+// is just the last frame of the flight.
 function fold6MFlyArrive(t) {
   if (!fold6MLegendIntroActive) return;
   fold6MFlySetRowsShown(t);

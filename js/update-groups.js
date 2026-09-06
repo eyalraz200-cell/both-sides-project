@@ -468,16 +468,19 @@ function updateGroups() {
     // un-types where @fold3 left it — so the shift must hold. Riding e6 there
     // slid the whole label up by half its extra wrapped height as it untyped.
     // The wrap cap this frame — needed here, before the shift, and written onto
-    // the element further down. FROZEN at the rest cap while flying: the real
-    // label is hidden for the whole flight, nothing reads its layout, and a
-    // moving cap would just be a pointless re-wrap-per-frame of an invisible
-    // element. The VISIBLE unwrap is done by the stand-in's sliding line spans
-    // instead (fold6MFlyPaintClone in js/groups.js) — a cap lerp re-breaks the
-    // text, and however the box is anchored a re-break hops a word to another
-    // line in one frame, which is the stutter this replaced.
+    // the element further down. While flying it is FROZEN, and frozen at the
+    // label's PANEL cap (flyTgt.cap, measured off the column's per-camp
+    // max-width in fold6MFlyMeasure), not at the rest cap: the wrap has to
+    // happen at the START of the flight, not at the end (explicit instruction).
+    // The label therefore takes off already in the shape it will land in — one
+    // re-break on the first frame of a move, under motion — and nothing changes
+    // at the swap, where a re-break would be a static snap with nothing to hide
+    // it. There is no cap LERP either: a cap that slid would re-break every few
+    // frames, and however the box is anchored a re-break hops a word to another
+    // line in one frame ("position never snaps").
     const capCol = groupLabelColumnMaxWidth(g), capLegend = groupLabelLegendMaxWidth();
     const capNow = capCol == null || capLegend == null ? null
-      : flying ? capCol
+      : flying ? (flyTgt && flyTgt.cap != null ? flyTgt.cap : capCol)
       : capCol + (capLegend - capCol) * (g.fold6 && raw2 >= FOLD2_BEATS.move.start + MOVE_SPAN ? fold6ShapeT : 0);
     // While FLYING the shift is recomputed from THIS frame's size and cap, and
     // is NOT faded out — that is what stops the re-wrap from being visible.
@@ -487,8 +490,8 @@ function updateGroups() {
     // only showed on the label with the most lines to lose. Anchoring the FIRST
     // line instead pins the text that is already on screen and lets the block
     // shed lines downward, off the end nobody is looking at. It converges on its
-    // own: at flyT = 1 the label is one line, so the shift is 0 and the landing
-    // stays pixel-exact.
+    // own: the flight anchors the first line directly (below), so the shift is
+    // out of the picture by the time it lands and the landing stays pixel-exact.
     //
     // NOT used while flying — see the is-mfly-topanchor block below, which drops
     // the -50% transform so the first line can be placed directly. Measuring the
@@ -513,9 +516,10 @@ function updateGroups() {
       // the centered transform, center = base + (H - lineH)/2, so
       // firstLineCenter = center - H/2 + lineH/2 = base, height cancelling out.
       // So the flight is a plain lerp of that first-line center onto the panel
-      // label's center (flyTgt.ly, one line, so its center IS its first line's).
-      // Nothing here reads a wrapped height, which is the whole point: the label
-      // can re-break as often as it likes and the visible line does not move.
+      // label's own first-line center (flyTgt.ly — measured as the first line's
+      // middle, since panel labels wrap too). Nothing here reads a wrapped
+      // height, which is the whole point: however many lines either end has,
+      // the line the swatch sits on is the one being flown, and it never hops.
       const lineH = labelFontSize * FOLD6_MFLY_LINE_H;
       const firstLineCenter = labelBase + ((flyTgt ? flyTgt.ly : labelBase) - labelBase) * flyT;
       item.label.classList.add("is-mfly-topanchor");
@@ -633,7 +637,7 @@ function updateGroups() {
     // this element can't out-stack that panel from inside .graphic-col (see
     // fold6MFlyPaintClone in js/groups.js). The real item stays laid out —
     // item.label.offsetWidth above depends on it — just not painted.
-    if (flying) fold6MFlyPaintClone(g, item, e6 >= 1, flyT, labelFontSize);
+    if (flying) fold6MFlyPaintClone(g, item, e6 >= 1);
     else if (fold6MFlyClones.size) fold6MFlyHideClone(g, item);
   });
 
@@ -871,21 +875,20 @@ function updateGroups() {
   // the rule is trimmed by it at both ends — it should span the text's INK,
   // not its line boxes (1.4 must match .fold6-note's line-height in style.css).
   const fold6NoteLead = (1.4 * 14 - 14) / 2;
-  // Note + rule fade in via acledNoteTrigger — on DESKTOP that is its own fold
-  // (#page-5, @fold6), one after the squares' grow-in fold (#page-4,
-  // squaresRevealTrigger) and two after the split (fold6Trigger); on MOBILE the
-  // same trigger is crossed a fold earlier, on #page-4 (see checkAcledNote). The
-  // note POSITION is still anchored to fold6's settled mini-legend target
-  // above; only its reveal is deferred.
+  // Note + rule fade in via acledNoteTrigger on its own fold (#page-5, @fold6),
+  // one after the squares' grow-in fold (#page-4, squaresRevealTrigger) and two
+  // after the split (fold6Trigger) — the same crossing on both viewports now
+  // (see checkAcledNote). The note POSITION is still anchored to fold6's settled
+  // mini-legend target above; only its reveal is deferred.
   // The note now stays up for the rest of the page on both viewports. The extra
   // mobile fade-out on fold9FlyTrigger existed only because the bottom pin sat
   // exactly where @fold8's year axis draws; anchored to the legend it no longer
   // does, so the fade went with the pin.
   //
   // Only the POSITION is desktop-only. On mobile the note flows inside the
-  // מקרא panel, so it needs no left/top — and the panel is open by then, so the
-  // reader sees the credit being ADDED to the legend, the frame growing to
-  // take it.
+  // מקרא panel, so it needs no left/top — and @fold6 is also the beat that
+  // OPENS that panel (fold6MLegendAutoBeat, closed since @fold5), so the reader
+  // sees the credit being ADDED to the legend, the frame growing to take it.
   const noteRevealT = acledNoteTrigger.currentT();
   if (!fold6MobileLegend) {
     fold6NoteTitleEl.style.left = `${fold6X}px`;
@@ -902,8 +905,19 @@ function updateGroups() {
   // are typed). Opacity is a hard 0/1 gate; the typewriter is the whole
   // reveal. Both reverse cleanly on scroll-up because the raw progress reverses.
   const noteRaw = acledNoteTrigger.currentRaw();
-  const noteBeatRaw = b =>
-    Math.max(0, Math.min(1, (noteRaw - FOLD6_NOTE_BEATS[b].start) / FOLD6_NOTE_BEATS[b].len));
+  // On mobile @fold6 is ALSO the beat that opens the מקרא panel the note lives
+  // in (fold6MLegendAutoBeat, js/groups.js), so the type-in waits for the card:
+  // every beat's share of the trigger starts one FOLD6_MLEGEND_OPEN_MS in, and
+  // ends where it always did. Without the shift the note is hidden while the
+  // card opens (fold6MLegendOpenRaw < 1, below) and would then appear already a
+  // third typed on the frame the card lands — a pop, not a reveal.
+  const noteOpenShift =
+    fold6MobileLegend ? FOLD6_MLEGEND_OPEN_MS / GROUP_TRANSITION_MS : 0;
+  const noteBeatRaw = (b) => {
+    const start = FOLD6_NOTE_BEATS[b].start + noteOpenShift;
+    return Math.max(0, Math.min(1,
+      (noteRaw - start) / Math.max(0.001, FOLD6_NOTE_BEATS[b].len - noteOpenShift)));
+  };
   const noteTypeT    = p9Ease(noteBeatRaw("type"));
   // Two seconds after it lands the note un-types itself from the end, and the
   // legend hover types it back — the same max(1 - untype, hover) crossfade the
@@ -1055,15 +1069,21 @@ function updateGroups() {
   // still arriving. On a normal read the two never overlap — the panel is left
   // OPEN by @fold4's hand-off and the note's own crossing is a fold later — so
   // this only catches a fast scroll that lands both at once.
+  // The panel's rows/note divider goes with them — it only means anything with
+  // the note under it — but it is mobile-only, so it is hidden outright on
+  // desktop rather than sharing the mobile gate.
   fold6NoteCardEl.hidden =
   fold6NoteRuleEl.hidden = fold6NoteEl.hidden = fold6NoteTitleEl.hidden =
     fold6MobileLegend && (noteRevealT <= 0 || fold6MLegendOpenRaw < 1);
+  fold6MobileNoteDividerEl.hidden = !fold6MobileLegend || fold6NoteTitleEl.hidden;
 
   // The מקרא bar appears with the same crossing that dissolves the six rows
   // into it (e6), and stays for the rest of the page — it is the mini-legend
   // from @fold4 onward. pointer-events only switch on past the halfway point so
   // a half-faded button can't be tapped mid-glide.
   fold6SetMobileLegendVisible(fold6MobileLegend ? e6 : 0);
+  // …and, once it is there, the @fold5 close / @fold6 open beats on top of it.
+  fold6MLegendAutoBeat(fold6MobileLegend ? e6 : 0);
 
   // (groupsOverlayEl's own "is-active" is set once at init, not toggled here
   // — see the comment by its declaration above.)
