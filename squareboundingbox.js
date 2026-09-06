@@ -65,7 +65,7 @@ const SBB_TIMELINE = {
 //            (P7_AXIS_EVENT_LINE_HEIGHT_MOBILE) — check it by eye then.
 const SBB_TIMELINE_MOBILE_LEFT          = 0.03;  // fraction of W
 const SBB_TIMELINE_MOBILE_GAP_PX        = 18;    // shared clearance above AND below the grid
-const SBB_TIMELINE_MOBILE_TOP_PX        = 64 + 19 + SBB_TIMELINE_MOBILE_GAP_PX;
+let   SBB_TIMELINE_MOBILE_TOP_PX        = 64 + 19 + SBB_TIMELINE_MOBILE_GAP_PX;  // `let` only so _debug-gaps.js can drive it; back to `const` when that harness goes
 const SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX = 36 + 10 + SBB_TIMELINE_MOBILE_GAP_PX;
 // Vertical axis on mobile (P7_VERT_MOBILE.enabled, page7.js): there is no
 // bottom axis to clear, so the box's bottom is a plain inset from the viewport

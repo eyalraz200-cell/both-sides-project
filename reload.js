@@ -12,7 +12,16 @@
   const isLocal =
     host === "localhost" || host === "127.0.0.1" || host === "[::1]" ||
     host === "" ||                       // file://
-    host.endsWith(".local");             // Bonjour name, e.g. testing on a phone
+    host.endsWith(".local") ||           // Bonjour name, e.g. testing on a phone
+    // …and the LAN IP the phone actually gets when it hits the Mac directly
+    // (http://192.168.x.x:8080). Without these the poller silently switched off
+    // on device, so a phone kept showing a stale page through every edit — the
+    // symptom reads as "the change didn't work", which is far more expensive
+    // than the 404s the gate exists to stop. Private ranges only: a deployed
+    // public host still never polls.
+    /^10\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host);
   if (!isLocal) return;
 
   let last = null;

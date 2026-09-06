@@ -91,7 +91,11 @@ const FOLD8_TYPE_MS_PER_CHAR = 15;  // typewriter speed — tuned snappy, not sl
 // down with it on a scroll up. Position, per the house rule, lerps
 // continuously; it never snaps.
 const TOOLTIP_DOCK_H_PX = 100;          // the collapsed frame's height (.page9-tooltip.is-docked, style.css)
-const TOOLTIP_DOCK_BOTTOM_PX = 24;      // px the frame keeps off the viewport's bottom edge
+const TOOLTIP_DOCK_BOTTOM_PX = -18;     // px the frame keeps off the viewport's bottom edge — NEGATIVE: it
+                                        // hangs 18px past the edge, so the frame's border reads as an open
+                                        // bottom rather than a floating box (picked by eye 2026-09-05).
+                                        // sbbTimelineMobileBottomPx() reads this live, so it also sets the
+                                        // timeline grid's bottom clearance (now 100).
 const TOOLTIP_DOCK_TOP_MIN_PX = 16;     // the @fold7 spot can never climb above this
 const TOOLTIP_DOCK_SQUARES_GAP_PX = 16; // gap between the frame's bottom edge and the topmost sample square
 
