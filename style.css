@@ -2093,7 +2093,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   text-decoration: none;
   cursor: pointer;
   line-height: 1.2;
-  transition: background 0.15s ease-out, color 0.15s ease-out;
+  /* Instant hover, no transition (explicit instruction, 2026-09-06). */
 }
 
 .page12-share-btn:hover,
