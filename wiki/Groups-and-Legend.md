@@ -20,8 +20,8 @@ hero dots included. Any doc claiming 8/10/12 groups is stale.
 
 | Color | Label | `actor` |
 |---|---|---|
-| `#6B89FF` | מתנגדי הרפורמה ותומכי עסקת החטופים | `protesters against government` |
-| `#FF1A94` | פעילי שמאל | `peace movements` |
+| `#6B89FF` | מתנגדי הרפורמה המשפטית | `protesters against government` |
+| `#FF1A94` | תומכי עסקת חטופים ומתנגדי המלחמה | `peace movements` |
 | `#31CE1C` | מפגינים ערבים ישראלים | `arab israelis` |
 
 Row order in **both** columns is the sort of that camp's `fold6.y` values (`legendRow` in
@@ -174,11 +174,12 @@ The wrap cap is the real lever on the row gap: `fold6RowPitchPx` is
 `max(24, tallest measured label + FOLD6_ROW_LABEL_GAP_PX)` with the gap at **6**, so at
 @fold3's 100px cap the longest labels wrapped to **three** lines and every row inherited
 that height. 150px (each legend column owns a half-width — @fold3's 100px exists because
-both camps must fit side by side) drops them to two. One group overrides the column cap:
-מתנגדי הרפורמה ותומכי עסקת החטופים carries `labelCapMobile: 140` on its `GROUPS` entry,
-read by `groupLabelColumnMaxWidth(g)` (per-group, always pass the group) and applied inline
-by `updateGroups` and by the hidden measurer, so it lands on two lines at @fold3 instead of
-three. The cap is **lerped from the column cap → 150 over `e6`** on the label's inline `max-width` (`js/update-groups.js`), alongside the
+both camps must fit side by side) drops them to two. Two groups override the column cap:
+מתנגדי הרפורמה המשפטית and תומכי עסקת חטופים ומתנגדי המלחמה carry `labelCapMobile: 140` on
+their `GROUPS` entries, read by `groupLabelColumnMaxWidth(g)` (per-group, always pass the
+group) and applied inline by `updateGroups` and by the hidden measurer, so the pink label
+(226px at 16px — three lines at 100px) lands on two lines at @fold3. The blue one (163px)
+sits on two lines at either cap, so its override is presently inert but stays wired. The cap is **lerped from the column cap → 150 over `e6`** on the label's inline `max-width` (`js/update-groups.js`), alongside the
 16 → 12 font-size lerp, so the text reflows gradually through the glide rather than
 dropping a line all at once at the end.
 
@@ -274,7 +275,7 @@ is just an alias for `FOLD6_SQUARE_ROW_IDS[0]`, whose text (עשרות פעיל�
 
 **A consequence of the "earliest" rule, not a bug:** the opening days are lopsided, so the
 right column is 1 grey + 3 identical yellows, and two of the six group colors never appear
-among the squares at all — פעילי שמאל's first event is 2023-02-27 and קבוצות ימין לאומיות's
+among the squares at all — תומכי עסקת חטופים ומתנגדי המלחמה's first event is 2023-02-27 and קבוצות ימין לאומיות's
 is 2023-01-10. Swapping indices 5/7 for `row-22` / `row-377` is a one-line roster change if
 that ever reads badly.
 
@@ -575,10 +576,11 @@ it — **width first, then height** — exactly as the desktop note opens.
   `.is-coalition` **124px**, `.is-change` **160px** (the modifier class is set in
   `js/groups.js` when the column is built) — and a long group name stacks lines inside that
   cap instead of widening the column and squeezing the other camp.
-  Which labels wrap was specified by hand: only «מתנגדי הרפורמה ותומכי עסקת החטופים» and
-  «תנועות התנחלות באיו״ש» do. **That cannot be done with one shared width**: at 14px
-  Assistant those measure 207px and 124.5px, but «מפגינים ערבים ישראלים» — which must stay on
-  one line — is 123.4px, ~1px under the settlers label. So each camp is capped on its own
+  Which labels wrap was specified by hand: only «תומכי עסקת חטופים ומתנגדי המלחמה» and
+  «תנועות התנחלות באיו״ש» do («מתנגדי הרפורמה המשפטית», 143px at 14px Assistant since the
+  2026-09-06 rename, fits the 160px change cap on one line). **That cannot be done with one
+  shared width**: at 14px Assistant those measure 198px and 124.5px, but «מפגינים ערבים
+  ישראלים» — which must stay on one line — is 123.4px, ~1px under the settlers label. So each camp is capped on its own
   longest *keeper* instead (coalition: קבוצות ימין לאומיות 101px; change: מפגינים ערבים
   ישראלים 123px), which leaves both caps a wide, device-proof margin. Each cap is the label
   width **+12px** for the 6px swatch and the 6px row gap. Retune a cap only against those

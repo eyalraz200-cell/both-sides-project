@@ -175,7 +175,7 @@ through the same three accessors — `p9Metrics()`, `p9MidY(H, W)`, `p9ExtremeTo
 nothing below changes shape; see [Mobile](#mobile).
 
 - **Extreme grid** (above the line) fills row-major upward from `midY`, right-aligned on
-  the left side and left-aligned on the right. Its column count `p9.extremeColsSticky` is
+  the left side and left-aligned on the right. Dots stack by **`P9_ACTOR_ORDER`** (page9.js), a global bottom-to-top rank per camp — left: מתנגדי הרפורמה (blue) → תומכי עסקת חטופים (pink) → ערבים ישראלים (green) on top; right: settlers (orange) → right wing (magenta) → haredi (grey) — then by event sequence within a group. Its column count `p9.extremeColsSticky` is
   **monotonic** (`max(prev, ceil(len/rows))`) so columns never collapse back mid-session.
 - **Center gap** = `p9.maxPillWidth + P9_GAP_PADDING` (190), falling back to
   `P9_EXTREME_GAP` (320) — always centered on the literal viewport middle regardless of

@@ -42,7 +42,7 @@ function prefersReducedMotion() {
 // Indices 11 (@fold12, the closing statement) and 12 (@fold13, the outro card)
 // share drawPage12: the freeform-morph canvas is established on arrival at
 // @fold12 and simply persists behind the credits card that follows it.
-const PAGES = [drawPage1, drawBackground, drawBackground, drawFoldSplit, drawBackground, drawBackground, drawFold7, drawFold9, drawPage7, drawPage8, drawPage9, drawPage12, drawPage12];
+const PAGES = [drawPage1, drawBackground, drawBackground, drawFoldSplit, drawBackground, drawBackground, drawFold7, drawFold9, drawPage7, drawPage8, drawPage9, drawPage12, drawPage12, drawPage12];
 let currentPage = 0;
 
 // How far every OTHER dot/square drops in opacity while one event is hovered
@@ -67,7 +67,7 @@ var HOVER_DIM_OPACITY = 0.2;
 var HOVER_DIM_BY_ACTOR = {
   "settlers": 0.15,                       // תנועות התנחלות באיו״ש
   "right wing protesters": 0.15,          // קבוצות ימין לאומיות
-  "protesters against government": 0.11,  // מתנגדי הרפורמה ותומכי עסקת החטופים
+  "protesters against government": 0.11,  // מתנגדי הרפורמה המשפטית
 };
 function hoverDim(actor) {
   const v = HOVER_DIM_BY_ACTOR[actor];

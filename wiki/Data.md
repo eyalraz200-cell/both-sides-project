@@ -32,7 +32,8 @@ group appears on the timeline.
 | `date` | `date` |
 | `description_he_medium` | `descHeMedium` (2 rows empty → `null`) |
 | `row_id` | `rowId` — the stable per-row handle JS pins to, and what a harness reports back for marking rows in the sheet |
-| `Description`, `location`, `fatalities`, `source`, `actor_type` | unused |
+| `actor_type` | unused by code (hidden column J). Sub-type filled only for the former `protesters against government` rows: `anti judicial reform demonstrators` (2,094), `anti government protesters` (373) — both still `protesters against government` — and `hostage deal protesters` (2,146), whose `main_actor` was **reassigned to `peace movements`** in the sheet on 2026-09-06 (so תומכי עסקת חטופים ומתנגדי המלחמה = left activists + hostage-deal protesters; the sub-type column keeps them distinguishable) |
+| `Description`, `location`, `fatalities`, `source` | unused; columns G–J are hidden in the sheet |
 
 **There is no `side` column.** The camp split is derived from `main_actor` via
 `ACTOR_SIDE` in `server.py`, which must stay in sync with `FOLD4_COALITION_ROWS` /

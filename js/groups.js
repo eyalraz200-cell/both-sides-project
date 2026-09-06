@@ -39,14 +39,19 @@ const GROUPS = [
     fold4: { x: 887,  y: 488, swatchFirst: true }, fold6: { x: 31, y: 512 } },
   { color: "#F024FF", label: "קבוצות ימין לאומיות",      actor: "right wing protesters",
     fold4: { x: 887,  y: 514, swatchFirst: true }, fold6: { x: 31, y: 560 } },
-  { color: "#6B89FF", label: "מתנגדי הרפורמה ותומכי עסקת החטופים", actor: "protesters against government",
+  { color: "#6B89FF", label: "מתנגדי הרפורמה המשפטית", actor: "protesters against government",
     fold4: { x: 725,  y: 488, swatchFirst: true }, fold6: { x: 31, y: 512 },
-    // Per-group @fold3 wrap cap on mobile (see groupLabelColumnMaxWidth): at the
-    // shared 100px this 5-word label breaks into THREE lines; 140px lets it sit
-    // on two ("מתנגדי הרפורמה / ותומכי עסקת החטופים"). Only this label needs it.
+    // Per-group @fold3 wrap cap on mobile (see groupLabelColumnMaxWidth). Tuned
+    // for the former 5-word label (3 lines at the shared 100px, 2 at 140px); the
+    // current 3-word label sits on two lines at either cap, so this is now inert
+    // but kept so the mechanism stays wired. Only this label carries it.
     labelCapMobile: 140 },
-  { color: "#FF1A94", label: "פעילי שמאל",             actor: "peace movements",
-    fold4: { x: 725,  y: 462, swatchFirst: true }, fold6: { x: 31, y: 536 } },
+  { color: "#FF1A94", label: "תומכי עסקת חטופים ומתנגדי המלחמה", actor: "peace movements",
+    fold4: { x: 725,  y: 462, swatchFirst: true }, fold6: { x: 31, y: 536 },
+    // Same @fold3 mobile wrap cap as the blue group: this 4-word label (226px at
+    // 16px) breaks into THREE lines at the shared 100px; 140px lets it sit on two
+    // ("תומכי עסקת חטופים / ומתנגדי המלחמה").
+    labelCapMobile: 140 },
   { color: "#454545", label: "מפגינים חרדים",           actor: "haredi jews",
     fold4: { x: 887,  y: 462, swatchFirst: true }, fold6: { x: 31, y: 536 } },
 ];
@@ -158,8 +163,8 @@ const FOLD2_GROUP_CELL = [
   { row: 0, col: 1 },  // #31CE1C  מפגינים ערבים ישראלים   (change)
   { row: 0, col: 3 },  // #F9B624  תנועות התנחלות          (coalition)
   { row: 2, col: 0 },  // #F024FF  קבוצות ימין לאומיות     (coalition)
-  { row: 2, col: 0 },  // #6B89FF  מתנגדי הרפורמה ותומכי עסקת החטופים (change)
-  { row: 0, col: 0 },  // #FF1A94  פעילי שמאל              (change)
+  { row: 2, col: 0 },  // #6B89FF  מתנגדי הרפורמה המשפטית (change)
+  { row: 0, col: 0 },  // #FF1A94  תומכי עסקת חטופים ומתנגדי המלחמה              (change)
   { row: 1, col: 1 },  // #454545  מפגינים חרדים           (coalition)
 ];
 // The scatter above is AUTHORED in the canonical 4-wide reading order; a cell's
@@ -497,7 +502,7 @@ function groupColorByActor(actor) {
 //   6  row-12    2023-01-06  arab israelis
 //   7  row-6795  2023-01-01  settlers
 // The earliest rows are lopsided, so this leaves the right column one grey and
-// three identical yellows, and neither פעילי שמאל (first event only 2023-02-27)
+// three identical yellows, and neither תומכי עסקת חטופים ומתנגדי המלחמה (first event only 2023-02-27)
 // nor קבוצות ימין לאומיות (2023-01-10) appears among the squares at all — a fact
 // of the data, accepted. Swapping an id here is the whole edit; keep
 // FOLD6_SQUARE_ACTORS and FOLD6_SQUARE_LABELS in step with it.
@@ -628,12 +633,13 @@ const acledNoteCardEl     = document.querySelector("#page-5 .text-card");
 // Hoisted above checkFold13 (below), which needs it already resolved at
 // definition time — also reused by p13SyncGateVisibility further down.
 // #page-11 is @fold12, the closing statement — NOT the outro/credits card,
-// which sits behind it at #page-12 and shares the same wrapper class. @fold12
+// which sits behind it at #page-13 (after the @fold13 share block) and shares
+// the same wrapper class. @fold12
 // owns the whole hand-off: the scroll GATE, the scroll-linked fade
 // (fold13ScrollT) and the freeform MORPH (checkFold13 below), the last two
 // sequenced back to back across its card's rise.
 //
-// > @fold13's own wrapper was once queried here as fold13OutroStickyEl, back
+// > The outro's own wrapper was once queried here as fold13OutroStickyEl, back
 // > when the morph fired on the credits card. Nothing reads it now.
 const page12StickyEl       = document.querySelector("#page-11 .page12-sticky-center");
 

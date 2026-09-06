@@ -64,17 +64,18 @@ Figma source: file `QASHSt1u7b6m6ASgrUPswf` ("Design"). Screens are revised one 
 | `@fold9` | `page-8` | The real pinned timeline (`page7-scrub`, page7.js) |
 | `@fold10` | `page-9` | Bridge glide (page8.js) |
 | `@fold11` | `page-10` | Drag-and-drop categorization (page9.js) |
-| `@fold12` | `page-11` | Closing statement; owns the scroll gate + the fade-out (`fold13ScrollT`) — extreme dots stay in their columns. 150vh section, **static** wrapper (height = spacing only while it isn't sticky) |
-| `@fold13` | `page-12` | Outro/credits card; the extreme dots' freeform spread fires here (`fold13Trigger`) |
+| `@fold12` | `page-11` | Closing statement; owns the scroll gate + the fade-out (`fold13ScrollT`) — extreme dots stay in their columns. 45vh section, **static** wrapper (height = spacing only while it isn't sticky); the share block trails 45vh under it |
+| `@fold13` | `page-12` | Share title block — «שתפו עם אחרים» over the WhatsApp/X/Facebook/copy-link row (`p12ShareInit`); no trigger |
+| `@fold14` | `page-13` | Outro/credits card; the extreme dots' freeform spread fired back on @fold12 (`fold13Trigger`) |
 
-**13 folds total.**
+**14 folds total.**
 
 ## Groups roster
 
 `GROUPS` in `js/groups.js` is **6 groups** — camp groups only (the old no-camp groups were removed on v2 and never appear anywhere):
 
 - **מחנה הימין (coalition):** תנועות התנחלות באיו״ש `#F9B624` (`settlers`), מפגינים חרדים `#454545` (`haredi jews`), קבוצות ימין לאומיות `#F024FF` (`right wing protesters`) (top→bottom)
-- **גוש השינוי (change):** מתנגדי הרפורמה ותומכי עסקת החטופים `#6B89FF` (`protesters against government`), פעילי שמאל `#FF1A94` (`peace movements`), מפגינים ערבים ישראלים `#31CE1C` (`arab israelis`) (top→bottom)
+- **גוש השינוי (change):** מתנגדי הרפורמה המשפטית `#6B89FF` (`protesters against government`), תומכי עסקת חטופים ומתנגדי המלחמה `#FF1A94` (`peace movements`), מפגינים ערבים ישראלים `#31CE1C` (`arab israelis`) (top→bottom)
 
 Row order is the sort of each camp's `fold6.y` (`legendRow`), not the `FOLD4_*_ROWS` declaration order — see [Groups-and-Legend](wiki/Groups-and-Legend.md).
 
