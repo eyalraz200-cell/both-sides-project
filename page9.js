@@ -576,14 +576,15 @@ const p9AnimateRightCountPos = makeP9CountPosAnimator();
 
 // Bottom-to-top stacking order for the extreme grid: settlers (orange) lowest,
 // then right wing protesters (red), then haredi jews (grey) — and on the
-// other side, protesters against government (blue) below arab israelis
-// (green), which sits below peace movements (pink). This is a *global* ranking,
+// other side, protesters against government (blue) below peace movements
+// (pink), which sits below arab israelis (green) (explicit instruction,
+// 2026-09-06). This is a *global* ranking,
 // not just "whatever order categories were dropped in".
 // Names are full_v3.xlsx's own lowercase `main_actor` values (see GROUPS).
 const P9_ACTOR_ORDER = [
   "protesters against government",
-  "arab israelis",
   "peace movements",
+  "arab israelis",
   "settlers",
   "right wing protesters",
   "haredi jews",
