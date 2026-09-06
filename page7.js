@@ -2718,6 +2718,11 @@ function p7DrawYearAxisVertical(ctx, W, H) {
       // the ring and its digits.
       ctx.fillStyle = "#FDFCFF";
       ctx.fillRect(axisX - tw / 2 - 3, ring ? y + R : ly - 2, tw + 6, ly + inkH + 2 - (ring ? y + R : ly - 2));
+      // Hover dot landing in this year's block: over the punch, under the
+      // digits, at half opacity — same treatment as inside a headline card.
+      if (hoverActive && hoverAxisY >= m.top && hoverAxisY <= m.bottom) {
+        p7DrawHoverMarker(ctx, axisX, hoverAxisY, p7ActorColor(hoveredEvent.actor), P7_AXIS_HOVER_MARKER_ALPHA);
+      }
       ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
       ctx.fillStyle = labelColor;
       ctx.fillText(label, axisX, ly + inkA);
@@ -2728,6 +2733,9 @@ function p7DrawYearAxisVertical(ctx, W, H) {
       yearSpans.push({ top: y - 11, bottom: y + 11, side: p7V().yearSide });
       ctx.fillStyle = "#FDFCFF";
       ctx.fillRect(dir > 0 ? lx - 2 : lx - tw - 2, y - 11, tw + 4, 22);
+      if (hoverActive && hoverAxisY >= m.top && hoverAxisY <= m.bottom) {
+        p7DrawHoverMarker(ctx, axisX, hoverAxisY, p7ActorColor(hoveredEvent.actor), P7_AXIS_HOVER_MARKER_ALPHA);
+      }
       ctx.textAlign = dir > 0 ? "left" : "right"; ctx.textBaseline = "middle";
       ctx.fillStyle = labelColor;
       ctx.fillText(label, lx, y);
@@ -2743,8 +2751,9 @@ function p7DrawYearAxisVertical(ctx, W, H) {
     // The hovered square's mirror dot: whole and on top of everything when it
     // is on bare axis. Inside an open headline card it is drawn by the card
     // pass instead — over the card's fill, under its text and split dots, at
-    // P7_AXIS_HOVER_MARKER_ALPHA — so skip it here.
-    let inCard = false;
+    // P7_AXIS_HOVER_MARKER_ALPHA — and inside a year block by the year loop
+    // above (over the punch, under the digits), so skip it here.
+    let inCard = marks.some(m => hoverAxisY >= m.top && hoverAxisY <= m.bottom);
     for (let i = 0; i < p7AxisEventSpans.length; i++) {
       const sp = p7AxisEventSpans[i];
       if (sp && hoverAxisY >= sp.top && hoverAxisY <= sp.bottom) { inCard = true; break; }
