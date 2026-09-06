@@ -255,8 +255,8 @@ function playPage0Entrance() {
 // ── @fold1 idle scroll cue (teacher review 2026-09-03, B1). A non-expert
 // tester tapped the dots and never scrolled, so once the page-load entrance
 // has finished and the user has done nothing for PAGE0_CUE_IDLE_MS, the two
-// dot columns pulse in a gentle wave from the BOTTOM row up to the top —
-// "look up here, this continues" — and repeat every PAGE0_CUE_REPEAT_MS until
+// dot columns pulse in a gentle wave from the TOP row down to the bottom —
+// "this continues downward" — and repeat every PAGE0_CUE_REPEAT_MS until
 // the first scroll, which cancels the cue for good and hands the dots back to
 // updateGroups' own @fold2 shrink/fly. Both the decorative .page0-dot
 // elements and the six group swatches (the legend items standing in for
@@ -266,20 +266,20 @@ function playPage0Entrance() {
 // the page sits idle at scrollY 0 nothing else repaints those dots, and the
 // first scroll event both cancels the loop and restores the at-rest transform
 // before updateGroups runs. Each dot's own pulse is p9Ease up then p9Ease back
-// down (no new curve), row-staggered so the trough travels upward. ──
+// down (no new curve), row-staggered so the trough travels downward. ──
 const PAGE0_CUE_IDLE_MS = 2000;       // quiet time after the entrance before the first pulse
 const PAGE0_CUE_REPEAT_MS = 3000;     // between pulses while still idle
-const PAGE0_CUE_ROW_STAGGER_MS = 24.8; // per row, bottom → top — DOT_MS / 24.8 ≈ 21 rows are
+const PAGE0_CUE_ROW_STAGGER_MS = 22.5; // per row, top → bottom — DOT_MS / 22.5 ≈ 42 rows are
                                        // mid-pulse at once, so the wave reads as a broad swell
-                                       // travelling up the column rather than a thin band
-const PAGE0_CUE_DOT_MS = 520;         // one dot's shrink-and-settle
+                                       // travelling down the column rather than a thin band
+const PAGE0_CUE_DOT_MS = 940;         // one dot's shrink-and-settle
 // The pulse SHRINKS rather than grows (explicit instruction): a value below 1
 // dips each dot inward at the trough instead of swelling it. 0.67 was tuned by
-// eye against a live harness — a 7px dot goes to ~4.7px, shallow enough that
-// the column reads as breathing rather than blinking. The lerp below is
+// eye against a live harness (0.67 first, then deepened to 0.3 on 2026-09-06) —
+// a 7px dot goes to ~2.1px. The lerp below is
 // `1 + (SCALE - 1) * bump`, which runs in either direction unchanged, so this
 // is the only number to turn and >1 restores the grow.
-const PAGE0_CUE_SCALE = 0.67;         // trough scale of a 7px dot (≈4.7px)
+const PAGE0_CUE_SCALE = 0.3;          // trough scale of a 7px dot (≈2.1px)
 let page0CueTimer = null;
 let page0CueCancelled = false;
 let page0CueRunning = false;
@@ -305,8 +305,9 @@ function page0CueRun() {
   if (page0CueCancelled || window.scrollY > 0 || page0CueRunning) return;
   const targets = page0CueTargets();
   if (!targets.length) return;
+  const minRow = Math.min(...targets.map((t) => t.row));
   const maxRow = Math.max(...targets.map((t) => t.row));
-  const totalMs = maxRow * PAGE0_CUE_ROW_STAGGER_MS + PAGE0_CUE_DOT_MS;
+  const totalMs = (maxRow - minRow) * PAGE0_CUE_ROW_STAGGER_MS + PAGE0_CUE_DOT_MS;
   const start = performance.now();
   page0CueRunning = true;
 
@@ -314,8 +315,8 @@ function page0CueRun() {
     if (page0CueCancelled) return; // page0CueCancel already restored the transforms
     const elapsed = performance.now() - start;
     targets.forEach((t) => {
-      // Bottom row (largest syncedRow) leads; each row starts PAGE0_CUE_ROW_STAGGER_MS after the one below it.
-      const local = Math.max(0, Math.min(1, (elapsed - (maxRow - t.row) * PAGE0_CUE_ROW_STAGGER_MS) / PAGE0_CUE_DOT_MS));
+      // Top row (smallest syncedRow) leads; each row starts PAGE0_CUE_ROW_STAGGER_MS after the one above it.
+      const local = Math.max(0, Math.min(1, (elapsed - (t.row - minRow) * PAGE0_CUE_ROW_STAGGER_MS) / PAGE0_CUE_DOT_MS));
       const bump = local < 0.5 ? p9Ease(local * 2) : 1 - p9Ease((local - 0.5) * 2);
       t.el.style.transform = local <= 0 || local >= 1 ? t.rest : `scale(${1 + (PAGE0_CUE_SCALE - 1) * bump})`;
     });

@@ -1,10 +1,11 @@
 // ── @fold12 animations ───────────────────────────────────────────────────────
 // Throughout this file, #page-11 is @fold12 — the closing statement card; the
-// outro/credits card is @fold13 (#page-12) and follows it. Every *scroll*
+// share block (@fold13, #page-12) and the outro/credits card (@fold14,
+// #page-13) follow it. Every *scroll*
 // threshold here (gate, hand-off, sticky freeze) is measured off @fold12's
 // offsetTop, so its own height never moves any of them. That height is 150vh
 // (style.css): one viewport to bring the card to centre, then half a viewport
-// of empty run so @fold13's near-full-height outro card doesn't rise into view
+// of empty run so the next card doesn't rise into view
 // while this one is still mid-screen. That only reads as spacing because
 // #page-11's .page12-sticky-center is overridden to position:static — left
 // sticky, extra height pins the card at centre instead of scrolling it away.
@@ -88,6 +89,12 @@ function updateFold13() {
   // CSS opacity transition fighting it.
   page9TrayEl.style.transition = eScroll > 0 ? "none" : "";
   page9TrayEl.style.opacity    = opacityVal;
+  // The whole panel is position:fixed (.frozen) from the gate onward and never
+  // leaves the screen, so once it is faded it still sat invisibly over the
+  // folds behind it — its tray band (pointer-events:auto) ate the hover on
+  // @fold13's share buttons whenever the card scrolled through it. Inert while
+  // anything is faded; cleared with the rest at eScroll=0.
+  page9StickyEl.style.pointerEvents = eScroll > 0 ? "none" : "";
   if (page9HeaderEl)    page9HeaderEl.style.opacity    = opacityVal;
   if (page9TitleCardEl) page9TitleCardEl.style.opacity = opacityVal;
   if (page9ZoneWrapEl)  page9ZoneWrapEl.style.opacity  = opacityVal;
