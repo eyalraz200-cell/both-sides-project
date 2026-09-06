@@ -628,12 +628,13 @@ const acledNoteCardEl     = document.querySelector("#page-5 .text-card");
 // Hoisted above checkFold13 (below), which needs it already resolved at
 // definition time — also reused by p13SyncGateVisibility further down.
 // #page-11 is @fold12, the closing statement — NOT the outro/credits card,
-// which sits behind it at #page-12 and shares the same wrapper class. @fold12
+// which sits behind it at #page-13 (after the @fold13 share block) and shares
+// the same wrapper class. @fold12
 // owns the whole hand-off: the scroll GATE, the scroll-linked fade
 // (fold13ScrollT) and the freeform MORPH (checkFold13 below), the last two
 // sequenced back to back across its card's rise.
 //
-// > @fold13's own wrapper was once queried here as fold13OutroStickyEl, back
+// > The outro's own wrapper was once queried here as fold13OutroStickyEl, back
 // > when the morph fired on the credits card. Nothing reads it now.
 const page12StickyEl       = document.querySelector("#page-11 .page12-sticky-center");
 

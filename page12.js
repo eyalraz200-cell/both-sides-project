@@ -79,7 +79,8 @@ function drawPage12(ctx, W, H) {
 // Share row on the @fold12 card (teacher review 2026-09-03, K2). The anchors
 // ship with href="#" and get their real share URLs here, from the page's own
 // location at load; the copy button writes the URL to the clipboard and flips
-// its label for a moment as feedback. Runs once from bootstrap (p12ShareInit).
+// its label for a moment as feedback. The row is @fold13's own title block
+// (#page-12). Runs once from bootstrap (p12ShareInit).
 function p12ShareInit() {
   const wrap = document.getElementById("page12Share");
   if (!wrap) return;
@@ -111,8 +112,8 @@ function p12ShareInit() {
   });
 }
 
-// The @fold13 card's height comes from the viewport (100vh − 2×48px, style.css
-// #page-12 .text-card-frame). Its WIDTH is solved here, because CSS can't: a
+// The @fold14 card's height comes from the viewport (100vh − 2×48px, style.css
+// #page-13 .text-card-frame). Its WIDTH is solved here, because CSS can't: a
 // narrower column is a taller one, so the narrowest width at which the copy
 // still clears the bottom padding is also the width that FILLS the card — any
 // wider and the leftover height opens as a void above and below the centred
@@ -121,7 +122,7 @@ function p12ShareInit() {
 const P12_CARD_MIN_W = 320;
 const P12_CARD_MAX_W = 900;
 function p12CardWidthFit() {
-  const f = document.querySelector("#page-12 .text-card-frame");
+  const f = document.querySelector("#page-13 .text-card-frame");
   if (!f) return;
   if (window.innerWidth <= 600) { f.style.removeProperty("width"); return; }  // mobile card is height:auto
   const fits = (w) => {
