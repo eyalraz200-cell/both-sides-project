@@ -1882,12 +1882,12 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   padding: 0;
 }
 
-/* @fold12 (the closing statement, #page-11) and @fold13 (the outro/credits
-   card, #page-12). Both share the .page12-sticky-center wrapper below, but
-   only @fold13 actually pins with it — see the override under #page-11. */
+/* @fold12 (the closing statement, #page-11) and @fold14 (the outro/credits
+   card, #page-13). Both share the .page12-sticky-center wrapper below, but
+   only @fold14 actually pins with it — see the override under #page-11. */
 #page-11 {
   /* 125vh: 100vh to bring the card up to rest flush at the top, then a
-     quarter viewport of empty run before @fold13's card starts rising. @fold13 is a near-full-height
+     quarter viewport of empty run before the next card starts rising. @fold14 (the outro) is a near-full-height
      outro card, not a one-line title, so at the house 100vh its top edge was
      already climbing into view while this card still sat mid-screen — "too
      close behind".
@@ -1914,7 +1914,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    what the old 25vh did, and centring the card in its 100vh wrapper (the old
    mobile geometry) opened half a viewport the same way.
    Paired with 125vh on the section: the card needs 100vh to arrive, the
-   remaining 25vh is trailing run so @fold13's tall outro card doesn't rise
+   remaining 25vh is trailing run so @fold14's tall outro card doesn't rise
    into view on top of this one. On a phone the fixed מקרא bar and the docked
    event frame sit at the top edge where the card lands, but both are on
    fold13ScrollT's fade (updateFold13, js/fold11.js) and are gone by arrival. */
@@ -1927,7 +1927,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 /* @fold12's card scrolls up and away like every other title fold's, rather
    than pinning: the sticky behaviour was only ever inherited from sharing
    .page12-sticky-center with the outro card, and nothing needs it here.
-   checkFold13 watches @fold13's wrapper now, and p13SyncGateVisibility's
+   checkFold13 watches @fold12's own wrapper now, and p13SyncGateVisibility's
    gate-hidden toggle is a plain opacity flip that works on any element.
    Kept 100vh + flex (top-aligned, see the trim above) so the card rests
    flush at the top on arrival, one viewport in — where fold13ScrollT()
@@ -1936,7 +1936,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   position: static;
 }
 
-#page-12 {
+#page-13 {
   min-height: 100vh;
   display: block;
   padding: 0;
@@ -1976,10 +1976,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    and below the copy (flex column, centred), so the top and bottom gaps read
    equal. The .text-card wrapper is fit-content so the frame stays centred
    past the 480px --card-w column. */
-#page-12 .text-card {
+#page-13 .text-card {
   width: fit-content;
 }
-#page-12 .text-card-frame {
+#page-13 .text-card-frame {
   width: 520px;
   height: calc(100vh - 96px);
   padding: 42px 40px;   /* 42px top and bottom, 40px sides */
@@ -1992,29 +1992,25 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 
 /* On shorter laptop viewports the card's height (title + body copy) leaves
    almost no gap from the screen's top/bottom edges — the sticky wrapper is a
-   fixed 100vh with no scroll room of its own to compensate (see #page-12's
+   fixed 100vh with no scroll room of its own to compensate (see #page-13's
    min-height comment above), so trim the card's own padding here instead. */
 @media (max-height: 920px) {
-  #page-12 .text-card-frame {
+  #page-13 .text-card-frame {
     padding: 24px 28px;
   }
-  /* id-scoped: the base .page12-share/.page12-credits rules sit later in the file */
-  #page-12 .page12-share {
-    margin-top: 11px;
-    padding-top: 11px;
-  }
-  #page-12 .page12-credits {
+  /* id-scoped: the base .page12-credits rule sits later in the file */
+  #page-13 .page12-credits {
     margin-top: 9px;
     padding-top: 9px;
   }
 }
 @media (max-height: 820px) {
-  #page-12 .text-card-frame {
+  #page-13 .text-card-frame {
     padding: 18px 22px;
   }
 }
 
-#page-12 .section-title {
+#page-13 .section-title {
   font-size: 40px;
   text-align: center;
   line-height: 1.2;
@@ -2048,27 +2044,24 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   margin-bottom: 0;
 }
 
-/* Share row + credits under the methodology (teacher review 2026-09-03,
-   K2/K3). Two single lines, kept tight on purpose: the card already fills a
-   900px-tall viewport before these rows (see the max-height rules above), so
-   every px here costs bottom clearance. Same Assistant face as .page12-body. */
+/* Credits under the methodology (teacher review 2026-09-03, K3), kept tight
+   on purpose: the card already fills a 900px-tall viewport before this row
+   (see the max-height rules above). Same Assistant face as .page12-body. */
+/* @fold13 (#page-12): the share row is its own title block now — a plain
+   .text-card-frame card with the "שתפו" .section-title over the button row,
+   centred like every other title fold. */
+.page12-share-card {
+  direction: rtl;
+  text-align: center;
+}
 .page12-share {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  /* The hairline sits in the MIDDLE of the 38px gap between the copy and the
-     share row — half above the line (margin), half below it (padding). */
-  margin-top: 19px;
-  padding-top: 19px;
-  border-top: 1px solid rgba(0, 0, 0, 0.15);
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
   font-family: 'Assistant', sans-serif;
-}
-
-.page12-share-title {
-  font-weight: 700;
-  font-size: 14px;
-  margin-inline-end: 4px;
 }
 
 .page12-share-btn {
@@ -2580,10 +2573,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   }
 
   /* The outro card carries its own fixed width instead of --card-w. */
-  #page-12 .text-card {
+  #page-13 .text-card {
     width: var(--card-w);
   }
-  #page-12 .text-card-frame {
+  #page-13 .text-card-frame {
     width: min(450px, 100vw - 48px);
     padding: 24px 22px 28px;
     box-sizing: border-box; /* the phone width is viewport-bound, not padding-bound */
@@ -2593,12 +2586,12 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   /* 40px over 3-4 Hebrew words overflows a 393px card; this is the one
      documented per-page title size (the shared .section-title 20px base is
      untouched — see the hard rule in CLAUDE.md). */
-  #page-12 .section-title {
+  #page-13 .section-title {
     font-size: 28px;
     margin-bottom: 20px;
   }
 
-  /* The outro (#page-12) is the one fold whose height is set by its own copy,
+  /* The outro (#page-13) is the one fold whose height is set by its own copy,
      not by the canvas: ~1400 characters of methodology text at 16px in a
      ~300px-wide card is taller than a phone viewport no matter how the padding
      is trimmed. So mobile drops the desktop "exactly one viewport" rule (see
@@ -2610,7 +2603,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        - min-height: 100vh is kept so short-content/large-phone cases still
          center the card.
 
-     Scoped to #page-12 on purpose. @fold12's wrapper (#page-11) shares this
+     Scoped to #page-13 on purpose. @fold12's wrapper (#page-11) shares this
      class but must stay sticky and exactly one viewport tall on mobile too:
      p13GateMax() and fold13ScrollT() both measure off #page-11's offsetTop and
      one innerHeight, so letting it grow past 100vh would move the gate line.
@@ -2618,7 +2611,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 
      checkFold13 (watchCardThreshold on #page-11's wrapper at frac 0) is
      unaffected either way — it watches the sticky wrapper, which still pins. */
-  #page-12 .page12-sticky-center {
+  #page-13 .page12-sticky-center {
     position: static;
     height: auto;
     min-height: 100vh;
