@@ -469,7 +469,8 @@ over `totalRows × CELL`:
   marker (`p7DrawHoverMarker`, white halo + actor colour) is whole and topmost while it is on
   bare axis; when its `p7AxisY` falls inside an open card's `p7AxisEventSpans[i]` the card
   pass draws it instead — over the card fill, under the text and split dots — at
-  `P7_AXIS_HOVER_MARKER_ALPHA` 0.5. It never snaps to a card's dot.
+  `P7_AXIS_HOVER_MARKER_ALPHA` 0.5; likewise inside a year block (`marks[].top..bottom`) the
+  year loop draws it over the punch, under the digits, at 0.5. It never snaps to a card's dot.
 
 ## Hover
 
