@@ -1720,7 +1720,9 @@ const P7_AXIS_Y_FRAC_MOBILE   = 0.94; // fraction of H — the axis sits lower o
 function p7AxisYFrac() { return isMobile() ? P7_AXIS_Y_FRAC_MOBILE : P7_AXIS_Y_FRAC; }
 const P7_AXIS_LINE_THICKNESS  = 1;     // px — the solid line's stroke height
 const P7_AXIS_MARKER_RADIUS   = 4;     // px — radius of the year-tick ring markers AND the headline-event dots at full size (shared so they read as one system)
-const P7_AXIS_MARKER_RADIUS_FADED = 2; // px — shrunk radius a headline-event dot settles to once its label has crossfaded away (grows back to _RADIUS on hover)
+const P7_AXIS_MARKER_RADIUS_FADED = 2;
+// Hovered square's mirror dot on the axis — translucent, drawn beneath the axis events.
+const P7_AXIS_HOVER_MARKER_ALPHA = 0.5; // px — shrunk radius a headline-event dot settles to once its label has crossfaded away (grows back to _RADIUS on hover)
 const P7_AXIS_MARKER_STROKE   = 1;     // px — ring line width for the hollow year markers
 const P7_AXIS_YEAR_LABEL_OFFSET = 12;  // px gap from the marker's bottom edge down to the year label's top
 const P7_AXIS_YEAR_LABEL_OFFSET_MOBILE = 5; // px — the same gap tightened on a phone, so the year reads as attached to its own tick rather than floating below the axis
@@ -2735,26 +2737,20 @@ function p7DrawYearAxisVertical(ctx, W, H) {
 
   // Dots pop on the DRAWN edge (fillY): the circle appears the instant the
   // fill reaches its top, never sitting on unfilled line.
-  p7DrawAxisEventsVertical(ctx, W, H, axisX, fillY, hoverActive, hoverAxisY, yearSpans);
-
   if (hoverActive) {
-    // The hovered square's mirror dot never lands inside an open headline
-    // card: when its date falls within a card's span it snaps to that card's
-    // top or bottom split dot — whichever half of the card it is in.
-    let hy = hoverAxisY;
-    for (let i = 0; i < p7AxisEventSpans.length; i++) {
-      const sp = p7AxisEventSpans[i];
-      if (!sp || hy < sp.top || hy > sp.bottom) continue;
-      hy = hy < (sp.top + sp.bottom) / 2 ? sp.top : sp.bottom;
-      break;
-    }
+    // The hovered square's mirror dot sits UNDER the axis events (drawn next)
+    // at reduced opacity, so where its date lands inside a headline card the
+    // card simply covers it — it never snaps or stops at a card's dot.
     ctx.save();
+    ctx.globalAlpha = P7_AXIS_HOVER_MARKER_ALPHA;
     ctx.fillStyle = "#FDFCFF";
-    ctx.beginPath(); ctx.arc(axisX, hy, P7_AXIS_MARKER_RADIUS + 1, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(axisX, hoverAxisY, P7_AXIS_MARKER_RADIUS + 1, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = p7ActorColor(hoveredEvent.actor);
-    ctx.beginPath(); ctx.arc(axisX, hy, P7_AXIS_MARKER_RADIUS, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(axisX, hoverAxisY, P7_AXIS_MARKER_RADIUS, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
+
+  p7DrawAxisEventsVertical(ctx, W, H, axisX, fillY, hoverActive, hoverAxisY, yearSpans);
 }
 
 // One axis-event dot: the bare marker, no halo — the card (or the punch) is
