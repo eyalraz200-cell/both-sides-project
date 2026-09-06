@@ -89,6 +89,12 @@ function updateFold13() {
   // CSS opacity transition fighting it.
   page9TrayEl.style.transition = eScroll > 0 ? "none" : "";
   page9TrayEl.style.opacity    = opacityVal;
+  // The whole panel is position:fixed (.frozen) from the gate onward and never
+  // leaves the screen, so once it is faded it still sat invisibly over the
+  // folds behind it — its tray band (pointer-events:auto) ate the hover on
+  // @fold13's share buttons whenever the card scrolled through it. Inert while
+  // anything is faded; cleared with the rest at eScroll=0.
+  page9StickyEl.style.pointerEvents = eScroll > 0 ? "none" : "";
   if (page9HeaderEl)    page9HeaderEl.style.opacity    = opacityVal;
   if (page9TitleCardEl) page9TitleCardEl.style.opacity = opacityVal;
   if (page9ZoneWrapEl)  page9ZoneWrapEl.style.opacity  = opacityVal;
