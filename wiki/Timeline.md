@@ -466,9 +466,9 @@ over `totalRows × CELL`:
   square is hovered the roster reveal opens every reached card, and their split half-dots
   stay at the full `P7_AXIS_MARKER_RADIUS` — `prominence` adds `p7AxisRosterT` back for
   half-dot cards, so only bare (closed-card) dots shrink to the faded radius; (2) the hover
-  marker never lands inside an open card: when its `p7AxisY` falls within a card's
-  `p7AxisEventSpans[i]` it snaps to that card's top or bottom split dot — top if it was in
-  the upper half of the card, bottom otherwise — drawn whole, with its white halo.
+  marker is translucent (`P7_AXIS_HOVER_MARKER_ALPHA` 0.5, halo included) and is drawn
+  **before** `p7DrawAxisEventsVertical`, i.e. beneath the axis events — where its date lands
+  inside an open card the card covers it; it never snaps to a card's dot.
 
 ## Hover
 
