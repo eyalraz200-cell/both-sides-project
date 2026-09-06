@@ -1721,7 +1721,7 @@ function p7AxisYFrac() { return isMobile() ? P7_AXIS_Y_FRAC_MOBILE : P7_AXIS_Y_F
 const P7_AXIS_LINE_THICKNESS  = 1;     // px — the solid line's stroke height
 const P7_AXIS_MARKER_RADIUS   = 4;     // px — radius of the year-tick ring markers AND the headline-event dots at full size (shared so they read as one system)
 const P7_AXIS_MARKER_RADIUS_FADED = 2;
-// Hovered square's mirror dot on the axis — translucent, drawn beneath the axis events.
+// Hovered square's mirror dot when it falls inside an open headline card (over the fill, under the text).
 const P7_AXIS_HOVER_MARKER_ALPHA = 0.5; // px — shrunk radius a headline-event dot settles to once its label has crossfaded away (grows back to _RADIUS on hover)
 const P7_AXIS_MARKER_STROKE   = 1;     // px — ring line width for the hollow year markers
 const P7_AXIS_YEAR_LABEL_OFFSET = 12;  // px gap from the marker's bottom edge down to the year label's top
@@ -2737,20 +2737,31 @@ function p7DrawYearAxisVertical(ctx, W, H) {
 
   // Dots pop on the DRAWN edge (fillY): the circle appears the instant the
   // fill reaches its top, never sitting on unfilled line.
-  if (hoverActive) {
-    // The hovered square's mirror dot sits UNDER the axis events (drawn next)
-    // at reduced opacity, so where its date lands inside a headline card the
-    // card simply covers it — it never snaps or stops at a card's dot.
-    ctx.save();
-    ctx.globalAlpha = P7_AXIS_HOVER_MARKER_ALPHA;
-    ctx.fillStyle = "#FDFCFF";
-    ctx.beginPath(); ctx.arc(axisX, hoverAxisY, P7_AXIS_MARKER_RADIUS + 1, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = p7ActorColor(hoveredEvent.actor);
-    ctx.beginPath(); ctx.arc(axisX, hoverAxisY, P7_AXIS_MARKER_RADIUS, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
-  }
-
   p7DrawAxisEventsVertical(ctx, W, H, axisX, fillY, hoverActive, hoverAxisY, yearSpans);
+
+  if (hoverActive) {
+    // The hovered square's mirror dot: whole and on top of everything when it
+    // is on bare axis. Inside an open headline card it is drawn by the card
+    // pass instead — over the card's fill, under its text and split dots, at
+    // P7_AXIS_HOVER_MARKER_ALPHA — so skip it here.
+    let inCard = false;
+    for (let i = 0; i < p7AxisEventSpans.length; i++) {
+      const sp = p7AxisEventSpans[i];
+      if (sp && hoverAxisY >= sp.top && hoverAxisY <= sp.bottom) { inCard = true; break; }
+    }
+    if (!inCard) p7DrawHoverMarker(ctx, axisX, hoverAxisY, p7ActorColor(hoveredEvent.actor), 1);
+  }
+}
+
+// The hovered square's axis dot (white halo + actor colour) at a given alpha.
+function p7DrawHoverMarker(ctx, x, y, color, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "#FDFCFF";
+  ctx.beginPath(); ctx.arc(x, y, P7_AXIS_MARKER_RADIUS + 1, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(x, y, P7_AXIS_MARKER_RADIUS, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
 }
 
 // One axis-event dot: the bare marker, no halo — the card (or the punch) is
@@ -3039,6 +3050,11 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
         } else p7DrawHeadlineCard(ctx, card, cxF, cyA, cwF, chA);
         textClip = { x: cxF, y: cyA, w: cwF, h: chA, alpha: openT };
       } else p7DrawHeadlineCard(ctx, card, cxF, cyF, cwF, chF);
+      if (centred && hoverActive && highlightY >= cyA && highlightY <= cyA + chA) {
+        // The hovered square's date falls inside this card: its dot goes over
+        // the fill, under the text and split dots, at half opacity.
+        p7DrawHoverMarker(ctx, axisX, highlightY, p7ActorColor((p7.hoveredEvent || p7Inspect.event).actor), P7_AXIS_HOVER_MARKER_ALPHA);
+      }
       if (dateBelowBar) {
         ctx.fillStyle = "#FDFCFF";
         ctx.fillRect(axisX - tw / 2 - 4, y0 + cardH + cpb, tw + 8, blockH - cardH + 2);
