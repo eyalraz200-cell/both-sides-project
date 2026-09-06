@@ -64,7 +64,7 @@ Figma source: file `QASHSt1u7b6m6ASgrUPswf` ("Design"). Screens are revised one 
 | `@fold9` | `page-8` | The real pinned timeline (`page7-scrub`, page7.js) |
 | `@fold10` | `page-9` | Bridge glide (page8.js) |
 | `@fold11` | `page-10` | Drag-and-drop categorization (page9.js) |
-| `@fold12` | `page-11` | Closing statement; owns the scroll gate + the fade-out (`fold13ScrollT`) — extreme dots stay in their columns. 150vh section, **static** wrapper (height = spacing only while it isn't sticky) |
+| `@fold12` | `page-11` | Closing statement; owns the scroll gate + the fade-out (`fold13ScrollT`) — extreme dots stay in their columns. 45vh section, **static** wrapper (height = spacing only while it isn't sticky); the share block trails 45vh under it |
 | `@fold13` | `page-12` | Share title block — «שתפו» over the WhatsApp/X/Facebook/copy-link row (`p12ShareInit`); no trigger |
 | `@fold14` | `page-13` | Outro/credits card; the extreme dots' freeform spread fired back on @fold12 (`fold13Trigger`) |
 
