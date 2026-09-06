@@ -3240,7 +3240,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   }
 
   /* @fold3's group labels. At the desktop 18px/nowrap the longest label
-     ("מתנגדי הרפורמה ותומכי עסקת החטופים") runs ~260px, so the two camps' label runs
+     ("מתנגדי הרפורמה המשפטית") runs ~184px, so the two camps' label runs
      collide across center well before 393px — the labels are what @fold3's
      rect column is centered against (campFold3X, js/update-groups.js), so
      this is a real overlap, not just tight spacing. Smaller type plus a

@@ -80,8 +80,10 @@ numbers in the source.
 
 ## Currently in the repo
 
-None. `_debug-fold-badge.js` (the bottom-left `@foldN` chip) was deleted on 2026-09-06;
-everything else was removed earlier (`_debug-glide-perf.js`, `_debug-mlegend-width.js`,
+`_debug-fold-badge.js` — the bottom-left `@foldN` chip (`@foldN · #page-(N-1) · short
+name`; click or `B` collapses it to just `@foldN`). Reinstated on 2026-09-06 with a `TEMP`
+`<script>` tag after `reload.js` in `project.html`; delete both together. Everything else
+was removed earlier (`_debug-glide-perf.js`, `_debug-mlegend-width.js`,
 `_debug-vert-mobile.js`, `_debug-fold5.js` and the `_debug-hero-*.html` probes). The mobile
 vertical-axis `compare/`+`manual/` (`_debug-vert-mobile.js`, modes band / widen / slot with
 `P7_VERT_MOBILE` knobs) was deleted before its bake; rebuild it from the template if the

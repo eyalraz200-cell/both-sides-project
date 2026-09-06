@@ -245,7 +245,13 @@ const P7_VERT = {
   corridorPx: P7_AXIS_CORRIDOR_PX,
   eventMode:  "widen", // picked 2026-09-04 (harness deleted; band code kept, unused)
   headline:   'widen', // where the headline copy lives: 'widen' (card in a wide corridor) | 'band' (rule + band across the grids) | 'slot' (one line under the grid)
-  yearLabelPx: 18,     // the year label's font size (its block height is this + 3)
+  yearLabelPx: 14,     // the year label's font size (its block height is this + 3) — 14 bold beside the line (2026-09-06)
+  yearLabelWeight: 700, // the year label's font weight
+  // Alpha of a REACHED year label when the digits sit beside the line
+  // (yearSide 'left'/'right'): the year is a quiet reference next to the line,
+  // not a heading, so it never goes as dark as the centred label's
+  // P7_AXIS_LABEL_COLOR. Unreached stays P7_AXIS_LABEL_FAINT_COLOR.
+  yearSideAlpha: 0.3,
   bottomInsetPx: 0,    // mobile-only: px between the box's bottom and the viewport bottom
   slotPx: 0,           // 'slot' headline mode: band height reserved under the grid
   // 'slot' mode: fill null = bare copy on the page background; a colour = a
@@ -260,7 +266,7 @@ const P7_VERT = {
   minSidePx: 96,       // mobile-only: a camp grid never gets narrower than this when the corridor is solved
   eventLine:  false,
   bandPx:     60,    // band mode: height reserved per headline (title line(s) + date)
-  wideCorridorPx: 208, // widen mode: the corridor, full height (by eye, 2026-09-05)
+  wideCorridorPx: 256, // widen mode: the corridor, full height (208 by eye 2026-09-05; +24 each side for the zig-zag side cards, 2026-09-06)
   fillRatio:  1,     // no permanent gaps — picked 2026-09-04
   // What one grid row stands for: a fixed span of this many days, counted
   // from minDate — picked 2026-09-04 (8 days: 160 rows fit the box at 3.3px;
@@ -268,13 +274,16 @@ const P7_VERT = {
   // events than its row holds spills DOWN into the next row, never up.
   daysPerRow: 8,
   // Where the year digits and the headline blocks sit relative to the axis
-  // line — picked 2026-09-04 (compare/ "version 1", everything centred on the
-  // line). The alternatives are kept as live code paths for a later compare:
+  // line — since 2026-09-06 (from the user's Figma draft 327:1654): the years
+  // beside the line on its RIGHT and the headline cards alternating sides
+  // (zig-zag), so the line itself runs unbroken top to bottom with a ring at
+  // every 1 January. 'center' for both (everything centred on the line, the
+  // line breaking around each year block) is kept as a live code path.
   // yearSide / eventSide 'left' | 'right' = beside the line, text aligned
   // toward it; eventSide 'alternate' = flips per event; dateSide 'left' |
   // 'right' = the date on its own side of the line.
-  yearSide:  'center',
-  eventSide: 'center',
+  yearSide:  'right',
+  eventSide: 'alternate',
   dateSide:  'with',   // 'with' = in the title block
   dateAbove: true,     // true = the date line sits ABOVE the title; false = under it (and under the bar, see bar.dateBelow) (only when dateSide is 'with')
   sideGap:   8,        // px between the line's marker edge and side-placed text
@@ -284,7 +293,7 @@ const P7_VERT = {
   // ring when on) sit centred in it. Purely visual: the dot rows run on
   // unbroken and the break eats the ends of the neighbouring line segments.
   yearGapPad: 3,
-  yearRing:   false,   // no ring on the line — the digits alone mark the year
+  yearRing:   true,    // a hollow ring ON the line at every 1 January (the digits sit beside it, see yearSide)
   // Headline card (centred blocks only). null = bare text on a punched
   // background. Shipped: style 'plain' — white card, no stroke, accent bar
   // along its bottom AND top edge (`barTop`), the dot cut to its outer half on
@@ -301,6 +310,13 @@ const P7_VERT = {
   //   on top of it).
   card: { style: 'plain', fill: '#FDFCFF', stroke: 'rgba(0, 0, 0, 0.3)', strokeWidth: 1, padX: 16, padTop: 6, padBottom: 6, radius: 4, radiusBottom: 0,
           gap: 0, stem: false, bar: true, barTop: true, sides: false, sidesAlpha: 1, halfDots: true, anchor: 'center' }, // sides = a full rounded border (bar line style, at sidesAlpha) instead of the two bars
+  // Side-placed cards (eventSide 'left'/'right'/'alternate') do NOT reuse
+  // `card`: they are a plain grey plaque after the Figma draft 327:1654 —
+  // flat fill, all four corners rounded, no bars/stroke/half-dots, floating
+  // `gap` px off the line (the dot stays whole and uncovered), centred
+  // vertically on its dot, the copy centred inside it. Its own smaller type.
+  sideCard: { fill: '#ECEBEB', radius: 4, gap: 8, padX: 8, padTop: 4, padBottom: 4,
+              type: { size: 12, weight: 400, lh: 19, color: 'rgba(0, 0, 0, 1)' } },
   // The accent bar under a headline: h px tall, `gap` px below the text's
   // last line, `padX` px wider than the text on each side, `alpha` opacity of
   // `color`, `round` = rounded ends.
@@ -345,6 +361,11 @@ const P7_VERT_MOBILE = {
   slotPx:        48,   // 'slot' with slotAnchor 'grid' ONLY — the reserved band under the grid. Mobile anchors 'top' instead, so nothing is reserved down there.
   minSidePx:     96,   // a camp grid never gets narrower than this when 'widen' solves its corridor
   yearLabelPx:   14,   // 4-digit years fit the mobile tick pitch at 14
+  yearLabelWeight: 400,
+  // The phone keeps the centred year blocks (the line breaking around them,
+  // no ring): a 44px corridor has no room for digits beside the line, and the
+  // headline never sits on the axis there ('slot'), so eventSide is moot.
+  yearSide: 'center', eventSide: 'center', yearRing: false,
   card: { padX: 8 },
   // On a phone the headline copy does NOT travel with its dot — there is no
   // room beside a phone-width axis for a card, and one hung off the dot covers
@@ -620,6 +641,9 @@ function p7RowEndOfDate(dateStr) {
 // The dot grids share this origin (their rows are dates), so they move with it.
 function p7VertYearHeaderH() {
   const ring = p7V().yearRing;
+  // Years beside the line: the first year's ring sits ON the line's top end,
+  // so only its upper half pokes above topY — no header block at all.
+  if (p7V().yearSide !== 'center') return ring ? P7_AXIS_MARKER_RADIUS : 0;
   return (ring ? P7_AXIS_MARKER_RADIUS * 2 + P7_VERT_YEAR_LABEL_GAP : 0) + (p7V().yearLabelPx + 3) + p7V().yearGapPad * 2;
 }
 function p7VertTopY(H) {
@@ -1850,10 +1874,12 @@ function p7AxisYearTicks() {
 const P7_AXIS_EVENTS = [
   // Nudged left to clear the "2023" year ring — 04.01 sits only 3 days from
   // minDate, so at its true x its dot all but touches the axis's right anchor.
-  { date: "2023-01-04", label: "הצגת הרפורמה המשפטית", maxWidth: null, xOffset: -14 },
+  { date: "2023-01-04", label: "הכרזת הרפורמה", maxWidth: null, xOffset: -14 },
+  { date: "2023-06-20", label: "הפיגוע בעלי", maxWidth: null },
+  { date: "2023-07-24", label: "ביטול עילת הסבירות", maxWidth: null },
   { date: "2023-10-07", label: "מתקפת 7 באוקטובר", maxWidth: null },
-  { date: "2024-06-25", label: "פסיקת בג״ץ על גיוס חרדים", maxWidth: null },
-  { date: "2024-12-08", label: "נפילת משטר אסד", maxWidth: null, xOffset: 12, above: true }, // desktop: card opens upward
+  { date: "2024-09-01", label: "מות ששת החטופים", maxWidth: null },
+  { date: "2025-03-18", label: "חידוש הלחימה בעזה", maxWidth: null },
   { date: "2025-06-13", label: "מבצע ״עם כלביא״", maxWidth: null },
   { date: "2025-10-13", label: "שחרור החטופים מעזה", maxWidth: null },
   // Past maxDate (2026-07-03) — parks at the axis's left end (see the clamp in
@@ -1877,7 +1903,10 @@ const P7_AXIS_EVENT_FADE_IN_MS  = 400;
 const P7_VERT_CARD_OPEN_MS = 900;
 function p7AxisFadeInMs() {
   const c = p7V().card;
-  return p7VerticalAxis() && p7V().headline === 'widen' && c && c.halfDots && c.anchor === 'center' && p7V().eventSide === 'center'
+  // Both card reveals run on the 900ms clock: the centred half-dot card's
+  // 3-beat unfold, and the side card's single unfold out from the line.
+  return p7VerticalAxis() && p7V().headline === 'widen' && c && c.anchor === 'center'
+    && (p7V().eventSide !== 'center' || c.halfDots)
     ? P7_VERT_CARD_OPEN_MS : P7_AXIS_EVENT_FADE_IN_MS;
 }
 // Windows of the reveal's raw progress (p9Ease re-applied per window):
@@ -2181,7 +2210,14 @@ function p7AxisEventOpacity(i, now) {
       // reached, possibly long ago) which previously kept this event pinned
       // at opacity 0 for the entire time next was fading out, then made it
       // pop in at full opacity the instant next's fade finished.
-      cap = Math.min(1, (now - next.leavingAt) / P7_AXIS_EVENT_FADE_OUT_MS);
+      // …except while the axis is UNDRAWING: the outro sets every event's
+      // leavingAt in the same instant, so this lift (0→1) and this event's own
+      // fade-out (1→0) would run on the same clock and cross at 0.5 — every
+      // long-suppressed card half-opened (the vertical card's beats are driven
+      // by this opacity) before collapsing. Freeze the lift at whatever it was
+      // when the outro began: a card that was suppressed stays shut.
+      const lift = Math.min(now, p7AxisOutroStart ?? now);
+      cap = Math.min(1, Math.max(0, (lift - next.leavingAt) / P7_AXIS_EVENT_FADE_OUT_MS));
     } else {
       cap = 1 - (now - next.triggeredAt) / P7_AXIS_EVENT_FADE_OUT_MS;
     }
@@ -2595,6 +2631,9 @@ const P7_AXIS_DOT_CATCHUP_PX    = 80;   // px of axis over which the fill edge, 
 // travels). Written by p7DrawAxisEventsVertical each frame, read by the next
 // frame's p7DrawYearAxisVertical so the fill skips it. null = dot only.
 const p7AxisEventSpans = [];
+// Per-event vertical offset (px) of a side plaque that slid off its date to
+// clear a year label; the dot pass applies it so the dot follows the card.
+const p7SideCardDy = [];
 
 function p7DrawYearAxisVertical(ctx, W, H) {
   if (!p7.vert) return;
@@ -2633,8 +2672,17 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   const R      = ring ? P7_AXIS_MARKER_RADIUS : 0;
   const blockH = (ring ? R * 2 + P7_VERT_YEAR_LABEL_GAP : 0) + (p7V().yearLabelPx + 3);
   const pad    = p7V().yearGapPad;
+  // Years beside the line (yearSide 'left'/'right'): the line never breaks —
+  // every 1 January, the first included, is a ring sitting ON the line at its
+  // row boundary (the first year's ring caps the line's top end), and the
+  // digits hang beside it. `top`/`bottom` are then the ring alone.
+  const sideYears = p7V().yearSide !== 'center';
   const marks  = ticks.filter(t => v.yearRow.has(t.year)).map(t => {
     const row = v.yearRow.get(t.year);
+    if (sideYears) {
+      const yc = axisQ(p7RowY(row, H));
+      return { tick: t, row, yc, top: yc - R, bottom: yc + R };
+    }
     // The first year (its 1 January is row 0, the line's top) sits as a header
     // ABOVE the line instead of breaking it: the line alone is the time count,
     // so an event on the first days of the range lands on the line, not in a
@@ -2643,11 +2691,12 @@ function p7DrawYearAxisVertical(ctx, W, H) {
     return { tick: t, row, yc, top: yc - blockH / 2 - pad, bottom: yc + blockH / 2 + pad };
   });
 
-  // Base line + filled portion from the top, drawn only between the year breaks.
+  // Base line + filled portion from the top, drawn only between the year
+  // breaks (one unbroken run when the years sit beside the line).
   const lineLeft = axisX - P7_AXIS_LINE_THICKNESS / 2;
   const segs = [];
   let segTop = topY;
-  marks.forEach(m => {
+  if (!sideYears) marks.forEach(m => {
     if (m.top > segTop) segs.push([segTop, m.top]);
     segTop = Math.max(segTop, m.bottom);
   });
@@ -2704,7 +2753,7 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   });
 
   // Year rings + labels. A tick is reached once the fill edge is past its row.
-  ctx.font = `${p7V().yearLabelPx}px 'Assistant', sans-serif`;
+  ctx.font = `${p7V().yearLabelWeight || 400} ${p7V().yearLabelPx}px 'Assistant', sans-serif`;
   ctx.textAlign = "center";
   // measureText's ink boxes are relative to the CURRENT baseline — measure
   // under 'alphabetic' (under 'top' the first label's ascent came back wrong
@@ -2737,7 +2786,7 @@ function p7DrawYearAxisVertical(ctx, W, H) {
     const inkH = inkA + inkD;
     const labelColor = hoverActive
       ? `rgba(0, 0, 0, ${P7_AXIS_BG_ALPHA})`
-      : (reached ? P7_AXIS_LABEL_COLOR : P7_AXIS_LABEL_FAINT_COLOR);
+      : (reached ? (sideYears ? `rgba(0, 0, 0, ${p7V().yearSideAlpha})` : P7_AXIS_LABEL_COLOR) : P7_AXIS_LABEL_FAINT_COLOR);
     if (p7V().yearSide === 'center') {
       // Label under the ring, on a punched background so the line doesn't run
       // through the digits.
@@ -2758,18 +2807,20 @@ function p7DrawYearAxisVertical(ctx, W, H) {
       ctx.fillStyle = labelColor;
       ctx.fillText(label, axisX, ly + inkA);
     } else {
-      // Label beside the ring, vertically centred on it, aligned toward the line.
+      // Label beside the ring, its ink centred on the ring, aligned toward
+      // the line. It sits off the line, so nothing is punched — the span is
+      // only for same-side headline cards to dodge.
       const dir = p7V().yearSide === 'right' ? 1 : -1;
       const lx  = axisX + dir * (R + p7V().sideGap);
-      yearSpans.push({ top: y - 11, bottom: y + 11, side: p7V().yearSide });
-      ctx.fillStyle = "#FDFCFF";
-      ctx.fillRect(dir > 0 ? lx - 2 : lx - tw - 2, y - 11, tw + 4, 22);
-      if (hoverActive && hoverAxisY >= m.top && hoverAxisY <= m.bottom) {
-        p7DrawHoverMarker(ctx, axisX, hoverAxisY, p7ActorColor(hoveredEvent.actor), P7_AXIS_HOVER_MARKER_ALPHA);
-      }
-      ctx.textAlign = dir > 0 ? "left" : "right"; ctx.textBaseline = "middle";
+      const half = Math.max(inkH / 2, R) + 2;
+      yearSpans.push({ top: y - half, bottom: y + half, side: p7V().yearSide });
+      ctx.textAlign = dir > 0 ? "left" : "right"; ctx.textBaseline = "alphabetic";
       ctx.fillStyle = labelColor;
-      ctx.fillText(label, lx, y);
+      ctx.fillText(label, lx, y - inkH / 2 + inkA);
+      // Hover dot landing on this ring: whole, over the ring.
+      if (hoverActive && hoverAxisY >= m.top && hoverAxisY <= m.bottom) {
+        p7DrawHoverMarker(ctx, axisX, hoverAxisY, p7ActorColor(hoveredEvent.actor), 1);
+      }
     }
   }
   ctx.restore();
@@ -2812,10 +2863,13 @@ function p7DrawAxisMarker(ctx, x, y, radius, color) {
 }
 
 // One headline card (P7_VERT.card) — the rounded rect behind a centred block.
-function p7DrawHeadlineCard(ctx, card, x, y, w, h) {
+// `radii` (optional, [TL, TR, BR, BL]) overrides the card's own radius/radiusBottom
+// pair — the side cards round only their far corners.
+function p7DrawHeadlineCard(ctx, card, x, y, w, h, radii) {
   const r = Math.min(card.radius || 0, w / 2, h / 2);
   const rb = Math.min(card.radiusBottom == null ? r : card.radiusBottom, w / 2, h / 2);
-  const path = () => { ctx.beginPath(); ctx.roundRect(x, y, w, h, [r, r, rb, rb]); };
+  const rr = radii ? radii.map(v => Math.min(v, w / 2, h / 2)) : [r, r, rb, rb];
+  const path = () => { ctx.beginPath(); ctx.roundRect(x, y, w, h, rr); };
   ctx.save();
   if (card.style === 'bar') {
     // No card: bare punched text with the accent bar under it.
@@ -2830,7 +2884,7 @@ function p7DrawHeadlineCard(ctx, card, x, y, w, h) {
     ctx.lineWidth = card.strokeWidth || 1;
     ctx.strokeStyle = card.style === 'accent' ? 'rgba(0, 0, 0, 0.12)' : (card.stroke || 'rgba(0, 0, 0, 0.3)');
     if (card.style === 'dashed') ctx.setLineDash([3, 3]);
-    ctx.beginPath(); ctx.roundRect(x + 0.5, y + 0.5, w - 1, h - 1, [r, r, rb, rb]); ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(x + 0.5, y + 0.5, w - 1, h - 1, rr); ctx.stroke();
     ctx.setLineDash([]);
   }
   if (card.style === 'accent' || card.style === 'bar' || (card.bar && !card.sides)) {
@@ -2849,7 +2903,7 @@ function p7DrawHeadlineCard(ctx, card, x, y, w, h) {
     ctx.save();
     ctx.globalAlpha *= b.alpha * (card.sidesAlpha ?? 1);
     ctx.strokeStyle = b.color; ctx.lineWidth = b.h;
-    ctx.beginPath(); ctx.roundRect(x + b.h / 2, y + b.h / 2, w - b.h, h - b.h, [r, r, rb, rb]); ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(x + b.h / 2, y + b.h / 2, w - b.h, h - b.h, rr); ctx.stroke();
     ctx.restore();
   }
   ctx.restore();
@@ -2897,7 +2951,9 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     : isMobile() ? p7V().type.maxWidth
     : p7V().eventMode === "band" ? 320
     : evSide === 'center' ? p7CenterGap() - 16
-    : p7CenterGap() / 2 - P7_AXIS_MARKER_RADIUS - p7V().sideGap - 8;
+    // Side blocks: half the corridor less the plaque's gap + two pads (or,
+    // bare, the dot + sideGap) and a 4px margin to the grid.
+    : p7CenterGap() / 2 - (p7V().sideCard ? p7V().sideCard.gap + 2 * p7V().sideCard.padX : P7_AXIS_MARKER_RADIUS + p7V().sideGap) - 4;
   // A mode switch (harness) must not leave a stale span from the other mode.
   for (let i = 0; i < p7AxisEventSpans.length; i++) p7AxisEventSpans[i] = null;
 
@@ -2910,7 +2966,9 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
   // Persistent dots (same easing as the horizontal pass).
   const evY = P7_AXIS_EVENTS.map((ev, i) => p7RowY(v.events[i].row, H));
   P7_AXIS_EVENTS.forEach((ev, i) => {
-    const y = evY[i];
+    // A side plaque that slid to clear a year label takes its dot with it
+    // (p7SideCardDy, written by the label pass below — one frame behind).
+    const y = evY[i] + (p7SideCardDy[i] || 0);
     const state = P7_AXIS_EVENT_STATE[i];
     // The dot stays (so the open card keeps its split circle) while the
     // headline is held open by the reverse hysteresis, even though the fill
@@ -2975,7 +3033,15 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     if (hl === 'slot') return;          // drawn once, below the grid — p7DrawVertHeadlineSlot
     if (opacity <= 0) return;
     const TY = p7V().type;
-    ctx.font = p7VertFont(TY.title);
+    // 'alternate' flips the side per event (even index left, odd right).
+    const evSideI = p7V().eventSide === 'alternate' ? (i % 2 ? 'right' : 'left') : evSide;
+    const evDirI  = evSideI === 'right' ? 1 : -1;
+    const onSide = evSideI !== 'center';
+    // Side plaque (P7_VERT.sideCard): its own type; the centred card keeps TY.
+    const SC = onSide ? p7V().sideCard || null : null;
+    const sideCard = !!SC;
+    const titleType = sideCard ? SC.type : TY.title;
+    ctx.font = p7VertFont(titleType);
     const lines = p7WrapLabel(ctx, ev.label, maxWidth);
     if (hl === 'band') {
       // Candidate A: a translucent band hanging under the event's rule
@@ -3002,7 +3068,7 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
       ctx.globalAlpha = 1;
       return;
     }
-    const lh = TY.title.lh, dlh = TY.date.lh;
+    const lh = titleType.lh, dlh = TY.date.lh;
     const dateLabel = p7FormatDateDMY(ev.date, ".");
     let tw = 0;
     lines.forEach(t => { tw = Math.max(tw, ctx.measureText(t).width); });
@@ -3010,16 +3076,13 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     if (!noDate) { ctx.font = p7VertFont(TY.date); tw = Math.max(tw, ctx.measureText(dateLabel).width); }
     // The date can sit on its own side of the line (split): then the title
     // block loses its date line and the date is drawn beside the dot alone.
-    // 'alternate' flips the side per event (even index left, odd right).
-    const evSideI = p7V().eventSide === 'alternate' ? (i % 2 ? 'right' : 'left') : evSide;
-    const evDirI  = evSideI === 'right' ? 1 : -1;
     const dateSide = p7V().dateSide === 'with' ? evSideI : p7V().dateSide;
     const split = !noDate && dateSide !== evSideI;
     const dateFirst = !split && !noDate && p7V().dateAbove;
-    const onSide = evSideI !== 'center';
-    const card = !onSide && p7V().card ? p7V().card : null;
-    const cpx = card ? Math.max(card.padX, card.style === 'bar' ? p7V().bar.padX : 0) : 0;
-    const cpt = card ? card.padTop : 0, cpb = card ? card.padBottom : 0;
+    // The centred card (P7_VERT.card) never applies to a side block.
+    const card = sideCard ? null : p7V().card || null;
+    const cpx = sideCard ? SC.padX : card ? Math.max(card.padX, card.style === 'bar' ? p7V().bar.padX : 0) : 0;
+    const cpt = sideCard ? SC.padTop : card ? card.padTop : 0, cpb = sideCard ? SC.padBottom : card ? card.padBottom : 0;
     const barExtra = card && (card.style === 'bar' || card.style === 'accent') ? p7V().bar.gap + p7V().bar.h : 0;
     // Bar between title and date: the card (and its bar) covers the title
     // only; the date hangs `dateGap` px under the bar, punched separately.
@@ -3041,7 +3104,7 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     const textGap = textGapBelow;
     const spans = (yearSpans || []).filter(s => !(onSide && s.side !== 'center' && s.side !== evSideI));
     const hits = (top) => spans.some(s => top - 2 - cpt < s.bottom && top + blockH + 2 + cpb > s.top);
-    const below = onSide ? evY[i] - lh / 2 : evY[i] + P7_AXIS_MARKER_RADIUS + textGap;
+    const below = sideCard ? evY[i] - blockH / 2 : onSide ? evY[i] - lh / 2 : evY[i] + P7_AXIS_MARKER_RADIUS + textGap;
     const above = evY[i] - P7_AXIS_MARKER_RADIUS - textGapAbove - blockH;
     // Default: under the dot. If that runs into a year label the block flips
     // ABOVE its dot; only if both sides collide is it pushed down past the year.
@@ -3049,15 +3112,43 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     // (P7_AXIS_EVENTS); side blocks always start beside the dot.
     const preferAbove = !onSide && !!ev.above;
     let y0 = preferAbove ? above : below, flipped = preferAbove;
-    if (hits(y0)) {
+    if (sideCard) {
+      // Side plaque: if centred on its date it would cross a same-side year
+      // label, slide it by the smallest amount that clears the label (up if
+      // shorter, else down) — and the DOT follows the plaque (p7SideCardDy,
+      // applied in the dot pass) so the two always stay centred on each
+      // other.
+      const s = hits(y0) ? spans.find(s => y0 - 2 - cpt < s.bottom && y0 + blockH + 2 + cpb > s.top) : null;
+      if (s) {
+        const up = s.top - 2 - cpb - blockH, down = s.bottom + 2 + cpt;
+        y0 = (y0 - up <= down - y0) ? up : down;
+      }
+      p7SideCardDy[i] = y0 + blockH / 2 - evY[i];
+    } else if (hits(y0)) {
       const alt = preferAbove ? below : above;
       if (!hits(alt)) { y0 = alt; flipped = !preferAbove; }
       else spans.forEach(s => { if (hits(y0)) y0 = s.bottom + textGap; });
     }
     ctx.globalAlpha = opacity;
     ctx.fillStyle = "#FDFCFF";
-    const tx = onSide ? axisX + evDirI * (P7_AXIS_MARKER_RADIUS + p7V().sideGap) : axisX;
-    if (onSide) {
+    // Side plaque: the copy is centred in the card, so tx is the card's centre.
+    const tx = sideCard ? axisX + evDirI * (SC.gap + cpx + tw / 2)
+      : onSide ? axisX + evDirI * (P7_AXIS_MARKER_RADIUS + p7V().sideGap) : axisX;
+    if (sideCard) {
+      // One-beat reveal: `opacity` is the raw progress, the plaque unfolds out
+      // from its near edge (`gap` px off the line; that edge stays put, the far
+      // edge travels) and the copy fades in clipped to the open part;
+      // reversing plays it back. The line and the dot are never covered, so no
+      // span is registered and the fill runs past it untouched.
+      const openT = p9Ease(Math.min(1, Math.max(0, opacity)));
+      const cwF = cpx + tw + cpx, chF = blockH + cpt + cpb, cyF = y0 - cpt;
+      const near = axisX + evDirI * SC.gap;
+      const cwA = cwF * openT;
+      const cxA = evDirI > 0 ? near : near - cwA;
+      ctx.globalAlpha = 1;
+      if (cwA > 0) p7DrawHeadlineCard(ctx, SC, cxA, cyF, cwA, chF);
+      textClip = { x: cxA, y: cyF, w: cwA, h: chF, alpha: openT };
+    } else if (onSide) {
       ctx.fillRect(evDirI > 0 ? tx - 3 : tx - tw - 3, y0 - 2, tw + 6, blockH + 4);
     } else if (card) {
       // Card: no punch between dot and card when it has a stem (the line is
@@ -3135,13 +3226,13 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
       ctx.beginPath(); ctx.rect(textClip.x, textClip.y, textClip.w, textClip.h); ctx.clip();
       ctx.globalAlpha = textClip.alpha;
     }
-    ctx.textAlign = onSide ? (evDirI > 0 ? "left" : "right") : "center";
+    ctx.textAlign = onSide && !sideCard ? (evDirI > 0 ? "left" : "right") : "center";
     const titleY0 = y0 + (dateFirst ? dlh + TY.gap : 0);
     const isHoverHighlighted = hoverActive && highlightY !== null && Math.abs(evY[i] - highlightY) < 0.5;
     const labelAlpha = (hoverActive && !isHoverHighlighted) ? P7_AXIS_ROSTER_LABEL_ALPHA : 1;
     const dimmed = hoverActive && !isHoverHighlighted;
-    ctx.font = p7VertFont(TY.title);
-    ctx.fillStyle = dimmed ? `rgba(0, 0, 0, ${labelAlpha})` : TY.title.color;
+    ctx.font = p7VertFont(titleType);
+    ctx.fillStyle = dimmed ? `rgba(0, 0, 0, ${labelAlpha})` : titleType.color;
     lines.forEach((text, li) => p7VertLineText(ctx, text, tx, titleY0 + li * lh, lh));
     ctx.font = p7VertFont(TY.date);
     ctx.fillStyle = dimmed ? `rgba(0, 0, 0, ${P7_AXIS_ROSTER_LABEL_ALPHA})` : TY.date.color;

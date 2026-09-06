@@ -25,8 +25,9 @@ Geometry comes from `SBB_TIMELINE` in `squareboundingbox.js`
 (`top 0.07, bottom 0.93` as fractions of H; the outer x edge is the fixed
 `SBB_TIMELINE_LEFT_PX` = **190px** on desktop, read via `sbbTimelineLeftX(W, H)` and mirrored
 at `W − 190` on the right — an exact px picked by eye, never a fraction of W) plus the centre gap: `p7CenterGap()` is
-`P7_AXIS_CORRIDOR_PX = 64` on desktop (the vertical axis's corridor — line, rings and
-18px year labels) and `CENTER_GAP = 4` on mobile. `SBB` itself belongs to page9, **not**
+`P7_VERT.wideCorridorPx` = **256** on desktop (the vertical axis's corridor — line, rings,
+the side year labels and the side headline cards; `P7_AXIS_CORRIDOR_PX` 64 is the band-mode
+fallback) and `CENTER_GAP = 4` on mobile. `SBB` itself belongs to page9, **not**
 here. On desktop **both grids hug the corridor** inside `p7GridGeometry`: the right camp's
 origin is `W/2 + gap/2`, the left camp's is `W/2 − gap/2 − cols·CELL`, so the corridor edges
 sit exactly at `W/2 ± gap/2` and the `floor(sideW / CELL)` leftover lands on the *outer* edge of
@@ -63,10 +64,11 @@ first year). Events are bucketed per **day** (`dayOf`, 1279 days for the current
 linear in time and a row's fill width *is* its event count. The dot rows run on
 **unbroken** across year boundaries — no empty rows for the year markers. `plan.yearRow`
 maps each year to the integer row its 1 January starts on; that row's top edge is where the
-drawn line breaks for the year digits (a px break only, see below). 161 rows total at
+year ring sits (the line itself is unbroken, see below). 161 rows total at
 1440×900. `p7SolveVerticalSq` shrinks the square until the plan's rows **plus the first
-year's header label** (`p7VertYearHeaderH()`: 21px digits, ring + 6 when on, `yearGapPad`
-above and below) fit the box (3.3 px at 1440×900; one-week rows needed 183 and 2.9 px,
+year's header** (`p7VertYearHeaderH()`: with side years just the ring's radius
+`P7_AXIS_MARKER_RADIUS` 4, so the first ring caps the line's top; centred years: 21px digits,
+ring + 6 when on, `yearGapPad` above and below) fit the box (3.3 px at 1440×900; one-week rows needed 183 and 2.9 px,
 which is why 8 days won). **On mobile only**, the solved square is then multiplied by
 `P7_VERT_SQ_BOOST` (**1.12**, `p7VertSqBoost()`, picked by eye at 390×721 on 2026-09-05):
 the packed solve read too short against the docked tooltip. That deliberately overshoots
@@ -92,13 +94,17 @@ The inner edge hugs the axis, the outer edge is the count. Deterministic, so a
 resize/relayout reproduces itself.
 
 The tunables live in `P7_VERT` (`page7.js`): `corridorPx` (band), `eventMode`, `eventLine`,
-`bandPx` 60, `wideCorridorPx` 208, `fillRatio` 1, `daysPerRow` 8, `yearGapPad` 3,
-`yearRing` false, `yearSide`/`eventSide` `'center'`, `dateSide` `'with'`, `dateAbove` true,
+`bandPx` 60, `wideCorridorPx` 256, `fillRatio` 1, `daysPerRow` 8, `yearGapPad` 3,
+`yearLabelPx` 14, `yearLabelWeight` 700, `yearSideAlpha` 0.3,
+`yearRing` true, `yearSide` `'right'`, `eventSide` `'alternate'`, `dateSide` `'with'`, `dateAbove` true,
 `sideGap` 8, `card` `{ style 'plain', fill #FDFCFF, padX 16, padTop 6,
-padBottom 6, radius 4, radiusBottom 0, gap 0, stem false, bar true, barTop true, sides false, sidesAlpha 1, halfDots true, anchor 'center' }` (the headline block, see "Headlines" below) — shipped defaults are **widen mode, line off, everything centred on the line**
-(compare/ "version 1", picked 2026-09-04). The side/alternate/split placements
-(`yearSide`/`eventSide` `'left'`/`'right'`, `eventSide` `'alternate'`, `dateSide` `'left'`/`'right'`)
-are live but unused code paths kept for a later compare; the band branch stays too. Changing
+padBottom 6, radius 4, radiusBottom 0, gap 0, stem false, bar true, barTop true, sides false, sidesAlpha 1, halfDots true, anchor 'center' }` (the centred headline block), `sideCard` `{ fill #ECEBEB, radius 4, gap 8, padX 8, padTop 4, padBottom 4, type { 12 / 400 / lh 19, black } }` (the desktop side plaque — see "Headlines" below) — shipped desktop defaults are **widen mode, line off, an
+unbroken line with hollow year rings, years beside the line on the right, headline cards
+zig-zagging left/right** (after the Figma draft `327:1654`, 2026-09-06). `P7_VERT_MOBILE`
+overrides `yearSide`/`eventSide` back to `'center'`, `yearRing` false and `yearLabelWeight`
+400, so the phone keeps the centred year blocks and centred cards. The centred/split
+placements (`yearSide`/`eventSide` `'center'`, `'left'`/`'right'`, `dateSide` `'left'`/`'right'`)
+are live code paths; the band branch stays too. Changing
 one needs a relayout (`p7.lastW = 0; draw()`), which also clears `p7TargetCellCache`.
 
 **Headline placement** (review item A1/A2; `widen` is the picked default, the `band` code is
@@ -255,25 +261,26 @@ axis so the first event's label can center over its own circle).
   anim loop and snaps within 0.0005.
 - **Year ticks** are hollow ring markers (background disc punched out at
   `P7_AXIS_MARKER_RADIUS` 4, then a stroked circle) — first tick is `minDate` itself,
-  then each `YYYY-01-01`. Labels sit **below** the line
+  then each `YYYY-01-01`. On the horizontal axis labels sit **below** the line
   (`p7AxisYearLabelOffset()` — `P7_AXIS_YEAR_LABEL_OFFSET` 12 desktop,
-  `P7_AXIS_YEAR_LABEL_OFFSET_MOBILE` **5**, so the year reads as attached to its own tick),
-  faint until reached. Reachedness for rings uses the
+  `P7_AXIS_YEAR_LABEL_OFFSET_MOBILE` **5**, so the year reads as attached to its own tick);
+  on the vertical axis they sit beside it (see "Vertical axis" below). Faint until reached. Reachedness for rings uses the
   **raw** `currentDate` x, not the lagged `curX`.
-- **Headline events** — `P7_AXIS_EVENTS`, 7 entries in chronological order
-  (הצגת הרפורמה המשפטית 2023-01-04, מתקפת 7 באוקטובר 2023-10-07,
-  פסיקת בג״ץ על גיוס חרדים 2024-06-25, נפילת משטר אסד 2024-12-08,
-  מבצע ״עם כלביא״ 2025-06-13, שחרור החטופים מעזה 2025-10-13,
-  התפזרות הכנסת ה-25 2026-07-17)
+- **Headline events** — `P7_AXIS_EVENTS`, 9 entries in chronological order
+  (הכרזת הרפורמה 2023-01-04, הפיגוע בעלי 2023-06-20, ביטול עילת הסבירות
+  2023-07-24, מתקפת 7 באוקטובר 2023-10-07, מות ששת החטופים
+  2024-09-01, חידוש הלחימה בעזה 2025-03-18, מבצע ״עם כלביא״ 2025-06-13, שחרור החטופים מעזה 2025-10-13,
+  התפזרות הכנסת ה-25 2026-07-17). Since `eventSide 'alternate'` is index-based,
+  adding/removing an entry flips the side of every later event.
+  All entries
   — render as **filled dots at their true date x**, plus an optional
   per-event **`xOffset`** (screen px, − = left; via `p7AxisEventTrueX`) that nudges dot
   *and* label together purely to clear a year ring — `date` stays truthful for the
   printed date and the crossfade order, but the label's reached-test requires **both**
   the date AND the fill edge catching up to the DRAWN (xOffset-nudged) x, so a
   leftward-nudged event's label appears together with its circle rather than at its
-  raw date (only binds on − nudges; + nudges still fire on the date). Three use one:
-  the first (`-14`, to clear the "2023" anchor), נפילת משטר אסד (`+12`, breathing room from
-  its neighbours) and the last (`+26`, see below).
+  raw date (only binds on − nudges; + nudges still fire on the date). Two use one:
+  the first (`-14`, to clear the "2023" anchor) and the last (`+26`, see below).
 - **Events past `maxDate`** — an event dated after the dataset's last event (only
   התפזרות הכנסת ה-25 2026-07-17, vs `maxDate` 2026-07-03) is **clamped at both ends**:
   `p7AxisEventTrueX` clamps its x into `[P7_AXIS_MARGIN, W - P7_AXIS_MARGIN]` so it parks
@@ -378,6 +385,10 @@ axis so the first event's label can center over its own circle).
   the last one, which would otherwise stay fully typed until the wipe's clip cut it off). The
   reach test has to be skipped, not merely overridden: the exit branches force `currentDate` to
   `maxDate`, which reads as "reached" and would cancel the fade the frame after it began.
+  Suppressed earlier cards **stay shut** during this: `p7AxisEventOpacity`'s "fade back in
+  while the next event leaves" lift is frozen at its value at `p7AxisOutroStart` (every
+  `leavingAt` is set in the same instant, so otherwise that lift and the card's own fade-out
+  would cross at 0.5 and every long-hidden card half-opened before collapsing).
   On desktop the **dots shrink out with the cards** on the same clock: `p7DrawAxisEventsVertical`
   multiplies `markerRadius` by `1 − p9Ease((now − p7AxisOutroStart) / P7_AXIS_EVENT_FADE_OUT_MS)`
   while the outro runs (the half-dots on an open card shrink with it, since they share
@@ -398,22 +409,25 @@ over `totalRows × CELL`:
   same `p7AxisUpdateFillLag` damping. Reached test for a tick: `p7RowOfDate(tick) ≤ p7CurRow()`.
 - **Build-in wipe:** the intro clips to `rect(0, 0, W, topY + p7Ease(introT) × len)` — the
   axis (and its headlines) reveal downward; the reverse wipe undraws upward.
-- **The line breaks at every year boundary** (`p7RowY(p7.vert.yearRow.get(year))`) —
-  except the first year, whose 1 January is row 0, the line's top: that label sits as a
-  header **above** `topY` (its block hangs `yearGapPad` above the line's top) and the line
-  starts unbroken, so an event on the first days of the range lands on the line, not in a
-  label gap. The line alone is the time count. For every other year the break is the year block's height (21px digits, plus ring + 6 when the ring
-  is on) plus `yearGapPad` 3 above and below, **centred on the boundary**, so the digits sit
-  exactly mid-gap. The break is visual only — it eats the ends of the two neighbouring line
-  segments; time and the dot rows are continuous. Each segment is drawn unfilled first, then
-  filled up to the fill edge.
-- **Year digits** (18px, `P7_AXIS_LABEL_COLOR`, faint until reached) are centred on the line
-  in the break **by their measured ink box** (`actualBoundingBoxAscent/Descent`, alphabetic
-  baseline), not by the font's line box, on a punched `#FDFCFF` rect, with **no ring** (`yearRing` false). Ring on:
-  hollow ring at the top of the centred block with the digits `P7_VERT_YEAR_LABEL_GAP` 6
-  below it, punch from the ring's edge. `yearSide` `'left'`/`'right'` puts the digits
-  beside the line instead, vertically centred on the year row, aligned toward the line
-  (`sideGap` 8 from the ring's edge).
+- **The line is one unbroken run** (`yearSide` `'right'`): every year boundary
+  (`p7RowY(p7.vert.yearRow.get(year))`) carries a **hollow ring** (`yearRing` true —
+  background disc punched at `P7_AXIS_MARKER_RADIUS` 4, then a 1px stroke, drawn over the
+  line) centred on the boundary; the first year's ring sits on row 0 and caps the line's top
+  (`p7VertYearHeaderH()` = the ring radius, no header block). The line is drawn unfilled
+  first, then filled up to the fill edge; a ring reads reached the same way as a tick.
+- **Year digits** (`yearLabelPx` 14, `yearLabelWeight` 700) sit **beside the line on the
+  right**, vertically centred on the ring **by their measured ink box**
+  (`actualBoundingBoxAscent/Descent`, alphabetic baseline), left-aligned toward the line
+  `sideGap` 8 past the ring's edge, no punch. Reached: `rgba(0,0,0, yearSideAlpha 0.3)`;
+  unreached: `P7_AXIS_LABEL_FAINT_COLOR` 0.12. Each label reserves a `yearSpans` entry
+  `{top, bottom, side}` of `max(inkH/2, R) + 2` each way, which same-side headline cards
+  dodge. The hover marker, when its y falls inside a ring's `marks[].top..bottom`, is drawn
+  whole over the ring.
+  *Mobile / `yearSide 'center'` (kept):* the line breaks at every boundary by the year
+  block's height (21px digits, ring + 6 when on) plus `yearGapPad` 3 above and below,
+  digits centred in the break on a punched `#FDFCFF` rect, no ring; the first year's block
+  sits as a header above `topY`. The break is visual only — time and the dot rows are
+  continuous.
 - **Headlines:** dot on the line at `p7RowY(events[i].row)` (`p7DrawAxisMarker`: the bare
   coloured disc, no white halo); "reached" = its y ≤ the fill
   edge. `p7UpdateAxisEventTriggers` uses one rule for all seven on desktop:
@@ -421,7 +435,27 @@ over `totalRows × CELL`:
   open stays open on the way back up until the fill edge retreats to the *previous* event's
   `reachRow` (the first headline: its own row), then it closes and the previous one, still
   reached by the same rule, crossfades back in. While held, the dot (and so the card's split
-  half-dots) stays at full size even though the fill edge is already above it. The block — **the date line first, then the title lines**
+  half-dots) stays at full size even though the fill edge is already above it.
+  **Side cards** (desktop, `eventSide` `'alternate'`): headline `i` opens on the **left for
+  even `i`, right for odd** — a zig-zag down the axis. A side card is **not** `P7_VERT.card`
+  but its own plaque, `P7_VERT.sideCard` (after the Figma draft `327:1654`): a flat
+  `#ECEBEB` fill, all four corners at radius 4, no bars/stroke/half-dots, floating `gap`
+  8 px off the line (its near edge at `axisX ± 8`; the line and the dot stay whole and
+  uncovered, so `p7AxisEventSpans[i]` stays null and nothing is redrawn on top). It is
+  **centred vertically on the dot** (`blockH/2` above and below), pads `padX` 8 each side
+  and `padTop`/`padBottom` 4, and its copy is `sideCard.type` — 12 px / 400 / lh 19, black
+  — **centred inside the plaque** (the centred card keeps `P7_VERT.type.title` 14/500).
+  Text wraps in `p7CenterGap()/2 − gap − 2·padX − 4` (100 px at 1440). **Reveal**: the
+  label's clock (`p7AxisFadeInMs()` = `P7_VERT_CARD_OPEN_MS` 900 ms in,
+  `P7_AXIS_EVENT_FADE_OUT_MS` out) is one `p9Ease`d beat — the plaque's width grows from 0
+  at its near edge outward to its full width, text fading in clipped to the open part;
+  reverse scroll folds it back in. A side card dodges same-side year labels only, and
+  never flips off its dot: it slides by the smallest amount that clears the label (up if
+  that is shorter, else down) and **the dot follows the plaque** — `p7SideCardDy[i]` (written
+  by the label pass, applied by the dot pass one frame later) offsets the dot so the two
+  stay centred on each other (the dot is then a few px off its true date row; no current
+  event triggers this at 1440×900). *Centred card (mobile / `eventSide 'center'`, kept):*
+  the block — **the date line first, then the title lines**
   (`dateAbove` true, `bar.dateBelow` false; `p7WrapLabel`, `maxWidth` 320 in band mode, `p7CenterGap() − 16` in
   widen mode) — hangs under the dot (`P7_VERT_EVENT_TEXT_GAP` 6), centred on the axis, on
   a punched background drawn at the label's opacity; the punch runs from the dot's edge (or
@@ -442,7 +476,7 @@ over `totalRows × CELL`:
   dot is redrawn clipped to the outside of the card (`p7DrawAxisMarker` inside a clip of the
   strips just above and below the card), so only its outer half shows past the bar, and the
   far edge gets a mirrored outward half-dot in the same colour and radius (top half above the top bar,
-  bottom half below the bottom bar). **Reveal** (desktop half-dot card only): the label's
+  bottom half below the bottom bar). **Reveal** (centred half-dot card only): the label's
   fade clock (`p7AxisFadeInMs()` = `P7_VERT_CARD_OPEN_MS` 900 ms in, `P7_AXIS_EVENT_FADE_OUT_MS`
   1000 ms out) is used as raw progress for three beats instead of an alpha fade — 1. the dot
   pops (the marker's own `reachedT`, before the trigger); 2. `P7_VERT_CARD_BEATS.bar`
@@ -458,7 +492,7 @@ over `totalRows × CELL`:
   mobile keeps the `P7_AXIS_*_FONT` constants): title 500 14px, line height 19, black;
   date 400 14px, line height 19, black at 0.3, **but `showDate` is false — the block is the title alone**
   (no date line; the axis's years give the time). `gap` 0 extra px between title and date when a date is shown. With `anchor 'edge'` the dot-to-block gap would be `card.gap` plus whichever card pad faces the dot. **Default side**: a headline hangs under its dot (the card opens downward); an event
-  flagged `above: true` in `P7_AXIS_EVENTS` (נפילת משטר אסד, and התפזרות הכנסת ה-25 — the
+  flagged `above: true` in `P7_AXIS_EVENTS` (only התפזרות הכנסת ה-25 — the
   last event, parked at the axis's far end, where a downward card would open past that end)
   sits **above** its dot (bottom edge
   `P7_VERT_EVENT_TEXT_GAP` above the dot, punch from the block's top down to the dot's
@@ -466,13 +500,14 @@ over `totalRows × CELL`:
   collected while the years are drawn) the block flips to the other side of its dot; only
   if both sides collide is it pushed down to just past the year — a headline never touches
   a year. No other de-collision — the layout reserves the space.
-  *Unused alternatives (kept):* `eventSide` `'left'`/`'right'`/`'alternate'` puts the block
-  beside the line, first line centred on the dot, text aligned toward the line, wrapping in
-  half the corridor; `dateSide` `'left'`/`'right'` draws the date alone on its own side.
-  Side blocks dodge centred year labels and same-side ones only.
+  *Unused alternatives (kept):* `eventSide` `'left'`/`'right'` puts every card on one
+  side; with `card` null a side headline is bare text beside the line (first line centred
+  on the dot, `R + sideGap` from the axis); `dateSide` `'left'`/`'right'` draws the date
+  alone on its own side. Side blocks dodge centred year labels and same-side ones only.
 - **Hover:** the hovered square's date marks the axis at `p7AxisY(date, H)` in its actor
   colour; `p7.axisEventPositions` is filled with `{x: axisX, y, radius}` so the existing
-  circle hit-test works unchanged. **Two hover rules for the half-dot cards:** (1) while a
+  circle hit-test works unchanged. Side cards never cover the line, so the marker stays
+  whole and topmost beside them. **Two hover rules for the centred half-dot cards:** (1) while a
   square is hovered the roster reveal opens every reached card, and their split half-dots
   stay at the full `P7_AXIS_MARKER_RADIUS` — `prominence` adds `p7AxisRosterT` back for
   half-dot cards, so only bare (closed-card) dots shrink to the faded radius; (2) the hover
