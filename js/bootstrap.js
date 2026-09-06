@@ -59,11 +59,27 @@ Promise.all([
   // does nothing but repaint. A width change is a real rotation/breakpoint
   // crossing and still runs the whole thing.
   let lastResizeW = window.innerWidth;
+  // Trailing re-place of the DOM overlays after a mobile bar slide has SETTLED.
+  // .graphic-col is `position: fixed; inset: 0`, so canvas.clientHeight *is*
+  // innerHeight and does move with the bar — the canvas re-reads it every paint
+  // (so the vertical axis re-centres itself), but the 8 fold6 squares are DOM
+  // elements that only move when layoutGroups() runs, which the cheap path
+  // below deliberately skips. Left alone they keep the position solved for the
+  // shorter viewport, which p7VertTopY centres half the bar's height too high —
+  // the "first 8 dots sit above 2023" bug. Debounced so nothing heavy runs
+  // *during* the slide (that stall is what made the bar refuse to collapse);
+  // one layoutGroups() after it stops is imperceptible.
+  let mobileHeightSettleT = 0;
   window.addEventListener("resize", () => {
     const w = window.innerWidth;
     const widthChanged = w !== lastResizeW;
     lastResizeW = w;
-    if (isMobile() && !widthChanged) { draw(); return; }
+    if (isMobile() && !widthChanged) {
+      draw();
+      clearTimeout(mobileHeightSettleT);
+      mobileHeightSettleT = setTimeout(() => { layoutGroups(); draw(); }, 180);
+      return;
+    }
     // buildPage0AllDots() must run before layoutGroups() — it repopulates
     // PAGE0_GROUP_DOT_ANCHORS (page1.js), which updateGroups() reads for the
     // fold1->fold2 legend entrance below.

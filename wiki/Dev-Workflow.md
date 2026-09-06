@@ -12,7 +12,11 @@ browser. It rebuilds `events.json` in memory from the xlsx at startup — but do
 watch the xlsx, so spreadsheet edits need a restart.
 
 `reload.js` **self-gates to local hosts** (`localhost`, `127.0.0.1`, `[::1]`, `file://`,
-`*.local`) and returns immediately anywhere else. Only `server.py` serves `/__mtime__`, so
+`*.local`, **and the private LAN ranges `10.*` / `192.168.*` / `172.16-31.*`**) and returns
+immediately anywhere else. The LAN ranges are load-bearing for on-device testing: a phone
+hitting `http://192.168.x.x:8080` is otherwise outside the gate, the poller never runs, and
+the phone keeps showing a stale page through every edit — a symptom that reads as "the
+change didn't work". Only `server.py` serves `/__mtime__`, so
 on a deployed host every poll 404s — once per 800ms, forever, with no user action — which
 buried the deployed console's real errors under a climbing pile of identical 404s. The
 `.catch(() => {})` silences the promise rejection but **not** the browser's own
@@ -76,16 +80,24 @@ numbers in the source.
 
 ## Currently in the repo
 
-`_debug-fold-badge.js` — a bottom-left chip showing the active `@foldN` number only (same
-50%-viewport crossing as the real `IntersectionObserver`). Not a panel harness — no knobs.
-
-Everything else was removed (`_debug-glide-perf.js`, `_debug-mlegend-width.js`,
+None. `_debug-fold-badge.js` (the bottom-left `@foldN` chip) was deleted on 2026-09-06;
+everything else was removed earlier (`_debug-glide-perf.js`, `_debug-mlegend-width.js`,
 `_debug-vert-mobile.js`, `_debug-fold5.js` and the `_debug-hero-*.html` probes). The mobile
 vertical-axis `compare/`+`manual/` (`_debug-vert-mobile.js`, modes band / widen / slot with
 `P7_VERT_MOBILE` knobs) was deleted before its bake; rebuild it from the template if the
 mobile axis is picked up again. `_debug-vert-order.js` — the `compare/` panel that picked the
 mobile @fold9 vertical order (מקרא bar / axis headline / grid / docked tooltip) — was deleted
-on 2026-09-05 once that order was baked.
+on 2026-09-05 once that order was baked. `_debug-axis-len.js` — the `manual/` that picked
+`P7_VERT_SQ_BOOST` (1.08) and `TOOLTIP_DOCK_BOTTOM_PX` (0) — was deleted the same day. It
+tuned the axis length by **wrapping the writable global `p7SolveVerticalSq`** and forcing a
+re-solve with `p7.lastH = -1; p7UpdateLayout(W, H); layoutGroups(); draw()`, since
+`p7UpdateLayout` early-returns on unchanged W/H/count. `_debug-axis-geo.js` — its successor,
+which re-picked the boost (1.12) plus `TOOLTIP_DOCK_BOTTOM_PX` (−18) and
+`P7_VERT_MOBILE.slotTopPx` (78) — was deleted the same day. Its one non-obvious trick: to
+give the axis **independent** top and bottom knobs, don't wrap `p7VertTopY` and lean on its
+centring — the boosted span overflows the box, so its `Math.max(0, …)` pins the top and
+silently sends all growth downward. Recompute the centring against the *shipped* length and
+subtract the top knob, so 0/0 reproduces the shipped geometry exactly.
 
 Delete each file **and** its `<script>` tag when it is no longer wanted.
 

@@ -248,6 +248,12 @@ const P7_VERT = {
   yearLabelPx: 18,     // the year label's font size (its block height is this + 3)
   bottomInsetPx: 0,    // mobile-only: px between the box's bottom and the viewport bottom
   slotPx: 0,           // 'slot' headline mode: band height reserved under the grid
+  // 'slot' mode: fill null = bare copy on the page background; a colour = a
+  // plaque behind the block, sized to the wrapped lines. Declared as a full
+  // object rather than null because p7VertMerge only recurses into keys the BASE
+  // already holds as objects — a null here would silently swallow the mobile
+  // override.
+  slotCard: { fill: null, color: '#000000', dateColor: 'rgba(0, 0, 0, 0.3)', padX: 12, padY: 8, radius: 4 },
   slotAnchor: 'grid',  // 'slot' mode: where the line prints — 'grid' (centred in the reserved band under the grid) | 'bottom' (pinned to the viewport's bottom edge) | 'top' (pinned to the viewport's top edge)
   slotBottomPx: 0,     // 'bottom' anchor only: px from the viewport bottom to the BOTTOM of the text block
   slotTopPx: 0,        // 'top' anchor only: px from the viewport top to the TOP of the text block
@@ -351,9 +357,18 @@ const P7_VERT_MOBILE = {
   // (type.showDate is false) — just the title, on the page background.
   headline: 'slot',
   slotAnchor: 'top',
-  // 16 (FOLD6_MLEGEND_TOP_MOBILE_PX) + the bar's own 30px + one
-  // SBB_TIMELINE_MOBILE_GAP_PX. SBB_TIMELINE_MOBILE_TOP_PX continues from here.
-  slotTopPx: 64,
+  // Started as 16 (FOLD6_MLEGEND_TOP_MOBILE_PX) + the bar's own 30px + one
+  // SBB_TIMELINE_MOBILE_GAP_PX = 64, then nudged to 78 by eye (2026-09-05) for
+  // the air it wanted under the מקרא bar. SBB_TIMELINE_MOBILE_TOP_PX no longer
+  // continues from this number — the grid top was NOT moved with it, and the
+  // slot has clearance to spare, so the two are independent now.
+  slotTopPx: 78,
+  // The mobile headline is the only copy on a screen that is otherwise a field
+  // of small coloured dots, so it gets a black plaque instead of sitting bare on
+  // the page: it reads as a label of the axis rather than as body text, and it
+  // stays legible when a dense run of dots crowds up under it. Inverted type,
+  // and the date line (unused here — type.showDate is false) would invert with it.
+  slotCard: { fill: '#000000', color: '#FDFCFF', dateColor: 'rgba(253, 252, 255, 0.6)', padX: 12, padY: 8, radius: 4 },
   // maxWidth is mobile-only: 'widen' solves the corridor FROM the wrapped copy
   // (p7SolveMobileCorridor), so the wrap width is the input, not the result.
   // Desktop has no such key — it wraps to its fixed corridor instead.
@@ -434,10 +449,23 @@ function p7DayMs(dateStr) { return new Date(dateStr + "T00:00:00Z").getTime(); }
 
 function p7VertBandRows(CELL) { return Math.ceil(p7V().bandPx / CELL); }
 
+// Deliberate overshoot of the solve below, tuned by eye at 390×721 (2026-09-05).
+// The solver returns the largest square that still PACKS; the axis it produces
+// read too short against the docked tooltip, so the result is stretched 12%.
+// That intentionally breaks the solver's own fit test (the grid spills past the
+// box, so p7VertTopY's Math.max(0, …) pins row 0 at the box top and the whole
+// overshoot lands at the BOTTOM end) — which is exactly how it was tuned: the
+// top of the axis stayed put and the bottom was pulled down 16px. It is the
+// look that was picked, not a rounding artefact. Don't "fix" it back to 1.
+// MOBILE ONLY — desktop shares this solver and was not part of that tuning.
+const P7_VERT_SQ_BOOST = 1.12;
+function p7VertSqBoost() { return isMobile() ? P7_VERT_SQ_BOOST : 1; }
+
 // Largest square (≤ P7_SQ, the mobile-style solve) whose grid holds the
 // busier camp once each day's events must sit in that day's rows: a date-
 // driven layout cannot pack as tightly as the old free permutation, and band
 // mode gives whole rows away to the headlines. 6% slack for the jitter spill.
+// The winner is scaled by P7_VERT_SQ_BOOST on the way out.
 function p7SolveVerticalSq(sideW, sideH, maxEvents) {
   const gapRatio = p7GapRatio();
   const bands = p7V().eventMode === "band" ? P7_AXIS_EVENTS.length : 0;
@@ -450,9 +478,9 @@ function p7SolveVerticalSq(sideW, sideH, maxEvents) {
     // Every fixed-span row, plus the first year's header label above row 0,
     // must fit the box (so p7VertTopY can centre the axis in it).
     if (sideH < p7VertRowPlan(CELL).totalRows * CELL + p7VertYearHeaderH()) continue;
-    if (avail * cap >= maxEvents * 1.06) return Math.round(sq * 100) / 100;
+    if (avail * cap >= maxEvents * 1.06) return Math.round(sq * p7VertSqBoost() * 100) / 100;
   }
-  return sqMin;
+  return Math.round(sqMin * p7VertSqBoost() * 100) / 100;
 }
 
 function p7BuildVerticalLayout(rows, cols, CELL) {
@@ -1830,7 +1858,10 @@ const P7_AXIS_EVENTS = [
   { date: "2025-10-13", label: "שחרור החטופים מעזה", maxWidth: null },
   // Past maxDate (2026-07-03) — parks at the axis's left end (see the clamp in
   // p7AxisEventTrueX); the +26 holds it clear of that end rather than flush to it.
-  { date: "2026-07-17", label: "התפזרות הכנסת ה-25", maxWidth: null, xOffset: 26 },
+  // `above` because it's the LAST event: parked at the axis's far end, a
+  // downward card would open into (and past) that end with nothing below it
+  // to hold it. Opening upward keeps the whole card on the axis.
+  { date: "2026-07-17", label: "התפזרות הכנסת ה-25", maxWidth: null, xOffset: 26, above: true },
 ];
 
 // Fixed real-time (wall-clock) fade durations — these only govern the crossfade
@@ -3175,10 +3206,31 @@ function p7DrawVertHeadlineSlot(ctx, W, H, now) {
   ctx.globalAlpha = bestOp;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  ctx.fillStyle = TY.title.color;
+  // V.slotCard (mobile): a black plaque behind the copy so the headline reads as
+  // a label of its own rather than page text that happens to sit above the grid.
+  // Sized to the WRAPPED lines, not to slotPx, and centred on the same W/2 the
+  // text uses — so a one-line and a three-line headline both stay centred and the
+  // card only ever grows downward from `ty`. Drawn inside the same globalAlpha,
+  // so card and text crossfade as one when the headline swaps.
+  const SC = V.slotCard && V.slotCard.fill ? V.slotCard : null;
+  if (SC) {
+    let tw = 0;
+    lines.forEach(t => { tw = Math.max(tw, ctx.measureText(t).width); });
+    if (TY.showDate) {
+      ctx.font = p7VertFont(TY.date);
+      tw = Math.max(tw, ctx.measureText(p7FormatDateDMY(ev.date, ".")).width);
+      ctx.font = p7VertFont(TY.title);
+    }
+    const cw = Math.round(tw) + SC.padX * 2, ch = blockH + SC.padY * 2;
+    const cx = Math.round(W / 2 - cw / 2), cy = Math.round(ty - SC.padY);
+    ctx.fillStyle = SC.fill;
+    ctx.beginPath(); ctx.roundRect(cx, cy, cw, ch, Math.min(SC.radius, cw / 2, ch / 2)); ctx.fill();
+  }
+  ctx.fillStyle = SC ? SC.color : TY.title.color;
   lines.forEach(t => { p7VertLineText(ctx, t, W / 2, ty, TY.title.lh); ty += TY.title.lh; });
   if (TY.showDate) {
-    ctx.font = p7VertFont(TY.date); ctx.fillStyle = TY.date.color;
+    ctx.font = p7VertFont(TY.date);
+    ctx.fillStyle = SC ? SC.dateColor : TY.date.color;
     p7VertLineText(ctx, p7FormatDateDMY(ev.date, "."), W / 2, ty + TY.gap, TY.date.lh);
   }
   ctx.globalAlpha = 1;
