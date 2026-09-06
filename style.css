@@ -1886,7 +1886,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    card, #page-13). Both share the .page12-sticky-center wrapper below, but
    only @fold14 actually pins with it — see the override under #page-11. */
 #page-11 {
-  /* 125vh: 100vh to bring the card up to rest flush at the top, then a
+  /* Was 125vh: 100vh to bring the card up to rest flush at the top, then a
      quarter viewport of empty run before the next card starts rising. @fold14 (the outro) is a near-full-height
      outro card, not a one-line title, so at the house 100vh its top edge was
      already climbing into view while this card still sat mid-screen — "too
@@ -1895,10 +1895,24 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      static for this fold. Left sticky, the same 150vh would pin the card dead
      centre for that quarter viewport instead of scrolling it away — which is
      exactly how a 200vh attempt read as "stuck". Height here is spacing only
-     while the wrapper is static; sticky turns it into hold time. */
-  min-height: 125vh;
+     while the wrapper is static; sticky turns it into hold time.
+     2026-09-06: 45vh now that @fold13 (the share title block, #page-12)
+     follows instead of the tall outro — the share card should read as a
+     footnote right under this one, so it sits 45vh below the card's top
+     (the fade/gate/freeze all measure offsetTop, not this height). */
+  min-height: 45vh;
   display: block;
   padding: 0;
+}
+
+/* @fold13 (#page-12, the share block): top-aligned like @fold12's card so it
+   trails it at a fixed distance, and 80vh tall so the outro (#page-13) still
+   starts 125vh after #page-11 — the spot where it stopped rising into view
+   while the closing card was mid-screen. */
+#page-12 {
+  min-height: 80vh;
+  align-items: flex-start;
+  padding-top: 0;
 }
 
 /* Dead-scroll trim between @fold11 and @fold12: @fold12 waits directly under
@@ -1913,9 +1927,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    that rise. Any padding-top here re-opens the gap by its own height — that's
    what the old 25vh did, and centring the card in its 100vh wrapper (the old
    mobile geometry) opened half a viewport the same way.
-   Paired with 125vh on the section: the card needs 100vh to arrive, the
-   remaining 25vh is trailing run so @fold14's tall outro card doesn't rise
-   into view on top of this one. On a phone the fixed מקרא bar and the docked
+   The section is 45vh (see #page-11 above); the share card follows 45vh under
+   this card's top, and the outro is kept 125vh away by #page-12's height. On a phone the fixed מקרא bar and the docked
    event frame sit at the top edge where the card lands, but both are on
    fold13ScrollT's fade (updateFold13, js/fold11.js) and are gone by arrival. */
 #page-11 .page12-sticky-center {
