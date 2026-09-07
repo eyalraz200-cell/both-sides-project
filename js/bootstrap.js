@@ -29,7 +29,9 @@ Promise.all([
   page9UpdateFromScroll();
   updateFold13();
   p12ShareInit();
+  p12MapPrefetchCheck();      // @fold13's map data (map.js) — lazy fetch, two viewports ahead
   p12CardWidthFit();
+  p12SpacingFit();            // #page-11's height = 50vh + half its card (house rhythm, page12.js)
   // The sections are vh-sized, so a window resize changes the document's total
   // height — but the browser keeps the raw pixel scrollY, which lands the reader
   // at a *different point in the narrative* (titles visibly slide up/down as the

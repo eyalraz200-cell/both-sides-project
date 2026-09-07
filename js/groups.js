@@ -118,13 +118,13 @@ function fold2RowPitchPx() {
 // center (Figma: block centers at x=590 and x=913 about the frame's own 756).
 // Symmetric on purpose — Figma's own two blocks are within ~5px of symmetric,
 // and at @fold2 neither block carries a label to unbalance it.
-// 180, not Figma's measured 160 — widened by eye with the `manual/` @fold3
-// harness on 2026-09-04. @fold3's rows trail a LABEL out of each column, which
-// @fold2's bare rect blocks don't, so the Figma gap that reads right at @fold2
-// let the two camps' label runs close on each other at @fold3. One constant
-// anchors both folds (and the camp headers) on purpose, so this is the value
-// that has to satisfy the tighter of the two.
-const FOLD2_CAMP_CENTER_GAP_PX = 180;
+// 162, not Figma's measured 160 — picked by eye with the `manual/` camp-gap
+// harness on 2026-09-07 (it had been widened to 180 by an earlier @fold3 harness
+// on 2026-09-04). @fold3's rows trail a LABEL out of each column, which @fold2's
+// bare rect blocks don't, so this value has to clear the tighter of the two: the
+// two camps' label runs must not close on each other at @fold3. One constant
+// anchors both folds (and the camp headers) on purpose.
+const FOLD2_CAMP_CENTER_GAP_PX = 162;
 // Live gap for a given viewport width. Desktop keeps the Figma-measured 160px
 // flat; on mobile (isMobile, js/core.js) the flat 160 would need ~500-600px of
 // width, so the two blocks are instead set to a fixed 90px of VISIBLE space
@@ -972,6 +972,9 @@ const p9TooltipDropTrigger = makeTrigger(P9_TOOLTIP_DROP_MS, () => {
 });
 
 const fold13Trigger           = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateFold13(...a));
+// @fold13's map build (map.js): outlines wipe on, the extreme dots fly from
+// @fold12's spread onto the map, the legit dots pop in. Own tempo — FOLD_MAP_MS.
+const foldMapTrigger          = makeTrigger(FOLD_MAP_MS, p12MapTick);
 let   fold13MorphStarted      = false;
 
 // Watches one title card's top edge for crossing H*frac, firing trigger
@@ -1159,9 +1162,11 @@ const checkFold9Fly = watchCardThreshold(page7TitleCardEl, 0, fold9FlyTrigger);
 // > Previously watched fold13OutroStickyEl (@fold13's wrapper) at the same
 // > frac. Don't restore that without also un-compressing the fade.
 const checkFold13 = watchCardThreshold(page12StickyEl, 0.5, fold13Trigger);
+// The map build fires on @fold13's own share card — the house 0.5 crossing.
+const checkFoldMap = watchCardThreshold(document.querySelector('#page-12 .page12-share-card'), 0.5, foldMapTrigger);
 
 function checkGroupTriggers() {
-  checkFold2(); checkFold3(); checkFold6(); checkSquaresReveal(); checkAcledNote(); checkNoteUntype(); checkFold7Label(); checkFold8SquareDim(); checkFold8Tooltip(); checkFold9(); checkFold9Fly(); checkFold13();
+  checkFold2(); checkFold3(); checkFold6(); checkSquaresReveal(); checkAcledNote(); checkNoteUntype(); checkFold7Label(); checkFold8SquareDim(); checkFold8Tooltip(); checkFold9(); checkFold9Fly(); checkFold13(); checkFoldMap();
 }
 
 // Default (camp-column) swatch size + the swatch-to-label gap

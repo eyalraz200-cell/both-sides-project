@@ -643,7 +643,9 @@ function p7VertYearHeaderH() {
   const ring = p7V().yearRing;
   // Years beside the line: the first year's ring sits ON the line's top end,
   // so only its upper half pokes above topY — no header block at all.
-  if (p7V().yearSide !== 'center') return ring ? P7_AXIS_MARKER_RADIUS : 0;
+  // (Raised by P7_VERT_FIRST_YEAR_RAISE_PX so the first event's dot, days
+  // after 1 January, doesn't sit on the ring.)
+  if (p7V().yearSide !== 'center') return (ring ? P7_AXIS_MARKER_RADIUS : 0) + P7_VERT_FIRST_YEAR_RAISE_PX;
   return (ring ? P7_AXIS_MARKER_RADIUS * 2 + P7_VERT_YEAR_LABEL_GAP : 0) + (p7V().yearLabelPx + 3) + p7V().yearGapPad * 2;
 }
 function p7VertTopY(H) {
@@ -1808,13 +1810,13 @@ const P7_AXIS_LABEL_COLOR       = "rgba(0, 0, 0, 0.65)";
 const P7_AXIS_INTRO_DURATION = 2800; // ms — full right-edge-to-left-edge wipe
 // Reverse wipe when the trigger un-fires (scrolling back up past the fly
 // trigger) and when @fold10's bridge glide starts: the same wipe plays
-// backwards, at the SAME SPEED as the build-in (explicit instruction) — at the
-// old 500ms the axis snapped away the moment @fold10's title block hit, which
-// read as a glitch rather than as the axis undrawing. Tied to the intro rather
-// than restated, so the two can't drift apart. This is the FULL-wipe time; an
+// backwards, but FASTER than the build-in — its own constant, tuned by eye on
+// a harness. 500ms snapped away the moment @fold10's title block hit and read
+// as a glitch; the intro's full 2800 was the other extreme, the axis still
+// undrawing well into the bridge glide. This is the FULL-wipe time; an
 // interrupted intro reverses over only its remaining distance (duration scaled
 // by how far it had got), per convention.
-const P7_AXIS_OUTRO_DURATION = P7_AXIS_INTRO_DURATION; // ms — full left-edge-back-to-right-edge un-wipe
+const P7_AXIS_OUTRO_DURATION = 1500; // ms — full left-edge-back-to-right-edge un-wipe
 let p7AxisIntroStart = null;
 let p7AxisOutroStart = null; // non-null while the reverse wipe is running
 let p7AxisOutroFromT = 0;    // introT captured at the moment the reverse began
@@ -1871,23 +1873,35 @@ function p7AxisYearTicks() {
 // two neighbouring events from colliding, since the de-collision pass below can
 // only slide labels sideways within a fixed axis width. `null` = no cap, draw
 // on one line. Tuned by eye per event, so they're hand-set numbers, not derived.
+// `desc` is the description that types into the plaque on hover (desktop side
+// plaques only — see P7_AXIS_DESC_* below); the source's trailing «מקור» is
+// deliberately omitted.
 const P7_AXIS_EVENTS = [
   // Nudged left to clear the "2023" year ring — 04.01 sits only 3 days from
   // minDate, so at its true x its dot all but touches the axis's right anchor.
-  { date: "2023-01-04", label: "הכרזת הרפורמה", maxWidth: null, xOffset: -14 },
-  { date: "2023-06-20", label: "הפיגוע בעלי", maxWidth: null },
-  { date: "2023-07-24", label: "ביטול עילת הסבירות", maxWidth: null },
-  { date: "2023-10-07", label: "מתקפת 7 באוקטובר", maxWidth: null },
-  { date: "2024-09-01", label: "מות ששת החטופים", maxWidth: null },
-  { date: "2025-03-18", label: "חידוש הלחימה בעזה", maxWidth: null },
-  { date: "2025-06-13", label: "מבצע ״עם כלביא״", maxWidth: null },
-  { date: "2025-10-13", label: "שחרור החטופים מעזה", maxWidth: null },
+  { date: "2023-01-04", label: "הכרזת הרפורמה", maxWidth: null, xOffset: -14,
+    desc: "הצגת תוכניתו של שר המשפטים יריב לוין לשינויים במערכת המשפט." },
+  { date: "2023-06-20", label: "הפיגוע בעלי", maxWidth: null,
+    desc: "פיגוע ירי סמוך ליישוב עלי, שבו נהרגו ארבעה ישראלים." },
+  { date: "2023-07-24", label: "ביטול עילת הסבירות", maxWidth: null,
+    desc: "אישור התיקון שמנע ביקורת שיפוטית על סבירות החלטות הממשלה והשרים." },
+  { date: "2023-10-07", label: "מתקפת 7 באוקטובר", maxWidth: null,
+    desc: "מתקפה בהובלת חמאס על יישובים ובסיסים בדרום ישראל, שכללה הרג וחטיפת אזרחים ואנשי ביטחון." },
+  { date: "2024-09-01", label: "מות ששת החטופים", maxWidth: null,
+    desc: "הודעת צה״ל על חילוץ גופותיהם של שישה חטופים שנרצחו בשבי ברפיח." },
+  { date: "2025-03-18", label: "חידוש הלחימה בעזה", maxWidth: null,
+    desc: "חידוש התקיפות הישראליות הנרחבות בעזה לאחר כחודשיים של הפסקת אש." },
+  { date: "2025-06-13", label: "מבצע ״עם כלביא״", maxWidth: null,
+    desc: "פתיחת המבצע הישראלי נגד מטרות גרעין וצבא באיראן, ובעקבותיו ירי איראני לעבר ישראל." },
+  { date: "2025-10-13", label: "שחרור החטופים מעזה", maxWidth: null,
+    desc: "שחרור עשרים החטופים החיים שנותרו בעזה במסגרת הסכם הפסקת אש." },
   // Past maxDate (2026-07-03) — parks at the axis's left end (see the clamp in
   // p7AxisEventTrueX); the +26 holds it clear of that end rather than flush to it.
   // `above` because it's the LAST event: parked at the axis's far end, a
   // downward card would open into (and past) that end with nothing below it
   // to hold it. Opening upward keeps the whole card on the axis.
-  { date: "2026-07-17", label: "התפזרות הכנסת ה-25", maxWidth: null, xOffset: 26, above: true },
+  { date: "2026-07-17", label: "התפזרות הכנסת ה-25", maxWidth: null, xOffset: 26, above: true,
+    desc: "אישור התפזרות הכנסת לקראת הבחירות באוקטובר." },
 ];
 
 // Fixed real-time (wall-clock) fade durations — these only govern the crossfade
@@ -1987,7 +2001,27 @@ function p7AxisEventMaxWidth(ev) {
 // frame while its label was still fading — position never snaps, and neither
 // should a dot's presence. Same lerp speed as hoverT so the axis has one tempo.
 const P7_AXIS_HOVER_ANIM_SPEED = 0.18; // per-frame lerp toward the hover target
-const P7_AXIS_EVENT_STATE = P7_AXIS_EVENTS.map(() => ({ triggeredAt: null, leavingAt: null, hoverT: 0, reachedT: 0 }));
+// descT (raw 0 → 1, linear in time) is the hover-description reveal of a desktop
+// side plaque: it advances toward 1 while the plaque (dot or card) is hovered
+// AND the event is on the roster (reached, not leaving), and retreats otherwise
+// — a fixed-tempo, reversible-mid-flight beat like the ACLED note's hover
+// (FOLD6_NOTE_HOVER_MS) rather than the per-frame lerp hoverT uses, so the
+// card-open and typing beats below can slice it into windows.
+const P7_AXIS_EVENT_STATE = P7_AXIS_EVENTS.map(() => ({ triggeredAt: null, leavingAt: null, hoverT: 0, reachedT: 0, descT: 0, othersT: 0 }));
+
+// Hover description (desktop side plaques). Same shape as the ACLED note: the
+// card opens first, then the description types in over the rest; a hard
+// opacity gate, no fade. Beats slice the RAW descT and re-ease per window.
+const P7_AXIS_DESC_MS = 700;                                          // = FOLD6_NOTE_HOVER_MS
+const P7_AXIS_DESC_BEATS = { open: { start: 0, len: 0.3 }, type: { start: 0.3, len: 0.7 } };
+// The card keeps the plaque's wrap width and only grows taller ("keep" won the
+// compare/ over widening outward over the grid, 2026-09-07).
+const P7_AXIS_DESC_GAP = 2;                                           // title block → description
+const P7_AXIS_DESC_TYPE = { size: 12, weight: 400, lh: 17, color: 'rgba(0, 0, 0, 0.75)' };
+// While one plaque is hovered every OTHER open plaque folds back into its near
+// edge — the reveal played backwards, dots untouched (compare/ pick over dimming
+// them, 2026-09-07). Driven by othersT, reversible at P7_AXIS_DESC_MS.
+let p7AxisDescLastNow = null;                                          // dt source for descT
 
 // Eased 0 → 1 amount of the "roster" state: 1 while a regular timeline square is
 // hovered, decaying back to 0 when it is not. ONE shared value rather than a
@@ -2009,6 +2043,9 @@ function p7AxisEventsAnimActive() {
     return Math.abs(state.hoverT - target) > 0.001;
   });
   if (hoverAnimating) return true;
+  // A description still opening or closing (descT off its target).
+  if (P7_AXIS_EVENT_STATE.some((state, i) => Math.abs(state.descT - (p7AxisDescTarget(i) ? 1 : 0)) > 0.0001)) return true;
+  if (P7_AXIS_EVENT_STATE.some((state, i) => Math.abs(state.othersT - (p7AxisOthersTarget(i) ? 1 : 0)) > 0.0001)) return true;
   // A circle still growing in or shrinking out (p7DrawAxisEvents' reachedT)
   // outlives its label's fade in the scroll-back case, so it needs its own check.
   const markerAnimating = P7_AXIS_EVENT_STATE.some((state) => state.reachedT > 0.001 && state.reachedT < 0.999);
@@ -2020,10 +2057,25 @@ function p7AxisEventsAnimActive() {
   return P7_AXIS_EVENT_STATE.some((state, i) => {
     if (state.triggeredAt === null) return false;
     if (now - state.triggeredAt < p7AxisFadeInMs()) return true;
-    if (state.leavingAt !== null && now - state.leavingAt < P7_AXIS_EVENT_FADE_OUT_MS) return true;
-    const next = P7_AXIS_EVENT_STATE[i + 1];
-    return !!next && next.triggeredAt !== null && now - next.triggeredAt < P7_AXIS_EVENT_FADE_OUT_MS;
+    return state.leavingAt !== null && now - state.leavingAt < P7_AXIS_EVENT_FADE_OUT_MS;
   });
+}
+
+// True while event i's description should be open: its plaque (dot or card) is
+// hovered and it is on the roster (reached, not leaving). Desktop only — the
+// mobile slot has no hover layer.
+function p7AxisDescTarget(i) {
+  const st = P7_AXIS_EVENT_STATE[i];
+  return !isMobile() && p7.hoveredAxisEvent === P7_AXIS_EVENTS[i] && st.triggeredAt !== null && st.leavingAt === null;
+}
+
+// True while event i should react as a "bystander": some OTHER reached event
+// is hovered (its description is opening) and i is on the roster itself.
+function p7AxisOthersTarget(i) {
+  if (p7AxisDescTarget(i)) return false;
+  const st = P7_AXIS_EVENT_STATE[i];
+  if (st.triggeredAt === null || st.leavingAt !== null) return false;
+  return P7_AXIS_EVENTS.some((_, j) => j !== i && p7AxisDescTarget(j));
 }
 
 // Computes where event `ev`'s label actually renders — its tick's own x
@@ -2186,10 +2238,9 @@ function p7UpdateAxisEventTriggers(W) {
   });
 }
 
-// Fades in on its own trigger, then holds at full opacity indefinitely — until
-// either the next event triggers (fading this one out on *that* event's clock,
-// a crossfade) or the user scrolls back above this event's own date (fading it
-// out on its own clock instead, via leavingAt).
+// Fades in on its own trigger, then holds at full opacity indefinitely — a
+// passed event STAYS (reaching the next one never fades it) until the user
+// scrolls back above this event's own date (leavingAt) or the axis undraws.
 function p7AxisEventOpacity(i, now) {
   const state = P7_AXIS_EVENT_STATE[i];
   if (state.triggeredAt === null) return 0;
@@ -2197,31 +2248,6 @@ function p7AxisEventOpacity(i, now) {
   if (state.leavingAt !== null) {
     const fadeOut = 1 - (now - state.leavingAt) / P7_AXIS_EVENT_FADE_OUT_MS;
     opacity = Math.min(opacity, Math.max(0, fadeOut));
-  }
-  const next = P7_AXIS_EVENT_STATE[i + 1];
-  if (next && next.triggeredAt !== null) {
-    let cap;
-    if (next.leavingAt !== null) {
-      // The next event is itself now reversing out (scrolled back above its
-      // own date) — let this (earlier) event fade back IN in lockstep with
-      // next's own leavingAt fade-out, over the same P7_AXIS_EVENT_FADE_OUT_MS
-      // clock, instead of staying suppressed by next's old triggeredAt-based
-      // timer (irrelevant now — that was from whenever next was first
-      // reached, possibly long ago) which previously kept this event pinned
-      // at opacity 0 for the entire time next was fading out, then made it
-      // pop in at full opacity the instant next's fade finished.
-      // …except while the axis is UNDRAWING: the outro sets every event's
-      // leavingAt in the same instant, so this lift (0→1) and this event's own
-      // fade-out (1→0) would run on the same clock and cross at 0.5 — every
-      // long-suppressed card half-opened (the vertical card's beats are driven
-      // by this opacity) before collapsing. Freeze the lift at whatever it was
-      // when the outro began: a card that was suppressed stays shut.
-      const lift = Math.min(now, p7AxisOutroStart ?? now);
-      cap = Math.min(1, Math.max(0, (lift - next.leavingAt) / P7_AXIS_EVENT_FADE_OUT_MS));
-    } else {
-      cap = 1 - (now - next.triggeredAt) / P7_AXIS_EVENT_FADE_OUT_MS;
-    }
-    opacity = Math.min(opacity, Math.max(0, cap));
   }
   return opacity;
 }
@@ -2624,6 +2650,11 @@ function p7DrawYearAxis(ctx, W, H) {
 const P7_VERT_EVENT_LINE_ALPHA  = 0.18; // A2 rule across the camps
 const P7_VERT_EVENT_TEXT_GAP    = 6;    // px between the dot's edge and the title's first line
 const P7_VERT_YEAR_LABEL_GAP    = 6;    // px between a year ring and its label
+// Years beside the line only: the FIRST year's ring (and digits) sit this many
+// px ABOVE the line's top (row 0) instead of on it, and the line extends up to
+// the ring. The first headline event (2023-01-04) lands 3 days — a fraction of
+// a row — under row 0, so a ring ON the top end collided with its dot.
+const P7_VERT_FIRST_YEAR_RAISE_PX = 14;
 const P7_AXIS_DOT_CATCHUP_PX    = 80;   // px of axis over which the fill edge, having skipped a headline circle/card, eases back into step with the true edge
 // Per headline event, the axis span its circle currently occupies — the dot
 // alone (±R) while closed, the whole open card while the circle has opened
@@ -2680,7 +2711,7 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   const marks  = ticks.filter(t => v.yearRow.has(t.year)).map(t => {
     const row = v.yearRow.get(t.year);
     if (sideYears) {
-      const yc = axisQ(p7RowY(row, H));
+      const yc = axisQ(p7RowY(row, H) - (row === 0 ? P7_VERT_FIRST_YEAR_RAISE_PX : 0));
       return { tick: t, row, yc, top: yc - R, bottom: yc + R };
     }
     // The first year (its 1 January is row 0, the line's top) sits as a header
@@ -2695,7 +2726,8 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   // breaks (one unbroken run when the years sit beside the line).
   const lineLeft = axisX - P7_AXIS_LINE_THICKNESS / 2;
   const segs = [];
-  let segTop = topY;
+  // Side years: one unbroken run, starting at the raised first ring's centre.
+  let segTop = sideYears && marks.length && marks[0].row === 0 ? marks[0].yc : topY;
   if (!sideYears) marks.forEach(m => {
     if (m.top > segTop) segs.push([segTop, m.top]);
     segTop = Math.max(segTop, m.bottom);
@@ -2958,7 +2990,18 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
   for (let i = 0; i < p7AxisEventSpans.length; i++) p7AxisEventSpans[i] = null;
 
   p7.axisEventPositions = new Map();
+  p7.axisCardRects = new Map();   // side plaque rects for the hover hit-test (p7HoverInit)
   const hoveredAxisEvent = p7.hoveredAxisEvent;
+  // descT advances at a fixed tempo on wall-clock dt (capped so a stalled
+  // tab doesn't jump), toward 1 while the description should be open.
+  const descDt = Math.min(50, now - (p7AxisDescLastNow ?? now));
+  p7AxisDescLastNow = now;
+  P7_AXIS_EVENT_STATE.forEach((st, i) => {
+    const dir = p7AxisDescTarget(i) ? 1 : -1;
+    st.descT = Math.min(1, Math.max(0, st.descT + dir * descDt / P7_AXIS_DESC_MS));
+    const odir = p7AxisOthersTarget(i) ? 1 : -1;
+    st.othersT = Math.min(1, Math.max(0, st.othersT + odir * descDt / P7_AXIS_DESC_MS));
+  });
   const rosterTarget = hoverActive ? 1 : 0;
   p7AxisRosterT += (rosterTarget - p7AxisRosterT) * P7_AXIS_HOVER_ANIM_SPEED;
   if (Math.abs(rosterTarget - p7AxisRosterT) < 0.001) p7AxisRosterT = rosterTarget;
@@ -3024,7 +3067,12 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
   // Labels: title lines then the date, hanging under the dot, centred on the
   // line. The block's background is punched so the line (and, in widen mode,
   // any stray dot) doesn't run through the text.
-  P7_AXIS_EVENTS.forEach((ev, i) => {
+  // A plaque with an open (or opening/closing) description is drawn LAST so it
+  // overlays its neighbours instead of being painted under them.
+  const labelOrder = P7_AXIS_EVENTS.map((_, i) => i)
+    .sort((a, b) => (P7_AXIS_EVENT_STATE[a].descT > 0) - (P7_AXIS_EVENT_STATE[b].descT > 0));
+  labelOrder.forEach((i) => {
+    const ev = P7_AXIS_EVENTS[i];
     const st = P7_AXIS_EVENT_STATE[i];
     const rosterOn = st.triggeredAt !== null && st.leavingAt === null;
     const opacity = Math.max(p7AxisEventOpacity(i, now), st.hoverT, rosterOn ? p7AxisRosterT : 0);
@@ -3140,14 +3188,66 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
       // edge travels) and the copy fades in clipped to the open part;
       // reversing plays it back. The line and the dot are never covered, so no
       // span is registered and the fill runs past it untouched.
-      const openT = p9Ease(Math.min(1, Math.max(0, opacity)));
+      // Bystander fold: while another event is hovered this plaque plays its
+      // reveal backwards into its near edge (othersT). Position never moves,
+      // and the dot is drawn outside this branch so it stays put.
+      const foldMul = 1 - p9Ease(st.othersT);
+      const openT = p9Ease(Math.min(1, Math.max(0, opacity))) * foldMul;
       const cwF = cpx + tw + cpx, chF = blockH + cpt + cpb, cyF = y0 - cpt;
       const near = axisX + evDirI * SC.gap;
-      const cwA = cwF * openT;
+      // Hover description (P7_AXIS_DESC_*): the plaque grows from its closed
+      // size to hold `desc`, then the copy types in. Windows re-ease the RAW
+      // descT so reversing plays the same beats backwards. The near edge never
+      // moves; growth is downward at the plaque's wrap width — unless the
+      // grown card would run off the canvas bottom, then it grows upward and
+      // the description sits above the title instead.
+      const dwin = (w) => p9Ease(Math.min(1, Math.max(0, (st.descT - w.start) / w.len)));
+      const DT = P7_AXIS_DESC_TYPE;
+      const descWrap = maxWidth;
+      ctx.font = p7VertFont(DT);
+      const descLines = ev.desc && st.descT > 0 ? p7WrapLabel(ctx, ev.desc, descWrap) : [];
+      const descH = descLines.length ? P7_AXIS_DESC_GAP + descLines.length * DT.lh : 0;
+      const descW = descLines.length ? Math.max(...descLines.map(t => ctx.measureText(t).width)) : 0;
+      const cwD = descLines.length ? Math.max(cwF, Math.min(descWrap, descW) + 2 * cpx) : cwF;
+      const openRaw = Math.min(1, Math.max(0, (st.descT - P7_AXIS_DESC_BEATS.open.start) / P7_AXIS_DESC_BEATS.open.len));
+      // Height and (the small wrap-driven) width grow together.
+      const hT = p9Ease(openRaw);
+      const wT = hT;
+      const growUp = cyF + chF + descH > H - 8;
+      const cwA = cwF * openT + (cwD - cwF) * wT;
+      const chA = chF + descH * hT;
+      const cyA = growUp ? cyF - descH * hT : cyF;
       const cxA = evDirI > 0 ? near : near - cwA;
       ctx.globalAlpha = 1;
-      if (cwA > 0) p7DrawHeadlineCard(ctx, SC, cxA, cyF, cwA, chF);
-      textClip = { x: cxA, y: cyF, w: cwA, h: chF, alpha: openT };
+      if (cwA > 0) p7DrawHeadlineCard(ctx, SC, cxA, cyA, cwA, chA);
+      if (cwA > 0) p7.axisCardRects.set(ev, { x: cxA, y: cyA, w: cwA, h: chA });
+      textClip = { x: cxA, y: cyA, w: cwA, h: chA, alpha: openT };
+      // Typing beat: a prefix of the wrapped copy, right-aligned (RTL) inside
+      // the card's pad, clipped to the open card. Hard 0/1 gate, no fade.
+      const typeT = dwin(P7_AXIS_DESC_BEATS.type);
+      if (typeT > 0 && descLines.length) {
+        const total = descLines.reduce((n, t) => n + t.length, 0);
+        let left = Math.round(typeT * total);
+        ctx.save();
+        ctx.beginPath(); ctx.rect(cxA, cyA, cwA, chA); ctx.clip();
+        // RTL paragraph direction so a trailing «.» lands at the END of the
+        // Hebrew run (its left), not flung to the right like in an LTR context.
+        ctx.direction = 'rtl';
+        // Right-side plaques sit flush to their axis-side (left) edge; the
+        // left-side ones stay right-aligned (compare/ pick, 2026-09-07).
+        const alignLeft = evDirI > 0;
+        ctx.textAlign = alignLeft ? 'left' : 'right';
+        ctx.fillStyle = DT.color;
+        const dx = alignLeft ? cxA + cpx : cxA + cwA - cpx;
+        const dy0 = growUp ? cyA + cpt : y0 + blockH + P7_AXIS_DESC_GAP;
+        descLines.forEach((t, li) => {
+          if (left <= 0) return;
+          const part = t.slice(0, left); left -= t.length;
+          p7VertLineText(ctx, part, dx, dy0 + li * DT.lh, DT.lh);
+        });
+        ctx.restore();
+      }
+      ctx.font = p7VertFont(titleType);
     } else if (onSide) {
       ctx.fillRect(evDirI > 0 ? tx - 3 : tx - tw - 3, y0 - 2, tw + 6, blockH + 4);
     } else if (card) {
@@ -3388,6 +3488,15 @@ function p7HoverInit() {
       const dx = mx - pos.x, dy = my - pos.y;
       const r = pos.radius + AXIS_HIT_PAD;
       if (dx * dx + dy * dy <= r * r) { hit = ev; break; }
+    }
+    // Side plaques (desktop): the card itself is a hover target too, so the
+    // description (P7_AXIS_DESC_*) opens from the card and stays open while the
+    // pointer is anywhere on the grown card. Rects are the last frame's.
+    if (!hit && p7.axisCardRects) {
+      for (const [ev, r] of p7.axisCardRects) {
+        if (mx >= r.x - AXIS_HIT_PAD && mx <= r.x + r.w + AXIS_HIT_PAD &&
+            my >= r.y - AXIS_HIT_PAD && my <= r.y + r.h + AXIS_HIT_PAD) { hit = ev; break; }
+      }
     }
     setAxisHover(hit);
   }
