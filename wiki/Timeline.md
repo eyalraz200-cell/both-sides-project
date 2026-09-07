@@ -523,7 +523,7 @@ over `totalRows × CELL`:
   the Hebrew run) in `P7_AXIS_DESC_TYPE` (400 12px, line height 17, black at 0.75). Copy is
   flush to each card's **axis-side** edge — left-aligned on right-side plaques, right-aligned
   on left-side ones (`compare/` pick, 2026-09-07; right-aligning both sides was rejected).
-  `P7_AXIS_DESC_GAP` 6 under the title, clipped to the card. The card's
+  `P7_AXIS_DESC_GAP` 2 under the title, clipped to the card. That is a *line-box* gap — `p7VertLineText` centres each line in its `lh`, so the visible white is 2 plus the title's and the description's facing half-leading bands (tuned by eye on a harness; 6 read as too loose). The card's
   **near edge never moves**: it keeps the plaque's wrap width (`maxWidth`) and grows downward — unless the grown
   card would pass the canvas bottom (`H − 8`), then it grows upward and the description
   sits above the title. A plaque with `descT > 0` is drawn last so it overlays its

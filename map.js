@@ -36,7 +36,7 @@ const MAP_GAP = 1;          // px between packed squares at zoom 1 (half a dot)
 const MAP_CELL_BASE = 24;   // SCREEN-px bucket for clustering neighbouring coordinates
 const MAP_CITY_KM = 5;      // points this close to a city join its square
 const MAP_ZOOM_MAX = 12;    // wheel zoom ceiling (1 = the fit-to-height view)
-const MAP_ZOOM_RATE = 0.0018; // zoom factor per wheel px: exp(-deltaY × rate)
+const MAP_ZOOM_RATE = 0.0018; // zoom factor per wheel px: exp(-deltaY × rate) — wheel-UP zooms in
 
 // Build beats, as windows over p12map.t (raw progress, eased fresh per window).
 const MAP_WIPE = { start: 0.00, len: 0.34 };   // outlines stroke on
@@ -267,9 +267,13 @@ function p12MapClampPan(W, H) {
 function p12MapWheel(e) {
   if (!p12MapAtEnd() || isMobile()) return;
   const v = p12map.view;
-  if (e.deltaY < 0 && v.z <= 1) return;   // at the fit view, wheel-up is a page scroll
+  // Wheel-UP zooms in, wheel-down zooms out (the reader is at the document's
+  // end, so "down" has nowhere left to go and reads as backing off). At the fit
+  // view a wheel-down is left alone; the way back up the page is the #p13Back
+  // button (page12.js), never the wheel.
+  if (e.deltaY > 0 && v.z <= 1) return;
   e.preventDefault();
-  const z1 = Math.min(MAP_ZOOM_MAX, Math.max(1, v.z * Math.exp(e.deltaY * MAP_ZOOM_RATE)));
+  const z1 = Math.min(MAP_ZOOM_MAX, Math.max(1, v.z * Math.exp(-e.deltaY * MAP_ZOOM_RATE)));
   if (z1 === v.z) return;
   // Zoom about the cursor: the map point under it stays under it.
   const k = z1 / v.z;
