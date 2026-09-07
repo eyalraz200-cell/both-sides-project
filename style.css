@@ -1896,24 +1896,20 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      centre for that quarter viewport instead of scrolling it away — which is
      exactly how a 200vh attempt read as "stuck". Height here is spacing only
      while the wrapper is static; sticky turns it into hold time.
-     2026-09-06: 45vh now that @fold13 (the share title block, #page-12)
-     follows instead of the tall outro — the share card should read as a
-     footnote right under this one, so it sits 45vh below the card's top
-     (the fade/gate/freeze all measure offsetTop, not this height). */
-  min-height: 45vh;
+     The height is SOLVED by p12SpacingFit() (page12.js) as 50vh + half this
+     card, which is the one value that puts @fold13's centred card exactly
+     100vh below this card's centre — the same centre-to-centre distance as
+     every other pair of title blocks. The 50vh here is only the no-JS
+     fallback. Don't replace it with a fixed vh: any fixed value is off by the
+     half-card it ignores (the fade/gate/freeze all measure offsetTop, not this
+     height, so they don't care). */
+  min-height: 50vh;
   display: block;
   padding: 0;
 }
 
-/* @fold13 (#page-12, the share block): top-aligned like @fold12's card so it
-   trails it at a fixed distance, and 80vh tall so the outro (#page-13) still
-   starts 125vh after #page-11 — the spot where it stopped rising into view
-   while the closing card was mid-screen. */
-#page-12 {
-  min-height: 80vh;
-  align-items: flex-start;
-  padding-top: 0;
-}
+/* @fold13 (#page-12, the share block) is an ordinary house fold — 100vh, card
+   centred — see the #page-12 rule further down. Nothing here overrides it. */
 
 /* Dead-scroll trim between @fold11 and @fold12: @fold12 waits directly under
    @fold11, with no empty run between them (explicit instruction) — at every
@@ -1927,8 +1923,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    that rise. Any padding-top here re-opens the gap by its own height — that's
    what the old 25vh did, and centring the card in its 100vh wrapper (the old
    mobile geometry) opened half a viewport the same way.
-   The section is 45vh (see #page-11 above); the share card follows 45vh under
-   this card's top, and the outro is kept 125vh away by #page-12's height. On a phone the fixed מקרא bar and the docked
+   The section's height is solved as 50vh + half this card (p12SpacingFit,
+   page12.js), so the share card's centre is exactly 100vh under this card's
+   centre — house rhythm. On a phone the fixed מקרא bar and the docked
    event frame sit at the top edge where the card lands, but both are on
    fold13ScrollT's fade (updateFold13, js/fold11.js) and are gone by arrival. */
 #page-11 .page12-sticky-center {
@@ -1955,10 +1952,58 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   position: static;
 }
 
+/* The outro is a DRAWER on desktop (p13Drawer, page12.js): the card is
+   position: fixed at the viewport's bottom and JS drives its translateY from
+   the distance left to the document's end, so it rises 1:1 with the scroll
+   like an in-flow card and docks with only its title showing at the last
+   scrollable pixel — where the wheel switches to zooming the map behind it
+   (map.js, p12MapWheel). Hovering the card slides it fully up. The section's
+   height is SOLVED by p12SpacingFit(): (50vh − half the share card) + the peek,
+   so the card's top enters at the house distance under the share card and the
+   document ends exactly at the dock. The 100vh here is the no-JS fallback.
+   No transition on the transform — JS writes it every frame. */
 #page-13 {
   min-height: 100vh;
   display: block;
   padding: 0;
+}
+#page-13 .page12-sticky-center {
+  position: static;
+  height: auto;
+  box-sizing: border-box;
+}
+/* The "back to the page" button at the dock (p13Drawer, page12.js): a 48px
+   circular title-block frame — white fill, the same 2px "2 2" dash the card
+   frames carry, as an SVG ring since border-image can't be round. Centred at
+   the top edge, fixed; JS toggles `hidden` (shown only at the document's end,
+   desktop). Click = map zoom reset + smooth scroll one viewport back up. */
+.p13-back {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+  z-index: 4;
+}
+.p13-back svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.p13-back-arrow { padding: 14px; box-sizing: border-box; }
+.p13-back:hover { background: #000; }
+.p13-back:hover .p13-back-arrow path { stroke: #fff; }
+@media (min-width: 601px) {
+  #page-13 .text-card {
+    position: fixed;
+    left: 50%;
+    bottom: 0;
+    transform: translate(-50%, 100vh);   /* off-screen until p13Drawer places it */
+    will-change: transform;
+    z-index: 3;
+  }
 }
 
 /* Sticky full-viewport centering wrapper — pins at top:0 so the card inside
@@ -2103,6 +2148,17 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   color: #fff;
 }
 
+/* @fold13: the map is drawn on the shared .graphic-col canvas (map.js) and its
+   build is a fold TRIGGER fired by this share card's centre crossing
+   (foldMapTrigger, js/groups.js) — so the section is an ordinary house fold:
+   one viewport, card centred. With #page-11 solved to 50vh + half its card and
+   #page-13 centring the outro in its first viewport, the three card centres
+   sit exactly 100vh apart, like every other consecutive pair. */
+#page-12 {
+  min-height: 100vh;
+  align-items: center;
+}
+
 .page12-credits {
   /* Same hairline as the share row's top border, so the share block is closed
      on both sides and the credits read as their own footer band. */
@@ -2182,14 +2238,18 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   position: fixed;
   left: calc(50% + 8px);
   /* Nudged up an extra 18px (276 vs the Figma-literal 258) so the gap below
-     the title to its dot column matches the gap below the subtitle to its
-     own dot column (both ~21.5px, pixel-measured) — title and subtitle
-     render at different heights and different fonts (3 lines @42px
+     the title to its dot column relates to the subtitle's own gap — title and
+     subtitle render at different heights and different fonts (3 lines @42px
      HadassahFriedlaender vs 4 @18px Assistant), whose line-height metrics
      don't scale the same way, so neither a Figma-literal top value nor a
      naive assumed-equal offset (the previous 286px, tuned by eye rather
-     than measurement, overshot by ~10px) actually lines the two gaps up —
-     only a pixel-measured comparison does. Per explicit user request. */
+     than measurement, overshot by ~10px) actually relates the two gaps —
+     only a pixel-measured comparison does. The measurement that matters is
+     TRIMMED: last baseline → top edge of the dot column, not box bottom →
+     dot, since the line box carries the descender plus half-leading and both
+     grow with line-height. Trimmed, this sits at 23.73px against the
+     subtitle's 20px — picked by eye on 2026-09-07 with the hero-title
+     `manual/` harness (wiki/Dev-Workflow.md). */
   top: calc(50% - 276px);
   width: 185px;
   /* 400, not 600: fonts/ holds exactly two HadassahFriedlaender faces (Thin
@@ -2202,6 +2262,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      fixed outlines and no such freedom. If retail weights above 400 are ever
      licensed, add the @font-face rule first, then this value may go up. */
   font: 400 42px 'HadassahFriedlaender', serif;
+  /* 1.31 is what the browser's own `normal` already resolved to for this face
+     (55px / 42px) — stated explicitly so the `top` above stays valid if the
+     font file is ever swapped for one with different metrics. */
+  line-height: 1.31;
   color: #000;
   text-align: left;
   margin: 0;
@@ -2218,9 +2282,19 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   position: fixed;
   left: calc(50% - 10px);
   transform: translateX(-100%);
-  top: calc(50% - 179px);
+  /* 189.1, not the old 179: the line-height below opened the 4 lines up, and
+     `top` is re-solved so the LAST BASELINE lands 20px above its dot column's
+     top edge (the trimmed gap — see .page0-title). Both numbers were picked by
+     eye on 2026-09-07 with the hero-title `manual/` harness. Exact px as
+     tuned, deliberately not converted to a relative unit. */
+  top: calc(50% - 189.1px);
   width: 125px;
   font: 300 18px 'Assistant', sans-serif;
+  /* Opened up from the browser's `normal` (which resolved to 1.2778 here) —
+     4 lines of 18px Assistant read tight against the title's much larger
+     leading. Changing this moves the last baseline, so `top` above must be
+     re-solved with it; the two are one setting. */
+  line-height: 1.52;
   color: #000;
   text-align: right;
   margin: 0;
@@ -2631,7 +2705,6 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      checkFold13 (watchCardThreshold on #page-11's wrapper at frac 0) is
      unaffected either way — it watches the sticky wrapper, which still pins. */
   #page-13 .page12-sticky-center {
-    position: static;
     height: auto;
     min-height: 100vh;
     padding: 32px 0;
@@ -2934,9 +3007,13 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     top: calc(50% - 223px);
   }
 
-  /* The other half of the same 17px hero drop — see .page0-title above. */
+  /* The other half of the same 17px hero drop — see .page0-title above.
+     172.1 = the old 162 plus the same 10.1px the desktop rule moved when the
+     subtitle's line-height opened to 1.52: the font-size and the 125px width
+     are not overridden here, so mobile wraps to the same 4 lines and its last
+     baseline shifts by exactly the same amount. Re-solve both together. */
   .page0-subtitle {
-    top: calc(50% - 162px);
+    top: calc(50% - 172.1px);
   }
 
   /* The pinned title card rests 4.4vh (~37px on an 844px phone) from the top
