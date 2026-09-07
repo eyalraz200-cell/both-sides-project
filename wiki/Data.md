@@ -35,6 +35,32 @@ group appears on the timeline.
 | `actor_type` | unused by code (hidden column J). Sub-type filled only for the former `protesters against government` rows: `anti judicial reform demonstrators` (2,094), `anti government protesters` (373) — both still `protesters against government` — and `hostage deal protesters` (2,146), whose `main_actor` was **reassigned to `peace movements`** in the sheet on 2026-09-06 (so תומכי עסקת חטופים ומתנגדי המלחמה = left activists + hostage-deal protesters; the sub-type column keeps them distinguishable) |
 | `Description`, `location`, `fatalities`, `source` | unused; columns G–J are hidden in the sheet |
 
+### `full_v4.xlsx` — v3 + geodata (source of `map/event-points.json`)
+
+`full_v4.xlsx` is `full_v3.xlsx` with four columns appended: `acled_id` (ACLED
+`event_id_cnty`, e.g. `ISR13526`), `latitude`, `longitude`, `geo_precision` (ACLED's 1 =
+named settlement, 2 = nearby stand-in, 3 = region centre only; 11,314 / 3,106 / 31 rows).
+Each row was matched against the raw ACLED exports (`raw-israel.csv`, `raw-palestine .csv`,
+repo root) on `(date, Description == notes, location)` — 14,451/14,451 matched, zero
+unmatched. Coordinates are settlement centroids: 904 distinct points across all rows.
+Two row pairs in the sheet are literal duplicates of one ACLED event and share an `acled_id`:
+`row-4132`/`row-4134` (`ISR42882`), `row-8895`/`row-8896` (`PSE46925`). `server.py` still
+reads `full_v3.xlsx`; the page consumes the geodata only through `map/event-points.json` (see `map/` below).
+
+## `map/` — the @fold13 event map's data
+
+Two static files, fetched by `map.js` (`p12MapLoad`) only when @fold13 comes within two
+viewports:
+
+| File | What it is |
+|---|---|
+| `map/region.geojson` | Natural Earth 10m admin-0 outlines (public domain), 14 features by `name`: Israel and Palestine (the two subjects, darker fills + `#999` stroke) plus Egypt, Jordan, Lebanon, Syria, Saudi Arabia, Iraq, Turkey, Cyprus, Northern Cyprus, Kuwait, Sudan and Libya (pale `#fafafa`, `#ccc`) — the map is viewport-wide, so the neighbours fill the horizon. Rings far outside the region are dropped and coordinates rounded to 3dp; ~210KB |
+| `map/event-points.json` | `{points: [[lat, lon] × 904], rows: [rowNum × 14451], pt: [pointIdx × 14451]}` — the 904 distinct coordinates in `full_v4.xlsx`, plus a per-event index into them keyed by the xlsx `row_id` number (`row-5` → 5). This is what lets every event own its own map cell and be flown/popped individually; `map.js` joins it to `events.json` through `rowId`. ~144KB |
+
+If the xlsx's rows change, `event-points.json` must be rebuilt from `full_v4.xlsx`'s
+`latitude`/`longitude` columns (there is no script for it in the repo — it was a one-off
+dump); `region.geojson` is data-independent.
+
 **There is no `side` column.** The camp split is derived from `main_actor` via
 `ACTOR_SIDE` in `server.py`, which must stay in sync with `FOLD4_COALITION_ROWS` /
 `FOLD4_CHANGE_ROWS` in `js/groups.js`. Every row maps to a known actor — zero rows are

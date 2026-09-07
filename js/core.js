@@ -42,7 +42,7 @@ function prefersReducedMotion() {
 // Indices 11 (@fold12, the closing statement) and 12 (@fold13, the outro card)
 // share drawPage12: the freeform-morph canvas is established on arrival at
 // @fold12 and simply persists behind the credits card that follows it.
-const PAGES = [drawPage1, drawBackground, drawBackground, drawFoldSplit, drawBackground, drawBackground, drawFold7, drawFold9, drawPage7, drawPage8, drawPage9, drawPage12, drawPage12, drawPage12];
+const PAGES = [drawPage1, drawBackground, drawBackground, drawFoldSplit, drawBackground, drawBackground, drawFold7, drawFold9, drawPage7, drawPage8, drawPage9, drawPage12, drawFoldMap, drawFoldMap];
 let currentPage = 0;
 
 // How far every OTHER dot/square drops in opacity while one event is hovered
@@ -202,7 +202,10 @@ function draw() {
   // dots when morphT > 0 (to avoid ghosting under the overdraw), so if
   // currentPage has already flipped back to 10, those dots would vanish until
   // morphT hits 0 and snap back instead of animating.
-  if ((p9?.fold13ExtremeMorphT ?? 0) > 0) {
+  // Only up to @fold12 though: the morph ends pinned at 1, and from @fold13 on
+  // drawFoldMap (map.js) owns those dots — it takes them from the morph's end
+  // positions and flies them onto the map.
+  if ((p9?.fold13ExtremeMorphT ?? 0) > 0 && currentPage < 12) {
     drawPage12(ctx, W, H);
   } else {
     PAGES[currentPage](ctx, W, H);
