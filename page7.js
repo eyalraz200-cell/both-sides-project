@@ -2016,7 +2016,7 @@ const P7_AXIS_DESC_MS = 700;                                          // = FOLD6
 const P7_AXIS_DESC_BEATS = { open: { start: 0, len: 0.3 }, type: { start: 0.3, len: 0.7 } };
 // The card keeps the plaque's wrap width and only grows taller ("keep" won the
 // compare/ over widening outward over the grid, 2026-09-07).
-const P7_AXIS_DESC_GAP = 6;                                           // title block → description
+const P7_AXIS_DESC_GAP = 2;                                           // title block → description
 const P7_AXIS_DESC_TYPE = { size: 12, weight: 400, lh: 17, color: 'rgba(0, 0, 0, 0.75)' };
 // While one plaque is hovered every OTHER open plaque folds back into its near
 // edge — the reveal played backwards, dots untouched (compare/ pick over dimming
