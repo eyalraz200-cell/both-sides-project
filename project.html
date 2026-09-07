@@ -89,6 +89,13 @@
          credit line, fatal for a button that has to be tappable and reachable
          by assistive tech. Same direct-.layout-child trick for the z-index. -->
     <div class="fold6-mlegend-layer" id="fold6MobileLegendLayer"></div>
+    <!-- @fold14's "back to the page" button: shows only at the document's end
+         (where the wheel is the map's), resets the zoom and scrolls back up.
+         A direct .layout child for the z-index; circular title-block frame. -->
+    <button class="p13-back" id="p13Back" type="button" aria-label="חזרה לגלילה" hidden>
+      <svg class="p13-back-ring" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="23" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="2 2"/></svg>
+      <svg class="p13-back-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="#000" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
     <div class="text-col" id="textCol">
       <section class="text-section" data-page="0" id="page-0">
         <div class="page0-overlay">
@@ -178,6 +185,10 @@
            statement and the outro (moved out of the outro card). The links get
            their real hrefs from p12ShareInit (page12.js) at load. -->
       <section class="text-section" data-page="12" id="page-12">
+        <!-- The event map has NO markup: map.js draws it on the shared
+             .graphic-col canvas, and this section is only the scroll runway the
+             build plays over (see #page-12 in style.css). The share card below
+             sits in the last viewport of that runway, after the map is done. -->
         <div class="section-text text-card">
           <div class="text-card-frame page12-share-card">
             <h2 class="section-title">שתפו עם אחרים</h2>
@@ -217,6 +228,7 @@
   <script src="page8.js"></script>
   <script src="page9.js"></script>
   <script src="page12.js"></script>
+  <script src="map.js"></script>
   <script src="js/core.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/fold1-intro.js"></script>
@@ -230,5 +242,9 @@
   <script src="reload.js"></script>
   <!-- TEMP: fold number chip; delete with _debug-fold-badge.js -->
   <script src="_debug-fold-badge.js"></script>
+  <!-- TEMP: manual/ hero titles. Baked 2026-09-07; the file is KEPT for
+       re-tuning — uncomment this tag to bring the panel back.
+  <script src="_debug-hero-title.js"></script>
+  -->
 </body>
 </html>

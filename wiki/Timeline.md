@@ -66,8 +66,10 @@ linear in time and a row's fill width *is* its event count. The dot rows run on
 maps each year to the integer row its 1 January starts on; that row's top edge is where the
 year ring sits (the line itself is unbroken, see below). 161 rows total at
 1440×900. `p7SolveVerticalSq` shrinks the square until the plan's rows **plus the first
-year's header** (`p7VertYearHeaderH()`: with side years just the ring's radius
-`P7_AXIS_MARKER_RADIUS` 4, so the first ring caps the line's top; centred years: 21px digits,
+year's header** (`p7VertYearHeaderH()`: with side years the ring's radius
+`P7_AXIS_MARKER_RADIUS` 4 plus `P7_VERT_FIRST_YEAR_RAISE_PX` 14 — the first year's ring and
+digits sit 14px ABOVE row 0 and the line runs up to the ring, so the first headline event
+(2023-01-04, a fraction of a row under row 0) no longer collides with the "2023" ring; centred years: 21px digits,
 ring + 6 when on, `yearGapPad` above and below) fit the box (3.3 px at 1440×900; one-week rows needed 183 and 2.9 px,
 which is why 8 days won). **On mobile only**, the solved square is then multiplied by
 `P7_VERT_SQ_BOOST` (**1.12**, `p7VertSqBoost()`, picked by eye at 390×721 on 2026-09-05):
@@ -268,9 +270,9 @@ axis so the first event's label can center over its own circle).
   **raw** `currentDate` x, not the lagged `curX`.
 - **Headline events** — `P7_AXIS_EVENTS`, 9 entries in chronological order
   (הכרזת הרפורמה 2023-01-04, הפיגוע בעלי 2023-06-20, ביטול עילת הסבירות
-  2023-07-24, מתקפת 7 באוקטובר 2023-10-07, מות ששת החטופים
-  2024-09-01, חידוש הלחימה בעזה 2025-03-18, מבצע ״עם כלביא״ 2025-06-13, שחרור החטופים מעזה 2025-10-13,
-  התפזרות הכנסת ה-25 2026-07-17). Since `eventSide 'alternate'` is index-based,
+  2023-07-24, מתקפת 7 באוקטובר 2023-10-07, ההודעה על מות ששת החטופים
+  2024-09-01, חידוש הלחימה בעזה 2025-03-18, מבצע ״עם כלביא״ 2025-06-13, שחרור החטופים החיים מעזה 2025-10-13,
+  התפזרות הכנסת ה־25 2026-07-17). Since `eventSide 'alternate'` is index-based,
   adding/removing an entry flips the side of every later event.
   All entries
   — render as **filled dots at their true date x**, plus an optional
@@ -282,7 +284,7 @@ axis so the first event's label can center over its own circle).
   raw date (only binds on − nudges; + nudges still fire on the date). Two use one:
   the first (`-14`, to clear the "2023" anchor) and the last (`+26`, see below).
 - **Events past `maxDate`** — an event dated after the dataset's last event (only
-  התפזרות הכנסת ה-25 2026-07-17, vs `maxDate` 2026-07-03) is **clamped at both ends**:
+  התפזרות הכנסת ה־25 2026-07-17, vs `maxDate` 2026-07-03) is **clamped at both ends**:
   `p7AxisEventTrueX` clamps its x into `[P7_AXIS_MARGIN, W - P7_AXIS_MARGIN]` so it parks
   at the axis's left end instead of floating past it, and `p7UpdateAxisEventTriggers(W)`
   switches that event's reached-test from dates to **x**: reached once the growing fill
@@ -291,9 +293,10 @@ axis so the first event's label can center over its own circle).
   the single frame where `currentDate === maxDate`, so the label never actually shows.
   Consequence: changing such an event's `xOffset` also changes *when* it appears. Its
   printed date stays the real one.
-- Each event carries a crossfading label +
-  date above. Labels fade in over 400 ms, hold, and are capped by the *next* event's own
-  fade (1000 ms).
+- Each event carries a label + date above. Labels fade in over 400 ms and then **hold
+  indefinitely — reaching the next event never fades a passed one.** A label only leaves
+  when the user scrolls back above its own date (`leavingAt`, `P7_AXIS_EVENT_FADE_OUT_MS`
+  1000 ms) or the axis undraws. There is no next-event cap in `p7AxisEventOpacity`.
 - **Label collisions** — resolved newest-first with `OVERLAP_PAD = 8`, sliding older
   blocks sideways (never to a second vertical tier). Three things make that work:
   the collision extent is the whole **title + date block** (`max` of every wrapped
@@ -328,9 +331,10 @@ axis so the first event's label can center over its own circle).
   same 0.34 (instead of vanishing into the faint background line), so the fill progress
   stays readable under the hover. An event whose date matches the hovered square
   stays full-strength. Ending the hover returns each to its own crossfade state.
-- **The dot persists** after its label fades, shrinking from radius 4 to
-  `P7_AXIS_MARKER_RADIUS_FADED` 2. **Hovering it re-shows the label** (`updateAxisHover`,
-  `AXIS_HIT_PAD` 6) — an independent hover target from the squares.
+- **The dot** is an independent hover target from the squares (`updateAxisHover`,
+  `AXIS_HIT_PAD` 6); on desktop the side plaque's rect (`p7.axisCardRects`, cached per
+  frame by `p7DrawAxisEventsVertical`) is a hover target too, which is what opens the
+  hover description (see "Description on hover" below).
 - **The dot's presence itself animates**, both ways. Whether the fill edge has passed an
   event is a boolean (`x >= curX`), but it drives a per-event eased `reachedT`
   (`P7_AXIS_EVENT_STATE[i].reachedT`, lerped at `P7_AXIS_HOVER_ANIM_SPEED` like `hoverT`)
@@ -363,10 +367,11 @@ axis so the first event's label can center over its own circle).
 - **Intro wipe** — `P7_AXIS_INTRO_DURATION` 2800 ms, a right-to-left `ctx.clip()` reveal
   covering line, rings, labels and events alike. Gated by `p7AxisShouldShow()` =
   `fold9FlyTrigger.currentRaw() > 0`, falling back to `p7HasEngaged`. Scrolling back above
-  the trigger plays the same wipe in reverse, at the **same speed as the build-in**
-  (`P7_AXIS_OUTRO_DURATION` is set to `P7_AXIS_INTRO_DURATION`, so the two can't drift;
-  explicit instruction — at the old 500 ms the axis snapped away the moment @fold10's title
-  block hit and read as a glitch. Full-scale; an interrupted intro reverses over only its
+  the trigger plays the same wipe in reverse, **faster than the build-in** —
+  `P7_AXIS_OUTRO_DURATION` 1500 ms, its own constant (tuned by eye on a harness). Don't
+  re-tie it to the intro: 500 ms snapped the axis away the moment @fold10's title block hit
+  and read as a glitch, while the intro's full 2800 ms left it still undrawing into the
+  bridge glide. Full-scale; an interrupted intro reverses over only its
   remaining distance —
   `p7AxisOutroStart`/`p7AxisOutroFromT`), then the axis is gone and the build-in replays
   from scratch on the next forward crossing. Re-crossing forward mid-reverse resumes the
@@ -385,10 +390,9 @@ axis so the first event's label can center over its own circle).
   the last one, which would otherwise stay fully typed until the wipe's clip cut it off). The
   reach test has to be skipped, not merely overridden: the exit branches force `currentDate` to
   `maxDate`, which reads as "reached" and would cancel the fade the frame after it began.
-  Suppressed earlier cards **stay shut** during this: `p7AxisEventOpacity`'s "fade back in
-  while the next event leaves" lift is frozen at its value at `p7AxisOutroStart` (every
-  `leavingAt` is set in the same instant, so otherwise that lift and the card's own fade-out
-  would cross at 0.5 and every long-hidden card half-opened before collapsing).
+  Every reached card is open at this point (passed events persist), so they all fade on
+  the same clock. Any open hover description closes with them: `p7AxisDescTarget` is
+  false once `leavingAt` is set, so `descT` retreats at its own tempo.
   On desktop the **dots shrink out with the cards** on the same clock: `p7DrawAxisEventsVertical`
   multiplies `markerRadius` by `1 − p9Ease((now − p7AxisOutroStart) / P7_AXIS_EVENT_FADE_OUT_MS)`
   while the outro runs (the half-dots on an open card shrink with it, since they share
@@ -492,7 +496,7 @@ over `totalRows × CELL`:
   mobile keeps the `P7_AXIS_*_FONT` constants): title 500 14px, line height 19, black;
   date 400 14px, line height 19, black at 0.3, **but `showDate` is false — the block is the title alone**
   (no date line; the axis's years give the time). `gap` 0 extra px between title and date when a date is shown. With `anchor 'edge'` the dot-to-block gap would be `card.gap` plus whichever card pad faces the dot. **Default side**: a headline hangs under its dot (the card opens downward); an event
-  flagged `above: true` in `P7_AXIS_EVENTS` (only התפזרות הכנסת ה-25 — the
+  flagged `above: true` in `P7_AXIS_EVENTS` (only התפזרות הכנסת ה־25 — the
   last event, parked at the axis's far end, where a downward card would open past that end)
   sits **above** its dot (bottom edge
   `P7_VERT_EVENT_TEXT_GAP` above the dot, punch from the block's top down to the dot's
@@ -504,6 +508,39 @@ over `totalRows × CELL`:
   side; with `card` null a side headline is bare text beside the line (first line centred
   on the dot, `R + sideGap` from the axis); `dateSide` `'left'`/`'right'` draws the date
   alone on its own side. Side blocks dodge centred year labels and same-side ones only.
+- **Description on hover (desktop side plaques only):** every `P7_AXIS_EVENTS` entry
+  carries a `desc` (the source's trailing «מקור» is deliberately omitted; the mobile slot
+  ignores it). While the pointer is on a reached plaque — its dot or its card rect
+  (`p7.axisCardRects`) — `p7AxisDescTarget(i)` is true and the event's `descT`
+  (`P7_AXIS_EVENT_STATE[i].descT`, raw 0→1) advances **linearly in wall-clock time** at
+  `P7_AXIS_DESC_MS` 700 (= `FOLD6_NOTE_HOVER_MS`) per frame at the top of
+  `p7DrawAxisEventsVertical` (dt capped at 50 ms); off the target it retreats at the same
+  tempo, so leaving mid-flight plays the same beats backwards. It is a hard 0/1 gate, no
+  fade. `P7_AXIS_DESC_BEATS` slices the raw value and re-applies `p9Ease` per window, the
+  ACLED note's shape: **`open` (0–0.3)** — the card grows from its closed size to hold the
+  wrapped copy; **`type` (0.3–1)** — a character prefix (`round(typeT × totalChars)`) of the
+  wrapped lines is drawn with `ctx.direction = 'rtl'` (so a trailing «.» lands at the end of
+  the Hebrew run) in `P7_AXIS_DESC_TYPE` (400 12px, line height 17, black at 0.75). Copy is
+  flush to each card's **axis-side** edge — left-aligned on right-side plaques, right-aligned
+  on left-side ones (`compare/` pick, 2026-09-07; right-aligning both sides was rejected).
+  `P7_AXIS_DESC_GAP` 6 under the title, clipped to the card. The card's
+  **near edge never moves**: it keeps the plaque's wrap width (`maxWidth`) and grows downward — unless the grown
+  card would pass the canvas bottom (`H − 8`), then it grows upward and the description
+  sits above the title. A plaque with `descT > 0` is drawn last so it overlays its
+  neighbours. (Widening the card outward over the grid to a fixed width was compared and
+  rejected on 2026-09-07 — don't reintroduce.) `p7AxisEventsAnimActive` keeps the loop
+  alive while any `descT` is off its target.
+- **While one plaque is hovered every OTHER reached plaque collapses** — it plays its own
+  reveal backwards into its near edge, so only the hovered card is left standing. Positions
+  and the axis dots are untouched; just the cards fold. Driven by a per-event `othersT`
+  (`p7AxisOthersTarget`) advanced at `P7_AXIS_DESC_MS` alongside `descT`, reversible
+  mid-flight and keeping the rAF loop alive. (Dimming the others to 0.35 instead was compared
+  and rejected on 2026-09-07 — don't reintroduce.)
+- **The plaque's title fades in** as its card opens: the copy is clipped to the growing card
+  and alpha-faded with it (`textClip.alpha`), unlike the description, which types. (Typing the
+  title too — a character prefix of the wrapped lines — was compared and rejected on
+  2026-09-07; don't reintroduce.)
+
 - **Hover:** the hovered square's date marks the axis at `p7AxisY(date, H)` in its actor
   colour; `p7.axisEventPositions` is filled with `{x: axisX, y, radius}` so the existing
   circle hit-test works unchanged. Side cards never cover the line, so the marker stays

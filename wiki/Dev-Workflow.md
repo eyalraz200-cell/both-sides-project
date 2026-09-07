@@ -82,9 +82,45 @@ numbers in the source.
 
 `_debug-fold-badge.js` — the bottom-left `@foldN` chip (`@foldN · #page-(N-1) · short
 name`; click or `B` collapses it to just `@foldN`). Reinstated on 2026-09-06 with a `TEMP`
-`<script>` tag after `reload.js` in `project.html`; delete both together. Everything else
+`<script>` tag after `reload.js` in `project.html`; delete both together. `_debug-camp-gap.js` —
+the `manual/` slider that picked the gap between the two camps at @fold2 **and** @fold3 (they share
+one anchor): `FOLD2_CAMP_CENTER_GAP_PX` 180 → **162**, re-laying out live with `updateGroups();
+draw()`. The knob was the HALF-gap — each camp's centre sits that many px either side of screen
+centre — so one step moved the camps 2px apart. It never touched mobile, which computes its own gap
+from `FOLD2_CAMP_EDGE_GAP_MOBILE_PX`. Deleted on 2026-09-07 once baked. Three @fold9 axis-plaque
+`compare/` panels — `_debug-axis-align.js` (picked the description's alignment: flush to the
+card's axis-side edge), `_debug-axis-others.js` (picked the other plaques collapsing into the
+axis on hover, over dimming them) and `_debug-axis-title.js` (kept the title's fade-in over
+typing it) — were all deleted on 2026-09-07 once baked. `_debug-hero-title.js` — **kept on disk but unloaded** (its `<script>` tag in `project.html` is
+commented out; uncomment to bring the panel back, and its seed values are kept in sync with what
+`style.css` ships). Baked on 2026-09-07: title `line-height: 1.31` (what `normal` already resolved
+to, now stated), subtitle `line-height: 1.52` with `top: calc(50% - 189.1px)` desktop /
+`172.1px` mobile, trimmed gaps 23.73px / 20px. The `manual/` panel for @fold1's hero titles, two tabs
+(title / subtitle) × three knobs: font-size, line-height, and the gap from the element's box
+bottom to the top dot of the column it sits over. That gap is **not** a CSS property: it is
+derived from the element's live measured box height against the `page1.js` dot lattice
+(`page0DotBaseOffsetY()`, `PAGE0_DOT_STEP`, `PAGE0_DOT_SQ`), so `top` is recomputed whenever
+size, line-height, the webfonts or the viewport change — hence the `init` that refreshes on
+`document.fonts.ready` and `resize` (without it the fallback face wraps the subtitle to an
+extra line and the panel moves it on load). Each tab carries its own starting values, since
+the subtitle ships with a different font, line count and gap. It bakes back into `style.css`
+as `font-size`, an explicit `line-height`, and `top: calc(50% - Npx)`. Two toggles — `R`
+(title) and `S` (subtitle) — draw a full-width dashed rule per rendered line, plus a live
+line-count readout. A line box has no element to measure, so the rules come from a `Range` over the
+element's contents (`getClientRects()` = one rect per rendered line), re-synced in a rAF loop since
+the hero texts are `fixed` and `page0ApplyTitleScrollLag` nudges them every frame. Both the rules
+and the gap knob use each line's **trimmed** bottom — its alphabetic baseline, `rect.top +
+half-leading + ascent` with ascent/descent read off a canvas `TextMetrics` — not the line box's
+bottom, which carries the descender plus half-leading and grows with line-height. Untrimmed, the
+gap knob moved whenever line-height moved and the two elements' numbers were incomparable
+(9.7 vs 19.7 for what the eye reads as one distance; trimmed the same shipped layout reads
+23.73 vs 24.71). The baseline is taken as an **offset from the element's own box top**, never as
+an absolute y: @fold1's intro parks the title at `translateY(100vh)`, so absolute rects are a
+viewport off until the slide-in finishes. Everything else
 was removed earlier (`_debug-glide-perf.js`, `_debug-mlegend-width.js`,
-`_debug-vert-mobile.js`, `_debug-fold5.js` and the `_debug-hero-*.html` probes). The mobile
+`_debug-vert-mobile.js`, `_debug-fold5.js` and the `_debug-hero-*.html` probes). `_debug-axis-desc.js` — the
+`compare/` that picked @fold9's hover-description card width (keep the plaque width, not
+widen over the grid) — was deleted on 2026-09-07 once baked. The mobile
 vertical-axis `compare/`+`manual/` (`_debug-vert-mobile.js`, modes band / widen / slot with
 `P7_VERT_MOBILE` knobs) was deleted before its bake; rebuild it from the template if the
 mobile axis is picked up again. `_debug-vert-order.js` — the `compare/` panel that picked the

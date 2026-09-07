@@ -2,3 +2,8 @@
 *.log
 .claude/
 __pycache__/
+
+# Large local-only assets — screen recordings and the raw ACLED exports the
+# xlsx is built from. Kept out of history for size; they live on disk only.
+*.mov
+raw-*.csv
