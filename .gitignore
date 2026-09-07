@@ -7,3 +7,7 @@ __pycache__/
 # xlsx is built from. Kept out of history for size; they live on disk only.
 *.mov
 raw-*.csv
+*.MP4
+*.mp4
+.DS_Store
+__pycache__/
