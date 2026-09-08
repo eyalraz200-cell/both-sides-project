@@ -38,14 +38,14 @@ function p8CurrentT() {
 
 function p8RunAnimLoop() {
   if (p8PhaseStart === null) return;
-  if (currentPage === 9) draw();
+  if (currentPage === 10) draw();
   if (p8CurrentT() !== p8PhaseToT) {
     requestAnimationFrame(p8RunAnimLoop);
   } else {
     p8PhaseFromT = p8PhaseToT; // settle here — p8CurrentT() reads this once phaseStart is null
     p8PhaseStart = null;
     if (p8PhaseToT === 0) p8Engaged = false; // back at rest — forward can fire again later
-    if (currentPage === 9) draw(); // final frame, locked at rest
+    if (currentPage === 10) draw(); // final frame, locked at rest
   }
 }
 
@@ -82,7 +82,7 @@ function drawPage8(ctx, W, H) {
 
   // Deliberately no fallback trigger here: currentPage flips to 10 (via the -50%
   // IntersectionObserver in main.js) well before the title visually reaches
-  // center, since page-9 already overlaps the screen-center line earlier than
+  // center, since page-10 already overlaps the screen-center line earlier than
   // that. Triggering on that flip would fire too early — page8CheckScroll
   // (main.js) is the only thing that calls p8Trigger/p8TriggerReverse, exactly
   // when the title crosses center (or scroll retreats back past that point).
@@ -112,8 +112,15 @@ function drawPage8(ctx, W, H) {
       const cell = positions[i];
       const col  = cell % cols;
       const row  = Math.floor(cell / cols);
-      const fromX = x0 + col * CELL;
-      const fromY = topY + row * CELL;
+      // @fold10 leaves the size grid ON across this fold (p7SizeGridOnPage,
+      // page7.js), so the flight starts from each dot's packed cell — its own
+      // tier size included — not from the timeline cell it hasn't occupied
+      // since @fold9. Off (mobile, or straight from @fold9) this is the
+      // timeline cell exactly as before.
+      const g     = p7GridRestRect(e, side === "left");
+      const fromX = g ? g.x : x0 + col * CELL;
+      const fromY = g ? g.y : topY + row * CELL;
+      const fromSQ = g ? g.sq : SQ;
 
       const target = p9LegitPosOf(e, indexOf, side, legitGeom);
       if (!target) return;
@@ -122,7 +129,7 @@ function drawPage8(ctx, W, H) {
       const y = fromY + (target.y - fromY) * ease;
       // Shrink each dot from the (now enlarged) real-timeline square size (p7.SQ)
       // down to page9's legit-grid size (P9_SQ) across the glide, so the dots
-      // visibly get smaller on the way into @fold12 and land at exactly the size
+      // visibly get smaller on the way into @fold13 and land at exactly the size
       // drawPage9 will keep drawing them — no size jump at the handoff. Both
       // endpoints are top-left anchored (fromX/Y and target.x/y are cell corners),
       // so a plain linear size lerp lines up at both ends.
@@ -130,7 +137,7 @@ function drawPage8(ctx, W, H) {
       // at the bar's own cell size, not P9_SQ — land on that instead, or the
       // dots pop a pixel at the handoff.
       const endSQ  = legitGeom.mode === "bar" ? legitGeom.cell : p9Metrics().legitSq;
-      const drawSQ = SQ + (endSQ - SQ) * ease;
+      const drawSQ = fromSQ + (endSQ - fromSQ) * ease;
       // No opacity fade — drawPage9 draws the legit grid at full opacity (see the
       // comment above its own drawBandedCols/drawJumbledBot calls; it used to be a
       // deliberate 0.12 de-emphasis, which this glide matched, but Figma's actual
@@ -144,7 +151,7 @@ function drawPage8(ctx, W, H) {
   // Once the glide has fully landed on a bar layout (mobile), stop drawing
   // dot-by-dot: thousands of 1px dots at fractionally-lerped positions leave
   // ragged colour seams the moment motion stops masking them, and this
-  // function keeps drawing at t=1 until @fold11's own drawPage9 takes over.
+  // function keeps drawing at t=1 until @fold12's own drawPage9 takes over.
   // Same solid-rect pass drawPage9's at-rest bar uses (p9DrawBarRects,
   // page9.js), so the handoff is pixel-identical.
   if (ease >= 1 && legitGeom.mode === "bar") {
@@ -196,14 +203,17 @@ function p8CaptureBlendedPositions(W, H, tOverride) {
   const topY    = p7VertTopY(H);
   const rightX0 = p7GridGeometry(W, H).rightX0;
 
+  const legitSQ = legitGeom.mode === "bar" ? legitGeom.cell : p9Metrics().legitSq;
   const out = new Map();
   function capture(events, indexOf, side, positions, x0) {
     events.forEach((e, i) => {
       const cell = positions[i];
       const col  = cell % cols;
       const row  = Math.floor(cell / cols);
-      const fromX = x0 + col * CELL;
-      const fromY = topY + row * CELL;
+      const g     = p7GridRestRect(e, side === "left");
+      const fromX = g ? g.x : x0 + col * CELL;
+      const fromY = g ? g.y : topY + row * CELL;
+      const fromSQ = g ? g.sq : p7.SQ;
 
       const target = p9LegitPosOf(e, indexOf, side, legitGeom);
       if (!target) return;
@@ -212,6 +222,10 @@ function p8CaptureBlendedPositions(W, H, tOverride) {
         x: fromX + (target.x - fromX) * ease,
         y: fromY + (target.y - fromY) * ease,
         alpha: 1,
+        // Per-dot, because out of the size grid every dot starts at its own
+        // tier size — drawPage9's continuation lerps from this (`from.sq`)
+        // when setActivePage leaves the scalar `fromSQ` off (js/nav.js).
+        sq: fromSQ + (legitSQ - fromSQ) * ease,
       });
     });
   }

@@ -109,7 +109,7 @@ const P9_MID  = 719 / 982; // divider position as fraction of H (~73.22vh) — F
 // room for exactly this.
 const P9_EXTREME_GAP = 320;
 
-// --- Mobile (@fold11 touch adaptation) ---------------------------------------
+// --- Mobile (@fold12 touch adaptation) ---------------------------------------
 // Under the 600px breakpoint the fold keeps ONE render path — only the geometry
 // swaps. Every consumer (p9PlaceDot's three interpolation branches, the
 // finalized state-1 drop, page8's bridge glide, page12's freeform spread) reads
@@ -121,7 +121,7 @@ const P9_EXTREME_GAP = 320;
 //   -> divider (p9MidY) -> legit bar, flush with the viewport's bottom edge
 // The tray is a band pinned under the titles, NOT a bottom sheet — and the
 // docked tooltip frame slides DOWN from its @fold9 spot to make room for it as
-// @fold11 engages (p9TooltipDropTrigger, js/groups.js).
+// @fold12 engages (p9TooltipDropTrigger, js/groups.js).
 // Dot size — both grids, so p9PlaceDot needs no extra param. 1.5 against a pitch
 // of 2 leaves a 0.5px gap: the dots read denser and bolder without touching grid
 // capacity. The pitch is what caps the dot, not taste — at pitch 3 one side's
@@ -298,7 +298,7 @@ function p9TrayH() {
   return document.querySelector(".page9-tray")?.offsetHeight || 0;
 }
 
-// Where the docked tooltip frame comes to rest on mobile at @fold11 — directly
+// Where the docked tooltip frame comes to rest on mobile at @fold12 — directly
 // under the tray band. Measuring the band (rather than hard-coding Figma's 259)
 // keeps the frame glued to it however the pills end up sizing.
 function p9DockTopM() {
@@ -389,13 +389,13 @@ function p9LineCurrentRaw() {
   return p9LineFromT + span * localT;
 }
 
-// @fold11's canvas stays visible into @fold12 (drawPage12 renders through
+// @fold12's canvas stays visible into @fold13 (drawPage12 renders through
 // drawPage9), so every animation loop below must keep painting on page 10
-// too — guarding on currentPage === 10 alone froze a mid-flight drop
-// animation the instant @fold12 was entered, leaving dots hanging in the
+// too — guarding on currentPage === 11 alone froze a mid-flight drop
+// animation the instant @fold13 was entered, leaving dots hanging in the
 // air until the user scrolled back.
 function p9PageVisible() {
-  return currentPage === 10 || currentPage === 11;
+  return currentPage === 11 || currentPage === 12;
 }
 
 function p9LineRunLoop() {
@@ -443,7 +443,7 @@ const p9 = {
   // { from: Map, start: timestamp, duration } while a category is moving between
   // extreme/legit; null when at rest.
   anim: null,
-  // The event currently under the pointer in #page-10 (set by p9HoverInit's
+  // The event currently under the pointer in #page-11 (set by p9HoverInit's
   // onMove), or null — read by p9PlaceDot to dim every other dot while one is
   // hovered.
   hoveredEvent: null,
@@ -665,8 +665,8 @@ function p9EnsureIndex() {
 // any other grid's margins. Pitch is pinned to the ORIGINAL 4px timeline pitch
 // (P9_CELL = P9_SQ 3 + P9_GAP 1) — it used to reuse P7_CELL directly, but the
 // real timeline's dots were later enlarged (P7_SQ/P7_GAP in page7.js) and these
-// @fold13 dots must NOT follow: they settle at this size as the target of the
-// @fold12 animation, so their pitch is decoupled and fixed here.
+// @fold14 dots must NOT follow: they settle at this size as the target of the
+// @fold13 animation, so their pitch is decoupled and fixed here.
 const LEGIT_CELL   = P9_CELL;
 const LEGIT_MARGIN = 0;
 
@@ -1212,7 +1212,7 @@ function drawPage9(ctx, W, H) {
     let sq = sizeOverride ?? SQ;
     // page8's glide doesn't only move the dots, it SHRINKS them from the real
     // timeline's square size down to the legit grid's across the flight
-    // (blendAndDraw, page8.js). When @fold11's title scrolls up mid-glide,
+    // (blendAndDraw, page8.js). When @fold12's title scrolls up mid-glide,
     // drawPage9 takes the flight over (p9.anim.plainGlide, seeded in
     // setActivePage) — and it used to paint them at their final size from that
     // frame on. A still-spread cloud of dots suddenly drawn small covers much
@@ -1263,7 +1263,7 @@ function drawPage9(ctx, W, H) {
       // glass is a nearest-neighbour 4x blit of this canvas — so a dot left at
       // a fractional position antialiases into a partial-alpha band that
       // magnifies into a pale ring, and the dots read as if they were stroked.
-      // p7DrawSideSquares snaps for exactly this; @fold11 was the path it
+      // p7DrawSideSquares snaps for exactly this; @fold12 was the path it
       // never reached.
       //
       // V2 desktop snaps for a third reason: on a display whose DPR isn't a
@@ -1302,7 +1302,7 @@ function drawPage9(ctx, W, H) {
     // of it, dimming each successive batch (right side, then both legit
     // sides) more than the last instead of every batch dimming by the same
     // flat amount.
-    // During @fold14 morph, drawPage12 overdraws at freeform positions.
+    // During @fold15 morph, drawPage12 overdraws at freeform positions.
     if ((p9.fold13ExtremeMorphT ?? 0) > 0) {
       return Math.ceil(orderArr.length / colsTotal) || 1;
     }
@@ -1558,7 +1558,7 @@ function drawPage9(ctx, W, H) {
   // here on canvas.
   // Untapered per explicit request — one flat color/alpha along the whole
   // stroke (previously a linear gradient fading toward each end, still
-  // scaled by lineAlpha below for @fold13's fade-out). Color matches the
+  // scaled by lineAlpha below for @fold14's fade-out). Color matches the
   // tray's own border (.page9-tray, style.css) exactly — rgba(90,90,90,0.45).
   // Drawn on both breakpoints. (It used to be skipped on mobile, back when the
   // tray sat immediately below midY and was itself the boundary — the tray now
@@ -1566,11 +1566,11 @@ function drawPage9(ctx, W, H) {
   // divider is the only edge between the two grids there, same as desktop.)
   {
     const dividerStartX = W * (1 - page9LineT);
-    // Rides @fold13's morph, NOT @fold12's fade (p9.fold13OutT) like the
+    // Rides @fold14's morph, NOT @fold13's fade (p9.fold13OutT) like the
     // counts and legit dots around it: per explicit request the divider is
-    // kept on @fold12, where everything else fades but the extreme dots stay
+    // kept on @fold13, where everything else fades but the extreme dots stay
     // standing in their columns — the line is what those columns sit on, so
-    // dropping it there would leave them floating. It goes on @fold13, in
+    // dropping it there would leave them floating. It goes on @fold14, in
     // step with the dots leaving the columns for freeform.
     const lineAlpha = 1 - (p9.fold13ExtremeMorphT ?? 0);
     // Mobile draws it a bit lighter (explicit request) — desktop keeps the
@@ -1596,9 +1596,9 @@ function drawPage9(ctx, W, H) {
   // @fold9 does it from doHitTest. Cheap and idempotent.
   p7InspectSync?.();
 
-  // The year axis's reverse wipe OUTLIVES @fold10. It starts when that fold's
+  // The year axis's reverse wipe OUTLIVES @fold11. It starts when that fold's
   // bridge glide starts (drawPage8) and now runs at the build-in's own speed,
-  // which is long enough that currentPage can flip here — the moment @fold10's
+  // which is long enough that currentPage can flip here — the moment @fold11's
   // title block reaches the top — while the axis is still undrawing. Without
   // this the axis would simply stop being drawn at that instant and snap away,
   // which is the very thing the slow reverse wipe exists to avoid. Same forcing
@@ -1674,10 +1674,10 @@ function p9GetDisplayedCounts() {
 }
 
 // Moves all extreme-zone pills back to their tray rows and resets p9.sides.
-// Called by main.js when the @fold14 reverse animation fully completes so the
-// drag-and-drop state reverts to the @fold13 starting point.
-// animate=true  → 3s dot migration (scroll-back from @fold13)
-// animate=false → instant reset    (@fold14 reverse completion)
+// Called by main.js when the @fold15 reverse animation fully completes so the
+// drag-and-drop state reverts to the @fold14 starting point.
+// animate=true  → 3s dot migration (scroll-back from @fold14)
+// animate=false → instant reset    (@fold15 reverse completion)
 // The currently-extreme categories, newest-first. On desktop that's
 // #page9ZoneAbove's own DOM order; on mobile pills never leave the tray (they
 // highlight in place), so the .is-extreme flag is the record instead — order is
@@ -1717,7 +1717,7 @@ function p9ResetDrops(animate = false) {
   p9CountAnim = null;
   if (animate && p9.lastPositions && p9.lastPositions.size > 0) {
     p9.anim = { from: new Map(p9.lastPositions), start: nowMs, duration: 3000 };
-    if (currentPage === 10) p9RunAnimLoop();
+    if (currentPage === 11) p9RunAnimLoop();
   } else {
     p9.anim = null;
   }
@@ -1725,7 +1725,7 @@ function p9ResetDrops(animate = false) {
 
 // Reverses the *visual* effect of p9ResetDrops(true) — moves the given
 // categories' pills from the tray back into the extreme zone and restores
-// p9.sides, so scrolling back into @fold13 (main.js's page9UpdateFromScroll)
+// p9.sides, so scrolling back into @fold14 (main.js's page9UpdateFromScroll)
 // puts the dots/pills right back where the user left them, rather than
 // requiring them to be re-dropped by hand. `idxs` must be in the DOM order
 // #page9ZoneAbove had right before p9ResetDrops ran (most-recently-dropped
@@ -1749,7 +1749,7 @@ function p9RestoreDrops(idxs) {
   p13SyncGateVisibility?.();
   if (p9.lastPositions && p9.lastPositions.size > 0) {
     p9.anim = { from: new Map(p9.lastPositions), start: nowMs, duration: 3000 };
-    if (currentPage === 10) p9RunAnimLoop();
+    if (currentPage === 11) p9RunAnimLoop();
   }
 }
 
@@ -1786,7 +1786,7 @@ function p9BuildPanel() {
 
   // ── Keyboard / assistive-tech path ───────────────────────────────────────
   // The pills are <div>s driven by pointerdown, so Tab skipped them and no key
-  // could trigger anything — and @fold12's scroll gate (p13GateLocked,
+  // could trigger anything — and @fold13's scroll gate (p13GateLocked,
   // js/fold11.js) won't unlock until one pill is classified, which made folds
   // 12-13 unreachable without a pointer. The keyboard path deliberately reuses
   // the SAME commit functions the pointer paths use rather than adding a
@@ -2097,7 +2097,7 @@ function p9BuildPanel() {
         baseRight,
       };
       p9CountAnim = null; // stagger drives the count directly — no separate count-up
-      if (currentPage === 10) p9RunAnimLoop();
+      if (currentPage === 11) p9RunAnimLoop();
 
     } else {
       // ── Dropping back into legit ───────────────────────────────────────────
@@ -2113,7 +2113,7 @@ function p9BuildPanel() {
 
       const DOT_DURATION = 3000;
       p9.anim = { from: new Map(p9.lastPositions), start: nowMs, duration: DOT_DURATION };
-      if (currentPage === 10) p9RunAnimLoop();
+      if (currentPage === 11) p9RunAnimLoop();
 
       // Ticks down WHILE the dots leave, not after — waiting out the full 3s
       // flight before an 800ms count-down (and only then the label fade for
@@ -2615,14 +2615,14 @@ function p9HoverInit() {
       // updateGroups (main.js) re-reads p9.hoverDimT/hoveredCategoryIdx to dim
       // the 8 fold6 squares in step with every other canvas dot — they're not
       // part of drawPage9's own dot loop, so draw() alone doesn't touch them.
-      if (currentPage === 10) { draw(); if (typeof updateGroups === "function") updateGroups(); }
+      if (currentPage === 11) { draw(); if (typeof updateGroups === "function") updateGroups(); }
       if (p9.hoverDimT !== hoverDimTarget) {
         hoverDimRaf = requestAnimationFrame(step);
       } else {
         hoverDimRaf = null;
         if (p9.hoverDimT === 0) {
           p9.hoverDimCategoryIdx = null;
-          if (currentPage === 10) { draw(); if (typeof updateGroups === "function") updateGroups(); }
+          if (currentPage === 11) { draw(); if (typeof updateGroups === "function") updateGroups(); }
         }
       }
     }
@@ -2734,7 +2734,7 @@ function p9HoverInit() {
     // Also fully off mid-drag (.dragging on .page9-sticky): the pointer
     // carrying a pill across the canvas shouldn't light up dot tooltips
     // under the ghost on its way to a zone.
-    if (currentPage !== 10 || p9.anim || isMobile() ||
+    if (currentPage !== 11 || p9.anim || isMobile() ||
         document.querySelector(".page9-sticky")?.classList.contains("dragging")) { hide(); return; }
 
     const rect = canvasEl.getBoundingClientRect();
@@ -2847,7 +2847,7 @@ function p9HoverInit() {
   // already hides the tooltip whenever nothing's under the cursor — so a
   // separate pointerleave handler isn't needed either.
   window.addEventListener("pointermove", onMove);
-  window.addEventListener("scroll", () => { if (currentPage !== 10) hide(); }, { passive: true });
+  window.addEventListener("scroll", () => { if (currentPage !== 11) hide(); }, { passive: true });
 }
 
 p9HoverInit();
@@ -2960,7 +2960,7 @@ function p9CategoryTooltipInit() {
   // is the user moving on from that pill anyway.
   zoneBelow.addEventListener("scroll", () => { if (openInfoPill) hide(); }, { passive: true });
 
-  window.addEventListener("scroll", () => { if (currentPage !== 10) hide(); }, { passive: true });
+  window.addEventListener("scroll", () => { if (currentPage !== 11) hide(); }, { passive: true });
 }
 
 p9CategoryTooltipInit();

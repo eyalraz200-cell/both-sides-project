@@ -78,7 +78,7 @@ const FOLD8_TYPE_MS_PER_CHAR = 15;  // typewriter speed — tuned snappy, not sl
 //     (top to bottom), so the frame closes the screen rather than opening it,
 //     and the grid's bottom clearance (sbbTimelineMobileBottomPx,
 //     squareboundingbox.js) is derived from it instead of its top.
-//   @fold11 engaged — p9DockTopM() (page9.js): pushed further down to clear the
+//   @fold12 engaged — p9DockTopM() (page9.js): pushed further down to clear the
 //     pill tray band, which on mobile pins itself under the titles rather than
 //     sitting at the bottom of the screen. Runs on p9TooltipDropTrigger
 //     (js/groups.js), fired from the same `isStuck` crossing that slides the
@@ -106,7 +106,7 @@ function tooltipDockRestPx() {
   return window.innerHeight - TOOLTIP_DOCK_BOTTOM_PX - TOOLTIP_DOCK_H_PX;
 }
 
-// Blends @fold11's drop onto whatever spot the earlier two produced, so the
+// Blends @fold12's drop onto whatever spot the earlier two produced, so the
 // three-way lerp stays continuous even if the user scrolls back up mid-drop.
 function tooltipDockDropPx(base) {
   if (typeof p9TooltipDropTrigger === "undefined" || typeof p9DockTopM !== "function") return base;
@@ -155,7 +155,7 @@ function tooltipDockTopPx(el) {
 // frame SNAPS clear of it and snaps back when the finger moves away or lifts.
 // Which WAY it dodges follows where the frame rests on that fold: on @fold9 it
 // rests at the bottom of the screen, so a finger held LOW is the collision and
-// the frame dodges UP to the grid's top clearance line; on @fold11 it still
+// the frame dodges UP to the grid's top clearance line; on @fold12 it still
 // rests high, so a finger held HIGH is the collision and it dodges DOWN.
 // A deliberate exception to "position never snaps", per explicit instruction —
 // the dodge is a mode flip serving a live finger, and an animated frame would
@@ -167,16 +167,16 @@ function tooltipDockTopPx(el) {
 // axis line (P7_AXIS_Y_FRAC_MOBILE) minus SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX,
 // keeping the frame clear of both the axis and the headline above it.
 //
-// The two folds anchor differently — explicit instruction, @fold11 ONLY:
+// The two folds anchor differently — explicit instruction, @fold12 ONLY:
 // - @fold9 (the real timeline): the frame's BOTTOM edge, off the LIVE
 //   offsetHeight, so a hold-expanded description grows UPWARD from the line
 //   and never touches the axis text.
-// - @fold11 (currentPage === 10): the COLLAPSED frame's bottom edge sits
+// - @fold12 (currentPage === 11): the COLLAPSED frame's bottom edge sits
 //   P7_TIP_AVOID_DROP_PX lower still (eating into the clearance, by
 //   instruction), and expansion grows DOWNWARD instead of upward.
 let p7TipAvoidActive = false;
 
-// @fold11-only extra drop below the clearance line, per explicit instruction
+// @fold12-only extra drop below the clearance line, per explicit instruction
 // ("snap to a bit lower position", then "lower still"). Deliberately eats into
 // the axis/label clearance described above — raise back toward 0 if the frame
 // starts crowding the axis text.
@@ -186,8 +186,8 @@ function tooltipAvoidPx(el, top) {
   if (!p7TipAvoidActive) return top;
   const H = window.innerHeight;
   const box = typeof sbbTimeline === "function" ? sbbTimeline(H) : null;
-  if (typeof currentPage !== "undefined" && currentPage === 10) {
-    // @fold11 — still docked high, so it dodges DOWN onto the grid's bottom
+  if (typeof currentPage !== "undefined" && currentPage === 11) {
+    // @fold12 — still docked high, so it dodges DOWN onto the grid's bottom
     // clearance line, P7_TIP_AVOID_DROP_PX lower still (by instruction), and a
     // hold-expanded description grows downward from there.
     const line = box ? H * box.bottom : H * 0.94 - 64;
@@ -350,7 +350,7 @@ function fold8AdvanceSequence() {
     // textOpacity further down) while the frame itself holds its spot, ready
     // for the next selection. Only reversing the whole fold back to elapsed 0
     // fades the frame itself, through growT.
-    // × (1 - fold13OutT): the sequence rAF keeps running while @fold12's
+    // × (1 - fold13OutT): the sequence rAF keeps running while @fold13's
     // scroll fade is active (mobile keeps the docked frame alive through
     // page 9), so without this factor each animation frame snapped the
     // frame back to full grow-in opacity between fold13 scroll ticks.

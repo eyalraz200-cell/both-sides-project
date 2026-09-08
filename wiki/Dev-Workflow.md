@@ -96,7 +96,7 @@ numbers in the source.
 
 `_debug-fold-badge.js` — the bottom-left `@foldN` chip (`@foldN · #page-(N-1) · short
 name`; click or `B` collapses it to just `@foldN`). Reinstated on 2026-09-06 with a `TEMP`
-`<script>` tag after `reload.js` in `project.html`; delete both together. The map harnesses (`_debug-map-lab.js`, `_debug-map-details.js`, `_debug-map-dots.js`, `_debug-map-columns.js`, `_debug-map-dot.js`, `_debug-map.js`, `_debug-map-view.js`, `_debug-map-clusters.js`) went with the @fold13/@fold14 event map when it was **archived on 2026-09-08** — the map itself, its data and the last live lab are on the `map-archive` branch (snapshot `834ee0d`); nothing map-related is loaded by `project.html` any more. `_debug-camp-gap.js` —
+`<script>` tag after `reload.js` in `project.html`; delete both together. The map harnesses (`_debug-map-lab.js`, `_debug-map-details.js`, `_debug-map-dots.js`, `_debug-map-columns.js`, `_debug-map-dot.js`, `_debug-map.js`, `_debug-map-view.js`, `_debug-map-clusters.js`) went with the @fold14/@fold15 event map when it was **archived on 2026-09-08** — the map itself, its data and the last live lab are on the `map-archive` branch (snapshot `834ee0d`); nothing map-related is loaded by `project.html` any more. `_debug-camp-gap.js` —
 the `manual/` slider that picked the gap between the two camps at @fold2 **and** @fold3 (they share
 one anchor): `FOLD2_CAMP_CENTER_GAP_PX` 180 → **162**, re-laying out live with `updateGroups();
 draw()`. The knob was the HALF-gap — each camp's centre sits that many px either side of screen
@@ -170,7 +170,7 @@ done.)*
 The tuning harnesses that existed are gone; what's worth keeping is what each one *baked into*, so a rebuilt
 version knows where its numbers land:
 
-- **@fold9/@fold11 loupe marker** (`compare/`: crosshair vs halo-by-subtraction vs
+- **@fold9/@fold12 loupe marker** (`compare/`: crosshair vs halo-by-subtraction vs
   grow-the-selection) — halo won, and it moved out of the loupe onto the main canvas:
   `P7_INSPECT_SCRIM` / `P7_INSPECT_HOLE_DOTS` + `p7DrawInspectScrim` in `page7.js`.
 - **@fold2 dot colours/positions** — group colours → `GROUPS[].color` **plus** the
@@ -184,7 +184,7 @@ version knows where its numbers land:
   decorative rows are skipped and rejoin the palette), and palette dedup being **one
   shared `claimed` set**, not one per column — otherwise an arranged colour carried across
   columns gets dealt twice.
-- **@fold11 row picking** — not a tuning harness: it collected `rowId`s off the page to
+- **@fold12 row picking** — not a tuning harness: it collected `rowId`s off the page to
   paste back into `full_v3.xlsx`. Its two reusable tricks: hit-test by coordinate against
   `p9.lastPositions` on `window` listeners (both dot layers are `pointer-events: none`),
   and overdraw by **wrapping the global `draw`**, which is a writable property of

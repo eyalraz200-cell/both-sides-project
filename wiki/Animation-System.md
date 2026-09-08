@@ -177,5 +177,5 @@ still lands. It's safe to apply that broadly only because of the rule above — 
 elements carry no CSS transition to fight with.
 
 **Deliberately NOT reduced:** motion that *is* the scroll position — @fold9's scrubbed
-timeline and @fold10's glide are the content, not decoration around it, and freezing them
+timeline and @fold11's glide are the content, not decoration around it, and freezing them
 would leave nothing to read. Nor page9.js's finalized state-1 drop animation.
