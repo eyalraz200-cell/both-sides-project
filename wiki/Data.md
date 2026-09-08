@@ -13,6 +13,7 @@ One object per event:
 | `actor` | Join key into `GROUPS`' `actor` field → the dot's color (`p7ActorColor`) |
 | `category` | Hebrew category string (the xlsx's `event_type`) → `CATEGORY_TO_IDX` (`page9.js`) |
 | `descHeMedium` | Per-event Hebrew description, shown in the hover tooltip |
+| `crowd` | Integer crowd estimate or `null` — from the **crowd size** column of a *second* workbook, see below. Drives the @fold9 hover bulge tier (`p7BulgeTier`, [Timeline](Timeline.md#the-hover-bulge)) |
 
 Committed dataset: **14,451 events — 5,325 left, 9,126 right**, from **2023-01-01** to
 **2026-07-03**.
@@ -22,6 +23,21 @@ An unmatched `actor` falls back to `#888`. All six `GROUPS` actors — including
 group appears on the timeline.
 
 ## Source of truth: the xlsx
+
+### `Events_with_description_he_medium.xlsx` — the crowd-size column (`CROWD_XLSX`)
+
+`full_v3.xlsx` has no crowd column; the reported figure lives in this second workbook
+(sheet `Sheet1`: side, main actor, event category, description, date, fatalities,
+**crowd size**, description_he_medium — 13,523 rows). `load_crowd()` (`server.py`) joins it
+to the v3 rows on the **first 80 characters of the English `Description`** — the only text
+shared verbatim by both files. 2,757 of 14,451 events end up with a figure; the rest are
+`null`. If the file is missing the server warns and every `crowd` is `null`.
+
+`parse_crowd(raw)` turns the cell's free text (`crowd size=about 2,000`,
+`…=tens of thousands`, `no report`) into ONE integer estimate: the larger of any number in
+the text and the first word bucket in `CROWD_WORDS` (hundreds of thousands 300,000 · tens
+of thousands 30,000 · thousands 3,000 · hundreds 300 · dozens 50 · tens 30); blank / "no
+report" → `null`. Distribution: < 100 — 837 · 100–999 — 985 · 1k–9,999 — 734 · ≥ 10k — 201.
 
 `full_v3.xlsx` at the repo root (sheet `raw-israel`, 14,451 data rows). Columns:
 

@@ -2631,7 +2631,38 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    nothing. Folds 8-10 (the pinned timeline, the bridge and the drag
    categorization) are NOT adapted yet; see wiki/Folds.md.
    ──────────────────────────────────────────────────────────────────────── */
+/* @fold9's size-grid toggle (#p7SizeGrid, page7.js) — one pill pinned under
+   the timeline box (SBB_TIMELINE.bottom 0.93), desktop only. Shown via
+   .is-visible while #page-8 is active; .is-active while the grid is on. */
+.p7-size-grid {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: none;
+  direction: rtl;
+}
+.p7-size-grid.is-visible { display: flex; }
+.p7-size-grid button {
+  font: 600 13px 'Assistant', sans-serif;
+  color: rgba(0, 0, 0, 0.5);
+  background: #fff;
+  border: 1px solid rgba(130, 130, 130, 0.3);
+  border-radius: 4px;
+  padding: 5px 10px;
+  box-shadow: 0 1px 1.1px rgba(0, 0, 0, 0.07);
+  cursor: pointer;
+}
+.p7-size-grid button:hover { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); }
+.p7-size-grid button.is-active {
+  color: #fff;
+  background: #1a1a1a;
+  border-color: #1a1a1a;
+}
+
 @media (max-width: 600px) {
+  .p7-size-grid { display: none !important; }
   /* Half the desktop gutter — --card-w's own min() subtracts 48px to match. */
   .text-section {
     padding: 0 24px;

@@ -435,11 +435,13 @@ over `totalRows × CELL`:
 - **Headlines:** dot on the line at `p7RowY(events[i].row)` (`p7DrawAxisMarker`: the bare
   coloured disc, no white halo); "reached" = its y ≤ the fill
   edge. `p7UpdateAxisEventTriggers` uses one rule for all seven on desktop:
-  `p7CurRow() ≥ events[i].reachRow` to open; **reverse hysteresis** — a headline that is
-  open stays open on the way back up until the fill edge retreats to the *previous* event's
-  `reachRow` (the first headline: its own row), then it closes and the previous one, still
-  reached by the same rule, crossfades back in. While held, the dot (and so the card's split
-  half-dots) stays at full size even though the fill edge is already above it.
+  `p7CurRow() ≥ events[i].reachRow` — the **same row opens and closes it**, so scrolling
+  back up past an event collapses that event immediately.
+
+  > **Removed — don't reintroduce:** the reverse hysteresis that held an open headline
+  > until the fill edge had retreated to the *previous* event's `reachRow`. It left a
+  > passed headline sitting up through most of the way back; the close is symmetric now.
+
   **Side cards** (desktop, `eventSide` `'alternate'`): headline `i` opens on the **left for
   even `i`, right for odd** — a zig-zag down the axis. A side card is **not** `P7_VERT.card`
   but its own plaque, `P7_VERT.sideCard` (after the Figma draft `327:1654`): a flat
@@ -793,6 +795,107 @@ the hovered one's. Three do: `settlers` and `right wing protesters` at 0.15,
 `protesters against government` at 0.11 — the loud colors, pushed further back so the
 whole grid reads as one even dim. `HOVER_DIM_MS` 80 is page9-only. Every
 hover change also calls `updateGroups()` so the 8 fold-6 DOM squares dim in step.
+
+### The hover bulge — `p7BulgeTick` / `p7BulgeList` / `p7BulgeShift` (page7.js)
+
+The same bulge (same constants, tiers and push) also applies to @fold11's extreme grid dots — `p9BulgeTick` in page9.js, see [Drag-and-Drop → Hover](Drag-and-Drop.md#hover).
+
+The hovered square **swells to a size set by its crowd** and shoves the grid apart so
+every gap around it stays exactly `P7_GAP`:
+
+- Grown side = `P7_SQ × P7_BULGE_MULT[tier]`; tier = how many of the ascending crowd
+  thresholds `P7_BULGE_CUTS` the event's `crowd` reaches (so `MULT` has one entry more
+  than `CUTS`). Tuned 2026-09-07 by harness (removed):
+  `CUTS [100, 2500, 25100, 100000]`, `MULT [1, 2.25, 4, 6, 7.5]` → 3.5 (unchanged) /
+  7.88 / 14 / 21 / 26.25 px. Tier 0 (no figure, or below the first cut) never swells — no entry is even
+  created in `p7BulgeT`. Tiers, not a continuous scale — a few sizes read, a ramp doesn't.
+- The extra width is split in two; every other square on that side shifts by the half
+  (`push`) away from the hovered cell on each axis it sits off-centre on
+  (`Math.sign(dc)`, `Math.sign(dr)`), so rows and columns slide as a unit and nothing
+  overlaps. Full strength out to `P7_BULGE_HOLD` 12 cells (Chebyshev), eased with `p9Ease`
+  to zero by `P7_BULGE_REACH` 30 cells — the shove is absorbed locally; beyond the hold
+  band the gaps compress by fractions of a px rather than the whole side sliding.
+- Per-event 0..1 in `p7BulgeT` (a Map), advanced on wall-clock every draw at
+  `P7_BULGE_MS` 120 toward 1 for the hovered event (or the drag-inspected one) and 0 for
+  every other; entries are dropped at 0. Skating across dots: the outgoing bulge keeps
+  collapsing while the next opens. `p7BulgeActive()` keeps `p7AnyAnimActive` (and so the
+  rAF loop `p7HoverInit` already starts on every hover change) alive until all settle.
+- The pushed position is what goes into `posMap`/`p7.lastPositions`, so the tooltip and
+  the hit-test follow the displaced squares. The hovered square's own hit box is its
+  **current grown size** (`hovHalf` in `doHitTest`) and wins outright while the pointer is
+  inside it — otherwise leaving the 3.5px core inside the big square dropped the hover,
+  snapped every dot to full opacity and re-hovered a pixel later (jitter). The hovered square itself stays centred on
+  its own cell (`bulgeSize` replaces `SQ` in the fill; the cascade `scale` still applies).
+
+### The size grid — `p7SizeGridSet` / `#p7SizeGrid` (page7.js, desktop only)
+
+One toggle pill («לפי גודל» → «חזרה לציר הזמן») pinned bottom-centre
+(`.p7-size-grid`, a direct `.layout` child, hidden under 600px), shown only
+while `#page-8` is active (`p7SizeGridOnPage`, the first line of
+`setActivePage` in `js/nav.js`). State: `p7Grid = { on, layout }`.
+
+**On:** every square currently on screen grows to its crowd tier and flies to
+a cell in a packed grid where nothing overlaps and every neighbour gap is the
+same unit gap. **Off:** everything flies back to its timeline cell. Dates stop
+meaning anything while it is on — the year axis is not drawn, and the two
+camps' packs meet on the centre line instead of straddling the corridor.
+
+- **Tiers as cell blocks.** A tier-k square (`p7BulgeTier`, same tiers as the
+  hover) spans `P7_GRID_TIER_CELLS[k] = [1, 2, 3, 5, 6]` unit cells; size
+  `n·CELL − GAP`, so gaps are exact by construction. That makes the grid's
+  ratios 1 / 2.43 / 3.86 / 6.71 / 8.14 — *not* the hover's `P7_BULGE_MULT`,
+  which is untouched.
+- **No dates, no axis.** The grid is a pure size pack: the year axis and its
+  event rules are not drawn while it is on (`p7DrawYearAxisVertical` /
+  `p7DrawVertEventLines` return early), and squares are packed in the order
+  they are drawn, with no date anchoring.
+- **The camps meet on the centre line.** There is no corridor in the grid —
+  both blocks' inner edge is `W/2`, so the two packs abut with a single unit
+  gap between them and stretch the full height of the box.
+- **The block doesn't span the side.** `P7_GRID_WIDTH_FRAC` (0.71) caps how
+  much of the half-width (centre line out to `sbbTimelineLeftX`) the pack may
+  use. Width and square size trade off — the block is always the full height
+  of the box, so a narrower cap means smaller squares.
+- **The unit square** is `P7_GRID_UNIT_PX` (**4.2px**) — a design choice, not a
+  solve; a tier-4 block is ~34px (the timeline's own dot is 3.5px). 0 falls
+  back to the timeline's `p7Sq()`.
+- **Packing is lazy: only a square that is actually drawn takes a cell**
+  (`p7GridCell`, called from `p7DrawSideSquares` *after* the
+  row-cursor/presence gate). Packing the whole ~14k roster up front reserved a
+  cell for every square the scroll had not revealed yet, and each reserved cell
+  rendered as a hole — the block came out moth-eaten. Now each side keeps a
+  live skyline (`widths[row]` = how far out that row already reaches;
+  `p7GridSky` / `p7GridPlace`) on a grid `floor(boxH / CELL)` rows tall — the
+  whole box — that grows *sideways*: a square takes the run of `n` rows whose
+  furthest-out column is nearest the centre line. So a camp fills top-to-bottom
+  before it widens, the two blocks grow away from `W/2` in opposite directions,
+  and a square already placed never moves as more arrive. Claimed events get
+  cells too. `p7BuildSizeGrid` builds geometry + two empty skylines only; it is
+  dropped on every press (each press repacks against what is on screen then)
+  and on any viewport/knob change (`p7SizeGridLayout`'s `key`,
+  `p7UpdateLayout`).
+- **The gap is the timeline's own** (`p7GapRatio()`): every neighbour, in
+  either direction and whatever the tiers, is exactly one unit gap apart —
+  spacing reads identically in both modes, only the dots' sizes change.
+- **The camps' corridor** is `P7_GRID_CAMP_GAP` px (0 = the two solid blocks
+  meet on the centre line). Each camp gives up half of it, out of its own
+  width.
+- **Only what's visible moves.** Row cursors are untouched: a square with no
+  reached row is not drawn, in either mode. Scrolling further while the grid
+  is on pops new squares straight into a fresh cell on the frontier; scrolling
+  back shrinks them away but keeps their cell until the next press. Turning off
+  needs no replay.
+- **Morph** (`p7GridMorph`, `GROUP_TRANSITION_MS`, `p9Ease`): on either flip
+  the `from` map is captured from `p7.lastPositions` (centre + the square's
+  own drawn size `sq`, so a click mid-flight continues from the blend) and
+  `p7DrawSideSquares` blends centre and size to the rest cell. **Size and
+  position only — alpha never changes.**
+- **Hover** while on: the bulge is off (`p7BulgeTick` sees no hovered
+  event); hover dim and the tooltip still work — `posMap` entries carry
+  `sq`, and `doHitTest` / the flipped tooltip read `pos.sq ?? p7.SQ`.
+- **Leaving the page** snaps it off instantly (`p7SizeGridSet(false,
+  {instant: true})`) so page8's glide and the fold-9 fly-out only ever read
+  timeline cells.
 
 ## Handoff to page8/page9
 

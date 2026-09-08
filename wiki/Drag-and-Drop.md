@@ -334,6 +334,25 @@ state (dim + category-only counts) for the whole drag via `p9.holdPillHoverDim`
 whose `hoveredCatPill` early-return no-ops when the hold bypassed it) — otherwise the dots and count labels sprang back to
 their unhovered state the instant the drag started, before anything was reclassified.
 
+**Hover bulge** (`p9BulgeTick` / `p9BulgeSize`, page9.js — desktop only): the hovered
+extreme dot swells to `P9_SQ × P7_BULGE_MULT[p7BulgeTier(e)]` centred on its cell, and
+every other dot in the same column block shifts by half the extra width away from it per
+axis, so the gaps around it stay exactly `P9_GAP`. It reuses @fold9's constants and helpers
+verbatim (`P7_BULGE_*`, `p7BulgeTier`, `p7BulgeShift`, page7.js — see
+[Timeline → The hover bulge](Timeline.md#the-hover-bulge--p7bulgetick--p7bulgelist--p7bulgeshift-page7js)):
+crowd tiers by `ev.crowd` (tier 0 never swells), push full strength within `P7_BULGE_HOLD`
+cells and faded out by `P7_BULGE_REACH` (in `P9_CELL` units), 120ms per-event `p9Ease`
+tween keyed on `p9.hoveredEvent`. `p9BulgeT` is page9's own map and clock (page7's tick
+reads `p7.hoveredEvent`); it schedules its own `requestAnimationFrame(draw)` while a bulge
+is still tweening, since `p9RunAnimLoop` only runs during `p9.anim` (and hover is off then).
+The size and shifted target are applied in `drawBandedCols` at the call into `p9PlaceDot`
+(`sizeOverride` + moved x/y) — `p9PlaceDot`'s animation branches, including the finalized
+state 1, are untouched. `posMap` therefore records the pushed positions, so the hit-test
+follows the shoved dots; the hovered dot's hit box is its **grown** box and wins outright,
+otherwise the cursor sitting in the white space the bulge opened dropped the hover and the
+grid flickered between dimmed and full. The flipped tooltip hangs below the grown box
+(`bestPos.sq`).
+
 **Tray-pill hover** (`p9CategoryTooltipInit`) is scoped to `#page9ZoneBelow` only, shows
 `P9_CATEGORY_DESC` in `#page9CatTooltip` 10px above the pill, and previews the drop box by
 adding `tray-pill-hover` to `#page9ZoneAbove`. Suppressed while dragging. Dot hover wins
