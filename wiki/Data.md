@@ -7,12 +7,13 @@ One object per event:
 
 | Field | Meaning |
 |---|---|
-| `rowId` | The xlsx's own stable `row_id` (`"row-11"`). Lets JS pin to specific events by id — all 8 @fold5–@fold8 sample squares are addressed this way (`FOLD6_SQUARE_ROW_IDS` → `p7OccurrenceOfRowId`) |
+| `rowId` | The xlsx's own stable `row_id` (`"row-11"`). Lets JS pin to specific events by id — all 8 @fold5–@fold9 sample squares are addressed this way (`FOLD6_SQUARE_ROW_IDS` → `p7OccurrenceOfRowId`) |
 | `date` | `YYYY-MM-DD`. Sorted lexicographically = chronologically |
 | `side` | `"left"` or `"right"` — which camp column the dot lives in |
 | `actor` | Join key into `GROUPS`' `actor` field → the dot's color (`p7ActorColor`) |
 | `category` | Hebrew category string (the xlsx's `event_type`) → `CATEGORY_TO_IDX` (`page9.js`) |
 | `descHeMedium` | Per-event Hebrew description, shown in the hover tooltip |
+| `crowd` | Integer crowd estimate or `null` — from the **crowd size** column of a *second* workbook, see below. Drives the @fold10 hover bulge tier (`p7BulgeTier`, [Timeline](Timeline.md#the-hover-bulge)) |
 
 Committed dataset: **14,451 events — 5,325 left, 9,126 right**, from **2023-01-01** to
 **2026-07-03**.
@@ -22,6 +23,21 @@ An unmatched `actor` falls back to `#888`. All six `GROUPS` actors — including
 group appears on the timeline.
 
 ## Source of truth: the xlsx
+
+### `Events_with_description_he_medium.xlsx` — the crowd-size column (`CROWD_XLSX`)
+
+`full_v3.xlsx` has no crowd column; the reported figure lives in this second workbook
+(sheet `Sheet1`: side, main actor, event category, description, date, fatalities,
+**crowd size**, description_he_medium — 13,523 rows). `load_crowd()` (`server.py`) joins it
+to the v3 rows on the **first 80 characters of the English `Description`** — the only text
+shared verbatim by both files. 2,757 of 14,451 events end up with a figure; the rest are
+`null`. If the file is missing the server warns and every `crowd` is `null`.
+
+`parse_crowd(raw)` turns the cell's free text (`crowd size=about 2,000`,
+`…=tens of thousands`, `no report`) into ONE integer estimate: the larger of any number in
+the text and the first word bucket in `CROWD_WORDS` (hundreds of thousands 300,000 · tens
+of thousands 30,000 · thousands 3,000 · hundreds 300 · dozens 50 · tens 30); blank / "no
+report" → `null`. Distribution: < 100 — 837 · 100–999 — 985 · 1k–9,999 — 734 · ≥ 10k — 201.
 
 `full_v3.xlsx` at the repo root (sheet `raw-israel`, 14,451 data rows). Columns:
 
@@ -47,19 +63,15 @@ Two row pairs in the sheet are literal duplicates of one ACLED event and share a
 `row-4132`/`row-4134` (`ISR42882`), `row-8895`/`row-8896` (`PSE46925`). `server.py` still
 reads `full_v3.xlsx`; the page consumes the geodata only through `map/event-points.json` (see `map/` below).
 
-## `map/` — the @fold13 event map's data
+## `map/` — archived with the event map
 
-Two static files, fetched by `map.js` (`p12MapLoad`) only when @fold13 comes within two
-viewports:
-
-| File | What it is |
-|---|---|
-| `map/region.geojson` | Natural Earth 10m admin-0 outlines (public domain), 14 features by `name`: Israel and Palestine (the two subjects, darker fills + `#999` stroke) plus Egypt, Jordan, Lebanon, Syria, Saudi Arabia, Iraq, Turkey, Cyprus, Northern Cyprus, Kuwait, Sudan and Libya (pale `#fafafa`, `#ccc`) — the map is viewport-wide, so the neighbours fill the horizon. Rings far outside the region are dropped and coordinates rounded to 3dp; ~210KB |
-| `map/event-points.json` | `{points: [[lat, lon] × 904], rows: [rowNum × 14451], pt: [pointIdx × 14451]}` — the 904 distinct coordinates in `full_v4.xlsx`, plus a per-event index into them keyed by the xlsx `row_id` number (`row-5` → 5). This is what lets every event own its own map cell and be flown/popped individually; `map.js` joins it to `events.json` through `rowId`. ~144KB |
-
-If the xlsx's rows change, `event-points.json` must be rebuilt from `full_v4.xlsx`'s
-`latitude`/`longitude` columns (there is no script for it in the repo — it was a one-off
-dump); `region.geojson` is data-independent.
+The @fold15 event map was archived on **2026-09-08** (branch `map-archive`, snapshot commit
+`834ee0d`). `map.js`, `map/region.geojson` (Natural Earth 10m admin-0 outlines for the region)
+and `map/event-points.json` (904 distinct settlement coordinates + a per-event index into them,
+covering all 14,451 rows) all live there, not in the working tree. Restore with
+`git checkout map-archive -- map map.js` if the map ever comes back; the geodata is keyed by the
+xlsx `row_id` number, so it must be rebuilt from `full_v4.xlsx`'s `latitude`/`longitude` columns
+if the rows change.
 
 **There is no `side` column.** The camp split is derived from `main_actor` via
 `ACTOR_SIDE` in `server.py`, which must stay in sync with `FOLD4_COALITION_ROWS` /

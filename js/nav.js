@@ -2,6 +2,9 @@
 const sections = Array.from(document.querySelectorAll(".text-section"));
 
 function setActivePage(page) {
+  // @fold10's size-grid toggle (page7.js) lives on that page only — snapped
+  // off before any handoff below reads the timeline's positions.
+  if (typeof p7SizeGridOnPage === "function") p7SizeGridOnPage(page);
   if (page === currentPage) return;
   // Scrolling back out of the timeline toward a fold that doesn't draw the
   // per-event squares at all (anything before drawFold7, i.e. currentPage < 6)
@@ -35,7 +38,7 @@ function setActivePage(page) {
   // *scroll-dependent* moment, that showed up as the glide stuttering and
   // landing differently depending on whether the user kept scrolling through
   // it. Replaying the same global 0..1 clock makes the handoff invisible.
-  if (currentPage === 9 && page === 10 && typeof p8CurrentT === "function" && p8Engaged && p8CurrentT() < 1) {
+  if (currentPage === 11 && page === 11 && typeof p8CurrentT === "function" && p8Engaged && p8CurrentT() < 1) {
     const W = canvas.clientWidth, H = canvas.clientHeight;
     p9.anim = {
       from: p8CaptureBlendedPositions(W, H, 0),
@@ -46,19 +49,22 @@ function setActivePage(page) {
       // shrinks the dots across the flight and drawPage9 has to keep doing so,
       // or the dots snap small at the handoff and the flight looks dimmer.
       // p8CaptureBlendedPositions above has just run p7UpdateLayout, so p7.SQ
-      // is this viewport's real timeline size.
-      fromSQ: p7.SQ,
+      // is this viewport's real timeline size. Out of @fold11's size grid there
+      // is no single start size — every dot leaves at its own tier size — so
+      // the scalar is left OFF there and each captured entry's own `sq` drives
+      // the lerp instead (p9PlaceDot's `from.sq` branch, page9.js).
+      ...(typeof p7Grid !== "undefined" && p7Grid.on ? {} : { fromSQ: p7.SQ }),
     };
   }
 
   // Mirror of the above, the other direction: leaving page8's bridge back
-  // toward the real timeline (#page-8, drawPage7) while page8's reverse glide
+  // toward the real timeline (#page-9, drawPage7) while page8's reverse glide
   // (p8CurrentT decreasing toward 0) hasn't finished yet. drawPage7 has no
   // notion of that glide's progress on its own — every square would
   // otherwise teleport straight to its resting timeline cell the instant
   // this section starts drawing instead of page8. See p7EntryAnim's own
   // comment (page7.js) for the full rationale.
-  if (currentPage === 9 && page === 8 && typeof p8CurrentT === "function" && p8CurrentT() > 0) {
+  if (currentPage === 11 && page === 9 && typeof p8CurrentT === "function" && p8CurrentT() > 0) {
     const W = canvas.clientWidth, H = canvas.clientHeight;
     // Same back-dating as the forward handoff above, mirrored: this direction
     // runs t: p8CurrentT() -> 0 and its target IS the timeline layout, so the
@@ -85,10 +91,10 @@ function setActivePage(page) {
   // whatever incidental draw() calls scroll/hover happened to trigger, i.e.
   // it would stall the instant the user stopped scrolling and lurch forward
   // again on the next unrelated redraw, instead of playing smoothly.
-  if (currentPage === 10 && p9.anim) p9RunAnimLoop();
+  if (currentPage === 12 && p9.anim) p9RunAnimLoop();
 
   // Same reasoning, for p7EntryAnim's own continuous loop.
-  if (currentPage === 8 && p7EntryAnim) p7StartAnimLoop();
+  if (currentPage === 9 && p7EntryAnim) p7StartAnimLoop();
 }
 
 const sectionObserver = new IntersectionObserver(entries => {

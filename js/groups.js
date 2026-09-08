@@ -516,7 +516,7 @@ const FOLD6_SQUARE_ROW_IDS = [
 const FOLD6_TOOLTIP_ROW_ID = FOLD6_SQUARE_ROW_IDS[0];
 // Not shown in Figma node 258:2206 either (all 8 squares render flat
 // #2d2d2d there — see lerpFold6SquareColor's own null-target case, same
-// value) — the actors only matter once @fold8 recolors/flies the squares out to
+// value) — the actors only matter once @fold9 recolors/flies the squares out to
 // their real per-event dots, a later beat that Figma frame doesn't depict. This
 // list MUST mirror FOLD6_SQUARE_ROW_IDS' own rows: it can't be read off the
 // data, because FOLD6_SQUARE_COLORS is computed at parse time, long before
@@ -615,14 +615,20 @@ const page2TitleCardEl  = document.querySelector("#page-1 .text-card");
 // @fold3 (#page-2) — the group labels fading in next to their rects.
 const page3TitleCardEl  = document.querySelector("#page-2 .text-card");
 const page6TitleCardEl  = document.querySelector("#page-3 .text-card");
-const page7TitleCardEl  = document.querySelector("#page-7 .text-card");
+const page7TitleCardEl  = document.querySelector("#page-8 .text-card");
 // Fold 6's own card (#page-6, "כל ריבוע מייצג..." — the timeline-intro title,
-// not to be confused with page7TitleCardEl above, which is fold 8's #page-8
+// not to be confused with page7TitleCardEl above, which is fold 8's #page-9
 // card) drives the fold-6 squares' labels fading IN — previously this had no
 // card of its own and just snapped on the instant fold6Trigger settled,
 // which (now that that's a fixed ~1s tween instead of a scroll-coupled one)
 // finishes long before the user actually reaches fold 7.
 const fold7LabelCardEl  = document.querySelector("#page-6 .text-card");
+// @fold8 (#page-7, «ריחוף העכבר מעל ריבוע חושף את תיאור הפעולה וממחיש את סדר גודלה.»)
+// — its own fold for the hover demo: the tooltip sequence and the demo square's
+// swell hang off this card. The 7-square DIM stays on @fold7's own card (per
+// explicit instruction: the dot is already singled out as the labels type in),
+// so this fold adds only the tooltip and the size.
+const fold8HoverCardEl  = document.querySelector("#page-7 .text-card");
 // @fold5 (#page-4, «אספנו תיעודים…»): this card drives the 8 grey squares
 // growing in at centre. @fold6 (#page-5, the ACLED methodology card) then
 // drives the ACLED bottom-legend note fading in. They used to be one fold
@@ -632,16 +638,16 @@ const squaresRevealCardEl = document.querySelector("#page-4 .text-card");
 const acledNoteCardEl     = document.querySelector("#page-5 .text-card");
 // Hoisted above checkFold13 (below), which needs it already resolved at
 // definition time — also reused by p13SyncGateVisibility further down.
-// #page-11 is @fold12, the closing statement — NOT the outro/credits card,
-// which sits behind it at #page-13 (after the @fold13 share block) and shares
-// the same wrapper class. @fold12
+// #page-13 is @fold14, the closing statement — NOT the outro/credits card,
+// which sits behind it at #page-15 (after the @fold15 share block) and shares
+// the same wrapper class. @fold14
 // owns the whole hand-off: the scroll GATE, the scroll-linked fade
 // (fold13ScrollT) and the freeform MORPH (checkFold13 below), the last two
 // sequenced back to back across its card's rise.
 //
 // > The outro's own wrapper was once queried here as fold13OutroStickyEl, back
 // > when the morph fired on the credits card. Nothing reads it now.
-const page12StickyEl       = document.querySelector("#page-11 .page12-sticky-center");
+const page12StickyEl       = document.querySelector("#page-13 .page12-sticky-center");
 
 // Generic discrete trigger: a fixed-duration 0<->1 phase fired once by
 // crossing a scroll threshold (see watchCardThreshold below), exactly like
@@ -667,7 +673,11 @@ function makeTrigger(duration, onTick, onSettle) {
     // frame, and 0/0 is NaN — which never equals toT, so the rAF loop would
     // never settle.
     if (prefersReducedMotion()) return toT;
-    const localT = Math.min(1, (performance.now() - phaseStart) / (duration * Math.abs(span)));
+    // `duration` may be a function — resolved per frame, not captured, so a
+    // live-tuned tempo (the @fold8 harness) takes effect on the next crossing
+    // without rebuilding the trigger.
+    const ms = typeof duration === "function" ? duration() : duration;
+    const localT = Math.min(1, (performance.now() - phaseStart) / (ms * Math.abs(span)));
     return fromT + span * localT;
   }
 
@@ -809,20 +819,53 @@ const fold6LabelHoverTrigger  = makeTrigger(FOLD6_LABEL_HOVER_MS,  (...a) => upd
 // updateGroups (they can't be CSS-only: the rows are laid out in JS against
 // the live viewport). They live on .layout rather than inside .groups-overlay,
 // whose `pointer-events: none` would otherwise have to be undone per child.
+// True while the pointer is actually over either hit box. @fold9's auto-peek
+// reads it so its scheduled collapse never yanks the labels out from under a
+// real hover that arrived mid-demo.
+let fold6LegendPointerOver = false;
 const fold6LegendHoverEls = [0, 1].map(() => {
   const el = document.createElement("div");
   el.className = "fold6-legend-hover";
   el.addEventListener("mouseenter", () => {
+    fold6LegendPointerOver = true;
     fold6LabelHoverTrigger.trigger(1);
     fold6NoteHoverTrigger.trigger(1);
   });
   el.addEventListener("mouseleave", () => {
+    fold6LegendPointerOver = false;
     fold6LabelHoverTrigger.trigger(0);
     fold6NoteHoverTrigger.trigger(0);
   });
   document.querySelector(".layout").appendChild(el);
   return el;
 });
+
+// One click strip per legend row, living INSIDE its column's hover box — so
+// reaching for a row never leaves the hover region and the labels never
+// un-type mid-click. Clicking toggles that group out of the real timeline
+// (@fold10 only); page7.js owns the re-pack and the flight. Positioned per
+// frame by updateGroups, alongside the hover boxes.
+const fold6LegendFilterEls = new Map();
+function fold6LegendFilterEl(g) {
+  let el = fold6LegendFilterEls.get(g);
+  if (el) return el;
+  el = document.createElement("div");
+  el.className = "fold6-legend-filter";
+  el.addEventListener("click", () => {
+    // Clickable on @fold10 and @fold11 — the two folds page7.js draws itself,
+    // so the toggle gets its shrink-then-fly. Later folds inherit the filter
+    // but can't change it: their dots aren't on p7's morph clock, so a toggle
+    // there would make them vanish and reappear with a snap.
+    if (typeof p7FilterToggle !== "function") return;
+    if (currentPage !== 9 && currentPage !== 10) return;
+    p7FilterToggle(g.actor);
+    updateGroups();
+  });
+  const box = fold6LegendHoverEls[FOLD4_COALITION_ROWS.includes(g) ? 1 : 0];
+  box.appendChild(el);
+  fold6LegendFilterEls.set(g, el);
+  return el;
+}
 // Grey squares grow-in (@fold5, #page-4) and the ACLED bottom-legend note
 // fade-in (@fold6, #page-5) — see squaresRevealCardEl / acledNoteCardEl above.
 const squaresRevealTrigger = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateGroups(...a));
@@ -844,11 +887,12 @@ const fold6NoteHoverTrigger = makeTrigger(FOLD6_NOTE_HOVER_MS, (...a) => updateG
 const acledNoteTrigger     = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateGroups(...a));
 const fold6NoteUntypeTrigger = makeTrigger(FOLD6_NOTE_UNTYPE_MS, (...a) => updateGroups(...a));
 const fold7LabelTrigger = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateGroups(...a));
-// Matches FOLD8_GROW_MS (the tooltip's own wall-clock grow-to-full-scale
-// time, see its comment above) — not the typewriter that follows it — so the
-// non-tooltip squares' dim-to-color fade finishes exactly as the tooltip
-// reaches max scale, instead of tracking the shared GROUP_TRANSITION_MS tempo.
-const FOLD8_SQUARE_DIM_MS = FOLD8_GROW_MS;
+// Its own value, not the shared GROUP_TRANSITION_MS: the dim is a quick
+// singling-out of the demo square, not a legend-system beat. (It used to be
+// aliased to FOLD8_GROW_MS so it landed with the tooltip's max scale; the dim
+// now fires a whole fold earlier, on @fold7, so that no longer means anything
+// — hence the literal.)
+const FOLD8_SQUARE_DIM_MS = 350;
 const fold8SquareDimTrigger = makeTrigger(FOLD8_SQUARE_DIM_MS, (...a) => updateGroups(...a));
 // @fold7 trigger #2 (teacher review 2026-09-03, F1): the tooltip demo used to
 // ride fold7LabelTrigger, so it grew + typed at the very moment the title
@@ -863,20 +907,23 @@ const fold8SquareDimTrigger = makeTrigger(FOLD8_SQUARE_DIM_MS, (...a) => updateG
 // The gap the card keeps above the tooltip's measured top edge. This is the
 // only hand-tuned number left in this crossing — everything else is measured
 // off the real box, so the crossing tracks the tooltip's actual size and spot
-// on any viewport instead of assuming them.
-const FOLD8_TOOLTIP_CLEARANCE_PX = 30;
+// on any viewport instead of assuming them. Tuned by eye to a NEGATIVE value:
+// the card is allowed to still overlap the tooltip's top edge by 20px when the
+// fold fires, so the box is on its way in as the card clears rather than after
+// it. Positive would fire later, negative earlier.
+const FOLD8_TOOLTIP_CLEARANCE_PX = -20;
 // Fallback only, for the frames before events.json has loaded (the demo
 // event's text is what gives the box its height) or if the demo square isn't
 // built yet — the old fixed offset, kept so the crossing still has somewhere
 // sane to sit rather than snapping to the house 0.5 and colliding again.
 const FOLD8_TOOLTIP_ABOVE_PX = 400;
 const fold8TooltipTrigger = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateGroups(...a));
-// @fold10 trigger #1 — its title card's ordinary midpoint crossing. Colors in
+// @fold12 trigger #1 — its title card's ordinary midpoint crossing. Colors in
 // only the highlighted square (index 0) and its tooltip's border; the other
 // 7 squares are untouched by this trigger.
 const FOLD9_COLOR_MS = 500;
 const fold9Trigger = makeTrigger(FOLD9_COLOR_MS, (...a) => updateGroups(...a));
-// @fold10 trigger #2 — the same crossing that makes the year axis appear
+// @fold12 trigger #2 — the same crossing that makes the year axis appear
 // (its title card passing fully offscreen, top <= 0 — see p7AxisShouldShow/
 // p7HasEngaged, page7.js). Colors in all 8 fold-6 squares (in their own
 // actor's group color) and flies each one to the real per-event dot it's
@@ -889,8 +936,8 @@ const fold9Trigger = makeTrigger(FOLD9_COLOR_MS, (...a) => updateGroups(...a));
 // cascade + the axis fill): both fire off the same crossing and simply play at
 // the same time — the axis/cascade never waits for the squares to land. Since
 // a fast scroll can carry currentPage on to the pinned real-timeline section
-// (#page-8) before this 1500ms fly has finished, draw() below is called
-// unconditionally (not just while currentPage === 7) so whichever page is now
+// (#page-9) before this 1500ms fly has finished, draw() below is called
+// unconditionally (not just while currentPage === 8) so whichever page is now
 // active keeps re-running the fly's own per-frame work.
 const FOLD9_FLY_MS = 1500;
 const fold9FlyTrigger = makeTrigger(FOLD9_FLY_MS, () => {
@@ -958,13 +1005,13 @@ function checkFold9TooltipShrink() {
     }
   }
 }
-// @fold11 on mobile pins the pill tray as a band under the titles, right where
-// the docked tooltip frame has been sitting since @fold8 — so the frame steps
+// @fold13 on mobile pins the pill tray as a band under the titles, right where
+// the docked tooltip frame has been sitting since @fold9 — so the frame steps
 // down to p9DockTopM() (page9.js) to make room, and back up on the way out.
 // Fired from page9UpdateFromScroll's `isStuck` crossing, the same one that
 // slides the band in; matches .page9-tray's own 850ms slide so the two move as
 // one gesture. A trigger rather than a CSS `transition: top` because the frame's
-// `top` is already rewritten every frame by the @fold7→@fold8 dock lerp, and a
+// `top` is already rewritten every frame by the @fold7→@fold9 dock lerp, and a
 // transition would smear that.
 const P9_TOOLTIP_DROP_MS = 850;
 const p9TooltipDropTrigger = makeTrigger(P9_TOOLTIP_DROP_MS, () => {
@@ -972,9 +1019,6 @@ const p9TooltipDropTrigger = makeTrigger(P9_TOOLTIP_DROP_MS, () => {
 });
 
 const fold13Trigger           = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateFold13(...a));
-// @fold13's map build (map.js): outlines wipe on, the extreme dots fly from
-// @fold12's spread onto the map, the legit dots pop in. Own tempo — FOLD_MAP_MS.
-const foldMapTrigger          = makeTrigger(FOLD_MAP_MS, p12MapTick);
 let   fold13MorphStarted      = false;
 
 // Watches one title card's top edge for crossing H*frac, firing trigger
@@ -1116,14 +1160,18 @@ function fold8TooltipCardFrac() {
   const entry = typeof fold6SquareEls !== "undefined" ? fold6SquareEls[0] : null;
   const sq = entry ? entry.sq : null;
   const tipH = fold8MeasureTooltipHeight();
-  if (!sq || tipH === null || !fold7LabelCardEl) return fallback;
+  if (!sq || tipH === null || !fold8HoverCardEl) return fallback;
   const sqRect = sq.getBoundingClientRect();
   if (!sqRect.height) return fallback;
   // Mirrors fold8PositionTooltip's own math: the box's bottom edge sits
-  // TOOLTIP_GAP above the square's centre, clamped 8px off the viewport top.
+  // TOOLTIP_GAP above the square's TOP EDGE (not its centre — the gap has to
+  // stay constant as the square swells on this fold), clamped 8px off the
+  // viewport top. Measured at the grown size, the tooltip's highest position.
   const TOOLTIP_GAP = 5;
-  const tipTop = Math.max(sqRect.top + sqRect.height / 2 - TOOLTIP_GAP - tipH, 8);
-  const cardH = fold7LabelCardEl.getBoundingClientRect().height;
+  const grown = Math.max(sqRect.height, FOLD8_DEMO_GROW_PX);
+  const sqTop = sqRect.top + sqRect.height / 2 - grown / 2;
+  const tipTop = Math.max(sqTop - TOOLTIP_GAP - tipH, 8);
+  const cardH = fold8HoverCardEl.getBoundingClientRect().height;
   const frac = (tipTop - FOLD8_TOOLTIP_CLEARANCE_PX - cardH) / window.innerHeight;
   // A frac at or below 0 would need the card fully offscreen to ever cross —
   // on a short viewport the tooltip can sit that high. Clamp so the trigger
@@ -1131,20 +1179,74 @@ function fold8TooltipCardFrac() {
   return Math.max(frac, 0);
 }
 const checkFold8Tooltip = watchCardThreshold(
-  fold7LabelCardEl, fold8TooltipCardFrac, fold8TooltipTrigger);
+  fold8HoverCardEl, fold8TooltipCardFrac, fold8TooltipTrigger);
+// «סדר גודלה» — the demo square itself grows on the same crossing as the
+// tooltip, so the box and the bulge read as one gesture. Provisional size,
+// tuned by eye through a manual/ harness.
+const FOLD8_DEMO_GROW_PX = 14;
+// The swell's own tempo, independent of the tooltip's (FOLD8_GROW_MS): they
+// share a crossing, not a duration.
+const FOLD8_DEMO_GROW_MS = 350;
+// Both beats hang off the SAME crossing; what's tunable is how long each waits
+// after it. The trigger therefore runs for delay+grow and the swell reads a
+// {start, len} window of its RAW progress, re-eased — the standard multi-beat
+// idiom. Tuned to 0: the swell leads, the tooltip follows it by 250ms.
+const FOLD8_DEMO_GROW_DELAY_MS = 0;
+const fold8DemoGrowTrigger = makeTrigger(
+  () => FOLD8_DEMO_GROW_DELAY_MS + FOLD8_DEMO_GROW_MS, (...a) => updateGroups(...a));
+// The swell's own eased 0..1 — use this, never fold8DemoGrowTrigger.currentT(),
+// which still carries the delay.
+function fold8DemoGrowT() {
+  const total = FOLD8_DEMO_GROW_DELAY_MS + FOLD8_DEMO_GROW_MS;
+  if (total <= 0) return fold8DemoGrowTrigger.currentRaw();
+  const start = FOLD8_DEMO_GROW_DELAY_MS / total;
+  const raw = fold8DemoGrowTrigger.currentRaw();
+  return p9Ease(Math.max(0, Math.min(1, (raw - start) / (1 - start || 1))));
+}
+const checkFold8DemoGrow = watchCardThreshold(
+  fold8HoverCardEl, fold8TooltipCardFrac, fold8DemoGrowTrigger);
 const checkFold9 = watchCardThreshold(page7TitleCardEl, 0.5, fold9Trigger);
+// «ניתן לסנן קבוצות באמצעות המקרא» — so on the same crossing the legend
+// demonstrates itself: it plays its own hover state (all labels type in, both
+// columns), holds, and un-types again. It drives the existing label-hover
+// trigger rather than a new one, so a real hover during or after the demo just
+// takes over the same state instead of fighting it. The ACLED note is
+// deliberately NOT part of the peek (explicit instruction) — the labels are the
+// subject here; opening the note too would bury them.
+const FOLD9_LEGEND_PEEK_HOLD_MS = 2000;
+let fold9PeekTimer = null;
+function fold9LegendPeek(target) {
+  clearTimeout(fold9PeekTimer);
+  fold9PeekTimer = null;
+  if (isMobile()) return;              // no hover state to demonstrate
+  if (fold6LegendPointerOver) return;  // the real thing is happening; don't touch
+  if (target < 1) {                    // scrolling back up cancels the peek
+    fold6LabelHoverTrigger.trigger(0);
+    return;
+  }
+  fold6LabelHoverTrigger.trigger(1);
+  // Hold starts after the type-in has landed, not at the crossing.
+  fold9PeekTimer = setTimeout(() => {
+    fold9PeekTimer = null;
+    if (fold6LegendPointerOver) return;
+    fold6LabelHoverTrigger.trigger(0);
+  }, FOLD6_LABEL_HOVER_MS + FOLD9_LEGEND_PEEK_HOLD_MS);
+}
+// A trigger-shaped stand-in: watchCardThreshold only ever calls .set()/.trigger().
+const checkFold9LegendPeek = watchCardThreshold(page7TitleCardEl, 0.5,
+  { set: fold9LegendPeek, trigger: fold9LegendPeek });
 // Same crossing as p7AxisShouldShow (page7.js) — title card fully offscreen,
 // top <= 0. Used to instant-reverse (snap straight back to rest on scroll-up
 // rather than being catchable mid-flight) — per explicit instruction, this is
 // now a normal reversible trigger like every other fold's, so scrolling back
-// up from @fold9 into @fold8 plays the same fly-out/color-in animation in
+// up from @fold10 into @fold9 plays the same fly-out/color-in animation in
 // reverse, covering only the remaining distance, instead of snapping.
 const checkFold9Fly = watchCardThreshold(page7TitleCardEl, 0, fold9FlyTrigger);
 // Watches the *sticky wrapper* (.page12-sticky-center), not the title card —
 // the card is centred inside a 100vh wrapper flush with the section top, so
 // the wrapper's own top is the section's arrival.
 //
-// It watches **@fold12's** wrapper (page12StickyEl, #page-11) — the freeform
+// It watches **@fold14's** wrapper (page12StickyEl, #page-13) — the freeform
 // spread is the closing statement's flourish, firing as that card arrives
 // rather than waiting for the credits card behind it.
 //
@@ -1159,14 +1261,34 @@ const checkFold9Fly = watchCardThreshold(page7TitleCardEl, 0, fold9FlyTrigger);
 // fold short of here — see p13GateMax/p13GateLocked), so no extra lock check
 // is needed.
 //
-// > Previously watched fold13OutroStickyEl (@fold13's wrapper) at the same
+// > Previously watched fold13OutroStickyEl (@fold15's wrapper) at the same
 // > frac. Don't restore that without also un-compressing the fade.
 const checkFold13 = watchCardThreshold(page12StickyEl, 0.5, fold13Trigger);
-// The map build fires on @fold13's own share card — the house 0.5 crossing.
-const checkFoldMap = watchCardThreshold(document.querySelector('#page-12 .page12-share-card'), 0.5, foldMapTrigger);
+
+// @fold11's size grid, on the house 0.5 crossing like every other fold — the
+// card reaching mid-screen is the trigger, NOT the IntersectionObserver page
+// flip that fired it before (that flips at -50% of the *section*, so the grid
+// formed while the card was still climbing). The shim adapts the grid's own
+// on/off API to watchCardThreshold's 0/1 trigger interface: `set` (first check,
+// or a jump over a whole viewport) snaps, `trigger` (a real scroll crossing)
+// morphs — the same instant-vs-animated split every other fold gets. Reversing
+// back up plays the dots onto the timeline at the same line they left it.
+const fold10GridCardEl = document.querySelector("#page-10 .text-card");
+const fold10GridTrigger = {
+  set:     v => p7SizeGridSet(v === 1, { instant: true }),
+  trigger: v => p7SizeGridSet(v === 1),
+};
+const checkFold10Grid = watchCardThreshold(fold10GridCardEl, 0.5, fold10GridTrigger);
+// Where p7SizeGridOnPage (page7.js) re-syncs from when @fold11 is re-entered
+// from below, a direction in which the watcher sees no crossing at all.
+function fold10GridPast() {
+  if (!fold10GridCardEl || isMobile()) return false;
+  return fold10GridCardEl.getBoundingClientRect().top <= window.innerHeight * 0.5;
+}
+// The map build fires on @fold15's own share card — the house 0.5 crossing.
 
 function checkGroupTriggers() {
-  checkFold2(); checkFold3(); checkFold6(); checkSquaresReveal(); checkAcledNote(); checkNoteUntype(); checkFold7Label(); checkFold8SquareDim(); checkFold8Tooltip(); checkFold9(); checkFold9Fly(); checkFold13(); checkFoldMap();
+  checkFold2(); checkFold3(); checkFold6(); checkSquaresReveal(); checkAcledNote(); checkNoteUntype(); checkFold7Label(); checkFold8SquareDim(); checkFold8Tooltip(); checkFold8DemoGrow(); checkFold9(); checkFold9LegendPeek(); checkFold9Fly(); checkFold10Grid(); checkFold13();
 }
 
 // Default (camp-column) swatch size + the swatch-to-label gap

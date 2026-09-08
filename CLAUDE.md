@@ -38,8 +38,7 @@ Two separate, unrelated HTML entry points sharing no layout:
 | `page7.js` | Pinned real timeline: per-event square cascade + canvas year axis |
 | `page8.js` | Bridge glide from timeline layout → page9 legit grid |
 | `page9.js` | Drag-and-drop categorization + dot-migration animation |
-| `page12.js` | `drawPage12` (@fold12's freeform spread) + `p12ShareInit` |
-| `map.js` | `drawFoldMap`: @fold13's event map, drawn in on the shared canvas by `foldMapTrigger` — outlines wipe on, extreme dots fly from @fold12's spread, legit dots pop in. Reads `map/region.geojson` + `map/event-points.json` lazily |
+| `page12.js` | `drawPage12` (@fold14's freeform spread) + `p12ShareInit` |
 | `squareboundingbox.js` | Shared grid-geometry constants (`SBB`, `SBB_TIMELINE`, `CENTER_GAP`) |
 | `reload.js` | Dev-only mtime poll → auto page reload |
 | `server.py` | Local dev server + `full_v3.xlsx`→`events.json` generation (derives `side` from `main_actor`) |
@@ -60,16 +59,18 @@ Figma source: file `QASHSt1u7b6m6ASgrUPswf` ("Design"). Screens are revised one 
 | `@fold4` | `page-3` | Groups glide into the persistent mini-legend; camp headers un-type — `fold6Trigger` |
 | `@fold5` | `page-4` | «אספנו תיעודים…»: 8 grey sample squares grow in — `squaresRevealTrigger` |
 | `@fold6` | `page-5` | ACLED methodology card (visible external link); the ACLED note fades into the mini-legend — `acledNoteTrigger` |
-| `@fold7` | `page-6` | Square labels + tooltip demo — `fold7LabelTrigger`, `fold8*` triggers |
-| `@fold8` | `page-7` | Squares gain colors and fly to their real timeline dots — `fold9Trigger`, `fold9FlyTrigger` |
-| `@fold9` | `page-8` | The real pinned timeline (`page7-scrub`, page7.js) |
-| `@fold10` | `page-9` | Bridge glide (page8.js) |
-| `@fold11` | `page-10` | Drag-and-drop categorization (page9.js) |
-| `@fold12` | `page-11` | Closing statement; owns the scroll gate + the fade-out (`fold13ScrollT`) — extreme dots stay in their columns. house 100vh section, **static** wrapper (height = spacing only while it isn't sticky); the share block trails it by the house gap (100vh minus this card) |
-| `@fold13` | `page-12` | The event map, **drawn in** on the canvas behind the share block «שתפו עם אחרים» (`p12ShareInit`) — `drawFoldMap`, map.js: outlines wipe → extreme dots fly → legit dots pop, one fixed-duration run fired by the share card's crossing (`foldMapTrigger`, 5200ms) |
-| `@fold14` | `page-13` | Outro/credits card as a fixed **drawer** (`p13Drawer`, page12.js, desktop): rises with the scroll and docks at the viewport bottom with only its title showing at the document's end; hover slides it fully up. Behind it the finished map (`drawFoldMap`, t pinned at 1); at the dock the wheel zooms the map and drag pans it (`p12MapWheel`, map.js, desktop only) |
+| `@fold7` | `page-6` | Square labels type in; the other 7 squares dim so the demo dot is singled out — `fold7LabelTrigger`, `fold8SquareDimTrigger` |
+| `@fold8` | `page-7` | «ריחוף העכבר מעל ריבוע…»: the hover demo. Square 0 swells to `FOLD8_DEMO_GROW_PX`, then the tooltip grows-then-types (date + description) 250ms behind it — `fold8TooltipTrigger`, `fold8DemoGrowTrigger` (the 7-square dim moved back to @fold8's predecessor, @fold7) |
+| `@fold9` | `page-8` | Squares gain colors and fly to their real timeline dots — `fold9Trigger`, `fold9FlyTrigger` |
+| `@fold10` | `page-9` | The real pinned timeline (`page7-scrub`, page7.js). Clicking a mini-legend row filters that group out — its dots shrink, the rest re-pack and fly (`p7FilterToggle`, desktop only). The filter is set here and on @fold11, and stays in force through every later fold |
+| `@fold11` | `page-10` | The size grid: the timeline undraws and every dot on screen morphs to its crowd tier, re-packed at the timeline's own gap (`p7SizeGridOnPage`, page7.js) |
+| `@fold12` | `page-11` | Bridge glide (page8.js) |
+| `@fold13` | `page-12` | Drag-and-drop categorization (page9.js) |
+| `@fold14` | `page-13` | Closing statement; owns the scroll gate + the fade-out (`fold13ScrollT`) — extreme dots stay in their columns. house 100vh section, **static** wrapper (height = spacing only while it isn't sticky); the share block trails it by the house gap (100vh minus this card) |
+| `@fold15` | `page-14` | Share title block — «שתפו עם אחרים» over the WhatsApp/X/Facebook/copy-link row (`p12ShareInit`); no trigger |
+| `@fold16` | `page-15` | Outro/credits card — an ordinary title block, but near-viewport-tall, so it is placed by its **top edge**, not centred: `p12SpacingFit()` pads the section by `50vh − half the share card` so the @fold15→@fold16 edge gap is `100vh − share card`, on a **static** (non-sticky) wrapper on desktop. Never centre it in 100vh — that's the recurring gap bug. The document ends 48px under it. **Removed — don't reintroduce:** the fixed drawer (`p13Drawer`, `#p13Back`) and the map wheel-zoom, archived with the map on 2026-09-08 (`map-archive`) |
 
-**14 folds total.**
+**16 folds total.**
 
 ## Groups roster
 
@@ -86,9 +87,10 @@ Timeline dot color is `p7ActorColor(actor)` — a lookup into `GROUPS` by its `a
 
 ## Hard rules (do not violate)
 
+- **Dots never fade.** A dot (any per-event square, anywhere on the page) leaves or arrives by **size** — it shrinks to nothing or grows from nothing. Never animate a dot's opacity to hide, remove, filter, or reveal it. Fading is reserved for text, cards, rules and labels.
 - **page9.js "state 1"** (the non-interrupting extreme-drop animation) **is FINALIZED — never touch it without explicit instruction.** See [Drag-and-Drop](wiki/Drag-and-Drop.md).
 - Renaming a category pill in `P9_CATEGORIES` (`page9.js`) must also update `FOLD6_SQUARE_LABELS` (`js/groups.js`).
-- "Removed — don't reintroduce" callouts in the wiki are binding: the page-1→fold-3 legend morph, the vertical dashed guide-line system on page-10, the anchor squares/`drawGroupLegend`, and the old `main_*` scratch files all stay gone.
+- "Removed — don't reintroduce" callouts in the wiki are binding: the page-1→fold-3 legend morph, the vertical dashed guide-line system on page-11, the anchor squares/`drawGroupLegend`, and the old `main_*` scratch files all stay gone.
 - `.section-title` is one shared base rule (20px desktop, **16px under the 600px breakpoint**; `font-weight: 300` + `line-height: 1.5` — 300 resolves down to the real Thin OTF, the only alternative face in `fonts/` besides Regular). No **per-page** font-size/weight overrides — a differently-sized title at the same viewport width is a regression. On the scrolling cards the title and the frame are the *same* `<h2>`, so `.text-card-frame`'s `margin: 0 auto` already zeroes the base rule's bottom margin — see [Architecture](wiki/Architecture.md).
 - Harness/scaffolding files are `_debug-*.js`, never ship, and follow the recipe + rules in [Dev-Workflow](wiki/Dev-Workflow.md).
 
