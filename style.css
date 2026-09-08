@@ -1956,8 +1956,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    position: fixed at the viewport's bottom and JS drives its translateY from
    the distance left to the document's end, so it rises 1:1 with the scroll
    like an in-flow card and docks with only its title showing at the last
-   scrollable pixel — where the wheel switches to zooming the map behind it
-   (map.js, p12MapWheel). Hovering the card slides it fully up. The section's
+   scrollable pixel. Hovering the card slides it fully up. The section's
    height is SOLVED by p12SpacingFit(): (50vh − half the share card) + the peek,
    so the card's top enters at the house distance under the share card and the
    document ends exactly at the dock. The 100vh here is the no-JS fallback.
@@ -2148,10 +2147,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   color: #fff;
 }
 
-/* @fold13: the map is drawn on the shared .graphic-col canvas (map.js) and its
-   build is a fold TRIGGER fired by this share card's centre crossing
-   (foldMapTrigger, js/groups.js) — so the section is an ordinary house fold:
-   one viewport, card centred. With #page-11 solved to 50vh + half its card and
+/* @fold13: an ordinary house fold — one viewport, card centred. With #page-11 solved to 50vh + half its card and
    #page-13 centring the outro in its first viewport, the three card centres
    sit exactly 100vh apart, like every other consecutive pair. */
 #page-12 {

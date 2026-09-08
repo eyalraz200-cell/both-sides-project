@@ -972,9 +972,6 @@ const p9TooltipDropTrigger = makeTrigger(P9_TOOLTIP_DROP_MS, () => {
 });
 
 const fold13Trigger           = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateFold13(...a));
-// @fold13's map build (map.js): outlines wipe on, the extreme dots fly from
-// @fold12's spread onto the map, the legit dots pop in. Own tempo — FOLD_MAP_MS.
-const foldMapTrigger          = makeTrigger(FOLD_MAP_MS, p12MapTick);
 let   fold13MorphStarted      = false;
 
 // Watches one title card's top edge for crossing H*frac, firing trigger
@@ -1163,10 +1160,9 @@ const checkFold9Fly = watchCardThreshold(page7TitleCardEl, 0, fold9FlyTrigger);
 // > frac. Don't restore that without also un-compressing the fade.
 const checkFold13 = watchCardThreshold(page12StickyEl, 0.5, fold13Trigger);
 // The map build fires on @fold13's own share card — the house 0.5 crossing.
-const checkFoldMap = watchCardThreshold(document.querySelector('#page-12 .page12-share-card'), 0.5, foldMapTrigger);
 
 function checkGroupTriggers() {
-  checkFold2(); checkFold3(); checkFold6(); checkSquaresReveal(); checkAcledNote(); checkNoteUntype(); checkFold7Label(); checkFold8SquareDim(); checkFold8Tooltip(); checkFold9(); checkFold9Fly(); checkFold13(); checkFoldMap();
+  checkFold2(); checkFold3(); checkFold6(); checkSquaresReveal(); checkAcledNote(); checkNoteUntype(); checkFold7Label(); checkFold8SquareDim(); checkFold8Tooltip(); checkFold9(); checkFold9Fly(); checkFold13();
 }
 
 // Default (camp-column) swatch size + the swatch-to-label gap
