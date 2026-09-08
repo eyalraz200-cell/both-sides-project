@@ -8,7 +8,7 @@ function p12EnsureFreeformTargets(W, H) {
   p12FreeformTargets = new Map();
   p12FreeformW = W; p12FreeformH = H;
 
-  // Mobile scatters at @fold12's own pitch (p9Metrics: 2px) — the desktop
+  // Mobile scatters at @fold13's own pitch (p9Metrics: 2px) — the desktop
   // P7_CELL pitch is more than double it and made the spread dots read
   // oversized/sparse on a phone. Desktop keeps P7_CELL as before.
   const CELL  = isMobile() ? p9Metrics().CELL : P7_CELL;
@@ -59,7 +59,7 @@ function drawPage12(ctx, W, H) {
   // Overdraw extreme dots at their lerped freeform positions.
   const targets  = p12EnsureFreeformTargets(W, H);
   const startPos = p9.fold13StartPos;
-  // Same size the dots had in @fold12's extreme grid (1.5px on mobile, 3px on
+  // Same size the dots had in @fold13's extreme grid (1.5px on mobile, 3px on
   // desktop) — drawing the morph at a hardcoded P9_SQ doubled them on a phone.
   const SQ       = p9Metrics().SQ;
 
@@ -76,11 +76,11 @@ function drawPage12(ctx, W, H) {
   ctx.globalAlpha = 1;
 }
 
-// Share row on the @fold13 card (teacher review 2026-09-03, K2). The anchors
+// Share row on the @fold14 card (teacher review 2026-09-03, K2). The anchors
 // ship with href="#" and get their real share URLs here, from the page's own
 // location at load; the copy button writes the URL to the clipboard and flips
-// its label for a moment as feedback. The row is @fold14's own title block
-// (#page-13). Runs once from bootstrap (p12ShareInit).
+// its label for a moment as feedback. The row is @fold15's own title block
+// (#page-14). Runs once from bootstrap (p12ShareInit).
 function p12ShareInit() {
   const wrap = document.getElementById("page12Share");
   if (!wrap) return;
@@ -112,8 +112,8 @@ function p12ShareInit() {
   });
 }
 
-// The @fold15 card's height comes from the viewport (100vh − 2×48px, style.css
-// #page-14 .text-card-frame). Its WIDTH is solved here, because CSS can't: a
+// The @fold16 card's height comes from the viewport (100vh − 2×48px, style.css
+// #page-15 .text-card-frame). Its WIDTH is solved here, because CSS can't: a
 // narrower column is a taller one, so the narrowest width at which the copy
 // still clears the bottom padding is also the width that FILLS the card — any
 // wider and the leftover height opens as a void above and below the centred
@@ -122,7 +122,7 @@ function p12ShareInit() {
 const P12_CARD_MIN_W = 320;
 const P12_CARD_MAX_W = 900;
 function p12CardWidthFit() {
-  const f = document.querySelector("#page-14 .text-card-frame");
+  const f = document.querySelector("#page-15 .text-card-frame");
   if (!f) return;
   if (window.innerWidth <= 600) { f.style.removeProperty("width"); return; }  // mobile card is height:auto
   const fits = (w) => {
@@ -138,10 +138,10 @@ function p12CardWidthFit() {
   while (hi - lo > 1) { const mid = Math.round((lo + hi) / 2); if (fits(mid)) hi = mid; else lo = mid; }
   fits(hi);
 }
-// @fold13 → @fold14 spacing, the house rhythm made exact. Every other pair of
+// @fold14 → @fold15 spacing, the house rhythm made exact. Every other pair of
 // title blocks is "card centred in a 100vh section", so consecutive card
-// CENTRES are always exactly 100vh apart. @fold13's card is flush to the top
-// of its section instead (the gate needs that — see #page-12 in style.css), so
+// CENTRES are always exactly 100vh apart. @fold14's card is flush to the top
+// of its section instead (the gate needs that — see #page-13 in style.css), so
 // its section's height is what sets that distance: the next card's centre sits
 // at (section height + 50vh) below this card's top, and that equals 100vh
 // below this card's CENTRE only when the section is 50vh + half the card. The
@@ -153,11 +153,11 @@ function p12CardWidthFit() {
 const P12_OUTRO_END = 48;
 function p12SpacingFit() {
   const H = window.innerHeight;
-  const sec = document.getElementById("page-12");
+  const sec = document.getElementById("page-13");
   const card = sec && sec.querySelector(".text-card-frame");
   if (card) sec.style.minHeight = Math.round(H / 2 + card.offsetHeight / 2) + "px";
 
-  // @fold14 → @fold15: the outro card is near-viewport-tall (100vh − 96px), so
+  // @fold15 → @fold16: the outro card is near-viewport-tall (100vh − 96px), so
   // "centred in a 100vh section" reads WRONG — it leaves only 50vh − half the
   // share card + 48px of air above it, well short of the house distance. What
   // reads as the house gap is the air between card EDGES, which for two title
@@ -166,8 +166,8 @@ function p12SpacingFit() {
   // share card into its own section, making the edge-to-edge gap exactly
   // 100vh − share card. The section is then just tall enough to scroll the card
   // to rest with P12_OUTRO_END px under it, and the document ends there.
-  const share = document.querySelector("#page-13 .page12-share-card");
-  const sec15 = document.getElementById("page-14");
+  const share = document.querySelector("#page-14 .page12-share-card");
+  const sec15 = document.getElementById("page-15");
   const outro = sec15 && sec15.querySelector(".text-card-frame");
   if (!share || !outro) return;
   if (window.innerWidth <= 600) {           // mobile: the card flows, no solve

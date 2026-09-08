@@ -13,7 +13,7 @@
 const P8_TRANSITION_DURATION = 3000; // ms — playback time of a full 0->1 forward traverse
 // The reverse runs on its own, much shorter clock. The forward glide is a
 // reveal the reader watches in place, but the reverse fires while they're
-// already scrolling away back up @fold9's multi-viewport scrub — at 3000ms a
+// already scrolling away back up @fold10's multi-viewport scrub — at 3000ms a
 // flick leaves the canvas showing a crushed page9-blend band and the end-state
 // axis several folds away for seconds. Position still animates continuously
 // (never snaps); it just resolves before the reader has left the neighborhood.
@@ -38,14 +38,14 @@ function p8CurrentT() {
 
 function p8RunAnimLoop() {
   if (p8PhaseStart === null) return;
-  if (currentPage === 10) draw();
+  if (currentPage === 11) draw();
   if (p8CurrentT() !== p8PhaseToT) {
     requestAnimationFrame(p8RunAnimLoop);
   } else {
     p8PhaseFromT = p8PhaseToT; // settle here — p8CurrentT() reads this once phaseStart is null
     p8PhaseStart = null;
     if (p8PhaseToT === 0) p8Engaged = false; // back at rest — forward can fire again later
-    if (currentPage === 10) draw(); // final frame, locked at rest
+    if (currentPage === 11) draw(); // final frame, locked at rest
   }
 }
 
@@ -82,7 +82,7 @@ function drawPage8(ctx, W, H) {
 
   // Deliberately no fallback trigger here: currentPage flips to 10 (via the -50%
   // IntersectionObserver in main.js) well before the title visually reaches
-  // center, since page-10 already overlaps the screen-center line earlier than
+  // center, since page-11 already overlaps the screen-center line earlier than
   // that. Triggering on that flip would fire too early — page8CheckScroll
   // (main.js) is the only thing that calls p8Trigger/p8TriggerReverse, exactly
   // when the title crosses center (or scroll retreats back past that point).
@@ -109,13 +109,16 @@ function drawPage8(ctx, W, H) {
 
   function blendAndDraw(events, indexOf, side, positions, x0) {
     events.forEach((e, i) => {
+      // The @fold10 legend filter carries through this fold — a group filtered
+      // out of the timeline stays out of the glide and of everything after it.
+      if (typeof p7FilterHiddenEv === "function" && p7FilterHiddenEv(e)) return;
       const cell = positions[i];
       const col  = cell % cols;
       const row  = Math.floor(cell / cols);
-      // @fold10 leaves the size grid ON across this fold (p7SizeGridOnPage,
+      // @fold11 leaves the size grid ON across this fold (p7SizeGridOnPage,
       // page7.js), so the flight starts from each dot's packed cell — its own
       // tier size included — not from the timeline cell it hasn't occupied
-      // since @fold9. Off (mobile, or straight from @fold9) this is the
+      // since @fold10. Off (mobile, or straight from @fold10) this is the
       // timeline cell exactly as before.
       const g     = p7GridRestRect(e, side === "left");
       const fromX = g ? g.x : x0 + col * CELL;
@@ -129,7 +132,7 @@ function drawPage8(ctx, W, H) {
       const y = fromY + (target.y - fromY) * ease;
       // Shrink each dot from the (now enlarged) real-timeline square size (p7.SQ)
       // down to page9's legit-grid size (P9_SQ) across the glide, so the dots
-      // visibly get smaller on the way into @fold13 and land at exactly the size
+      // visibly get smaller on the way into @fold14 and land at exactly the size
       // drawPage9 will keep drawing them — no size jump at the handoff. Both
       // endpoints are top-left anchored (fromX/Y and target.x/y are cell corners),
       // so a plain linear size lerp lines up at both ends.
@@ -151,7 +154,7 @@ function drawPage8(ctx, W, H) {
   // Once the glide has fully landed on a bar layout (mobile), stop drawing
   // dot-by-dot: thousands of 1px dots at fractionally-lerped positions leave
   // ragged colour seams the moment motion stops masking them, and this
-  // function keeps drawing at t=1 until @fold12's own drawPage9 takes over.
+  // function keeps drawing at t=1 until @fold13's own drawPage9 takes over.
   // Same solid-rect pass drawPage9's at-rest bar uses (p9DrawBarRects,
   // page9.js), so the handoff is pixel-identical.
   if (ease >= 1 && legitGeom.mode === "bar") {

@@ -42,6 +42,17 @@ Don't remove the gate.
 
 **No build step, no npm, no tests.** Edit the files directly.
 
+## Link previews (Open Graph)
+
+Both entry points carry `og:*` + `twitter:*` meta tags in `<head>` so WhatsApp/X/Facebook
+render a preview card. `og-image.png` at the repo root is a **2400×1260** (2× of the
+1200×630 card) shot of @fold1 at rest, taken headless with `#debug-fold-badge` hidden;
+reshoot it the same way if the hero changes. `og:image` must be an absolute URL, so the
+tags hardcode the live GitHub Pages base — `https://eyalraz200-cell.github.io/both-sides-project/`.
+If the site ever moves, those four URLs (two per file) are the only things to update; the
+@fold15 share buttons build their URLs from `location.href` (`p12ShareInit`, page12.js) and
+follow the deploy automatically.
+
 ## Verifying a change
 
 There's no test suite, so the habit is:
@@ -96,12 +107,12 @@ numbers in the source.
 
 `_debug-fold-badge.js` — the bottom-left `@foldN` chip (`@foldN · #page-(N-1) · short
 name`; click or `B` collapses it to just `@foldN`). Reinstated on 2026-09-06 with a `TEMP`
-`<script>` tag after `reload.js` in `project.html`; delete both together. The map harnesses (`_debug-map-lab.js`, `_debug-map-details.js`, `_debug-map-dots.js`, `_debug-map-columns.js`, `_debug-map-dot.js`, `_debug-map.js`, `_debug-map-view.js`, `_debug-map-clusters.js`) went with the @fold14/@fold15 event map when it was **archived on 2026-09-08** — the map itself, its data and the last live lab are on the `map-archive` branch (snapshot `834ee0d`); nothing map-related is loaded by `project.html` any more. `_debug-camp-gap.js` —
+`<script>` tag after `reload.js` in `project.html`; delete both together. The map harnesses (`_debug-map-lab.js`, `_debug-map-details.js`, `_debug-map-dots.js`, `_debug-map-columns.js`, `_debug-map-dot.js`, `_debug-map.js`, `_debug-map-view.js`, `_debug-map-clusters.js`) went with the @fold15/@fold16 event map when it was **archived on 2026-09-08** — the map itself, its data and the last live lab are on the `map-archive` branch (snapshot `834ee0d`); nothing map-related is loaded by `project.html` any more. `_debug-camp-gap.js` —
 the `manual/` slider that picked the gap between the two camps at @fold2 **and** @fold3 (they share
 one anchor): `FOLD2_CAMP_CENTER_GAP_PX` 180 → **162**, re-laying out live with `updateGroups();
 draw()`. The knob was the HALF-gap — each camp's centre sits that many px either side of screen
 centre — so one step moved the camps 2px apart. It never touched mobile, which computes its own gap
-from `FOLD2_CAMP_EDGE_GAP_MOBILE_PX`. Deleted on 2026-09-07 once baked. Three @fold9 axis-plaque
+from `FOLD2_CAMP_EDGE_GAP_MOBILE_PX`. Deleted on 2026-09-07 once baked. Three @fold10 axis-plaque
 `compare/` panels — `_debug-axis-align.js` (picked the description's alignment: flush to the
 card's axis-side edge), `_debug-axis-others.js` (picked the other plaques collapsing into the
 axis on hover, over dimming them) and `_debug-axis-title.js` (kept the title's fade-in over
@@ -133,12 +144,12 @@ an absolute y: @fold1's intro parks the title at `translateY(100vh)`, so absolut
 viewport off until the slide-in finishes. Everything else
 was removed earlier (`_debug-glide-perf.js`, `_debug-mlegend-width.js`,
 `_debug-vert-mobile.js`, `_debug-fold5.js` and the `_debug-hero-*.html` probes). `_debug-axis-desc.js` — the
-`compare/` that picked @fold9's hover-description card width (keep the plaque width, not
+`compare/` that picked @fold10's hover-description card width (keep the plaque width, not
 widen over the grid) — was deleted on 2026-09-07 once baked. The mobile
 vertical-axis `compare/`+`manual/` (`_debug-vert-mobile.js`, modes band / widen / slot with
 `P7_VERT_MOBILE` knobs) was deleted before its bake; rebuild it from the template if the
 mobile axis is picked up again. `_debug-vert-order.js` — the `compare/` panel that picked the
-mobile @fold9 vertical order (מקרא bar / axis headline / grid / docked tooltip) — was deleted
+mobile @fold10 vertical order (מקרא bar / axis headline / grid / docked tooltip) — was deleted
 on 2026-09-05 once that order was baked. `_debug-axis-len.js` — the `manual/` that picked
 `P7_VERT_SQ_BOOST` (1.08) and `TOOLTIP_DOCK_BOTTOM_PX` (0) — was deleted the same day. It
 tuned the axis length by **wrapping the writable global `p7SolveVerticalSq`** and forcing a
@@ -160,9 +171,9 @@ field, since `legendRow` derives the order from those y values,
 `_debug-tooltip-style.js`, the `compare/` that picked the desktop tooltip's group-colour
 fill over the old white-box-with-dashed-stroke, `_debug-tooltip-weight.js`, the `manual/`
 sliders that picked the tooltip description's 550 weight, `_debug-fold4-handoff.js`, the `@fold4`
-hand-off compare, `_debug-edge.js`, the `@fold9`
+hand-off compare, `_debug-edge.js`, the `@fold10`
 outer-dot-edge `manual/` slider that picked `SBB_TIMELINE_LEFT_PX`, and `_debug-axis.js`,
-the `@fold9` vertical-axis knobs that picked `P7_VERT`, were all deleted once their work was
+the `@fold10` vertical-axis knobs that picked `P7_VERT`, were all deleted once their work was
 done.)*
 
 ## Previously-built harnesses (all deleted)
@@ -170,7 +181,7 @@ done.)*
 The tuning harnesses that existed are gone; what's worth keeping is what each one *baked into*, so a rebuilt
 version knows where its numbers land:
 
-- **@fold9/@fold12 loupe marker** (`compare/`: crosshair vs halo-by-subtraction vs
+- **@fold10/@fold13 loupe marker** (`compare/`: crosshair vs halo-by-subtraction vs
   grow-the-selection) — halo won, and it moved out of the loupe onto the main canvas:
   `P7_INSPECT_SCRIM` / `P7_INSPECT_HOLE_DOTS` + `p7DrawInspectScrim` in `page7.js`.
 - **@fold2 dot colours/positions** — group colours → `GROUPS[].color` **plus** the
@@ -184,7 +195,7 @@ version knows where its numbers land:
   decorative rows are skipped and rejoin the palette), and palette dedup being **one
   shared `claimed` set**, not one per column — otherwise an arranged colour carried across
   columns gets dealt twice.
-- **@fold12 row picking** — not a tuning harness: it collected `rowId`s off the page to
+- **@fold13 row picking** — not a tuning harness: it collected `rowId`s off the page to
   paste back into `full_v3.xlsx`. Its two reusable tricks: hit-test by coordinate against
   `p9.lastPositions` on `window` listeners (both dot layers are `pointer-events: none`),
   and overdraw by **wrapping the global `draw`**, which is a writable property of
