@@ -39,7 +39,6 @@ Two separate, unrelated HTML entry points sharing no layout:
 | `page8.js` | Bridge glide from timeline layout → page9 legit grid |
 | `page9.js` | Drag-and-drop categorization + dot-migration animation |
 | `page12.js` | `drawPage12` (@fold12's freeform spread) + `p12ShareInit` |
-| `map.js` | `drawFoldMap`: @fold13's event map, drawn in on the shared canvas by `foldMapTrigger` — outlines wipe on, extreme dots fly from @fold12's spread, legit dots pop in. Reads `map/region.geojson` + `map/event-points.json` lazily |
 | `squareboundingbox.js` | Shared grid-geometry constants (`SBB`, `SBB_TIMELINE`, `CENTER_GAP`) |
 | `reload.js` | Dev-only mtime poll → auto page reload |
 | `server.py` | Local dev server + `full_v3.xlsx`→`events.json` generation (derives `side` from `main_actor`) |
@@ -66,8 +65,8 @@ Figma source: file `QASHSt1u7b6m6ASgrUPswf` ("Design"). Screens are revised one 
 | `@fold10` | `page-9` | Bridge glide (page8.js) |
 | `@fold11` | `page-10` | Drag-and-drop categorization (page9.js) |
 | `@fold12` | `page-11` | Closing statement; owns the scroll gate + the fade-out (`fold13ScrollT`) — extreme dots stay in their columns. house 100vh section, **static** wrapper (height = spacing only while it isn't sticky); the share block trails it by the house gap (100vh minus this card) |
-| `@fold13` | `page-12` | The event map, **drawn in** on the canvas behind the share block «שתפו עם אחרים» (`p12ShareInit`) — `drawFoldMap`, map.js: outlines wipe → extreme dots fly → legit dots pop, one fixed-duration run fired by the share card's crossing (`foldMapTrigger`, 5200ms). Clusters grow inside their country's outline (`MAP_TUNE`, `MAP_PACKERS`, region mask) — dots never cross a border |
-| `@fold14` | `page-13` | Outro/credits card as a fixed **drawer** (`p13Drawer`, page12.js, desktop): rises with the scroll and docks at the viewport bottom with only its title showing at the document's end; hover slides it fully up. Behind it the finished map (`drawFoldMap`, t pinned at 1); at the dock the wheel zooms the map and drag pans it (`p12MapWheel`, map.js, desktop only) |
+| `@fold13` | `page-12` | Share title block — «שתפו עם אחרים» over the WhatsApp/X/Facebook/copy-link row (`p12ShareInit`); no trigger |
+| `@fold14` | `page-13` | Outro/credits card as a fixed **drawer** (`p13Drawer`, page12.js, desktop): rises with the scroll and docks at the viewport bottom with only its title showing at the document's end; hover slides it fully up |
 
 **14 folds total.**
 

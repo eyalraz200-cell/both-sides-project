@@ -161,8 +161,7 @@ function p12SpacingFit() {
   // blocks is 100vh minus a title card. So the outro's top is placed where a
   // title card's top would be: 50vh − half the share card, measured from its
   // section top. The section then runs one full viewport past the card's
-  // bottom, so the document ends on a clear viewport of map (see #page-13 in
-  // style.css). Desktop only — the mobile outro is height:auto and just scrolls.
+  // bottom (see #page-13 in style.css). Desktop only — the mobile outro is height:auto and just scrolls.
   const share = document.querySelector("#page-12 .page12-share-card");
   const sec13 = document.getElementById("page-13");
   if (!share || !sec13) return;
@@ -170,8 +169,7 @@ function p12SpacingFit() {
   // On desktop the outro card is a fixed DRAWER (p13Drawer below), out of
   // flow: the section only has to be tall enough that the card's top enters
   // the viewport at the house distance and the document ends when its title
-  // is docked — padTop + the peek. Scrolling past that is impossible, so the
-  // wheel is the map's from there (map.js).
+  // is docked — padTop + the peek. Scrolling past that is impossible.
   const padTop = Math.round(H / 2 - share.offsetHeight / 2);
   sec13.style.minHeight = (padTop + p13Drawer.peek()) + "px";
   p13Drawer.place();
@@ -181,7 +179,7 @@ function p12SpacingFit() {
 // viewport's bottom edge, and JS drives its translateY from the distance left
 // to the document's end: it rises 1:1 with the scroll, exactly as an in-flow
 // card would, and DOCKS with only its title showing (`peek` px) at the last
-// scrollable pixel — where the wheel switches to zooming the map behind it.
+// scrollable pixel.
 // Hovering the card slides the whole thing up into view (`open`, a
 // short named tempo — it's a hover, not a fold beat); leaving slides it back.
 // One transform, written by JS every frame — no CSS transition on it.
@@ -205,11 +203,11 @@ const p13Drawer = (() => {
     const away = Math.max(0, scrollMax() - window.scrollY);   // px still to scroll
     const hidden = (frame.offsetHeight - peek()) * (1 - p9Ease(openT()));
     card.style.transform = `translate(-50%, ${Math.round(away + hidden)}px)`;
-    if (back) back.hidden = away > 0;   // the way back, only once the wheel is the map's
+    if (back) back.hidden = away > 0;   // the way back, only once the drawer is docked
   };
   const back = document.getElementById("p13Back");
   if (back) back.addEventListener("click", () => {
-    p12MapResetView(); draw();
+    draw();
     window.scrollBy({ top: -window.innerHeight, behavior: "smooth" });
   });
   if (card) {

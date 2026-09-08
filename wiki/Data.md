@@ -63,19 +63,15 @@ Two row pairs in the sheet are literal duplicates of one ACLED event and share a
 `row-4132`/`row-4134` (`ISR42882`), `row-8895`/`row-8896` (`PSE46925`). `server.py` still
 reads `full_v3.xlsx`; the page consumes the geodata only through `map/event-points.json` (see `map/` below).
 
-## `map/` — the @fold13 event map's data
+## `map/` — archived with the event map
 
-Two static files, fetched by `map.js` (`p12MapLoad`) only when @fold13 comes within two
-viewports:
-
-| File | What it is |
-|---|---|
-| `map/region.geojson` | Natural Earth 10m admin-0 outlines (public domain), 14 features by `name`: Israel and Palestine (the two subjects, darker fills + `#999` stroke) plus Egypt, Jordan, Lebanon, Syria, Saudi Arabia, Iraq, Turkey, Cyprus, Northern Cyprus, Kuwait, Sudan and Libya (pale `#fafafa`, `#ccc`) — the map is viewport-wide, so the neighbours fill the horizon. Rings far outside the region are dropped and coordinates rounded to 3dp; ~210KB |
-| `map/event-points.json` | `{points: [[lat, lon] × 904], rows: [rowNum × 14451], pt: [pointIdx × 14451]}` — the 904 distinct coordinates in `full_v4.xlsx`, plus a per-event index into them keyed by the xlsx `row_id` number (`row-5` → 5). This is what lets every event own its own map cell and be flown/popped individually; `map.js` joins it to `events.json` through `rowId`. ~144KB |
-
-If the xlsx's rows change, `event-points.json` must be rebuilt from `full_v4.xlsx`'s
-`latitude`/`longitude` columns (there is no script for it in the repo — it was a one-off
-dump); `region.geojson` is data-independent.
+The @fold13 event map was archived on **2026-09-08** (branch `map-archive`, snapshot commit
+`834ee0d`). `map.js`, `map/region.geojson` (Natural Earth 10m admin-0 outlines for the region)
+and `map/event-points.json` (904 distinct settlement coordinates + a per-event index into them,
+covering all 14,451 rows) all live there, not in the working tree. Restore with
+`git checkout map-archive -- map map.js` if the map ever comes back; the geodata is keyed by the
+xlsx `row_id` number, so it must be rebuilt from `full_v4.xlsx`'s `latitude`/`longitude` columns
+if the rows change.
 
 **There is no `side` column.** The camp split is derived from `main_actor` via
 `ACTOR_SIDE` in `server.py`, which must stay in sync with `FOLD4_COALITION_ROWS` /
