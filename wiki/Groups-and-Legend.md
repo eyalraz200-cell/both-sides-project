@@ -109,6 +109,12 @@ opacity every frame, so nothing has to switch it back on.
    right column drops its head, the left column its tail — so each dissolves away from the
    screen edge it is anchored to. The **hover re-type** is head-first on both columns; the
    flip is gated on the un-type term winning the `max()`. `FOLD6_LABEL_UNTYPE_MS` 900, `FOLD6_LABEL_HOVER_MS` 420.
+   **@fold9 auto-peeks it**: on @fold9's crossing the legend plays its own hover state
+   unprompted — labels type in (the ACLED note stays closed), hold `FOLD9_LEGEND_PEEK_HOLD_MS`
+   (2000ms, timed from when the type-in lands), then un-type — so the fold's title line
+   about the מקרא demonstrates itself. It drives the same label-hover trigger rather than a
+   new one, and is skipped/cancelled while `fold6LegendPointerOver` is true, so a real
+   hover during the demo simply takes over. Desktop only. See [Folds](Folds.md).
    Mobile is unaffected — it un-types inside the glide already. This is the legend's final
    resting state for the rest of the page.
    Once a row's glide has fully landed (`e6 === 1`, desktop only) its label carries `.is-plated`: an
@@ -243,11 +249,11 @@ are both fixed px, so on a phone an H-scaled distance would swing with the URL b
 - **gain labels at @fold7** (`FOLD6_SQUARE_LABELS`), while square 0 shows the shared
   `#page9Tooltip` with a real event's date + description, grown and typed on its own
   wall-clock sequence;
-- **gain colors and fly at @fold8** — `FOLD6_SQUARE_ACTORS` (via `groupColorByActor`) gives
+- **gain colors and fly at @fold9** — `FOLD6_SQUARE_ACTORS` (via `groupColorByActor`) gives
   each its group color, and `fold6SquareOccurrence(i)` says which chronological occurrence
   of that actor it stands in for. The real cascade never draws those 8 events
   (`p7GetClaimedEvents`), so the DOM square just stays once it lands.
-- **shrink with the @fold10 glide** — as page8's blend carries them down to the legit
+- **shrink with the @fold12 glide** — as page8's blend carries them down to the legit
   band, both position *and size* lerp by the same ease (`js/update-groups.js`): the end
   size is the band's own rule (`legitGeom.cell` in bar mode, else `p9Metrics().legitSq`),
   matching what page8.js uses for canvas dots. On big desktop that's a no-op (legitSq =
@@ -504,7 +510,7 @@ it — **width first, then height** — exactly as the desktop note opens.
 - **Stacking — the legend is ALWAYS above the title blocks** (explicit instruction), open or
   closed. The layer is `z-index: 5`, over `.section-text.text-card`'s **4** (mobile only,
   with `.text-section > .section-text.text-card` supplying the `position: relative` — the
-  child combinator leaves `@fold11`/`@fold12`'s sticky/fixed cards alone), and on the folds
+  child combinator leaves `@fold13`/`@fold14`'s sticky/fixed cards alone), and on the folds
   whose cards climb to 1001 to clear the docked tooltip it climbs with them to **1002**.
   Out-stacking the full-viewport `.text-section` boxes is also what keeps the button
   tappable at all. The card's lift to 4 only counts because **`.text-col` deliberately
@@ -967,3 +973,15 @@ leaving marks on screen at `@fold4`, most visibly on the way back up:
 
 Same family as the timeline dots' phantom stroke ([Timeline](Timeline.md)): sub-pixel
 geometry on a high-DPR screen paints something, not nothing.
+
+## Clicking a legend row — the @fold10 filter
+
+On the real timeline (@fold10) each legend row is also a **filter toggle**: click it
+and that group leaves the graph (its dots shrink away, the rest re-pack and fly).
+The click strips are `.fold6-legend-filter`, one per row, built by
+`fold6LegendFilterEl(g)` inside that column's hover box and positioned per frame by
+`updateGroups`; a filtered row carries `is-filtered-off` (opacity .28) on its
+`.group-item`. Desktop only; the strips are clickable on @fold10 and @fold11, and the filter
+itself stays in force through every fold after the timeline (the dimmed rows keep
+saying so) until you scroll back above @fold10. The mechanics live
+in [Timeline](Timeline.md#the-legend-filter-fold10-desktop-only--p7filtertoggle-page7js).
