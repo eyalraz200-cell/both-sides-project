@@ -25,7 +25,7 @@ function isMobile() {
 // js/groups.js, which collapses its duration to 0 and lands every fold on its
 // end state instantly) and CSS transitions (see the reduced-motion block in
 // style.css). What it deliberately does NOT turn off: motion that IS the
-// scroll position — @fold9's scrubbed timeline and @fold10's glide are the
+// scroll position — @fold9's scrubbed timeline and @fold11's glide are the
 // content, not decoration around it, and freezing them would leave nothing to
 // read. Nor page9.js's drop animation, which is finalized.
 const REDUCED_MOTION_MQ =
@@ -39,10 +39,12 @@ function prefersReducedMotion() {
 // drawFoldSplit/drawFold7/drawFold9 are tiny inline background-only
 // functions (see below) — these folds' only visual content is the DOM overlay.
 // Folds whose canvas is *purely* background use drawBackground directly.
-// Indices 11 (@fold12, the closing statement) and 12 (@fold13, the outro card)
+// Index 9 is @fold10, the size grid: the same drawPage7 canvas, with p7Grid
+// on (the axis undraws, the dots re-pack) — see p7SizeGridOnPage.
+// Indices 12 (@fold13, the closing statement) and 13 (@fold14, the outro card)
 // share drawPage12: the freeform-morph canvas is established on arrival at
-// @fold12 and simply persists behind the credits card that follows it.
-const PAGES = [drawPage1, drawBackground, drawBackground, drawFoldSplit, drawBackground, drawBackground, drawFold7, drawFold9, drawPage7, drawPage8, drawPage9, drawPage12, drawPage12, drawPage12];
+// @fold13 and simply persists behind the credits card that follows it.
+const PAGES = [drawPage1, drawBackground, drawBackground, drawFoldSplit, drawBackground, drawBackground, drawFold7, drawFold9, drawPage7, drawPage7, drawPage8, drawPage9, drawPage12, drawPage12, drawPage12];
 let currentPage = 0;
 
 // How far every OTHER dot/square drops in opacity while one event is hovered
@@ -162,7 +164,7 @@ function drawFold9(ctx, W, H) {
 
 // Several independent rAF loops legitimately run at once (p8RunAnimLoop,
 // p7StartAnimLoop, every animating makeTrigger, …) and each calls this same
-// global draw() — measured at ~2 full canvas paints per frame during @fold10's
+// global draw() — measured at ~2 full canvas paints per frame during @fold11's
 // bridge glide, which is where its scroll stutter came from. Coalesced: the
 // first call in a frame paints, later same-frame calls queue ONE rerun on the
 // next frame instead (not dropped — state mutated between the two calls still
@@ -253,7 +255,7 @@ function fitDashArray(geomEl) {
 // The dash <svg> is CSS-sized at 100% of the frame but drawn against a baked
 // viewBox — any box-size change the bake didn't see leaves the stroke scaled
 // off the box edge while the white fill (a plain CSS background) still hugs
-// the real box, i.e. fill visibly outside the stroke. @fold11's card is the
+// the real box, i.e. fill visibly outside the stroke. @fold12's card is the
 // worst case: on mobile its padding TRANSITIONS on .is-stuck (style.css), so
 // the box resizes over 0.35s with no explicit update call, and an address-bar
 // resize could even re-bake the viewBox mid-transition/while-stuck, freezing
@@ -266,7 +268,7 @@ const textCardFrameResizeObs = typeof ResizeObserver !== "undefined"
 
 function updateTextCardFrameDashes() {
   document.querySelectorAll(".text-card-frame").forEach((frame) => {
-    // border-box, NOT the default content-box: @fold11's stick/un-stick
+    // border-box, NOT the default content-box: @fold12's stick/un-stick
     // animates PADDING, which moves the border box while the content box
     // stays put — the default observer stayed silent through the whole
     // transition, so a mid-stuck re-bake (address-bar resize) froze a stale

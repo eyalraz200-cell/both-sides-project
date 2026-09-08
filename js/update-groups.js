@@ -10,7 +10,7 @@ const SWATCH_VANISH_PX = 1;
 // Same per-frame coalescing as draw() (js/core.js) and for the same reason:
 // every animating makeTrigger's own rAF loop plus fold9EnsureP8SyncLoop each
 // call this global directly, which measured out at 2+ full DOM restyles per
-// frame during @fold10's bridge glide. First call in a frame runs; later
+// frame during @fold11's bridge glide. First call in a frame runs; later
 // same-frame calls queue one rerun next frame so no state change is dropped.
 let ugRanThisFrame = false;
 let ugRerunQueued  = false;
@@ -1090,12 +1090,12 @@ function updateGroups() {
   fold6SquaresOverlayEl.style.opacity = "1";
 
   const e7Label = fold7LabelTrigger.currentT();
-  // @fold10 trigger #1 (its title card's ordinary midpoint crossing, see
+  // @fold11 trigger #1 (its title card's ordinary midpoint crossing, see
   // checkFold9 above) colors in only the highlighted square (index 0) and
   // its tooltip's border below — the other 7 squares stay base gray until a
   // later trigger is added.
   const fold9Phase1T = fold9Trigger.currentT();
-  // @fold10 trigger #2 (title card fully offscreen, same crossing as the year
+  // @fold11 trigger #2 (title card fully offscreen, same crossing as the year
   // axis appearing — see checkFold9Fly above) colors in the other 7 squares,
   // resizes all 8 to their real per-event dot's size, and only once that's
   // done flies them to that dot's position — two sequential beats, not
@@ -1217,7 +1217,7 @@ function updateGroups() {
     const FOLD6_SQUARE_DIM_OPACITY = 0.3;
     const dimT = fold8SquareDimTrigger.currentRaw();
     const dimFromFold8 = 1 - (1 - FOLD6_SQUARE_DIM_OPACITY) * dimT;
-    // Restored to full opacity in step with @fold10 trigger #2 (fold9FlyT) —
+    // Restored to full opacity in step with @fold11 trigger #2 (fold9FlyT) —
     // once a square is colored in and flying to its real dot, the dimmed
     // ~30% opacity (which only ever fit its gray, pre-color state) no longer
     // applies; a real timeline dot is always full opacity.
@@ -1230,7 +1230,7 @@ function updateGroups() {
     if (typeof p7 !== "undefined" && p7.hoveredEvent && targetEvent) {
       if (targetEvent !== p7.hoveredEvent) opacity *= hoverDim(targetEvent.actor);
     }
-    // Same parity for @fold11's own hover-dim (p9.hoveredEvent/hoveredCategoryIdx/
+    // Same parity for @fold12's own hover-dim (p9.hoveredEvent/hoveredCategoryIdx/
     // hoverDimT, page9.js's p9PlaceDot) — these squares are also drawn a second
     // time as an ordinary canvas dot in page9's legit/extreme grid (this DOM
     // square just sits on top of it once it arrives), so without this the
@@ -1252,7 +1252,7 @@ function updateGroups() {
         if (!stillHighlighted) opacity *= dimFactor;
       }
     }
-    // @fold12's own legit-dot fade-out (p9.fold13OutT, drawPage9) only ever
+    // @fold13's own legit-dot fade-out (p9.fold13OutT, drawPage9) only ever
     // fades events whose category is still classified "below" (legitimate) —
     // extreme ("above") events morph away separately instead (p9.fold13ExtremeMorphT,
     // drawPage12). Same classification check, so a square whose category was
@@ -1262,7 +1262,7 @@ function updateGroups() {
       const idx = CATEGORY_TO_IDX[targetEvent.category];
       const isExtreme = idx !== undefined && p9.sides && p9.sides[idx] === "above";
       if (!isExtreme) opacity *= 1 - (p9.fold13OutT ?? 0);
-      // Once @fold11 reclassifies this square's category to extreme, its
+      // Once @fold12 reclassifies this square's category to extreme, its
       // canvas twin flies up into the extreme column — but this DOM square
       // only ever blends to p9LegitPosOf (the legit band spot), so it stayed
       // parked on the band: exempt from the pill-hover dim (its category IS
@@ -1272,7 +1272,7 @@ function updateGroups() {
       // also hidden while any drop animation runs, so dragging the pill back
       // to legit can't pop the square onto the band before its twin's return
       // flight has landed there.
-      if (currentPage >= 10 && (isExtreme || p9.anim)) opacity = 0;
+      if (currentPage >= 11 && (isExtreme || p9.anim)) opacity = 0;
     }
     // The mobile picker's selection halo (p7DrawInspectScrim, page7.js) is a
     // white scrim painted over the whole CANVAS — so it dims every canvas dot
@@ -1311,19 +1311,19 @@ function updateGroups() {
       // has emptied it (see fold8AdvanceSequence's own opacity branch): the
       // frame is a designated fixture of @fold7/@fold8/the timeline, not a
       // callout that comes and goes with one event, so it holds its spot
-      // through them and only stands down once the bridge (@fold10) takes the
+      // through them and only stands down once the bridge (@fold11) takes the
       // squares over into page9's grid.
-      // It now runs through @fold11 (page 9) as well: the press-and-hold event
+      // It now runs through @fold12 (page 9) as well: the press-and-hold event
       // picker serves that fold too on mobile (p7InspectPage, page7.js), and it
       // needs the same resting empty frame to write into. The bound is a plain
       // <= 10 rather than "7 or 9" so the frame doesn't blink off across the
-      // bridge fold (page 8) in between — and it includes page 10 (@fold12)
+      // bridge fold (page 8) in between — and it includes page 10 (@fold13)
       // because the IntersectionObserver flips currentPage to 10 partway
-      // through @fold12's scroll-in: a <= 9 bound made forceHide fire
+      // through @fold13's scroll-in: a <= 9 bound made forceHide fire
       // fold8ResetTooltip at that arbitrary flip point, display:none-ing the
       // frame mid-fade (the "tooltip snaps" bug). Through page 10 the frame's
       // exit belongs to updateFold13's scroll fade instead.
-      const keepEmptyFrame = isMobile() && currentPage <= 11;
+      const keepEmptyFrame = isMobile() && currentPage <= 12;
       const forceHide = !event || (shrinkT >= 1 && !keepEmptyFrame);
       const wantShow = !forceHide && tooltipT > 0.001;
 
@@ -1348,7 +1348,7 @@ function updateGroups() {
       } else if (fold8SequenceEvent) {
         fold8TooltipOwnsIt = true;
         // Colors in step with the highlighted square itself (both driven by
-        // fold9Phase1T/@fold10 trigger #1) — gray until the title card's
+        // fold9Phase1T/@fold11 trigger #1) — gray until the title card's
         // midpoint crossing, then transitions to the actor's real group
         // color together with the square.
         // `color`, not `border-color` — the visible stroke is the dashed <svg>
@@ -1426,7 +1426,7 @@ function updateGroups() {
     // === 10). page8CheckScroll/fold9EnsureP8SyncLoop above make sure
     // p8CurrentT() below is both freshly triggered and kept moving even
     // without further scroll events.
-    const ease = currentPage >= 10 ? 1 : p9Ease(typeof p8CurrentT === "function" ? p8CurrentT() : 0);
+    const ease = currentPage >= 11 ? 1 : p9Ease(typeof p8CurrentT === "function" ? p8CurrentT() : 0);
     if (target && ease > 0) {
       if (targetEvent) {
         p9EnsureIndex();

@@ -247,7 +247,7 @@ are both fixed px, so on a phone an H-scaled distance would swing with the URL b
   each its group color, and `fold6SquareOccurrence(i)` says which chronological occurrence
   of that actor it stands in for. The real cascade never draws those 8 events
   (`p7GetClaimedEvents`), so the DOM square just stays once it lands.
-- **shrink with the @fold10 glide** — as page8's blend carries them down to the legit
+- **shrink with the @fold11 glide** — as page8's blend carries them down to the legit
   band, both position *and size* lerp by the same ease (`js/update-groups.js`): the end
   size is the band's own rule (`legitGeom.cell` in bar mode, else `p9Metrics().legitSq`),
   matching what page8.js uses for canvas dots. On big desktop that's a no-op (legitSq =
@@ -504,7 +504,7 @@ it — **width first, then height** — exactly as the desktop note opens.
 - **Stacking — the legend is ALWAYS above the title blocks** (explicit instruction), open or
   closed. The layer is `z-index: 5`, over `.section-text.text-card`'s **4** (mobile only,
   with `.text-section > .section-text.text-card` supplying the `position: relative` — the
-  child combinator leaves `@fold11`/`@fold12`'s sticky/fixed cards alone), and on the folds
+  child combinator leaves `@fold12`/`@fold13`'s sticky/fixed cards alone), and on the folds
   whose cards climb to 1001 to clear the docked tooltip it climbs with them to **1002**.
   Out-stacking the full-viewport `.text-section` boxes is also what keeps the button
   tappable at all. The card's lift to 4 only counts because **`.text-col` deliberately

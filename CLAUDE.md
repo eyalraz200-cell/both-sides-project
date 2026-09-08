@@ -38,7 +38,7 @@ Two separate, unrelated HTML entry points sharing no layout:
 | `page7.js` | Pinned real timeline: per-event square cascade + canvas year axis |
 | `page8.js` | Bridge glide from timeline layout → page9 legit grid |
 | `page9.js` | Drag-and-drop categorization + dot-migration animation |
-| `page12.js` | `drawPage12` (@fold12's freeform spread) + `p12ShareInit` |
+| `page12.js` | `drawPage12` (@fold13's freeform spread) + `p12ShareInit` |
 | `squareboundingbox.js` | Shared grid-geometry constants (`SBB`, `SBB_TIMELINE`, `CENTER_GAP`) |
 | `reload.js` | Dev-only mtime poll → auto page reload |
 | `server.py` | Local dev server + `full_v3.xlsx`→`events.json` generation (derives `side` from `main_actor`) |
@@ -62,13 +62,14 @@ Figma source: file `QASHSt1u7b6m6ASgrUPswf` ("Design"). Screens are revised one 
 | `@fold7` | `page-6` | Square labels + tooltip demo — `fold7LabelTrigger`, `fold8*` triggers |
 | `@fold8` | `page-7` | Squares gain colors and fly to their real timeline dots — `fold9Trigger`, `fold9FlyTrigger` |
 | `@fold9` | `page-8` | The real pinned timeline (`page7-scrub`, page7.js) |
-| `@fold10` | `page-9` | Bridge glide (page8.js) |
-| `@fold11` | `page-10` | Drag-and-drop categorization (page9.js) |
-| `@fold12` | `page-11` | Closing statement; owns the scroll gate + the fade-out (`fold13ScrollT`) — extreme dots stay in their columns. house 100vh section, **static** wrapper (height = spacing only while it isn't sticky); the share block trails it by the house gap (100vh minus this card) |
-| `@fold13` | `page-12` | Share title block — «שתפו עם אחרים» over the WhatsApp/X/Facebook/copy-link row (`p12ShareInit`); no trigger |
-| `@fold14` | `page-13` | Outro/credits card as a fixed **drawer** (`p13Drawer`, page12.js, desktop): rises with the scroll and docks at the viewport bottom with only its title showing at the document's end; hover slides it fully up |
+| `@fold10` | `page-9` | The size grid: the timeline undraws and every dot on screen morphs to its crowd tier, re-packed at the timeline's own gap (`p7SizeGridOnPage`, page7.js) |
+| `@fold11` | `page-10` | Bridge glide (page8.js) |
+| `@fold12` | `page-11` | Drag-and-drop categorization (page9.js) |
+| `@fold13` | `page-12` | Closing statement; owns the scroll gate + the fade-out (`fold13ScrollT`) — extreme dots stay in their columns. house 100vh section, **static** wrapper (height = spacing only while it isn't sticky); the share block trails it by the house gap (100vh minus this card) |
+| `@fold14` | `page-13` | Share title block — «שתפו עם אחרים» over the WhatsApp/X/Facebook/copy-link row (`p12ShareInit`); no trigger |
+| `@fold15` | `page-14` | Outro/credits card — an ordinary title block, but near-viewport-tall, so it is placed by its **top edge**, not centred: `p12SpacingFit()` pads the section by `50vh − half the share card` so the @fold14→@fold15 edge gap is `100vh − share card`, on a **static** (non-sticky) wrapper on desktop. Never centre it in 100vh — that's the recurring gap bug. The document ends 48px under it. **Removed — don't reintroduce:** the fixed drawer (`p13Drawer`, `#p13Back`) and the map wheel-zoom, archived with the map on 2026-09-08 (`map-archive`) |
 
-**14 folds total.**
+**15 folds total.**
 
 ## Groups roster
 

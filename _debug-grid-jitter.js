@@ -10,115 +10,115 @@
      - Pop out reopens in a real window that can leave the browser
    ========================================================================== */
 (function () {
+  if (window.innerWidth <= 600) return;   // the size grid is desktop-only
   // ---------------------------------------------------------------- CONFIG --
   var CONFIG = {
-    title: 'size grid — camps',
+    title: '@fold10 — grid edge, growth & spread',
 
     tabs: [],
-    tab: null,
-    onTab: null,
-
-    // manual/ — the three knobs asked for. The order/place candidates are
-    // settled (random + tight, baked in page7.js) so they get no controls.
     sliders: [
-      { key: 'camp', label: 'gap between the camps (px)', min: 0, max: 240, step: 1, value: 0,
-        source: 'page7.js — P7_GRID_CAMP_GAP' },
-      { key: 'unit', label: 'dot size (px)', min: 1, max: 14, step: 0.05, value: 4.2,
-        source: 'page7.js — P7_GRID_UNIT_PX' },
-      { key: 'frac', label: 'max width (share of the side)', min: 0.2, max: 1, step: 0.01, value: 0.71,
-        source: 'page7.js — P7_GRID_WIDTH_FRAC' },
+      { key: 'jitter', label: 'edge jitter (0 = flat edge)', min: 0, max: 1, step: 0.05, value: 0.95,
+        source: 'page7.js P7_GRID_EDGE_JITTER' },
+      { key: 'cells',  label: 'deepest tooth (cells, at jitter 1)', min: 2, max: 40, step: 1, value: 24,
+        source: 'page7.js P7_GRID_JITTER_CELLS' },
+      { key: 'wave',   label: 'tooth width (rows per control point)', min: 2, max: 40, step: 1, value: 2,
+        source: 'page7.js P7_GRID_JITTER_WAVE' },
+      { key: 'seed',   label: 'noise seed (a different edge, same settings)', min: 0, max: 40, step: 1, value: 0,
+        source: 'page7.js P7_GRID_SEED (+ this offset)' },
+      { key: 'width',  label: 'frame width (of the side)', min: 0.3, max: 1, step: 0.01, value: 0.9,
+        source: 'page7.js P7_GRID_WIDTH_FRAC' },
+      { key: 'spread', label: 'big blocks keep apart (0 = they clump)', min: 0, max: 1, step: 0.05, value: 0,
+        source: 'page7.js P7_GRID_BIG_SPREAD' },
+      // Below 6 the "big" blocks are most of the block's area and the only way
+      // to separate them is to open holes — the readout reports them, watch it.
+      { key: 'bigmin', label: 'smallest block that counts as big (cells)', min: 2, max: 14, step: 1, value: 6,
+        source: 'page7.js P7_GRID_BIG_MIN' }
     ],
     colors: [],
-    modes: [],
-    mode: null,
+    modes: [
+      { key: 's', id: 'side', label: 'grow sideways from the corridor (current)' },
+      { key: 'u', id: 'up',   label: 'grow upward from the bottom' }
+    ],
+    mode: 'side',
+    toggles: [],
 
-    // The knob only shows on @fold9 with the grid on — flip it from here.
-    toggles: [{ key: '1', id: 'grid', label: 'size grid on', on: false }],
-
-    apply: function (v, mode, tab, on) {
-      if (typeof P7_GRID_WIDTH_FRAC === 'undefined') return;
-      P7_GRID_WIDTH_FRAC = v.frac;
-      P7_GRID_UNIT_PX = v.unit;
-      P7_GRID_CAMP_GAP = v.camp;
+    apply: function (v, mode) {
+      if (typeof p7Grid === 'undefined') return;
+      var seed = 20260908 + v.seed;
+      var changed = P7_GRID_EDGE_JITTER !== v.jitter || P7_GRID_JITTER_CELLS !== v.cells ||
+                    P7_GRID_JITTER_WAVE !== v.wave || P7_GRID_SEED !== seed ||
+                    P7_GRID_WIDTH_FRAC !== v.width || P7_GRID_BIG_SPREAD !== v.spread ||
+                    P7_GRID_BIG_MIN !== v.bigmin || P7_GRID_GROW !== (mode || 'side');
+      P7_GRID_EDGE_JITTER  = v.jitter;
+      P7_GRID_JITTER_CELLS = v.cells;
+      P7_GRID_JITTER_WAVE  = v.wave;
+      P7_GRID_SEED         = seed;
+      P7_GRID_WIDTH_FRAC   = v.width;
+      P7_GRID_BIG_SPREAD   = v.spread;
+      P7_GRID_BIG_MIN      = v.bigmin;
+      P7_GRID_GROW         = mode || 'side';
+      if (!changed) return;
+      // The layout key doesn't carry the seed or the noise shape, so clear it
+      // by hand. Two frames: the unit is solved on the first pack, the block is
+      // drawn at it on the next.
       p7Grid.layout = null;
-      if (!!on.grid !== p7Grid.on) p7SizeGridSet(!!on.grid);
-      else if (p7Grid.on) { p7SizeGridLayout(innerWidth, innerHeight); draw(); }
-      DBG.mark();
+      if (typeof draw === 'function') { draw(); requestAnimationFrame(function () { draw(); readout(); }); }
     },
 
-    init: function (api) { DBG.api = api; addEventListener('resize', function () { p7Grid.layout = null; DBG.mark(); }); },
-
-    // Live readout of what the current width costs in square size.
     custom: function (box, api, doc) {
-      var el = doc.createElement('div');
-      el.style.cssText = 'font:11px ui-monospace,monospace;line-height:1.6;opacity:.75;white-space:pre';
-      box.appendChild(el);
-      return function redraw() { el.textContent = DBG.stats(); };
+      var out = doc.createElement('div');
+      out.style.cssText = 'margin-top:8px;font:11px ui-monospace,monospace;opacity:.75;line-height:1.5';
+      box.appendChild(out);
+      // The measured contour — what the teeth actually came out as, since the
+      // pack's own saturation decides how far the contour slides out.
+      readout = function () {
+        if (typeof p7Grid === 'undefined' || !p7Grid.layout) { out.textContent = 'scroll to @fold10'; return; }
+        var L = p7Grid.layout;
+        var txt = 'unit ' + L.SQ.toFixed(2) + 'px · ' + L.lanes + (L.up ? ' columns, grows up' : ' rows, grows sideways') + '\n';
+        // Holes: empty cells inside a lane's own filled span. Must stay 0 —
+        // that is the whole point of the pack, and spread is what breaks it.
+        var occ = {}, ext = {}, cells = 0;
+        L.pos.forEach(function (g) {
+          if (g.cx > L.leftEdge) return;
+          var n = Math.round((g.sq + L.GAP) / L.CELL);
+          var col = Math.round((L.leftEdge - g.cx) / L.CELL - n / 2);
+          var row = Math.round((g.cy - L.top) / L.CELL - n / 2);
+          for (var i = 0; i < n; i++) for (var j = 0; j < n; j++) {
+            var r = row + i, c = col + j, lane = L.up ? c : r, d = L.up ? r : c;
+            if (!occ[lane]) occ[lane] = {};
+            if (!occ[lane][d]) { occ[lane][d] = 1; cells++; }
+            var e = ext[lane] || (ext[lane] = [1e9, -1e9]);
+            if (d < e[0]) e[0] = d; if (d > e[1]) e[1] = d;
+          }
+        });
+        var holes = 0;
+        for (var lane in ext) for (var d = ext[lane][0]; d <= ext[lane][1]; d++) if (!occ[lane][d]) holes++;
+        txt += 'left camp: ' + cells + ' cells, ' + holes + ' holes (' +
+               (100 * holes / Math.max(1, cells)).toFixed(1) + '%)\n';
+        ['left', 'right'].forEach(function (side) {
+          L.bucket[side].forEach(function (b) {
+            var w = [].slice.call(b.sky.widths), lo = Math.min.apply(null, w), hi = Math.max.apply(null, w);
+            txt += side + ': edge ' + lo + '–' + hi + ' cells (teeth ' + (hi - lo) +
+                   ' = ' + Math.round((hi - lo) * L.CELL) + 'px)\n';
+          });
+        });
+        out.textContent = txt;
+      };
+      return readout;
     },
-
-    width: 300,
-    collapseSliders: false,
-    knobCols: 1,
 
     summary: function (v, mode) {
-      return 'page7.js  P7_GRID_CAMP_GAP   = ' + v.camp +
-             '\npage7.js  P7_GRID_UNIT_PX    = ' + v.unit +
-             '\npage7.js  P7_GRID_WIDTH_FRAC = ' + v.frac + '\n' + DBG.stats();
+      return 'P7_GRID_EDGE_JITTER  = ' + v.jitter + ';   // page7.js\n' +
+             'P7_GRID_JITTER_CELLS = ' + v.cells + ';\n' +
+             'P7_GRID_JITTER_WAVE  = ' + v.wave + ';\n' +
+             'P7_GRID_SEED         = ' + (20260908 + v.seed) + ';\n' +
+             'P7_GRID_WIDTH_FRAC   = ' + v.width + ';\n' +
+             'P7_GRID_BIG_SPREAD   = ' + v.spread + ';\n' +
+             'P7_GRID_BIG_MIN      = ' + v.bigmin + ';\n' +
+             "P7_GRID_GROW         = '" + (mode || 'side') + "';";
     }
   };
-
-  /* Live readout + the on-page marker: a short tick in the margin at each
-     block's OUTER edge (the thing this knob moves), so the width is seen on
-     the page and not only inferred from the dots. Kept to a stub at the top
-     of the timeline box — never a rule across the artwork. */
-  var DBG = {
-    stats: function () {
-      if (typeof p7Grid === 'undefined' || !p7Grid.layout) return 'grid off — flip the toggle';
-      var L = p7Grid.layout;
-      return 'unit  ' + L.SQ.toFixed(2) + 'px   gap ' + L.GAP.toFixed(2) +
-             '\n      (timeline dot = ' + p7.SQ.toFixed(2) + 'px)' +
-             '\ntier4 ' + (P7_GRID_TIER_CELLS[4] * L.CELL - L.GAP).toFixed(1) + 'px' +
-             '\ncamp gap ' + P7_GRID_CAMP_GAP + 'px' +
-             '\ncols  ' + L.cols + '  (' + Math.round(L.cols * L.CELL) + 'px wide)' +
-             '\nrows  ' + L.rows + '  (' + Math.round(L.rows * L.CELL) + ' of ' +
-             Math.round((sbbTimeline(innerHeight).bottom - sbbTimeline(innerHeight).top) * innerHeight) + 'px tall)';
-    },
-    mark: function () {
-      var wrap = document.getElementById('dbgGridWidthMark');
-      if (!wrap) {
-        wrap = document.createElement('div');
-        wrap.id = 'dbgGridWidthMark';
-        wrap.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:999';
-        document.body.appendChild(wrap);
-      }
-      wrap.innerHTML = '';
-      if (typeof p7Grid === 'undefined' || !p7Grid.on || !p7Grid.layout) return;
-      var L = p7Grid.layout, W = innerWidth, H = innerHeight;
-      var top = sbbTimeline(H).top * H, half = P7_GRID_CAMP_GAP / 2, w = L.cols * L.CELL;
-      // Ticks at the four block edges: the two inner ones bracket the camp gap.
-      [[W / 2 - half - w, 'right'], [W / 2 - half, 'right', 'gap ' + P7_GRID_CAMP_GAP + 'px'],
-       [W / 2 + half, 'left', ' '], [W / 2 + half + w, 'left']].forEach(function (o) {
-        var t = document.createElement('div');
-        t.style.cssText = 'position:absolute;left:' + o[0] + 'px;top:' + (top - 26) +
-          'px;width:1px;height:22px;background:#e0006d';
-        var lab = document.createElement('div');
-        lab.style.cssText = 'position:absolute;bottom:22px;' + o[1] + ':2px;font:10px ui-monospace,monospace;color:#e0006d;white-space:nowrap';
-        lab.textContent = (o[2] || Math.round(w) + 'px');
-        t.appendChild(lab); wrap.appendChild(t);
-      });
-      // Reference: a square the size of the TIMELINE's dot, next to one the
-      // size of the grid's unit — so "bigger/smaller than now" is seen.
-      var ref = document.createElement('div');
-      ref.style.cssText = 'position:absolute;left:' + (W / 2 - 60) + 'px;top:' + (top - 30) +
-        'px;display:flex;align-items:flex-end;gap:6px;font:10px ui-monospace,monospace;color:#e0006d';
-      ref.innerHTML = '<i style="display:block;width:' + p7.SQ + 'px;height:' + p7.SQ +
-        'px;background:#e0006d"></i><span>timeline ' + p7.SQ.toFixed(2) + 'px</span>' +
-        '<i style="display:block;width:' + L.SQ + 'px;height:' + L.SQ +
-        'px;background:#00a3ff"></i><span style="color:#00a3ff">grid ' + L.SQ.toFixed(2) + 'px</span>';
-      wrap.appendChild(ref);
-    }
-  };
-  if (innerWidth <= 600) return;   // desktop-only knob — see CLAUDE.md
+  var readout = function () {};
   // ------------------------------------------------------------ END CONFIG --
 
   var style = document.createElement('style');

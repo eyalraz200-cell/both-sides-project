@@ -38,7 +38,7 @@ function setActivePage(page) {
   // *scroll-dependent* moment, that showed up as the glide stuttering and
   // landing differently depending on whether the user kept scrolling through
   // it. Replaying the same global 0..1 clock makes the handoff invisible.
-  if (currentPage === 9 && page === 10 && typeof p8CurrentT === "function" && p8Engaged && p8CurrentT() < 1) {
+  if (currentPage === 10 && page === 10 && typeof p8CurrentT === "function" && p8Engaged && p8CurrentT() < 1) {
     const W = canvas.clientWidth, H = canvas.clientHeight;
     p9.anim = {
       from: p8CaptureBlendedPositions(W, H, 0),
@@ -49,8 +49,11 @@ function setActivePage(page) {
       // shrinks the dots across the flight and drawPage9 has to keep doing so,
       // or the dots snap small at the handoff and the flight looks dimmer.
       // p8CaptureBlendedPositions above has just run p7UpdateLayout, so p7.SQ
-      // is this viewport's real timeline size.
-      fromSQ: p7.SQ,
+      // is this viewport's real timeline size. Out of @fold10's size grid there
+      // is no single start size — every dot leaves at its own tier size — so
+      // the scalar is left OFF there and each captured entry's own `sq` drives
+      // the lerp instead (p9PlaceDot's `from.sq` branch, page9.js).
+      ...(typeof p7Grid !== "undefined" && p7Grid.on ? {} : { fromSQ: p7.SQ }),
     };
   }
 
@@ -61,7 +64,7 @@ function setActivePage(page) {
   // otherwise teleport straight to its resting timeline cell the instant
   // this section starts drawing instead of page8. See p7EntryAnim's own
   // comment (page7.js) for the full rationale.
-  if (currentPage === 9 && page === 8 && typeof p8CurrentT === "function" && p8CurrentT() > 0) {
+  if (currentPage === 10 && page === 8 && typeof p8CurrentT === "function" && p8CurrentT() > 0) {
     const W = canvas.clientWidth, H = canvas.clientHeight;
     // Same back-dating as the forward handoff above, mirrored: this direction
     // runs t: p8CurrentT() -> 0 and its target IS the timeline layout, so the
@@ -88,7 +91,7 @@ function setActivePage(page) {
   // whatever incidental draw() calls scroll/hover happened to trigger, i.e.
   // it would stall the instant the user stopped scrolling and lurch forward
   // again on the next unrelated redraw, instead of playing smoothly.
-  if (currentPage === 10 && p9.anim) p9RunAnimLoop();
+  if (currentPage === 11 && p9.anim) p9RunAnimLoop();
 
   // Same reasoning, for p7EntryAnim's own continuous loop.
   if (currentPage === 8 && p7EntryAnim) p7StartAnimLoop();

@@ -632,16 +632,16 @@ const squaresRevealCardEl = document.querySelector("#page-4 .text-card");
 const acledNoteCardEl     = document.querySelector("#page-5 .text-card");
 // Hoisted above checkFold13 (below), which needs it already resolved at
 // definition time — also reused by p13SyncGateVisibility further down.
-// #page-11 is @fold12, the closing statement — NOT the outro/credits card,
-// which sits behind it at #page-13 (after the @fold13 share block) and shares
-// the same wrapper class. @fold12
+// #page-12 is @fold13, the closing statement — NOT the outro/credits card,
+// which sits behind it at #page-14 (after the @fold14 share block) and shares
+// the same wrapper class. @fold13
 // owns the whole hand-off: the scroll GATE, the scroll-linked fade
 // (fold13ScrollT) and the freeform MORPH (checkFold13 below), the last two
 // sequenced back to back across its card's rise.
 //
 // > The outro's own wrapper was once queried here as fold13OutroStickyEl, back
 // > when the morph fired on the credits card. Nothing reads it now.
-const page12StickyEl       = document.querySelector("#page-11 .page12-sticky-center");
+const page12StickyEl       = document.querySelector("#page-12 .page12-sticky-center");
 
 // Generic discrete trigger: a fixed-duration 0<->1 phase fired once by
 // crossing a scroll threshold (see watchCardThreshold below), exactly like
@@ -871,12 +871,12 @@ const FOLD8_TOOLTIP_CLEARANCE_PX = 30;
 // sane to sit rather than snapping to the house 0.5 and colliding again.
 const FOLD8_TOOLTIP_ABOVE_PX = 400;
 const fold8TooltipTrigger = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateGroups(...a));
-// @fold10 trigger #1 — its title card's ordinary midpoint crossing. Colors in
+// @fold11 trigger #1 — its title card's ordinary midpoint crossing. Colors in
 // only the highlighted square (index 0) and its tooltip's border; the other
 // 7 squares are untouched by this trigger.
 const FOLD9_COLOR_MS = 500;
 const fold9Trigger = makeTrigger(FOLD9_COLOR_MS, (...a) => updateGroups(...a));
-// @fold10 trigger #2 — the same crossing that makes the year axis appear
+// @fold11 trigger #2 — the same crossing that makes the year axis appear
 // (its title card passing fully offscreen, top <= 0 — see p7AxisShouldShow/
 // p7HasEngaged, page7.js). Colors in all 8 fold-6 squares (in their own
 // actor's group color) and flies each one to the real per-event dot it's
@@ -958,7 +958,7 @@ function checkFold9TooltipShrink() {
     }
   }
 }
-// @fold11 on mobile pins the pill tray as a band under the titles, right where
+// @fold12 on mobile pins the pill tray as a band under the titles, right where
 // the docked tooltip frame has been sitting since @fold8 — so the frame steps
 // down to p9DockTopM() (page9.js) to make room, and back up on the way out.
 // Fired from page9UpdateFromScroll's `isStuck` crossing, the same one that
@@ -1141,7 +1141,7 @@ const checkFold9Fly = watchCardThreshold(page7TitleCardEl, 0, fold9FlyTrigger);
 // the card is centred inside a 100vh wrapper flush with the section top, so
 // the wrapper's own top is the section's arrival.
 //
-// It watches **@fold12's** wrapper (page12StickyEl, #page-11) — the freeform
+// It watches **@fold13's** wrapper (page12StickyEl, #page-12) — the freeform
 // spread is the closing statement's flourish, firing as that card arrives
 // rather than waiting for the credits card behind it.
 //
@@ -1156,13 +1156,34 @@ const checkFold9Fly = watchCardThreshold(page7TitleCardEl, 0, fold9FlyTrigger);
 // fold short of here — see p13GateMax/p13GateLocked), so no extra lock check
 // is needed.
 //
-// > Previously watched fold13OutroStickyEl (@fold13's wrapper) at the same
+// > Previously watched fold13OutroStickyEl (@fold14's wrapper) at the same
 // > frac. Don't restore that without also un-compressing the fade.
 const checkFold13 = watchCardThreshold(page12StickyEl, 0.5, fold13Trigger);
-// The map build fires on @fold13's own share card — the house 0.5 crossing.
+
+// @fold10's size grid, on the house 0.5 crossing like every other fold — the
+// card reaching mid-screen is the trigger, NOT the IntersectionObserver page
+// flip that fired it before (that flips at -50% of the *section*, so the grid
+// formed while the card was still climbing). The shim adapts the grid's own
+// on/off API to watchCardThreshold's 0/1 trigger interface: `set` (first check,
+// or a jump over a whole viewport) snaps, `trigger` (a real scroll crossing)
+// morphs — the same instant-vs-animated split every other fold gets. Reversing
+// back up plays the dots onto the timeline at the same line they left it.
+const fold10GridCardEl = document.querySelector("#page-9 .text-card");
+const fold10GridTrigger = {
+  set:     v => p7SizeGridSet(v === 1, { instant: true }),
+  trigger: v => p7SizeGridSet(v === 1),
+};
+const checkFold10Grid = watchCardThreshold(fold10GridCardEl, 0.5, fold10GridTrigger);
+// Where p7SizeGridOnPage (page7.js) re-syncs from when @fold10 is re-entered
+// from below, a direction in which the watcher sees no crossing at all.
+function fold10GridPast() {
+  if (!fold10GridCardEl || isMobile()) return false;
+  return fold10GridCardEl.getBoundingClientRect().top <= window.innerHeight * 0.5;
+}
+// The map build fires on @fold14's own share card — the house 0.5 crossing.
 
 function checkGroupTriggers() {
-  checkFold2(); checkFold3(); checkFold6(); checkSquaresReveal(); checkAcledNote(); checkNoteUntype(); checkFold7Label(); checkFold8SquareDim(); checkFold8Tooltip(); checkFold9(); checkFold9Fly(); checkFold13();
+  checkFold2(); checkFold3(); checkFold6(); checkSquaresReveal(); checkAcledNote(); checkNoteUntype(); checkFold7Label(); checkFold8SquareDim(); checkFold8Tooltip(); checkFold9(); checkFold9Fly(); checkFold10Grid(); checkFold13();
 }
 
 // Default (camp-column) swatch size + the swatch-to-label gap

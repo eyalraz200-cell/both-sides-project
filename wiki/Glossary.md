@@ -15,7 +15,7 @@ white box around just the `<h2>` is `.text-card-frame`.
 `@fold4` and alive through every later fold. Not the old page-1 list.
 
 **`@dragcards` / "draggable events"** — the category **pills** (`.page9-pill`,
-`P9_CATEGORIES`) in `@fold11`'s tray. **Not** the per-event canvas dots.
+`P9_CATEGORIES`) in `@fold12`'s tray. **Not** the per-event canvas dots.
 
 **"Axis events"** — the 9 `P7_AXIS_EVENTS` headline events on the year axis: side plaques
 beside the vertical axis on desktop (each with a `desc` that types in on hover — see
@@ -61,4 +61,4 @@ divider.
 `@fold1` decorative dots; they shrink away at `@fold3`, leaving each row's rightmost rect
 as the persistent `.group-item`.
 
-- **size grid** — @fold9's desktop toggle (`#p7SizeGrid`, `p7SizeGridSet`, page7.js): the visible timeline squares grow to their crowd-tier block size and re-pack into a gap-exact skyline grid per camp, and fly back on the second press. Distinct from the hover **bulge** (same tiers, different multipliers). See [Timeline](Timeline.md).
+- **size grid** — what **@fold10** (`#page-9`, desktop) does: arriving on the fold turns it on (`p7SizeGridSet`/`p7SizeGridOnPage`, page7.js), the timeline undraws, and the visible squares grow to their crowd-tier block size and re-pack into a gap-exact skyline grid per camp, at the timeline's own gap. Scrolling back to @fold9 flies them back. There is no button. Distinct from the hover **bulge** (same tiers, different multipliers). See [Timeline](Timeline.md).
