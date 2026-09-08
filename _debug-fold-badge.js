@@ -4,21 +4,22 @@
 (function () {
   const NAMES = {
     1: "hero / dot columns",
-    2: "dots → camp grids",
+    2: "dots \u2192 camp grids",
     3: "filler rects shrink",
-    4: "groups → mini-legend",
+    4: "groups \u2192 mini-legend",
     5: "8 grey squares",
     6: "ACLED card",
-    7: "labels + tooltip",
-    8: "colors + fly to timeline",
-    9: "real pinned timeline",
-    10: "bridge glide",
-    11: "drag & drop",
-    12: "closing statement",
-    13: "share block",
-    14: "outro / credits",
+    7: "square labels",
+    8: "hover: tooltip + grow",
+    9: "colors + fly to timeline",
+    10: "real pinned timeline",
+    11: "size grid",
+    12: "bridge glide",
+    13: "drag & drop",
+    14: "closing statement",
+    15: "share block",
+    16: "outro / credits",
   };
-
   const el = document.createElement("div");
   el.id = "debug-fold-badge";
   el.style.cssText = [

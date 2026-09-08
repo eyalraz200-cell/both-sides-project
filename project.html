@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- lang="he" so screen readers use a Hebrew voice. NOT dir="rtl" at the root:
      the stylesheet declares `direction: rtl` per block, and the flex rows that
-     don't (the @fold12 pill tray, .page9-zone) would reverse their inline
+     don't (the @fold13 pill tray, .page9-zone) would reverse their inline
      order under a root RTL. Setting it is still the right end state — it needs
      an eyeball pass over folds 10–12 first. -->
 <html lang="he">
@@ -9,6 +9,24 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Radical Events</title>
+  <!-- Open Graph / Twitter card — what WhatsApp, X, Facebook, LinkedIn render when
+       the link is shared (the @fold15 share row relies on this). og:image must be an
+       ABSOLUTE url; og-image.png is a 2400×1260 (2× of the 1200×630 card) shot of @fold1.
+       Served from GitHub Pages at /both-sides-project/. -->
+  <meta property="og:type" content="article" />
+  <meta property="og:locale" content="he_IL" />
+  <meta property="og:site_name" content="שקוף" />
+  <meta property="og:title" content="קיצוניים משני הצדדים" />
+  <meta property="og:description" content="ניתוח הפעילות של המחנות הפוליטיים בישראל" />
+  <meta property="og:url" content="https://eyalraz200-cell.github.io/both-sides-project/project.html" />
+  <meta property="og:image" content="https://eyalraz200-cell.github.io/both-sides-project/og-image.png" />
+  <meta property="og:image:width" content="2400" />
+  <meta property="og:image:height" content="1260" />
+  <meta property="og:image:alt" content="קיצוניים משני הצדדים — ניתוח הפעילות של המחנות הפוליטיים בישראל" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="קיצוניים משני הצדדים" />
+  <meta name="twitter:description" content="ניתוח הפעילות של המחנות הפוליטיים בישראל" />
+  <meta name="twitter:image" content="https://eyalraz200-cell.github.io/both-sides-project/og-image.png" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -57,12 +75,12 @@
          child, NOT nested in .graphic-col: that column is its own stacking
          context (position:fixed + z-index:0), which traps any z-index inside
          it below .text-col's full-viewport sections — on mobile that made the
-         docked frame untappable, every touch landing on section#page-8. -->
+         docked frame untappable, every touch landing on section#page-9. -->
     <div class="page9-tooltip" id="page9Tooltip" aria-hidden="true">
       <div class="page9-tooltip-date"></div>
       <div class="page9-tooltip-desc"></div>
     </div>
-    <!-- Hover tooltip for a category pill in page-11's tray (#page9ZoneBelow
+    <!-- Hover tooltip for a category pill in page-12's tray (#page9ZoneBelow
          only — see p9CategoryTooltipInit in page9.js). Same reasoning as
          #page9Tooltip above: a direct .layout child, not nested in
          .graphic-col, so its z-index actually stacks above .text-col's tray/
@@ -126,29 +144,34 @@
       </section>
       <section class="text-section" data-page="6" id="page-6">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">כל ריבוע מייצג פעולה פוליטית בשטח - כזו שהתרחשה ותועדה במרחב הציבורי.</h2>
+          <h2 class="section-title text-card-frame">כל ריבוע מייצג פעולה פוליטית שהתרחשה ותועדה במרחב הציבורי.</h2>
         </div>
       </section>
       <section class="text-section" data-page="7" id="page-7">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">צבע הריבוע מציין את הקבוצה שביצעה את הפעולה.</h2>
+          <h2 class="section-title text-card-frame">ריחוף העכבר מעל ריבוע חושף את תיאור הפעולה וממחיש את סדר גודלה.</h2>
         </div>
       </section>
-      <section class="text-section page7-scrub" data-page="8" id="page-8"></section>
-      <!-- @fold10: the size grid. Arriving here fires p7SizeGridSet(true)
+      <section class="text-section" data-page="8" id="page-8">
+        <div class="section-text text-card">
+          <h2 class="section-title text-card-frame">צבע הריבוע מציין את הקבוצה שביצעה את הפעולה.<br>ניתן לסנן קבוצות באמצעות המקרא.</h2>
+        </div>
+      </section>
+      <section class="text-section page7-scrub" data-page="9" id="page-9"></section>
+      <!-- @fold11: the size grid. Arriving here fires p7SizeGridSet(true)
            (p7SizeGridOnPage, page7.js) — the timeline undraws and every dot on
            screen grows to its crowd tier and re-packs. -->
-      <section class="text-section" data-page="9" id="page-9">
+      <section class="text-section" data-page="10" id="page-10">
         <div class="section-text text-card">
           <h2 class="section-title text-card-frame">המחנות נבדלים במספר הפעולות שביצעו, אך פעולה אחת עשויה להתבצע בידי אדם יחיד, ואחרת בהשתתפות מאות אלפי אנשים.</h2>
         </div>
       </section>
-      <section class="text-section" data-page="10" id="page-10">
+      <section class="text-section" data-page="11" id="page-11">
         <div class="section-text text-card">
           <h2 class="section-title text-card-frame">פעולות פוליטיות נבדלות זו מזו במטרה, באמצעים ובאופן הפעולה. אבל הגבול בין פעולה לגיטימית לפעולה קיצונית אינו תמיד מוסכם.</h2>
         </div>
       </section>
-      <section class="text-section page9-panel" data-page="11" id="page-11">
+      <section class="text-section page9-panel" data-page="12" id="page-12">
         <div class="page9-title-row">
           <div class="section-text text-card">
             <h2 class="section-title text-card-frame">מה נחשב בעיניכם לפעולה לגיטימית, ומה לפעולה קיצונית?</h2>
@@ -167,25 +190,25 @@
           </div>
         </div>
       </section>
-      <!-- @fold13 — the closing statement. It, not the credits card, is what
-           @fold12 resolves into: the scroll gate (p13GateMax) and the
-           drag-panel fade-out (fold13ScrollT) key off #page-12, and the
+      <!-- @fold14 — the closing statement. It, not the credits card, is what
+           @fold13 resolves into: the scroll gate (p13GateMax) and the
+           drag-panel fade-out (fold13ScrollT) key off #page-13, and the
            gate-hidden toggle off its .page12-sticky-center, so this section
-           carries that wrapper and the credits card moved to #page-13 behind
+           carries that wrapper and the credits card moved to #page-14 behind
            it. The extreme dots' morph to freeform (checkFold13) is watched on
-           #page-13's wrapper instead — that flourish belongs to the final
+           #page-14's wrapper instead — that flourish belongs to the final
            card. This wrapper is made position:static in style.css. -->
-      <section class="text-section" data-page="12" id="page-12">
+      <section class="text-section" data-page="13" id="page-13">
         <div class="page12-sticky-center">
           <div class="section-text text-card">
             <h2 class="section-title text-card-frame">בתקופה של מחלוקות עמוקות, חשוב שנסתכל מעבר למטרות הפוליטיות של שני המחנות, אלא גם על האמצעים להשגתן: אילו פעולות אנחנו מוכנים לקבל במרחב הציבורי, ואילו פעולות חוצות את הגבול.</h2>
           </div>
         </div>
       </section>
-      <!-- @fold14 — the share block: its own title block between the closing
+      <!-- @fold15 — the share block: its own title block between the closing
            statement and the outro (moved out of the outro card). The links get
            their real hrefs from p12ShareInit (page12.js) at load. -->
-      <section class="text-section" data-page="13" id="page-13">
+      <section class="text-section" data-page="14" id="page-14">
         <div class="section-text text-card">
           <div class="text-card-frame page12-share-card">
             <h2 class="section-title">שתפו עם אחרים</h2>
@@ -198,8 +221,8 @@
           </div>
         </div>
       </section>
-      <!-- @fold15 — the outro/credits card. -->
-      <section class="text-section" data-page="14" id="page-14">
+      <!-- @fold16 — the outro/credits card. -->
+      <section class="text-section" data-page="15" id="page-15">
         <div class="page12-sticky-center">
           <div class="section-text text-card">
             <div class="text-card-frame page12-card">
@@ -235,7 +258,6 @@
   <script src="js/page8-9-scroll.js"></script>
   <script src="js/fold11.js"></script>
   <script src="js/bootstrap.js"></script>
-  <script src="_debug-grid-jitter.js"></script>   <!-- SCAFFOLDING: manual/ @fold10 edge jitter — delete with the file -->
   <script src="reload.js"></script>
   <!-- TEMP: fold number chip; delete with _debug-fold-badge.js -->
   <script src="_debug-fold-badge.js"></script>

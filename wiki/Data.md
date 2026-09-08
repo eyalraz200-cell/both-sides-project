@@ -7,13 +7,13 @@ One object per event:
 
 | Field | Meaning |
 |---|---|
-| `rowId` | The xlsx's own stable `row_id` (`"row-11"`). Lets JS pin to specific events by id — all 8 @fold5–@fold8 sample squares are addressed this way (`FOLD6_SQUARE_ROW_IDS` → `p7OccurrenceOfRowId`) |
+| `rowId` | The xlsx's own stable `row_id` (`"row-11"`). Lets JS pin to specific events by id — all 8 @fold5–@fold9 sample squares are addressed this way (`FOLD6_SQUARE_ROW_IDS` → `p7OccurrenceOfRowId`) |
 | `date` | `YYYY-MM-DD`. Sorted lexicographically = chronologically |
 | `side` | `"left"` or `"right"` — which camp column the dot lives in |
 | `actor` | Join key into `GROUPS`' `actor` field → the dot's color (`p7ActorColor`) |
 | `category` | Hebrew category string (the xlsx's `event_type`) → `CATEGORY_TO_IDX` (`page9.js`) |
 | `descHeMedium` | Per-event Hebrew description, shown in the hover tooltip |
-| `crowd` | Integer crowd estimate or `null` — from the **crowd size** column of a *second* workbook, see below. Drives the @fold9 hover bulge tier (`p7BulgeTier`, [Timeline](Timeline.md#the-hover-bulge)) |
+| `crowd` | Integer crowd estimate or `null` — from the **crowd size** column of a *second* workbook, see below. Drives the @fold10 hover bulge tier (`p7BulgeTier`, [Timeline](Timeline.md#the-hover-bulge)) |
 
 Committed dataset: **14,451 events — 5,325 left, 9,126 right**, from **2023-01-01** to
 **2026-07-03**.
@@ -65,7 +65,7 @@ reads `full_v3.xlsx`; the page consumes the geodata only through `map/event-poin
 
 ## `map/` — archived with the event map
 
-The @fold14 event map was archived on **2026-09-08** (branch `map-archive`, snapshot commit
+The @fold15 event map was archived on **2026-09-08** (branch `map-archive`, snapshot commit
 `834ee0d`). `map.js`, `map/region.geojson` (Natural Earth 10m admin-0 outlines for the region)
 and `map/event-points.json` (904 distinct settlement coordinates + a per-event index into them,
 covering all 14,451 rows) all live there, not in the working tree. Restore with
