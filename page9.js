@@ -936,6 +936,46 @@ function p9DrawBarRects(ctx, legitGeom, H, alpha) {
   ctx.globalAlpha = 1;
 }
 
+// ----------------------------------------------------------- HOVER BULGE --
+// @fold9's hover bulge (page7.js: P7_BULGE_*, p7BulgeTier, p7BulgeShift)
+// applied to the extreme grid: the hovered dot swells to P9_SQ x
+// P7_BULGE_MULT[tier] centred on its cell and every other dot of the same
+// column block shifts by half the extra width away from it per axis, full
+// strength within P7_BULGE_HOLD cells, gone by P7_BULGE_REACH. Same 120ms
+// per-event tween, same tiers (tier 0 never swells). Own map/clock — page7's
+// tick reads p7.hoveredEvent, this one p9.hoveredEvent — the geometry helpers
+// are shared. Desktop only (mobile has no hover). Applied at drawBandedCols'
+// call into p9PlaceDot (target + sizeOverride), so p9PlaceDot's animation
+// branches stay untouched.
+const p9BulgeT = new Map();   // event -> { t }
+let p9BulgeLastTick = 0, p9BulgeRaf = 0;
+function p9BulgeTick() {
+  const now = performance.now();
+  const dt  = p9BulgeLastTick ? Math.min(100, now - p9BulgeLastTick) : 0;
+  p9BulgeLastTick = now;
+  const hovered = isMobile() ? null : (p9.hoveredEvent || null);
+  if (hovered && p7BulgeTier(hovered) && !p9BulgeT.has(hovered)) p9BulgeT.set(hovered, { t: 0 });
+  let active = false;
+  for (const [ev, b] of p9BulgeT) {
+    const target = ev === hovered ? 1 : 0;
+    const step = dt / P7_BULGE_MS;
+    b.t = target > b.t ? Math.min(1, b.t + step) : Math.max(0, b.t - step);
+    if (b.t === 0 && target === 0) p9BulgeT.delete(ev);
+    else if (b.t !== target) active = true;
+  }
+  if (p9BulgeT.size === 0) p9BulgeLastTick = 0;
+  // Keep redrawing while any bulge is still tweening — p9RunAnimLoop only
+  // runs during p9.anim, and hover is off while that runs anyway.
+  if (active && !p9BulgeRaf) {
+    p9BulgeRaf = requestAnimationFrame(() => { p9BulgeRaf = 0; if (p9PageVisible() && !p9.anim) draw(); });
+  }
+}
+// Current grown side of an event's bulge (P9_SQ when it has none).
+function p9BulgeSize(ev) {
+  const b = p9BulgeT.get(ev);
+  return b ? P9_SQ * (1 + (P7_BULGE_MULT[p7BulgeTier(ev)] - 1) * p9Ease(b.t)) : P9_SQ;
+}
+
 function drawPage9(ctx, W, H) {
   if (!p7.ready) {
     drawBackground(ctx, W, H);
@@ -1275,18 +1315,38 @@ function drawPage9(ctx, W, H) {
       const i = orderArr.findIndex(e => P9_ACTOR_ORDER.indexOf(e.actor) > P9_ACTOR_ORDER.indexOf("settlers"));
       return i === -1 ? orderArr.length : i;
     })();
+    // The bulges living in this column block, in (col,row) cell coordinates
+    // for p7BulgeShift. Cells count from the centre outward and rows upward,
+    // so the shift's signs flip to screen space below.
+    const bulges = [];
+    for (const ev of p9BulgeT.keys()) {
+      const i = orderArr.indexOf(ev);
+      if (i === -1) continue;
+      const size = p9BulgeSize(ev);
+      bulges.push({ ev, col: i % colsTotal, row: Math.floor(i / colsTotal), size, push: (size - SQ) / 2 });
+    }
     orderArr.forEach((e, i) => {
       const r = Math.floor(i / colsTotal);
       const c = i % colsTotal;
-      const x = rightAlign ? centerX - (c + 1) * CELL : rightX0 + c * CELL;
-      const y = midY - (r + 1) * CELL;
+      let x = rightAlign ? centerX - (c + 1) * CELL : rightX0 + c * CELL;
+      let y = midY - (r + 1) * CELL;
+      let size;
+      if (bulges.length) {
+        const own = bulges.find(b => b.ev === e);
+        if (own) { size = own.size; x -= own.push; y -= own.push; }   // grow about the cell centre
+        else {
+          const sh = p7BulgeShift(bulges, c, r);
+          x += rightAlign ? -sh.dx : sh.dx;
+          y -= sh.dy;
+        }
+      }
       // Clipped at midY, the grid's own anchor — NOT at H - 16. On desktop the
       // two are equivalent (midY is 0.6H, far above H - 16, and no row can sit
       // at or below midY by construction), but on mobile midY is H minus the
       // 4px legit bar, so an H - 16 floor culled the bottom rows and opened a
       // ~12px gap between the columns and the bar they should be resting on.
       if (y < topY || y >= midY) return;
-      p9PlaceDot(e, x, y, targetAlpha, i, orderArr.length, lowRankCount);
+      p9PlaceDot(e, x, y, targetAlpha, i, orderArr.length, lowRankCount, size);
     });
     return Math.ceil(orderArr.length / colsTotal) || 1;
   }
@@ -1367,6 +1427,7 @@ function drawPage9(ctx, W, H) {
   // intentional dim. Previously drawn at 0.12 as a deliberate de-emphasis
   // that Figma's actual reference doesn't show.
   ctx.globalAlpha = 1;
+  p9BulgeTick();
   const leftTopRows  = drawBandedCols(p9.leftTopOrder,  true,  extremeColsTotal);
   const rightTopRows = drawBandedCols(p9.rightTopOrder, false, extremeColsTotal);
   drawJumbledBot(p7.leftEvents,  p9.leftIndexOf,  "left",  leftBotSet);
@@ -2686,13 +2747,20 @@ function p9HoverInit() {
     // getBoundingClientRect, so no DPR conversion needed). Below-the-line
     // ("legitimate") dots are skipped entirely, per explicit request — only
     // the above-the-line ("extreme") block gets the tooltip/dim interaction.
+    // The hovered dot's hit box is its GROWN box (p9BulgeSize) and it wins
+    // outright — otherwise the cursor sitting in the white space its bulge
+    // opened would drop the hover and the whole grid would flicker back to
+    // full opacity between dots.
+    const hov = p9.hoveredEvent;
+    const hovHalf = hov ? p9BulgeSize(hov) / 2 : half;
     let bestEvent = null, bestPos = null, bestDist = Infinity;
     for (const [ev, pos] of p9.lastPositions) {
       if (pos.y >= p9.midY) continue;
-      const cx = pos.x + half, cy = pos.y + half;
+      const h  = ev === hov ? hovHalf : half;
+      const cx = pos.x + h, cy = pos.y + h;
       const dx = mx - cx, dy = my - cy;
-      if (Math.abs(dx) > half + HIT_PAD || Math.abs(dy) > half + HIT_PAD) continue;
-      const dist = dx * dx + dy * dy;
+      if (Math.abs(dx) > h + HIT_PAD || Math.abs(dy) > h + HIT_PAD) continue;
+      const dist = ev === hov ? -1 : dx * dx + dy * dy;
       if (dist < bestDist) { bestDist = dist; bestEvent = ev; bestPos = pos; }
     }
 
@@ -2761,7 +2829,7 @@ function p9HoverInit() {
     const flipped = rawTop < rect.top + p9ExtremeTopY(canvasEl.clientHeight);
     tooltipEl.classList.toggle("is-flipped", flipped);
     const top = flipped
-      ? dotClientY + P9_SQ + TOOLTIP_GAP
+      ? dotClientY + (bestPos.sq ?? P9_SQ) + TOOLTIP_GAP
       : Math.max(rawTop, 8);
     tooltipEl.style.left = `${left}px`;
     tooltipEl.style.top  = `${top}px`;

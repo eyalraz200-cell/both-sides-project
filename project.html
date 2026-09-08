@@ -71,6 +71,12 @@
          The arrow is a separate element from the box but shares the parent's
          single drop-shadow (style.css), so the two read as one shape instead
          of two overlapping shadows. -->
+    <!-- @fold9's size-grid toggle (p7SizeGridInit, page7.js): the visible
+         squares grow to their crowd tier and re-pack into a gap-exact grid,
+         and back. Desktop only; shown by p7SizeGridOnPage while #page-8 is
+         active. A direct .layout child for the same stacking reason as the
+         tooltips above. -->
+    <div class="p7-size-grid" id="p7SizeGrid"></div>
     <div class="page9-cat-tooltip" id="page9CatTooltip" aria-hidden="true">
       <div class="page9-cat-tooltip-desc"></div>
       <div class="page9-cat-tooltip-arrow"></div>
@@ -239,6 +245,10 @@
   <script src="js/page8-9-scroll.js"></script>
   <script src="js/fold11.js"></script>
   <script src="js/bootstrap.js"></script>
+  <!-- SCAFFOLDING — @fold9 size-grid camp gap / dot size; delete with the file -->
+  <script src="_debug-grid-camp.js"></script>
+  <!-- TEMP: @fold13/@fold14 map lab — every dot/cluster/colour/zoom knob; delete with the file -->
+  <script src="_debug-map-lab.js"></script>
   <script src="reload.js"></script>
   <!-- TEMP: fold number chip; delete with _debug-fold-badge.js -->
   <script src="_debug-fold-badge.js"></script>

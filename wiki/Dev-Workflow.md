@@ -11,6 +11,20 @@ Requires `openpyxl` (`pip install openpyxl`). The server sends no-cache headers,
 browser. It rebuilds `events.json` in memory from the xlsx at startup — but does **not**
 watch the xlsx, so spreadsheet edits need a restart.
 
+### A second, narrower instance (`--port` / `--watch`)
+
+```
+python3 server.py --port 8081 --watch map.js,map     # a map-only tab
+```
+
+`--watch` takes comma-separated paths relative to the project root (a file, or a directory
+watched recursively) and is the **only** thing that instance's auto-reload reacts to;
+without it the watch is the usual "every top-level html/css/js". Both instances serve the
+same files from the same directory and can run at once. This exists so a tab focused on one
+area (the map, say) isn't reloaded out from under you by every unrelated edit — another
+Claude session working on another fold, a CSS tweak, a wiki-driven refactor. Keep the tab on
+`:8081` while working there; `:8080` stays the everyday server.
+
 `reload.js` **self-gates to local hosts** (`localhost`, `127.0.0.1`, `[::1]`, `file://`,
 `*.local`, **and the private LAN ranges `10.*` / `192.168.*` / `172.16-31.*`**) and returns
 immediately anywhere else. The LAN ranges are load-bearing for on-device testing: a phone
@@ -82,7 +96,13 @@ numbers in the source.
 
 `_debug-fold-badge.js` — the bottom-left `@foldN` chip (`@foldN · #page-(N-1) · short
 name`; click or `B` collapses it to just `@foldN`). Reinstated on 2026-09-06 with a `TEMP`
-`<script>` tag after `reload.js` in `project.html`; delete both together. `_debug-camp-gap.js` —
+`<script>` tag after `reload.js` in `project.html`; delete both together. `_debug-map-lab.js` — **live**, the @fold13/@fold14 **map lab** (desktop only, `innerWidth ≥ 900`; the map builds at the document end, scroll there yourself). One panel for everything map.js can be tuned by, split into five knob-group pills: **dots** (packer `shape` — `Q` grow-square / `W` grow-hex / `E` square / `R` disc — plus dot, dotGrow, dotMax, gapRatio, jitter), **order** (`sort`: `A` mix / `S` wedge / `D` ring), **cluster** (method `Z` grid / `X` hex / `C` link / `V` city / `B` none, plus cellBase, linkPx, minCluster, cityKm), **map** (the whole `MAP_COLORS` palette as swatches + road width/zoom) and **zoom** (the **four stops** of `MAP_ZOOM_LEVELS` — six knobs per stop: z, count cutoff, city tiers 1–3, towns 0/1, roads 0/1, tooltip 0/1 — plus `MAP_TUNE.zoomLevel` (which stop the map rests at), startX/startY, and a **JUMP** slider that parks the view on a stop so its rules can be judged without wheeling there). Always-visible toggles: `T` hides both title blocks (@fold13's share card and @fold14's drawer), `1` counts, `2` roads, `3` water, `4` Gaza, `5` town labels, `6` scale bar, `7` tooltip count, `8` cellKm, `9` round dots, `P` crossBorder (ignore the Israel/Palestine line when packing). Structural knobs null `p12map.layout` on a **90ms debounce** (a re-pack of 14,451 dots costs 100–350ms); every other knob is draw-only. The required trigger marker is a live **zoom ruler** in the panel plus a small chip in the top-left margin: the four stops on a log scale with the live zoom as a caret, the current stop green, and each stop's own rules (z, count cutoff, city tiers, towns, roads, tooltip) spelled out in the chip. Both follow the wheel — a rAF poll writes `p12map.view.lvl` back into the JUMP slider. Delete the file and its `TEMP` `<script>` tag in `project.html` together once the values are baked. `_debug-map-details.js` — was the `compare/` panel for @fold13's optional map details (water / town labels / Gaza tone / km scale / tooltip count, the `MAP_DETAILS` flags in map.js); nothing picked, harness removed 2026-09-07, the flags stay all `false`. `_debug-map-dots.js` — was the `manual/` panel for @fold13's dot/cluster knobs (`MAP_TUNE` dot/dotGrow/dotMax/gapRatio/cellBase/cityKm/zoomMin/zoomMax/countMin*/countZ, packer shape, colour order, round, cluster counts); baked twice and deleted 2026-09-07. `_debug-map-columns.js` — was the `compare/` panel for @fold13's render mode (dot stacks / cubes on a tilted, rotatable ground vs the flat map); flat kept, the columns code removed from map.js, deleted 2026-09-07. `_debug-map-dot.js` — was the `manual/` panel for @fold13's dot growth (`dot`, `dotGrow`, `dotMax`, `gapRatio`); baked and deleted 2026-09-07. `_debug-map.js` — was the joined `manual/` panel for @fold13's dot size + hover knobs (`MAP_TUNE` dot/dotGrow/dotMax/gapRatio/hoverMinZoom/hoverPad/hoverDim); baked and deleted 2026-09-07. `_debug-map-view.js` — was the `manual/` panel for @fold13's resting view (`MAP_TUNE.zoomStart`/`startX`/`startY`); baked and deleted 2026-09-07. `_debug-map-clusters.js` —
+was the live `manual/` panel for @fold13's map (desktop only, `innerWidth ≥ 900`; the map only builds
+at the document end, scroll there yourself): a slider per numeric `MAP_TUNE` field (map.js:39–45 —
+dot, dotMax, gapRatio, cellBase, cityKm, zoomMax, zoomRate), shape keys `1` square / `2` grow-hex /
+`3` grow-square, sort keys `w` wedge / `r` ring, toggle `o` round dots. Every change nulls
+`p12map.layout` and redraws; Copy emits a paste-ready `MAP_TUNE = {…}` line to bake at map.js:38.
+Picked dot 1 / dotMax 5 / gapRatio 0.35 / cellBase 8 / cityKm 0 / zoomRate 0.0037, grow-square, square dots, wedge; baked into `MAP_TUNE` and deleted on 2026-09-07. `_debug-camp-gap.js` —
 the `manual/` slider that picked the gap between the two camps at @fold2 **and** @fold3 (they share
 one anchor): `FOLD2_CAMP_CENTER_GAP_PX` 180 → **162**, re-laying out live with `updateGroups();
 draw()`. The knob was the HALF-gap — each camp's centre sits that many px either side of screen

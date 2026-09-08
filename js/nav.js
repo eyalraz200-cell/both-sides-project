@@ -2,6 +2,9 @@
 const sections = Array.from(document.querySelectorAll(".text-section"));
 
 function setActivePage(page) {
+  // @fold9's size-grid toggle (page7.js) lives on that page only — snapped
+  // off before any handoff below reads the timeline's positions.
+  if (typeof p7SizeGridOnPage === "function") p7SizeGridOnPage(page);
   if (page === currentPage) return;
   // Scrolling back out of the timeline toward a fold that doesn't draw the
   // per-event squares at all (anything before drawFold7, i.e. currentPage < 6)

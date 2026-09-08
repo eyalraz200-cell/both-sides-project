@@ -60,3 +60,5 @@ divider.
 **Filler rects** — the 18 extra rects in `@fold2`'s 4×3 camp blocks that are really
 `@fold1` decorative dots; they shrink away at `@fold3`, leaving each row's rightmost rect
 as the persistent `.group-item`.
+
+- **size grid** — @fold9's desktop toggle (`#p7SizeGrid`, `p7SizeGridSet`, page7.js): the visible timeline squares grow to their crowd-tier block size and re-pack into a gap-exact skyline grid per camp, and fly back on the second press. Distinct from the hover **bulge** (same tiers, different multipliers). See [Timeline](Timeline.md).
