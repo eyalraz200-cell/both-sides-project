@@ -109,12 +109,21 @@ opacity every frame, so nothing has to switch it back on.
    right column drops its head, the left column its tail — so each dissolves away from the
    screen edge it is anchored to. The **hover re-type** is head-first on both columns; the
    flip is gated on the un-type term winning the `max()`. `FOLD6_LABEL_UNTYPE_MS` 900, `FOLD6_LABEL_HOVER_MS` 420.
-   **@fold9 auto-peeks it**: on @fold9's crossing the legend plays its own hover state
+   **@fold8 auto-peeks it**: on @fold8's crossing the legend plays its own hover state
    unprompted — labels type in (the ACLED note stays closed), hold `FOLD9_LEGEND_PEEK_HOLD_MS`
    (2000ms, timed from when the type-in lands), then un-type — so the fold's title line
    about the מקרא demonstrates itself. It drives the same label-hover trigger rather than a
    new one, and is skipped/cancelled while `fold6LegendPointerOver` is true, so a real
    hover during the demo simply takes over. Desktop only. See [Folds](Folds.md).
+   **Hovering a DOT opens just that dot's row.** Any per-event square, on any fold whose
+   hover layer is live (`p7HoverInit` on @fold9/@fold10 — including the 8 claimed DOM
+   squares — and `p9HoverInit` on @fold13) calls `fold6DotHover(actor)` (js/groups.js)
+   alongside setting its own `hoveredEvent`. That drives a **per-group** trigger
+   (`fold6DotHoverTriggers`, one per actor, also `FOLD6_LABEL_HOVER_MS` 420) which joins the
+   same combination in `updateGroups`: `max(1 - untype, legendHover, dotHover)`. Only the
+   hovered dot's group opens; moving between dots of different groups reverses the outgoing
+   row rather than snapping it shut, so the two labels crossfade. `fold6DotHover(null)` on
+   un-hover. Desktop only.
    Mobile is unaffected — it un-types inside the glide already. This is the legend's final
    resting state for the rest of the page.
    Once a row's glide has fully landed (`e6 === 1`, desktop only) its label carries `.is-plated`: an
@@ -215,6 +224,29 @@ decides the line count it measures.
 The note's own width/right edge read the same inset functions, so it stays flush with the
 right column at either breakpoint.
 
+## The «היקף האירועים» button above the right column
+
+@fold11's manual switch for the crowd-size tiers (`p7ScopeBtnEl`, js/groups.js;
+`.p7-scope-btn`, style.css). It reads as part of the mini-legend — right edge
+flush with the right column's rows, `P7_SCOPE_BTN_GAP` (22px) above the **top**
+row's centre line, both written every frame by `updateGroups` — but it is **not**
+a `.groups-overlay` child. The overlay is `pointer-events: none` *and*
+`z-index: 0` with its own stacking context, so a button inside it would sit under
+`.text-col` and never see a click; the button is a direct `.layout` child at
+`z-index: 3` instead (`.fold6-note-link` gets away with living in the overlay
+only because `.fold6-note-layer` is a separate `z-index: 2` layer). Appears on @fold11's crossing — the fold whose copy names it — and stays for every fold
+after it, fading out with everything else on @fold14's `p9.fold13OutT` clock;
+`hidden` before that. Desktop only. Behaviour and what it
+toggles: [Timeline](Timeline.md#the-size-grid).
+
+The click is **page-gated** (js/groups.js): `currentPage < 12` → page7's
+`p7SizeGridSet(true, {uniform: !p7GridUniform})`; `currentPage === 12` →
+page9's own `p9ScopeSet(!p7GridUniform)`, which tiers **the extreme columns
+only** on @fold13 (the legit grid never changes size); any later page → inert. `p7GridUniform` stays the single
+source of truth for "tiers showing" on both paths, so the pressed look
+(`!p7GridUniform && (p7Grid.on || p9PageVisible())`, js/update-groups.js) is
+one formula covering both folds.
+
 ## Camp headers
 
 The two headers (`.camp-header`, 18px Assistant 660, `direction: rtl`, base
@@ -249,7 +281,7 @@ are both fixed px, so on a phone an H-scaled distance would swing with the URL b
 - **gain labels at @fold7** (`FOLD6_SQUARE_LABELS`), while square 0 shows the shared
   `#page9Tooltip` with a real event's date + description, grown and typed on its own
   wall-clock sequence;
-- **gain colors and fly at @fold9** — `FOLD6_SQUARE_ACTORS` (via `groupColorByActor`) gives
+- **gain colors and fly at @fold8** — `FOLD6_SQUARE_ACTORS` (via `groupColorByActor`) gives
   each its group color, and `fold6SquareOccurrence(i)` says which chronological occurrence
   of that actor it stands in for. The real cascade never draws those 8 events
   (`p7GetClaimedEvents`), so the DOM square just stays once it lands.
@@ -974,14 +1006,18 @@ leaving marks on screen at `@fold4`, most visibly on the way back up:
 Same family as the timeline dots' phantom stroke ([Timeline](Timeline.md)): sub-pixel
 geometry on a high-DPR screen paints something, not nothing.
 
-## Clicking a legend row — the @fold10 filter
+## Clicking a legend row — the @fold9 filter
 
-On the real timeline (@fold10) each legend row is also a **filter toggle**: click it
+On the real timeline (@fold9) each legend row is also a **filter toggle**: click it
 and that group leaves the graph (its dots shrink away, the rest re-pack and fly).
 The click strips are `.fold6-legend-filter`, one per row, built by
 `fold6LegendFilterEl(g)` inside that column's hover box and positioned per frame by
 `updateGroups`; a filtered row carries `is-filtered-off` (opacity .28) on its
-`.group-item`. Desktop only; the strips are clickable on @fold10 and @fold11, and the filter
+`.group-item`. Desktop only; the strips are clickable on @fold9 through @fold13 (on @fold12/@fold13 a
+toggle animates by size only, and the 8 claimed squares scale with it on every fold —
+see Timeline; those 8 read the canvas's own beat functions rather than re-deriving
+them — `p8Beats(rawT).posE`/`.sizeE` for the glide — which is the standing rule for
+keeping them in step whenever a beat is added), and the filter
 itself stays in force through every fold after the timeline (the dimmed rows keep
-saying so) until you scroll back above @fold10. The mechanics live
+saying so) until you scroll back above @fold9. The mechanics live
 in [Timeline](Timeline.md#the-legend-filter-fold10-desktop-only--p7filtertoggle-page7js).

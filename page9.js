@@ -96,6 +96,10 @@ function p9TrayGrid() {
 // p9BuildPanel) rather than a drag.
 const P9_CLICK_SLOP_PX = 4;
 
+// Where in a dropped dot's flight its resize starts, as a fraction of the raw
+// travel. 0 = size and position on one clock (the old behaviour); 0.7 = fly at
+// the old size for the first 70%, then do the whole resize in the last 30%.
+const P9_DROP_SIZE_START = 0.7;
 const P9_SQ      = 3;
 const P9_GAP  = 1;
 const P9_CELL = P9_SQ + P9_GAP;
@@ -120,7 +124,7 @@ const P9_EXTREME_GAP = 320;
 //   מקרא bar -> title card -> tray band -> docked tooltip frame -> extreme grid
 //   -> divider (p9MidY) -> legit bar, flush with the viewport's bottom edge
 // The tray is a band pinned under the titles, NOT a bottom sheet — and the
-// docked tooltip frame slides DOWN from its @fold10 spot to make room for it as
+// docked tooltip frame slides DOWN from its @fold9 spot to make room for it as
 // @fold13 engages (p9TooltipDropTrigger, js/groups.js).
 // Dot size — both grids, so p9PlaceDot needs no extra param. 1.5 against a pitch
 // of 2 leaves a 0.5px gap: the dots read denser and bolder without touching grid
@@ -458,6 +462,18 @@ const p9 = {
   // Keeps the last-highlighted category index alive during fade-out so dots
   // that were at full opacity don't jump dim the instant hoveredCategoryIdx clears.
   hoverDimCategoryIdx: null,
+  // ── «היקף האירועים» on this fold (p9ScopeSet & co, below) ───────────────
+  // The cached tier pack, per side: { left: {key, layout}, right: {...} }.
+  // Nulled by any press, by a resize, and on every page flip.
+  scopeLayout: null,
+  // { from: Map<event,{cx,cy,sq}>, start, dir: "on"|"off" } while the tiers
+  // are morphing in or out; null at rest.
+  scopeMorph: null,
+  // Bumped by p9SyncTopOrder whenever the extreme roster actually changes, so
+  // the pack cache knows to rebuild. Cheaper and safer than hashing the array.
+  orderVersion: 0,
+  // Last frame's pack numbers, for the compare/ harness's Copy button.
+  scopeStats: null,
 };
 
 // Gentle sine-based ease-in-out — a soft, slow ramp up and down rather than the
@@ -481,6 +497,52 @@ function p9RunAnimLoop() {
     if (p9PageVisible()) draw();
   }
 }
+
+// The extreme columns CLOSE RANKS on a toggle (drawBandedCols' slotOf), which
+// means real travel. Called by p7FilterCommit BEFORE it rebuilds the filter
+// layout and redraws — exactly where page7 takes its own `from` snapshot, and
+// for the same reason: by the time the click handler returns, drawPage9 has
+// already re-run and p9.lastPositions holds the NEW slots, so a snapshot taken
+// then equals the target and nothing moves. Seeded here it's the same plain
+// glide page8's handoff uses. A hidden dot keeps its own slot, so its `from`
+// equals its target and it only shrinks; a restored one has no `from` (it left
+// p9.lastPositions when it shrank away) and so arrives by growing, in place.
+// The same tempo the drop's own reposition phase runs at (STATE1_REPOSITION_MS
+// in commitDropState) — this IS that move: the column re-filling itself around
+// dots that left.
+const P9_FILTER_REPACK_MS = 2200;
+function p9FilterSnapshot() {
+  if (!p9PageVisible() || !p9.lastPositions?.size) return;
+  // NOT a plain glide: the shape wanted here is the tier-staggered "existing
+  // dot repositioning" branch of p9PlaceDot — the one that runs when a drop
+  // sends dots up from legit to fill the extreme column — so the dots trickle
+  // into the freed slots instead of the whole block sliding down as one.
+  // Leaving `plainGlide`/`newEventStagger` off is what selects it.
+  p9.anim = { from: new Map(p9.lastPositions), start: performance.now(),
+              duration: P9_FILTER_REPACK_MS, repositionMs: P9_FILTER_REPACK_MS };
+  p9RunAnimLoop();
+}
+
+// Frames for a legend-filter toggle that nothing else is already animating:
+// @fold13's canvas (p9.anim isn't involved — no dot moves — and page7's own
+// loop stops at @fold12), and, on every fold, the 8 claimed DOM squares, which
+// only ever move when updateGroups() runs. Called from the legend click.
+function p9FilterKick() {
+  if (typeof p7FilterMorphActive !== "function") return;
+  if (p9FilterRaf) return;
+  const frame = () => {
+    if (typeof updateGroups === "function") updateGroups();
+    if (p9PageVisible()) draw();
+  };
+  const step = () => {
+    p9FilterRaf = 0;
+    frame();
+    if (p7FilterMorphActive()) p9FilterRaf = requestAnimationFrame(step);
+    else frame();
+  };
+  p9FilterRaf = requestAnimationFrame(step);
+}
+let p9FilterRaf = 0;
 
 // Count-up animation for the extreme-zone labels — separate from p9.anim (dot
 // movement). commitDrop sets start = drop time + dot-anim duration, so the
@@ -610,11 +672,15 @@ const p9SeqOf = (() => {
 // color order correct, but it's the minimum reflow that requires, and existing
 // same-actor dots never reorder relative to each other.
 function p9SyncTopOrder(orderArr, currentSet) {
+  let changed = false;
   for (let i = orderArr.length - 1; i >= 0; i--) {
-    if (!currentSet.has(orderArr[i])) orderArr.splice(i, 1);
+    if (!currentSet.has(orderArr[i])) { orderArr.splice(i, 1); changed = true; }
   }
   const existing = new Set(orderArr);
-  for (const e of currentSet) if (!existing.has(e)) orderArr.push(e);
+  for (const e of currentSet) if (!existing.has(e)) { orderArr.push(e); changed = true; }
+  // The tier pack (p9ScopeLayoutFor) is cached across frames; this is the one
+  // place the roster it packs can change.
+  if (changed) p9.orderVersion = (p9.orderVersion || 0) + 1;
   orderArr.sort((a, b) => {
     const rankDiff = P9_ACTOR_ORDER.indexOf(a.actor) - P9_ACTOR_ORDER.indexOf(b.actor);
     return rankDiff !== 0 ? rankDiff : p9SeqOf(a) - p9SeqOf(b);
@@ -645,6 +711,14 @@ function p9UpdateLayout(W, H) {
 
   p9.lastW = W;
   p9.lastH = H;
+  // The tier pack is sized to the box, and the box moved.
+  p9.scopeLayout = null;
+  // The button is hidden under 600px and the columns there are a dot or two
+  // wide, so tiers never survive a trip to mobile.
+  if (isMobile() && typeof p7GridUniform !== "undefined" && !p7GridUniform) {
+    p7GridUniform = true;
+    p9.scopeMorph = null;
+  }
 }
 
 
@@ -848,7 +922,6 @@ function p9LegitGeometry(W, H) {
     p9.legitShuffleRight     = p7Shuffle(Array.from({ length: rightTotalCells }, (_, i) => i), 22222);
     p9.legitShuffleSizeRight = rightTotalCells;
   }
-
   return geom;
 }
 
@@ -937,7 +1010,7 @@ function p9DrawBarRects(ctx, legitGeom, H, alpha) {
 }
 
 // ----------------------------------------------------------- HOVER BULGE --
-// @fold10's hover bulge (page7.js: P7_BULGE_*, p7BulgeTier, p7BulgeShift)
+// @fold9's hover bulge (page7.js: P7_BULGE_*, p7BulgeTier, p7BulgeShift)
 // applied to the extreme grid: the hovered dot swells to P9_SQ x
 // P7_BULGE_MULT[tier] centred on its cell and every other dot of the same
 // column block shifts by half the extra width away from it per axis, full
@@ -953,7 +1026,11 @@ function p9BulgeTick() {
   const now = performance.now();
   const dt  = p9BulgeLastTick ? Math.min(100, now - p9BulgeLastTick) : 0;
   p9BulgeLastTick = now;
-  const hovered = isMobile() ? null : (p9.hoveredEvent || null);
+  // Tiered (@fold13's «היקף האירועים»), the blocks already ARE the crowd size,
+  // so drawBandedCols ignores bulges — registering one anyway left `active`
+  // true and rescheduled a full-canvas redraw every frame the cursor sat on a
+  // block, for no visible change. That was the hover stutter.
+  const hovered = isMobile() || p9ScopeTiered() ? null : (p9.hoveredEvent || null);
   if (hovered && p7BulgeTier(hovered) && !p9BulgeT.has(hovered)) p9BulgeT.set(hovered, { t: 0 });
   let active = false;
   for (const [ev, b] of p9BulgeT) {
@@ -974,6 +1051,281 @@ function p9BulgeTick() {
 function p9BulgeSize(ev) {
   const b = p9BulgeT.get(ev);
   return b ? P9_SQ * (1 + (P7_BULGE_MULT[p7BulgeTier(ev)] - 1) * p9Ease(b.t)) : P9_SQ;
+}
+
+// ── «היקף האירועים» on @fold13 — crowd tiers in the EXTREME columns ─────────
+// The button (p7ScopeBtnEl, js/groups.js) drives @fold10/@fold11's size grid
+// through p7SizeGridSet. That machinery is page7's and is gated to currentPage
+// 8..10, so on @fold13 the press flipped p7GridUniform and nothing on screen
+// read it. This module is @fold13's own answer to the same flag.
+//
+// ONLY the extreme dots — the ones dragged up into the columns — take their
+// crowd-tier size. The legit strip below the line is drawn by drawJumbledBot at
+// one flat legitSq and is deliberately left alone (except in the `legit` room
+// mode below, which exists only so the compare/ harness can show what the
+// columns could do with that space).
+//
+// p7GridUniform stays the single source of truth for "tiers showing", shared
+// with @fold10/@fold11, so the button's is-on state needs no second flag.
+
+// The extreme columns make room for the (roughly 2x) cells tiers need by
+// growing OUTWARD toward the viewport edges — the one way that loses no dots
+// at the native 4px pitch (chosen against clip / shrink-pitch / hide-legit /
+// hide-pills on a live compare/ harness).
+// No block may be wider than this many cells; capping is the answer to
+// overflow, in preference to clipping the row. P7_GRID_TIER_CELLS tops out at
+// 14, so at this value nothing is capped and every tier draws at full width.
+var P9_SCOPE_TIER_CAP = 14;
+// px kept clear of the viewport edge on each side. This is only the CEILING on
+// the widening, not the width — p9ScopeSolveCols keeps the columns as narrow as
+// the pack allows, so a small margin costs nothing and just stops a crowded
+// viewport clipping its last rows.
+var P9_SCOPE_WIDEN_MARGIN = 8;
+
+// Tiers are showing when the shared flag says so. Desktop only — the button is
+// hidden under 600px and the columns there are one or two dots wide.
+function p9ScopeTiered() {
+  return typeof p7GridUniform !== "undefined" && !p7GridUniform && !isMobile();
+}
+
+// This event's block width in CELLS, capped twice: by P9_SCOPE_TIER_CAP and by
+// the box itself, so a block can never be wider than the side it lives in.
+function p9ScopeCellsFor(ev, colsMax) {
+  if (!p9ScopeTiered()) return 1;
+  const tier  = typeof p7BulgeTier === "function" ? p7BulgeTier(ev) : 0;
+  const cells = (typeof P7_GRID_TIER_CELLS !== "undefined" && P7_GRID_TIER_CELLS[tier]) || 1;
+  return Math.max(1, Math.min(cells, P9_SCOPE_TIER_CAP, colsMax || Infinity));
+}
+
+// Bottom-left skyline packer over CELL coordinates: columns count from the
+// centre gap outward, rows upward from the anchor. Each entry takes the lowest
+// run of `n` adjacent columns, innermost on a tie.
+//
+// Deliberately NOT page7's p7BuildSizeGrid — that one is bound to its own box,
+// its camps, its jitter and its unit solve. This one has a property that
+// matters here: with every n === 1 it degenerates to the exact row-major fill
+// the columns already use (first entry to column 0, next to column 1, wrap),
+// so the un-tiered state is pixel-identical to before and toggling the tiers
+// off puts every dot back where it was.
+function p9PackColumns(entries, cols, cellsOf) {
+  const h = new Array(Math.max(1, cols)).fill(0);
+  const pos = new Map();
+  let rows = 0;
+  for (const e of entries) {
+    const n = Math.max(1, Math.min(cellsOf(e), h.length));
+    // Lowest resting row wins; among equally low runs take the one that
+    // buries the FEWEST dead cells under the block (a wide block bridging
+    // columns of unequal height seals the pockets beneath it — that is the
+    // only place this pack leaves holes).
+    let bestC = 0, bestR = Infinity, bestWaste = Infinity;
+    for (let c = 0; c + n <= h.length; c++) {
+      let r = 0;
+      for (let k = 0; k < n; k++) if (h[c + k] > r) r = h[c + k];
+      let waste = 0;
+      if (n > 1) for (let k = 0; k < n; k++) waste += r - h[c + k];
+      if (r < bestR || (r === bestR && waste < bestWaste)) {
+        bestR = r; bestC = c; bestWaste = waste;
+      }
+    }
+    if (bestR === Infinity) { bestR = 0; bestC = 0; }
+    for (let k = 0; k < n; k++) h[bestC + k] = bestR + n;
+    pos.set(e, { c: bestC, r: bestR, n });
+    if (bestR + n > rows) rows = bestR + n;
+  }
+  return { pos, rows };
+}
+
+// The pack is the one expensive thing here (14k entries), so it is cached and
+// only rebuilt when something it actually depends on moves. p9.orderVersion is
+// bumped by p9SyncTopOrder on any add/remove; the filter count covers the
+// legend's close-ranks; the rest are the box and the knobs.
+function p9ScopeCacheKey(side, colsMax, rowsMax, visLen) {
+  const filt = (typeof p7FilterOff !== "undefined" && p7FilterOff && p7FilterOff.size) || 0;
+  return [side, p9ScopeTiered() ? 1 : 0, colsMax, rowsMax, P9_SCOPE_TIER_CAP,
+          p9.orderVersion || 0, filt, visLen].join("|");
+}
+
+// The columns stay as NARROW as they can: the pack is solved for the FEWEST
+// columns whose rows still fit under the ceiling, not for all the width the
+// viewport could give. `colsMax` is only the ceiling on that search, so the
+// widening is what the pack needs and no more. Binary search — rows fall
+// monotonically as columns are added, so the narrowest fitting width is found
+// in ~log2(colsMax) packs, and the whole thing is cached anyway.
+function p9ScopeSolveCols(visList, colsMin, colsMax, rowsMax) {
+  if (!p9ScopeTiered()) return colsMin;
+  let lo = Math.max(1, colsMin), hi = Math.max(lo, colsMax), best = null;
+  const packAt = (c) => p9PackColumns(visList, c, e => p9ScopeCellsFor(e, c));
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const layout = packAt(mid);
+    if (layout.rows <= rowsMax) { best = { cols: mid, layout }; hi = mid - 1; }
+    else lo = mid + 1;
+  }
+  // Nothing fits even at the full width — take the widest, which clips least.
+  return best || { cols: Math.max(colsMin, colsMax), layout: packAt(Math.max(colsMin, colsMax)) };
+}
+
+function p9ScopeLayoutFor(side, colsMin, colsMax, rowsMax, visList) {
+  const key  = p9ScopeCacheKey(side, colsMax, rowsMax, visList.length);
+  const slot = p9.scopeLayout && p9.scopeLayout[side];
+  if (slot && slot.key === key) return slot.layout;
+  let layout;
+  if (p9ScopeTiered()) {
+    const solved = p9ScopeSolveCols(visList, colsMin, colsMax, rowsMax);
+    layout = solved.layout;
+    layout.cols = solved.cols;
+  } else {
+    layout = p9PackColumns(visList, colsMin, e => 1);
+    layout.cols = colsMin;
+  }
+  if (!p9.scopeLayout) p9.scopeLayout = {};
+  p9.scopeLayout[side] = { key, layout };
+  return layout;
+}
+
+// The box the two column blocks are packed into: how many cells wide, at what
+// pitch, between which two screen y's. Untiered it is exactly today's box, so
+// nothing about the fold at rest changes. Tiered, the room mode picks how the
+// extra area is found.
+function p9ScopeBox(W, H, colsTotal, topY, midY, centerX, rightX0, CELL) {
+  const box = { cols: colsTotal, colsMax: colsTotal, cellPx: CELL, topY, anchorY: midY };
+  box.rowsMax = Math.max(1, Math.floor((midY - topY) / CELL));
+  if (!p9ScopeTiered()) return box;
+  // Tiers need roughly twice the cells, so the columns may grow OUTWARD toward
+  // the viewport edges — but only as far as the pack actually needs (see
+  // p9ScopeSolveCols). This is just the ceiling on that: how wide a side could
+  // get while keeping P9_SCOPE_WIDEN_MARGIN clear of the edge. Both sides share
+  // the one ceiling, taken from the narrower side.
+  const leftRoom  = centerX - P9_SCOPE_WIDEN_MARGIN;
+  const rightRoom = W - P9_SCOPE_WIDEN_MARGIN - rightX0;
+  box.colsMax = Math.max(colsTotal, Math.floor(Math.min(leftRoom, rightRoom) / CELL));
+  return box;
+}
+
+// ---- The morph ------------------------------------------------------------
+// Same choreography as @fold10's (p7MorphWindows / p7MorphWin / the push
+// throttle, reused verbatim) so the two folds read as one gesture — but on
+// page9's own clock and its own rAF loop, because p7ShouldRedrawForAnim
+// excludes page 12 and p7SizeGridSet only builds a from-map for pages 8..10.
+function p9ScopeMorphMs() {
+  return p9.scopeMorph
+    ? Math.min(p9ScopeTotalMs(), performance.now() - p9.scopeMorph.start)
+    : p9ScopeTotalMs();
+}
+
+// Blend one square from where it was drawn to its new cell. Mirrors
+// p7MorphBlend exactly, minus the p7GridMorph read.
+// TEMP compare/ scaffolding — which beat leads @fold13's tier morph. Page9's
+// OWN windows, so tuning them never touches @fold10's constants. Seeded from
+// @fold10's numbers, so "fly-then-size" is byte-for-byte what shipped.
+//   fly-then-size  fly, size joins P9_SCOPE_GAP_MS before the flight lands
+//   strict-fly     the flight fully lands, THEN every tier grows
+//   size-then-fly  grow in place first, then the whole field flies
+//   together       both beats on the same clock
+var P9_SCOPE_ORDER      = "strict-fly";
+var P9_SCOPE_FLY_MS     = 1400;
+var P9_SCOPE_SIZE_MS    = 450;
+var P9_SCOPE_GAP_MS     = -300;   // <0 overlaps the two beats, >0 waits between
+var P9_SCOPE_STAGGER_MS = 140;    // tier-to-tier delay, biggest crowd first
+var P9_SCOPE_PUSH       = true;   // hold a dot back from outgrowing its spacing
+
+function p9ScopeWindows(tier) {
+  const maxT   = typeof P7_MAX_TIER !== "undefined" ? P7_MAX_TIER : 5;
+  const stag   = (maxT - tier) * P9_SCOPE_STAGGER_MS;
+  const allStag = maxT * P9_SCOPE_STAGGER_MS;
+  switch (P9_SCOPE_ORDER) {
+    case "size-then-fly":
+      return { size: [stag, P9_SCOPE_SIZE_MS],
+               pos:  [allStag + P9_SCOPE_SIZE_MS + P9_SCOPE_GAP_MS, P9_SCOPE_FLY_MS] };
+    case "together":
+      return { pos: [0, P9_SCOPE_FLY_MS], size: [stag, P9_SCOPE_SIZE_MS] };
+    case "strict-fly":
+      return { pos: [0, P9_SCOPE_FLY_MS],
+               size: [P9_SCOPE_FLY_MS + stag, P9_SCOPE_SIZE_MS] };
+    default:   // fly-then-size
+      return { pos: [0, P9_SCOPE_FLY_MS],
+               size: [P9_SCOPE_FLY_MS + P9_SCOPE_GAP_MS + stag, P9_SCOPE_SIZE_MS] };
+  }
+}
+function p9ScopeTotalMs() {
+  const w = p9ScopeWindows(0);   // tier 0 is the last to start in every order
+  return Math.max(1, w.pos[0] + w.pos[1], w.size[0] + w.size[1]);
+}
+
+function p9ScopeBlend(ev, from, cx, cy, sq) {
+  const ms = p9ScopeMorphMs();
+  const w  = p9ScopeWindows(p7BulgeTier(ev));
+  if (p9.scopeMorph && p9.scopeMorph.dir === "off") {
+    const T = p9ScopeTotalMs();
+    w.pos  = [T - w.pos[0]  - w.pos[1],  w.pos[1]];
+    w.size = [T - w.size[0] - w.size[1], w.size[1]];
+  }
+  const tPos = p7MorphWin(ms, w.pos), tSize = p7MorphWin(ms, w.size);
+  let outSq  = from.sq + (sq - from.sq) * tSize;
+  const outX = from.cx + (cx - from.cx) * tPos;
+  const outY = from.cy + (cy - from.cy) * tPos;
+  if (P9_SCOPE_PUSH && tSize > tPos) {
+    const posSq = from.sq + (sq - from.sq) * tPos;
+    outSq = Math.min(outSq, posSq * P7_MORPH_PUSH_MAX);
+  }
+  return { cx: outX, cy: outY, sq: outSq };
+}
+
+// Press the button on @fold13. `uniform` is the flag's NEW value: false = show
+// the crowd tiers, true = back to one flat size each.
+function p9ScopeSet(uniform, opts) {
+  if (isMobile()) return;
+  uniform = !!uniform;
+  if (uniform === p7GridUniform) return;
+  const instant = opts && opts.instant;
+  const from = new Map();
+  if (!instant && p9.lastPositions && p9.lastPositions.size) {
+    for (const [ev, pos] of p9.lastPositions) {
+      // Every dot on the fold, above AND below the divider — the tiers apply
+      // to the legit grid too, so it morphs on the same clock.
+      const sq = pos.sq ?? p9Metrics().SQ;
+      from.set(ev, { cx: pos.x + sq / 2, cy: pos.y + sq / 2, sq });
+    }
+  }
+  p7GridUniform  = uniform;
+  p9.scopeLayout = null;
+  p9.scopeMorph  = from.size
+    ? { from, start: performance.now(), dir: uniform ? "off" : "on" }
+    : null;
+  if (typeof p7BulgeT !== "undefined") p7BulgeT.clear();
+  p9.hoveredEvent = null;
+  if (typeof draw === "function") draw();
+  p9ScopeRunLoop();
+}
+
+// The morph's own rAF loop. Yields its draw to p9RunAnimLoop whenever a drop is
+// animating, so the two never paint the same frame twice.
+function p9ScopeRunLoop() {
+  if (!p9.scopeMorph) return;
+  const done = performance.now() - p9.scopeMorph.start >= p9ScopeTotalMs();
+  if (!p9.anim && p9PageVisible()) draw();
+  if (done) {
+    p9.scopeMorph = null;
+    if (p9PageVisible()) draw();
+    return;
+  }
+  requestAnimationFrame(p9ScopeRunLoop);
+}
+
+// Called on every page flip (p7SizeGridOnPage) — the tiers do not survive
+// leaving the fold, so neither should the morph or the pack.
+function p9ScopeSync() {
+  p9.scopeMorph  = null;
+  p9.scopeLayout = null;
+}
+
+// Debug readout: pack width/rows and how many dots (if any) the box refused.
+function p9ScopeStats() {
+  return {
+    tiers: p9ScopeTiered(),
+    tierCap: P9_SCOPE_TIER_CAP,
+    ...(p9.scopeStats || {}),
+  };
 }
 
 function drawPage9(ctx, W, H) {
@@ -1104,6 +1456,11 @@ function drawPage9(ctx, W, H) {
   const centerX  = W / 2 - gapWidth / 2;
   const rightX0  = W / 2 + gapWidth / 2;
 
+  // The box both column blocks pack into. Identical to the numbers just above
+  // whenever the tiers are off, so nothing about this fold at rest changes;
+  // with them on, the columns widen outward to find the extra area.
+  const scopeBox = p9ScopeBox(W, H, extremeColsTotal, topY, midY, centerX, rightX0, CELL);
+
   // Records each event's *target* placement for next time (so a future transition
   // has a "from" to blend out of), and — while p9.anim is active — actually draws
   // it partway between its old recorded spot and that target instead of snapping
@@ -1132,21 +1489,30 @@ function drawPage9(ctx, W, H) {
   // every event's position on record for the next drop's p9.anim.from and the
   // picker's nearest-dot scan.
   function p9PlaceDot(e, targetX, targetY, targetAlpha, orderIndex, orderCount, lowRankCount, sizeOverride, recordOnly) {
-    // The @fold10 legend filter is still in force here (page7.js: it only
-    // clears when you scroll back above the timeline). A filtered-out group is
-    // gone from this fold entirely — not drawn, not recorded, so it can't be
-    // dragged or counted either. One guard at the single choke point every dot
-    // goes through, rather than a skip in each caller.
-    if (typeof p7FilterHiddenEv === "function" && p7FilterHiddenEv(e)) return;
+    // The @fold9 legend filter is still in force here (page7.js: it only
+    // clears when you scroll back above the timeline). Once a group is fully
+    // filtered out it is gone from this fold entirely — not drawn, not
+    // recorded, so it can't be dragged or counted either. One guard at the
+    // single choke point every dot goes through, rather than a skip in each
+    // caller. Toggled ON this fold, p7FilterSizeFactor ramps 1 → 0 (or 0 → 1
+    // restoring) first, so the dot shrinks away in place instead of blinking
+    // out; `filtF` scales its size at the fillRect below. The columns don't
+    // re-pack around it — same size-only answer @fold12 gives.
+    const filtF = typeof p7FilterSizeFactor === "function" ? p7FilterSizeFactor(e) : 1;
+    if (filtF <= 0.002) return;
     let drawX = targetX, drawY = targetY, drawAlpha = targetAlpha;
     // The animation's own eased progress for this dot, kept for the size lerp
     // below. 1 (= fully arrived, draw at the target size) whenever nothing is
     // animating this dot.
     let animT = 1;
+    // The SAME progress before p9Ease, kept so the size beat can be sliced off
+    // the raw clock — slicing the eased value and easing again would compound
+    // the curve (house rule: never ease an already-eased slice).
+    let animRaw = 1;
     const from = p9.anim ? p9.anim.from.get(e) : null;
     {
       if (from) {
-        let t;
+        let t, rawT = 1;
         if (p9.anim.newEventStagger && p9.anim.newEventStagger.has(e)) {
           // New extreme dot — departs once the reposition phase finishes
           // (phase2Start === start+repositionMs), or immediately/concurrently
@@ -1157,7 +1523,8 @@ function drawPage9(ctx, W, H) {
           const dotArrival  = p9.anim.newEventStagger.get(e);
           const phase2Start = p9.anim.phase2Start;
           const dotDur      = dotArrival - phase2Start;
-          t = p9Ease(Math.min(1, Math.max(0, (performance.now() - phase2Start) / dotDur)));
+          rawT = Math.min(1, Math.max(0, (performance.now() - phase2Start) / dotDur));
+          t = p9Ease(rawT);
         } else if (p9.anim.plainGlide) {
           // Plain, unstaggered glide over the animation's full duration — used
           // when picking up page8's timeline->legit-grid glide mid-flight (see
@@ -1167,7 +1534,8 @@ function drawPage9(ctx, W, H) {
           // the extreme-zone reposition case it's built for) — reusing it here
           // made the glide visibly speed up ~2.5x the instant this section's
           // title card appeared and this continuation kicked in.
-          t = p9Ease(Math.min(1, Math.max(0, (performance.now() - p9.anim.start) / p9.anim.duration)));
+          rawT = Math.min(1, Math.max(0, (performance.now() - p9.anim.start) / p9.anim.duration));
+          t = p9Ease(rawT);
         } else {
           // Existing dot repositioning.
           // Dots whose actor rank is above "settlers" in the column (right wing
@@ -1198,12 +1566,14 @@ function drawPage9(ctx, W, H) {
           const tierCount   = isHighRank ? (orderCount ?? 1) - low : (low || (orderCount ?? 1));
           const denom       = Math.max(1, tierCount - 1);
           const dotStart    = p9.anim.start + staggerSpan * (tierIndex / denom);
-          t = p9Ease(Math.min(1, Math.max(0, (performance.now() - dotStart) / travelDur)));
+          rawT = Math.min(1, Math.max(0, (performance.now() - dotStart) / travelDur));
+          t = p9Ease(rawT);
         }
         drawX     = from.x     + (targetX     - from.x)     * t;
         drawY     = from.y     + (targetY     - from.y)     * t;
         drawAlpha = from.alpha + (targetAlpha - from.alpha) * t;
         animT     = t;
+        animRaw   = rawT;
       }
     }
     // Recorded here — the actually-drawn, mid-interpolation position/alpha,
@@ -1234,7 +1604,17 @@ function drawPage9(ctx, W, H) {
       // ≤1600px desktop, 1px mobile) to the extreme grid's SQ on the first
       // frame, before the flight even started — and mirror-image on un-drop.
       // On big desktop legitSq === SQ so this is a no-op there.
-      sq = from.sq + (sq - from.sq) * animT;
+      // FLY, THEN RESIZE. The size used to ride the position's own clock, so a
+      // dot grew from the legit size to the extreme one all the way across its
+      // flight. It now holds its old size for the first P9_DROP_SIZE_START of
+      // the raw travel and does the whole resize in the tail, so the flight
+      // reads as a flight and the growth as a separate, later beat — the same
+      // ordering the scope morph uses on this fold. Reverses for free: on an
+      // un-drop the from/target sizes swap and the shrink lands at the end of
+      // the trip home.
+      const sizeT = p9Ease(Math.min(1, Math.max(0,
+        (animRaw - P9_DROP_SIZE_START) / (1 - P9_DROP_SIZE_START))));
+      sq = from.sq + (sq - from.sq) * sizeT;
     }
     posMap.set(e, { x: drawX, y: drawY, alpha: drawAlpha, sq: sq });
 
@@ -1296,6 +1676,15 @@ function drawPage9(ctx, W, H) {
       drawY = Math.round(drawY * dpr) / dpr;
       sq    = Math.max(1 / dpr, Math.round(sq * dpr) / dpr);
     }
+    if (filtF < 1) {
+      // Applied AFTER the device-pixel snap, whose Math.max floor would
+      // otherwise hold a shrinking dot at 1 device px until it popped out.
+      // Shrink about the centre so the dot collapses in place.
+      const s2 = sq * filtF;
+      drawX += (sq - s2) / 2;
+      drawY += (sq - s2) / 2;
+      sq = s2;
+    }
     ctx.fillRect(drawX, drawY, sq, sq);
   }
 
@@ -1317,26 +1706,61 @@ function drawPage9(ctx, W, H) {
     // settlers-or-below entry sits before every Right-wing/Haredi one — one
     // findIndex locates that boundary for the whole column, see p9PlaceDot's
     // tierIndex/tierCount.
-    const lowRankCount = (() => {
-      const i = orderArr.findIndex(e => P9_ACTOR_ORDER.indexOf(e.actor) > P9_ACTOR_ORDER.indexOf("settlers"));
-      return i === -1 ? orderArr.length : i;
+    // Counted over the VISIBLE entries only, for the same reason the slots
+    // below are: it's a boundary within the column as actually drawn.
+    const lowRankVis = (() => {
+      const vis = orderArr.filter(e => !(typeof p7FilterHiddenEv === "function" && p7FilterHiddenEv(e)));
+      const i = vis.findIndex(e => P9_ACTOR_ORDER.indexOf(e.actor) > P9_ACTOR_ORDER.indexOf("settlers"));
+      return i === -1 ? vis.length : i;
     })();
+    const lowRankCount = lowRankVis;
     // The bulges living in this column block, in (col,row) cell coordinates
     // for p7BulgeShift. Cells count from the centre outward and rows upward,
     // so the shift's signs flip to screen space below.
+    // Each entry's CELL SLOT, which is not its index in orderArr once the
+    // legend filter is on: a filtered-out dot no longer holds a slot, so the
+    // ones above it drop into the space and the column gets shorter — the same
+    // close-ranks the real timeline does at @fold10. It keeps its own last
+    // slot (its raw index) so it shrinks away in place rather than moving.
+    const hiddenHere = e => typeof p7FilterHiddenEv === "function" && p7FilterHiddenEv(e);
+    const tiered = p9ScopeTiered();
+    const cols   = scopeBox.cols;
+    const cell   = scopeBox.cellPx;
+    const gapPx  = CELL - SQ;   // the pitch's own gap, kept at every block size
+    // Packed over the VISIBLE entries only, so the legend filter closes ranks
+    // the same way it always did. A hidden dot keeps the plain row-major cell
+    // its raw index gives it, so it shrinks away where it stands instead of
+    // travelling first.
+    const vis = orderArr.filter(e => !hiddenHere(e));
+    const visIndex = new Map(vis.map((e, i) => [e, i]));
+    const visN = vis.length;
+    const layout = p9ScopeLayoutFor(rightAlign ? "left" : "right",
+      cols, scopeBox.colsMax, scopeBox.rowsMax, vis);
+    const slotOf = new Map();
+    orderArr.forEach((e, i) => slotOf.set(e, visIndex.has(e) ? visIndex.get(e) : i));
+    // Hover bulges are off while the tiers are showing: the blocks already ARE
+    // the crowd size, and p7BulgeShift's push assumes one-cell neighbours.
     const bulges = [];
-    for (const ev of p9BulgeT.keys()) {
-      const i = orderArr.indexOf(ev);
-      if (i === -1) continue;
-      const size = p9BulgeSize(ev);
-      bulges.push({ ev, col: i % colsTotal, row: Math.floor(i / colsTotal), size, push: (size - SQ) / 2 });
+    if (!tiered) {
+      for (const ev of p9BulgeT.keys()) {
+        const i = slotOf.has(ev) ? slotOf.get(ev) : -1;
+        if (i === -1) continue;
+        const size = p9BulgeSize(ev);
+        bulges.push({ ev, col: i % cols, row: Math.floor(i / cols), size, push: (size - SQ) / 2 });
+      }
     }
-    orderArr.forEach((e, i) => {
-      const r = Math.floor(i / colsTotal);
-      const c = i % colsTotal;
-      let x = rightAlign ? centerX - (c + 1) * CELL : rightX0 + c * CELL;
-      let y = midY - (r + 1) * CELL;
-      let size;
+    let clipped = 0;
+    orderArr.forEach((e, rawI) => {
+      const P = layout.pos.get(e);
+      const i = slotOf.get(e);
+      const n = P ? P.n : 1;
+      const c = P ? P.c : rawI % cols;
+      const r = P ? P.r : Math.floor(rawI / cols);
+      // A block of n cells spans n columns out from the gap and n rows up from
+      // the anchor; at n === 1 this is the old single-cell arithmetic exactly.
+      let x = rightAlign ? centerX - (c + n) * cell : rightX0 + c * cell;
+      let y = scopeBox.anchorY - (r + n) * cell;
+      let size = tiered ? n * cell - gapPx : undefined;
       if (bulges.length) {
         const own = bulges.find(b => b.ev === e);
         if (own) { size = own.size; x -= own.push; y -= own.push; }   // grow about the cell centre
@@ -1351,10 +1775,28 @@ function drawPage9(ctx, W, H) {
       // at or below midY by construction), but on mobile midY is H minus the
       // 4px legit bar, so an H - 16 floor culled the bottom rows and opened a
       // ~12px gap between the columns and the bar they should be resting on.
-      if (y < topY || y >= midY) return;
-      p9PlaceDot(e, x, y, targetAlpha, i, orderArr.length, lowRankCount, size);
+      if (y < scopeBox.topY || y >= scopeBox.anchorY) { clipped++; return; }
+      // The tier morph rides on top of the resting placement, on page9's own
+      // clock — same windows and same push throttle as @fold10's.
+      if (p9.scopeMorph) {
+        const f = p9.scopeMorph.from.get(e);
+        if (f) {
+          const s0 = size ?? SQ;
+          const b  = p9ScopeBlend(e, f, x + s0 / 2, y + s0 / 2, s0);
+          x = b.cx - b.sq / 2; y = b.cy - b.sq / 2; size = b.sq;
+        }
+      }
+      p9PlaceDot(e, x, y, targetAlpha, i, visN, lowRankCount, size);
     });
-    return Math.ceil(orderArr.length / colsTotal) || 1;
+    // Merged across the two calls; drawPage9 clears it before the left one.
+    p9.scopeStats = Object.assign(p9.scopeStats || {}, {
+      [rightAlign ? "leftRows" : "rightRows"]: layout.rows,
+      [rightAlign ? "leftClipped" : "rightClipped"]: clipped,
+      [rightAlign ? "leftCols" : "rightCols"]: layout.cols,
+      colsMax: scopeBox.colsMax, cellPx: Math.round(cell * 100) / 100,
+      rowsMax: scopeBox.rowsMax,
+    });
+    return layout.rows || 1;
   }
 
   // The legitimate (below-the-line) grid keeps the same left/right screen-side
@@ -1405,11 +1847,26 @@ function drawPage9(ctx, W, H) {
     // The legit grid's own dot size — in bar mode the packed cell, otherwise
     // the per-breakpoint legitSq (desktop P9_SQ; the mobile spread strip's
     // finer P9_LEGIT_SQ_SPREAD_M).
-    const sq    = bar ? legitGeom.cell : p9Metrics().legitSq;
+    let sq      = bar ? legitGeom.cell : p9Metrics().legitSq;
+    // The `legit` room mode (compare/ only) gives the columns this strip's
+    // floor. The dots leave BY SIZE, never by opacity — house rule.
+      if (sq <= 0) return 0;
     order.forEach(e => {
       if (!botSet.has(e)) return;
-      const pos = p9LegitPosOf(e, indexOf, side, legitGeom);
+      let pos = p9LegitPosOf(e, indexOf, side, legitGeom);
       if (!pos) return; // guards a stale cache
+      let sqHere = sq;
+      // The legit grid never tiers — flat size, shuffled cell, both states.
+      // It rides the scope morph only so a legit dot the press does move
+      // blends instead of snapping.
+      if (p9.scopeMorph) {
+        const f = p9.scopeMorph.from.get(e);
+        if (f) {
+          const b = p9ScopeBlend(e, f, pos.x + sqHere / 2, pos.y + sqHere / 2, sqHere);
+          pos = { x: b.cx - b.sq / 2, y: b.cy - b.sq / 2 };
+          sqHere = b.sq;
+        }
+      }
       // Offscreen dots are still PUT ON RECORD, only not painted. The legit
       // grid packs however many rows its events need (legitRows), which on the
       // V2 desktop strip is more rows than the 150px band can show — skipping
@@ -1418,7 +1875,7 @@ function drawPage9(ctx, W, H) {
       // straight into their extreme column instead of flying. Same reasoning
       // as the mobile bar's recordOnly use.
       const offscreen = pos.y < topY || pos.y >= H;
-      p9PlaceDot(e, pos.x, pos.y, targetAlpha, undefined, undefined, undefined, sq,
+      p9PlaceDot(e, pos.x, pos.y, targetAlpha, undefined, undefined, undefined, sqHere,
                  barAtRest || offscreen);
     });
   }
@@ -1434,6 +1891,7 @@ function drawPage9(ctx, W, H) {
   // that Figma's actual reference doesn't show.
   ctx.globalAlpha = 1;
   p9BulgeTick();
+  p9.scopeStats = {};
   const leftTopRows  = drawBandedCols(p9.leftTopOrder,  true,  extremeColsTotal);
   const rightTopRows = drawBandedCols(p9.rightTopOrder, false, extremeColsTotal);
   drawJumbledBot(p7.leftEvents,  p9.leftIndexOf,  "left",  leftBotSet);
@@ -1599,7 +2057,7 @@ function drawPage9(ctx, W, H) {
 
   // The mobile event picker (p7InspectInit, page7.js) serves this fold too —
   // its state is kept in step from the owning fold's own draw, exactly as
-  // @fold10 does it from doHitTest. Cheap and idempotent.
+  // @fold9 does it from doHitTest. Cheap and idempotent.
   p7InspectSync?.();
 
   // The year axis's reverse wipe OUTLIVES @fold12. It starts when that fold's
@@ -2728,6 +3186,8 @@ function p9HoverInit() {
     if (!p9.hoveredEvent) return;
     tooltipEl.classList.remove("is-visible");
     p9.hoveredEvent = null;
+    // Close this dot's group label in the mini-legend (js/groups.js).
+    if (typeof fold6DotHover === "function") fold6DotHover(null);
     setHighlightedPill(undefined);
     draw();
     if (typeof updateGroups === "function") updateGroups(); // see p9HoverDimAnimate's own comment
@@ -2758,11 +3218,21 @@ function p9HoverInit() {
     // opened would drop the hover and the whole grid would flicker back to
     // full opacity between dots.
     const hov = p9.hoveredEvent;
-    const hovHalf = hov ? p9BulgeSize(hov) / 2 : half;
+    // Its grown box — or, tiered, the block's own drawn size, which is far
+    // bigger than the bulge formula's P9_SQ-based one. With the small number
+    // the cursor only had to sit a few px off a 55px block's centre to lose
+    // the hover, and the grid flickered back to full opacity between frames.
+    const hovDrawn = hov && p9.lastPositions.get(hov);
+    const hovHalf = hov
+      ? Math.max(p9BulgeSize(hov), (hovDrawn && hovDrawn.sq) || 0) / 2
+      : half;
     let bestEvent = null, bestPos = null, bestDist = Infinity;
     for (const [ev, pos] of p9.lastPositions) {
       if (pos.y >= p9.midY) continue;
-      const h  = ev === hov ? hovHalf : half;
+      // A tiered block (@fold13's «היקף האירועים») is far bigger than the flat
+      // square, so the hit box is the size the dot was actually drawn at.
+      // Neutral when the tiers are off — pos.sq is SQ there.
+      const h  = ev === hov ? hovHalf : (pos.sq ? pos.sq / 2 : half);
       const cx = pos.x + h, cy = pos.y + h;
       const dx = mx - cx, dy = my - cy;
       if (Math.abs(dx) > h + HIT_PAD || Math.abs(dy) > h + HIT_PAD) continue;
@@ -2777,6 +3247,8 @@ function p9HoverInit() {
     // over the same dot, which would redraw the whole canvas needlessly.
     if (p9.hoveredEvent !== bestEvent) {
       p9.hoveredEvent = bestEvent;
+      // Open this dot's own group label in the mini-legend (js/groups.js).
+      if (typeof fold6DotHover === "function") fold6DotHover(bestEvent.actor);
       // Cancel any running pill-hover dim animation so hoverDimT is reset clean.
       hoverDimTarget = 0; p9.hoverDimT = 0;
       setHighlightedPill(CATEGORY_TO_IDX[bestEvent.category]);
@@ -2800,7 +3272,7 @@ function p9HoverInit() {
     // doesn't reach across the canvas's center gap into the opposite side's
     // column — mirrors which corner of the box anchors at the dot (see
     // .page9-tooltip.is-mirrored, style.css).
-    // Same two vertical screen-X lines @fold10's timeline hover uses, and the
+    // Same two vertical screen-X lines @fold9's timeline hover uses, and the
     // same constants (P7_TIP_FLIP_L / P7_TIP_FLIP_R_INSET, page7.js) so the
     // two tooltips can never disagree about which way they open: a dot left of
     // P7_TIP_FLIP_L always opens rightward, a dot within P7_TIP_FLIP_R_INSET

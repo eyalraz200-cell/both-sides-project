@@ -75,12 +75,12 @@
          child, NOT nested in .graphic-col: that column is its own stacking
          context (position:fixed + z-index:0), which traps any z-index inside
          it below .text-col's full-viewport sections — on mobile that made the
-         docked frame untappable, every touch landing on section#page-9. -->
+         docked frame untappable, every touch landing on section#page-8. -->
     <div class="page9-tooltip" id="page9Tooltip" aria-hidden="true">
       <div class="page9-tooltip-date"></div>
       <div class="page9-tooltip-desc"></div>
     </div>
-    <!-- Hover tooltip for a category pill in page-12's tray (#page9ZoneBelow
+    <!-- Hover tooltip for a category pill in page-13's tray (#page9ZoneBelow
          only — see p9CategoryTooltipInit in page9.js). Same reasoning as
          #page9Tooltip above: a direct .layout child, not nested in
          .graphic-col, so its z-index actually stacks above .text-col's tray/
@@ -134,7 +134,7 @@
       </section>
       <section class="text-section" data-page="4" id="page-4">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">אספנו תיעודים של פעולות פוליטיות משני צדי המפה - בהן הפגנות, הפרות סדר ותקיפות פיזיות - שהתרחשו מתחילת 2023 ועד היום.</h2>
+          <h2 class="section-title text-card-frame">כל ריבוע מייצג פעולה פוליטית של אחת הקבוצות שהתרחשה מ-2023 ועד היום - כגון הפגנה, הפרת סדר ותקיפה פיזית.</h2>
         </div>
       </section>
       <section class="text-section" data-page="5" id="page-5">
@@ -144,26 +144,33 @@
       </section>
       <section class="text-section" data-page="6" id="page-6">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">כל ריבוע מייצג פעולה פוליטית שהתרחשה ותועדה במרחב הציבורי.</h2>
+          <h2 class="section-title text-card-frame">ריחוף העכבר מעל ריבוע חושף את תיאור הפעולה וממחיש את סדר גודלה.</h2>
         </div>
       </section>
       <section class="text-section" data-page="7" id="page-7">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">ריחוף העכבר מעל ריבוע חושף את תיאור הפעולה וממחיש את סדר גודלה.</h2>
-        </div>
-      </section>
-      <section class="text-section" data-page="8" id="page-8">
-        <div class="section-text text-card">
           <h2 class="section-title text-card-frame">צבע הריבוע מציין את הקבוצה שביצעה את הפעולה.<br>ניתן לסנן קבוצות באמצעות המקרא.</h2>
         </div>
       </section>
-      <section class="text-section page7-scrub" data-page="9" id="page-9"></section>
-      <!-- @fold11: the size grid. Arriving here fires p7SizeGridSet(true)
+      <section class="text-section page7-scrub" data-page="8" id="page-8"></section>
+      <!-- @fold10: the size grid. Arriving here fires p7SizeGridSet(true)
            (p7SizeGridOnPage, page7.js) — the timeline undraws and every dot on
            screen grows to its crowd tier and re-packs. -->
-      <section class="text-section" data-page="10" id="page-10">
+      <section class="text-section" data-page="9" id="page-9">
         <div class="section-text text-card">
           <h2 class="section-title text-card-frame">המחנות נבדלים במספר הפעולות שביצעו, אך פעולה אחת עשויה להתבצע בידי אדם יחיד, ואחרת בהשתתפות מאות אלפי אנשים.</h2>
+        </div>
+      </section>
+      <!-- @fold11: every square SIZES DOWN to one uniform cell where it
+           stands, and then the whole field FLIES to page9's legit zone —
+           @fold10's morph played backwards, but landing in the legit grid
+           instead of back on the timeline (fold11SizeApply, js/groups.js).
+           Its PAGES slot (10) is drawPage8, the bridge glide — the SAME draw
+           function @fold12 uses — because this fold owns the glide now, so
+           @fold12 simply arrives with it already at rest. -->
+      <section class="text-section" data-page="10" id="page-10">
+        <div class="section-text text-card">
+          <h2 class="section-title text-card-frame">לצורך ההשוואה המספרית, כל הריבועים יוצגו בגודל אחיד.<br>ניתן ללחוץ על הכפתור ״היקף האירועים״ במקרא כדי להציגם לפי מספר המשתתפים בכל אירוע.</h2>
         </div>
       </section>
       <section class="text-section" data-page="11" id="page-11">
@@ -261,9 +268,5 @@
   <script src="reload.js"></script>
   <!-- TEMP: fold number chip; delete with _debug-fold-badge.js -->
   <script src="_debug-fold-badge.js"></script>
-  <!-- TEMP: manual/ hero titles. Baked 2026-09-07; the file is KEPT for
-       re-tuning — uncomment this tag to bring the panel back.
-  <script src="_debug-hero-title.js"></script>
-  -->
 </body>
 </html>

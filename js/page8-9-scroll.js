@@ -7,6 +7,10 @@
 // past while the glide plays in the background. Scrolling back up past that same
 // point plays the glide back in reverse via
 // p8TriggerReverse, once currentPage has made it back to 9. ──
+// @fold12's title no longer drives the glide — @fold11 (#page-10) owns it now
+// (fold11SizeApply, js/groups.js), so the squares can size down to one uniform
+// cell BEFORE they fly. What is left of this watcher is the mobile tooltip
+// drop below, which still rides @fold12's own crossing.
 const page8TitleEl = document.querySelector("#page-11 .section-title");
 let page8Ticking = false;
 
@@ -36,16 +40,18 @@ function page8CheckScroll() {
   if (typeof p9TooltipDropTrigger !== "undefined") {
     p9TooltipDropTrigger.trigger(nowPast && isMobile() ? 1 : 0);
   }
-  if (page8TitleWasPast === null) {
-    page8TitleWasPast = nowPast;
-    if (nowPast) p8Trigger();
-    return;
+  // Desktop V2 only: @fold12's crossing pops the @dragcards pills in, one fold
+  // ahead of the rest of the panel — the full-bleed rule, the drop zone and the
+  // pinned header still wait for @fold13's stick (.engaged, below). Same pop
+  // animation and stagger; only the class driving it differs (.pills-in, see
+  // the .page9-layout-v2.pills-in rules in style.css). Set unconditionally, so
+  // it resolves on the first tick and reverses on the way back up. The tray
+  // keeps pointer-events:none until .engaged, so nothing is draggable yet.
+  if (page9StickyEl) {
+    const pillsIn = nowPast && typeof p9IsV2 === "function" && p9IsV2();
+    page9StickyEl.classList.toggle("pills-in", pillsIn);
   }
-  if (nowPast !== page8TitleWasPast) {
-    page8TitleWasPast = nowPast;
-    if (nowPast) p8Trigger();
-    else p8TriggerReverse();
-  }
+  page8TitleWasPast = nowPast;
 }
 
 window.addEventListener("scroll", () => {
@@ -144,6 +150,10 @@ function page9UpdateFromScroll() {
   // Both tray and zone-wrap are position:fixed — always at their final viewport
   // position — so both can fire together the moment the title card sticks.
   page9StickyEl.classList.toggle("engaged", isStuck);
+  // Safety net for the pills' earlier beat: if the panel is engaged the pills
+  // must be in, even if @fold12's crossing was never ticked (a load or jump
+  // straight into @fold13 fires no scroll event over that title).
+  if (isStuck) page9StickyEl.classList.add("pills-in");
   // (The mobile docked-tooltip drop that clears room for the tray band is NOT
   // fired here — it rides @fold12's title crossing in page8CheckScroll above.)
 

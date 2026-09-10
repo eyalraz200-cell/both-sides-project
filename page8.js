@@ -10,14 +10,52 @@
 // Scrolling back up past the original trigger point plays the same glide in
 // reverse (see p8TriggerReverse), the same interruptible-cascade pattern
 // page7.js uses for its month-by-month reveal.
-const P8_TRANSITION_DURATION = 3000; // ms — playback time of a full 0->1 forward traverse
+// The forward glide is two independent beats on two independent clocks: the
+// SHRINK (each dot's timeline/size-grid square morphing down to page9's legit-grid
+// size) and the FLY (its position travelling to the legit cell). How the two are
+// staged is P8_STAGING:
+//   "together"        — both start at 0, each running its own ms (today's look:
+//                       the dots resize *during* flight)
+//   "shrink-then-fly" — resize in place first, then fly at the landed size
+//   "fly-then-shrink" — fly at the timeline size, then resize once landed
+// var, not const: tuned live through a manual/ compare/ harness (_debug-fold11.js).
+var P8_SHRINK_MS = 3000;
+var P8_FLY_MS    = 1450;
+var P8_STAGING   = "together";
+
+// Full-traverse ms for the forward direction — sequential stagings take both
+// beats end to end, the concurrent one takes the longer of the two.
+function p8ForwardMs() {
+  const S = Math.max(1, P8_SHRINK_MS), F = Math.max(1, P8_FLY_MS);
+  return P8_STAGING === "together" ? Math.max(S, F) : S + F;
+}
+
+// Slice the phase's RAW progress into the two beats and re-apply p9Ease fresh
+// per beat (house multi-beat convention — never ease an already-eased slice).
+function p8Beats(t) {
+  const S = Math.max(1, P8_SHRINK_MS), F = Math.max(1, P8_FLY_MS);
+  if (P8_STAGING === "shrink-then-fly") {
+    const s = S / (S + F);
+    return { sizeE: p9Ease(Math.min(1, t / s)),
+             posE:  p9Ease(Math.max(0, (t - s) / (1 - s))) };
+  }
+  if (P8_STAGING === "fly-then-shrink") {
+    const f = F / (S + F);
+    return { posE:  p9Ease(Math.min(1, t / f)),
+             sizeE: p9Ease(Math.max(0, (t - f) / (1 - f))) };
+  }
+  const tot = Math.max(S, F);
+  return { sizeE: p9Ease(Math.min(1, (t * tot) / S)),
+           posE:  p9Ease(Math.min(1, (t * tot) / F)) };
+}
+const P8_TRANSITION_DURATION = 3000; // ms — legacy default; p8ForwardMs() is the live value
 // The reverse runs on its own, much shorter clock. The forward glide is a
 // reveal the reader watches in place, but the reverse fires while they're
-// already scrolling away back up @fold10's multi-viewport scrub — at 3000ms a
+// already scrolling away back up @fold9's multi-viewport scrub — at 3000ms a
 // flick leaves the canvas showing a crushed page9-blend band and the end-state
 // axis several folds away for seconds. Position still animates continuously
 // (never snaps); it just resolves before the reader has left the neighborhood.
-const P8_REVERSE_DURATION = 700; // ms — playback time of a full 1->0 traverse
+var P8_REVERSE_DURATION = 1350; // ms — playback time of a full 1->0 traverse
 let p8Engaged       = false; // true from the forward trigger until fully reversed back to rest
 let p8PhaseStart    = null;  // performance.now() when the current phase (forward/reverse) began
 let p8PhaseFromT    = 0;     // t value the current phase started from
@@ -38,21 +76,21 @@ function p8CurrentT() {
 
 function p8RunAnimLoop() {
   if (p8PhaseStart === null) return;
-  if (currentPage === 11) draw();
+  if (currentPage === 10 || currentPage === 11) draw();
   if (p8CurrentT() !== p8PhaseToT) {
     requestAnimationFrame(p8RunAnimLoop);
   } else {
     p8PhaseFromT = p8PhaseToT; // settle here — p8CurrentT() reads this once phaseStart is null
     p8PhaseStart = null;
     if (p8PhaseToT === 0) p8Engaged = false; // back at rest — forward can fire again later
-    if (currentPage === 11) draw(); // final frame, locked at rest
+    if (currentPage === 10 || currentPage === 11) draw(); // final frame, locked at rest
   }
 }
 
 function p8StartPhase(toT) {
   p8PhaseFromT = p8CurrentT();
   p8PhaseToT   = toT;
-  p8PhaseDur   = toT === 0 ? P8_REVERSE_DURATION : P8_TRANSITION_DURATION;
+  p8PhaseDur   = toT === 0 ? P8_REVERSE_DURATION : p8ForwardMs();
   p8PhaseStart = performance.now();
   p8RunAnimLoop();
 }
@@ -95,7 +133,8 @@ function drawPage8(ctx, W, H) {
     return;
   }
 
-  const ease = p9Ease(t);
+  const { sizeE, posE } = p8Beats(t);
+  const ease = posE; // position is the beat the rest of this function keys off
 
   drawBackground(ctx, W, H);
 
@@ -109,18 +148,24 @@ function drawPage8(ctx, W, H) {
 
   function blendAndDraw(events, indexOf, side, positions, x0) {
     events.forEach((e, i) => {
-      // The @fold10 legend filter carries through this fold — a group filtered
+      // The @fold9 legend filter carries through this fold — a group filtered
       // out of the timeline stays out of the glide and of everything after it.
-      if (typeof p7FilterHiddenEv === "function" && p7FilterHiddenEv(e)) return;
+      // Toggled ON this fold it shrinks/grows in place rather than blinking out:
+      // p7FilterSizeFactor is the size ramp (1 → 0, or 0 → 1 restoring). The
+      // survivors do NOT close ranks here — the glide's destination is page9's
+      // legit grid, which is index-based — so this fold answers a toggle with
+      // size only. Position, as ever, never snaps.
+      const filtF = typeof p7FilterSizeFactor === "function" ? p7FilterSizeFactor(e) : 1;
+      if (filtF <= 0.002) return;
       const cell = positions[i];
       const col  = cell % cols;
       const row  = Math.floor(cell / cols);
-      // @fold11 leaves the size grid ON across this fold (p7SizeGridOnPage,
+      // @fold10 leaves the size grid ON across this fold (p7SizeGridOnPage,
       // page7.js), so the flight starts from each dot's packed cell — its own
       // tier size included — not from the timeline cell it hasn't occupied
-      // since @fold10. Off (mobile, or straight from @fold10) this is the
+      // since @fold9. Off (mobile, or straight from @fold9) this is the
       // timeline cell exactly as before.
-      const g     = p7GridRestRect(e, side === "left");
+      const g     = p7GridLiveRect(e, side === "left");
       const fromX = g ? g.x : x0 + col * CELL;
       const fromY = g ? g.y : topY + row * CELL;
       const fromSQ = g ? g.sq : SQ;
@@ -140,14 +185,18 @@ function drawPage8(ctx, W, H) {
       // at the bar's own cell size, not P9_SQ — land on that instead, or the
       // dots pop a pixel at the handoff.
       const endSQ  = legitGeom.mode === "bar" ? legitGeom.cell : p9Metrics().legitSq;
-      const drawSQ = fromSQ + (endSQ - fromSQ) * ease;
+      const drawSQ = fromSQ + (endSQ - fromSQ) * sizeE;
       // No opacity fade — drawPage9 draws the legit grid at full opacity (see the
       // comment above its own drawBandedCols/drawJumbledBot calls; it used to be a
       // deliberate 0.12 de-emphasis, which this glide matched, but Figma's actual
       // reference doesn't show that dimming, so it was dropped). Glide only moves
       // position now, so there's no fade-to-faint here for fold11's draw to "pop" out of.
       ctx.fillStyle = p7ActorColor(e.actor);
-      ctx.fillRect(x, y, drawSQ, drawSQ);
+      // Shrink stays centred on the cell, so a filtered dot collapses in place
+      // instead of sliding toward its own top-left corner.
+      const s = drawSQ * filtF;
+      const o = (drawSQ - s) / 2;
+      ctx.fillRect(x + o, y + o, s, s);
     });
   }
 
@@ -157,7 +206,7 @@ function drawPage8(ctx, W, H) {
   // function keeps drawing at t=1 until @fold13's own drawPage9 takes over.
   // Same solid-rect pass drawPage9's at-rest bar uses (p9DrawBarRects,
   // page9.js), so the handoff is pixel-identical.
-  if (ease >= 1 && legitGeom.mode === "bar") {
+  if (t >= 1 && legitGeom.mode === "bar") {
     p9DrawBarRects(ctx, legitGeom, H, 1);
   } else {
     blendAndDraw(p7.leftEvents,  p9.leftIndexOf,  "left",  p7.leftPos,  leftX0);
@@ -213,7 +262,7 @@ function p8CaptureBlendedPositions(W, H, tOverride) {
       const cell = positions[i];
       const col  = cell % cols;
       const row  = Math.floor(cell / cols);
-      const g     = p7GridRestRect(e, side === "left");
+      const g     = p7GridLiveRect(e, side === "left");
       const fromX = g ? g.x : x0 + col * CELL;
       const fromY = g ? g.y : topY + row * CELL;
       const fromSQ = g ? g.sq : p7.SQ;

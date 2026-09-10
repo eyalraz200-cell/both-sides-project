@@ -7,7 +7,7 @@ const SBB = {
   top: 0.08,   // fraction of H
 };
 
-// The real timeline's own box (page7.js/page8.js, #page-8) — kept separate from SBB
+// The real timeline's own box (page7.js/page8.js, #page-7) — kept separate from SBB
 // above (used by page9.js's drag-and-drop grid, #page-11) so widening or reshaping the
 // timeline's grid doesn't also move that unrelated page's layout.
 // left is wider than the old SBB.left but still clears the persistent mini-legend pinned

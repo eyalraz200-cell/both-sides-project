@@ -52,7 +52,7 @@ own timing.
 `@fold2` and un-type in place at `@fold4`; they never travel into the legend.
 
 **The 8 squares** — `#fold6SquaresOverlay`'s sample squares, which grow in at `@fold6`,
-gain labels at `@fold7`, and gain colors + fly to their real per-event dots at `@fold9`.
+gain labels at `@fold7`, and gain colors + fly to their real per-event dots at `@fold8`.
 
 **Legit grid / extreme grid** — page9's two dot fields, below and above the `P9_MID`
 divider.
@@ -61,4 +61,4 @@ divider.
 `@fold1` decorative dots; they shrink away at `@fold3`, leaving each row's rightmost rect
 as the persistent `.group-item`.
 
-- **size grid** — what **@fold11** (`#page-10`, desktop) does: arriving on the fold turns it on (`p7SizeGridSet`/`p7SizeGridOnPage`, page7.js), the timeline undraws, and the visible squares grow to their crowd-tier block size and re-pack into a gap-exact skyline grid per camp, at the timeline's own gap. Scrolling back to @fold10 flies them back. There is no button. Distinct from the hover **bulge** (same tiers, different multipliers). See [Timeline](Timeline.md).
+- **size grid** — what **@fold10** (`#page-9`, desktop) does: arriving on the fold turns it on (`p7SizeGridSet`/`p7SizeGridOnPage`, page7.js), the timeline undraws, and the visible squares grow to their crowd-tier block size and re-pack into a gap-exact skyline grid per camp, at the timeline's own gap. Scrolling back to @fold9 flies them back. There is no button. Distinct from the hover **bulge** (same tiers, different multipliers). See [Timeline](Timeline.md).
