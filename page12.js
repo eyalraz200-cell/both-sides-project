@@ -284,7 +284,7 @@ function drawPage12(ctx, W, H) {
   };
 
   // A dot arriving from @fold13 may be wearing a crowd-tier size (the
-  // «היקף האירועים» button, p9ScopeSet in page9.js) — up to nine cells across
+  // «הצגת גודל האירועים» button, p9ScopeSet in page9.js) — up to nine cells across
   // where the spread wants a flat SQ. Lerp it down on the spread's own clock,
   // shrinking about the block's centre, so it eases into the field instead of
   // popping to 3px on the first frame. Size only, never opacity. A no-op

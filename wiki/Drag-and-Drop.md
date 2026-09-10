@@ -56,6 +56,15 @@ would hold scroll where the card never pins and the fold deadlocks.
   reading order**, not `data-idx` DOM order: each pill carries an inline `order` set from
   `P9_TRAY_GRID_V2`'s single-row column (p9BuildPanel) — inert in both desktop grids, where
   every pill is explicitly placed.
+- **The grip handle is collapsed until `.engaged`** (desktop V2 only). In the tray it sits at
+  `width: 0; margin-inline-end: -6px; overflow: hidden; transform: scale(0)` and `.engaged`
+  restores `8px` / `0` / `scale(1)` on the pill's own pop clock. All **three** properties are
+  needed: `scale(0)` is paint-time only and would leave the 8px grid box in the flex line, and
+  a zero-width handle still draws the pill's own 6px flex `gap` — hence the negative margin.
+  Because `p9MeasureTrayLayout` bakes fixed pixel column tracks and runs while `.engaged` is
+  off, it holds `.page9-measuring-handles` on the panel across its width reads (same lifetime
+  as its measurement `nowrap`) so the tracks reserve the handle's 14px; without it the pills
+  overflow their tracks the moment @fold13 pops the dots in and the labels wrap.
 - Pills are built in JS: `div.page9-pill[data-idx]` > `span.page9-handle` (6 grip dots) +
   `span.page9-pill-label`. Dropped pills lose their border/background and take
   `width: var(--page9-max-pill-width)` with 1px hairline separators via `::before`/`::after`.
@@ -213,6 +222,21 @@ nothing below changes shape; see [Mobile](#mobile).
   (`P9_EVENTS_GAP` 4) to dodge bidi reordering. Positions glide over `P9_COUNT_POS_MS`
   500; visibility crossfades over `P9_COUNT_LABEL_FADE_MS` 400 at the 0↔nonzero boundary.
   While a pill is hovered the labels show only that category's counts, unanimated.
+  Each label centres over the span its side **actually drew** — `p9.scopeStats.leftCols`
+  / `.rightCols` (published by `drawBandedCols`, cleared right before the two calls),
+  floored by that side's event count. That keeps it centered in crowd-tier/resize mode
+  too, where `p9ScopeLayoutFor` solves a wider column count than `extremeColsSticky`;
+  untiered the expression reduces to the old `leftRealCols`/`rightRealCols`, so a
+  side with too few events to fill the reserved width still gets a label over its
+  squares rather than over the empty reservation. Cell pitch is always `CELL`
+  (`p9ScopeBox` never scales `cellPx`), so only the column count varies.
+  **The legend filter is counted out**: every counter (`p9ExtremeCountsNow`, the
+  `newEventStagger` arrival tally, the hovered-pill filter) skips events failing
+  `p9CountsEvent` (`!p7FilterHiddenEv`), so the label says what the column actually
+  shows. A toggle counts to the new number on the re-pack's own clock —
+  `p9FilterSnapshot` seeds `p9CountAnim` over `P9_FILTER_REPACK_MS`, starting from
+  `p9LastDrawnCounts` (the last painted pair) because `p7FilterOff` has already been
+  mutated by the time it runs, so the live count is the *target*, not the origin.
   Drawn at both breakpoints; mobile shows a **two-line centered block** — the number
   with `אירועים` under it (two single-script `fillText` runs, so no bidi problem),
   both at **13px** (desktop's side-by-side line stays 12px), line pitch
@@ -237,7 +261,7 @@ nothing below changes shape; see [Mobile](#mobile).
   `p9.lastPositions`, so a later drop has a start point to fly them from instead of
   snapping them into their column.
 
-## Crowd tiers — «היקף האירועים» on this fold
+## Crowd tiers — «הצגת גודל האירועים» on this fold
 
 The scope pill works on @fold13 too (`p9ScopeSet`, page9.js — reached through the
 page-gated click in js/groups.js; see
@@ -295,8 +319,9 @@ back, never while sitting below the divider.
   order **strict-fly**: the flight fully lands (`P9_SCOPE_FLY_MS` 1400ms), then
   every tier grows (`P9_SCOPE_SIZE_MS` 450ms) staggered biggest-first by
   `P9_SCOPE_STAGGER_MS` (140ms), 2550ms total. Mirrored on the clock for
-  `dir: "off"`. `P9_SCOPE_GAP_MS` (−300) only applies to the other orders the
-  compare harness offers; strict-fly by definition has no gap to tune.
+  `dir: "off"`. The order was chosen with a `compare/` harness and **baked** —
+  the alternatives (`size-then-fly`, `together`, `fly-then-size` with a
+  `P9_SCOPE_GAP_MS` overlap) and the `P9_SCOPE_ORDER` switch are gone.
 - **Bulge off while tiered** — and off in the *bookkeeping* too: `p9BulgeTick`
   refuses to register a hover entry at all while tiered. Registering one kept its
   tween "active" and rescheduled a full-canvas redraw every frame the cursor sat
@@ -356,15 +381,52 @@ on the first frame, before the flight began, and mirror-image on un-drop. On big
 `legitSq === SQ`, so it's a no-op there — which is why the snap was only visible on the
 regular-desktop tier and mobile.
 
-**Fly, then resize.** The size lerp does *not* ride the position's clock. It is sliced off
-the **raw** (pre-`p9Ease`) progress at `P9_DROP_SIZE_START` (0.7) and re-eased fresh, so a
-dot holds its old size for the first 70% of its raw travel and does the whole resize in the
-tail — the flight reads as a flight and the growth as a separate, later beat, the same
-ordering the scope morph's strict-fly uses on this fold. Measured: size fraction is 0.00
-through ~80% of travelled distance (eased travel runs ahead of raw), then completes. It
-reverses for free — on an un-drop the from/target sizes swap and the shrink lands at the
-end of the trip home. `plainGlide` is deliberately excluded and stays on the eased clock,
-so page8's invisible handoff is unaffected.
+**Fly to the centre, then resize.** The flight lerps the dot's **centre**, not its top-left
+corner, and the drawn corner is recovered from that centre and the frame's *current* size.
+`x`/`y` are the top-left of a block whose size is about to change, so interpolating corners
+flew the dot to the corner of its slot and then grew it down-and-right out of that corner.
+Centre-to-centre lands it in the middle of the slot it is about to fill and the size beat
+expands symmetrically about that point — measured centre drift while the size beat runs is
+**0.000px** over 2528 mid-resize frames. At rest the maths is an exact identity
+(`targetX + targetSq/2 − targetSq/2`), so the resting layout is untouched.
+
+**Fly, then resize — in sequence, not overlapping.** For a dot whose size actually changes,
+the position beat is **compressed** into the first `P9_DROP_SIZE_START` (0.7) of its slot and
+is fully landed before the size beat runs over the remaining 30%; both slices come off the
+**raw** (pre-`p9Ease`) progress and are re-eased fresh. Slicing only the *size* off the tail
+of the shared clock was not enough: `p9Ease` is sine in-out, so raw 0.7 is already ~85% of the
+distance and the dot was still visibly drifting the last stretch while it grew. Measured at
+1440×900 with tiers on: size fraction 0.000 through 90% of travelled distance, all of it after
+the dot lands. On an un-drop the order is REVERSED, not mirrored — see "Removing a pill" below.
+A dot whose size doesn't change (big desktop, `legitSq === SQ`)
+keeps the uncompressed clock exactly, and `plainGlide` is excluded outright so page8's
+invisible handoff is unaffected.
+
+**Removing a pill: resize FIRST, then fly.** Only the extreme→legit direction —
+a dot that *shrinks*. It resizes in place at the head of its slot (`animSizeAt =
+slotStart`, still a fixed `P9_DROP_SIZE_MS`) and the flight home is held back
+behind it, compressed into the last `P9_DROP_SIZE_START` of the slot. Keyed per
+dot on `targetSq < from.sq` (`shrinks` in `p9PlaceDot`), so the legit→extreme
+drop keeps fly-then-resize untouched. A big block flying the whole way across
+and only shrinking on arrival read as being dumped; shrinking on the spot first
+reads as being let go.
+
+**Each dot resizes at the end of its own trip.** The size beat starts the moment
+*that* dot lands — not when the field does — so the growth ripples through the
+drop's stagger the way the flight does. The whole-field alternatives (everyone
+lands, *then* everyone grows, optionally on @fold10's biggest-crowd-first tier
+stagger) were compared live and **rejected**: the drop's clock carries the whole
+per-dot stagger, so on a big category nothing would resize for ~6s. `p9DropNow`,
+`P9_DROP_SIZE_MODE` and `P9_DROP_TIER_STAGGER_MS` are gone with them — **don't
+reintroduce**.
+
+The resize beat is a fixed **`P9_DROP_SIZE_MS` (450ms)** — @fold10's
+`P7_MORPH_SIZE_MS`, the same property — deliberately *not* a share of the drop's
+clock, for the same reason: a "30% tail" of a 13s staggered drop was a
+four-second grow. `P9_DROP_SIZE_START` (0.7) now only says *when* the size beat
+starts, never how long it lasts, and it runs off wall time (`animSizeAt`, the
+absolute ms this dot's slot ends) rather than the clamped progress, so the
+window keeps its full length even past the end of the slot.
 
 **Dropping back to legit** is much simpler: a flat `DOT_DURATION = 3000` ms plain glide
 with no stagger, and an 800 ms count-down animation running concurrently (started
@@ -946,9 +1008,14 @@ two folds:
   band `visible` and runs the pill pop-in described above — the band carries no chrome in
   V2, so nothing but the pills appears. The tray keeps `pointer-events: none`, so no pill is
   draggable yet. Scrolling back up removes it and the pills shrink away, mirrored.
+  **The pills arrive bare — no 6-dot grip handle.** Nothing is draggable on this fold, so
+  the grip would advertise an affordance the fold can't honour; the handle is @fold13's
+  beat instead (below), and the pill is narrower by exactly its footprint here.
 - **`.engaged` — @fold13's stick.** Everything else: the full-bleed `::after` rule, the
-  drop zone (`.page9-zone-wrap-extreme`), the pinned `.page9-header`, and the tray's
-  `pointer-events: auto`. `page9UpdateFromScroll` also *adds* `.pills-in` whenever it
+  drop zone (`.page9-zone-wrap-extreme`), the pinned `.page9-header`, the tray's
+  `pointer-events: auto` — and the **grip handles popping in**, each pill widening around
+  its own on the same `--p9-pop-i × --p9-pop-stagger` right→left crest the pills used a
+  fold earlier. `page9UpdateFromScroll` also *adds* `.pills-in` whenever it
   engages, as a safety net for a load or jump straight into @fold13 that fires no scroll
   event over @fold12's title.
 

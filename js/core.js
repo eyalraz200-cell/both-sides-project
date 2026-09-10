@@ -58,7 +58,7 @@ let currentPage = 0;
 // drawn over them (updateGroups, below), so the whole screen dims by one
 // consistent amount. `var`, not `let`, deliberately: it stays overridable
 // from the console/a tuning harness.
-var HOVER_DIM_OPACITY = 0.2;
+var HOVER_DIM_OPACITY = 0.27;
 
 // Per-group override of the factor above, keyed by the DIMMED dot's own
 // `actor` (GROUPS' events.json join key) — not the hovered one's. The six
@@ -67,14 +67,10 @@ var HOVER_DIM_OPACITY = 0.2;
 // carry its own. An actor with no entry here falls back to
 // HOVER_DIM_OPACITY, so this staying empty = the old single-value behavior.
 // `var` for the same reason as above: overridable from a tuning harness.
-// Only the three groups that needed to go FURTHER back than the shared 0.2 are
-// listed — tuned by eye on the real timeline; the other three read right at the
-// default and are deliberately absent rather than restating 0.2.
-var HOVER_DIM_BY_ACTOR = {
-  "settlers": 0.15,                       // תנועות התנחלות באיו״ש
-  "right wing protesters": 0.15,          // קבוצות ימין לאומיות
-  "protesters against government": 0.11,  // מתנגדי הרפורמה המשפטית
-};
+// Empty since 2026-09-10: re-tuned by eye with a per-group harness and every
+// group landed on the same value (0.27), so the shared number carries all six. The hook
+// stays for the next time one colour needs its own number.
+var HOVER_DIM_BY_ACTOR = {};
 function hoverDim(actor) {
   const v = HOVER_DIM_BY_ACTOR[actor];
   return v === undefined ? HOVER_DIM_OPACITY : v;

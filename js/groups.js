@@ -875,6 +875,19 @@ function fold6LegendFilterEl(g) {
   if (el) return el;
   el = document.createElement("div");
   el.className = "fold6-legend-filter";
+  // The row says it is clickable on hover (style.css .is-filter-hover): its
+  // label lifts to black and its swatch grows, the other rows step back. Class
+  // flips only — the per-frame inline writes never touch these properties.
+  el.addEventListener("mouseenter", () => {
+    const item = groupItems[GROUPS.indexOf(g)];
+    if (item) item.el.classList.add("is-filter-hover");
+    groupsOverlayEl.classList.add("is-filter-hover-any");
+  });
+  el.addEventListener("mouseleave", () => {
+    const item = groupItems[GROUPS.indexOf(g)];
+    if (item) item.el.classList.remove("is-filter-hover");
+    groupsOverlayEl.classList.remove("is-filter-hover-any");
+  });
   el.addEventListener("click", () => {
     // Clickable on @fold9 and @fold10 (page7.js draws them itself, so the
     // toggle gets its full shrink-then-fly) and on @fold12, where page8's glide
@@ -1331,7 +1344,7 @@ function fold10GridPast() {
 }
 
 // @fold11 (#page-10) — the fold right after the size grid: the squares go back
-// to ONE uniform size so the counts can be compared, and the «היקף האירועים»
+// to ONE uniform size so the counts can be compared, and the «הצגת גודל האירועים»
 // toggle appears above the right-hand mini-legend so the reader can put the
 // crowd-size grid back on by hand. Same house 0.5 crossing, same shim as
 // @fold10 above, just inverted: crossing DOWN switches the grid off, crossing
@@ -1360,18 +1373,32 @@ function fold11BeatGapMs() {
 }
 function fold11SizeApply(past, instant) {
   clearTimeout(fold11SizeBeatTO); fold11SizeBeatTO = null;
+  // The «הצגת גודל האירועים» toggle's own ring-pop + type-in reveal rides this
+  // same crossing (see p7ScopeRevealTrigger below).
+  if (typeof p7ScopeRevealTrigger !== "undefined") {
+    p7ScopeRevealTrigger[instant ? "set" : "trigger"](past ? 1 : 0);
+  }
   if (past) {
     p7SizeGridSet(true, { uniform: true, instant });
     if (instant) p8Trigger();
     else if (fold11BeatGapMs() <= 0) p8Trigger();
-    else fold11SizeBeatTO = setTimeout(p8Trigger, fold11BeatGapMs());
+    else fold11SizeBeatTO = setTimeout(() => {
+      fold11SizeBeatTO = null; p8Trigger();
+    }, fold11BeatGapMs());
   } else {
     p8TriggerReverse();
     if (instant) p7SizeGridSet(true, { uniform: false, instant: true });
-    else fold11SizeBeatTO = setTimeout(
-      () => p7SizeGridSet(true, { uniform: false }), P8_REVERSE_DURATION);
+    else fold11SizeBeatTO = setTimeout(() => {
+      fold11SizeBeatTO = null; p7SizeGridSet(true, { uniform: false });
+    }, P8_REVERSE_DURATION);
   }
 }
+// True while the second beat is still waiting to leave. p7SizeGridOnPage
+// (page7.js) reads it and stands down: this fold's beats straddle a page flip,
+// so without it the flip's instant re-sync fires INSIDE the sequence and snaps
+// the flags the sequence is mid-way through animating. The handle is nulled by
+// each timeout above so this can never latch true.
+function fold11SizeBeatPending() { return fold11SizeBeatTO !== null; }
 const fold11SizeTrigger = {
   set:     v => fold11SizeApply(v === 1, true),
   trigger: v => fold11SizeApply(v === 1, false),
@@ -1382,23 +1409,42 @@ function fold11SizePast() {
   return fold11SizeCardEl.getBoundingClientRect().top <= window.innerHeight * 0.5;
 }
 
-// ── The «היקף האירועים» toggle ──────────────────────────────────────────────
+// ── The «הצגת גודל האירועים» toggle ──────────────────────────────────────────────
 // Desktop only (the size grid itself is desktop-only). It is a DIRECT .layout
 // child, not a .groups-overlay one: .groups-overlay is z-index 0 and its own
 // stacking context, so a button inside it would sit under .text-col and never
 // see a click (the same trap #page9CatTooltip and .fold6-note-layer work
 // around). updateGroups (js/update-groups.js) parks it above the right-hand
 // legend column every frame.
-const P7_SCOPE_BTN_LABEL = "היקף האירועים";
+const P7_SCOPE_BTN_LABEL = "הצגת גודל האירועים";
 // Vertical gap between the button's bottom edge and the TOP legend row's
 // centre line (fold6RowIndexY(0, H)) — the pitch between rows is 24, so this
 // reads as "one row further up, plus air".
 const P7_SCOPE_BTN_GAP = 22;
+// The checkmark ring's outer diameter, in step with .p7-scope-btn::before's
+// `width`/`height` in style.css. updateGroups needs it to line the ring's
+// center up with the legend swatches' center column.
+const P7_SCOPE_RING_PX = 10;
+// The button does NOT fade in (per explicit spec): the ring POPS in and the
+// label TYPES in behind it, the same grow-then-type order the @fold7 tooltip
+// uses. One trigger, two windows sliced off its RAW progress and re-eased
+// fresh (house rule) — the ring on p7Ease (cubic out, the house pop curve),
+// the characters on p9Ease. Fired from fold11SizeApply at the same 0.5
+// crossing that flattens the squares, so it reverses with the fold: scrolling
+// back up un-types the label and the ring pops back out.
+const P7_SCOPE_RING_POP_MS      = 260;
+const P7_SCOPE_TYPE_MS_PER_CHAR = 22;
+const P7_SCOPE_REVEAL_MS =
+  P7_SCOPE_RING_POP_MS + P7_SCOPE_BTN_LABEL.length * P7_SCOPE_TYPE_MS_PER_CHAR;
+const p7ScopeRevealTrigger = makeTrigger(P7_SCOPE_REVEAL_MS, (...a) => updateGroups(...a));
 const p7ScopeBtnEl = document.createElement("button");
 p7ScopeBtnEl.type = "button";
 p7ScopeBtnEl.className = "p7-scope-btn";
 p7ScopeBtnEl.textContent = P7_SCOPE_BTN_LABEL;
 p7ScopeBtnEl.setAttribute("aria-pressed", "false");
+// The visible label is sliced per frame while it types, so the accessible name
+// comes from a static aria-label instead of the truncated text content.
+p7ScopeBtnEl.setAttribute("aria-label", P7_SCOPE_BTN_LABEL);
 p7ScopeBtnEl.addEventListener("click", () => {
   // Toggles the TIERS, not the grid: the squares stay packed either way — the
   // grid going "off" would fly them back onto the timeline, which is not what

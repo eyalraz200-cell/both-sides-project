@@ -169,7 +169,7 @@ subtract the top knob, so 0/0 reproduces the shipped geometry exactly.
 Delete each file **and** its `<script>` tag when it is no longer wanted.
 
 
-*(`_debug-fold3.js`, the `manual/` that picked `@fold3`'s per-camp row order and the 180px
+*(`_debug-legend-ux.js` + `_debug-scope-btn.js`, the two 2026-09-10 panels that picked the shared hover-dim (0.3, then re-levelled to **0.27**), the scope button's circle-checkmark look and its +2/+10 placement nudge, the legend row's hover cue and the scope button's 12px text, deleted the same day; `_debug-fold3.js`, the `manual/` that picked `@fold3`'s per-camp row order and the 180px
 camp gap — it permuted `fold6.y` among a camp's three groups rather than turning any order
 field, since `legendRow` derives the order from those y values,
 `_debug-tooltip-style.js`, the `compare/` that picked the desktop tooltip's group-colour

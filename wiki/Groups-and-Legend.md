@@ -224,17 +224,39 @@ decides the line count it measures.
 The note's own width/right edge read the same inset functions, so it stays flush with the
 right column at either breakpoint.
 
-## The «היקף האירועים» button above the right column
+## The «הצגת גודל האירועים» button above the right column
 
 @fold11's manual switch for the crowd-size tiers (`p7ScopeBtnEl`, js/groups.js;
-`.p7-scope-btn`, style.css). It reads as part of the mini-legend — right edge
-flush with the right column's rows, `P7_SCOPE_BTN_GAP` (22px) above the **top**
-row's centre line, both written every frame by `updateGroups` — but it is **not**
+`.p7-scope-btn`, style.css; 14px Assistant, **no letter-spacing** — matching `.group-label`'s settled mini-legend type exactly). It is **not a pill**:
+borderless text with a **10px ring** 8px to its right (`::before`, `flex-direction:
+row-reverse` so the ring lands on the RTL row's right) — empty when off, **filled dark** under
+`.is-on`, with no tick inside it (at 10px a checkmark is a smudge, so the fill alone carries
+the state). It reads as part of the mini-legend, and it is aligned by its **ring**, not by its box:
+the circle's center sits on the swatch column's center line (`W − fold6LegendInsetRight() −
+LEFT_LEGEND_SWATCH_SIZE / 2`), which puts the button's `left` at that x minus its own width
+plus `P7_SCOPE_RING_PX / 2` (10px, js/groups.js — must stay in step with the `::before`'s
+`width`, which is `box-sizing: border-box` because the `*` reset doesn't reach pseudo-elements).
+The ring itself is centered on the label's **ink**, not its line box: `--p7-scope-ring-ink`
+is `groupLabelInkShift(14)`, the same measurement the legend rows use for their swatches,
+applied as a `translateY` alongside the pop's `scale`. And because the label TYPES in, the
+button pins `line-height: 17px` / `min-height: 25px` — without it an empty box measures short
+and the placement (which subtracts `btnH`) jerked the control 5px upward on the first typed
+character. Vertically, `P7_SCOPE_BTN_GAP` (22px) above the **top**
+row's centre line **−10px** (that nudge tuned by eye 2026-09-10), all written every frame by `updateGroups` — but it is **not**
 a `.groups-overlay` child. The overlay is `pointer-events: none` *and*
 `z-index: 0` with its own stacking context, so a button inside it would sit under
 `.text-col` and never see a click; the button is a direct `.layout` child at
 `z-index: 3` instead (`.fold6-note-link` gets away with living in the overlay
-only because `.fold6-note-layer` is a separate `z-index: 2` layer). Appears on @fold11's crossing — the fold whose copy names it — and stays for every fold
+only because `.fold6-note-layer` is a separate `z-index: 2` layer). Appears on @fold11's crossing — the fold whose copy points at it — and it **never fades in**:
+the ring **pops** in on `p7Ease` over `P7_SCOPE_RING_POP_MS` (260) and the label **types** in
+behind it at `P7_SCOPE_TYPE_MS_PER_CHAR` (22) per character on `p9Ease` (`typedText`), the same
+grow-then-type order the @fold7 tooltip uses. One `p7ScopeRevealTrigger` (js/groups.js) fired
+from `fold11SizeApply`, its raw progress sliced into the two windows and re-eased fresh, so a
+reverse crossing un-types the label and pops the ring back out. The ring's scale rides a
+`--p7-scope-ring-t` custom property written per frame (hence no CSS transition on the
+transform), and the typed label is measured *before* the button's right-edge placement each
+frame, so the ring holds still while the characters grow leftward. The accessible name comes
+from a static `aria-label`, since the visible text is sliced. Then it stays for every fold
 after it, fading out with everything else on @fold14's `p9.fold13OutT` clock;
 `hidden` before that. Desktop only. Behaviour and what it
 toggles: [Timeline](Timeline.md#the-size-grid).
@@ -1013,7 +1035,12 @@ and that group leaves the graph (its dots shrink away, the rest re-pack and fly)
 The click strips are `.fold6-legend-filter`, one per row, built by
 `fold6LegendFilterEl(g)` inside that column's hover box and positioned per frame by
 `updateGroups`; a filtered row carries `is-filtered-off` (opacity .28) on its
-`.group-item`. Desktop only; the strips are clickable on @fold9 through @fold13 (on @fold12/@fold13 a
+`.group-item`. **Hovering a strip says the row is clickable:** it puts `is-filter-hover`
+on that `.group-item` (label → `#000`, swatch `transform: scale(1.5)`) and
+`is-filter-hover-any` on `.groups-overlay` (every other non-filtered row drops to opacity
+.45), all over 260ms CSS transitions on `.group-item` opacity / `.group-swatch` transform —
+the only transitions those elements carry, and the opacity one also softens the
+`is-filtered-off` flip. Desktop only; the strips are clickable on @fold9 through @fold13 (on @fold12/@fold13 a
 toggle animates by size only, and the 8 claimed squares scale with it on every fold —
 see Timeline; those 8 read the canvas's own beat functions rather than re-deriving
 them — `p8Beats(rawT).posE`/`.sizeE` for the glide — which is the standing rule for

@@ -95,11 +95,22 @@ function p9TrayGrid() {
 // as a click (desktop click-to-classify, see the pointerdown handler in
 // p9BuildPanel) rather than a drag.
 const P9_CLICK_SLOP_PX = 4;
-
-// Where in a dropped dot's flight its resize starts, as a fraction of the raw
-// travel. 0 = size and position on one clock (the old behaviour); 0.7 = fly at
-// the old size for the first 70%, then do the whole resize in the last 30%.
+// FLY, THEN RESIZE — a dropped dot's trip is two beats on its own clock: it
+// FLIES over the first P9_DROP_SIZE_START of its slot (position fully landed by
+// then) and only then RESIZES, over a fixed P9_DROP_SIZE_MS. Raise the share
+// for a longer flight and a later grow, lower it for the reverse; 1 would start
+// the grow only once the whole slot is spent. Only applies to a dot whose size
+// actually changes — and the ORDER depends on which way it changes: a dot that
+// grows (a pill dropped into a column) flies then resizes; a dot that shrinks
+// (a pill removed, going home to the legit grid) resizes then flies, the same
+// share splitting the slot the other way round.
 const P9_DROP_SIZE_START = 0.7;
+// How long the resize beat itself lasts, in ms — @fold10's P7_MORPH_SIZE_MS,
+// the same property. FIXED, not a share of the drop's clock: that clock carries
+// the whole per-dot stagger (13s+ for a big category), so a 30% "tail" was a
+// four-second grow. The resize starts when the flight is done and takes this
+// long whatever the drop's size.
+const P9_DROP_SIZE_MS = 450;
 const P9_SQ      = 3;
 const P9_GAP  = 1;
 const P9_CELL = P9_SQ + P9_GAP;
@@ -462,7 +473,7 @@ const p9 = {
   // Keeps the last-highlighted category index alive during fade-out so dots
   // that were at full opacity don't jump dim the instant hoveredCategoryIdx clears.
   hoverDimCategoryIdx: null,
-  // ── «היקף האירועים» on this fold (p9ScopeSet & co, below) ───────────────
+  // ── «הצגת גודל האירועים» on this fold (p9ScopeSet & co, below) ───────────────
   // The cached tier pack, per side: { left: {key, layout}, right: {...} }.
   // Nulled by any press, by a resize, and on every page flip.
   scopeLayout: null,
@@ -521,6 +532,17 @@ function p9FilterSnapshot() {
   p9.anim = { from: new Map(p9.lastPositions), start: performance.now(),
               duration: P9_FILTER_REPACK_MS, repositionMs: P9_FILTER_REPACK_MS };
   p9RunAnimLoop();
+  // The column labels answer the toggle too — on the same clock as the re-pack,
+  // so the number lands as the column finishes closing ranks. `from` is the
+  // last painted pair (p9LastDrawnCounts), not p9ExtremeCountsNow(): p7FilterOff
+  // was already mutated before p7FilterCommit called us, so "now" is the target.
+  if (p9LastDrawnCounts) {
+    const to = p9ExtremeCountsNow();
+    p9CountAnim = { fromLeft: p9LastDrawnCounts.left,  toLeft:  to.left,
+                    fromRight: p9LastDrawnCounts.right, toRight: to.right,
+                    start: performance.now(), duration: P9_FILTER_REPACK_MS };
+    p9CountRunLoop();
+  }
 }
 
 // Frames for a legend-filter toggle that nothing else is already animating:
@@ -549,6 +571,7 @@ let p9FilterRaf = 0;
 // labels stay frozen at the pre-drop count while dots travel, then count up
 // once they've arrived. fromLeft/toLeft (and right) are the integer endpoints.
 let p9CountAnim = null; // { fromLeft, toLeft, fromRight, toRight, start, duration }
+let p9LastDrawnCounts = null; // the numbers actually painted last frame
 
 function p9CountRunLoop() {
   if (!p9CountAnim) return;
@@ -1026,7 +1049,7 @@ function p9BulgeTick() {
   const now = performance.now();
   const dt  = p9BulgeLastTick ? Math.min(100, now - p9BulgeLastTick) : 0;
   p9BulgeLastTick = now;
-  // Tiered (@fold13's «היקף האירועים»), the blocks already ARE the crowd size,
+  // Tiered (@fold13's «הצגת גודל האירועים»), the blocks already ARE the crowd size,
   // so drawBandedCols ignores bulges — registering one anyway left `active`
   // true and rescheduled a full-canvas redraw every frame the cursor sat on a
   // block, for no visible change. That was the hover stutter.
@@ -1053,7 +1076,7 @@ function p9BulgeSize(ev) {
   return b ? P9_SQ * (1 + (P7_BULGE_MULT[p7BulgeTier(ev)] - 1) * p9Ease(b.t)) : P9_SQ;
 }
 
-// ── «היקף האירועים» on @fold13 — crowd tiers in the EXTREME columns ─────────
+// ── «הצגת גודל האירועים» on @fold13 — crowd tiers in the EXTREME columns ─────────
 // The button (p7ScopeBtnEl, js/groups.js) drives @fold10/@fold11's size grid
 // through p7SizeGridSet. That machinery is page7's and is gated to currentPage
 // 8..10, so on @fold13 the press flipped p7GridUniform and nothing on screen
@@ -1215,37 +1238,19 @@ function p9ScopeMorphMs() {
 
 // Blend one square from where it was drawn to its new cell. Mirrors
 // p7MorphBlend exactly, minus the p7GridMorph read.
-// TEMP compare/ scaffolding — which beat leads @fold13's tier morph. Page9's
-// OWN windows, so tuning them never touches @fold10's constants. Seeded from
-// @fold10's numbers, so "fly-then-size" is byte-for-byte what shipped.
-//   fly-then-size  fly, size joins P9_SCOPE_GAP_MS before the flight lands
-//   strict-fly     the flight fully lands, THEN every tier grows
-//   size-then-fly  grow in place first, then the whole field flies
-//   together       both beats on the same clock
-var P9_SCOPE_ORDER      = "strict-fly";
+// STRICT FLY, THEN GROW — the whole field lands, then every tier grows,
+// biggest crowd first. Page9's OWN constants, so tuning them never touches
+// @fold10's, though they're seeded from @fold10's numbers.
 var P9_SCOPE_FLY_MS     = 1400;
 var P9_SCOPE_SIZE_MS    = 450;
-var P9_SCOPE_GAP_MS     = -300;   // <0 overlaps the two beats, >0 waits between
 var P9_SCOPE_STAGGER_MS = 140;    // tier-to-tier delay, biggest crowd first
 var P9_SCOPE_PUSH       = true;   // hold a dot back from outgrowing its spacing
 
 function p9ScopeWindows(tier) {
-  const maxT   = typeof P7_MAX_TIER !== "undefined" ? P7_MAX_TIER : 5;
-  const stag   = (maxT - tier) * P9_SCOPE_STAGGER_MS;
-  const allStag = maxT * P9_SCOPE_STAGGER_MS;
-  switch (P9_SCOPE_ORDER) {
-    case "size-then-fly":
-      return { size: [stag, P9_SCOPE_SIZE_MS],
-               pos:  [allStag + P9_SCOPE_SIZE_MS + P9_SCOPE_GAP_MS, P9_SCOPE_FLY_MS] };
-    case "together":
-      return { pos: [0, P9_SCOPE_FLY_MS], size: [stag, P9_SCOPE_SIZE_MS] };
-    case "strict-fly":
-      return { pos: [0, P9_SCOPE_FLY_MS],
-               size: [P9_SCOPE_FLY_MS + stag, P9_SCOPE_SIZE_MS] };
-    default:   // fly-then-size
-      return { pos: [0, P9_SCOPE_FLY_MS],
-               size: [P9_SCOPE_FLY_MS + P9_SCOPE_GAP_MS + stag, P9_SCOPE_SIZE_MS] };
-  }
+  const maxT = typeof P7_MAX_TIER !== "undefined" ? P7_MAX_TIER : 5;
+  const stag = (maxT - tier) * P9_SCOPE_STAGGER_MS;
+  return { pos:  [0, P9_SCOPE_FLY_MS],
+           size: [P9_SCOPE_FLY_MS + stag, P9_SCOPE_SIZE_MS] };
 }
 function p9ScopeTotalMs() {
   const w = p9ScopeWindows(0);   // tier 0 is the last to start in every order
@@ -1501,6 +1506,9 @@ function drawPage9(ctx, W, H) {
     const filtF = typeof p7FilterSizeFactor === "function" ? p7FilterSizeFactor(e) : 1;
     if (filtF <= 0.002) return;
     let drawX = targetX, drawY = targetY, drawAlpha = targetAlpha;
+    // The animated CENTRE. null until an animation sets it; the corner is
+    // recovered from it once the frame's size is known (see below).
+    let drawCX = null, drawCY = null;
     // The animation's own eased progress for this dot, kept for the size lerp
     // below. 1 (= fully arrived, draw at the target size) whenever nothing is
     // animating this dot.
@@ -1509,10 +1517,19 @@ function drawPage9(ctx, W, H) {
     // the raw clock — slicing the eased value and easing again would compound
     // the curve (house rule: never ease an already-eased slice).
     let animRaw = 1;
+    // Absolute ms at which this dot's size beat starts (its flight is over).
+    let animSizeAt = 0;
+    // Resolved up here, not after the flight: whether this dot resizes at all
+    // decides whether its POSITION beat is compressed (see below).
+    const targetSq = sizeOverride ?? SQ;
     const from = p9.anim ? p9.anim.from.get(e) : null;
     {
       if (from) {
         let t, rawT = 1;
+        // This dot's own position slot, in absolute ms — the size beat hangs off
+        // its END, and needs real elapsed time (rawT clamps at 1, wall time
+        // doesn't) to run its own fixed-length window past it.
+        let slotStart = p9.anim.start, slotMs = p9.anim.duration || 1;
         if (p9.anim.newEventStagger && p9.anim.newEventStagger.has(e)) {
           // New extreme dot — departs once the reposition phase finishes
           // (phase2Start === start+repositionMs), or immediately/concurrently
@@ -1523,6 +1540,7 @@ function drawPage9(ctx, W, H) {
           const dotArrival  = p9.anim.newEventStagger.get(e);
           const phase2Start = p9.anim.phase2Start;
           const dotDur      = dotArrival - phase2Start;
+          slotStart = phase2Start; slotMs = dotDur;
           rawT = Math.min(1, Math.max(0, (performance.now() - phase2Start) / dotDur));
           t = p9Ease(rawT);
         } else if (p9.anim.plainGlide) {
@@ -1566,14 +1584,53 @@ function drawPage9(ctx, W, H) {
           const tierCount   = isHighRank ? (orderCount ?? 1) - low : (low || (orderCount ?? 1));
           const denom       = Math.max(1, tierCount - 1);
           const dotStart    = p9.anim.start + staggerSpan * (tierIndex / denom);
+          slotStart = dotStart; slotMs = travelDur;
           rawT = Math.min(1, Math.max(0, (performance.now() - dotStart) / travelDur));
           t = p9Ease(rawT);
         }
-        drawX     = from.x     + (targetX     - from.x)     * t;
-        drawY     = from.y     + (targetY     - from.y)     * t;
+        // FLY, THEN RESIZE — really then, not overlapping. Slicing the size
+        // off the tail of the shared clock wasn't enough: p9Ease is sine
+        // in-out, so raw 0.7 is already ~85% of the DISTANCE and the dot was
+        // still visibly drifting the last stretch while it grew. So for a dot
+        // that actually changes size, the position beat is compressed into
+        // the first P9_DROP_SIZE_START of its slot and is fully landed before
+        // the size beat starts — two beats in sequence, like the scope
+        // morph's strict-fly. A dot whose size doesn't change (big desktop,
+        // where legitSq === SQ) keeps the uncompressed clock exactly, and
+        // plainGlide is excluded outright so page8's handoff is untouched.
+        const resizes = from.sq !== undefined
+          && Math.abs(targetSq - from.sq) > 0.01
+          && !(p9.anim.plainGlide && p9.anim.fromSQ !== undefined);
+        // ...and the mirror image on the way OUT. Removing a pill sends its
+        // dots back to the legit grid, i.e. they SHRINK — and there the order
+        // flips: resize FIRST, then fly. A big extreme block gliding all the
+        // way across the canvas and only shrinking once it arrives reads as a
+        // block being dumped; shrinking on the spot first reads as it being
+        // let go. Keyed on the direction of this dot's own size change, so the
+        // legit->extreme drop above is untouched (it grows, so it keeps
+        // fly-then-resize) and a dot that doesn't resize at all keeps the
+        // plain uncompressed clock.
+        const shrinks = resizes && targetSq < from.sq;
+        t = p9Ease(
+          shrinks ? Math.max(0, (rawT - (1 - P9_DROP_SIZE_START)) / P9_DROP_SIZE_START)
+          : resizes ? Math.min(1, rawT / P9_DROP_SIZE_START)
+          : rawT);
+        // Lerp the dot's CENTRE, not its top-left corner. x/y here are the
+        // top-left of a block whose size is about to change, so interpolating
+        // corners flies the dot to the corner of the slot and then grows it
+        // down-and-right out of that corner. Flying centre-to-centre lands it
+        // in the middle of the slot it is going to fill, and the size beat
+        // then expands symmetrically about that point — the corner is derived
+        // from the centre and the CURRENT size, further down.
+        const fSq = from.sq !== undefined ? from.sq : targetSq;
+        drawCX    = (from.x + fSq / 2) + ((targetX + targetSq / 2) - (from.x + fSq / 2)) * t;
+        drawCY    = (from.y + fSq / 2) + ((targetY + targetSq / 2) - (from.y + fSq / 2)) * t;
         drawAlpha = from.alpha + (targetAlpha - from.alpha) * t;
         animT     = t;
         animRaw   = rawT;
+        // Grow: at the END of the flight. Shrink: at the START of the slot,
+        // with the flight held back behind it by the same share.
+        animSizeAt = shrinks ? slotStart : slotStart + slotMs * P9_DROP_SIZE_START;
       }
     }
     // Recorded here — the actually-drawn, mid-interpolation position/alpha,
@@ -1585,7 +1642,7 @@ function drawPage9(ctx, W, H) {
     // real one. Captured before hover-dimming below, which is a transient
     // display-only effect that shouldn't get baked into the next animation's
     // starting alpha.
-    let sq = sizeOverride ?? SQ;
+    let sq = targetSq;
     // page8's glide doesn't only move the dots, it SHRINKS them from the real
     // timeline's square size down to the legit grid's across the flight
     // (blendAndDraw, page8.js). When @fold13's title scrolls up mid-glide,
@@ -1606,16 +1663,19 @@ function drawPage9(ctx, W, H) {
       // On big desktop legitSq === SQ so this is a no-op there.
       // FLY, THEN RESIZE. The size used to ride the position's own clock, so a
       // dot grew from the legit size to the extreme one all the way across its
-      // flight. It now holds its old size for the first P9_DROP_SIZE_START of
-      // the raw travel and does the whole resize in the tail, so the flight
-      // reads as a flight and the growth as a separate, later beat — the same
-      // ordering the scope morph uses on this fold. Reverses for free: on an
-      // un-drop the from/target sizes swap and the shrink lands at the end of
-      // the trip home.
-      const sizeT = p9Ease(Math.min(1, Math.max(0,
-        (animRaw - P9_DROP_SIZE_START) / (1 - P9_DROP_SIZE_START))));
+      // flight. It now holds its old size for the whole flight and starts
+      // growing the moment THIS dot lands, over a fixed P9_DROP_SIZE_MS — so
+      // the flight reads as a flight and the growth as a separate, later beat,
+      // the same ordering the scope morph uses on this fold. On an un-drop the
+      // order is reversed instead of mirrored (see `shrinks` above): the beat
+      // runs first, at the head of the slot, and the flight home follows it.
+      const sizeT = p7MorphWin(performance.now() - animSizeAt, [0, P9_DROP_SIZE_MS]);
       sq = from.sq + (sq - from.sq) * sizeT;
     }
+    // Now that this frame's size is known, put the (possibly mid-resize) block
+    // back on its animated centre. Without an animation the centre is null and
+    // the target corner stands as-is, so the resting layout is untouched.
+    if (drawCX !== null) { drawX = drawCX - sq / 2; drawY = drawCY - sq / 2; }
     posMap.set(e, { x: drawX, y: drawY, alpha: drawAlpha, sq: sq });
 
     if (recordOnly) return;
@@ -1926,7 +1986,7 @@ function drawPage9(ctx, W, H) {
     let leftCount, rightCount;
     if (p9.hoveredCategoryIdx !== null) {
       // Pill hovered — show only that category's dot count, no animation.
-      const catFilter = e => CATEGORY_TO_IDX[e.category] === p9.hoveredCategoryIdx;
+      const catFilter = e => CATEGORY_TO_IDX[e.category] === p9.hoveredCategoryIdx && p9CountsEvent(e);
       leftCount  = leftTop.filter(catFilter).length;
       rightCount = rightTop.filter(catFilter).length;
     } else {
@@ -1940,6 +2000,10 @@ function drawPage9(ctx, W, H) {
     // the labels in/out (p9CountLabelAnimate) instead of snapping, per
     // explicit feedback — the fade itself is p9CountLabelAlpha, updated here
     // since this is the one place both sides' counts are already resolved.
+    // Kept for p9FilterSnapshot: a legend toggle has to count from what the
+    // label is actually showing, and by the time it runs p7FilterOff already
+    // holds the NEW state, so the old number is unrecoverable otherwise.
+    p9LastDrawnCounts = { left: leftCount, right: rightCount };
     const anyCount = leftCount > 0 || rightCount > 0;
     if (anyCount !== p9CountLabelWasOn) {
       p9CountLabelWasOn = anyCount;
@@ -2004,8 +2068,25 @@ function drawPage9(ctx, W, H) {
       const countsY    = mobile
         ? Math.max(countsYRaw, topY - P9_COUNT_LABEL_ROOM_M + P9_COUNT_LINE_H_M)
         : countsYRaw;
-      const leftPos  = p9AnimateLeftCountPos(centerX - leftRealCols * CELL / 2, countsY);
-      const rightPos = p9AnimateRightCountPos(rightX0 + rightRealCols * CELL / 2, countsY);
+      // In tier/resize mode («הצגת גודל האירועים») the block is NOT
+      // extremeColsTotal wide — p9ScopeLayoutFor solves a wider column count and
+      // drawBandedCols lays the dots out over it, growing outward from the
+      // centre split. leftRealCols/rightRealCols only know the untiered width,
+      // so centering on them puts the label off by half the difference. Take the
+      // span drawBandedCols actually drew instead (p9.scopeStats.*Cols, written
+      // by both calls a few lines above this block and cleared right before
+      // them), still floored by how many columns this side's events can fill —
+      // untiered that reduces to exactly leftRealCols/rightRealCols, so the
+      // short-column behaviour this block's opening comment describes is
+      // unchanged. cellPx is always CELL (p9ScopeBox), so the pitch needs no
+      // substitution.
+      const stats          = p9.scopeStats || {};
+      const leftDrawnCols  = p9.leftTopOrder.length
+        ? Math.min(stats.leftCols  ?? extremeColsTotal, p9.leftTopOrder.length)  : 0;
+      const rightDrawnCols = p9.rightTopOrder.length
+        ? Math.min(stats.rightCols ?? extremeColsTotal, p9.rightTopOrder.length) : 0;
+      const leftPos  = p9AnimateLeftCountPos(centerX - leftDrawnCols * CELL / 2, countsY);
+      const rightPos = p9AnimateRightCountPos(rightX0 + rightDrawnCols * CELL / 2, countsY);
       drawEventsCount(leftCount,  leftPos.x,  leftPos.y);
       drawEventsCount(rightCount, rightPos.x, rightPos.y);
     }
@@ -2089,11 +2170,11 @@ function p9CurrentExtremeDisplayedCounts() {
     let arrivedLeft = 0, arrivedRight = 0;
     for (const e of p7.leftEvents) {
       const dotArrival = p9.anim.newEventStagger.get(e);
-      if (dotArrival !== undefined && now >= dotArrival) arrivedLeft++;
+      if (dotArrival !== undefined && now >= dotArrival && p9CountsEvent(e)) arrivedLeft++;
     }
     for (const e of p7.rightEvents) {
       const dotArrival = p9.anim.newEventStagger.get(e);
-      if (dotArrival !== undefined && now >= dotArrival) arrivedRight++;
+      if (dotArrival !== undefined && now >= dotArrival && p9CountsEvent(e)) arrivedRight++;
     }
     return { left: p9.anim.baseLeft + arrivedLeft, right: p9.anim.baseRight + arrivedRight };
   }
@@ -2102,16 +2183,21 @@ function p9CurrentExtremeDisplayedCounts() {
 
 // Current extreme event counts derived directly from p9.sides — used by
 // commitDrop to capture before/after counts around a sides update.
+// A dot filtered out through the mini-legend is not on screen, so it is not in
+// the count either — the label has to say what the column actually shows.
+function p9CountsEvent(e) {
+  return !(typeof p7FilterHiddenEv === "function" && p7FilterHiddenEv(e));
+}
 function p9ExtremeCountsNow() {
   let left = 0, right = 0;
   if (p7.ready) {
     for (const e of p7.leftEvents) {
       const idx = CATEGORY_TO_IDX[e.category];
-      if (idx !== undefined && p9.sides[idx] === "above") left++;
+      if (idx !== undefined && p9.sides[idx] === "above" && p9CountsEvent(e)) left++;
     }
     for (const e of p7.rightEvents) {
       const idx = CATEGORY_TO_IDX[e.category];
-      if (idx !== undefined && p9.sides[idx] === "above") right++;
+      if (idx !== undefined && p9.sides[idx] === "above" && p9CountsEvent(e)) right++;
     }
   }
   return { left, right };
@@ -2916,6 +3002,15 @@ function p9BuildPanel() {
     // its pills are already nowrap by CSS.
     const mobile = isMobile();
     if (!mobile) trayRows.forEach(rowEl => { rowEl.style.whiteSpace = "nowrap"; });
+    // Measure with the 6-dot grip handle at FULL width even though it is
+    // collapsed until @fold13 engages (style.css). This runs on load and on
+    // resize — i.e. almost always while .engaged is off — so every width read
+    // below would come back 14px per pill short, and those reads are what the
+    // fixed column tracks get baked from. Once @fold13 popped the dots in, the
+    // pills would be wider than the tracks holding them and the labels would
+    // wrap. Same trick, and the same lifetime, as the nowrap above: forced for
+    // the read, released after the bake.
+    if (!mobile) panel.classList.add("page9-measuring-handles");
     panel.classList.remove("page9-pills-tight");
     const pillsTight = p9IsV2() && trayRows[0].offsetWidth > document.documentElement.clientWidth;
     panel.classList.toggle("page9-pills-tight", pillsTight);
@@ -2957,6 +3052,9 @@ function p9BuildPanel() {
       // fit on one line without it.
       rowEl.style.whiteSpace = "";
     });
+    // Tracks are baked at handle-inclusive width — release the measure state so
+    // the handles go back to being @fold13's business.
+    panel.classList.remove("page9-measuring-handles");
 
     // The extreme zone's own drop-target box (shown only while dragging, see
     // style.css) is sized to fit every single category stacked inside it —
@@ -3229,7 +3327,7 @@ function p9HoverInit() {
     let bestEvent = null, bestPos = null, bestDist = Infinity;
     for (const [ev, pos] of p9.lastPositions) {
       if (pos.y >= p9.midY) continue;
-      // A tiered block (@fold13's «היקף האירועים») is far bigger than the flat
+      // A tiered block (@fold13's «הצגת גודל האירועים») is far bigger than the flat
       // square, so the hit box is the size the dot was actually drawn at.
       // Neutral when the tiers are off — pos.sq is SQ there.
       const h  = ev === hov ? hovHalf : (pos.sq ? pos.sq / 2 : half);
