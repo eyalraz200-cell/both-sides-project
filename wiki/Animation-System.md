@@ -123,12 +123,12 @@ Named exceptions, each because the shared tempo read wrong for that specific bea
 **Bigger canvas glides:** `P7_ANIM_TOTAL_DURATION` 2200 (one cascade unit — a row on the
 desktop vertical axis, a month on mobile; see [Timeline](Timeline.md)),
 `P7_POP_DURATION` 220 (one square), the @fold11 glide's two beats — `P8_SHRINK_MS` 3000
-(each square morphing down to the legit-grid size) and `P8_FLY_MS` 1450 (its position
+(each square morphing down to the legit-grid size) and `P8_FLY_MS` 3000 (its position
 travelling to the legit cell), staged by `P8_STAGING` (`"together"` — both from 0, each
 on its own ms, the shipped look; `"shrink-then-fly"`; `"fly-then-shrink"`) with
 `p8ForwardMs()` the resulting full traverse and `p8Beats(t)` slicing the phase's **raw**
 progress and re-easing each beat fresh; forward only — the reverse runs on
-`P8_REVERSE_DURATION` 1350 as one undivided traverse, because it fires while the reader is
+`P8_REVERSE_DURATION` 700 as one undivided traverse, because it fires while the reader is
 already flicking back up @fold9's scrub and at 3000 ms the canvas showed a crushed
 page9-blend band several folds away, `P9_LINE_DURATION` 800, page9's dot migration (600 ms travel per dot plus
 stagger; 2200/3400 ms reposition; flat 3000 ms back to legit) — see

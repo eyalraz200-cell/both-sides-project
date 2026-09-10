@@ -20,7 +20,7 @@
 //   "fly-then-shrink" — fly at the timeline size, then resize once landed
 // var, not const: tuned live through a manual/ compare/ harness (_debug-fold11.js).
 var P8_SHRINK_MS = 3000;
-var P8_FLY_MS    = 1450;
+var P8_FLY_MS    = 3000;
 var P8_STAGING   = "together";
 
 // Full-traverse ms for the forward direction — sequential stagings take both
@@ -55,7 +55,7 @@ const P8_TRANSITION_DURATION = 3000; // ms — legacy default; p8ForwardMs() is 
 // flick leaves the canvas showing a crushed page9-blend band and the end-state
 // axis several folds away for seconds. Position still animates continuously
 // (never snaps); it just resolves before the reader has left the neighborhood.
-var P8_REVERSE_DURATION = 1350; // ms — playback time of a full 1->0 traverse
+var P8_REVERSE_DURATION = 700; // ms — playback time of a full 1->0 traverse
 let p8Engaged       = false; // true from the forward trigger until fully reversed back to rest
 let p8PhaseStart    = null;  // performance.now() when the current phase (forward/reverse) began
 let p8PhaseFromT    = 0;     // t value the current phase started from

@@ -380,7 +380,7 @@ axis so the first event's label can center over its own circle).
   covering line, rings, labels and events alike. Gated by `p7AxisShouldShow()` =
   `fold9FlyTrigger.currentRaw() > 0`, falling back to `p7HasEngaged`. Scrolling back above
   the trigger plays the same wipe in reverse, **faster than the build-in** —
-  `P7_AXIS_OUTRO_DURATION` 1500 ms, its own constant (tuned by eye on a harness). Don't
+  `P7_AXIS_OUTRO_DURATION` 1250 ms, its own constant (tuned by eye on a harness). Don't
   re-tie it to the intro: 500 ms snapped the axis away the moment @fold12's title block hit
   and read as a glitch, while the intro's full 2800 ms left it still undrawing into the
   bridge glide. Full-scale; an interrupted intro reverses over only its
@@ -824,11 +824,10 @@ square's neighbours away, so the pointer crosses a ring of bare canvas with noth
 it, hover drops, the dim snaps off, and the next pixel snaps it back on. Fixed 2026-09-09;
 the same device page9.js already used for its pill hover (`p9.hoverDimT`). Non-hovered
 squares draw at `alpha * (1 − (1 − hoverDim(actor)) * hoverDimT)`, the hovered one rises
-`alpha → 1` on the same ramp; `hoverDim` is `js/core.js` — the shared `HOVER_DIM_OPACITY` 0.2 unless that
+`alpha → 1` on the same ramp; `hoverDim` is `js/core.js` — the shared `HOVER_DIM_OPACITY` **0.27** unless that
 group has its own entry in `HOVER_DIM_BY_ACTOR`, keyed by the **dimmed** dot's actor, not
-the hovered one's. Three do: `settlers` and `right wing protesters` at 0.15,
-`protesters against government` at 0.11 — the loud colors, pushed further back so the
-whole grid reads as one even dim. `HOVER_DIM_MS` 80 is page9's own pill-hover ramp. Every
+the hovered one's. The map is currently **empty** (re-tuned per group on 2026-09-10 and
+all six landed on the same value, re-levelled to 0.27 the same day); it stays as the hook for a colour that needs its own number. `HOVER_DIM_MS` 80 is page9's own pill-hover ramp. Every
 hover change also calls `updateGroups()` so the 8 fold-6 DOM squares dim in step.
 
 ### The hover bulge — `p7BulgeTick` / `p7BulgeList` / `p7BulgeShift` (page7.js)
@@ -893,6 +892,15 @@ re-entry lands on the right side of **both** crossings — note the grid stays
 crossing, never while the reader sits still inside one — that is what lets the
 button below hold its state. State: `p7Grid = { on, layout }`.
 
+**It stands down while @fold11's beats are in flight** (`fold11SizeBeatPending()`,
+js/groups.js — true between the two beats; each timeout nulls its own handle so
+it can't latch). @fold11's sequence straddles a page flip: on a fast scroll back
+up, the flip to @fold10 lands ~0ms into the 700ms glide home, and the re-sync's
+`instant: true` set the END state of both beats on that frame — the squares
+snapped to their tiered rest cells under a field still flying, which read as the
+whole thing snapping back to the timeline. `fold11SizeApply` owns the flags for
+the length of its sequence; the next flip re-syncs.
+
 ### @fold11 — flatten in place, then fly (`fold11SizeApply`, js/groups.js)
 
 @fold11 is @fold10's morph in reverse, except it lands in **page9's legit
@@ -924,12 +932,15 @@ triggers the glide**: `page8CheckScroll` (js/page8-9-scroll.js) still watches
 `fold10GridTrigger` passes `uniform: false`, so scrolling back up into @fold10
 always restores the tiered grid even if the reader had flattened it by hand.
 
-**The «היקף האירועים» button.** From @fold11's crossing on, the grid is also
+**The «הצגת גודל האירועים» button.** From @fold11's crossing on, the grid is also
 under manual control: `p7ScopeBtnEl` (js/groups.js) is
 a pill parked `P7_SCOPE_BTN_GAP` (22px) above the **top row of the right-hand
-mini-legend**, right edges flush with it, placed and faded every frame by
+mini-legend**, right edges flush with it, placed every frame by
 `updateGroups` (js/update-groups.js). It appears on **@fold11's crossing** —
-the fold whose own copy names it — and then **stays for every fold after it**,
+the fold whose own copy points at it — **by popping its ring and typing its
+label in** (`p7ScopeRevealTrigger`; details in
+[Groups-and-Legend](Groups-and-Legend.md#the-הצגת-גודל-האירועים-button-above-the-right-column)),
+never by fading — and then **stays for every fold after it**,
 leaving only on @fold14's scroll-linked fade-out (`p9.fold13OutT`, js/fold11.js)
 — the same clock the tray, the pills and the legit dots fade on. Before the
 crossing it is `hidden`, so it can never eat a click over the timeline. It therefore outlives the tiers, and the
@@ -977,9 +988,15 @@ camps' packs meet on the centre line instead of straddling the corridor.
 - **The axis un-wipes, it never snaps.** `p7AxisShouldShow()` returns false while
   `p7Grid.on`, which routes @fold10 through the reverse wipe every other axis
   exit already uses (`p7AxisTriggerIfNeeded` → `p7AxisReverseOut` →
-  `p7AxisOutroStart`, `P7_AXIS_OUTRO_DURATION` 1500ms, scaled by whatever intro
+  `p7AxisOutroStart`, `P7_AXIS_OUTRO_DURATION` 1250ms, scaled by whatever intro
   progress it had). Scrolling back out re-triggers the build-in from wherever
-  the reverse got to, so the pair is reversible mid-flight like everything else.
+  the reverse got to, so the pair is reversible mid-flight like everything else —
+  but **not on the same beat as the dots**: `p7AxisShouldShow()` also stays false
+  for as long as the grid's OFF morph is running (`p7GridMorph.dir === "off"`,
+  `p7MorphTotalMs(flat)`), so scrolling back up to @fold9 plays two ordered
+  beats — the dots fly home first, THEN the axis wipes in. It used to start the
+  wipe on the frame the grid switched off, drawing the axis through a field
+  still in the air.
   Before this, `p7DrawYearAxisVertical` / `p7DrawVertEventLines` returned early
   on `p7Grid.on` and the whole axis vanished on the trigger frame while the dots
   took 1900ms to morph. The one carve-out: `p7AxisEventsAnimActive`'s `p7Grid.on`
@@ -1288,7 +1305,8 @@ camps' packs meet on the centre line instead of straddling the corridor.
 - **@fold10 and @fold11 tune separately.** Those four `P7_MORPH_*` values are
   @fold10's **grow** only. @fold11's flatten runs the same machinery off its
   own set — `P7_FLAT_FLY_MS` / `P7_FLAT_SIZE_MS` / `P7_FLAT_SIZE_START_MS` /
-  `P7_FLAT_TIER_STAGGER_MS` (page7.js:1880-1883) — picked by `p7MorphKnobs(flat)`,
+  `P7_FLAT_TIER_STAGGER_MS` (page7.js:1880-1883, currently 1400 / 450 / 0 / 50) —
+  picked by `p7MorphKnobs(flat)`,
   which both `p7MorphTotalMs(flat)` and `p7MorphWindows(tier, flat)` take. The
   flag is `p7GridMorph.flat`, set in `p7SizeGridSet` from `sameGrid`: true when
   only the flatten flag moved (@fold11, both directions), false when the grid
@@ -1493,8 +1511,8 @@ again to bring it back. Multiple groups can be off at once.
 `page8.js` is the bridge and imports page9's geometry as the source of truth
 (`p9EnsureIndex`, `p9LegitGeometry`, `p9LegitPosOf`). `p8CurrentT()` runs at constant
 speed over the current phase's clock — `p8ForwardMs()` forward (the `P8_SHRINK_MS` /
-`P8_FLY_MS` beats staged by `P8_STAGING`: 3000 / 1450 ms concurrent by default),
-`P8_REVERSE_DURATION` 1350 ms reverse (`p8PhaseDur`) — so a mid-flight reversal covers
+`P8_FLY_MS` beats staged by `P8_STAGING`: 3000 / 3000 ms concurrent by default),
+`P8_REVERSE_DURATION` 700 ms reverse (`p8PhaseDur`) — so a mid-flight reversal covers
 only the remaining distance. The reverse is deliberately much faster: it fires while the
 reader is already scrolling back up the multi-viewport scrub, and at 3000 ms the canvas
 showed a crushed page9-blend band and the end-state axis deep into @fold9 for seconds. `drawPage8` at `t <= 0` delegates to `drawPage7` with `currentDate`

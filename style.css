@@ -689,6 +689,49 @@ body {
   transform: scale(1);
   transition-delay: calc(var(--p9-pop-i, 0) * var(--p9-pop-stagger));
 }
+/* The 6-dot grip handle is @fold13's beat, not @fold12's. @fold12 pops the
+   pills in a fold early (.pills-in above) while the tray is still
+   pointer-events:none — nothing is draggable yet, so a grip affordance there
+   promises something the fold can't deliver. So in the tray the handle starts
+   collapsed and the pill is narrower by exactly its footprint; @fold13's stick
+   (.engaged) pops the dots in and the pill widens around them.
+
+   Collapsing it takes THREE properties, not just the transform: `scale(0)` is a
+   paint-time transform and leaves the 8px grid box in the flex line, so the pill
+   would keep the space and only the dots would vanish. `width: 0` retracts the
+   box, and the negative inline-end margin swallows the pill's own 6px flex gap,
+   which is otherwise still drawn between a zero-width handle and the label. All
+   three animate together on the pill's own pop clock, so the widening reads as
+   one move. Scoped to `.page9-tray` so a dropped pill in #page9ZoneAbove (which
+   hides its dots on its own terms, further down) is untouched, and to
+   `.page9-layout-v2` so mobile — where the handle is display:none anyway — never
+   sees it. */
+.page9-sticky.page9-layout-v2 .page9-tray .page9-pill .page9-handle {
+  width: 0;
+  margin-inline-end: -6px;
+  overflow: hidden;
+  transform: scale(0);
+  transition: width var(--p9-pop-ms) cubic-bezier(0.37, 0, 0.63, 1),
+              margin-inline-end var(--p9-pop-ms) cubic-bezier(0.37, 0, 0.63, 1),
+              transform var(--p9-pop-ms) cubic-bezier(0.37, 0, 0.63, 1);
+}
+.page9-sticky.page9-layout-v2.engaged .page9-tray .page9-pill .page9-handle {
+  width: 8px;   /* 2 columns of 3px + the 2px column gap */
+  margin-inline-end: 0;
+  transform: scale(1);
+  transition-delay: calc(var(--p9-pop-i, 0) * var(--p9-pop-stagger));
+}
+/* Held for the length of p9MeasureTrayLayout's reads only (page9.js): the fixed
+   column tracks it bakes have to reserve the handle's width even though the
+   handle is collapsed at measure time, or the pills overflow their tracks the
+   moment @fold13 pops the dots in. No transition — this state is never seen. */
+.page9-sticky.page9-layout-v2.page9-measuring-handles .page9-tray .page9-pill .page9-handle {
+  width: 8px;
+  margin-inline-end: 0;
+  transform: none;
+  transition: none;
+}
+
 /* Reduced motion, CSS half. The JS half is prefersReducedMotion() in
    js/core.js, read by makeTrigger (js/groups.js) — together they cover every
    fold beat and every state flip.
@@ -2526,25 +2569,71 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   z-index: 3;
   box-sizing: border-box;
   margin: 0;
-  padding: 4px 12px;
-  border: 1px solid rgba(0, 0, 0, 0.28);
-  border-radius: 999px;
+  padding: 4px 0;
+  border: 0;
   background: transparent;
   color: rgba(0, 0, 0, 0.81);
+  /* Same face, size and colour as a settled mini-legend label (.group-label,
+     written to 14px by updateGroups) — and, like it, NO letter-spacing: the
+     0.04em this carried as a pill made it read as a different typeface sitting
+     right next to the rows it belongs to. */
   font: 14px 'Assistant', sans-serif;
   white-space: nowrap;
   cursor: pointer;
   pointer-events: auto;
-  opacity: 0;              /* updateGroups fades it in on @fold11 */
-  transition: opacity 220ms ease, background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+  /* No fade-in: @fold11 reveals it by POPPING the ring and TYPING the label
+     (js/update-groups.js). Opacity is still written per frame, but only for
+     @fold14's shared fade-OUT — so no transition on it either. */
+  opacity: 0;
+  /* RTL: the ring belongs to the RIGHT of the Hebrew label, and ::before is
+     laid out first, so the row is reversed to put it there. */
+  display: flex;
+  align-items: center;
+  flex-direction: row-reverse;
+  gap: 8px;                /* ring → text */
+  /* The label TYPES IN, so the box starts with no text at all. Left to the
+     font, an empty button is 18px tall and a one-character button is 23px —
+     and since updateGroups places it by `rowY − gap − btnH`, that one-frame
+     growth jerked the whole control 5px upward just as the ring popped.
+     Pinning the line box keeps the height constant from the very first frame. */
+  line-height: 17px;
+  min-height: 25px;        /* the 17px line box + 4px padding, top and bottom */
+  transition: color 180ms ease;
 }
-.p7-scope-btn:hover { border-color: rgba(0, 0, 0, 0.55); }
+/* The ring: an empty 10px circle that simply FILLS dark when the crowd sizes
+   are showing — no tick inside it. At 10px a checkmark is a smudge, so the
+   fill alone carries the on/off state. */
+.p7-scope-btn::before {
+  content: "";
+  flex: 0 0 auto;
+  /* The `*` reset above does NOT match pseudo-elements, so say it here: the
+     10px is the OUTER diameter, border included. js/update-groups.js places the
+     button off that number (P7_SCOPE_RING_PX), so the two must agree. */
+  box-sizing: border-box;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  background: transparent;
+  /* The pop-in. --p7-scope-ring-t is written per frame by updateGroups off
+     @fold11's reveal trigger, so there is deliberately no transition on the
+     transform; the box keeps its 10px either way, which is what the button's
+     right-edge placement measures against. */
+  /* …and the ink correction: align-items centers the ring on the LINE BOX,
+     whose unused Hebrew descent sits it visibly low against the letters.
+     --p7-scope-ring-ink is groupLabelInkShift(12) — the same measurement the
+     legend uses to center its swatches on their labels — so the ring reads
+     centered on the ink instead. */
+  transform: translateY(calc(-1 * var(--p7-scope-ring-ink, 0px)))
+             scale(var(--p7-scope-ring-t, 1));
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+.p7-scope-btn:hover::before { border-color: rgba(0, 0, 0, 0.75); }
 /* Pressed = the size grid is ON. Kept in step with p7Grid.on (and aria-pressed)
    by updateGroups, so a scroll crossing that flips the grid also flips this. */
-.p7-scope-btn.is-on {
-  background: rgba(0, 0, 0, 0.81);
+.p7-scope-btn.is-on::before {
+  background-color: rgba(0, 0, 0, 0.81);
   border-color: rgba(0, 0, 0, 0.81);
-  color: var(--bg);
 }
 /* The size grid is desktop-only, so its switch is too. */
 @media (max-width: 600px) {
@@ -3669,4 +3758,17 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    opacity on the row multiplies down into swatch and label together. */
 .group-item.is-filtered-off {
   opacity: 0.28;
+}
+/* Hovering a click strip (@fold9+) says "this row is a button": the hovered
+   row's label lifts to black and its swatch grows in place (transform, so the
+   per-frame width/height/top writes are untouched), while every other row
+   steps back to .45 — the filtered-off rows stay at their own .28. Pure state
+   flips, so these are the one place .group-item / .group-swatch transition;
+   the opacity one also softens the is-filtered-off flip above, on purpose. */
+.group-item { transition: opacity 260ms ease; }
+.group-swatch { transition: transform 260ms ease; }
+.group-item.is-filter-hover .group-label { color: #000; }
+.group-item.is-filter-hover .group-swatch { transform: scale(1.5); }
+.groups-overlay.is-filter-hover-any .group-item:not(.is-filter-hover):not(.is-filtered-off) {
+  opacity: 0.45;
 }

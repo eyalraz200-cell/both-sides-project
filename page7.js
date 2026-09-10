@@ -1880,7 +1880,7 @@ let P7_MORPH_PUSH_MAX = 2;   // how far a dot may outgrow its current spacing
 let P7_FLAT_FLY_MS           = 1400;
 let P7_FLAT_SIZE_MS          = 450;
 let P7_FLAT_SIZE_START_MS    = 0;    // the flatten only shrinks — nothing to wait for
-let P7_FLAT_TIER_STAGGER_MS  = 140;
+let P7_FLAT_TIER_STAGGER_MS  = 50;
 // Which set of four is live. `flat` defaults to the morph currently running
 // (p7GridMorph.flat, set in p7SizeGridSet: true when only the flatten flag
 // moved — @fold11 either way — false when the grid itself came on or off).
@@ -2032,7 +2032,7 @@ function p7GridLiveRect(ev, isLeft) {
 //     are, for re-entry from below (scrolling up, they never cross the line
 //     again, so the watchers stay silent). The grid is on only in the band
 //     BETWEEN @fold10's card and @fold11's: past @fold11 the squares are
-//     uniform again and the «היקף האירועים» button is what turns it back on,
+//     uniform again and the «הצגת גודל האירועים» button is what turns it back on,
 //     so this hook must not fight the button — it only ever runs on a section
 //     crossing, never while the reader sits still inside one;
 //   • anything past @fold12 — off, instantly.
@@ -2049,6 +2049,14 @@ function p7SizeGridOnPage(page) {
   // is a trap.
   if (page < 9) p7FilterReset();
   if (isMobile()) { p7SizeGridSet(false, { instant: true }); return; }
+  // @fold11's reverse is TWO beats — glide home, then grow the tiers back — and
+  // the flip back to @fold10 lands ~0ms into the first one. Re-syncing here
+  // would set the end state of both beats INSTANTLY, under a field that is
+  // still flying: the squares snapped to their tiered rest cells mid-glide and
+  // the whole thing read as the field snapping back to the timeline. While a
+  // beat is still pending, fold11SizeApply owns the flags — stand down; it
+  // finishes the sequence on its own clock and the next flip re-syncs.
+  if (typeof fold11SizeBeatPending === "function" && fold11SizeBeatPending()) return;
   if (page >= 9 && page <= 12) {
     const past10  = typeof fold10GridPast === "function" && fold10GridPast();
     const past11 = typeof fold11SizePast === "function" && fold11SizePast();
@@ -3081,6 +3089,13 @@ function p7AxisShouldShow() {
   // reverse wipe every other exit uses (p7AxisReverseOut, via
   // p7AxisTriggerIfNeeded), not by vanishing on the trigger frame.
   if (p7Grid.on) return false;
+  // ...and for as long as the grid's OFF morph is still flying the dots back
+  // onto the timeline. The two beats are strictly ordered on the way up: the
+  // DOTS fly first, and only once they have landed does the axis draw itself
+  // in. Starting the build-in wipe on the frame the grid switched off had it
+  // wiping through a field still in the air.
+  if (p7GridMorph && p7GridMorph.dir === "off"
+      && performance.now() - p7GridMorph.start < p7MorphTotalMs(p7GridMorph.flat)) return false;
   if (typeof fold9FlyTrigger !== "undefined" && fold9FlyTrigger.currentRaw() > 0) return true;
   return p7HasEngaged;
 }
@@ -3179,15 +3194,17 @@ const P7_AXIS_LABEL_COLOR       = "rgba(0, 0, 0, 0.65)";
 // where the scroll-driven reveal above starts from too. p7AxisIntroStart is
 // null when not yet triggered (or reset back to it, see p7AxisTriggerIfNeeded).
 const P7_AXIS_INTRO_DURATION = 2800; // ms — full right-edge-to-left-edge wipe
-// Reverse wipe when the trigger un-fires (scrolling back up past the fly
-// trigger) and when @fold12's bridge glide starts: the same wipe plays
-// backwards, but FASTER than the build-in — its own constant, tuned by eye on
-// a harness. 500ms snapped away the moment @fold12's title block hit and read
-// as a glitch; the intro's full 2800 was the other extreme, the axis still
-// undrawing well into the bridge glide. This is the FULL-wipe time; an
-// interrupted intro reverses over only its remaining distance (duration scaled
-// by how far it had got), per convention.
-const P7_AXIS_OUTRO_DURATION = 1500; // ms — full left-edge-back-to-right-edge un-wipe
+// Reverse wipe on EVERY exit the axis has — @fold10's size grid (p7Grid.on
+// makes p7AxisShouldShow false, so p7AxisTriggerIfNeeded hands off to
+// p7AxisReverseOut), scrolling back up past the fly trigger, and @fold12's
+// bridge glide. The same wipe plays backwards, but FASTER than the build-in —
+// its own constant, tuned by eye on a harness. 500ms snapped away the moment
+// @fold12's title block hit and read as a glitch; the intro's full 2800 was the
+// other extreme, the axis still undrawing well into the bridge glide. 1500 was
+// the first setting between them and still lagged @fold10's morph. This is the
+// FULL-wipe time; an interrupted intro reverses over only its remaining
+// distance (duration scaled by how far it had got), per convention.
+const P7_AXIS_OUTRO_DURATION = 1250; // ms — full left-edge-back-to-right-edge un-wipe
 let p7AxisIntroStart = null;
 let p7AxisOutroStart = null; // non-null while the reverse wipe is running
 let p7AxisOutroFromT = 0;    // introT captured at the moment the reverse began

@@ -869,7 +869,7 @@ function updateGroups() {
     fold6LegendHoverEls.forEach((el) => { el.style.display = "none"; });
   }
 
-  // ── The «היקף האירועים» toggle ───────────────────────────────────────────
+  // ── The «הצגת גודל האירועים» toggle ───────────────────────────────────────────
   // Parked above the TOP row of the right-hand legend column, right edges
   // flush with it (the rows are right-aligned to W - fold6LegendInsetRight(),
   // so the button is too). It appears on @fold11's crossing — the fold whose
@@ -881,16 +881,45 @@ function updateGroups() {
   // click-through-dead — pointer-events plus a real `hidden` — so it can never
   // swallow a click over the timeline.
   if (typeof p7ScopeBtnEl !== "undefined") {
+    // It does NOT fade in: the ring pops, then the label types in behind it
+    // (p7ScopeRevealTrigger, js/groups.js). Two windows sliced off the
+    // trigger's RAW progress and re-eased fresh, per the house multi-beat
+    // rule. Kept mounted while the reveal is mid-flight even after the
+    // crossing has flipped back, so a reverse scroll un-types instead of
+    // snapping the button away.
+    const revealRaw = typeof p7ScopeRevealTrigger !== "undefined"
+      ? p7ScopeRevealTrigger.currentRaw() : 1;
+    const popFrac = P7_SCOPE_RING_POP_MS / P7_SCOPE_REVEAL_MS;
+    const c01 = (v) => Math.max(0, Math.min(1, v));
+    const ringT = p7Ease(c01(revealRaw / popFrac));
+    const typeT = p9Ease(c01((revealRaw - popFrac) / (1 - popFrac)));
     const shown = !fold6MobileLegend
-      && typeof fold11SizePast === "function" && fold11SizePast();
+      && ((typeof fold11SizePast === "function" && fold11SizePast()) || revealRaw > 0);
     p7ScopeBtnEl.hidden = !shown;
     if (shown) {
+      // Written before the width is read below — the label's typed length is
+      // what btnW measures, and the button is placed off its RIGHT edge, so
+      // the ring stays put while the characters grow leftward (RTL).
+      p7ScopeBtnEl.textContent = typedText(P7_SCOPE_BTN_LABEL, typeT);
+      p7ScopeBtnEl.style.setProperty("--p7-scope-ring-t", String(ringT));
+      // The ring is centered on the label's INK, not on its line box — same
+      // correction (and same measurement) the legend rows use for their
+      // swatches. 14 is .p7-scope-btn's own font-size.
+      p7ScopeBtnEl.style.setProperty(
+        "--p7-scope-ring-ink", `${groupLabelInkShift(14)}px`);
       const right = W - fold6LegendInsetRight();
       const btnW = p7ScopeBtnEl.offsetWidth;
       const btnH = p7ScopeBtnEl.offsetHeight;
-      p7ScopeBtnEl.style.left = `${right - btnW}px`;
+      // The button is aligned by its RING, not by its box: the checkmark
+      // circle's center sits on the same vertical line as the legend swatches'
+      // centers (`right - LEFT_LEGEND_SWATCH_SIZE / 2`). The ring is the last
+      // thing on the row (row-reverse), flush with the button's right edge, so
+      // its center is `btnW - P7_SCOPE_RING_PX / 2` in from `left`.
+      const swatchCx = right - LEFT_LEGEND_SWATCH_SIZE / 2;
+      p7ScopeBtnEl.style.left =
+        `${swatchCx - btnW + P7_SCOPE_RING_PX / 2}px`;
       p7ScopeBtnEl.style.top =
-        `${fold6RowIndexY(0, H) - P7_SCOPE_BTN_GAP - btnH}px`;
+        `${fold6RowIndexY(0, H) - P7_SCOPE_BTN_GAP - btnH + 10}px`;  // +10 by eye, 2026-09-10
       // @fold14's fade-out, shared with everything else on screen.
       const outT = (typeof p9 !== "undefined" && p9.fold13OutT) || 0;
       p7ScopeBtnEl.style.opacity = String(1 - outT);
