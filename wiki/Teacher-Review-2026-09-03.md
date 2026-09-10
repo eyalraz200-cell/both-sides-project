@@ -11,7 +11,7 @@ Legend: 🔴 must · 🟡 should · 🟢 nice-to-have / "not critical" · 📱 m
 
 ---
 
-## A. The big one — @fold10 timeline layout 🔴
+## A. The big one — @fold9 timeline layout 🔴
 
 - [x] **A1. Move the year axis vertically between the two camps.** Instead of the horizontal
   axis under two side-by-side grids, the axis runs top→bottom down the centre gap and the two

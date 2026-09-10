@@ -406,7 +406,11 @@ function updateGroups() {
       // (g.fold6) take part; the rest have shrunk to nothing by then anyway.
       const untypeVisibleT = 1 - p9Ease(fold6LabelUntypeTrigger.currentRaw());
       const hoverVisibleT   = p9Ease(fold6LabelHoverTrigger.currentRaw());
-      const restT = g.fold6 ? Math.max(untypeVisibleT, hoverVisibleT) : 1;
+      // …and this row's own dot-hover term (fold6DotHover, js/groups.js):
+      // hovering a square anywhere on the page opens just ITS group's label.
+      const dotT = fold6DotHoverTriggers.has(g.actor)
+        ? p9Ease(fold6DotHoverTriggers.get(g.actor).currentRaw()) : 0;
+      const restT = g.fold6 ? Math.max(untypeVisibleT, hoverVisibleT, dotT) : 1;
       item.labelSpans = null;
       // The two columns un-type from OPPOSITE ends (explicit instruction). The
       // right column's label is right-aligned against the screen edge, so a
@@ -843,19 +847,19 @@ function updateGroups() {
       el.style.display = live ? "block" : "none";
     });
     // The per-row filter strips ride inside those boxes, so their coordinates
-    // are relative to the box, not the viewport. Only clickable on @fold10 —
-    // the timeline is the only place a filter means anything.
+    // are relative to the box, not the viewport. Clickable on @fold9 through
+    // @fold13 — the folds whose dots can still answer a toggle by size.
     const pitch = fold6RowPitchPx();
-    const canFilter = live && (currentPage === 9 || currentPage === 10)
+    const canFilter = live && (currentPage >= 8 && currentPage <= 12)
       && typeof p7FilterOff !== "undefined";
-    const filterLives = live && currentPage >= 9 && typeof p7FilterOff !== "undefined";
+    const filterLives = live && currentPage >= 8 && typeof p7FilterOff !== "undefined";
     GROUPS.forEach((g, gi) => {
       if (!g.fold6) return;
       const el = fold6LegendFilterEl(g);
       el.style.top = `${fold6RowY(g, H) - hoverTop - pitch / 2}px`;
       el.style.height = `${pitch}px`;
       el.style.display = canFilter ? "block" : "none";
-      // The dim outlives the click target: on @fold12+ the filter is still in
+      // The dim outlives the click target: on @fold14+ the filter is still in
       // force, so the legend must keep saying which groups are missing.
       const off = filterLives && p7FilterOff.has(g.actor);
       const item = groupItems[gi];
@@ -863,6 +867,46 @@ function updateGroups() {
     });
   } else {
     fold6LegendHoverEls.forEach((el) => { el.style.display = "none"; });
+  }
+
+  // ── The «היקף האירועים» toggle ───────────────────────────────────────────
+  // Parked above the TOP row of the right-hand legend column, right edges
+  // flush with it (the rows are right-aligned to W - fold6LegendInsetRight(),
+  // so the button is too). It appears on @fold11's crossing — the fold whose
+  // own copy names it — and then STAYS for every fold after it, deliberately
+  // NOT shown on @fold10 before that. It leaves the way the rest of the page
+  // does: on @fold14's scroll-linked fade-out (p9.fold13OutT, js/fold11.js),
+  // the same clock the tray, the pills and the legit dots fade on, so nothing
+  // is left hanging over the closing statement. Before the crossing it is
+  // click-through-dead — pointer-events plus a real `hidden` — so it can never
+  // swallow a click over the timeline.
+  if (typeof p7ScopeBtnEl !== "undefined") {
+    const shown = !fold6MobileLegend
+      && typeof fold11SizePast === "function" && fold11SizePast();
+    p7ScopeBtnEl.hidden = !shown;
+    if (shown) {
+      const right = W - fold6LegendInsetRight();
+      const btnW = p7ScopeBtnEl.offsetWidth;
+      const btnH = p7ScopeBtnEl.offsetHeight;
+      p7ScopeBtnEl.style.left = `${right - btnW}px`;
+      p7ScopeBtnEl.style.top =
+        `${fold6RowIndexY(0, H) - P7_SCOPE_BTN_GAP - btnH}px`;
+      // @fold14's fade-out, shared with everything else on screen.
+      const outT = (typeof p9 !== "undefined" && p9.fold13OutT) || 0;
+      p7ScopeBtnEl.style.opacity = String(1 - outT);
+      p7ScopeBtnEl.style.pointerEvents = outT > 0.5 ? "none" : "auto";
+      // Pressed = crowd sizes are showing, i.e. the grid is up and NOT flat.
+      // On @fold13 the grid itself is long gone — the dots live in page9's
+      // extreme columns — but the same flag still says whether the crowd
+      // tiers are showing, so the button reads pressed there too.
+      const p9Live = typeof p9PageVisible === "function" && p9PageVisible();
+      const on = typeof p7GridUniform !== "undefined" && !p7GridUniform
+        && ((typeof p7Grid !== "undefined" && p7Grid.on) || p9Live);
+      p7ScopeBtnEl.classList.toggle("is-on", !!on);
+      p7ScopeBtnEl.setAttribute("aria-pressed", on ? "true" : "false");
+    } else {
+      p7ScopeBtnEl.style.opacity = "0";
+    }
   }
 
   const noteRightEdge = W - fold6LegendInsetRight();
@@ -901,7 +945,7 @@ function updateGroups() {
   // mini-legend target above; only its reveal is deferred.
   // The note now stays up for the rest of the page on both viewports. The extra
   // mobile fade-out on fold9FlyTrigger existed only because the bottom pin sat
-  // exactly where @fold9's year axis draws; anchored to the legend it no longer
+  // exactly where @fold8's year axis draws; anchored to the legend it no longer
   // does, so the fade went with the pin.
   //
   // Only the POSITION is desktop-only. On mobile the note flows inside the
@@ -1153,7 +1197,7 @@ function updateGroups() {
   // never does" convention) so the pop finishes well before the mini-legend
   // glide (also driven by e6) settles, instead of taking the full duration.
   const GROW_SPAN = 0.55;
-  // Grow-in is @fold5 (#page-4, «אספנו תיעודים…») via squaresRevealTrigger —
+  // Grow-in is @fold5 (#page-4, «כל ריבוע מייצג פעולה פוליטית…») via squaresRevealTrigger —
   // detached from fold6Trigger (the split) so the squares only appear on the
   // next fold, after the mini-legend split has settled.
   const growScale = p9Ease(Math.max(0, Math.min(1, squaresRevealTrigger.currentRaw() / GROW_SPAN)));
@@ -1323,12 +1367,12 @@ function updateGroups() {
       const event = targetEvent;
       // shrinkT >= 1 (fold 9's own, later, one-way "arrived at its real dot"
       // collapse) or a missing event forces an immediate hide below —
-      // unrelated to @fold10's own scroll reversal, which is handled entirely
+      // unrelated to @fold9's own scroll reversal, which is handled entirely
       // by fold8SeqElapsed/fold8SeqDirection instead (see their own comments
       // above fold8SequenceEvent).
       // Mobile keeps the EMPTY docked frame on screen after the shrink beat
       // has emptied it (see fold8AdvanceSequence's own opacity branch): the
-      // frame is a designated fixture of @fold7/@fold9/the timeline, not a
+      // frame is a designated fixture of @fold7/@fold8/the timeline, not a
       // callout that comes and goes with one event, so it holds its spot
       // through them and only stands down once the bridge (@fold12) takes the
       // squares over into page9's grid.
@@ -1445,8 +1489,19 @@ function updateGroups() {
     // === 10). page8CheckScroll/fold9EnsureP8SyncLoop above make sure
     // p8CurrentT() below is both freshly triggered and kept moving even
     // without further scroll events.
-    const ease = currentPage >= 12 ? 1 : p9Ease(typeof p8CurrentT === "function" ? p8CurrentT() : 0);
-    if (target && ease > 0) {
+    //
+    // The glide is TWO beats on two clocks (P8_SHRINK_MS / P8_FLY_MS, staged by
+    // P8_STAGING) — so read them from page8's own p8Beats() rather than easing
+    // p8CurrentT() once here. These 8 have a long history of drifting out of
+    // step with the field whenever the canvas path gains a beat; the cure is
+    // always the same, call the same function the canvas calls instead of
+    // re-deriving it. `posE` drives position, `sizeE` size — never one `ease`
+    // for both.
+    const rawT  = currentPage >= 12 ? 1 : (typeof p8CurrentT === "function" ? p8CurrentT() : 0);
+    const beats = typeof p8Beats === "function" ? p8Beats(rawT)
+                                                : { posE: p9Ease(rawT), sizeE: p9Ease(rawT) };
+    const ease = beats.posE;
+    if (target && rawT > 0) {
       if (targetEvent) {
         p9EnsureIndex();
         const side = p9.leftIndexOf.has(targetEvent) ? "left" : "right";
@@ -1454,8 +1509,8 @@ function updateGroups() {
         const legitGeom = p9LegitGeometry(W, H);
         const legitPos = p9LegitPosOf(targetEvent, indexOf, side, legitGeom);
         if (legitPos) {
-          target.x = target.x + (legitPos.x - target.x) * ease;
-          target.y = target.y + (legitPos.y - target.y) * ease;
+          target.x = target.x + (legitPos.x - target.x) * beats.posE;
+          target.y = target.y + (legitPos.y - target.y) * beats.posE;
           // Size blends down with the same glide: the legit grid draws at
           // legitSq (2px on ≤1600 desktop) / the bar's own cell on mobile —
           // same end-size rule page8.js uses for every canvas dot. Without
@@ -1463,11 +1518,11 @@ function updateGroups() {
           // reading as one oversized dot among the small legit dots (a no-op
           // on big desktop, where legitSq === the timeline size).
           const endSq = legitGeom.mode === "bar" ? legitGeom.cell : p9Metrics().legitSq;
-          target.size = target.size + (endSq - target.size) * ease;
+          target.size = target.size + (endSq - target.size) * beats.sizeE;
         }
       }
     }
-    // @fold8's «סדר גודלה» beat: the demo square (index 0) swells from the
+    // @fold7's «סדר גודלה» beat: the demo square (index 0) swells from the
     // 8px resting size to FOLD8_DEMO_GROW_PX on the tooltip's own crossing,
     // reversible with it. Every other square keeps 8. This is the size the fly
     // then resizes *from*, so a grown square never snaps back before departing.
@@ -1482,12 +1537,23 @@ function updateGroups() {
     // offset with it) fades out exactly as the square departs, leaving the
     // established top-left-anchored fly geometry untouched.
     const growOffset = -((restSize - 8) * (1 - resizeT)) / 2;
+    // The legend filter reaches these 8 too. They're the permanent real dot for
+    // their event (p7GetClaimedEvents skips them in the canvas cascade), so a
+    // filtered group left them sitting on the timeline as the only survivors of
+    // their own colour. Folded into the transform's scale rather than into the
+    // width/height: scale() works about the element's centre, so the square
+    // shrinks in place with no offset arithmetic — and it composes with
+    // growScale instead of fighting @fold7's swell.
+    const filtF = typeof p7FilterSizeFactor === "function"
+      ? p7FilterSizeFactor({ actor: FOLD6_SQUARE_ACTORS[i] })
+      : 1;
+    const scaleT = growScale * filtF;
     if (target) {
       const restX = W / 2 + FOLD6_SQUARES_OFFSET[i].dx;
       const restY = H / 2 + FOLD6_SQUARES_OFFSET[i].dy;
       const dx = (target.x - restX) * moveT + growOffset;
       const dy = (target.y - restY) * moveT + growOffset;
-      sq.style.transform = `translate(${dx}px, ${dy}px) scale(${growScale})`;
+      sq.style.transform = `translate(${dx}px, ${dy}px) scale(${scaleT})`;
       const size = restSize + (target.size - restSize) * resizeT;
       sq.style.width = sq.style.height = `${size}px`;
 
@@ -1496,11 +1562,11 @@ function updateGroups() {
       // page7.js), so there's no separate canvas dot to ever hand off to.
       // Stays visible once it arrives and just sits there like any other
       // timeline dot from then on.
-      wrap.style.display = growScale > 0 ? "" : "none";
+      wrap.style.display = scaleT > 0 ? "" : "none";
     } else {
-      sq.style.transform = `translate(${growOffset}px, ${growOffset}px) scale(${growScale})`;
+      sq.style.transform = `translate(${growOffset}px, ${growOffset}px) scale(${scaleT})`;
       sq.style.width = sq.style.height = `${restSize}px`;
-      wrap.style.display = growScale > 0 ? "" : "none";
+      wrap.style.display = scaleT > 0 ? "" : "none";
     }
   });
 }
@@ -1531,7 +1597,7 @@ window.addEventListener("scroll", () => {
 // truly done.
 window.addEventListener("scrollend", checkGroupTriggers, { passive: true });
 
-// drawFold9/drawFold7 (currentPage 6/5, #page-8/#page-6) used to be static
+// drawFold9/drawFold7 (currentPage 6/5, #page-7/#page-6) used to be static
 // background-only, so nothing redrew the canvas while scrolling within them.
 // Now drawFold9 also draws the year axis preview (gated on p7AxisShouldShow,
 // page7.js) once fold 9's title passes offscreen, and both keep drawing the
@@ -1544,7 +1610,7 @@ window.addEventListener("scroll", () => {
   if (fold9AxisTicking) return;
   fold9AxisTicking = true;
   requestAnimationFrame(() => {
-    if (currentPage === 6 || currentPage === 7 || currentPage === 8) draw();
+    if (currentPage === 6 || currentPage === 7) draw();
     fold9AxisTicking = false;
   });
 }, { passive: true });

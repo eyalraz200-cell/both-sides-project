@@ -124,6 +124,44 @@ function updateFold13() {
   draw();
 }
 
+// @fold15 — the camps pair up. A SECOND move on top of @fold14's spread:
+// @fold14's camp-split freeform positions are the from, the couple slots
+// (p12EnsurePairTargets, page12.js) are the to. p9Ease (sine in-out, the house
+// default), fully reversible — scrolling back up walks the couples home and
+// shrinks the filler dots away.
+// TWO BEATS, sliced off the trigger's RAW progress with p9Ease re-applied
+// fresh per window (house convention — never ease an already-eased slice):
+//   pop  [0 … span)  the newcomers grow in on their own camp's side,
+//                    everything still standing in @fold14's spread
+//   fly  [span … 1]  the whole field travels to the couple slots
+// Nothing moves until every newcomer is fully there.
+// The two beats are timed INDEPENDENTLY, in ms: the trigger's duration is their
+// sum (makeTrigger resolves a function duration per frame, so a live edit takes
+// effect on the next crossing) and the split point is pop's share of it. Named
+// exceptions to GROUP_TRANSITION_MS because the beats are deliberately uneven —
+// a quick pop, then a long flight.
+// var, not const: tuned live through a manual/ harness (since removed).
+var FOLD14_POP_MS = 775;   // beat 1 — newcomers grow in
+var FOLD14_FLY_MS = 2240;  // beat 2 — the field flies to the couple slots
+function fold14TotalMs() { return FOLD14_POP_MS + FOLD14_FLY_MS; }
+function fold14PopSpan() { return FOLD14_POP_MS / Math.max(1, fold14TotalMs()); }
+
+function updateFold14() {
+  // currentRaw, not currentT — currentT is already p9Ease'd, and each beat
+  // below re-eases its own window (never ease an eased slice).
+  const raw = fold14PairTrigger.currentRaw();
+  if (raw > 0 && !fold14PairStarted) {
+    fold14PairStarted = true;
+    p12PairTargets = null; // force recompute with current W/H
+  }
+  if (raw <= 0) fold14PairStarted = false;
+  const span = fold14PopSpan();
+  p9.fold14PopT  = p9Ease(Math.min(1, raw / span));
+  p9.fold14PairT = p9Ease(Math.max(0, (raw - span) / (1 - span)));
+  draw();
+}
+let fold14PairStarted = false;
+
 // The fade-out is the title block's ARRIVAL, not a separate scroll range
 // (explicit instruction): 0 the instant @fold14's card first pokes above the
 // viewport's bottom edge, 1 when it has finished rising to its resting spot

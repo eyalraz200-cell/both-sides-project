@@ -77,7 +77,8 @@ numbers in the source.
 1. Copy `~/.claude/templates/harness-panel.js` → `_debug-<thing>.js` in the project root.
 2. Splice the new CONFIG between `var CONFIG = {` and the `END CONFIG` marker line.
    Fields: `title`, `sliders[{key, label, min, max, step, value, source}]`,
-   `apply(v, mode, tab, on)`, `init(api)`, `custom(box, api, doc)`, `summary(v, mode)`.
+   `apply(v, mode, tab, on)`, `init(api)`, `custom(box, api, doc)`, `summary(v, mode)`,
+   plus `goTo` / `goLabel` / `onGo` for the Go button (always fill these in).
 3. Insert `if (window.innerWidth < 900) return;   // desktop-only layout` immediately
    after `(function () {`.
 4. Add `<script src="_debug-<thing>.js"></script>` at the end of `project.html`'s script
@@ -86,8 +87,13 @@ numbers in the source.
 
 **Rules (non-negotiable):**
 
-- Floating, draggable, position remembered. Buttons in fixed order: **Copy · Reset ·
+- Floating, draggable, position remembered. Buttons in fixed order: **Go · Copy · Reset ·
   Pop out · Hide** (`H` toggles hide; the chip is always clickable back).
+- **Every harness gets a Go button** — it teleports the page to the fold being tuned.
+  Config: `goTo` (selector or fn, e.g. `'#page-12'`), `goLabel` (`'@fold13'`), optional
+  `onGo(el)` to put the fold into the state worth looking at. The scroll is **animated**
+  and followed by `ScrollTrigger.refresh()` once it settles — an instant jump would latch
+  the pins exactly as a load-time jump does. Fires on click only, never on load.
 - **Never scroll or jump the page on load.** No `scrollIntoView`, no `scrollTo`, no hash
   jump in `init`. An instant jump skips pinned/scrubbed sections and latches them into
   their end state, so later folds sit stuck on screen and the page looks broken *because
@@ -112,13 +118,11 @@ the `manual/` slider that picked the gap between the two camps at @fold2 **and**
 one anchor): `FOLD2_CAMP_CENTER_GAP_PX` 180 → **162**, re-laying out live with `updateGroups();
 draw()`. The knob was the HALF-gap — each camp's centre sits that many px either side of screen
 centre — so one step moved the camps 2px apart. It never touched mobile, which computes its own gap
-from `FOLD2_CAMP_EDGE_GAP_MOBILE_PX`. Deleted on 2026-09-07 once baked. Three @fold10 axis-plaque
+from `FOLD2_CAMP_EDGE_GAP_MOBILE_PX`. Deleted on 2026-09-07 once baked. Three @fold9 axis-plaque
 `compare/` panels — `_debug-axis-align.js` (picked the description's alignment: flush to the
 card's axis-side edge), `_debug-axis-others.js` (picked the other plaques collapsing into the
 axis on hover, over dimming them) and `_debug-axis-title.js` (kept the title's fade-in over
-typing it) — were all deleted on 2026-09-07 once baked. `_debug-hero-title.js` — **kept on disk but unloaded** (its `<script>` tag in `project.html` is
-commented out; uncomment to bring the panel back, and its seed values are kept in sync with what
-`style.css` ships). Baked on 2026-09-07: title `line-height: 1.31` (what `normal` already resolved
+typing it) — were all deleted on 2026-09-07 once baked. `_debug-hero-title.js` was **deleted on 2026-09-10** (file + `<script>` tag), its values long since baked into `style.css`. Baked on 2026-09-07: title `line-height: 1.31` (what `normal` already resolved
 to, now stated), subtitle `line-height: 1.52` with `top: calc(50% - 189.1px)` desktop /
 `172.1px` mobile, trimmed gaps 23.73px / 20px. The `manual/` panel for @fold1's hero titles, two tabs
 (title / subtitle) × three knobs: font-size, line-height, and the gap from the element's box
@@ -144,12 +148,12 @@ an absolute y: @fold1's intro parks the title at `translateY(100vh)`, so absolut
 viewport off until the slide-in finishes. Everything else
 was removed earlier (`_debug-glide-perf.js`, `_debug-mlegend-width.js`,
 `_debug-vert-mobile.js`, `_debug-fold5.js` and the `_debug-hero-*.html` probes). `_debug-axis-desc.js` — the
-`compare/` that picked @fold10's hover-description card width (keep the plaque width, not
+`compare/` that picked @fold9's hover-description card width (keep the plaque width, not
 widen over the grid) — was deleted on 2026-09-07 once baked. The mobile
 vertical-axis `compare/`+`manual/` (`_debug-vert-mobile.js`, modes band / widen / slot with
 `P7_VERT_MOBILE` knobs) was deleted before its bake; rebuild it from the template if the
 mobile axis is picked up again. `_debug-vert-order.js` — the `compare/` panel that picked the
-mobile @fold10 vertical order (מקרא bar / axis headline / grid / docked tooltip) — was deleted
+mobile @fold9 vertical order (מקרא bar / axis headline / grid / docked tooltip) — was deleted
 on 2026-09-05 once that order was baked. `_debug-axis-len.js` — the `manual/` that picked
 `P7_VERT_SQ_BOOST` (1.08) and `TOOLTIP_DOCK_BOTTOM_PX` (0) — was deleted the same day. It
 tuned the axis length by **wrapping the writable global `p7SolveVerticalSq`** and forcing a
@@ -171,9 +175,9 @@ field, since `legendRow` derives the order from those y values,
 `_debug-tooltip-style.js`, the `compare/` that picked the desktop tooltip's group-colour
 fill over the old white-box-with-dashed-stroke, `_debug-tooltip-weight.js`, the `manual/`
 sliders that picked the tooltip description's 550 weight, `_debug-fold4-handoff.js`, the `@fold4`
-hand-off compare, `_debug-edge.js`, the `@fold10`
+hand-off compare, `_debug-edge.js`, the `@fold9`
 outer-dot-edge `manual/` slider that picked `SBB_TIMELINE_LEFT_PX`, and `_debug-axis.js`,
-the `@fold10` vertical-axis knobs that picked `P7_VERT`, were all deleted once their work was
+the `@fold9` vertical-axis knobs that picked `P7_VERT`, were all deleted once their work was
 done.)*
 
 ## Previously-built harnesses (all deleted)
@@ -181,7 +185,7 @@ done.)*
 The tuning harnesses that existed are gone; what's worth keeping is what each one *baked into*, so a rebuilt
 version knows where its numbers land:
 
-- **@fold10/@fold13 loupe marker** (`compare/`: crosshair vs halo-by-subtraction vs
+- **@fold9/@fold13 loupe marker** (`compare/`: crosshair vs halo-by-subtraction vs
   grow-the-selection) — halo won, and it moved out of the loupe onto the main canvas:
   `P7_INSPECT_SCRIM` / `P7_INSPECT_HOLE_DOTS` + `p7DrawInspectScrim` in `page7.js`.
 - **@fold2 dot colours/positions** — group colours → `GROUPS[].color` **plus** the

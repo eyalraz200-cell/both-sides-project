@@ -25,7 +25,7 @@ function isMobile() {
 // js/groups.js, which collapses its duration to 0 and lands every fold on its
 // end state instantly) and CSS transitions (see the reduced-motion block in
 // style.css). What it deliberately does NOT turn off: motion that IS the
-// scroll position — @fold10's scrubbed timeline and @fold12's glide are the
+// scroll position — @fold9's scrubbed timeline and @fold12's glide are the
 // content, not decoration around it, and freezing them would leave nothing to
 // read. Nor page9.js's drop animation, which is finalized.
 const REDUCED_MOTION_MQ =
@@ -39,12 +39,16 @@ function prefersReducedMotion() {
 // drawFoldSplit/drawFold7/drawFold9 are tiny inline background-only
 // functions (see below) — these folds' only visual content is the DOM overlay.
 // Folds whose canvas is *purely* background use drawBackground directly.
-// Index 10 is @fold11, the size grid: the same drawPage7 canvas, with p7Grid
+// Index 9 is @fold10, the size grid: the same drawPage7 canvas, with p7Grid
 // on (the axis undraws, the dots re-pack) — see p7SizeGridOnPage.
-// Indices 13 (@fold14, the closing statement) and 14 (@fold15, the outro card)
+// Indices 10 (@fold11) and 11 (@fold12) BOTH draw page8's bridge glide: @fold11
+// flattens the grid and then fires the glide, so @fold12 is reached with it
+// already running or at rest, on the same canvas.
+// Indices 13 (@fold14, the closing statement), 14 (@fold15, the share block)
+// and 15 (@fold16, the outro card)
 // share drawPage12: the freeform-morph canvas is established on arrival at
 // @fold14 and simply persists behind the credits card that follows it.
-const PAGES = [drawPage1, drawBackground, drawBackground, drawFoldSplit, drawBackground, drawBackground, drawFold7, drawFold7, drawFold9, drawPage7, drawPage7, drawPage8, drawPage9, drawPage12, drawPage12, drawPage12];
+const PAGES = [drawPage1, drawBackground, drawBackground, drawFoldSplit, drawBackground, drawBackground, drawFold7, drawFold9, drawPage7, drawPage7, drawPage8, drawPage8, drawPage9, drawPage12, drawPage12, drawPage12];
 let currentPage = 0;
 
 // How far every OTHER dot/square drops in opacity while one event is hovered
@@ -97,7 +101,7 @@ function drawBackground(ctx, W, H) {
 
 // Split-phase fold (id #page-3) — the groups split into the left/right corner
 // mini-legends (driven by fold6Trigger via updateGroups). The grey squares
-// grow in on the next fold (#page-4, «אספנו תיעודים…») and the ACLED
+// grow in on the next fold (#page-4, «כל ריבוע מייצג פעולה פוליטית…») and the ACLED
 // mini-legend note on the one after (#page-5). All DOM overlay; plain
 // background only here (and on those two, which use drawBackground).
 function drawFoldSplit(ctx, W, H) {
@@ -106,7 +110,7 @@ function drawFoldSplit(ctx, W, H) {
 
 // Timeline-intro fold (id #page-6, Figma node 120:1299) — just the timeline's
 // intro title now. The real pinned scrub section (drawPage7/page7-scrub) lives
-// at #page-9, *after* fold 9, specifically so the real per-event reveal
+// at #page-8, *after* fold 9, specifically so the real per-event reveal
 // doesn't engage until then — bundling them together (the original
 // structure) meant the real dot-grid started growing the instant this
 // title appeared, clashing with fold 6-9's own curated squares for the
@@ -115,7 +119,7 @@ function drawFold7(ctx, W, H) {
   drawBackground(ctx, W, H);
   // Same reasoning as drawFold9 below (see p7RealTimelineReached's own
   // comment, page7.js): if a fast scroll-up carries the user all the way
-  // past #page-8 (the fold-9 colors fold) and into this fold within a single
+  // past #page-7 (the fold-9 colors fold) and into this fold within a single
   // continuous motion, any per-event squares still mid-retreat should keep
   // animating out here too, instead of freezing the instant currentPage drops.
   // No axis here (p7AxisTriggerIfNeeded isn't called) — the axis has never
@@ -129,21 +133,21 @@ function drawFold7(ctx, W, H) {
   }
 }
 
-// Fold 9 (id #page-8, Figma node 162:63876) — see GROUPS/updateGroups below
+// Fold 9 (id #page-7, Figma node 162:63876) — see GROUPS/updateGroups below
 // for its actual DOM-overlay content (the fold-6 squares losing their
 // labels and gaining group colors). Background only, except the year axis
 // (page7.js) — that one starts appearing here already, gated by
 // p7AxisTriggerIfNeeded (its trigger is p7HasEngaged, i.e. this very fold's
 // own title card passing fully offscreen, which also kicks off the axis's
 // one-shot build-in wipe), rather than waiting until currentPage actually
-// flips to the real timeline/#page-9. p7DrawYearAxis itself is still also called from
+// flips to the real timeline/#page-8. p7DrawYearAxis itself is still also called from
 // drawPage7, since the axis needs to keep drawing for the whole rest of the
 // timeline.
 function drawFold9(ctx, W, H) {
   drawBackground(ctx, W, H);
   if (!p7.ready) return;
   p7UpdateEngagement(); // keeps p7HasEngaged live while scrolling back through this fold too (page7.js)
-  // Once the real timeline (drawPage7, #page-9) has actually been reached at
+  // Once the real timeline (drawPage7, #page-8) has actually been reached at
   // least once, keep drawing/animating its per-event squares here too — see
   // p7RealTimelineReached's own comment (page7.js) for why: without this, the
   // instant the user scrolls back up far enough for currentPage to drop from
@@ -151,7 +155,7 @@ function drawFold9(ctx, W, H) {
   // events) just vanished in a single frame instead of finishing its reverse
   // cascade. Gated on p7RealTimelineReached rather than p7HasEngaged alone
   // (which flips true earlier, while still on this very fold) so the
-  // *forward* reveal still only ever starts once #page-9 is actually reached
+  // *forward* reveal still only ever starts once #page-8 is actually reached
   // — this only smooths out the reverse crossing.
   if (p7RealTimelineReached) {
     p7DrawTimelineSquares(ctx, W, H);
@@ -480,7 +484,7 @@ function tooltipFillScaled(r, g, b) {
 //                which carries white text.
 // Four call sites write it — p7HoverInit and p7InspectInit (page7.js),
 // p9HoverInit (page9.js) and @fold7's scripted demo (js/update-groups.js) —
-// and the first version of the fill missed two of them, so @fold10's timeline
+// and the first version of the fill missed two of them, so @fold9's timeline
 // hover silently kept the raw colour. Hence the helper.
 function setTooltipColor(el, color) {
   if (!el) return;

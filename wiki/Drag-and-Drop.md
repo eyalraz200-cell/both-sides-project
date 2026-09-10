@@ -29,7 +29,8 @@ would hold scroll where the card never pins and the fold deadlocks.
   string is also `project.html`'s literal markup; JS overwrites it. It renders at
   `rgba(0, 0, 0, 0.45)` — set on the *colour*, because the `opacity` property on the same
   element is the stick reveal (0 → 1 once the title card pins).
-- `.page9-sticky` — `position: sticky; top: 0; height: 100vh` at every width (see above — the desktop trim is on the title row). Gains `.engaged` once the
+- `.page9-sticky` — `position: sticky; top: 0; height: 100vh` at every width (see above — the desktop trim is on the title row). Gains `.pills-in` at
+  @fold12's title crossing (desktop V2 only), `.engaged` once the
   title card sticks, `.dragging` during a pointer drag, and `.frozen`
   (`position: fixed`) at the outro fold.
 - `.page9-zone-wrap-extreme` — `position: fixed`, centered, `top: 14vh; bottom: 28.78vh`,
@@ -191,6 +192,21 @@ nothing below changes shape; see [Mobile](#mobile).
   budget changes. `p9LegitPosOf` maps event → shuffled cell → xy; page8 imports this
   directly as its glide target. **Desktop only** — mobile replaces the shuffle with the
   bar pack, same function, see [Mobile](#mobile).
+- **The legend filter closes the extreme columns' ranks.** `drawBandedCols` takes each
+  entry's cell slot from `slotOf` — a running count of the VISIBLE entries — not from its
+  index in `orderArr`, so a filtered-out dot stops holding a slot and the ones above it
+  drop into the space, shortening the column (the same close-ranks @fold10 does).
+  `lowRankCount` and the row count follow the visible count too. A hidden dot keeps its
+  raw index as its slot, so it shrinks away in place. The travel is a plain glide seeded
+  by `p9FilterSnapshot`, which `p7FilterCommit` calls at the same moment page7 takes its
+  own `from` snapshot — **before** the rebuild and redraw, or `p9.lastPositions` already
+  holds the new slots and nothing moves — running the **tier-staggered reposition** branch of `p9PlaceDot` over
+  `P9_FILTER_REPACK_MS` (2200ms, the drop's own `STATE1_REPOSITION_MS`) — the same
+  trickle-into-the-freed-slots move a drop uses, not a plain block glide. Leaving
+  `plainGlide`/`newEventStagger` off the anim record is what selects it.
+  Position never snaps; a restored dot has no `from` and so arrives by growing. The legit grid below the
+  line is untouched by this — it stays on its fixed shuffle and answers the filter by size
+  alone.
 - Dot color is `p7ActorColor(e.actor)` and is invariant per event — only position and
   alpha ever animate.
 - **Count labels**: `"אירועים"` and the number are two separate `fillText` calls
@@ -220,6 +236,82 @@ nothing below changes shape; see [Mobile](#mobile).
   on record via `p9PlaceDot`'s `recordOnly` flag — painted nothing, but present in
   `p9.lastPositions`, so a later drop has a start point to fly them from instead of
   snapping them into their column.
+
+## Crowd tiers — «היקף האירועים» on this fold
+
+The scope pill works on @fold13 too (`p9ScopeSet`, page9.js — reached through the
+page-gated click in js/groups.js; see
+[Groups-and-Legend](Groups-and-Legend.md#the-%D7%94%D7%99%D7%A7%D7%A3-%D7%94%D7%90%D7%99%D7%A8%D7%95%D7%A2%D7%99%D7%9D-button-above-the-right-column)).
+**Only the extreme columns tier.** The legit grid never changes size — a dot
+gains its crowd size when it *enters* the extreme zone and loses it on the way
+back, never while sitting below the divider.
+
+- **Room — narrowest width that fits.** Tiers need roughly twice the cells, so
+  the columns may grow **outward** toward the viewport edges at the native 4px
+  pitch, but only as far as the pack actually needs: `p9ScopeSolveCols` binary
+  searches for the **fewest** columns whose rows still fit under the ceiling
+  (rows fall monotonically as columns are added, so ~log2 packs, and the result
+  is cached). Each side solves its own width, so the sparser right column
+  usually stays at its native `p9.extremeColsSticky` and never widens at all.
+  `p9ScopeBox` only sets the *ceiling* on that search — how wide a side could
+  get while keeping `P9_SCOPE_WIDEN_MARGIN` (8px) clear of the viewport edge,
+  the narrower side setting it for both. Chosen on a live harness over clipping,
+  shrinking the pitch, hiding the legit strip and hiding the pill tray: the only
+  option that loses no dots without changing the pitch. Measured at 1440×900
+  with two categories dropped, all 6761 extreme dots draw, nothing clipped.
+- **Tier size.** `p9ScopeCellsFor(ev)` reads `p7BulgeTier(ev)` into
+  `P7_GRID_TIER_CELLS`, then clamps to `P9_SCOPE_TIER_CAP` (14) **and** to the box
+  width, so no block can exceed the columns it has to live in. At 14 the cap is
+  the same as the largest tier, so nothing is capped today — lower it and the big
+  blocks come down. Drawn size is
+  `n * cellPx − gap`, passed to `p9PlaceDot`'s existing `sizeOverride`, so drops,
+  un-drops and filter repacks lerp size along with position for free. State 1 is
+  untouched.
+- **Packing.** `p9PackColumns` is a bottom-left skyline packer over cell coords,
+  columns from the centre outward, rows up from the anchor: each block takes the
+  lowest run of `n` columns that will hold it, and among equally low runs the one
+  that buries the fewest dead cells beneath it. With every `n = 1` it degenerates
+  to the old row-major fill exactly (the waste tiebreak is skipped at `n = 1`), so
+  the untiered state is pixel-identical and un-tiering returns every dot to the
+  cell it left. **Holes:** a skyline pack cannot backfill under a wide block that
+  bridges columns of unequal height, so a few pockets remain — measured fill at
+  1440×900 is 96.7% left / 96.2% right of the cells the block spans.
+- **Cache.** The layout is rebuilt only when its key changes:
+  side, tiered, cols, tier cap, room mode, `p9.orderVersion` (bumped by
+  `p9SyncTopOrder` on any splice/push), filter size, visible count. A frame is one
+  `Map.get` per dot. `p9UpdateLayout` (resize) nulls it.
+- **The legit grid never tiers.** Its resting layout stays the *shuffled* free
+  grid — one flat-size cell per dot, deliberately gapped — in both states; a
+  press changes nothing below the divider. Legit dots are still seeded into the
+  morph's from-map, so a legit dot the repack does happen to move blends to its
+  new cell instead of snapping.
+- **Morph.** Page 12 has no page7 anim loop, so the fold runs its own clock:
+  `p9.scopeMorph = {from, start, dir}` seeded from **every** entry in
+  `p9.lastPositions`, extreme and legit alike (only the extreme ones change
+  size), and driven by
+  `p9ScopeRunLoop`, which yields its `draw()`
+  while `p9.anim` owns the frame. Windows are page9's own — `p9ScopeWindows` /
+  `p9ScopeTotalMs`, reusing `p7MorphWin` and the `P7_MORPH_PUSH` throttle —
+  order **strict-fly**: the flight fully lands (`P9_SCOPE_FLY_MS` 1400ms), then
+  every tier grows (`P9_SCOPE_SIZE_MS` 450ms) staggered biggest-first by
+  `P9_SCOPE_STAGGER_MS` (140ms), 2550ms total. Mirrored on the clock for
+  `dir: "off"`. `P9_SCOPE_GAP_MS` (−300) only applies to the other orders the
+  compare harness offers; strict-fly by definition has no gap to tune.
+- **Bulge off while tiered** — and off in the *bookkeeping* too: `p9BulgeTick`
+  refuses to register a hover entry at all while tiered. Registering one kept its
+  tween "active" and rescheduled a full-canvas redraw every frame the cursor sat
+  on a block, for no visible change. The hovered dot's win-outright hit box is
+  `max(p9BulgeSize(ev), drawn sq)`, so it follows the block; the bulge formula's
+  `P9_SQ`-based number would have shrunk a 55px block's box to a few px and
+  dropped the hover as the cursor moved across it.
+- **Handoff to @fold14.** `drawPage12` lerps each dot from its
+  `p9.fold13StartPos` size down to the flat spread size over `morphT`, shrinking
+  about the block centre — size only, never alpha.
+- **Reset on page flip.** `p7SizeGridOnPage` already forces `uniform: true` for
+  pages 9–12 and now also calls `p9ScopeSync()`, which clears the morph and the
+  cached layout. Tiers do not survive scrolling away.
+- **Mobile.** The pill is hidden under 600px, `p9ScopeSet` early-returns on
+  `isMobile()`, and `p9UpdateLayout` forces uniform if a resize lands there.
 
 ## Dot migration — the two states
 
@@ -264,6 +356,16 @@ on the first frame, before the flight began, and mirror-image on un-drop. On big
 `legitSq === SQ`, so it's a no-op there — which is why the snap was only visible on the
 regular-desktop tier and mobile.
 
+**Fly, then resize.** The size lerp does *not* ride the position's clock. It is sliced off
+the **raw** (pre-`p9Ease`) progress at `P9_DROP_SIZE_START` (0.7) and re-eased fresh, so a
+dot holds its old size for the first 70% of its raw travel and does the whole resize in the
+tail — the flight reads as a flight and the growth as a separate, later beat, the same
+ordering the scope morph's strict-fly uses on this fold. Measured: size fraction is 0.00
+through ~80% of travelled distance (eased travel runs ahead of raw), then completes. It
+reverses for free — on an un-drop the from/target sizes swap and the shrink lands at the
+end of the trip home. `plainGlide` is deliberately excluded and stays on the eased clock,
+so page8's invisible handoff is unaffected.
+
 **Dropping back to legit** is much simpler: a flat `DOT_DURATION = 3000` ms plain glide
 with no stagger, and an 800 ms count-down animation running concurrently (started
 `COUNT_DELAY` 300 ms in, so the dots visibly launch first) — not after the flight, which
@@ -296,7 +398,7 @@ box-model space open), and derives the path inset/radius from it.
 
 The tooltip normally opens **upward** from the dot (square anchor corner bottom-left,
 bottom-right for left-side events via `.is-mirrored`) — but the data-side rule is
-overridden at the screen edges by **the same two vertical flip lines @fold10's timeline
+overridden at the screen edges by **the same two vertical flip lines @fold9's timeline
 hover uses, sharing its constants** (`P7_TIP_FLIP_L` / `P7_TIP_FLIP_R_INSET`, both 327,
 `page7.js`): a dot left of `P7_TIP_FLIP_L` always opens rightward, a dot within
 `P7_TIP_FLIP_R_INSET` of the right edge always opens leftward. Deliberately one shared
@@ -337,7 +439,7 @@ their unhovered state the instant the drag started, before anything was reclassi
 **Hover bulge** (`p9BulgeTick` / `p9BulgeSize`, page9.js — desktop only): the hovered
 extreme dot swells to `P9_SQ × P7_BULGE_MULT[p7BulgeTier(e)]` centred on its cell, and
 every other dot in the same column block shifts by half the extra width away from it per
-axis, so the gaps around it stay exactly `P9_GAP`. It reuses @fold10's constants and helpers
+axis, so the gaps around it stay exactly `P9_GAP`. It reuses @fold9's constants and helpers
 verbatim (`P7_BULGE_*`, `p7BulgeTier`, `p7BulgeShift`, page7.js — see
 [Timeline → The hover bulge](Timeline.md#the-hover-bulge--p7bulgetick--p7bulgelist--p7bulgeshift-page7js)):
 crowd tiers by `ev.crowd` (tier 0 never swells), push full strength within `P7_BULGE_HOLD`
@@ -476,17 +578,18 @@ was touched**.
   variant flip re-lays the tray live.
 - `.page9-tray` in V2: `top: var(--p9-v2-tray-top); bottom: auto`, and it does **not**
   slide — its transform is `translate(-50%, 0)` in both states; the base rule's
-  visibility/opacity gate keeps it unseen until `.engaged`. The entrance is the **pill
-  pop-in** instead: each tray pill rests at `scale(0)` and pops to `scale(1)` over 280ms
+  visibility/opacity gate keeps it unseen until **`.pills-in`** (see below). The entrance
+  is the **pill pop-in** instead: each tray pill rests at `scale(0)` and pops to `scale(1)` over 280ms
   (sine in-out — the hero dots' own pop) delayed by `--p9-pop-i × 60ms`, where
   `--p9-pop-i` is set by `p9BuildPanel` from `P9_TRAY_GRID_V2[idx].col − 1` (0 = the
   rightmost pill, first in RTL reading order), so the crest travels **right → left**.
-  Un-engaging mirrors the delays (leftmost shrinks first). The bottom rule is a
+  Un-crossing mirrors the delays (leftmost shrinks first). The bottom rule is a
   `.page9-tray::after` (1px `rgba(90,90,90,0.18)`, full-bleed) scaled from
   `transform-origin: right` over `9×60+280 = 820ms` **linear**, so its leading edge keeps
   pace with the constant pill stagger. The rules are scoped to `.page9-tray .page9-pill`
   so a pill docked in `#page9ZoneAbove` is unaffected; `prefers-reduced-motion` drops both
-  transitions. **No card chrome** (per explicit request): full-bleed `width: 100vw`,
+  transitions. **The pop fires one fold early** — on `.pills-in`, not `.engaged`; see
+  "Two-beat reveal" below. **No card chrome** (per explicit request): full-bleed `width: 100vw`,
   transparent background, no radius and no border other than that rule — the same
   treatment the ≤600px block gives the mobile band. `.page9-tray-title` is hidden, padding is `14px 0`, and the
   `:has(.dragover)` card tint is neutralized (there's no card to tint) — **except while
@@ -601,7 +704,7 @@ again, for its own hit area) carry `-webkit-touch-callout: none` +
 half** — iOS WebKit ignores the unprefixed property alone, so a press-and-hold on a pill
 used to raise selection handles and the Copy bar *over* the drag. Nothing in the tray is
 reading material; the title card lives in `.text-col`, outside it, and stays selectable.
-This is the same suppression the graphic column carries for @fold10's loupe.
+This is the same suppression the graphic column carries for @fold9's loupe.
 
 - `p9Metrics()` → `{ SQ: 1, CELL: 2, legitCell: 1.5, legitSq: 1 }` with the spread flag on
   (bar mode: `legitCell`/`legitSq` both `LEGIT_CELL_M` 1; desktop `{3, 4, LEGIT_CELL, 3}`).
@@ -819,7 +922,7 @@ go through it — querying `#page9ZoneAbove` directly would silently no-op on mo
 The **divider stroke draws on mobile too** (same right-to-left grow-in via
 `p9TriggerLine`/`page9LineT`), sitting at `p9MidY` on the top edge of the legit strip.
 `p9HoverInit` is off; the touch equivalent is the
-same press-and-hold loupe as `@fold10`, generalized from fold-8-only via `p7InspectPage()`
+same press-and-hold loupe as `@fold9`, generalized from fold-8-only via `p7InspectPage()`
 (pages 7 **and** 9) and `p7InspectSource()` (which positions/half-size/`maxY` to read).
 `drawPage9` therefore ends with `p7InspectSync?.()`, and `keepEmptyFrame` in
 `js/update-groups.js` is `currentPage <= 11` so the docked empty tooltip frame carries through
@@ -831,6 +934,23 @@ The vertical dashed guide-line system (`.page9-divider-line`/`-top`/`-bottom`,
 `.page9-divider-highlight`, `p9SyncBottomDivider`/`p9SyncExtremeGap`/
 `p9SyncTopDividerHighlight`) was deleted — neither Figma frame shows it. The drop
 affordance is `#page9ZoneAbove` itself.
+
+### Two-beat reveal — `.pills-in` (@fold12) then `.engaged` (@fold13)
+
+The panel does **not** arrive all at once on desktop V2. Two classes on `.page9-sticky`,
+two folds:
+
+- **`.pills-in` — @fold12's crossing.** `page8CheckScroll` (`js/page8-9-scroll.js`) already
+  watches `#page-11 .section-title` passing viewport centre; it toggles `.pills-in` there
+  (gated on `p9IsV2()`, so mobile and the legacy layout never see it). That class makes the
+  band `visible` and runs the pill pop-in described above — the band carries no chrome in
+  V2, so nothing but the pills appears. The tray keeps `pointer-events: none`, so no pill is
+  draggable yet. Scrolling back up removes it and the pills shrink away, mirrored.
+- **`.engaged` — @fold13's stick.** Everything else: the full-bleed `::after` rule, the
+  drop zone (`.page9-zone-wrap-extreme`), the pinned `.page9-header`, and the tray's
+  `pointer-events: auto`. `page9UpdateFromScroll` also *adds* `.pills-in` whenever it
+  engages, as a safety net for a load or jump straight into @fold13 that fires no scroll
+  event over @fold12's title.
 
 **Both breakpoints: the tray is `visibility: hidden` until `.engaged`.** Its hidden resting
 state is a percentage of its OWN height (`translate(-50%, 100%)` on desktop,
