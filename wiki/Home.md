@@ -1,7 +1,7 @@
 # Both Sides — project wiki
 
 Current-state documentation for the scrollytelling project ("קיצוניים משני הצדדים").
-Everything here describes the **v2 branch as it is now** — no history narration; use
+Everything here describes the **project as it is now** — no history narration; use
 `git log` for how things got here.
 
 > **Keep this wiki updated.** Any change that alters behavior, structure, naming,
@@ -21,6 +21,7 @@ Everything here describes the **v2 branch as it is now** — no history narratio
 | [Data](Data.md) | `events.json`, the xlsx source, category/actor mappings |
 | [Dev-Workflow](Dev-Workflow.md) | Running the project, harness (`manual/`/`compare/`) convention, verification habits |
 | [Glossary](Glossary.md) | Shared shorthand terms (@legend, @dragcards, axis events, state 1/2…) |
+| [Teacher-Review-2026-09-03](Teacher-Review-2026-09-03.md) | Action items from the 3 Sep 2026 review call; tick off as they land |
 
 ## Quick facts
 
@@ -31,4 +32,3 @@ Everything here describes the **v2 branch as it is now** — no history narratio
 - Fold numbering: **always** resolve `@foldN` via [Folds](Folds.md) — it is off by one from
   the HTML ids (`@foldN` = `id="page-(N-1)"`).
 
-- [Teacher-Review-2026-09-03](Teacher-Review-2026-09-03.md) — action items from the 3 Sep 2026 review call; tick off as they land

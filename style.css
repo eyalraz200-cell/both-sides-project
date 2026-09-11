@@ -219,7 +219,7 @@ body {
 }
 
 /* The title's own normal-flow "page" — scrolls up and away like every other
-   fold's title block, no JS positioning of its own (see main.js's
+   fold's title block, no JS positioning of its own (see js/page8-9-scroll.js's
    page9UpdateFromScroll, which only watches .page9-sticky now, not this).
    Centered via inset:0 + margin:auto — deliberately NOT percentage-left +
    transform (tried that first; measured centered in every automated test but
@@ -354,7 +354,7 @@ body {
 
 /* Nothing in the panel — the dragcards tray, the dropped-pill stack — is
    visible/interactive until the title card sticks at the top (see
-   page9UpdateFromScroll in main.js's "engaged" toggle). The tray slides in
+   page9UpdateFromScroll in js/page8-9-scroll.js's "engaged" toggle). The tray slides in
    first (CSS transition on .page9-tray); the zone-wrap and header fade in
    0.4 s later so the sequence is tray → zone. The (at-rest empty)
    dropped-pill stack just fades; the tray gets its own rule below since it
@@ -492,7 +492,7 @@ body {
      invisible. When the sticky panel IS pinned (top:0, height:100vh) this
      is the same visual position as absolute;bottom:0 would give.
      fold13's slide-out overrides transform via an inline style (see
-     updateFold13 in main.js) and sets transition:none so it tracks scroll
+     updateFold13 in js/fold11.js) and sets transition:none so it tracks scroll
      frame-by-frame without lag from the CSS transition. */
   position: fixed;
   left: 50%;
@@ -1491,7 +1491,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    spacing. So the border here is transparent (it only holds the box-model
    spacing open) and the visible stroke is an absolutely positioned inline
    <svg> child (.page9-tooltip-dash, built/sized by updateTooltipDash() in
-   main.js on every hover) whose viewBox is set 1:1 to the box's own pixel
+   js/core.js on every hover) whose viewBox is set 1:1 to the box's own pixel
    size, so the dash can't be scaled or squashed by the box's aspect ratio.
    Unlike the title cards' plain rounded rect, this one is a <path> — it has
    to carry the one square anchor corner (and swap which corner that is for
@@ -1512,7 +1512,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   /* Widened from 222px at the same time the text went to 14px — a bigger face
      in the old box wrapped the descriptions onto more lines. 275px (≈251px of
      text after the 10px side padding + 2px borders) is sized so @fold7's demo
-     description — row-34, 109 characters, FOLD6_TOOLTIP_ROW_ID in js/groups.js —
+     description — row-34, 109 characters, FOLD6_SQUARE_ROW_IDS[0] in js/groups.js —
      lands on exactly 3 lines. Mobile keeps 222 (it clamps against the viewport
      anyway, see the ≤600px block). */
   width: 275px;
@@ -1743,8 +1743,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    text, replacing both the old right-aligned sidebar AND the later
    position:fixed/pinned-center treatment — text now scrolls continuously
    with the page instead of snapping visible/invisible at a fixed screen
-   position. Centering comes from the parent (.text-section/.pageN-sticky
-   are flex containers with align-items:center) plus margin:auto here so it
+   position. Centering comes from the parent (.text-section/the per-page
+   sticky wrappers are flex containers with align-items:center) plus margin:auto here so it
    stays centered without taking over layout. No fade — the card is always
    visible and simply scrolls with the page. The dashed-box visual treatment
    lives on .text-card-frame below, since per Figma (node 119:997 vs 119:969)
@@ -1775,7 +1775,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    mode was used on the short axis. The dash is drawn instead via a plain
    transparent border (preserves the box-model spacing) plus an absolutely
    positioned inline `<svg>` child (`.text-card-frame-dash`, inserted/sized by
-   updateTextCardFrameDashes() in main.js) whose viewBox is set to the frame's
+   updateTextCardFrameDashes() in js/core.js) whose viewBox is set to the frame's
    own actual pixel size every time it's (re)measured — a true 1:1
    viewBox-to-CSS-px mapping on both axes, so the dash/radius can't be
    scaled or distorted no matter the box's aspect ratio. */
@@ -1804,7 +1804,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    border-box on every side, leaving a ring of bare white fill between the
    dash and the frame's true edge. Expanding by --frame-border-w on all
    sides corrects for that, so this overlay's rendered CSS size (which
-   updateTextCardFrameDashes() in main.js reads via offsetWidth/offsetHeight
+   updateTextCardFrameDashes() in js/core.js reads via offsetWidth/offsetHeight
    to set its viewBox) actually matches the frame's real border-box. */
 .text-card-frame-dash {
   position: absolute;
@@ -1818,7 +1818,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 /* The single overlay holding all 9 groups across the legend (fold 2) through
    fold 5 — one persistent set of .group-item nodes, continuously
    repositioned/restyled rather than separate per-fold overlays crossfading
-   into each other (see GROUPS/updateGroups in main.js). Visibility is
+   into each other (see GROUPS in js/groups.js / updateGroups in
+   js/update-groups.js). Visibility is
    t-gated by that same code, not page-gated. */
 /* Invisible hit boxes over the two mini-legend columns — hovering either one
    types every group label back in (js/groups.js fold6LabelHoverTrigger).
@@ -1840,7 +1841,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   transition: opacity 200ms ease-out;
 }
 
-/* Holds only the fold6 source-credit note + its divider (main.js reparents
+/* Holds only the fold6 source-credit note + its divider (js/groups.js reparents
    fold6NoteEl/fold6NoteDividerEl here instead of .groups-overlay) — a direct
    .layout child, not nested in .graphic-col, so its z-index actually stacks
    above .text-col (see #page9CatTooltip for the same
@@ -1868,7 +1869,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    (same convention as .group-item: its left/top IS the square's own
    position), so the label can be positioned relative to it without
    re-measuring anything. Both label opacity and square color are driven
-   continuously from JS (updateGroups in main.js), so neither gets a CSS
+   continuously from JS (updateGroups in js/update-groups.js), so neither gets a CSS
    transition here — same reasoning as the overlay's own opacity above. */
 .fold6-squares-overlay {
   position: fixed;
@@ -1931,7 +1932,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 /* The dot columns' fixed-to-viewport layer (see the comment above
    buildPage0AllDots in page1.js for why this isn't normal-flow content) —
    same position:fixed/inset:0/z-index:0/pointer-events:none convention as
-   .groups-overlay. Opacity is set every frame from main.js's updateGroups
+   .groups-overlay. Opacity is set every frame from updateGroups
+   (js/update-groups.js)
    (1 - fold2Trigger's progress), not a CSS transition, same reasoning as
    every other continuously-JS-driven opacity in this file. */
 .page0-dots-overlay {
@@ -2035,8 +2037,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    ordinary centred card's top would land, and its min-height to just clear the
    card, so the document ends on it. That needs the card IN FLOW, hence the
    static wrapper below — a sticky wrapper ignores the padding and re-centres.
-   (It was a fixed DRAWER while the event map played behind it; the map was
-   archived 2026-09-08 and the drawer went with it.) */
+   No fixed drawer or map here — see the "Removed — don't reintroduce" note
+   in CLAUDE.md / wiki/Folds.md. */
 #page-15 {
   min-height: 100vh;
   display: block;
@@ -2061,7 +2063,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   direction: rtl;
 }
 
-/* Forced invisible while @fold14's scroll gate (main.js, p13GateLocked) is
+/* Forced invisible while @fold14's scroll gate (js/fold11.js, p13GateLocked) is
    locked — momentum-phase wheel events are non-cancelable in some browsers,
    so the page can genuinely scroll past the gate for a paint or two before
    the safety net corrects scrollY back. Since this wrapper is position:sticky,
@@ -2228,7 +2230,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    tall, so 17.4px half-height) from that 459px.
    position: fixed — per explicit instruction the logo doesn't scroll up with
    the rest of @fold1 like the title/subtitle do, it fades out in place
-   instead (page0ApplyTitleScrollLag in main.js sets its opacity directly, no
+   instead (page0ApplyTitleScrollLag in js/fold1-intro.js sets its opacity directly, no
    transform). .page0-title/.page0-subtitle are also position: fixed now
    (see their own comments below) but, unlike the logo, still get a JS
    transform each frame to reproduce their own scroll-up motion — just
@@ -2269,7 +2271,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      renders identically either way, and fixed just keeps it glued to the
      viewport instead of scrolling away by document flow. Switched from
      absolute per explicit instruction: the scroll-driven lag effect in
-     main.js (page0ApplyTitleScrollLag) needs to be the *only* thing moving this
+     js/fold1-intro.js (page0ApplyTitleScrollLag) needs to be the *only* thing moving this
      element — layering a JS transform on top of native scroll-driven flow
      movement (the old absolute behavior) meant two separate browser
      pipelines (layout/paint for the flow position, compositing for the
@@ -2311,7 +2313,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   margin: 0;
 }
 
-/* @fold1's page-load entrance (playPage0Entrance, main.js) sets this
+/* @fold1's page-load entrance (playPage0Entrance, js/fold1-intro.js) sets this
    element's own transform directly every animation frame (translateY from
    100vh down to 0, p9Ease'd) — deliberately no CSS transition here, since
    one would just re-ease motion that's already eased in JS, the same
@@ -2345,7 +2347,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 }
 
 /* One persistent .group-item per group, used across every stage (legend
-   through fold 5) — see GROUPS/updateGroups in main.js. left/top (set every
+   through fold 5) — see GROUPS (js/groups.js) / updateGroups
+   (js/update-groups.js). left/top (set every
    scroll tick) is the SWATCH's own anchor point, not the item box, since the
    item itself has no size: .group-swatch sits at that exact point and
    .group-label's own left (also set every tick, continuously lerped rather
@@ -2397,8 +2400,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 /* The two camp headers ("מחנה הימין" / "גוש השינוי") — no Figma node, new
    content per explicit written spec. ONE pair of elements spanning three
    folds, not a fold-4 thing: they type in at @fold2, stay through @fold3 and
-   un-type at @fold4. (They were called .fold4-column-title until that name
-   misled a reader into treating them as fold-4-only.) Same type
+   un-type at @fold4 — not fold-4-only, despite living near @fold4's code.
+   Same type
    ramp as .group-label's is-emphasized state (18px/#000) but bold, so it
    reads as a heading over the rows beneath it. Right-aligned via a static
    translate(-100%, -50%) rather than JS-measured left math — left/top set in
@@ -2410,7 +2413,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   transform: translate(-100%, -50%);
   white-space: nowrap;
   /* The header types in as two sibling spans (revealed prefix + transparent
-     remainder, main.js: fold8SetupTypewriter). The document is dir=ltr, so
+     remainder, js/fold8-tooltip.js: fold8SetupTypewriter). The document is dir=ltr, so
      without this the two Hebrew runs would lay out left-to-right relative to
      each other and the prefix would render on the wrong side. */
   direction: rtl;
@@ -2425,7 +2428,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   opacity: 0;
 }
 
-/* Source-credit line under fold6's mini-legend (main.js: fold6NoteEl) — no
+/* Source-credit line under fold6's mini-legend (js/groups.js: fold6NoteEl) — no
    Figma node, new content. Fixed px width so it wraps consistently
    regardless of viewport (same convention as .text-card's fixed 480px);
    left/top are the note's own position (not an anchor offset from a
@@ -2435,7 +2438,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 .fold6-note {
   position: absolute;
   direction: rtl;
-  text-align: right; /* right-aligned: the note now sits under the RIGHT legend column and hugs its right edge (see fold6X / noteRightEdge in main.js) */
+  text-align: right; /* right-aligned: the note now sits under the RIGHT legend column and hugs its right edge (see fold6X / noteRightEdge in js/update-groups.js) */
   font: 14px 'Assistant', sans-serif;
   line-height: 1.4;
   color: rgba(0, 0, 0, 0.85);
@@ -2696,7 +2699,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    ────────────────────────────────────────────────────────────────────────
    Hidden entirely above the breakpoint — the desktop mini-legend is drawn as
    DOM group rows over the canvas instead. The layer is fixed and full-bleed
-   like the other .layout-level overlays, and passes clicks through; only the
+   like the other direct-.layout-child overlays, and passes clicks through; only the
    bar itself takes pointer events (and only once updateGroups fades it in).
 
    z-index 5 keeps the button tappable — the .text-section boxes are
@@ -3159,12 +3162,6 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        instruction; the tray band and everything hanging off it sit the same
        distance down (P9_TRAY_TOP_M 116). */
     --card-top: 60px;
-  }
-
-  /* The drop zones' 260px rest-width forces horizontal overflow on a phone
-     (fold 10 is otherwise still desktop-shaped — see wiki/Folds.md). */
-  .page9-zone-stack {
-    min-width: 0;
   }
 
   /* Figma node 294-1279 ("dragcard" in the full @fold13 frame): 16px Assistant

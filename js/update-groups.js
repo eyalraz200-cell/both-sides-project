@@ -1613,8 +1613,8 @@ window.addEventListener("scroll", () => {
   requestAnimationFrame(() => { checkGroupTriggers(); groupsTicking = false; });
 }, { passive: true });
 
-// A programmatic smooth scroll (the dev fold-jump dropdown's own
-// scrollIntoView({behavior:"smooth"}), main.js above) can momentarily
+// A programmatic smooth scroll (e.g. a dev harness's
+// scrollIntoView({behavior:"smooth"})) can momentarily
 // overshoot or coalesce its very last frame, letting a card's top transiently
 // cross a watchCardThreshold boundary during the animated transit even though
 // the scroll actually *settles* on the other side of that boundary — with no

@@ -13,10 +13,10 @@ One object per event:
 | `actor` | Join key into `GROUPS`' `actor` field → the dot's color (`p7ActorColor`) |
 | `category` | Hebrew category string (the xlsx's `event_type`) → `CATEGORY_TO_IDX` (`page9.js`) |
 | `descHeMedium` | Per-event Hebrew description, shown in the hover tooltip |
-| `crowd` | Integer crowd estimate or `null` — from the **crowd size** column of a *second* workbook, see below. Drives the @fold9 hover bulge tier (`p7BulgeTier`, [Timeline](Timeline.md#the-hover-bulge)) |
+| `crowd` | Integer crowd estimate or `null` — from the **crowd size** column of a *second* workbook, see below. Drives the @fold9 hover bulge tier (`p7BulgeTier`, [Timeline](Timeline.md#the-hover-bulge--p7bulgetick--p7bulgelist--p7bulgeshift-page7js)) |
 
-Committed dataset: **14,451 events — 5,325 left, 9,126 right**, from **2023-01-01** to
-**2026-07-03**.
+Committed dataset (`events.json` at the repo root, `crowd` field included): **14,451
+events — 5,325 left, 9,126 right**, from **2023-01-01** to **2026-07-03**.
 
 An unmatched `actor` falls back to `#888`. All six `GROUPS` actors — including `#31CE1C`
 (מפגינים ערבים ישראלים, `arab israelis`, 537 events) — are present in the data, so every
@@ -48,7 +48,7 @@ report" → `null`. Distribution: < 100 — 837 · 100–999 — 985 · 1k–9,9
 | `date` | `date` |
 | `description_he_medium` | `descHeMedium` (2 rows empty → `null`) |
 | `row_id` | `rowId` — the stable per-row handle JS pins to, and what a harness reports back for marking rows in the sheet |
-| `actor_type` | unused by code (hidden column J). Sub-type filled only for the former `protesters against government` rows: `anti judicial reform demonstrators` (2,094), `anti government protesters` (373) — both still `protesters against government` — and `hostage deal protesters` (2,146), whose `main_actor` was **reassigned to `peace movements`** in the sheet on 2026-09-06 (so תומכי עסקת חטופים ומתנגדי המלחמה = left activists + hostage-deal protesters; the sub-type column keeps them distinguishable) |
+| `actor_type` | unused by code (hidden column J). Sub-type filled for three groups of rows: `anti judicial reform demonstrators` (2,094) and `anti government protesters` (373) — both `main_actor` `protesters against government` — and `hostage deal protesters` (2,146), whose `main_actor` is `peace movements` (so תומכי עסקת חטופים ומתנגדי המלחמה = left activists + hostage-deal protesters; the sub-type column keeps them distinguishable) |
 | `Description`, `location`, `fatalities`, `source` | unused; columns G–J are hidden in the sheet |
 
 ### `full_v4.xlsx` — v3 + geodata (source of `map/event-points.json`)
@@ -60,18 +60,13 @@ Each row was matched against the raw ACLED exports (`raw-israel.csv`, `raw-pales
 repo root) on `(date, Description == notes, location)` — 14,451/14,451 matched, zero
 unmatched. Coordinates are settlement centroids: 904 distinct points across all rows.
 Two row pairs in the sheet are literal duplicates of one ACLED event and share an `acled_id`:
-`row-4132`/`row-4134` (`ISR42882`), `row-8895`/`row-8896` (`PSE46925`). `server.py` still
-reads `full_v3.xlsx`; the page consumes the geodata only through `map/event-points.json` (see `map/` below).
+`row-4132`/`row-4134` (`ISR42882`), `row-8895`/`row-8896` (`PSE46925`). `server.py` reads
+`full_v3.xlsx`, not this file; **nothing in the page consumes the geodata** — `full_v4.xlsx`
+is kept in the repo as data only.
 
-## `map/` — archived with the event map
-
-The @fold15 event map was archived on **2026-09-08** (branch `map-archive`, snapshot commit
-`834ee0d`). `map.js`, `map/region.geojson` (Natural Earth 10m admin-0 outlines for the region)
-and `map/event-points.json` (904 distinct settlement coordinates + a per-event index into them,
-covering all 14,451 rows) all live there, not in the working tree. Restore with
-`git checkout map-archive -- map map.js` if the map ever comes back; the geodata is keyed by the
-xlsx `row_id` number, so it must be rebuilt from `full_v4.xlsx`'s `latitude`/`longitude` columns
-if the rows change.
+> **Removed — don't reintroduce:** the @fold15 event map (`map.js`, `map/region.geojson`,
+> `map/event-points.json`), snapshot at commit `834ee0d`; its geodata came from
+> `full_v4.xlsx`'s `latitude`/`longitude` columns.
 
 **There is no `side` column.** The camp split is derived from `main_actor` via
 `ACTOR_SIDE` in `server.py`, which must stay in sync with `FOLD4_COALITION_ROWS` /
@@ -85,8 +80,9 @@ dropped; a row with an unmapped actor is skipped and reported as a startup warni
 `server.py` read that file. If the xlsx changes and a deployment needs it, dump
 `server.py`'s `/events.json` output to the file manually.
 
-Note that `server.py`'s mtime watcher polls `.html`/`.css`/`.js` only — it does **not**
-watch the xlsx. Editing the spreadsheet requires a server restart, not just a reload.
+Note that `server.py`'s mtime watcher polls `.html`/`.css`/`.js` files only (at the root
+and under `js/`) — it does **not** watch the xlsx. Editing the spreadsheet requires a server
+restart, not just a reload.
 
 ## Category mapping
 

@@ -513,7 +513,6 @@ const FOLD6_SQUARE_ROW_IDS = [
 // Index 0 is the tooltip square — @fold7's demo shows that one specific event
 // (chosen by eye: the 2023-01-06 lawyers' protest outside the justice
 // minister's Modi'in home, whose description fills the docked frame cleanly).
-const FOLD6_TOOLTIP_ROW_ID = FOLD6_SQUARE_ROW_IDS[0];
 // Not shown in Figma node 258:2206 either (all 8 squares render flat
 // #2d2d2d there — see lerpFold6SquareColor's own null-target case, same
 // value) — the actors only matter once @fold8 recolors/flies the squares out to
@@ -734,9 +733,8 @@ const FOLD2_ENTRANCE_MS = 2400;
 // move (everything flying into the camp grids), header (the two camp titles
 // typing in). Windows, not a sequential split, so beats may overlap: header
 // currently shares move's exact window, i.e. the titles type as the rects fly.
-// `let`, not `const`, only so the compare/manual harness
-// (_debug-fold2-fly.js) can retune the sequencing live; production never
-// writes to it.
+// `let`, not `const`, only so a compare/manual harness can retune the
+// sequencing live; production never writes to it.
 // Tuned by eye on a live timeline harness, hence the un-round fractions —
 // they're the ms windows (in the trailing comments) divided by
 // FOLD2_ENTRANCE_MS. The dots' shrink and the flight deliberately overlap
@@ -1365,7 +1363,7 @@ let fold11SizeBeatTO = null;
 // How long after the size-down beat starts the FLY beat leaves. null = the
 // house default, "strictly after": the full flatten clock, p7MorphTotalMs(true) — the P7_FLAT_* set.
 // A number overlaps the two beats (0 = they leave together, resizing in
-// flight). var, not const — a manual/ harness drives it live (_debug-fold11.js).
+// flight). var, not const — a manual/ harness drives it live.
 var FOLD11_BEAT_GAP_MS = null;
 function fold11BeatGapMs() {
   return FOLD11_BEAT_GAP_MS === null ? p7MorphTotalMs(true)
@@ -1465,7 +1463,8 @@ p7ScopeBtnEl.addEventListener("click", () => {
   if (typeof updateGroups === "function") updateGroups();
 });
 (document.querySelector(".layout") || document.body).appendChild(p7ScopeBtnEl);
-// The map build fires on @fold15's own share card — the house 0.5 crossing.
+// @fold15's own share card fires the couple pairing (checkFold14Pair ->
+// fold14PairTrigger) on its house 0.5 crossing, like every other fold.
 
 function checkGroupTriggers() {
   checkFold2(); checkFold3(); checkFold6(); checkSquaresReveal(); checkAcledNote(); checkNoteUntype(); checkFold7Label(); checkFold8SquareDim(); checkFold8Tooltip(); checkFold8DemoGrow(); checkFold9(); checkFold9LegendPeek(); checkFold9Fly(); checkFold10Grid(); checkFold11Size(); checkFold13(); checkFold14Pair();

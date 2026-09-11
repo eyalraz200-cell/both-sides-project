@@ -267,17 +267,8 @@ const P9_COUNT_LABEL_ROOM_V2 = 28; // one 12px count line + breathing room above
 // the two never read as touching.
 const P9_ZONE_GRID_GAP_V2 = 26;
 
-// The full drop-zone stack height (--page9-zone-stack-height, written by
-// p9MeasureTrayLayout) in px — the always-reserved vertical budget for
-// #page9ZoneAbove in V2. 0 until first measure.
-function p9ZoneStackHV2() {
-  const zone = document.getElementById("page9ZoneAbove");
-  if (!zone) return 0;
-  const v = getComputedStyle(zone).getPropertyValue("--page9-zone-stack-height");
-  return parseFloat(v) || 0;
-}
-
-// Its width twin (--page9-zone-stack-width) — the canvas center gap is sized
+// The drop-zone stack width (--page9-zone-stack-width, written by
+// p9MeasureTrayLayout) in px — the canvas center gap is sized
 // off this in V2 so the two extreme blocks part exactly wide enough for the
 // zone that sits between them. 0 until first measure.
 function p9ZoneStackWV2() {
@@ -385,7 +376,7 @@ const CATEGORY_TO_IDX = Object.fromEntries(P9_CATEGORIES.map((c, i) => [c, i]));
 // 0..1 eased progress of the horizontal divider line growing in from the left —
 // not scroll-driven: a fixed-duration animation triggered once the title card
 // crosses the viewport's vertical center (see p9TriggerLine, called from
-// page9UpdateFromScroll in main.js — same frac-0.5 convention as every other
+// page9UpdateFromScroll in js/page8-9-scroll.js — same frac-0.5 convention as every other
 // fold's title-driven animation, deliberately NOT tied to .page9-sticky's own
 // pin state, see that function's comment), playing on its own clock the same
 // way page8's dot-grid transition does. The reverse plays if the title
@@ -1324,15 +1315,6 @@ function p9ScopeSync() {
   p9.scopeLayout = null;
 }
 
-// Debug readout: pack width/rows and how many dots (if any) the box refused.
-function p9ScopeStats() {
-  return {
-    tiers: p9ScopeTiered(),
-    tierCap: P9_SCOPE_TIER_CAP,
-    ...(p9.scopeStats || {}),
-  };
-}
-
 function drawPage9(ctx, W, H) {
   if (!p7.ready) {
     drawBackground(ctx, W, H);
@@ -1546,7 +1528,7 @@ function drawPage9(ctx, W, H) {
         } else if (p9.anim.plainGlide) {
           // Plain, unstaggered glide over the animation's full duration — used
           // when picking up page8's timeline->legit-grid glide mid-flight (see
-          // setActivePage, main.js) to continue at the same visual speed it
+          // setActivePage, js/nav.js) to continue at the same visual speed it
           // was already moving at. The tier-staggered branch below compresses
           // actual travel into only 40% of its given duration (by design, for
           // the extreme-zone reposition case it's built for) — reusing it here
@@ -2095,7 +2077,7 @@ function drawPage9(ctx, W, H) {
   // Dividing line between the "extreme" and "legitimate" dot-grid halves —
   // spans the full screen width edge-to-edge, growing in from the *right*
   // edge toward the left as the user scrolls (page9LineT, driven by
-  // page9UpdateFromScroll in main.js — per explicit request, reversed from
+  // page9UpdateFromScroll in js/page8-9-scroll.js — per explicit request, reversed from
   // the left-to-right direction every other fold's own grow-in uses),
   // reaching full width exactly when the title finishes docking at the top.
   // The category panel that classifies events into these halves lives as
@@ -2224,7 +2206,8 @@ function p9GetDisplayedCounts() {
 }
 
 // Moves all extreme-zone pills back to their tray rows and resets p9.sides.
-// Called by main.js when the @fold16 reverse animation fully completes so the
+// Called by page9UpdateFromScroll (js/page8-9-scroll.js) when the @fold16
+// reverse animation fully completes so the
 // drag-and-drop state reverts to the @fold15 starting point.
 // animate=true  → 3s dot migration (scroll-back from @fold15)
 // animate=false → instant reset    (@fold16 reverse completion)
@@ -2275,7 +2258,8 @@ function p9ResetDrops(animate = false) {
 
 // Reverses the *visual* effect of p9ResetDrops(true) — moves the given
 // categories' pills from the tray back into the extreme zone and restores
-// p9.sides, so scrolling back into @fold15 (main.js's page9UpdateFromScroll)
+// p9.sides, so scrolling back into @fold15 (page9UpdateFromScroll,
+// js/page8-9-scroll.js)
 // puts the dots/pills right back where the user left them, rather than
 // requiring them to be re-dropped by hand. `idxs` must be in the DOM order
 // #page9ZoneAbove had right before p9ResetDrops ran (most-recently-dropped
@@ -3174,7 +3158,7 @@ function p9HoverInit() {
       p9.hoverDimT = hoverDimTarget > p9.hoverDimT
         ? Math.min(hoverDimTarget, p9.hoverDimT + delta)
         : Math.max(hoverDimTarget, p9.hoverDimT - delta);
-      // updateGroups (main.js) re-reads p9.hoverDimT/hoveredCategoryIdx to dim
+      // updateGroups (js/update-groups.js) re-reads p9.hoverDimT/hoveredCategoryIdx to dim
       // the 8 fold6 squares in step with every other canvas dot — they're not
       // part of drawPage9's own dot loop, so draw() alone doesn't touch them.
       if (currentPage === 12) { draw(); if (typeof updateGroups === "function") updateGroups(); }
@@ -3361,7 +3345,7 @@ function p9HoverInit() {
     dateEl.textContent = p7FormatDateDMY(bestEvent.date);
     descEl.textContent = bestEvent.descHeMedium;
     // `color`, not `border-color`: the visible stroke is the dashed <svg>
-    // overlay (updateTooltipDash, main.js), which strokes currentColor.
+    // overlay (updateTooltipDash, js/core.js), which strokes currentColor.
     setTooltipColor(tooltipEl, p7ActorColor(bestEvent.actor));
     tooltipEl.classList.add("is-visible");
 

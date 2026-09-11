@@ -2,9 +2,9 @@
 
 ## The roster
 
-`GROUPS` (`js/groups.js`) is **6 groups** — camp groups only. The old no-camp groups
-(אתיופיה, סביבתיים, להט"ב, דרוזים…) were removed entirely on v2 and appear nowhere,
-hero dots included. Any doc claiming 8/10/12 groups is stale.
+`GROUPS` (`js/groups.js`) is **6 groups** — camp groups only; no no-camp group appears
+anywhere, hero dots included. Any doc claiming 8/10/12 groups is stale.
+**Removed — don't reintroduce:** the no-camp groups (אתיופיה, סביבתיים, להט"ב, דרוזים…).
 
 `GROUPS` is the source of truth for colors, labels and the `actor` join key.
 
@@ -67,7 +67,7 @@ opacity every frame, so nothing has to switch it back on.
    [Dev-Workflow](Dev-Workflow.md) for the harness that arranges them.
 2. **@fold2** — the dots fly into two 4×3 blocks of plain rects (Figma `279:1342`), no
    labels, no divider. Spacing comes from `fold2ColPitchPx()` / `fold2RowPitchPx()`
-   (`js/groups.js`) and **differs by breakpoint**. Desktop pitches are harness-tuned by eye
+   (`js/groups.js`) and **differs by breakpoint**. Desktop pitches are flat px
    — **29px across, 29px down** around the 11px rect, i.e. an 18px visible gap both ways.
    Mobile instead authors the **visible gap** directly at a flat `FOLD2_RECT_GAP_MOBILE_PX`
    = **18px** both ways, so its pitch derives as `18 + CLUSTER_SWATCH_SIZE` = **29px** and
@@ -81,7 +81,7 @@ opacity every frame, so nothing has to switch it back on.
    cells set the flying dot's color via `FOLD2_FILLER_COLORS` (`js/groups.js`, resolved in
    `assignFold2Fillers`). Both are keyed by **cell**, not by dot — which decorative dot
    lands in which cell depends on the viewport height, and listing every cell means that
-   pick no longer shows: the grid reads identically at any height.
+   pick never shows: the grid reads identically at any height.
    Both tables are **authored** in the canonical 4-wide reading order, but a cell's live
    `(row, col)` is derived from that flat index and `FOLD2_GRID_COLS` (`fold2CellOf` /
    `fold2GroupCell` / `fold2FillerCells`, `js/groups.js`), so the same 12-cell roster lays
@@ -120,7 +120,10 @@ opacity every frame, so nothing has to switch it back on.
    squares — and `p9HoverInit` on @fold13) calls `fold6DotHover(actor)` (js/groups.js)
    alongside setting its own `hoveredEvent`. That drives a **per-group** trigger
    (`fold6DotHoverTriggers`, one per actor, also `FOLD6_LABEL_HOVER_MS` 420) which joins the
-   same combination in `updateGroups`: `max(1 - untype, legendHover, dotHover)`. Only the
+   same combination in `updateGroups` (js/update-groups.js): `restT = Math.max(untypeVisibleT,
+   hoverVisibleT, dotT)`, where `untypeVisibleT = 1 - p9Ease(fold6LabelUntypeTrigger)`,
+   `hoverVisibleT = p9Ease(fold6LabelHoverTrigger)` and `dotT` is this row's own eased
+   `fold6DotHoverTriggers` value (0 when the actor has none). Only the
    hovered dot's group opens; moving between dots of different groups reverses the outgoing
    row rather than snapping it shut, so the two labels crossfade. `fold6DotHover(null)` on
    un-hover. Desktop only.
@@ -201,8 +204,8 @@ dropping a line all at once at the end.
 @fold3's pitch is **one knob per breakpoint, nothing else has a vote**
 (`js/update-groups.js`). Desktop: a flat `FOLD3_ROW_PITCH_DESKTOP_PX` = **34px** (a 23px
 visible gap around the 11px swatch) — no `max()` against label heights, because desktop
-labels are nowrap one-liners and the old `max()` meant editing the pitch constant silently
-did nothing whenever tallest-label + gap outvoted it. Mobile has no flat pitch at all:
+labels are nowrap one-liners and a `max()` would mean editing the pitch constant silently
+does nothing whenever tallest-label + gap outvotes it. Mobile has no flat pitch at all:
 its labels wrap to 1-3 lines with the **first line** on the row y and the rest hanging
 below it (`firstLineShift`), so the **visible gap** is the constant instead. Each step
 from row *k* to *k+1* is
@@ -213,8 +216,8 @@ between any two rows is the same whatever their line counts. `fold3RowY` is the 
 sum of those steps.
 
 **Both folds share one fixed top anchor** — `fold3TopRowY === fold2TopRowY`; each pitch
-only spaces its own rows downward from it. **Removed — don't reintroduce:** the old
-re-centering term (`fold2TopRowY - (fold3RowPitch - fold2RowPitchPx()) * rows / 2`) made
+only spaces its own rows downward from it. **Removed — don't reintroduce:** a
+re-centering term (`fold2TopRowY - (fold3RowStep - fold2RowPitchPx()) * rows / 2`) that made
 @fold3's whole column, and the header riding `topRowYNow`, move whenever *either* fold's
 pitch was edited — worst on mobile, where fold3's pitch is label-height-derived. The anchor
 is a position; the pitches are gaps; they must never feed each other.
@@ -242,7 +245,7 @@ applied as a `translateY` alongside the pop's `scale`. And because the label TYP
 button pins `line-height: 17px` / `min-height: 25px` — without it an empty box measures short
 and the placement (which subtracts `btnH`) jerked the control 5px upward on the first typed
 character. Vertically, `P7_SCOPE_BTN_GAP` (22px) above the **top**
-row's centre line **−10px** (that nudge tuned by eye 2026-09-10), all written every frame by `updateGroups` — but it is **not**
+row's centre line **−10px**, all written every frame by `updateGroups` — but it is **not**
 a `.groups-overlay` child. The overlay is `pointer-events: none` *and*
 `z-index: 0` with its own stacking context, so a button inside it would sit under
 `.text-col` and never see a click; the button is a direct `.layout` child at
@@ -259,7 +262,7 @@ frame, so the ring holds still while the characters grow leftward. The accessibl
 from a static `aria-label`, since the visible text is sliced. Then it stays for every fold
 after it, fading out with everything else on @fold14's `p9.fold13OutT` clock;
 `hidden` before that. Desktop only. Behaviour and what it
-toggles: [Timeline](Timeline.md#the-size-grid).
+toggles: [Timeline](Timeline.md#the-size-grid--p7sizegridset-page7js-desktop-only).
 
 The click is **page-gated** (js/groups.js): `currentPage < 12` → page7's
 `p7SizeGridSet(true, {uniform: !p7GridUniform})`; `currentPage === 12` →
@@ -279,9 +282,9 @@ weight; see [Folds](Folds.md) for the beat-mirroring mechanism.
 
 The gap down to the camp's top swatch row is measured two different ways. Desktop uses
 `FOLD4_HEADER_GAP` (36) as **plain px, header center → swatch center** — fixed, NOT
-frame-scaled (it used to multiply by `H/982`, which made this the one distance in the
-scene that changed on window resize; per explicit instruction it holds constant — ~19px
-of visible white at any height).
+frame-scaled (per explicit instruction it holds constant rather than multiplying by `H/982`
+— ~19px of visible white at any height, the one distance in the scene that must not change
+on window resize).
 Like mobile, the desktop header is placed off the top row's **current (blended) y**, not a
 flat `fold2RowY(0)` anchor. @fold3 runs a slightly larger gap than @fold2 (per explicit
 instruction): `FOLD3_HEADER_GAP` (42, same px units), lerped from `FOLD4_HEADER_GAP`
@@ -311,8 +314,8 @@ are both fixed px, so on a phone an H-scaled distance would swing with the URL b
   band, both position *and size* lerp by the same ease (`js/update-groups.js`): the end
   size is the band's own rule (`legitGeom.cell` in bar mode, else `p9Metrics().legitSq`),
   matching what page8.js uses for canvas dots. On big desktop that's a no-op (legitSq =
-  timeline size); on ≤1600 desktop and mobile the squares used to stay at timeline size
-  and read as oversized dots on the band.
+  timeline size); on ≤1600 desktop and mobile it is what keeps the squares from landing at
+  timeline size and reading as oversized dots on the band.
 
 **All 8 squares are pinned to specific events by id.** `FOLD6_SQUARE_ROW_IDS`
 (`js/groups.js`) is the roster — the xlsx's own `row_id` per square, in square order:
@@ -343,7 +346,7 @@ that ever reads badly.
 `FOLD6_SQUARE_COLORS` is computed from it at parse time, before events.json exists. The
 occurrence number the lookups actually need is derived from the loaded data at first use
 (`fold6SquareOccurrence(i)` → `p7OccurrenceOfRowId`, `page7.js`) and cached per slot, so
-**editing the xlsx can no longer silently slide a square onto a neighbouring event** — it
+**editing the xlsx cannot silently slide a square onto a neighbouring event** — it
 follows the row. Every consumer must go through `fold6SquareOccurrence(i)`, or
 `p7GetClaimedEvents` and the tooltip disagree and the real cascade draws a duplicate dot. If
 a row is deleted from the dataset the console warns once per id and that square falls back to
@@ -483,7 +486,7 @@ second declaration would replace both. Both come from custom properties written 
 `updateGroups`. The **rotation runs on the card's width step and nothing else** (explicit
 instruction): `--note-open` is `cardWT`, the eased progress of the width window, so the chevron
 turns exactly while the card is widening and is still while the height fills with text. It does
-*not* track the typing — that read as a slow sweep, and was briefly a hard `0`/`1` snap instead;
+*not* track the typing — that read as a slow sweep, and a hard `0`/`1` snap is too abrupt;
 tying it to the one beat it belongs to is the middle ground. Because the chevron exists on both
 breakpoints, `cardWindows`/`cardOpen`/`cardWT` are computed **above** the desktop-only card
 block in `updateGroups`, not inside it. The **fade** is still continuous, from `--note-title-p`
@@ -521,14 +524,14 @@ rule's ink trim is measured against that line-height. It reparents into the מק
 with the note and the rule (`fold6SyncNoteHome`) and takes the same `hidden` gate on mobile.
 
 The stack reads downward from the bottom row: the **title** sits `FOLD6_NOTE_TOP_GAP`
-(**17px** — the old 8+1+8 collapsed into one number, so the distance is unchanged) below the
+(**17px**) below the
 rows with the note `FOLD6_NOTE_TITLE_GAP` (**4px**) under the title's measured box, and
 the rule runs alongside all of it.
 
 The note box is a fixed `FOLD6_NOTE_WIDTH` = **155px** wrap width (`js/groups.js`); in the
 mobile panel it has no width at all and fills the panel. It is RTL and right-aligned, so it hugs the rule and extends leftward. Editing `FOLD6_NOTE_WIDTH` re-wraps the
-note and changes its height; the legend rows no longer move with it (the old
-`fold6NoteShiftPx` row pre-shift is gone) — the note just extends further down.
+note and changes its height; the legend rows do not move with it — the note just extends
+further down. **Removed — don't reintroduce:** a `fold6NoteShiftPx` row pre-shift.
 
 ## The mobile מקרא bar
 
@@ -607,24 +610,24 @@ it — **width first, then height** — exactly as the desktop note opens.
   at the ends (unhidden at once on open, so the card can measure the height it is opening to
   and the fly hand-off can measure its targets; hidden when the close lands). `.is-open` on
   the bar and the layer follow the same ends.
-- **There is no pressed chip any more** — the card opening *is* the open state. Being a
+- **There is no pressed chip** — the card opening *is* the open state. Being a
   real `<button>`, it still gets the UA's tap highlight and a focus ring that outlives the
   tap; both are cancelled explicitly (`-webkit-tap-highlight-color: transparent`, and
   `outline: none` on `:focus`/`:focus-visible`), the same treatment the pill ⓘ needs — see
-  [Drag-and-Drop](Drag-and-Drop.md#the-pill-ⓘ-button).
+  [Drag-and-Drop](Drag-and-Drop.md#the-pill--button).
 - **The panel spans the bar's full width** — the screen less `.fold6-mlegend`'s 12px
-  insets (per explicit instruction; it was briefly shrink-wrapped to the mini-legend). It
+  insets (per explicit instruction — not shrink-wrapped to the mini-legend). It
   carries **no frame of its own** (no background, border or shadow — the card behind the
   bar is the frame); just the 8px gap under the title row and `padding: 2px 4px 0`.
 - **Scroll cost while open — keep both guards.** The open panel sits in a
   `position: fixed` full-viewport layer over a canvas that repaints every frame; scrolling
-  with it down used to stutter. Two things fix
+  with it down would stutter. Two things prevent
   it and both are load-bearing: `.fold6-mlegend-panel` carries `transform: translateZ(0)`
   + `contain: paint` so it is composited rather than re-rasterised with the canvas, and
   `fold6SetMobileLegendVisible` caches its last `vis` and skips the write when unchanged —
   it runs from `updateGroups`, i.e. once per scroll frame, and `vis` is pinned at 0 or 1
-  outside `fold6Trigger`'s own ~1.9s ramp, so nearly all of those writes were no-ops that
-  still dirtied the subtree for repaint.
+  outside `fold6Trigger`'s own ~1.9s ramp, so nearly all of those writes would be no-ops that
+  still dirty the subtree for repaint.
 - **Inside, the layout mirrors `@fold3` on screen.** Only the **camp title** is centered
   (over its own column, `align-self: stretch` + `text-align: center`). The **group rows are
   not** — `.fold6-mlegend-col` is `align-items: flex-start`, so every row shares the
@@ -637,8 +640,8 @@ it — **width first, then height** — exactly as the desktop note opens.
   `js/groups.js` when the column is built) — and a long group name stacks lines inside that
   cap instead of widening the column and squeezing the other camp.
   Which labels wrap was specified by hand: only «תומכי עסקת חטופים ומתנגדי המלחמה» and
-  «תנועות התנחלות באיו״ש» do («מתנגדי הרפורמה המשפטית», 143px at 14px Assistant since the
-  2026-09-06 rename, fits the 160px change cap on one line). **That cannot be done with one
+  «תנועות התנחלות באיו״ש» do («מתנגדי הרפורמה המשפטית», 143px at 14px Assistant,
+  fits the 160px change cap on one line). **That cannot be done with one
   shared width**: at 14px Assistant those measure 198px and 124.5px, but «מפגינים ערבים
   ישראלים» — which must stay on one line — is 123.4px, ~1px under the settlers label. So each camp is capped on its own
   longest *keeper* instead (coalition: קבוצות ימין לאומיות 101px; change: מפגינים ערבים
@@ -647,11 +650,11 @@ it — **width first, then height** — exactly as the desktop note opens.
   measured widths — a cap set by eye on one phone will flip a label on another.
   The swatch stays on the label's **first** line (`.fold6-mlegend-row` is
   `align-items: flex-start`), exactly as the canvas rows sit at `@fold3`. No
-  `overflow-x` guard is needed any more — nothing can out-measure the panel.
+  `overflow-x` guard is needed — nothing can out-measure the panel.
 - **The six `groupItems` don't go anywhere** *(typed hand-off only — with `FOLD4_FLY` on,
   the default, they fly into the panel instead; see the two-versions bullet below)*. At
   `@fold4` they leave from exactly where
-  `@fold3` left them (per explicit instruction — they used to fly into the button): the
+  `@fold3` left them (per explicit instruction — they do not fly into the button): the
   swatch **shrinks to nothing** in place (`swatchSize *= 1 - e6`) and the label **un-types**.
   The shrink is paired with an opacity fade over the last CSS pixel
   (`SWATCH_VANISH_PX` = 1, `js/update-groups.js`) — see **Shrinking to zero doesn't hide
@@ -663,11 +666,11 @@ it — **width first, then height** — exactly as the desktop note opens.
   swatch size, label gap, font-size, wrap cap and label side all stay at their column
   values, via `fold6ShapeT` (`js/update-groups.js`) = `e6` on desktop, **0** on mobile.
   **The label must not move a pixel while it un-types**, and two separate terms of its
-  `top` used to slide it up: the swatch's own center (`swatchSize / 2`, following the
+  `top` would otherwise slide it up: the swatch's own center (`swatchSize / 2`, following the
   shrink) and `firstLineShift` (faded over `e6`). Both are fixed —
   `labelAnchorSwatch` holds the pre-shrink size for the label's anchor only, and
   `firstLineShift` fades over `fold6ShapeT` instead of `e6`, so on mobile it holds.
-- **The camp names live inside the panel** (per explicit instruction — they used to rise
+- **The camp names live inside the panel** (per explicit instruction — they do not rise
   onto the screen). Each column is headed by a static `.fold6-mlegend-camp` carrying
   `CAMP_HEADER_TITLE_COALITION` / `_CHANGE`, with a **12px** gap below it (double the 6px
   pitch between the group rows, so the camp → groups split reads at a glance). On screen, `campHeaderCoalitionEl`/
@@ -969,7 +972,7 @@ it — **width first, then height** — exactly as the desktop note opens.
   open from `@fold4` onward; now that `@fold5` closes it, firing there landed the credit
   inside a closing panel — i.e. nowhere — and, because both triggers then read as "on" at the
   same fold, it also wedged `fold6MLegendAutoBeat` so the panel never closed at all.
-  `fold6MLegendIntroActive` no longer gates it — that flag now stays true for as long as the
+  `fold6MLegendIntroActive` does not gate it — that flag stays true for as long as the
   rows can still fly back out. `updateGroups` keeps the note + rule `hidden` (out of layout,
   not just transparent) only while `fold6MLegendOpenRaw < 1`, i.e. while the card is still
   opening: the one moment the note could grow the frame under rows that are still arriving,
@@ -983,8 +986,9 @@ it — **width first, then height** — exactly as the desktop note opens.
   opened by hand is never caught mid-animation; the card's own open/close is *not*
   cancelled by it — the tap that follows just turns the card toward its new target.
   Desktop never runs it (`isMobile()` guard).
-- `fold6NoteShiftPx` is **0** on mobile (no rows on screen to shift), which also makes
-  `FOLD6_LEGEND_TOP_MOBILE` inert.
+- `FOLD6_LEGEND_TOP_MOBILE` (**24**, js/groups.js) is `fold6RowIndexY`'s mobile branch — a
+  flat top inset for the on-canvas rows. With no on-canvas legend under 600px nothing visible
+  reads it; the hover boxes and the note anchors that call `fold6RowIndexY` are desktop-only.
 
 **Desktop is unchanged** by any of this.
 
@@ -1009,42 +1013,9 @@ un-types at `@fold4`.
 
 ## Shrinking to zero doesn't hide anything
 
-**An element scaled or sized toward zero is not reliably invisible.** Its last frames
-cover a fraction of a device pixel, and on a DPR>1 phone the compositor renders that as a
-faint speck rather than as nothing. Both places that retire an element by size alone were
-leaving marks on screen at `@fold4`, most visibly on the way back up:
-
-- **The six group swatches** shrink in place on mobile (`swatchSize *= 1 - e6`). Their
-  opacity is now multiplied by `swatchSize / SWATCH_VANISH_PX` (clamped), so the last CSS
-  pixel of the shrink is also a fade to 0. `SWATCH_VANISH_PX` is **1** — the fade runs
-  entirely inside a pixel that was already invisible, so no beat's visible timing moves.
-- **The 8 sample squares** rest at `scale(growScale)`, and at `growScale` 0 the eight
-  specks sat in `FOLD6_SQUARES_OFFSET`'s 2×4 arrangement, reading as two small wedges
-  mid-screen on every fold before `@fold6`. Their wraps are now `display: none` whenever
-  `growScale` is 0. `display: none` is safe here **only** because nothing measures these
-  wraps — `layoutFold6Squares` writes their `left`/`top` from constants. Anything that
-  needs measuring must use the opacity form instead.
-
-Same family as the timeline dots' phantom stroke ([Timeline](Timeline.md)): sub-pixel
-geometry on a high-DPR screen paints something, not nothing.
+Dots enter and leave by **size**, never opacity — the project-wide rule is [Animation-System → Dots never fade](Animation-System.md#dots-never-fade); its sub-pixel corollaries here are `SWATCH_VANISH_PX` (**1**, `js/update-groups.js` — the mobile swatch shrink's opacity is multiplied by `swatchSize / SWATCH_VANISH_PX`, so the fade lives entirely inside an already-invisible pixel) and the 8 sample squares' wraps going `display: none` at `growScale` 0 (safe only because `layoutFold6Squares` never measures them).
 
 ## Clicking a legend row — the @fold9 filter
 
-On the real timeline (@fold9) each legend row is also a **filter toggle**: click it
-and that group leaves the graph (its dots shrink away, the rest re-pack and fly).
-The click strips are `.fold6-legend-filter`, one per row, built by
-`fold6LegendFilterEl(g)` inside that column's hover box and positioned per frame by
-`updateGroups`; a filtered row carries `is-filtered-off` (opacity .28) on its
-`.group-item`. **Hovering a strip says the row is clickable:** it puts `is-filter-hover`
-on that `.group-item` (label → `#000`, swatch `transform: scale(1.5)`) and
-`is-filter-hover-any` on `.groups-overlay` (every other non-filtered row drops to opacity
-.45), all over 260ms CSS transitions on `.group-item` opacity / `.group-swatch` transform —
-the only transitions those elements carry, and the opacity one also softens the
-`is-filtered-off` flip. Desktop only; the strips are clickable on @fold9 through @fold13 (on @fold12/@fold13 a
-toggle animates by size only, and the 8 claimed squares scale with it on every fold —
-see Timeline; those 8 read the canvas's own beat functions rather than re-deriving
-them — `p8Beats(rawT).posE`/`.sizeE` for the glide — which is the standing rule for
-keeping them in step whenever a beat is added), and the filter
-itself stays in force through every fold after the timeline (the dimmed rows keep
-saying so) until you scroll back above @fold9. The mechanics live
-in [Timeline](Timeline.md#the-legend-filter-fold10-desktop-only--p7filtertoggle-page7js).
+On the real timeline (@fold9) each legend row is also a **filter toggle** (`.fold6-legend-filter` strips, built by `fold6LegendFilterEl(g)` and positioned per frame by `updateGroups`; desktop only): click it and that group leaves the graph by size, and the filter stays in force through every later fold.
+Mechanics, hover/filtered-off styling and how the 8 claimed squares follow it: [Timeline](Timeline.md#the-legend-filter-fold9-desktop-only--p7filtertoggle-page7js).

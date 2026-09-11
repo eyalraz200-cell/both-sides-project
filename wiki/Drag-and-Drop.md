@@ -3,10 +3,9 @@
 "מה נחשב בעיניכם לפעולה לגיטימית, ומה לפעולה קיצונית?" — the reader drags category pills into an "extreme" zone and
 the matching event dots migrate above the divider line.
 
-> **Two desktop layouts.** The section below describes the *legacy* desktop layout
-> (bottom tray, tall legit shuffle). The layout actually shipping on desktop today is
-> **[Desktop layout V2](#desktop-layout-v2)** — `P9_LAYOUT_V2 = true`. Mobile is
-> unaffected by the switch in either direction.
+> The sections from here down to **Hover** describe the desktop layout behind
+> `P9_LAYOUT_V2 = false` (bottom tray, tall legit shuffle); the shipping desktop layout is
+> **[Desktop layout V2](#desktop-layout-v2)**. Mobile is unaffected by the flag.
 
 ## Layout
 
@@ -35,8 +34,7 @@ would hold scroll where the card never pins and the fold deadlocks.
   (`position: fixed`) at the outro fold.
 - `.page9-zone-wrap-extreme` — `position: fixed`, centered, `top: 14vh; bottom: 28.78vh`,
   bottom-anchored flex column. **That `28.78vh` is hand-synced to `P9_MID`** — change one
-  and you must change the other. **Legacy layout only** — V2 overrides both offsets with
-  values derived from measured CSS vars, precisely to avoid a second hand-synced copy.
+  and you must change the other.
   Desktop only: on mobile the divider's y is derived, not a
   vh fraction (see [Mobile](#mobile)).
 - `#page9ZoneAbove` — the extreme drop target (`display: none` on mobile — nothing is
@@ -52,7 +50,7 @@ would hold scroll where the card never pins and the fold deadlocks.
   `p9TooltipDropTrigger`), sliding in from *above*, with `.page9-tray-title` hidden and a rule on
   its bottom edge only; the two wrappers are `display: contents` and
   `#page9ZoneBelow` is one `nowrap`, horizontally-scrolling flex row of all 10 pills, one pill
-  tall — see [Folds](Folds.md#fold10s-tray-on-mobile). The flex row follows the **desktop
+  tall — see [Folds](Folds.md#fold13s-tray-on-mobile). The flex row follows the **desktop
   reading order**, not `data-idx` DOM order: each pill carries an inline `order` set from
   `P9_TRAY_GRID_V2`'s single-row column (p9BuildPanel) — inert in both desktop grids, where
   every pill is explicitly placed.
@@ -100,7 +98,7 @@ or `"below"` (legit). `p9.sides` starts all `"below"`. An unknown category yield
 
 `page12.js` reads the same lookup to decide which events join @fold14's freeform
 spread (`p12EnsureFreeformTargets` keeps only events whose category is `"above"`).
-Its old name `CATEGORY_EN_TO_IDX` is gone — a stale reference there throws a
+There is no `CATEGORY_EN_TO_IDX` — a reference to it there throws a
 `ReferenceError` inside `drawPage12` and the extreme dots silently never spread.
 
 ## Drag mechanics
@@ -226,7 +224,7 @@ nothing below changes shape; see [Mobile](#mobile).
   / `.rightCols` (published by `drawBandedCols`, cleared right before the two calls),
   floored by that side's event count. That keeps it centered in crowd-tier/resize mode
   too, where `p9ScopeLayoutFor` solves a wider column count than `extremeColsSticky`;
-  untiered the expression reduces to the old `leftRealCols`/`rightRealCols`, so a
+  untiered the expression reduces to `leftRealCols`/`rightRealCols`, so a
   side with too few events to fill the reserved width still gets a label over its
   squares rather than over the empty reservation. Cell pitch is always `CELL`
   (`p9ScopeBox` never scales `cellPx`), so only the column count varies.
@@ -242,7 +240,7 @@ nothing below changes shape; see [Mobile](#mobile).
   both at **13px** (desktop's side-by-side line stays 12px), line pitch
   `P9_COUNT_LINE_H_M` (15). `p9ExtremeTopY` reserves
   `P9_COUNT_LABEL_ROOM_M` (20 + `P9_COUNT_LINE_H_M` = 35) of the tooltip→grid clearance
-  for the block — the grid ceiling sits one line lower than the old single-line layout,
+  for the block — the grid ceiling sits one line lower than a single-line label would need,
   so the max column is 15px shorter and every gap in the stack is unchanged. The
   column-top→baseline gap is 16px on desktop, 12px on mobile (2 dot-rows tighter,
   `countsGap` in drawPage9, per explicit request). The clamp
@@ -265,7 +263,7 @@ nothing below changes shape; see [Mobile](#mobile).
 
 The scope pill works on @fold13 too (`p9ScopeSet`, page9.js — reached through the
 page-gated click in js/groups.js; see
-[Groups-and-Legend](Groups-and-Legend.md#the-%D7%94%D7%99%D7%A7%D7%A3-%D7%94%D7%90%D7%99%D7%A8%D7%95%D7%A2%D7%99%D7%9D-button-above-the-right-column)).
+[Groups-and-Legend](Groups-and-Legend.md#the-הצגת-גודל-האירועים-button-above-the-right-column)).
 **Only the extreme columns tier.** The legit grid never changes size — a dot
 gains its crowd size when it *enters* the extreme zone and loses it on the way
 back, never while sitting below the divider.
@@ -295,7 +293,7 @@ back, never while sitting below the divider.
   columns from the centre outward, rows up from the anchor: each block takes the
   lowest run of `n` columns that will hold it, and among equally low runs the one
   that buries the fewest dead cells beneath it. With every `n = 1` it degenerates
-  to the old row-major fill exactly (the waste tiebreak is skipped at `n = 1`), so
+  to a plain row-major fill exactly (the waste tiebreak is skipped at `n = 1`), so
   the untiered state is pixel-identical and un-tiering returns every dot to the
   cell it left. **Holes:** a skyline pack cannot backfill under a wide block that
   bridges columns of unequal height, so a few pockets remain — measured fill at
@@ -529,7 +527,7 @@ The `pointerover` half is **desktop-only** (`if (isMobile()) return;`). On mobil
 
 The desktop layout in force today. The pills move to a bare band under the titles — no tray
 card, just a rule beneath them — the drop zone stays **vertical, in the center gap between the
-two extreme column-blocks** (as in the legacy layout), and the legit shuffle keeps its ordinary free-dot grid in a **shorter strip**, so the same
+two extreme column-blocks**, and the legit shuffle keeps its ordinary free-dot grid in a **shorter strip**, so the same
 dots simply read denser. **Interaction, animation timing and the finalized state-1 drop are
 unchanged** — only geometry moves.
 
@@ -539,8 +537,10 @@ unchanged** — only geometry moves.
 ### The switch
 
 `const P9_LAYOUT_V2 = true` (page9.js) and `p9IsV2() { return P9_LAYOUT_V2 && !isMobile(); }`.
-Flip the constant to `false` to get the legacy desktop layout back, byte-identical — no
-legacy rule was edited, only overridden.
+The flag is the only switch between the two desktop layouts: `false` selects the legacy
+desktop layout — the live code path the sections from **Layout** through **Hover** above
+document. Every V2 rule *overrides* a legacy rule rather than editing it, so the `false`
+path is byte-identical to that documentation.
 
 `p9SyncLayoutV2Class()` toggles `page9-layout-v2` on `.page9-sticky`; **every V2 CSS rule is
 scoped under `.page9-sticky.page9-layout-v2`**, so no V2 rule can reach mobile. Synced at
@@ -581,8 +581,8 @@ was touched**.
   P9_COUNT_LABEL_ROOM_V2` — the grid hangs off the pill band. The drop zone's height is **not**
   part of this stack: the zone sits in the columns' own center gap, not between the band and
   the grid, so a column at its maximum height clears it by construction.
-- `p9ExtremeRowsFor` → uses `p9ExtremeTopY(H)` as the row budget's ceiling, not the legacy
-  hardcoded `H * 0.18`, or prediction and real layout would disagree.
+- `p9ExtremeRowsFor` → uses `p9ExtremeTopY(H)` as the row budget's ceiling, so prediction
+  and real layout agree.
 - Center gap → the drop zone's measured box plus slack, `p9ZoneStackWV2() +
   P9_ZONE_GAP_SLACK_V2 * 2` (`p9ZoneStackWV2()` reads `--page9-zone-stack-width` back off
   `#page9ZoneAbove`), so the two blocks part exactly wide enough for the zone between them.
@@ -598,7 +598,7 @@ was touched**.
   `p9IsRegularDesktop()`). **TRIAL under judgment:** the tier currently keeps the single-row
   `P9_TRAY_GRID_V2` with pills shrunk to **18px** by the `@media (max-width: 1600px)` rule in
   style.css's V2 block (tray and zone pills both — the zone reserve is measured off tray
-  pills). The previously-baked alternative — legacy **5/5 two-row** `P9_TRAY_GRID` at 20px,
+  pills). The alternative — the **5/5 two-row** `P9_TRAY_GRID` at 20px,
   row gap 18px→10px — is the documented fallback inside `p9TrayGrid()` if the trial is
   rejected. The JS and CSS 1600s must stay in sync. Crossing the cutoff on resize
   re-slots live via the existing resize → `p9RemeasureTray` → `p9ApplyTrayGrid` chain.
@@ -661,7 +661,7 @@ was touched**.
   `rgb(230,229,244)`), while the extreme zone's own drag fills are suppressed via
   `:not(.dragging-from-above)` on their selectors — plus an explicit
   `.dragging.dragging-from-above` transparent-background override (specificity-bumped to
-  (1,4,0)), since the legacy base layout's `.dragging #page9ZoneAbove` fill would otherwise
+  (1,4,0)), since the base `.dragging #page9ZoneAbove` fill would otherwise
   show through the gap the standing-down V2 rules leave.
 - `.page9-zone-wrap-extreme` in V2: `top: calc(var(--p9-v2-tray-top) + var(--page9-tray-height)
   + 18px); bottom: calc(var(--p9-v2-legit-h) + 24px); justify-content: center` — the band it
@@ -671,7 +671,7 @@ was touched**.
   so when the full ten-pill reserve is taller than the band, it clamps to the band instead of
   poking past both ends. `--p9-v2-legit-h` is published by
   `p9MeasureTrayLayout` from `P9_LEGIT_H_V2`, never hand-synced. `#page9ZoneAbove`'s
-  `margin-bottom: 20px` (axis-label clearance in the legacy layout) goes to 0.
+  base `margin-bottom: 20px` goes to 0.
 - **When the clamped box is shorter than its stack, the zone scrolls** — `overflow-y: auto`
   on the V2 zone rule, active only in that circumstance (a short viewport where
   `max-height: 100%` cuts the box under the ten-pill reserve; while everything fits, `auto`
@@ -687,24 +687,24 @@ was touched**.
 - `#page9ZoneAbove` in V2 is a **vertical** stack, inheriting the base rule's
   `flex-direction: column` / `min-width` (`justify-content` is overridden — see the scroll
   bullet above); V2 also changes
-  `gap: 8px` (real gaps, not the legacy flush 0), `padding: 18px 16px` (tuned by eye — the
+  `gap: 8px`, `padding: 18px 16px` (the
   measured reserve width and the canvas center gap both follow it) and `min-width: 0` (the base
   260px floor would otherwise override a narrower measured width). In its **very first state**
   only — `:empty`, showing the "גררו…" hint — the sides open to `26px`, so the hint line isn't
   near the dashed edge, **and the box itself grows by 32px on each axis**
   (`calc(var(--page9-zone-stack-*) + 32px)`), snapping back to the exact reserve on the first
   drop; safe against the canvas because the center gap derives from the un-padded reserve var
-  and extreme columns only exist once the zone is no longer `:empty` (the base rule's
+  and extreme columns only exist once the zone stops being `:empty` (the base rule's
   `max-height: 100%` still clamps the taller empty box inside the band).
   `.tray-pill-hover` is excluded so the inset can't jump on hover (the class co-exists with
-  `:empty` before any drop, so hovering doesn't shrink the enlarged empty box either). Its dropped pills override the whole legacy dropped-chip treatment back to the base
+  `:empty` before any drop, so hovering doesn't shrink the enlarged empty box either). Its dropped pills are overridden back to the base
   `.page9-pill` look — border, 4px radius, white fill, shadow, natural width — and the
   `::before`/`::after` seam hairlines are `display: none` (they exist only to join a flush
   vertical stack).
 - **The V2 zone's dashed stroke and its box are both unconditional** — `border-color`,
   `border-radius`, `height: var(--page9-zone-stack-height)` and `width:
   var(--page9-zone-stack-width)` all sit on the base V2 rule, not only under `:empty` /
-  `.tray-pill-hover` / `.dragging` as in the legacy layout. Otherwise the zone shrink-wraps
+  `.tray-pill-hover` / `.dragging`. Otherwise the zone shrink-wraps
   to its contents on the first drop and the outline collapses onto the pills; V2 keeps one
   stable frame that pills fill up inside. Safe because the reserve is sized for all ten
   regardless (see the bullet below) and `p9ExtremeTopY` budgets for it either way.
@@ -723,20 +723,19 @@ was touched**.
   branch rounds `x`/`y`/size to `1/devicePixelRatio` when `isMobile() || p9IsV2()`. Mobile's
   reason is the loupe (below); V2's is fractional DPR — on a 1.25x/1.5x scaled monitor a 3px
   square at a fractional CSS position spreads over 4–5 device pixels at partial alpha and the
-  dots read soft, while the same page on a 1x/2x screen looks sharp. The legacy desktop
-  layout is deliberately left unsnapped.
+  dots read soft, while the same page on a 1x/2x screen looks sharp.
 - All three — fill, stroke and the
   `::after` hint colour — **switch instantly**: the V2 base rule sets `transition: none`,
   overriding the shared `.page9-zone`'s `transition: background 0.15s` so the fill can't lag a
-  frame behind the border. `#page9ZoneBelow` and the legacy layout keep the transition.
-- `p9MeasureTrayLayout`'s reserve sizing is the **same in V2 as in the legacy layout** — ten
+  frame behind the border. `#page9ZoneBelow` keeps the transition.
+- `p9MeasureTrayLayout`'s reserve sizing is ten
   pills deep by the longest one wide, read against `#page9ZoneAbove`'s own computed gap and
   padding, so the reserved box never resizes mid-drag. (V2 pills keep their natural widths
   visually; the reserve still uses `maxPillWidth`, which is the widest of them.)
 - `p9MeasureTrayLayout` **releases the tray rows' fixed grid tracks before measuring**:
   the tracks it writes are baked px widths from the previous run, and a resize that grows
   the pill font (crossing 1600px upward, 18px→20px, or 600px, 16px→20px) leaves labels wider
-  than their old track — they'd wrap and `offsetWidth` would re-bake the clamped wrapped
+  than their baked track — they'd wrap and `offsetWidth` would re-bake the clamped wrapped
   width. Clearing first restores natural one-line widths for the reads; the tracks are
   re-applied from the fresh numbers at the end.
 - `p9MeasureTrayLayout` writes `--p9-v2-tray-top` and `--page9-tray-height` onto
@@ -745,10 +744,10 @@ was touched**.
 ### Handoffs
 
 - **page8's bridge glide** lerps its end dot size to `legitGeom.cell` whenever
-  `legitGeom.mode === "bar"` (was hardcoded `P9_SQ`), so dots land on the bar at exactly the
+  `legitGeom.mode === "bar"`, so dots land on the bar at exactly the
   size `drawPage9` keeps drawing them — no 1px pop. That's a **mobile-only** path today
-  (V2 isn't a bar); V2 lands at `P9_SQ` like the legacy desktop layout, and needed nothing
-  either way since page8 targets via `p9LegitGeometry`/`p9LegitPosOf`.
+  (V2 isn't a bar); V2 lands at `P9_SQ` and needs nothing
+  extra since page8 targets via `p9LegitGeometry`/`p9LegitPosOf`.
 - **`updateFold13`'s tray slide-out** (js/fold11.js) exits **upward** whenever the tray is a
   top band — `isMobile() || p9IsV2()` — using `p9TrayTopV2()` as the offset in V2 (mobile
   keeps its 112).
@@ -763,8 +762,8 @@ accessors:
 **Text selection is suppressed across the whole tray.** `.page9-sticky` (and `.page9-pill`
 again, for its own hit area) carry `-webkit-touch-callout: none` +
 `-webkit-user-select`/`user-select: none`. The **`-webkit-` prefixes are the load-bearing
-half** — iOS WebKit ignores the unprefixed property alone, so a press-and-hold on a pill
-used to raise selection handles and the Copy bar *over* the drag. Nothing in the tray is
+half** — iOS WebKit ignores the unprefixed property alone, and a press-and-hold on a pill
+would raise selection handles and the Copy bar *over* the drag. Nothing in the tray is
 reading material; the title card lives in `.text-col`, outside it, and stays selectable.
 This is the same suppression the graphic column carries for @fold9's loupe.
 
@@ -784,10 +783,11 @@ This is the same suppression the graphic column carries for @fold9's loupe.
   flush with the viewport's bottom edge, floored so the extreme grid always keeps 8 cells of
   height.
 
-### The dropped pill's ✕ — PARKED (desktop)
+### The dropped pill's ✕ — not enabled (desktop)
 
-**Not live.** A dropped pill ships as it always has: 6-dot grip on the right, no ✕. The whole
-feature is built and kept behind one switch because the decision is deferred, not made.
+**Not live.** A dropped pill ships with the 6-dot grip on the right and no ✕. The whole
+feature is built and kept behind one switch that nothing adds, because the decision is
+deferred, not made.
 
 **To turn it on:** add `page9-x-affordance` to `.page9-sticky` (markup or a one-liner in
 page9.js). That is the only change — every pill already carries a
@@ -795,8 +795,8 @@ page9.js). That is the only change — every pill already carries a
 rules match. See the `OPTIONAL` block in style.css.
 
 **What it does when on.** The ✕ **replaces the 6-dot grip** at the pill's right-hand end
-(`order: -1` — lower order = further right in this RTL row), chosen by eye with a `compare/`
-harness on 2026-09-04 over two left-hand placements. The reasoning: a dropped pill's one
+(`order: -1` — lower order = further right in this RTL row), chosen over two left-hand
+placements. The reasoning: a dropped pill's one
 gesture is a click that returns it to the tray, which is what a ✕ announces and what a
 "drag me" grip does not — two icons at that end would say two different things. Dragging
 still works exactly as before; it just stops advertising itself.
@@ -848,8 +848,8 @@ only the tooltip closes), and so does a **`scroll` on `#page9ZoneBelow`**: the p
 positioned once from the pill's rect and then lives in viewport coordinates, so scrolling the
 run horizontally would slide the pill out from under a frame that stayed put. It closes
 instead of tracking. The tray's `pointerleave` → `hide()` is **desktop-only**: a touch
-pointer is destroyed at `pointerup`, so `pointerleave` fires *before* the `click` and used to
-null `openInfoPill` a beat before the click handler read it — every second tap re-opened
+pointer is destroyed at `pointerup`, so `pointerleave` fires *before* the `click` and would
+null `openInfoPill` a beat before the click handler reads it — every second tap would re-open
 instead of closing. On touch there is no "left the tray" to detect anyway. `show()` also adds `tray-pill-hover` to
 `#page9ZoneAbove`, which is inert here — that zone is `display: none` on mobile.
 
@@ -864,12 +864,12 @@ dragged pill's ghost (`.page9-pill-ghost`) to 1005, so the event hover tooltip p
 them. **This category tooltip is the one exception**, by a later explicit instruction: it
 must stay on top of everything, because in V2 it hangs down over the drop zone.
 
-The popover sits above its pill only on the legacy desktop layout, and only when there's
-room. It hangs below **unconditionally on mobile and in desktop V2**
-(`p9IsV2() || isMobile() || above < 8`) — both bands sit high, but not always so high that
-the fits-above test fails on its own; on mobile a one-line description used to pass it and
-angle up over the title while taller ones angled down (explicit instruction: all angle
-down).
+The popover hangs below its pill **unconditionally on mobile and in desktop V2**
+(`p9IsV2() || isMobile() || above < 8`; only the `P9_LAYOUT_V2 = false` desktop path can
+place it above, and only when there's room) — both bands sit high, but not always so high
+that the fits-above test fails on its own; without the forced branch a one-line description
+on mobile passes it and angles up over the title while taller ones angle down (explicit
+instruction: all angle down).
 `.is-below` moves its arrow from the box's bottom edge to its top so it still points at the
 pill.
 
@@ -947,7 +947,7 @@ the fold9 square lerp, fold11's outro) keeps calling the same two functions.
   into `colSegs[side]` = `{c0, c1}` column ranges by rounding the cumulative rank scale to
   whole columns, so group *i* ends on exactly the column group *i+1* starts on and every
   colour change is a straight vertical line. A group with any events gets at least one
-  column. Previously the boundary fell wherever a continuous `rank → cell` map put it,
+  column. A continuous `rank → cell` map would put the boundary wherever it fell,
   leaving the boundary column half one colour and half the next.
 - **The bar shrinks from its outer end.** Those column edges are rounded against `N0`, the
   camp's **original** legit count, not its current one. An untouched camp therefore fills its
@@ -976,7 +976,7 @@ two apart. The pill never moves; `#page9ZoneAbove` and the handle are `display: 
 latter written as `.page9-pill .page9-handle`, matching the base rule's two-class selector,
 since a media query adds no specificity and a bare `.page9-handle` loses the cascade.
 
-Because the dropped set is no longer recorded by DOM parentage, **`p9DroppedIdxs()`** is the
+Because the dropped set is not recorded by DOM parentage alone, **`p9DroppedIdxs()`** is the
 single reader: `#page9ZoneAbove`'s children on desktop, `.page9-pill.is-extreme` in the tray
 on mobile. `p9ResetDrops` / `p9RestoreDrops` / `js/page8-9-scroll.js`'s scroll-out reset all
 go through it — querying `#page9ZoneAbove` directly would silently no-op on mobile.
@@ -990,14 +990,7 @@ same press-and-hold loupe as `@fold9`, generalized from fold-8-only via `p7Inspe
 `js/update-groups.js` is `currentPage <= 11` so the docked empty tooltip frame carries through
 the bridge fold into `@fold13`.
 
-## Removed — don't reintroduce
-
-The vertical dashed guide-line system (`.page9-divider-line`/`-top`/`-bottom`,
-`.page9-divider-highlight`, `p9SyncBottomDivider`/`p9SyncExtremeGap`/
-`p9SyncTopDividerHighlight`) was deleted — neither Figma frame shows it. The drop
-affordance is `#page9ZoneAbove` itself.
-
-### Two-beat reveal — `.pills-in` (@fold12) then `.engaged` (@fold13)
+## Two-beat reveal — `.pills-in` (@fold12) then `.engaged` (@fold13)
 
 The panel does **not** arrive all at once on desktop V2. Two classes on `.page9-sticky`,
 two folds:
@@ -1045,3 +1038,10 @@ tray can never be stranded invisible. `.is-measured` is deliberately separate fr
 — it only asserts "the hidden transform now really hides"; whether the tray is on screen stays
 `.engaged`'s job. Nothing writes an inline opacity on the tray (`updateFold13` fades the
 header, title card, zone wrap and legend, never this), so nothing competes with it.
+
+## Removed — don't reintroduce
+
+The vertical dashed guide-line system (`.page9-divider-line`/`-top`/`-bottom`,
+`.page9-divider-highlight`, `p9SyncBottomDivider`/`p9SyncExtremeGap`/
+`p9SyncTopDividerHighlight`) was deleted — neither Figma frame shows it. The drop
+affordance is `#page9ZoneAbove` itself.
