@@ -7,16 +7,16 @@ const SBB = {
   top: 0.08,   // fraction of H
 };
 
-// The real timeline's own box (page7.js/page8.js, #page-7) — kept separate from SBB
-// above (used by page9.js's drag-and-drop grid, #page-11) so widening or reshaping the
+// The real timeline's own box (page7.js/page8.js, #page-8) — kept separate from SBB
+// above (used by page9.js's drag-and-drop grid, #page-12) so widening or reshaping the
 // timeline's grid doesn't also move that unrelated page's layout.
 // left is wider than the old SBB.left but still clears the persistent mini-legend pinned
-// at the screen's left edge (GROUPS' fold6 position in main.js) — measured ~0.07-0.10
+// at the screen's left edge (GROUPS' fold6 position in js/groups.js) — measured ~0.07-0.10
 // of W at typical desktop widths, so 0.18 leaves a comfortable margin. The right edge
 // mirrors left automatically (see p7GridGeometry), so no `right` field.
 // DESKTOP `left` is a fixed px (SBB_TIMELINE_LEFT_PX), not a fraction — picked by eye
 // with the `manual/` edge harness on 2026-09-04 at 1920 wide (was 0.18 ≈ 346px there),
-// re-tuned to 190 with _debug-corridor.js on 2026-09-05.
+// re-tuned to 190 by eye on 2026-09-05.
 // Read it through sbbTimelineLeftX(W, H), never W * box.left, so the exact px survives
 // every viewport width. Mobile stays a fraction (SBB_TIMELINE_MOBILE_LEFT).
 const SBB_TIMELINE_LEFT_PX = 190;
@@ -65,7 +65,7 @@ const SBB_TIMELINE = {
 //            (P7_AXIS_EVENT_LINE_HEIGHT_MOBILE) — check it by eye then.
 const SBB_TIMELINE_MOBILE_LEFT          = 0.03;  // fraction of W
 const SBB_TIMELINE_MOBILE_GAP_PX        = 18;    // shared clearance above AND below the grid
-let   SBB_TIMELINE_MOBILE_TOP_PX        = 64 + 19 + SBB_TIMELINE_MOBILE_GAP_PX;  // `let` only so _debug-gaps.js can drive it; back to `const` when that harness goes
+let   SBB_TIMELINE_MOBILE_TOP_PX        = 64 + 19 + SBB_TIMELINE_MOBILE_GAP_PX;  // `let` only so a manual/ harness can drive it live
 const SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX = 36 + 10 + SBB_TIMELINE_MOBILE_GAP_PX;
 // Vertical axis on mobile (P7_VERT_MOBILE.enabled, page7.js): there is no
 // bottom axis to clear, so the box's bottom is a plain inset from the viewport

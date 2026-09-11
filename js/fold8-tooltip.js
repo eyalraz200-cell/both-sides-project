@@ -435,7 +435,7 @@ function fold8EnsureSequenceRunning() {
 
 let fold8AnchorSquareEl = null;
 
-// Bespoke back-out curve for the fold-8 tooltip's grow-in (main.js
+// Bespoke back-out curve for the fold-8 tooltip's grow-in (this file
 // only — page7.js/page9.js's own p7Ease/p9Ease are both monotonic and gentler),
 // applied on top of tooltipT (itself already p9Ease'd via fold8TooltipTrigger)
 // for a punchier, more dynamic "pop" than a plain scale-from-0

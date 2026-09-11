@@ -9,5 +9,3 @@ __pycache__/
 raw-*.csv
 *.MP4
 *.mp4
-.DS_Store
-__pycache__/

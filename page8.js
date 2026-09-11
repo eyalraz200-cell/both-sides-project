@@ -1,7 +1,7 @@
 // page8.js — bridge between page7's timeline and page9's extreme/legit grid.
 // Holds at page7's final (maxDate) layout until this section's title actually
-// reaches the viewport's vertical center (see page8CheckScroll in main.js, which
-// calls p8Trigger here) — at which point every dot glides, on its own clock and
+// reaches the viewport's vertical center (see page8CheckScroll in js/page8-9-scroll.js,
+// which calls p8Trigger here) — at which point every dot glides, on its own clock and
 // not tied to further scrolling, toward the position it'll occupy on page9: the
 // legit grid, since nothing has been classified as "extreme" yet (see
 // p9LegitGeometry/p9LegitPosOf in page9.js, the shared source of truth for that
@@ -18,7 +18,7 @@
 //                       the dots resize *during* flight)
 //   "shrink-then-fly" — resize in place first, then fly at the landed size
 //   "fly-then-shrink" — fly at the timeline size, then resize once landed
-// var, not const: tuned live through a manual/ compare/ harness (_debug-fold11.js).
+// var, not const: tuned live through a manual/ compare/ harness.
 var P8_SHRINK_MS = 3000;
 var P8_FLY_MS    = 3000;
 var P8_STAGING   = "together";
@@ -48,7 +48,7 @@ function p8Beats(t) {
   return { sizeE: p9Ease(Math.min(1, (t * tot) / S)),
            posE:  p9Ease(Math.min(1, (t * tot) / F)) };
 }
-const P8_TRANSITION_DURATION = 3000; // ms — legacy default; p8ForwardMs() is the live value
+const P8_TRANSITION_DURATION = 3000; // ms — p8ForwardMs() drives this file's glide; setActivePage (js/nav.js) still reads this as the clock for the mid-flight handoff into page9's p9.anim
 // The reverse runs on its own, much shorter clock. The forward glide is a
 // reveal the reader watches in place, but the reverse fires while they're
 // already scrolling away back up @fold9's multi-viewport scrub — at 3000ms a
@@ -96,7 +96,7 @@ function p8StartPhase(toT) {
 }
 
 // Called once, the instant the title crosses the viewport's vertical center
-// (see page8CheckScroll in main.js — tracks the crossing itself, not just a
+// (see page8CheckScroll in js/page8-9-scroll.js — tracks the crossing itself, not just a
 // static position check, so this can't refire while already engaged).
 // Idempotent — safe to call again.
 function p8Trigger() {
@@ -105,7 +105,8 @@ function p8Trigger() {
   p8StartPhase(1);
 }
 
-// Called once the title's crossing (see page8CheckScroll in main.js) reverses
+// Called once the title's crossing (see page8CheckScroll in js/page8-9-scroll.js)
+// reverses
 // back below the threshold — plays the glide back toward page7's layout.
 function p8TriggerReverse() {
   if (!p8Engaged) return;
@@ -119,10 +120,10 @@ function drawPage8(ctx, W, H) {
   }
 
   // Deliberately no fallback trigger here: currentPage flips to 10 (via the -50%
-  // IntersectionObserver in main.js) well before the title visually reaches
+  // IntersectionObserver in js/nav.js) well before the title visually reaches
   // center, since page-11 already overlaps the screen-center line earlier than
   // that. Triggering on that flip would fire too early — page8CheckScroll
-  // (main.js) is the only thing that calls p8Trigger/p8TriggerReverse, exactly
+  // (js/page8-9-scroll.js) is the only thing that calls p8Trigger/p8TriggerReverse, exactly
   // when the title crosses center (or scroll retreats back past that point).
   const t = p8CurrentT();
   if (t <= 0) {
@@ -228,13 +229,13 @@ function drawPage8(ctx, W, H) {
 }
 
 // Called once, right when currentPage flips from 10 to 11 while this glide is
-// still mid-flight (see setActivePage in main.js) — the section-level
+// still mid-flight (see setActivePage in js/nav.js) — the section-level
 // IntersectionObserver driving currentPage can cross into page9's slot before
 // p8CurrentT() actually reaches 1, and drawPage9 has no notion of this
 // glide's progress on its own, so without capturing it here the dots would
 // otherwise jump straight to their final legit-grid position the instant
 // page9 starts drawing instead of this section. Reuses page9's own p9.anim
-// entrance mechanism (the same shape p9.js seeds for its other "animate from
+// entrance mechanism (the same shape page9.js seeds for its other "animate from
 // wherever these dots currently are" entrances) — just seeded once here with
 // this glide's current on-screen (blended) position as the "from", identical
 // math to blendAndDraw above.

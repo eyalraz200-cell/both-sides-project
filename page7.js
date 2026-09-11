@@ -29,7 +29,7 @@ const P7_MOBILE_FILL      = 0.86;
 // hold the right camp inside the taller axis clearance); every phone from
 // 320×700 up solves well above it. Below ~1.2 a square stops reading as a mark
 // at all, so the floor is where truncation is preferred to invisibility.
-let   P7_MOBILE_SQ_MIN    = 1.25;  // `let` only while _debug-vert-mobile.js exists
+let   P7_MOBILE_SQ_MIN    = 1.25;  // `let` only so a manual/ harness can drive it live
 const P7_MOBILE_SQ_MAX    = 3;     // just under desktop's 3.5
 const P7_MOBILE_GAP_RATIO = 0.5;
 const P7_MOBILE_SQ_STEP   = 0.05;
@@ -71,7 +71,7 @@ function p7SqStep() { return isMobile() ? P7_MOBILE_SQ_STEP : 0.1; }
 // AXIS block below), so the centre gap is the wider P7_AXIS_CORRIDOR_PX
 // corridor rather than CENTER_GAP. Mobile keeps CENTER_GAP + the horizontal axis.
 // Mobile joins the vertical path behind P7_VERT_MOBILE.enabled (Phase 1 —
-// _debug-vert-mobile.js flips it; key 0 = the old horizontal axis).
+// a compare/ harness flips it; off = the old horizontal axis).
 function p7VerticalAxis() { return !isMobile() || P7_VERT_M.enabled; }
 function p7CenterGap() {
   if (!p7VerticalAxis()) return CENTER_GAP;
@@ -94,12 +94,12 @@ function p7GridGeometry(W, H) {
   return { leftX0, rightX0, cols, CELL };
 }
 
-// Looks up an event's color via GROUPS (main.js) rather than a separate
+// Looks up an event's color via GROUPS (js/groups.js) rather than a separate
 // hardcoded palette, by events.json's actor string — the same join key
 // stored on GROUPS' 5 camp entries as `actor` — so every real per-event
 // square (here, page8.js's transition glide, and page9.js's grids) always
 // matches the legend's current color, including after a future edit to
-// GROUPS. main.js loads after this file, but GROUPS only needs to exist by
+// GROUPS. js/groups.js loads after this file, but GROUPS only needs to exist by
 // the time a square is actually drawn, long after all scripts have run.
 function p7ActorColor(actor) {
   const group = GROUPS.find(g => g.actor === actor);
@@ -223,7 +223,7 @@ function p7OrderFromCenter(total, cols, seed, side, maxEvents) {
    off at fillRatio 1). Deterministic (p7Rng) so the layout is stable across
    frames and resizes.
 
-   P7_VERT is the tunable bundle (edited live by _debug-axis.js while the
+   P7_VERT is the tunable bundle (edited live by a compare/ harness while the
    headline placement is being compared — see wiki/Timeline.md):
      eventMode "band"  — the dot flow pauses at each headline event: bandRows
                           empty rows are reserved and the headline + date sit
@@ -235,7 +235,7 @@ function p7OrderFromCenter(total, cols, seed, side, maxEvents) {
    ------------------------------------------------------------------------- */
 // Tooltip horizontal flip lines (screen px): a hovered dot left of P7_TIP_FLIP_L
 // never mirrors; one within P7_TIP_FLIP_R_INSET of the right edge always does.
-// One mirrored inset, picked by eye with _debug-corridor.js on 2026-09-05 —
+// One mirrored inset, picked by eye with a manual/ harness on 2026-09-05 —
 // exact px, never vw. Used in the hover closure (search "P7_TIP_FLIP_L") and,
 // deliberately shared rather than re-tuned, by @fold13's dot hover in page9.js
 // — the two tooltips must never disagree about which way they open.
@@ -354,8 +354,8 @@ const P7_VERT = {
 // the SAME objects as desktop, so the harness dragging a mobile card knob would
 // silently retune the desktop card too.
 const P7_VERT_MOBILE = {
-  // Phase 1: the vertical axis is ON for mobile; _debug-vert-mobile.js's key 0
-  // flips it back to the old horizontal axis for comparison.
+  // Phase 1: the vertical axis is ON for mobile; a compare/ harness can
+  // flip it back to the old horizontal axis for comparison.
   enabled:       true,
   corridorPx:    44,   // 'band'/'slot': no room for the desktop corridor between two phone-width grids
   bottomInsetPx: 24,   // no bottom axis to clear — the box just stops short of the screen edge
@@ -761,7 +761,7 @@ function p7MonthSettle(k, c) {
 
 // Set once, the instant currentPage flips from 9 to 8 (leaving page8's
 // bridge) while page8's own timeline<->legit-grid glide (p8CurrentT,
-// page8.js) hasn't reached 0 yet — see setActivePage, main.js. Without this,
+// page8.js) hasn't reached 0 yet — see setActivePage, js/nav.js. Without this,
 // p7DrawSideSquares below has no notion of that glide's progress and would
 // draw every square straight at its resting timeline cell the instant this
 // section starts drawing instead of page8, i.e. an instant teleport back to
@@ -830,7 +830,7 @@ function p7OrchestrateRows() {
 
 // Wipes all per-month animation state so the next entry into the timeline
 // replays the cascade from scratch instead of showing settled dots.
-// Called from setActivePage (main.js) when the user scrolls back out of
+// Called from setActivePage (js/nav.js) when the user scrolls back out of
 // @fold13 toward an earlier fold.
 function p7ResetForReplay() {
   for (const k in p7MonthPhase) delete p7MonthPhase[k];
@@ -839,19 +839,19 @@ function p7ResetForReplay() {
 }
 
 // True once fold 9's own title card (#page-7 .text-card, page7TitleCardEl in
-// main.js) has scrolled all the way past the top of the viewport — not once
+// js/groups.js) has scrolled all the way past the top of the viewport — not once
 // #page-8 itself reaches the top, which (since #page-7's card sits vertically
 // centered in its own 100vh-tall section) only happens half a viewport-height
 // *after* the card is already gone, leaving a stretch of scrolling where
 // nothing visibly happens before the real per-event reveal kicks in. Tying
 // engagement directly to the card's own exit instead means the timeline
 // starts exactly when the title that introduces it leaves the screen, no
-// matter how main.js ends up sizing #page-7's section.
+// matter how #page-7's section ends up being sized.
 let p7HasEngaged = false;
 
 // True once the real timeline (drawPage7, #page-8) has actually been reached
 // at least once this "visit" — set by drawPage7 itself, cleared by drawFold9
-// (main.js) once fully retreated back out (p7HasEngaged false again and
+// (js/core.js) once fully retreated back out (p7HasEngaged false again and
 // nothing left animating). Lets drawFold9 keep drawing/animating the
 // per-event squares (p7DrawTimelineSquares below) for as long as there's
 // still something to retreat when the user scrolls back up from #page-8 into
@@ -861,7 +861,7 @@ let p7HasEngaged = false;
 let p7RealTimelineReached = false;
 
 // Updates p7HasEngaged — called from drawPage7 (currentPage 7) and drawFold9
-// (main.js, currentPage 6) alike, since the title card this depends on
+// (js/core.js, currentPage 6) alike, since the title card this depends on
 // belongs to fold 9/#page-7. p7HasEngaged is recomputed fresh every call, not
 // a one-way latch, so scrolling back up un-engages it again and scrolling
 // forward replays the same axis-then-squares sequence — calling this from
@@ -894,7 +894,7 @@ function p7UpdateEngagement() {
   if (!page7TitleCardEl) { p7HasEngaged = false; return; }
   const top = page7TitleCardEl.getBoundingClientRect().top;
   // Engagement is deliberately NOT gated on @fold9's squares finishing their
-  // fly-in (fold9FlyTrigger, main.js — legacy name). Per explicit instruction
+  // fly-in (fold9FlyTrigger, js/groups.js — legacy name). Per explicit instruction
   // the two are unrelated animations that simply run at the same time: the
   // axis fills and the per-event dots appear on the card's own exit, whether
   // or not the flying squares have landed. (An earlier `flyDone` gate here
@@ -906,7 +906,7 @@ function p7UpdateEngagement() {
 // scroll-derived target via a per-frame lerp instead of snapping to it every
 // scroll event — same "after-action" trailing feel, and the same damping
 // tempo, as @fold1's logo/title scroll-lag (PAGE0_SCROLL_LAG_DAMPING/
-// PAGE0_OPACITY_DAMPING, main.js), just applied to this fold's own fill
+// PAGE0_OPACITY_DAMPING, js/fold1-intro.js), just applied to this fold's own fill
 // fraction instead of a scroll-derived pixel offset. p7.currentDate itself
 // (which drives the real per-event cascade's month timing) is untouched —
 // only the axis's own visual fill lags, not the timeline's actual engagement.
@@ -974,10 +974,10 @@ function p7AnyAnimActive() {
 // maxDate (see page8.js) — it's a continuation of page7's view, not a separate one, so
 // the cascade must keep redrawing there too, or it freezes the instant the user
 // scrolls into page8 mid-flight instead of finishing "off screen" as page7 intended.
-// Fold 9 (#page-7, currentPage 6 — drawFold9 in main.js, just before the real
+// Fold 9 (#page-7, currentPage 6 — drawFold9 in js/core.js, just before the real
 // timeline) is included too, now that its own axis build-in (p7AxisIntroT
 // above) can be playing while it's on screen. Fold 7 (#page-6, currentPage 5 —
-// drawFold7 in main.js) is included too, now that it also keeps drawing
+// drawFold7 in js/core.js) is included too, now that it also keeps drawing
 // p7DrawTimelineSquares for as long as p7RealTimelineReached is true (see that
 // flag's own comment) — a fast enough scroll-up can carry the user past
 // #page-7 into this fold within a single continuous motion while squares are
@@ -1210,7 +1210,7 @@ let P7_GRID_PACK_SLACK_CELLS = 3;
 let P7_GRID_EDGE_JITTER = 0.7;   // compare/-baked 2026-09-08
 let P7_GRID_JITTER_CELLS = 25;   // deepest tooth, in cells, at jitter = 1
 let P7_GRID_JITTER_WAVE  = 2;    // rows per noise control point (tooth width)
-// HOW the pack is arranged — both are `compare/` axes (_debug-grid-arrange.js),
+// HOW the pack is arranged — both are `compare/` axes,
 // and both feed p7GridKey, so changing either rebuilds the layout from scratch.
 //   order:    the sequence squares claim cells in, inside their bucket.
 //             arrival = the order they are drawn (date order) — the original.
@@ -1919,7 +1919,6 @@ function p7MorphWindows(tier, flat) {
 function p7GridMorphMs() {
   return p7GridMorph ? Math.min(p7MorphTotalMs(), performance.now() - p7GridMorph.start) : p7MorphTotalMs();
 }
-function p7GridMorphT() { return p9Ease(p7GridMorphMs() / p7MorphTotalMs()); }
 function p7MorphWin(ms, w) {
   return p9Ease(Math.min(1, Math.max(0, (ms - w[0]) / Math.max(1, w[1]))));
 }
@@ -1994,17 +1993,7 @@ function p7SizeGridSet(on, opts) {
   if (typeof draw === "function") draw();
   if (typeof p7StartAnimLoop === "function") p7StartAnimLoop();
 }
-// The rest rect of an event's grid cell — top-left + that cell's own size, the
-// same shape a timeline cell has, so page8's bridge glide can start its flight
-// from the size grid instead of from the timeline. Places the event lazily if
-// it never got drawn while the grid was up (the glide draws the whole roster).
-// Null when the grid is off or has no layout yet.
-function p7GridRestRect(ev, isLeft) {
-  if (!p7Grid.on || !p7Grid.layout) return null;
-  const g = p7GridCell(ev, isLeft);
-  return g ? { x: g.cx - g.sq / 2, y: g.cy - g.sq / 2, sq: g.sq } : null;
-}
-// The same cell, but honouring a morph still in flight (p7GridMorph): the
+// An event's grid cell honouring a morph still in flight (p7GridMorph): the
 // square's blended centre + size right now, not where it will come to rest.
 // page8's glide starts from THIS, so @fold11's two beats can overlap — the
 // re-pack keeps playing underneath the flight instead of snapping to the
@@ -2547,7 +2536,7 @@ function p7UpdateLayout(W, H) {
     // Desktop: rows are dates (see VERTICAL AXIS above).
     const v = p7BuildVerticalLayout(rows, p7.cols, CELL);
     // Rows the box can't hold even at the solved size (0 when it fits) —
-    // read by _debug-vert-mobile.js's summary; the smallest phones hit it.
+    // surfaced by a mobile harness's summary; the smallest phones hit it.
     v.overflowRows = Math.max(0, Math.ceil((v.totalRows * CELL + p7VertYearHeaderH() - sideH) / CELL));
     p7.vert     = v;
     p7.leftPos  = v.leftPos;
@@ -2579,7 +2568,7 @@ function p7UpdateLayout(W, H) {
 
 // Index (into `events`, chronologically sorted) of the nth (0-based)
 // occurrence of `actor` — used below to find which real event a fold-9
-// curated square (main.js) should stand in for. A plain linear scan, not a
+// curated square (FOLD6_SQUARE_ROW_IDS, js/groups.js) should stand in for. A plain linear scan, not a
 // precomputed per-actor index, because it only ever runs once per
 // actor/occurrence pair (see p7TargetCellCache) rather than every frame.
 function p7NthIndexOfActor(events, actor, n) {
@@ -2619,7 +2608,8 @@ function p7ResolveActorOccurrenceCell(actor, n) {
 // Returns the top-left {x, y, size} (viewport-pixel space, same coordinate
 // system every other page7 square uses) of the grid cell where the nth
 // chronological event by `actor` will eventually settle, or null if there is
-// no such event — used by main.js's fold-9 squares fly-out to send each
+// no such event — used by the fold-9 squares fly-out (fold9FlyTrigger,
+// js/groups.js) to send each
 // curated square to the exact real dot it's standing in for, rather than
 // just fading away in place.
 function p7TargetForActorOccurrence(actor, n, W, H) {
@@ -2706,7 +2696,8 @@ function p7TargetForActorOccurrence(actor, n, W, H) {
 // chronological event by `actor`, or null if there is no such event / data
 // isn't loaded yet — same actor+occurrence join key as
 // p7TargetForActorOccurrence above, but returns the event itself rather than
-// its eventual on-screen cell, for main.js's fold-8 square tooltip (shows a
+// its eventual on-screen cell, for the fold-8 square tooltip
+// (js/fold8-tooltip.js — shows a
 // real event's own date+description instead of a static label).
 function p7EventForActorOccurrence(actor, n) {
   if (!p7.ready) return null;
@@ -2738,7 +2729,7 @@ function p7OccurrenceOfRowId(rowId) {
 
 // The 8 real events @fold12's fold-6 squares fly to/become (FOLD6_SQUARE_ROW_IDS/
 // fold6SquareOccurrence, js/groups.js — referenced here only inside this function
-// body, never at load time, since page7.js loads before main.js in
+// body, never at load time, since page7.js loads before js/groups.js in
 // project.html) are never drawn by the real per-event cascade below — the
 // flying DOM square *is* that dot permanently, not a stand-in that hands off
 // to a separately-popping-in real one once it arrives. Resolved once
@@ -2756,7 +2747,7 @@ function p7GetClaimedEvents() {
   return p7ClaimedEvents;
 }
 
-// Extracted from drawPage7 below so drawFold9 (main.js, #page-7, currentPage
+// Extracted from drawPage7 below so drawFold9 (js/core.js, #page-7, currentPage
 // 6) can keep this running too — see p7RealTimelineReached's own comment
 // above for why: without this, scrolling back up from #page-8 into #page-7
 // (crossing back over @fold12's own title) made every still-retreating square
@@ -2833,15 +2824,15 @@ function p7DrawTimelineSquares(ctx, W, H) {
   //
   // The very first month (minDate's month) starts out "current" before the user has
   // scrolled into page7 at all — p7HasEngaged (updated by p7UpdateEngagement,
-  // called from both here and drawFold9 in main.js so it stays accurate even
+  // called from both here and drawFold9 in js/core.js so it stays accurate even
   // while currentPage is 7) only flips true once fold 9's title card has
   // scrolled past the top of the viewport, AND the year axis's own build-in
   // wipe (p7AxisIntroT) has fully finished.
   const isNewTerritory = p7HasEngaged && curMonthKey > p7MonthMaxReached;
   if (isNewTerritory) {
     // A single engaged tick can jump curMonthKey forward by more than one
-    // month at once — e.g. @fold12's fly-then-engage gate (p7UpdateEngagement,
-    // main.js) lets scroll position race ahead of curMonthKey while
+    // month at once — e.g. @fold12's fly-then-engage gate (p7UpdateEngagement
+    // above) lets scroll position race ahead of curMonthKey while
     // engagement is still pending, so the moment it fires, `t` (and the date
     // it maps to) can already be several months past minDate. Without
     // backfilling every skipped month here, each one falls straight into
@@ -3082,8 +3073,8 @@ function p7Saturate(hex, amt) {
 // @fold9's fly trigger is activated (fold9FlyTrigger — legacy name, it's the
 // squares' fly-out on id #page-8), NOT after the squares land: p7HasEngaged
 // additionally waits for that fly to finish (`flyDone` in p7UpdateEngagement),
-// which made the wipe start late. Falls back to p7HasEngaged if main.js hasn't
-// defined the trigger yet, so this still degrades safely.
+// which made the wipe start late. Falls back to p7HasEngaged if js/groups.js
+// (which loads after this file) hasn't defined the trigger yet, so this still degrades safely.
 function p7AxisShouldShow() {
   // @fold10's size grid has no dates, so the axis goes — but through the same
   // reverse wipe every other exit uses (p7AxisReverseOut, via
@@ -3537,7 +3528,7 @@ function p7AxisEventBounds(ctx, ev, i, W) {
 // date, regardless of how the user got there (slow scroll, fast flick, or a
 // direct jump) — and un-fires it if they scroll back above that date. Requires
 // p7.currentDate to have actually advanced past p7.minDate first: the pinned
-// scrub section (page7UpdateFromScroll, main.js) starts every visit at exactly
+// scrub section (page7UpdateFromScroll, js/page7-scrub.js) starts every visit at exactly
 // t=0 → currentDate=minDate, before the user has scrolled within it at all —
 // so a `>=` comparison would count minDate itself as "reached" on arrival,
 // and any event dated at the dataset's very start (minDate is 2023-01-01;
@@ -4851,13 +4842,13 @@ function p7HoverInit() {
   const AXIS_HIT_PAD = 6; // px of extra hit area around each axis event circle (small target, generous pad)
   const TOOLTIP_GAP = 5; // px of breathing room between the square and the tooltip box, both axes
   // Viewport-px line: a hovered dot above it opens its tooltip DOWNWARD
-  // (.is-flipped) instead of the default upward. 295 was tuned by eye with the
-  // _debug-tip-flip.js harness — exact px per explicit instruction, don't
+  // (.is-flipped) instead of the default upward. 295 was tuned by eye with a
+  // manual/ harness — exact px per explicit instruction, don't
   // convert to vh (the choice was made at one viewport size).
   const P7_TIP_FLIP_Y = 295;
   // Horizontal counterparts (viewport px): outside these two lines the tooltip
   // side is forced away from the nearer mini-legend, overriding the data-side
-  // mirroring. Tuned by eye with _debug-tip-flip-x.js — exact px, see the
+  // mirroring. Tuned by eye with a manual/ harness — exact px, see the
   // comment where they're used in doHitTest. Each line is measured from the
   // edge its legend hangs off: L from the left edge, R as an INSET from the
   // right edge — one mirrored 327px inset since 2026-09-05. The R line used to
@@ -5045,7 +5036,7 @@ function p7HoverInit() {
     // Two vertical screen-X lines keep the tooltip off the mini-legends: a dot
     // left of P7_TIP_FLIP_L always opens rightward, a dot within
     // P7_TIP_FLIP_R_INSET of the RIGHT edge always opens leftward; between them
-    // the data-side rule holds. Both tuned by eye with the _debug-tip-flip-x.js
+    // the data-side rule holds. Both tuned by eye with a manual/
     // harness — exact px per explicit instruction, don't convert to vw. Each is
     // a px distance from the edge its legend hangs off, so both lines follow a
     // window resize (an absolute right-line screen-X died on narrow windows).

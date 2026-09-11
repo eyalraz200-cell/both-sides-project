@@ -56,8 +56,7 @@ gaps remain at the edges.
 
 ### The vertical layout (desktop) — `p7BuildVerticalLayout(rows, cols, CELL, visible?)` → `p7.vert`
 
-Rows are dates, and **every row stands for the same span: `P7_VERT.daysPerRow` days (8,
-picked 2026-09-04), counted afresh from each 1 January** (and from `minDate` for the
+Rows are dates, and **every row stands for the same span: `P7_VERT.daysPerRow` days (8), counted afresh from each 1 January** (and from `minDate` for the
 first year). Events are bucketed per **day** (`dayOf`, 1279 days for the current data);
 `p7VertRowPlan(CELL)` builds `rowStart[d]` = the year's first row + `floor(k / 8) + (k % 8) / 8`
 (`k` = day index within its year) and `rowsOf[d] = 1/8`, so each year's segment is exactly
@@ -69,15 +68,15 @@ year ring sits (the line itself is unbroken, see below). 161 rows total at
 year's header** (`p7VertYearHeaderH()`: with side years the ring's radius
 `P7_AXIS_MARKER_RADIUS` 4 plus `P7_VERT_FIRST_YEAR_RAISE_PX` 14 — the first year's ring and
 digits sit 14px ABOVE row 0 and the line runs up to the ring, so the first headline event
-(2023-01-04, a fraction of a row under row 0) no longer collides with the "2023" ring; centred years: 21px digits,
+(2023-01-04, a fraction of a row under row 0) clears the "2023" ring; centred years: 21px digits,
 ring + 6 when on, `yearGapPad` above and below) fit the box (3.3 px at 1440×900; one-week rows needed 183 and 2.9 px,
 which is why 8 days won). **On mobile only**, the solved square is then multiplied by
-`P7_VERT_SQ_BOOST` (**1.12**, `p7VertSqBoost()`, picked by eye at 390×721 on 2026-09-05):
+`P7_VERT_SQ_BOOST` (**1.12**, `p7VertSqBoost()`, picked by eye at 390×721):
 the packed solve read too short against the docked tooltip. That deliberately overshoots
 the solver's own fit test, and the overshoot is **not** shared between the two ends — the
 grid spills past the box, so `p7VertTopY`'s `Math.max(0, …)` pins row 0 at the box top and
-every extra pixel lands at the BOTTOM. That is how it was tuned (top held, bottom pulled
-down 16px), so it is the chosen look, not a rounding artefact; don't reset it to 1.
+every extra pixel lands at the BOTTOM. That is the tuned look (top held, bottom pulled
+down 16px), not a rounding artefact; don't reset it to 1.
 Desktop shares the solver and is boosted by 1 (2.18 px / 526 px of axis, top y 124 →
 bottom y 650 at 390×721; 3.2 px at 1440×900, unchanged). **Row 0's y is `p7VertTopY(H)`**: on desktop the whole span
 (header + `totalRows × CELL`) is centred vertically in the box, so the slack left by the
@@ -102,17 +101,17 @@ The tunables live in `P7_VERT` (`page7.js`): `corridorPx` (band), `eventMode`, `
 `sideGap` 8, `card` `{ style 'plain', fill #FDFCFF, padX 16, padTop 6,
 padBottom 6, radius 4, radiusBottom 0, gap 0, stem false, bar true, barTop true, sides false, sidesAlpha 1, halfDots true, anchor 'center' }` (the centred headline block), `sideCard` `{ fill #ECEBEB, radius 4, gap 8, padX 8, padTop 4, padBottom 4, type { 12 / 400 / lh 19, black } }` (the desktop side plaque — see "Headlines" below) — shipped desktop defaults are **widen mode, line off, an
 unbroken line with hollow year rings, years beside the line on the right, headline cards
-zig-zagging left/right** (after the Figma draft `327:1654`, 2026-09-06). `P7_VERT_MOBILE`
+zig-zagging left/right** (after the Figma draft `327:1654`). `P7_VERT_MOBILE`
 overrides `yearSide`/`eventSide` back to `'center'`, `yearRing` false and `yearLabelWeight`
 400, so the phone keeps the centred year blocks and centred cards. The centred/split
 placements (`yearSide`/`eventSide` `'center'`, `'left'`/`'right'`, `dateSide` `'left'`/`'right'`)
 are live code paths; the band branch stays too. Changing
 one needs a relayout (`p7.lastW = 0; draw()`), which also clears `p7TargetCellCache`.
 
-**Headline placement** (review item A1/A2; `widen` is the picked default, the `band` code is
-still present but unused — the `_debug-axis.js` harness that compared them is deleted):
-- `eventMode: "band"` — *(dead since fixed-span rows: the layout no longer reserves band rows,
-  so switching it on would overlap dots)* `ceil(bandPx / CELL)` empty rows were reserved just *before* the
+**Headline placement** (`widen` is the picked default; the `band` code is still present but
+unused):
+- `eventMode: "band"` — *(dead: the fixed-span row layout reserves no band rows, so switching it on
+  would overlap dots)* `ceil(bandPx / CELL)` empty rows were reserved just *before* the
   event's day (the past-the-end event's band goes after the last day); the dot sits 1.5 rows
   into the band (`events[i].row`) and the headline + date hang under it, centred on the axis.
   `reachRow` = the band's top.
@@ -120,7 +119,7 @@ still present but unused — the `_debug-axis.js` harness that compared them is 
   simply wider over its whole height (`p7CenterGap()` returns `wideCorridorPx` instead of
   `corridorPx`) so every headline block fits inside it beside the axis. Dot at the middle
   of the day's rows (past-the-end: `totalRows − 3`); `reachRow` = the dot's row.
-- `eventLine` (A2) — a 1px `rgba(90,90,90,0.18)` rule from `leftX0` to `W − leftX0` at each
+- `eventLine` — a 1px `rgba(90,90,90,0.18)` rule from `leftX0` to `W − leftX0` at each
   event's dot row, drawn in `p7DrawTimelineSquares` *under* the dots. Persistent like the
   event's dot (`reachedT`, × the intro wipe), not tied to the label's crossfade.
 
@@ -162,6 +161,9 @@ and its presence is a pure function of its row's cursor (`undefined` row = never
 = not drawn). `p7ResetForReplay` clears the row phases too.
 
 ### Mobile: one cursor per month
+
+*The horizontal-axis path (`p7.vert` null, i.e. `p7VerticalAxis() === false`); with
+`P7_VERT_MOBILE.enabled` true, mobile runs the row-cursor system above instead.*
 
 `p7DrawSideSquares` animates one month's worth of squares at a time:
 `stagger = P7_ANIM_TOTAL_DURATION - P7_POP_DURATION` (2200 − 220 = 1980 ms) spread across
@@ -234,10 +236,9 @@ p7.currentDate = minDate + round(p7ScrubEaseIn(t) * totalDays) days
 reaching `P7_SCRUB_END_LEAD_VH = 0.5` viewports above the viewport bottom — half a
 viewport of scroll before @fold10's card crosses 0.5 and the size grid takes over. That
 lead is deliberate: the axis's own fill trails `p7.currentDate` through the
-`P7_AXIS_FILL_LAG_DAMPING` lerp, so ending the dataset flush with @fold10 left the axis
-still visibly filling as the grid started. It used to end a *whole* viewport early
-(bottom hitting the viewport bottom), which was 100vh of dead scroll with the timeline
-already complete.
+`P7_AXIS_FILL_LAG_DAMPING` lerp, so ending the dataset flush with @fold10 leaves the axis
+still visibly filling as the grid starts, while a *whole* viewport of lead (bottom hitting
+the viewport bottom) is 100vh of dead scroll with the timeline already complete.
 
 The section height must track the lead — `680vh + lead · 100vh` (today 730vh; mobile
 460vh + lead, today 510vh) — so `scrubRange`, and with it the scrub's pace, never move
@@ -380,7 +381,7 @@ axis so the first event's label can center over its own circle).
   covering line, rings, labels and events alike. Gated by `p7AxisShouldShow()` =
   `fold9FlyTrigger.currentRaw() > 0`, falling back to `p7HasEngaged`. Scrolling back above
   the trigger plays the same wipe in reverse, **faster than the build-in** —
-  `P7_AXIS_OUTRO_DURATION` 1250 ms, its own constant (tuned by eye on a harness). Don't
+  `P7_AXIS_OUTRO_DURATION` 1250 ms, its own constant (tuned by eye). Don't
   re-tie it to the intro: 500 ms snapped the axis away the moment @fold12's title block hit
   and read as a glitch, while the intro's full 2800 ms left it still undrawing into the
   bridge glide. Full-scale; an interrupted intro reverses over only its
@@ -484,7 +485,7 @@ over `totalRows × CELL`:
   `P7_VERT.bar` accent bar along its whole bottom edge **and** its top edge (`card.bar` +
   `card.barTop`, drawn by `p7DrawAccentBar`) in the year-axis line's own style: `h`
   `P7_AXIS_LINE_THICKNESS` (1px), `color` #000000, `alpha` 1 (shared) times a per-edge
-  `alphaTop` / `alphaBottom` (0.3 each, tuned by eye 2026-09-05; beat 2's lone bar uses the dot-facing edge's value),
+  `alphaTop` / `alphaBottom` (0.3 each, tuned by eye; beat 2's lone bar uses the dot-facing edge's value),
   square ends (`round` false),
   `inset` 0 (px shorter than the card each side), `dash` 0 / `dashGap` 0 (dash > 0 =
   dashed line of that dash length); the bar's `gap`/`padX`/`dateBelow`/`dateGap` only apply
@@ -536,24 +537,25 @@ over `totalRows × CELL`:
   wrapped lines is drawn with `ctx.direction = 'rtl'` (so a trailing «.» lands at the end of
   the Hebrew run) in `P7_AXIS_DESC_TYPE` (400 12px, line height 17, black at 0.75). Copy is
   flush to each card's **axis-side** edge — left-aligned on right-side plaques, right-aligned
-  on left-side ones (`compare/` pick, 2026-09-07; right-aligning both sides was rejected).
-  `P7_AXIS_DESC_GAP` 2 under the title, clipped to the card. That is a *line-box* gap — `p7VertLineText` centres each line in its `lh`, so the visible white is 2 plus the title's and the description's facing half-leading bands (tuned by eye on a harness; 6 read as too loose). The card's
+  on left-side ones.
+  `P7_AXIS_DESC_GAP` 2 under the title, clipped to the card. That is a *line-box* gap — `p7VertLineText` centres each line in its `lh`, so the visible white is 2 plus the title's and the description's facing half-leading bands (tuned by eye; 6 reads as too loose). The card's
   **near edge never moves**: it keeps the plaque's wrap width (`maxWidth`) and grows downward — unless the grown
   card would pass the canvas bottom (`H − 8`), then it grows upward and the description
   sits above the title. A plaque with `descT > 0` is drawn last so it overlays its
-  neighbours. (Widening the card outward over the grid to a fixed width was compared and
-  rejected on 2026-09-07 — don't reintroduce.) `p7AxisEventsAnimActive` keeps the loop
-  alive while any `descT` is off its target.
+  neighbours. `p7AxisEventsAnimActive` keeps the loop alive while any `descT` is off its
+  target.
 - **While one plaque is hovered every OTHER reached plaque collapses** — it plays its own
   reveal backwards into its near edge, so only the hovered card is left standing. Positions
   and the axis dots are untouched; just the cards fold. Driven by a per-event `othersT`
   (`p7AxisOthersTarget`) advanced at `P7_AXIS_DESC_MS` alongside `descT`, reversible
-  mid-flight and keeping the rAF loop alive. (Dimming the others to 0.35 instead was compared
-  and rejected on 2026-09-07 — don't reintroduce.)
+  mid-flight and keeping the rAF loop alive.
 - **The plaque's title fades in** as its card opens: the copy is clipped to the growing card
-  and alpha-faded with it (`textClip.alpha`), unlike the description, which types. (Typing the
-  title too — a character prefix of the wrapped lines — was compared and rejected on
-  2026-09-07; don't reintroduce.)
+  and alpha-faded with it (`textClip.alpha`), unlike the description, which types.
+  > **Removed — don't reintroduce:** right-aligning the description on both sides (the copy
+  > is flush to each card's axis-side edge); widening the opened card outward over the grid
+  > to a fixed width (it grows downward at its wrap width); dimming the other plaques to 0.35
+  > while one is hovered (they collapse instead); typing the plaque's title in character by
+  > character (it fades with the card).
 
 - **Hover:** the hovered square's date marks the axis at `p7AxisY(date, H)` in its actor
   colour; `p7.axisEventPositions` is filled with `{x: axisX, y, radius}` so the existing
@@ -601,45 +603,44 @@ other four pass through byte-identical.
 gives it. Uniform scaling holds the hue angle, and #F9B624's ~40° darkened is olive/brown —
 brown *is* dark orange-yellow, so there is no dark yellow that still reads as yellow. The
 override rotates it to hue 24° at 84% saturation, the brightest value there still clearing
-AA, chosen by eye off a solved hue × saturation grid (2026-09-05). Matching is by proximity,
+AA, chosen by eye off a solved hue × saturation grid. Matching is by proximity,
 not equality — within `TOOLTIP_OVERRIDE_NEAR` (**90**, Manhattan) the override is blended
 with the generic result by closeness, so @fold7's grey→colour lerp arrives at the picked
-hue continuously instead of popping to it on the last frame. The generic scaling now lives
+hue continuously instead of popping to it on the last frame. The generic scaling lives
 in `tooltipFillScaled(r, g, b)`, which returns an `[r, g, b]` triple; `tooltipFill` is the
 public entry point and still returns an `rgb()` string. Its bisection rounds to 8-bit
 **first and then verifies**, stepping the factor down until the rounded colour truly clears
-the ceiling — rounding a channel up used to push luminance back over it (yellow landed at
+the ceiling — rounding a channel up can push luminance back over it (yellow would land at
 4.48:1 against a 4.50 target). `color` deliberately stays the TRUE group colour, kept in
 step by `setTooltipColor` even though nothing paints from it today.
 
-> **Mobile matches desktop (2026-09-05).** The docked mobile frame used to be white with a
-> dashed group-coloured stroke and dark text; it now takes the same group-colour fill and
-> white text as desktop, so the two fixtures differ only in SHAPE (desktop anchors a box to
-> the dot, mobile keeps the one docked frame). The fill / white-text /
-> `.page9-tooltip-dash { display: none }` rules moved out of the old
-> `@media (min-width: 601px)` wrapper in style.css and are now unconditional; mobile's own
-> two bits of type were re-toned to white alphas — `.p7-tip-more` 0.75. The dash `<svg>` is
-> still built by `updateTooltipDash()` on every hover, only hidden.
+**Mobile matches desktop.** The docked mobile frame takes the same group-colour fill and
+white text as desktop, so the two fixtures differ only in SHAPE (desktop anchors a box to
+the dot, mobile keeps the one docked frame). The fill / white-text /
+`.page9-tooltip-dash { display: none }` rules in style.css are unconditional (not inside the
+`@media (min-width: 601px)` wrapper); mobile's own two bits of type are white alphas —
+`.p7-tip-more` 0.75. The dash `<svg>` is still built by `updateTooltipDash()` on every
+hover, only hidden.
 
-> **The neutral frame has no card at all (2026-09-05).** Only the state *with an event in
-> it* is a filled box. `.page9-tooltip.is-docked.is-picker` sets `background: none` and
-> `border-color: transparent`, so while nothing is picked there is just the
-> `.p7-inspect-hint` line on the page background — an empty coloured box read as a control
-> waiting to be operated, the words alone read as the instruction they are. The hint takes
-> `color: currentColor` (it can no longer be white: there is no fill under it), which
-> resolves to the resting grey `FOLD8_TOOLTIP_REST_COLOR` `#858585` that
-> `updateGroups`' `keepEmptyFrame` branch writes — and `release()` (`p7InspectInit`) now
-> writes it too, so a released event's group colour can't be left tinting the instruction.
-> The `100px` height and the `.is-picker` centring are deliberately KEPT while empty: the
-> hint sits exactly where the filled frame's middle will be, so picking an event brings the
-> box back in place instead of jumping the text.
+**The neutral frame has no card at all.** Only the state *with an event in it* is a
+filled box. `.page9-tooltip.is-docked.is-picker` sets `background: none` and
+`border-color: transparent`, so while nothing is picked there is just the
+`.p7-inspect-hint` line on the page background — an empty coloured box reads as a control
+waiting to be operated, the words alone read as the instruction they are. The hint takes
+`color: currentColor` (there is no fill under it, so it cannot be white), which resolves
+to the resting grey `FOLD8_TOOLTIP_REST_COLOR` `#858585` that `updateGroups`'
+`keepEmptyFrame` branch writes — and `release()` (`p7InspectInit`) writes it too, so a
+released event's group colour can't be left tinting the instruction. The `100px` height
+and the `.is-picker` centring are deliberately KEPT while empty: the hint sits exactly
+where the filled frame's middle will be, so picking an event brings the box back in place
+instead of jumping the text.
 
 @fold7's demo feeds the lerped grey→colour value through it every frame, so the
 darkening is continuous rather than a snap at the end; `.is-mirrored` flips the
 box for `side === "left"` — except outside the two horizontal flip lines, which keep the
 box off the mini-legends: a dot left of `P7_TIP_FLIP_L` (**327 px from the left edge**)
 always opens rightward (`mirrored = false`), a dot within `P7_TIP_FLIP_R_INSET`
-(**327 px from the right edge**, the same inset mirrored — tuned by eye 2026-09-05) always opens leftward (`mirrored = true`); only between
+(**327 px from the right edge**, the same inset mirrored — tuned by eye) always opens leftward (`mirrored = true`); only between
 them does the data-side rule decide. Both hand-tuned by eye at a 1900px-wide viewport,
 exact px, not vw — but each is anchored to the edge its legend hangs off, so both lines
 track a window resize (the right line reads `window.innerWidth - P7_TIP_FLIP_R_INSET`
@@ -652,9 +653,9 @@ as @fold13's hover, whose corner logic `updateTooltipDash` (js/core.js) already 
 **The box hangs off the square's own drawn edge, not its top-left corner** — the anchor is
 `centre ± (pos.sq/2 + bulge grow)` on both axes, and the flip test reads that same box's top
 edge. On the timeline every square is `p7.SQ` so the two are indistinguishable, but in
-@fold10's size grid a block can be 68.5px wide and anchoring to `bestPos.x` laid the
-rightward (non-mirrored) tooltip **on top of** the block; the mirrored side happened to look
-right only because `bestPos.x` already is that side's edge. Fixed 2026-09-09.
+@fold10's size grid a block can be 68.5px wide, and anchoring to `bestPos.x` would lay the
+rightward (non-mirrored) tooltip **on top of** the block (the mirrored side only looks
+right that way because `bestPos.x` already is that side's edge).
 
 **On mobile the tooltip is docked, not anchored.** `tooltipDockMobile(el)`
 (`js/fold8-tooltip.js`) adds `.page9-tooltip.is-docked` below the 600px breakpoint and
@@ -675,10 +676,9 @@ block), so every title block that shares the screen with the frame paints OVER i
 @fold13's card scrolls up through the frame's dropped spot (`p9DockTopM()`) on its way to
 pinning at the top, so without it the frame's white fill swallowed the title mid-pass.
 The frame itself stays fully visible throughout that pass — the title simply paints over
-it (a transit-hide that faded the frame out for the overlap was tried and reverted per
-explicit instruction: nothing disappears). The frame is filled — in the event's group
+it (no transit-hide: nothing disappears). The frame is filled — in the event's group
 colour — only while an event is actually in it; the empty hint state carries no fill and no
-border at all (see the 2026-09-05 note above). @fold9
+border at all (see the neutral-frame note above). @fold9
 itself has no card to stack: `#page-8` is an empty scrub spacer. The final spot is above the timeline grid (`top: 62px`, centered, `width: min(300px, 100vw - 48px)`
 — 300px was chosen by eye after measurement: ~76% of descriptions fit the 3 clamped lines (measured at 14px; type since bumped to 15px) (320px bought 82%, the 342px title-block width 87.5%, but both read too wide) — **fixed** `height: 100px`, with the overflow clipped on `.page9-tooltip-desc` — **never on
 the frame**, whose dashed `<svg>` is inset `-2px` on every side and would be clipped clean
@@ -697,8 +697,8 @@ scale is the ENTRANCE only and, unlike desktop, is **not** multiplied by the shr
 real dot the docked frame does not leave, it stays put **empty**, ready for the next
 selection. As it animates up to the timeline spot its stroke also fades from the demo
 event's actor color back to the neutral resting gray (`FOLD8_TOOLTIP_REST_COLOR` #858585 —
-the frame's own constant, a touch lighter than the squares' `FOLD6_SQUARE_REST_COLOR`
-#767676 since a stroke reads heavier than a fill: `colorT * (1 - fold9FlyT)` into
+the frame's own constant, a touch lighter than the squares'
+`FOLD6_SQUARE_REST_COLOR` #767676 since a stroke reads heavier than a fill: `colorT * (1 - fold9FlyT)` into
 `lerpFold6SquareColor` with the tooltip constant as its `base`, gated on `keepEmptyFrame`
 so desktop is untouched). `updateGroups`' `keepEmptyFrame` (mobile and `currentPage <= 11`) is what holds
 it there past the shrink; the bound is `<= 9` rather than page 7 alone so the frame carries
@@ -742,8 +742,7 @@ the finger drops the selection entirely and the frame returns to its resting sta
 `setTooltipColor` itself, and `updateGroups`' `keepEmptyFrame` branch repaints
 `fold8TooltipEl.style.color` every frame it runs; `release()` calls `updateGroups()` too.)
 An event's text and its actor-colored fill left standing after the finger
-lifts read as permanent page furniture, and kept covering the chart the gesture had just been
-used to explore.
+lifts would read as permanent page furniture, covering the chart the gesture was exploring.
 
 > **Removed — don't reintroduce:** release used to *keep* the selection, leaving the date,
 > description and colored stroke on screen with `is-expandable` still on so a later tap could
@@ -778,8 +777,8 @@ reporting anything truthfully. `P7_TIP_CLAMP_LINES` (page7.js) must stay in sync
 **Order matters in `showEvent`: `sync()` must run BEFORE `syncMore()`.** `sync()` is what drops
 `is-picker`, and `.page9-tooltip.is-docked.is-picker .page9-tooltip-desc` is `display: none` —
 so measuring first measures a hidden box (zero width, no line boxes), the test reads "fits" for
-every event, and the toggle never appears at all. This was the actual reason the feature looked
-dead; the measurement technique was never the problem. `syncMore` now also falls back to the
+every event, and the toggle never appears at all — the feature looks dead even though the
+measurement technique is sound. `syncMore` also falls back to the
 frame's own inner width when the description reports none, so a mistimed call can't fail
 silently as "fits" a second time.
 
@@ -804,30 +803,29 @@ text. Two rules this state obeys:
 `chartTouch` already ignores touches inside the frame, so the press-and-hold is unaffected
 either way. The `click` handler calls `updateTooltipDash(tipEl)`: the dashed border is an
 `<svg>` sized to the box's own pixels, and a box that just changed height would otherwise keep
-the old outline.
+a stale outline.
 
 **The hovered square's hit box is its own drawn size**, not `p7.SQ`: `doHitTest`
 adds the bulge's extra half-extent (`hovGrow`) to each square's own half-extent
-(`pos.sq ?? p7.SQ`). Anchoring the hovered box to `p7.SQ` was invisible on the
-timeline, where every square *is* `p7.SQ`, but in the size grid it shrank a
+(`pos.sq ?? p7.SQ`). Anchoring the hovered box to `p7.SQ` is invisible on the
+timeline, where every square *is* `p7.SQ`, but in the size grid it would shrink a
 60px square's hit box to ~1.5px the instant it became hovered — pointer outside
-its own box, hover dropped, full-size box caught it again a pixel later, and it
-flip-flopped every frame. That was the @fold10 hover stutter (fixed 2026-09-08),
-worst on the big squares simply because there is more room to move inside one.
+its own box, hover dropped, full-size box catches it again a pixel later, and it
+flip-flops every frame (the @fold10 hover stutter, worst on the big squares
+simply because there is more room to move inside one).
 
 **Page7's hover dim ramps** on `p7.hoverDimT`, a 0..1 eased on the same frame clock as
 the bulge but its own duration, `P7_HOVER_DIM_MS` 90 (it is advanced inside `p7BulgeTick`,
 and `p7BulgeActive()` reports it so the anim loop keeps running until it settles — a
-tier-0 hover has no bulge at all, yet still dims). It used to be a **snap** (`if
-(p7.hoveredEvent)`), which flickered when leaving a *big* square: the bulge pushes that
-square's neighbours away, so the pointer crosses a ring of bare canvas with nothing under
-it, hover drops, the dim snaps off, and the next pixel snaps it back on. Fixed 2026-09-09;
-the same device page9.js already used for its pill hover (`p9.hoverDimT`). Non-hovered
+tier-0 hover has no bulge at all, yet still dims). A snap (`if (p7.hoveredEvent)`) would
+flicker when leaving a *big* square: the bulge pushes that square's neighbours away, so the
+pointer crosses a ring of bare canvas with nothing under it, hover drops, the dim snaps
+off, and the next pixel snaps it back on. The ramp is the same device page9.js uses for
+its pill hover (`p9.hoverDimT`). Non-hovered
 squares draw at `alpha * (1 − (1 − hoverDim(actor)) * hoverDimT)`, the hovered one rises
 `alpha → 1` on the same ramp; `hoverDim` is `js/core.js` — the shared `HOVER_DIM_OPACITY` **0.27** unless that
 group has its own entry in `HOVER_DIM_BY_ACTOR`, keyed by the **dimmed** dot's actor, not
-the hovered one's. The map is currently **empty** (re-tuned per group on 2026-09-10 and
-all six landed on the same value, re-levelled to 0.27 the same day); it stays as the hook for a colour that needs its own number. `HOVER_DIM_MS` 80 is page9's own pill-hover ramp. Every
+the hovered one's. The map is currently **empty** (all six groups share the 0.27); it stays as the hook for a colour that needs its own number. `HOVER_DIM_MS` 80 is page9's own pill-hover ramp. Every
 hover change also calls `updateGroups()` so the 8 fold-6 DOM squares dim in step.
 
 ### The hover bulge — `p7BulgeTick` / `p7BulgeList` / `p7BulgeShift` (page7.js)
@@ -839,15 +837,12 @@ every gap around it stays exactly `P7_GAP`:
 
 - Grown side = `P7_SQ × P7_BULGE_MULT[tier]`; tier = how many of the ascending crowd
   thresholds `P7_BULGE_CUTS` the event's `crowd` reaches (so `MULT` has one entry more
-  than `CUTS`). `CUTS [100, 2500, 25100, 100000, 250000]` (the 250k+ tier, added
-  2026-09-08, holds 4 events); `MULT [1, 2.43, 3.86, 8.14, 12.43, 19.57]` → 3.5
+  than `CUTS`). `CUTS [100, 2500, 25100, 100000, 250000]` (the 250k+ tier holds 4 events); `MULT [1, 2.43, 3.86, 8.14, 12.43, 19.57]` → 3.5
   (unchanged) / 8.5 / 13.5 / 28.5 / 43.5 / 68.5 px.
-  **`MULT` is the size grid's own ladder** (`compare/`-baked 2026-09-09): @fold10 draws a
+  **`MULT` is the size grid's own ladder**: @fold10 draws a
   tier-k dot as `P7_GRID_TIER_CELLS[k]` cells, `n·CELL − GAP = (n·(1+r) − r)·SQ` with
-  `r = p7GapRatio()`, and the hover now says the same thing — the same event is the same
-  size on both screens. It used to run its own ladder (`1 / 2.25 / 4 / 6 / 7.5 / 9`,
-  tuned 2026-09-07), so the top tier was 9× on the timeline against nearly 20× in the
-  grid. Changing `P7_GRID_TIER_CELLS` means recomputing `MULT`.
+  `r = p7GapRatio()`, and the hover says the same thing — the same event is the same
+  size on both screens. Changing `P7_GRID_TIER_CELLS` means recomputing `MULT`.
   Tier 0 (no figure, or below the first cut) never swells — no entry is even
   created in `p7BulgeT`. Tiers, not a continuous scale — a few sizes read, a ramp doesn't.
 - The extra width is split in two; every other square on that side shifts by the half
@@ -877,11 +872,10 @@ js/groups.js, run from `checkGroupTriggers`). The shim it drives adapts the
 grid's own API to the 0/1 trigger interface — `set` (first check, or a jump over
 a whole viewport) snaps, `trigger` (a real scroll crossing) morphs — so the grid
 gets the same instant-vs-animated split as every other fold, in both directions.
-It used to hang off the `currentPage === 9` IntersectionObserver flip, which
-fires at −50% of the *section*: the grid formed while the card was still
-climbing.
+(The `currentPage === 9` IntersectionObserver flip fires at −50% of the *section*,
+which would form the grid while the card was still climbing.)
 
-`p7SizeGridOnPage` (the first line of `setActivePage`, js/nav.js) no longer owns
+`p7SizeGridOnPage` (the first line of `setActivePage`, js/nav.js) does not own
 the flip — it only keeps the grid consistent where that watcher can't speak:
 forced off on mobile; re-synced to `fold10GridPast()` **instantly** on pages
 8–10 (re-entry from below never crosses the line again, so the watcher stays
@@ -895,13 +889,13 @@ button below hold its state. State: `p7Grid = { on, layout }`.
 **It stands down while @fold11's beats are in flight** (`fold11SizeBeatPending()`,
 js/groups.js — true between the two beats; each timeout nulls its own handle so
 it can't latch). @fold11's sequence straddles a page flip: on a fast scroll back
-up, the flip to @fold10 lands ~0ms into the 700ms glide home, and the re-sync's
-`instant: true` set the END state of both beats on that frame — the squares
-snapped to their tiered rest cells under a field still flying, which read as the
-whole thing snapping back to the timeline. `fold11SizeApply` owns the flags for
-the length of its sequence; the next flip re-syncs.
+up, the flip to @fold10 lands ~0ms into the 700ms glide home, and without the
+stand-down the re-sync's `instant: true` would set the END state of both beats on
+that frame — the squares snapping to their tiered rest cells under a field still
+flying. `fold11SizeApply` owns the flags for the length of its sequence; the next
+flip re-syncs.
 
-### @fold11 — flatten in place, then fly (`fold11SizeApply`, js/groups.js)
+## @fold11 — flatten in place, then fly (`fold11SizeApply`, js/groups.js)
 
 @fold11 is @fold10's morph in reverse, except it lands in **page9's legit
 zone** instead of back on the timeline. Two beats, strictly in order:
@@ -910,13 +904,13 @@ zone** instead of back on the timeline. Two beats, strictly in order:
    size **where it already stands**. `p7GridUniform` is a **draw-time override**
    (`p7GridFlatten`, page7.js), *not* a different pack: the tiered layout is
    left alone and each block is simply drawn at `L.SQ`, centred on the cell
-   block it occupies. So **nothing travels on this beat** — measured, 2001 dot
-   centres across the flip moved 0px. A repack at one cell each was tried and
-   rejected: it read as a rearrangement between the two beats. `p7GridKey`
+   block it occupies. So **nothing travels on this beat** (2001 dot centres across
+   the flip move 0px; a repack at one cell each would read as a rearrangement
+   between the two beats). `p7GridKey`
    deliberately does **not** carry the uniform flag, and `p7SizeGridSet` skips
    the `layout = null` / `packVis = null` reset when only the flag moves.
    It is also **not** "the grid off" — off means the dots fly home to the
-   timeline (that was the first, wrong implementation of this fold).
+   timeline.
 2. After `p7MorphTotalMs()` (~2.4s) — a wall-clock `setTimeout`, because the two
    animations run on separate clocks — `p8Trigger()` glides the whole field into
    the legit grid. The handle (`fold11SizeBeatTO`) is kept and cleared, so a
@@ -926,9 +920,9 @@ Reverse plays both backwards: `p8TriggerReverse()`, then un-flatten after
 `P8_REVERSE_DURATION`.
 
 Because the fold owns the bridge glide, its section is `data-page="10"` —
-page8's canvas slot, the same one @fold12 uses — and **@fold12's title no longer
-triggers the glide**: `page8CheckScroll` (js/page8-9-scroll.js) still watches
-`#page-11 .section-title`, but only for the mobile tooltip drop.
+page8's canvas slot, the same one @fold12 uses — and **@fold12's title does not
+trigger the glide**: `page8CheckScroll` (js/page8-9-scroll.js) watches
+`#page-11 .section-title` only for the mobile tooltip drop.
 `fold10GridTrigger` passes `uniform: false`, so scrolling back up into @fold10
 always restores the tiered grid even if the reader had flattened it by hand.
 
@@ -950,7 +944,7 @@ the grid itself, which would fly the dots back to the timeline. On
 `currentPage === 12` (@fold13) it calls `p9ScopeSet(!p7GridUniform)` instead,
 which tiers **only the dots already dragged into the extreme columns** and never
 touches page7's grid state; see
-[Drag-and-Drop](Drag-and-Drop.md#crowd-tiers--%D7%94%D7%99%D7%A7%D7%A3-%D7%94%D7%90%D7%99%D7%A8%D7%95%D7%A2%D7%99%D7%9D-on-this-fold).
+[Drag-and-Drop](Drag-and-Drop.md#crowd-tiers--הצגת-גודל-האירועים-on-this-fold).
 On any later page the click is inert. It is
 a direct `.layout` child, **not** a `.groups-overlay` one: that overlay is
 `z-index: 0` and its own stacking context, so a button inside it would sit under
@@ -967,8 +961,8 @@ meaning anything while it is on — the year axis is not drawn, and the two
 camps' packs meet on the centre line instead of straddling the corridor.
 
 - **Tiers as cell blocks.** A tier-k square (`p7BulgeTier`, same tiers as the
-  hover) spans `P7_GRID_TIER_CELLS[k] = [1, 2, 3, 6, 9, 14]` unit cells (baked
-  2026-09-08); size `n·CELL − GAP` exactly — the block fills its cells, so the
+  hover) spans `P7_GRID_TIER_CELLS[k] = [1, 2, 3, 6, 9, 14]` unit cells; size
+  `n·CELL − GAP` exactly — the block fills its cells, so the
   gap between *any* two neighbours is `L.GAP`, whatever tiers touch. With
   `CELL = 4.5` / `GAP = 1.5` (1600×1000, dpr 2) that makes the drawn sizes
   3 / 7.5 / 12 / 25.5 / 39 / 61.5px — *not* the hover's
@@ -980,11 +974,11 @@ camps' packs meet on the centre line instead of straddling the corridor.
   they are drawn, with no date anchoring. **`p7AxisEventsAnimActive` returns
   false outright while the grid is on**, for the same reason: none of the axis
   states can advance when nothing draws them, so a target they can never reach
-  (`p7AxisRosterT` → 1 the moment a square is hovered) pinned the animation loop
-  open for the whole fold — ~14k squares redrawn every frame with the pointer
-  standing still, which read as the hover stuttering (worst on the big squares,
-  the easy ones to rest on). Fixed 2026-09-08; measured 178 draws → 4 over 1.5s
-  of stationary hover.
+  (`p7AxisRosterT` → 1 the moment a square is hovered) would pin the animation
+  loop open for the whole fold — ~14k squares redrawn every frame with the pointer
+  standing still, reading as hover stutter (worst on the big squares, the easy
+  ones to rest on). With the early return a 1.5s stationary hover costs 4 draws
+  instead of 178.
 - **The axis un-wipes, it never snaps.** `p7AxisShouldShow()` returns false while
   `p7Grid.on`, which routes @fold10 through the reverse wipe every other axis
   exit already uses (`p7AxisTriggerIfNeeded` → `p7AxisReverseOut` →
@@ -994,39 +988,35 @@ camps' packs meet on the centre line instead of straddling the corridor.
   but **not on the same beat as the dots**: `p7AxisShouldShow()` also stays false
   for as long as the grid's OFF morph is running (`p7GridMorph.dir === "off"`,
   `p7MorphTotalMs(flat)`), so scrolling back up to @fold9 plays two ordered
-  beats — the dots fly home first, THEN the axis wipes in. It used to start the
-  wipe on the frame the grid switched off, drawing the axis through a field
-  still in the air.
-  Before this, `p7DrawYearAxisVertical` / `p7DrawVertEventLines` returned early
-  on `p7Grid.on` and the whole axis vanished on the trigger frame while the dots
-  took 1900ms to morph. The one carve-out: `p7AxisEventsAnimActive`'s `p7Grid.on`
-  early return (above) now also requires `p7AxisOutroStart === null`, so the
-  outro gets its frames.
+  beats — the dots fly home first, THEN the axis wipes in, never through a field
+  still in the air. The one carve-out: `p7AxisEventsAnimActive`'s `p7Grid.on`
+  early return (above) also requires `p7AxisOutroStart === null`, so the outro
+  gets its frames.
 - **The years leave with the axis cards, not with the wipe.** The year rings and
   digits are drawn under `ctx.globalAlpha *= spanShrink` with the ring radius
   scaled to `yearR = P7_AXIS_MARKER_RADIUS * spanShrink` — the same
   `P7_AXIS_EVENT_FADE_OUT_MS` clock the headline dots/cards shrink on. The wipe
   clip stays anchored at `topY` and consumes the span top-last, and the FIRST
   year is drawn as a header *above* `topY`, so on the wipe alone «2023» and its
-  ring stood on an otherwise empty screen for the whole outro and then snapped
+  ring would stand on an otherwise empty screen for the whole outro and then snap
   off. (Rings shrink because they are markers; digits fade because they are
   text — the no-fade rule is about dots.)
 - **The 8 claimed squares fly too.** `FOLD6_SQUARE_ROW_IDS`'s events are DOM
   squares (`js/update-groups.js`), skipped by the canvas cascade
   (`p7GetClaimedEvents`), so they move only when
-  `p7TargetForActorOccurrence` moves. It now returns the packed cell
+  `p7TargetForActorOccurrence` moves. It returns the packed cell
   (`p7GridCell`) blended through `p7MorphBlend` whenever the grid is on or a
-  morph is running — before this they stayed parked on their timeline cell
-  while every other dot flew.
+  morph is running, so the 8 fly with the field instead of staying parked on
+  their timeline cell.
   **These 8 never re-derive the field's math — they call the same function the
   canvas calls.** Their glide blend reads `p8Beats(rawT)` (page8.js) and uses
   `posE` for position and `sizeE` for size, exactly as `blendAndDraw` does;
-  easing `p8CurrentT()` once locally here is what left them behind every time
-  the canvas path gained a beat, and is the recurring cause of "the 8 don't do
-  what the other dots do". Any new beat added to the glide belongs in
+  easing `p8CurrentT()` locally here would leave them behind every time the
+  canvas path gains a beat — the recurring cause of "the 8 don't do what the
+  other dots do". Any new beat added to the glide belongs in
   `p8Beats`, not duplicated in `js/update-groups.js`.
   Their target function `p7TargetForActorOccurrence` also calls
-  `p7UpdateLayout(W, H)`, which on desktop nulls `p7Grid.layout`; it now bails
+  `p7UpdateLayout(W, H)`, which on desktop nulls `p7Grid.layout`; it bails
   on a non-finite `W`/`H` (page7.js) so a dimension-less call from this path can
   never throw away the packed cells the rest of the field is standing on.
   And because nothing calls `updateGroups()` per
@@ -1036,18 +1026,18 @@ camps' packs meet on the centre line instead of straddling the corridor.
 - **The tooltip is off while the dots fly.** `doHitTest` bails on
   `p7GridMorph !== null` alongside its existing `p8PhaseStart` bail, and
   `p7SizeGridSet` calls `p7RecheckHover()` **before** clearing
-  `p7.hoveredEvent` — clearing it first makes `hideSquare` early-return, so an
-  already-open tooltip kept its `.is-visible` class and hung over the flying
+  `p7.hoveredEvent` — clearing it first would make `hideSquare` early-return and
+  leave an already-open tooltip's `.is-visible` class hanging over the flying
   dots for the whole morph. Hover comes back on its own once the morph settles.
 - **The camps meet on the centre line.** There is no corridor in the grid —
   both blocks' inner edge is `W/2`, so the two packs abut with a single unit
   gap between them and stretch the full height of the box.
-- **The frame width is the master knob.** `P7_GRID_WIDTH_FRAC` (**0.7**, `manual/`-baked 2026-09-08) is how
+- **The frame width is the master knob.** `P7_GRID_WIDTH_FRAC` (**0.7**) is how
   much of the half-width (corridor edge out to `sbbTimelineLeftX`) the wider
   camp's block occupies — and it is *enforced*: `P7_GRID_UNIT_PX` is **0**, which
   means the unit square is **solved** for that width by `p7SizeGridLayout`. The
   pack always fills the box height first and then widens, so with a fixed unit
-  the width was only a result (4.5px ran ~150px past the left edge at 1440×900).
+  the width is only a result (4.5px runs ~150px past the left edge at 1440×900).
   The solve packs what is on screen (the whole roster on a cold jump) on
   throwaway layouts via `p7Grid.solveVis`, measures the wider camp's reach
   (`colOff + sky.maxW`), and rescales the unit by `√(sideW / reach·CELL)` — area
@@ -1055,7 +1045,7 @@ camps' packs meet on the centre line instead of straddling the corridor.
   The real layout is then built fresh at that unit so it still packs lazily.
   At 1440×900 / 0.9 the unit comes out ≈3.0px, a tier-5 block ≈58px. A
   fixed `P7_GRID_UNIT_PX > 0` still works, but then the width is a result again.
-- **The outer edge can be ragged.** `P7_GRID_EDGE_JITTER` (**0.7**, 0..1, `compare/`-baked 2026-09-08). **The
+- **The outer edge can be ragged.** `P7_GRID_EDGE_JITTER` (**0.7**, 0..1). **The
   packing itself never loosens** — squares always drop into the shallowest run,
   so the interior stays solid at one uniform gap; the jitter only moves the
   block's outer *contour*. Each row gets a **notch** depth (`p7GridNotch`:
@@ -1065,28 +1055,24 @@ camps' packs meet on the centre line instead of straddling the corridor.
   enforces is `sky.limit − notch[row]`. When nothing fits inside the contour any
   more, `limit` **grows by a cell** and the whole contour slides outward keeping
   its shape — that is what makes the teeth survive: an ordinary "fall back to
-  the shallowest run" filled every notch back in as soon as the block saturated
-  (measured: the edge came out flat). Deterministic (`p7GridRng`, mulberry32 off
+  the shallowest run" would fill every notch back in as soon as the block
+  saturated, for a flat edge. Deterministic (`p7GridRng`, mulberry32 off
   `P7_GRID_SEED`, one stream per skyline), gaps stay exact — 0 overlaps at
   jitter 1, where the left camp's rows end 109–115 cells out. Part of `p7GridKey`.
-  Tuned live on a `manual/` harness and then decided on a `compare/` harness
-  (`_debug-grid-compare.js`) that held three complete candidates — spread,
-  upward and sideways — and flipped between them in place. **`up` won on
-  2026-09-08 and is what ships**; both harnesses are deleted. The baked set:
+  Of the three complete growth modes — spread, upward and sideways — **`up` is
+  what ships**. The baked set:
   `EDGE_JITTER 0.7`, `JITTER_CELLS 25`, `JITTER_WAVE 2`, `SEED 20260908`,
   `WIDTH_FRAC 0.7`, `HEIGHT_FRAC 1`, `SPREAD_FRAC 0.8`, `SPREAD_LOOSE 1`,
   `BIG_SPREAD 1`, `BIG_MIN 5`, `GROW "up"`.
-- **The solve aims short of the frame, on the full roster.** Two things kept the
-  taller camp clipped at `HEIGHT_FRAC = 1`. (a) The unit was solved from
-  `p7.lastPositions` — whatever had arrived at press time, at 1440x900 only 8790
-  of the right camp's 9126 — so the finished block outgrew what it was sized
-  for; `p7Grid.solveVis` is now the full roster (the real pack is still lazy).
-  (b) The tolerance was two-sided and the target was the frame exactly, but the
-  lazy pack fills in arrival order, not the solve layouts' order, and an
-  order-dependent frontier lands a cell or two either way. The solve now accepts
-  only an undershoot and aims `P7_GRID_PACK_SLACK_CELLS` (**3**) cells short.
-  At 1440x900 the block's top edge went from 8px above the frame to 9px inside
-  it, for a unit of 3.10 instead of 3.13. Fixed 2026-09-08.
+- **The solve aims short of the frame, on the full roster.** Two things would
+  otherwise clip the taller camp at `HEIGHT_FRAC = 1`. (a) `p7Grid.solveVis` is
+  the full roster, not `p7.lastPositions` — whatever has arrived at press time (at
+  1440x900 only 8790 of the right camp's 9126) undersizes the finished block; the
+  real pack is still lazy. (b) The lazy pack fills in arrival order, not the solve
+  layouts' order, and an order-dependent frontier lands a cell or two either way,
+  so the solve accepts only an undershoot (never a two-sided tolerance on the
+  frame exactly) and aims `P7_GRID_PACK_SLACK_CELLS` (**3**) cells short — at
+  1440x900 the block's top edge sits 9px inside the frame, unit 3.10.
   Gotcha for the next harness here: the seed and the noise shape are **not** in
   `p7GridKey`, so a harness must clear `p7Grid.layout` by hand and draw twice —
   the unit is solved on the first pack. And a readout must be built in
@@ -1118,8 +1104,7 @@ camps' packs meet on the centre line instead of straddling the corridor.
   the space that separation needs. **Spreading everything above the smallest
   tier is only available by paying in holes.** If the clumping has to go, the
   lever is `P7_GRID_TIER_CELLS` (smaller big tiers → they stop dominating the
-  area), not `P7_GRID_BIG_SPREAD`. The harness's readout reports the hole count
-  live so the trade is visible while turning the knob.
+  area), not `P7_GRID_BIG_SPREAD`.
 - **Which way a block grows — `P7_GRID_GROW` (`side` | `up` | `spread`).** The packer is
   written on an abstract *lane* × *depth* grid, and the mode only decides what
   those axes are:
@@ -1129,12 +1114,12 @@ camps' packs meet on the centre line instead of straddling the corridor.
     is its outer *side* edge. The frame is half the **screen** minus the
     half-corridor — *not* the timeline box: the size grid is full-bleed, so
     `WIDTH_FRAC = 1` means "out to the edge of the window". (Measuring it from
-    `sbbTimelineLeftX` left a ~150px white margin down each side that no knob
-    could close.) Measured at 1440×900: frac 1 → unit 11.17px, the outer edge
+    `sbbTimelineLeftX` would leave a ~150px white margin down each side that no
+    knob could close.) Measured at 1440×900: frac 1 → unit 11.17px, the outer edge
     2px **past** the window edge; 0.9 → 10.56px, 82px in. The unit is solved
     from the **wider** camp, so the smaller camp still stops short of its own
     edge — that is the data, not the frame.
-  - `up` (**current — `compare/`-baked 2026-09-08**): lanes are **columns** across the camp's full width, depth runs
+  - `up` (**current**): lanes are **columns** across the camp's full width, depth runs
     **upward from the bottom** of the box (`cy = top + boxH − (depth + n/2)·CELL`).
     The block fills the width first, then grows up, and the jitter contour
     becomes its *top* edge. The camp gap is untouched — each block still starts
@@ -1190,7 +1175,7 @@ camps' packs meet on the centre line instead of straddling the corridor.
   `boxH · HEIGHT_FRAC`), and that is what their unit solve measures against;
   `spread` does not use it (it solves by area). All three modes measured
   overlap-free at 1440×900, and the two packing modes hole-free.
-  Part of `p7GridKey`; a `compare/` mode trio (`s` / `u` / `p`) on the harness.
+  Part of `p7GridKey`.
 - **The lattice is whole device pixels — every gap is identical.** `p7BuildSizeGrid`
   quantises before anything is placed: `CELL = floor(sq·(1 + p7GapRatio())·dpr)/dpr`
   (floor only, so a solved unit is ever only *shortened* — the solve accepts an
@@ -1201,23 +1186,23 @@ camps' packs meet on the centre line instead of straddling the corridor.
   origin (`top`, `boxH`, `leftEdge`, `rightX0`, `boxLeft`, `latLeft`, `latMid`) is
   snapped by `qd = v => round((v + GAP/2)·dpr)/dpr − GAP/2`, i.e. so that a square's
   real edge — origin + k·CELL + GAP/2 — lands on the device grid. `p7DrawSideSquares`
-  still snaps each dot with `q()`, but that is now a no-op instead of a per-dot ±½px
+  still snaps each dot with `q()`, but that is a no-op instead of a per-dot ±½px
   wobble. `p7GridKey` carries `dpr`, so dragging the window to another screen rebuilds.
   Measured across 1920×1080@1, 1600×1000@2, 1440×900@1/@2 and 1280×800@2: the
   neighbour-gap histogram is a **single** bin, 0 off-device-pixel edges, 0 overlaps,
   0 dots outside the frame.
-  > **Removed — don't reintroduce: `P7_GRID_DOT_FRAC` (0.94), 2026-09-09.** It shrank
+  > **Removed — don't reintroduce: `P7_GRID_DOT_FRAC` (0.94).** It shrank
   > each square by a *fraction of its own size*, so a 14-cell block gave up 0.42 cell
   > a side and a 1-cell block 0.03, and the visible gap then depended on which tiers
   > happened to touch — 11 distinct gaps from 1.51 to 2.84px at 1440×900. Looser dots
-  > are now bought by raising `GAP`, which stays uniform by construction.
+  > are bought by raising `GAP`, which stays uniform by construction.
 - **No holes in the interior.** An `n×n` block sits at the furthest-out column
   of its `n` rows, so any shallower row in that run is left with dead cells
   behind it. Two things close them: the run-choice cost carries a **waste term**
   `(w·n − Σwidths)/n`, which prefers level runs, and the cells that do get
   stranded are pushed onto `sky.holes` and **backfilled** by the next 1-cell
-  squares (`p7GridPlace` checks the hole list before searching). That alone left
-  the holes created *after* the last 1-cell arrival open, so `p7GridPreclaim` ends
+  squares (`p7GridPlace` checks the hole list before searching). That alone would
+  leave the holes created *after* the last 1-cell arrival open, so `p7GridPreclaim` ends
   each band with a **tip-pull sweep**: it tracks every 1-cell square it placed and,
   while `sky.holes` is non-empty, moves the outermost square that is the **tip of
   its own lane** (`k === sky.widths[row] − 1`, so the move can't open a fresh hole)
@@ -1228,10 +1213,9 @@ camps' packs meet on the centre line instead of straddling the corridor.
   overlaps at the baked jitter, at every spread and at all five test viewports.
 - **Packing is lazy: only a square that is actually drawn takes a cell**
   (`p7GridCell`, called from `p7DrawSideSquares` *after* the
-  row-cursor/presence gate). Packing the whole ~14k roster up front reserved a
-  cell for every square the scroll had not revealed yet, and each reserved cell
-  rendered as a hole — the block came out moth-eaten. Now each side keeps a
-  live skyline (`widths[row]` = how far out that row already reaches;
+  row-cursor/presence gate). Packing the whole ~14k roster up front would reserve
+  a cell for every square the scroll has not revealed yet, each rendering as a
+  hole — a moth-eaten block. Each side keeps a live skyline (`widths[row]` = how far out that row already reaches;
   `p7GridSky` / `p7GridPlace`) on a grid `floor(boxH / CELL)` rows tall — the
   whole box — that grows *sideways*: a square takes the run of `n` rows whose
   furthest-out column is nearest the centre line. So a camp fills top-to-bottom
@@ -1241,32 +1225,24 @@ camps' packs meet on the centre line instead of straddling the corridor.
   dropped on every flip (each entry repacks against what is on screen then)
   and on any viewport/knob change (`p7SizeGridLayout`'s `key`,
   `p7UpdateLayout`).
-- **Arrangement is two knobs, baked 2026-09-08 to**
-  `P7_GRID_ORDER` = `random`, `P7_GRID_GROUPING` = `camp` (both feed
-  `p7GridKey`, so either one changing rebuilds the pack). `order` is the
-  sequence squares claim cells in — `arrival` (draw/date order) | `size`
-  (biggest first) | `small` | `random` (fixed `P7_GRID_SEED`, so it is the same
-  pack every rebuild). `grouping` subdivides a camp's block into column bands —
-  `camp` (no subdivision) | `group` (a band per group, legend row order) |
-  `tier` (a band per size tier, biggest first) | `random`
-  (`P7_GRID_RANDOM_BANDS` = 3 bands of hashed membership — the control for the
-  two meaningful groupings) | `none`, which drops the camp split itself: one
-  block for the whole roster packed from the box's left edge across the centre
-  line, both sides sharing one skyline and one pre-claim pass (merged in date
-  order), with no corridor. `none` holds the same box height as every other
-  mode, so a single block of the whole roster comes out about twice as wide as
-  one camp's and overruns the box — `P7_GRID_WIDTH_FRAC`/`P7_GRID_UNIT_PX` would
-  need retuning if it is ever picked. **Bands are laid out by packing,
-  not by estimating**: each starts one cell past how far the previous one
-  actually reached (`sky.maxW`). Sizing bands up front from each bucket's area
-  let a band outgrow its allotment and overlap its neighbour.
+- **Arrangement is two knobs:** `P7_GRID_ORDER` = `random` and
+  `P7_GRID_GROUPING` = `camp` (page7.js; both feed `p7GridKey`, so either one
+  changing rebuilds the pack). `order` is the sequence squares claim cells in —
+  `random` uses the fixed `P7_GRID_SEED`, so it is the same pack every rebuild;
+  `grouping` subdivides a camp's block into column bands, and `camp` is no
+  subdivision. The other enum values (`arrival` | `size` | `small` for `order`;
+  `group` | `tier` | `random` | `none` for `grouping`) exist in code but are not
+  selected. **Bands are laid out by packing, not by estimating**: each starts one
+  cell past how far the previous one actually reached (`sky.maxW`); sizing bands
+  up front from each bucket's area would let a band outgrow its allotment and
+  overlap its neighbour.
 - **The pre-claim pass** (`p7GridPreclaim`) is what makes those two possible:
   lazy arrival packing only ever sees one square, so it cannot sort or bucket.
   On the first cell request per side it takes the squares that are actually on
   screen — `p7.lastPositions`, i.e. the visibility gate's own answer from the
   last frame — buckets them, and places them in the chosen order; squares that
   scroll in afterwards still land lazily, in their own band. At
-  `arrival`+`camp` it is identical to the original lazy pack (one band, list
+  `arrival`+`camp` it is identical to a plain lazy pack (one band, list
   order, same skyline).
 - **The gap is the timeline's own** (`p7GapRatio()`): every neighbour, in
   either direction and whatever the tiers, is exactly one unit gap apart —
@@ -1300,12 +1276,11 @@ camps' packs meet on the centre line instead of straddling the corridor.
   defaults; `p7AnyAnimActive` and the morph clear read it. **OFF (scrolling
   back to @fold9) is the exact mirror of that clock** (`dir === "off"` flips
   every window to `T − start − len`): the smallest tier shrinks first, the
-  biggest last, and the flight home comes at the end. Baked 2026-09-08 off the
-  `manual/` harness `_debug-grid-morph.js`, now **deleted**.
+  biggest last, and the flight home comes at the end.
 - **@fold10 and @fold11 tune separately.** Those four `P7_MORPH_*` values are
   @fold10's **grow** only. @fold11's flatten runs the same machinery off its
   own set — `P7_FLAT_FLY_MS` / `P7_FLAT_SIZE_MS` / `P7_FLAT_SIZE_START_MS` /
-  `P7_FLAT_TIER_STAGGER_MS` (page7.js:1880-1883, currently 1400 / 450 / 0 / 50) —
+  `P7_FLAT_TIER_STAGGER_MS` (page7.js, 1400 / 450 / 0 / 50) —
   picked by `p7MorphKnobs(flat)`,
   which both `p7MorphTotalMs(flat)` and `p7MorphWindows(tier, flat)` take. The
   flag is `p7GridMorph.flat`, set in `p7SizeGridSet` from `sameGrid`: true when
@@ -1321,7 +1296,7 @@ camps' packs meet on the centre line instead of straddling the corridor.
   apart is not an option** — the timeline box is already full, so any spread
   throws the outermost dots off screen, and clamping the spread to the box just
   puts the overlaps back. So the *growth* is throttled instead: while
-  `tSize > tPos` a square may be at most `P7_MORPH_PUSH_MAX` (**2**, baked) × the size it
+  `tSize > tPos` a square may be at most `P7_MORPH_PUSH_MAX` (**2**) × the size it
   would have at its current position, catching up to its full tier size as it
   flies. Measured 0 dots off screen and ~2k overlapping pairs — neighbours
   touch, nothing piles up or escapes. Lower `P7_MORPH_PUSH_MAX` → gentler
@@ -1335,16 +1310,16 @@ camps' packs meet on the centre line instead of straddling the corridor.
   packed cell and its own tier size (`p7GridLiveRect` → `blendAndDraw`/
   `p8CaptureBlendedPositions`, page8.js), shrinking it to page9's legit size on
   the way down, so the dots are never seen snapping back onto the timeline in
-  between. Because sizes now differ per dot, `setActivePage`'s mid-glide handoff
+  between. Because sizes differ per dot, `setActivePage`'s mid-glide handoff
   (js/nav.js) **omits the scalar `fromSQ`** while the grid is on and lets each
   captured entry's own `sq` drive the lerp (`p9PlaceDot`'s `from.sq` branch).
   Every other page still snaps it off instantly (`p7SizeGridSet(false,
   {instant: true})`), so the fold-9 fly-out only ever reads timeline cells.
   The reverse glide flies them back into the grid the same way.
   **Only @fold12 may hold the grid past its own fold** — anything else drawing
-  from `p7.lastPositions` expects timeline cells. The
-  baked values (`P7_GRID_CAMP_GAP` 4 / `P7_GRID_WIDTH_FRAC` 0.7 / `P7_GRID_HEIGHT_FRAC` 1, unit solved)
-  were tuned on a `manual/` harness at 1440×900, 2026-09-08.
+  from `p7.lastPositions` expects timeline cells. The baked values are
+  `P7_GRID_CAMP_GAP` 4 / `P7_GRID_WIDTH_FRAC` 0.7 / `P7_GRID_HEIGHT_FRAC` 1, unit
+  solved.
 
 ## The legend filter (@fold9, desktop only) — `p7FilterToggle` (page7.js)
 
@@ -1474,13 +1449,13 @@ again to bring it back. Multiple groups can be off at once.
     takes a survivor's destination from `p7FilterLayout`, then blends
     the centre from `p7FilterMorph` on the `pos` channel, applied after the grid
     morph so it wins. Position only — the size half is `scaleT`. Without it a
-    surviving claimed square stayed parked on its unfiltered cell while every
-    canvas dot around it closed ranks, and a filtered-out one held its old cell
-    invisibly, reserving the spot a real dot was flying into.
+    surviving claimed square would stay parked on its unfiltered cell while every
+    canvas dot around it closed ranks, and a filtered-out one would hold its
+    previous cell invisibly, reserving the spot a real dot was flying into.
     A **hidden** square returns early at its snapshot position
     (`p7FilterMorph.from`) — it shrinks in place, so its destination is where it
-    already stands. Reading its base grid cell instead sent it flying back to its
-    original spot on the way out, whenever it had since moved (the size grid, or
+    already stands. Reading its base grid cell instead would send it flying back to
+    its original spot on the way out, whenever it has since moved (the size grid, or
     an earlier group filtered out from under it); the early return also keeps
     `p7GridCell`/`p7GridMorph` off it, the same rule the canvas path states.
     The **canvas** dots follow the same rule: a hidden event's centre is pinned to
@@ -1537,91 +1512,83 @@ stuttering and landing inconsistently *only when the user kept scrolling through
 
 ## Mobile
 
-> **In progress (2026-09-05): the vertical centre axis is being ported to mobile.**
-> `P7_VERT_MOBILE` (page7.js, merged over `P7_VERT` into `P7_VERT_M`; read via
-> `p7V()`) puts mobile on the vertical path when `enabled` is true — the default —
-> so `p7VerticalAxis()` is `!isMobile() || P7_VERT_M.enabled`. Everything the
-> vertical path needs on mobile lives there: `corridorPx` 44, a solved wide
-> corridor (`p7SolveMobileCorridor`: widest wrapped headline line at
-> `type.maxWidth` + card pads + side gaps, clamped so each camp keeps
-> `minSidePx` 96), `bottomInsetPx` 24 / `slotPx` 48 (the box's bottom is now `H − inset`, via
-> `sbbTimelineMobileBottomPx()` in squareboundingbox.js — the axis-clearance row
-> in the table below applies only with the vertical path off), 14px year labels
-> (`yearLabelPx`), 14px titles, and the square solve reusing `p7SolveVerticalSq`
-> with mobile bounds (`p7SqMax/p7SqMin/p7SqStep/p7GapRatio`; `p7.vert.overflowRows`
-> counts rows the box can't hold). The tooltip dodge spot follows
-> `sbbTimeline(H).bottom`.
->
-> Three **headline placements** are candidates, switched by `P7_VERT_MOBILE.headline`
-> and picked by eye with `_debug-vert-mobile.js` (key `0` = the old horizontal axis):
-> `'band'` — a rule across both grids (`p7DrawVertEventLines`, forced on) with a
-> translucent band under it, copy right-aligned at the grids' edge; `'widen'` —
-> the desktop card in the solved corridor; `'slot'` — dots only in the corridor,
-> one headline (most recently triggered) centred in a `slotPx` band under the grid
-> (`p7DrawVertHeadlineSlot`; the box reserves it). Phase 2 bakes the pick, deletes
-> the other two, the horizontal axis, the month cascade and this note, and
-> rewrites this section.
->
-> **Mobile prints its headline at the top of the screen, and docks the tooltip at the
-> bottom (2026-09-05).** The mobile stack, top to bottom, is **מקרא bar / axis headline /
-> dot grid / docked tooltip** — picked by eye against the other five candidate orders. The
-> mobile default is `headline: 'slot'` with `slotAnchor: 'top'` and `slotTopPx: 78`
-> (it started at `FOLD6_MLEGEND_TOP_MOBILE_PX` 16 + the bar's 30px + one
-> `SBB_TIMELINE_MOBILE_GAP_PX` = 64, then nudged by eye): the
-> **axis itself carries only the event circles** (the label pass in
-> `p7DrawAxisEventsVertical` returns immediately for `'slot'`, so nothing prints beside a
-> dot, and — the half-dot card path being `'widen'`-only — no circle is ever split), and
-> `p7DrawVertHeadlineSlot` prints **one** line, **title only** (`type.showDate` is false),
-> in a **black plaque with inverted type** (`P7_VERT_MOBILE.slotCard`: `fill #000000`,
-> `color #FDFCFF`, `padX 12` / `padY 8`, `radius 4` — 2026-09-05), directly under the מקרא
-> bar, so the copy reads with the legend that colours it. It is the only copy on a screen
-> that is otherwise a field of small coloured dots; bare text on the page background lost
-> against a dense run of them. The plaque is sized to the **wrapped lines**, not to
-> `slotPx`, centred on the same `W / 2` the text uses (so a one- and a three-line headline
-> stay centred and it only grows downward from `ty`), and painted inside the same
-> `globalAlpha`, so card and text crossfade as one when the headline swaps. `slotCard` is
-> declared on `P7_VERT` as a **full object with `fill: null`**, never as `null` —
-> `p7VertMerge` only recurses into keys the base already holds as objects, so a null base
-> silently swallows the mobile override. Desktop keeps `fill: null` (bare copy), and the
-> draw gates on `V.slotCard.fill`. `slotAnchor` is the knob: `'grid'`
-> (desktop default) centres the block in the `slotPx` band under the grid; `'top'` (mobile)
-> hangs it off the viewport's top edge at `slotTopPx`; `'bottom'` is its mirror
-> (`slotBottomPx` off the bottom edge) and is currently unused. **`slotPx` is reserved by
-> `sbbTimelineMobileBottomPx()` only under `'grid'`** — the viewport anchors take no band
-> out of the grid, because they sit outside it. `SBB_TIMELINE_MOBILE_TOP_PX` started from
-> the headline (`64 + 19 + 18` = **101**) and stays there: `slotTopPx` was nudged to **78**
-> on 2026-09-05 without moving the grid top with it, so the two are independent now — the
-> plaque's own `padY` eats into the same clearance, and there is room to spare.
->
-> The docked tooltip is bottom-anchored to match: `tooltipDockRestPx()`
-> (`js/fold8-tooltip.js`) = `innerHeight − TOOLTIP_DOCK_BOTTOM_PX (−18) − TOOLTIP_DOCK_H_PX
-> (100)`, read live so a bar-collapse resize moves it. The old `TOOLTIP_DOCK_TOP_PX` (62) is
-> **gone**; the `@fold7` spot's "can't climb off the top" clamp is its own
-> `TOOLTIP_DOCK_TOP_MIN_PX` (16), *not* the resting spot — clamping to a bottom rest would
-> have dragged every `@fold7` frame down there. The grid's bottom clearance is derived from
-> the frame (`−18 + 100 + 18` = **100** off the bottom edge) rather than from a headline
-> band. `TOOLTIP_DOCK_BOTTOM_PX` is **−18** as of 2026-09-05 — negative on purpose: the
-> frame hangs 18px *past* the bottom edge so its border reads as an open bottom rather than
-> a floating box. Because the grid's clearance is derived from it, lowering the frame also
-> lengthens the axis; the two were tuned together in one harness.
-> Which event prints: the most recently reached one still at non-zero opacity (ties → the
-> higher index); the others stay as circles on the axis. Because `p7CenterGap()` solves the
-> wide corridor only for `'widen'`, the corridor falls back to `corridorPx` (44) and both
-> camp grids get the width the copy used to take. Desktop is unchanged (`'widen'`,
-> straddling card). The older `'none'` value still exists and still skips the copy
-> entirely; nothing selects it now.
+**The vertical centre axis runs on mobile too.** `P7_VERT_MOBILE` (page7.js, merged
+over `P7_VERT` into `P7_VERT_M`; read via `p7V()`) has `enabled: true`, so
+`p7VerticalAxis()` — `!isMobile() || P7_VERT_M.enabled` — is true at every width; the
+horizontal-axis branches (`p7SolveMobileSq`, the per-month cascade) are not taken on
+mobile. Everything the vertical path needs on mobile lives there: `corridorPx` 44, a
+solved wide corridor (`p7SolveMobileCorridor`: widest wrapped headline line at
+`type.maxWidth` + card pads + side gaps, clamped so each camp keeps `minSidePx` 96),
+`bottomInsetPx` 24 / `slotPx` 48 (the box's bottom is `H − inset`, via
+`sbbTimelineMobileBottomPx()` in squareboundingbox.js — the axis-clearance row in the
+table below applies only with the vertical path off), 14px year labels (`yearLabelPx`),
+14px titles, and the square solve reusing `p7SolveVerticalSq` with mobile bounds
+(`p7SqMax/p7SqMin/p7SqStep/p7GapRatio`; `p7.vert.overflowRows` counts rows the box can't
+hold), boosted by `P7_VERT_SQ_BOOST` (1.12, `p7VertSqBoost()`, mobile only). The tooltip
+dodge spot follows `sbbTimeline(H).bottom`.
 
-> **The 8 curated squares must be re-placed after a bar slide (2026-09-05).** `.graphic-col`
-> is `position: fixed; inset: 0`, so `canvas.clientHeight` **is** `innerHeight` and does move
-> when the phone's bar collapses — the canvas re-reads it every paint, so the vertical axis
-> re-centres itself (`p7VertTopY` centres the row block in the box, so half of any height
-> change lands in `topY`). The `@fold8` squares, though, are DOM elements: they move only
-> when `layoutGroups()` runs, and `js/bootstrap.js`'s mobile height-only resize path
-> deliberately skips it — the full relayout is what made the bar refuse to collapse. Left
-> alone they kept the position solved for the shorter viewport and ended up ~half a bar
-> above the axis top, printing **above the `2023` label**. The fix is a **debounced trailing
-> `layoutGroups()` + `draw()`, 180ms after the last resize tick**: nothing heavy runs during
-> the slide, and the squares snap into place once it settles. Don't make it un-debounced.
+Three **headline placements** exist, switched by `P7_VERT_MOBILE.headline`: `'band'` — a
+rule across both grids (`p7DrawVertEventLines`, forced on) with a translucent band under
+it, copy right-aligned at the grids' edge; `'widen'` — the desktop card in the solved
+corridor; `'slot'` — dots only in the corridor, one headline (most recently triggered)
+centred in a `slotPx` band under the grid (`p7DrawVertHeadlineSlot`; the box reserves it).
+Mobile ships `'slot'`.
+
+**Mobile prints its headline at the top of the screen, and docks the tooltip at the
+bottom.** The mobile stack, top to bottom, is **מקרא bar / axis headline / dot grid /
+docked tooltip** — picked by eye against the other five candidate orders. The mobile
+default is `headline: 'slot'` with `slotAnchor: 'top'` and `slotTopPx: 78`: the **axis
+itself carries only the event circles** (the label pass in `p7DrawAxisEventsVertical`
+returns immediately for `'slot'`, so nothing prints beside a dot, and — the half-dot card
+path being `'widen'`-only — no circle is ever split), and `p7DrawVertHeadlineSlot` prints
+**one** line, **title only** (`type.showDate` is false), in a **black plaque with inverted
+type** (`P7_VERT_MOBILE.slotCard`: `fill #000000`, `color #FDFCFF`, `padX 12` / `padY 8`,
+`radius 4`), directly under the מקרא bar, so the copy reads with the legend that colours
+it. It is the only copy on a screen that is otherwise a field of small coloured dots; bare
+text on the page background loses against a dense run of them. The plaque is sized to the
+**wrapped lines**, not to `slotPx`, centred on the same `W / 2` the text uses (so a one-
+and a three-line headline stay centred and it only grows downward from `ty`), and painted
+inside the same `globalAlpha`, so card and text crossfade as one when the headline swaps.
+`slotCard` is declared on `P7_VERT` as a **full object with `fill: null`**, never as
+`null` — `p7VertMerge` only recurses into keys the base already holds as objects, so a
+null base silently swallows the mobile override. Desktop keeps `fill: null` (bare copy),
+and the draw gates on `V.slotCard.fill`. `slotAnchor` is the knob: `'grid'` (desktop
+default) centres the block in the `slotPx` band under the grid; `'top'` (mobile) hangs it
+off the viewport's top edge at `slotTopPx`; `'bottom'` is its mirror (`slotBottomPx` off
+the bottom edge) and is currently unused. **`slotPx` is reserved by
+`sbbTimelineMobileBottomPx()` only under `'grid'`** — the viewport anchors take no band
+out of the grid, because they sit outside it. `SBB_TIMELINE_MOBILE_TOP_PX` is **101** and
+is independent of `slotTopPx` (78) — the plaque's own `padY` eats into the same
+clearance, and there is room to spare.
+
+The docked tooltip is bottom-anchored to match: `tooltipDockRestPx()`
+(`js/fold8-tooltip.js`) = `innerHeight − TOOLTIP_DOCK_BOTTOM_PX (−18) − TOOLTIP_DOCK_H_PX
+(100)`, read live so a bar-collapse resize moves it. The `@fold7` spot's "can't climb off
+the top" clamp is its own `TOOLTIP_DOCK_TOP_MIN_PX` (16), *not* the resting spot —
+clamping to a bottom rest would drag every `@fold7` frame down there. The grid's bottom
+clearance is derived from the frame (`−18 + 100 + 18` = **100** off the bottom edge)
+rather than from a headline band. `TOOLTIP_DOCK_BOTTOM_PX` is **−18** — negative on
+purpose: the frame hangs 18px *past* the bottom edge so its border reads as an open bottom
+rather than a floating box. Because the grid's clearance is derived from it, lowering the
+frame also lengthens the axis; the two are tuned together.
+Which event prints: the most recently reached one still at non-zero opacity (ties → the
+higher index); the others stay as circles on the axis. Because `p7CenterGap()` solves the
+wide corridor only for `'widen'`, the corridor falls back to `corridorPx` (44) and both
+camp grids get the width a card would take. Desktop is unchanged (`'widen'`, straddling
+card). The `'none'` value exists and skips the copy entirely; nothing selects it.
+
+**The 8 curated squares are re-placed after a bar slide.** `.graphic-col` is
+`position: fixed; inset: 0`, so `canvas.clientHeight` **is** `innerHeight` and does move
+when the phone's bar collapses — the canvas re-reads it every paint, so the vertical axis
+re-centres itself (`p7VertTopY` centres the row block in the box, so half of any height
+change lands in `topY`). The `@fold8` squares, though, are DOM elements: they move only
+when `layoutGroups()` runs, and `js/bootstrap.js`'s mobile height-only resize path
+deliberately skips it — a full relayout there keeps the bar from collapsing. Left alone
+they would keep the position solved for the shorter viewport and end up ~half a bar above
+the axis top, printing **above the `2023` label**. So `js/bootstrap.js` runs a **debounced
+trailing `layoutGroups()` + `draw()`, 180ms after the last resize tick**: nothing heavy
+runs during the slide, and the squares snap into place once it settles. Don't make it
+un-debounced.
 
 Under the 600px breakpoint the fold keeps its shape — two camps mirrored around the
 center gap, same cascade, same scrub — and changes only scale. Every value below is a
@@ -1633,7 +1600,7 @@ no extra invalidation; desktop rendering is untouched.
 |---|---|---|---|
 | Square / gap (pitch) | 3.5 / 1.5 (5) | **solved per viewport**, gap = half the square | See "The solved square size" below |
 | Box `left` | **190px** (`SBB_TIMELINE_LEFT_PX`) | 0.03 | The desktop px exists only to clear the *left*-pinned desktop legend; on mobile the legend is top-pinned, so this becomes a plain screen-edge inset (≈12px at 393, matching `FOLD6_LEGEND_INSET_MOBILE`) |
-| Box `top` | 0.07 | **101px** (`SBB_TIMELINE_MOBILE_TOP_PX`) | The axis headline's bottom edge + `SBB_TIMELINE_MOBILE_GAP_PX` (18): `slotTopPx` (64 at the time it was derived, 78 now) + one 19px title line. It was NOT moved when `slotTopPx` was. A px clearance, not a fraction — the thing being cleared is fixed-px, so a fraction wasted a band on a tall phone and collided on a short one |
+| Box `top` | 0.07 | **101px** (`SBB_TIMELINE_MOBILE_TOP_PX`) | A fixed clearance under the axis headline plaque, independent of `slotTopPx` (78) + `SBB_TIMELINE_MOBILE_GAP_PX` (18). A px clearance, not a fraction — the thing being cleared is fixed-px, so a fraction would waste a band on a tall phone and collide on a short one |
 | Box `bottom` | 0.93 | **axis − 64px** (`SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX`) | `P7_AXIS_Y_FRAC_MOBILE`×H minus the tallest label block that can print above the axis — sized for what really prints: at the 220px wrap all seven titles fit on **one line**, so the block is offset 36 + ~10px cap height = 46 — minus the *same* 18px `SBB_TIMELINE_MOBILE_GAP_PX` used at the top, so the dots clear the labels by exactly as much as they clear the tooltip. Reserving spare lines left every real block floating in a hole; a longer title added later would wrap and eat 18px per extra line out of the gap. Three lines is the worst case |
 | `P7_AXIS_MARGIN` | 120 | 28 | At 120 a 393px screen would leave ~150px of axis; 28 gives ~337px, year ticks ~90px apart |
 | Year label | 18px | 14px | 4-digit years fit at that tick pitch — no 2-digit fallback needed |
@@ -1664,15 +1631,19 @@ each event at its true date position on the axis; only the text moves to the cen
 
 ### The solved square size
 
+*This is the `p7VerticalAxis() === false` path (`p7SolveMobileSq`), not taken while
+`P7_VERT_MOBILE.enabled` is true; mobile's live square is `p7SolveVerticalSq` ×
+`P7_VERT_SQ_BOOST` (1.12), see above.*
+
 The mobile square is **not a constant**. A fixed pitch has to be small enough for the
-smallest phone, which left every larger one with capacity far above its event count — and
+smallest phone, which leaves every larger one with capacity far above its event count — and
 since `p7OrderFromCenter` sizes its usable pool to the side's own events, that surplus read
 as a thin scatter of dots in a box mostly made of gaps.
 
 `p7SolveMobileSq(sideW, sideH, maxEvents)` instead walks down from `P7_MOBILE_SQ_MAX` (3)
 in `P7_MOBILE_SQ_STEP` (0.05) and returns the **first** size whose grid still holds the
 bigger camp — `floor(sideW/cell) × floor(sideH/cell) × P7_MOBILE_FILL ≥ maxEvents`, with
-`cell = sq × 1.5` (`P7_MOBILE_GAP_RATIO` 0.5, the ratio the old 1.5/0.75 already had).
+`cell = sq × 1.5` (`P7_MOBILE_GAP_RATIO` 0.5).
 `P7_MOBILE_FILL` = **0.86**: the bigger camp may occupy at most 86% of the cells, so the
 remaining scatter of permanent gaps keeps the desktop grid's texture instead of packing the
 box solid. The result lands in `p7MobileSq`, which `p7Sq()`/`p7Cell()` return.
@@ -1884,18 +1855,17 @@ moves to the finger's new position and the 300ms clock restarts. A live scroll k
 pushing the deadline back and is never interfered with; a scrolling finger that comes to
 rest *without lifting* fires the hold right where it stopped — essential on the pinned
 timeline, where the scrolling finger is what drives the month cascade, so "wait for the
-dots then hold" naturally happens mid-gesture. (It used to cancel outright, which made a
-mid-scroll hold impossible.) `touchstart` is therefore **passive**, and so is the
+dots then hold" naturally happens mid-gesture. `touchstart` is therefore **passive**, and so is the
 always-on `touchmove` that does the re-anchoring. The half that `preventDefault`s is a
 **separate** handler, `loupeMove`, bound non-passively only for the life of a hold — added
 where `armTimer`'s timeout sets `p7Inspect.dragging`, removed in `hideLoupe`.
 
-> **Never leave a non-passive `touchmove` bound to `window` for the page's life
-> (2026-09-05).** Mobile browsers can't know in advance that such a handler won't cancel
+> **Never leave a non-passive `touchmove` bound to `window` for the page's life.**
+> Mobile browsers can't know in advance that such a handler won't cancel
 > the scroll, so they keep the URL/bottom bar pinned on *every* drag anywhere on the page —
-> the bar simply never collapses. Both offenders were fixed the same way: bind the
-> cancelling handler only while it can actually fire. The other one is @fold14's gate
-> (`p13TouchBlock` in js/fold11.js), now switched by `p13SyncTouchBlock` — attached only
+> the bar simply never collapses. Both such handlers are bound only while they can
+> actually fire. The other one is @fold14's gate
+> (`p13TouchBlock` in js/fold11.js), switched by `p13SyncTouchBlock` — attached only
 > while the gate is locked *and* `scrollY` is within one viewport of `p13GateMax()`, driven
 > by the gate's own passive `scroll` listener and by `p13SyncGateVisibility`.
 
@@ -1905,13 +1875,12 @@ dot behind it. On `touchend` the loupe hides and `release()` clears the selectio
 
 **Native momentum blocks the picker, and that is accepted.** While an iOS
 fling is coasting, WebKit delivers **no touch or pointer events at all** to the page —
-verified on-device with a trace harness: a finger planted on the coasting timeline and
-held for two seconds produced no `touchstart`, no `pointerdown`, and no `touchcancel`.
+on device, a finger planted on the coasting timeline and held for two seconds produces no `touchstart`, no `pointerdown`, and no `touchcancel`.
 There is nothing for `p7InspectInit` to hook during a native fling, so **a hold cannot be
 started until the page settles on its own.** The reader flicks, waits for the coast to
 stop, then holds. Every fold, mobile included, uses plain native momentum.
 
-> **Removed — don't reintroduce: the momentum brake `p7BrakeInit` (2026-09-05).** It
+> **Removed — don't reintroduce: the momentum brake `p7BrakeInit`.** It
 > covered exactly this gap on @fold9/@fold13 by cancelling the native fling on `touchend`
 > with a programmatic `scrollTo` and running its own faster rAF glide, so touch events kept
 > arriving through the coast ("touch stops the page, then picks"). The cost was the
@@ -1949,17 +1918,12 @@ into the same two elements, but `fold8SeqElapsed` is still valid.
 **The @fold12 handoff needs no mobile-specific work.** `p7TargetForActorOccurrence` reads
 `p7.CELL/SQ/cols` *after* `p7UpdateLayout`, which already clears `p7TargetCellCache` on any
 geometry change — so the 8 flying squares land on mobile cells automatically. `page8.js`
-was pointed at `sbbTimeline()`/`p7GridGeometry().rightX0` for the same reason.
+reads `sbbTimeline()`/`p7GridGeometry().rightX0` for the same reason.
 
-Both former tight spots (grid-top clearance under the legend, a three-line title grazing
-the grid's bottom) are gone by construction — the box is now derived from those two
-landmarks rather than guessed at as a fraction. The knobs, if the spacing wants tuning by
+Neither tight spot (grid-top clearance under the legend, a three-line title grazing
+the grid's bottom) can occur — the box is derived from those two landmarks rather than
+guessed at as a fraction. The knobs, if the spacing wants tuning by
 eye, are `SBB_TIMELINE_MOBILE_GAP_PX` — one shared 18px clearance used *both* above and
 below, so the grid sits evenly inside the tooltip / dots / axis-label stack instead of
 crooked — and the label-block height inside `SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX`. Either one
 shrinks the box, which the solver answers with a smaller square.
-
-## Known stale comments
-
-None currently — `p7UpdateAxisEventTriggers`' comment block was corrected to the real
-`minDate` `2023-01-01` / first axis event `2023-01-04`.

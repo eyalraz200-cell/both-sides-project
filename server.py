@@ -6,10 +6,11 @@ WATCH_DIR = Path(__file__).parent
 WATCH_EXTS = {".html", ".css", ".js"}
 
 # Flags — the defaults are the everyday server:
-#   python3 server.py                     → :8080, reloads on any top-level html/css/js
-#   python3 server.py --port 8081 --watch map.js,map  → a SECOND instance serving the
+#   python3 server.py                     → :8080, reloads on any html/css/js at the
+#     project root or under js/ (the xlsx is NOT watched — restart after editing it)
+#   python3 server.py --port 8081 --watch page9.js,js  → a SECOND instance serving the
 #     same files, whose auto-reload only fires for those paths. Point one browser tab
-#     at :8081 to work on the map without every unrelated edit (another chat, another
+#     at :8081 to work on one fold without every unrelated edit (another chat, another
 #     fold) reloading it. Both instances can run at once; they share the directory.
 # --watch takes comma-separated names relative to the project root: a file, or a
 # directory (watched recursively).
@@ -25,7 +26,11 @@ last_modified = 0
 
 def _watched_paths():
     if not WATCH_ONLY:
-        return (p for p in WATCH_DIR.iterdir() if p.suffix in WATCH_EXTS)
+        top = [p for p in WATCH_DIR.iterdir() if p.suffix in WATCH_EXTS]
+        js = WATCH_DIR / "js"
+        if js.is_dir():
+            top.extend(q for q in js.rglob("*") if q.suffix in WATCH_EXTS)
+        return top
     out = []
     for name in WATCH_ONLY:
         p = WATCH_DIR / name
@@ -73,7 +78,7 @@ CROWD_XLSX = "Events_with_description_he_medium.xlsx"
 
 # "crowd size=about 2,000" / "…=tens of thousands" → one integer ESTIMATE.
 # The estimate is what ships; the small/medium/large cutoffs are a JS-side
-# decision (P7_HALO_TIERS, page7.js) so they can be retuned without a server
+# decision (P7_BULGE_CUTS, page7.js) so they can be retuned without a server
 # restart. Word buckets take the geometric middle of their decade band; a
 # range ("dozens to hundreds") resolves to its larger end, since every number
 # in the sheet is an eyewitness lower bound.
@@ -149,7 +154,7 @@ def load_events():
         events.append({
             # The xlsx's own stable row_id ("row-145"). Passed through so JS can
             # pin to one specific event by id instead of by its position in the
-            # date-sorted list — see FOLD6_TOOLTIP_ROW_ID (js/groups.js).
+            # date-sorted list — see FOLD6_SQUARE_ROW_IDS (js/groups.js).
             "rowId": row[col["row_id"]],
             "side": side,
             "actor": actor,
@@ -159,7 +164,7 @@ def load_events():
             "descHeMedium": row[col["description_he_medium"]] or None,
             # Reported crowd size as an integer estimate, or None when the
             # source says "no report" / the description didn't join. Drives the
-            # halo tier on the timeline dots (p7HaloTier, page7.js).
+            # bulge tier on the timeline dots (p7BulgeTier, page7.js).
             "crowd": n,
         })
     wb.close()

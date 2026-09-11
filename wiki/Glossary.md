@@ -12,7 +12,7 @@ white box around just the `<h2>` is `.text-card-frame`.
 
 **`@legend`** — the persistent mini-legend: the 6 camp groups
 (`GROUPS` / `#groupsOverlay`) in their final two-column resting state, established at
-`@fold4` and alive through every later fold. Not the old page-1 list.
+`@fold4` and alive through every later fold.
 
 **`@dragcards` / "draggable events"** — the category **pills** (`.page9-pill`,
 `P9_CATEGORIES`) in `@fold13`'s tray. **Not** the per-event canvas dots.
@@ -31,7 +31,7 @@ right → left along the bottom axis.
 **"Band" / "widen"** — the two headline placements under comparison on the desktop
 vertical axis (`P7_VERT.eventMode`): *band* pauses the dot flow and prints the headline
 across the reserved rows; *widen* makes the whole centre corridor wider (top to bottom) so the headlines fit inside it.
-See [Timeline](Timeline.md#the-vertical-layout-desktop--p7buildverticallayoutrows-cols-cell--p7vert).
+See [Timeline](Timeline.md#the-vertical-layout-desktop--p7buildverticallayoutrows-cols-cell-visible--p7vert).
 
 **"State 1" / "state 2" — page9** — the two extreme-drop animation modes.
 State 1 = non-interrupting (reposition, *then* new dots fly, 2200 ms).
@@ -61,4 +61,9 @@ divider.
 `@fold1` decorative dots; they shrink away at `@fold3`, leaving each row's rightmost rect
 as the persistent `.group-item`.
 
-- **size grid** — what **@fold10** (`#page-9`, desktop) does: arriving on the fold turns it on (`p7SizeGridSet`/`p7SizeGridOnPage`, page7.js), the timeline undraws, and the visible squares grow to their crowd-tier block size and re-pack into a gap-exact skyline grid per camp, at the timeline's own gap. Scrolling back to @fold9 flies them back. There is no button. Distinct from the hover **bulge** (same tiers, different multipliers). See [Timeline](Timeline.md).
+**Size grid** — what `@fold10` (`#page-9`, desktop) does: arriving on the fold turns it on
+(`p7SizeGridSet`/`p7SizeGridOnPage`, page7.js), the timeline undraws, and the visible squares
+grow to their crowd-tier block size and re-pack into a gap-exact skyline grid per camp, at
+the timeline's own gap. Scrolling back to `@fold9` flies them back. There is no button.
+Distinct from the hover **bulge** (same tiers, different multipliers). See
+[Timeline](Timeline.md#the-size-grid--p7sizegridset-page7js-desktop-only).

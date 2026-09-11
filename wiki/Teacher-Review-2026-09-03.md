@@ -51,23 +51,24 @@ Legend: 🔴 must · 🟡 should · 🟢 nice-to-have / "not critical" · 📱 m
 
 ## C. Group names (`GROUPS`, `js/groups.js`) 🟡
 
-- [x] **C1. Renamed "ארגוני שלום ודו קיום" → «פעילי שמאל».** Reads as editorial approval
-  ("you're selling me too well") — the other five are neutral/identity labels. Settled on the
-  plain political-bloc label rather than either anti-occupation candidate, mirroring the
-  right-side «קבוצות ימין לאומיות». Landed first as «ארגוני שמאל», then narrowed to «פעילי
-  שמאל» — "activists" describes who actually shows up at these events, where "organisations"
-  implied a formal institutional actor the data doesn't support. The `actor` key stays
-  `peace movements` (it is the xlsx's own `main_actor` string and is not display text).
-- [x] **C2. Sharpened "ארגוני מחאה נגד הממשלה" → «מתנגדי הרפורמה ותומכי עסקת החטופים».** Too
-  vague — every group here is "against the government". The new name spells out both strands it
-  spans, the judicial-overhaul protests and the hostages movement, and reads as distinct from
-  C1's «פעילי שמאל». The `actor` key stays `protesters against government` (xlsx `main_actor`
+- [x] **C1. Renamed "ארגוני שלום ודו קיום" → «תומכי עסקת חטופים ומתנגדי המלחמה».** Reads as
+  editorial approval ("you're selling me too well") — the other five are neutral/identity
+  labels. Went through «ארגוני שמאל» and «פעילי שמאל» before settling on the label that names
+  what the group's rows actually are: the hostage-deal protesters (whose `main_actor` in the
+  sheet is `peace movements`) plus the anti-war left. Live label: `js/groups.js:49`. The
+  `actor` key stays `peace movements` (it is the xlsx's own `main_actor` string and is not
+  display text).
+- [x] **C2. Sharpened "ארגוני מחאה נגד הממשלה" → «מתנגדי הרפורמה המשפטית»** (live label,
+  `js/groups.js:42`; it passed through «מתנגדי הרפורמה ותומכי עסקת החטופים» before the
+  hostage-deal strand moved to C1's group). Too vague — every group here is "against the
+  government". The name now spells out the one strand it spans, the judicial-overhaul
+  protests, and reads as distinct from C1. The `actor` key stays `protesters against government` (xlsx `main_actor`
   string, not display text). It is now by far the longest label in `GROUPS` — see the width
   note in the mobile `.group-label` block of `style.css`.
 - Sync: renaming touches `GROUPS`, `FOLD6_SQUARE_LABELS` if any label references them, the
   @fold3 typed labels, and the wiki roster in CLAUDE.md + [Groups-and-Legend](Groups-and-Legend.md).
 
-## D. Typography of the title cards (`.section-title`, `style.css:1316`) 🔴
+## D. Typography of the title cards (`.section-title`, `style.css`) 🔴
 
 - [x] **D1. Lighter weight + more leading.** Hadassah at faked 600 is "too heavy"; Galia skipped
   the ACLED card entirely because the box was big and uninviting. Agreed values:
@@ -92,7 +93,7 @@ Legend: 🔴 must · 🟡 should · 🟢 nice-to-have / "not critical" · 📱 m
 - [x] **F1. Tooltip fires exactly when the card covers the squares** — they collide graphically.
   Fix options discussed (pick one, test): (a) fire earlier so the tooltip is already waiting
   before the card arrives; (b) split into two triggers — first just darkens square 0, then a
-  second trigger slightly higher pops the tooltip; (c) move the bubble further from the squares. *(Done: (b), desktop trigger #2 fires once the card's bottom clears the tooltip's measured top edge by 30px — `fold8TooltipCardFrac`/`fold8TooltipTrigger`; it was a fixed 400px offset until 2026-09-04.)*
+  second trigger slightly higher pops the tooltip; (c) move the bubble further from the squares. *(Done: (b), desktop trigger #2 fires off the card's bottom against the tooltip's measured top edge, offset by `FOLD8_TOOLTIP_CLEARANCE_PX` = −20px (negative: the card may still overlap that edge by 20px when it fires) — `fold8TooltipCardFrac`/`fold8TooltipTrigger`; it was a fixed 400px offset until 2026-09-04.)*
 - [ ] **F2. Tooltip style 🟢.** Options: bubble in *negative* (fill = the group colour, white
   text) if it stays accessible; or drop the dashed border for a thin light-grey / translucent
   solid line. Eyal already tried solid and disliked it in the regular tooltip — revisit but

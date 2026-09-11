@@ -17,7 +17,7 @@ function drawPage1(ctx, W, H) {
 // style.css), with left/top expressed the same vh/2-relative way .page0-dot
 // always has been, so the exact same numbers that used to describe a
 // position *within the scrolling page* now describe a fixed point *in the
-// viewport* instead. main.js shrinks each decorative dot down to nothing in
+// viewport* instead. updateGroups (js/update-groups.js) shrinks each decorative dot down to nothing in
 // place (PAGE0_DECORATIVE_DOT_ELS below) once @fold2's title card reaches
 // center, since those dots have nothing further to do at that point — the
 // group-colored ones (PAGE0_GROUP_DOT_ANCHORS) fly to the legend instead.
@@ -44,20 +44,20 @@ function page0DotBaseOffsetY() {
 
 // Where each of GROUPS' 9 colors landed among @fold1's dots, keyed by color —
 // left/top match .group-item's own anchor convention (top-left corner, left
-// relative to viewport center), not the dot's center, so main.js's
-// updateGroups() can lerp a legend swatch directly from this anchor to its
+// relative to viewport center), not the dot's center, so
+// updateGroups() (js/update-groups.js) can lerp a legend swatch directly from this anchor to its
 // resting spot with no extra conversion. syncedRow (see buildPage0AllDots)
 // is which "step down the screen" this dot sits at, counting both columns
 // together — col. 2's own row i sits at the same height as col. 1's row
-// i+2 (col. 2 starts 2 steps lower), so syncedRow lets main.js's page0
-// entrance animation (playPage0Entrance) pop both columns in row-by-row in
+// i+2 (col. 2 starts 2 steps lower), so syncedRow lets the page0
+// entrance animation (playPage0Entrance, js/fold1-intro.js) pop both columns in row-by-row in
 // sync, rather than column-by-column. Rebuilt every buildPage0AllDots() call
 // (initial load + resize), since which dot a color lands on depends on
 // vh-dependent dot counts.
 let PAGE0_GROUP_DOT_ANCHORS = {};
 
 // Every decorative (non-group) dot, paired with its syncedRow (see above) —
-// main.js's updateGroups() uses just the element to scale each one down
+// updateGroups() (js/update-groups.js) uses just the element to scale each one down
 // individually at @fold2 (transform-origin defaults to each dot's own
 // center, so it shrinks in place rather than toward some shared point);
 // playPage0Entrance uses syncedRow to pop them in row-by-row on page load.
@@ -81,7 +81,7 @@ const PAGE0_PALETTE = [
 ];
 
 // Where each group's own dot sits, hand-arranged by eye with
-// _debug-fold1-dots.js (see wiki/Dev-Workflow.md), parallel to GROUPS.
+// a manual/ harness (see wiki/Dev-Workflow.md), parallel to GROUPS.
 // `col` indexes PAGE0_DOT_COLS (0 = the right-hand column, 1 = the left one)
 // and `row` is the step down THAT column — not the two-column "syncedRow",
 // so a number here is the dot's own index within its column and stays put
@@ -177,7 +177,7 @@ function buildPage0DotColorSet(counts) {
 
 // Rebuilds the dot columns (in #page0DotsOverlay, a fixed one-viewport-tall
 // layer — see the comment above) from the current window.innerHeight —
-// re-run on resize (see main.js) since how many dots fit depends on vh.
+// re-run on resize (see js/bootstrap.js) since how many dots fit depends on vh.
 function buildPage0AllDots() {
   const vh = window.innerHeight;
   const overlay = document.getElementById("page0DotsOverlay");
@@ -200,8 +200,8 @@ function buildPage0AllDots() {
       const syncedRow = startOffsetY / PAGE0_DOT_STEP + i;
 
       // A group-colored slot isn't rendered as a real (scrolling) .page0-dot
-      // at all — main.js's persistent .group-item overlay (fixed position,
-      // see groupsOverlayEl) renders it instead, sitting at this exact spot
+      // at all — the persistent .group-item overlay (js/groups.js, (fixed position,
+      // groupsOverlayEl) renders it instead, sitting at this exact spot
       // from page load so it reads as part of the column, but staying put
       // on screen (not scrolling away) until fold2Trigger flies it into the
       // legend. Only record the anchor here; only non-group (decorative,
@@ -221,12 +221,12 @@ function buildPage0AllDots() {
       dot.style.left = `calc(${centerX} - ${PAGE0_DOT_SQ / 2}px)`;
       dot.style.top = `${(centerY - PAGE0_DOT_SQ / 2).toFixed(2)}px`;
       dot.style.background = color;
-      // Hidden/shrunk until playPage0Entrance (main.js) pops it in on page
+      // Hidden/shrunk until playPage0Entrance (js/fold1-intro.js) pops it in on page
       // load, row by row — see syncedRow above.
       dot.style.opacity = "0";
       dot.style.transform = "scale(0)";
       overlay.appendChild(dot);
-      // popped (flipped by playPage0Entrance, main.js) guards updateGroups()'s
+      // popped (flipped by playPage0Entrance, js/fold1-intro.js) guards updateGroups()'s
       // @fold2 shrink line below from touching this dot's transform before
       // its entrance pop has happened — without it, updateGroups() already
       // runs once during init (well before the entrance's first setTimeout
@@ -235,9 +235,9 @@ function buildPage0AllDots() {
       // `anchor` mirrors PAGE0_GROUP_DOT_ANCHORS' own convention (top-left
       // corner, left relative to viewport center) — 18 of these dots don't
       // shrink away at @fold2 but fly into the camp grids' filler cells
-      // alongside the real group dots (see assignFold2Fillers in main.js),
+      // alongside the real group dots (see assignFold2Fillers in js/groups.js),
       // and need the same numeric start point the group items lerp from.
-      // `color` is kept so main.js can lerp it toward its camp-row's group
+      // `color` is kept so updateGroups (js/update-groups.js) can lerp it toward its camp-row's group
       // color over that same flight.
       PAGE0_DECORATIVE_DOT_ELS.push({
         el: dot,

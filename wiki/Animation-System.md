@@ -20,12 +20,12 @@ not a bug to flatten.
 ## Triggers
 
 ```js
-const t = makeTrigger(durationMs, onTick, onSettle);
+const t = makeTrigger(duration, onTick, onSettle);
 // → { currentRaw(), currentT(), trigger(target), set(value) }
 const check = watchCardThreshold(cardEl, frac, t, instantReverse = false);
 ```
 
-- `durationMs` may also be a **function**, resolved per frame rather than captured, for a
+- `duration` (ms) may also be a **function**, resolved per frame rather than captured, for a
   tempo tuned live by a harness (`fold8DemoGrowTrigger`).
 - `currentRaw()` is the linear 0..1 progress; `currentT()` is that through `p9Ease`.
 - `watchCardThreshold` fires the trigger when `cardEl`'s top crosses `frac * innerHeight`
@@ -43,8 +43,12 @@ const check = watchCardThreshold(cardEl, frac, t, instantReverse = false);
   runs on wall-clock, so it mirrors the snap itself: in `fold8AdvanceSequence`, a
   one-tick `fold7LabelTrigger` raw drop of >0.5 down to ≤0 (impossible for an animated
   reverse, which moves ~0.01/frame) triggers an immediate `fold8ResetTooltip()`.
-- `page7.js`/`page8.js` hand-roll the same shape locally (`p8CurrentT`/`p8StartPhase`,
-  `p7MonthAnimStart`/`p7MonthReverseStart`) — they pre-date `makeTrigger`.
+- `page7.js`/`page8.js` hand-roll the same shape locally — page8 with `p8CurrentT`/`p8StartPhase`;
+  page7 per cascade month with `p7MonthPhase` (`monthKey → {fromC, toC, start}`), read by
+  `p7MonthCursor(k)` (the month's cursor right now, linear on wall-clock; `undefined` = never
+  reached), re-aimed by `p7MonthAim(k, toC)` (idempotent, starts from the current cursor) and
+  dropped straight to rest by `p7MonthSettle(k, c)` (no animation — months landed on while
+  scrolling backward).
 - `makeTrigger`'s own rAF loop **stops once a phase settles**. Anything that must keep
   running afterwards (the @fold7 tooltip sequence, page8's glide sync) needs its own
   loop — see `fold8SequenceTick` and `fold9EnsureP8SyncLoop`.
@@ -63,14 +67,14 @@ const check = watchCardThreshold(cardEl, frac, t, instantReverse = false);
   position handover.** @fold1's title/subtitle are driven by the page-load entrance
   (a timed slide from 100vh) until the first scroll, then permanently by
   `page0ApplyTitleScrollLag`, whose position is a pure function of scroll fraction.
-  The two disagree about where the element is, so the switch used to snap the title
-  a full viewport in one frame. `page0BeginTitleHandover` (js/fold1-intro.js) records
+  The two disagree about where the element is, so an unbridged switch would snap the
+  title a full viewport in one frame. `page0BeginTitleHandover` (js/fold1-intro.js) records
   the px gap between the two at the switch instant into `page0HandoverTitlePx` /
   `page0HandoverSubtitlePx`, added to the driver's output and decayed by
   `PAGE0_SCROLL_LAG_DAMPING` per frame (snapped to 0 under 0.5px). Separate values
   per element: the parallax term pushes them opposite ways and the entrance adds the
   subtitle's 107px alignment offset. **Guard:** above scroll fraction 0.5 the handover
-  is skipped and the old snap is kept on purpose — both positions are off-screen
+  is skipped and the switch snaps, on purpose — both positions are off-screen
   there (a reload restoring a scrolled position), so easing between them would drag
   the title back across the viewport.
 
@@ -193,4 +197,4 @@ A dot — any per-event square, on any fold — enters and leaves by **size**: i
 from nothing or shrinks to nothing. Never animate a dot's opacity to hide, remove,
 filter or reveal it. Opacity is for text, cards, rules and labels. (The @fold9
 legend filter is the reference case: filtered-out dots shrink to zero, they do not
-fade — see [Timeline](Timeline.md#the-legend-filter-fold10-desktop-only--p7filtertoggle-page7js).)
+fade — see [Timeline](Timeline.md#the-legend-filter-fold9-desktop-only--p7filtertoggle-page7js).)
