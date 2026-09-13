@@ -5527,6 +5527,12 @@ function p7DrawVertDotCards(ctx, W, H, now) {
   const edgeY = leads ? p7FillEdgeY(H) : 0;
   const ops = P7_AXIS_EVENTS.map((ev, i) => {
     const st = P7_AXIS_EVENT_STATE[i];
+    // A `mobileAbove` plaque is PINNED: it sits above its dot from the start and
+    // it never leaves. No fly (sideDir is forced to 0 below, which gates the
+    // travel) and no leave beat — so P7_AXIS_LEAVE_MODE's collapse never runs on
+    // it either, since that is driven by this same presence value. It is a fixed
+    // label on the head of the axis, not an event that plays.
+    if (p7AxisEvMobileAbove(ev)) return 1;
     if (flies) {
       // Full until the event's TRIGGER fires, then out over beat 2 — one beat on
       // its own clock, reversible mid-flight, like every other fold animation.
