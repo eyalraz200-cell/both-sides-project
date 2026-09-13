@@ -68,6 +68,36 @@ buildPage0AllDots();
 const FOLD4_COALITION_ROWS = ["#454545", "#F9B624", "#F024FF"].map(c => GROUPS.find(g => g.color === c));
 const FOLD4_CHANGE_ROWS    = ["#FF1A94", "#6B89FF", "#31CE1C"].map(c => GROUPS.find(g => g.color === c));
 
+// MOBILE ONLY: two pairs of rows trade places within their camp (per explicit
+// instruction, 2026-09-12) —
+//   גוש השינוי:  מתנגדי הרפורמה המשפטית ↔ תומכי עסקת חטופים ומתנגדי המלחמה
+//   מחנה הימין:  מפגינים חרדים ↔ קבוצות ימין לאומיות
+// so mobile reads settlers / right-wing / haredi and peace / reform / arab,
+// top→bottom. Expressed as a swap of the SHARED order rather than a second set
+// of fold6.y values, because that order is what every legend layout derives
+// from: @fold3's column (legendRow, js/update-groups.js) and the מקרא panel's
+// rows both go through campRowOrder below, so the two agree and the @fold4 fly
+// still lands each row on its own panel row without any of them crossing.
+// Desktop is untouched — it keeps GROUPS' own fold6.y order, which is also the
+// real geometry of its on-canvas mini-legend (fold6RowY).
+const MOBILE_ROW_SWAPS = [
+  ["#6B89FF", "#FF1A94"],
+  ["#454545", "#F024FF"],
+];
+// A camp's rows top→bottom. `mobile` defaults to the live viewport; the מקרא
+// panel passes `true` outright, since it is built once at parse time and only
+// ever shown under the breakpoint.
+function campRowOrder(camp, mobile) {
+  const rows = camp.slice().sort((a, b) => a.fold6.y - b.fold6.y);
+  if (!(mobile == null ? isMobile() : mobile)) return rows;
+  MOBILE_ROW_SWAPS.forEach(([c1, c2]) => {
+    const i = rows.findIndex(g => g.color === c1);
+    const j = rows.findIndex(g => g.color === c2);
+    if (i >= 0 && j >= 0) { const t = rows[i]; rows[i] = rows[j]; rows[j] = t; }
+  });
+  return rows;
+}
+
 // ── @fold2's camp grids (Figma node 279:1342, frame 1512×982) ──
 // Each camp is no longer a single column of 3 labelled rows — it's a 4-col ×
 // 3-row block of 12 plain rects, no labels and no center divider (per Figma).
@@ -135,12 +165,24 @@ const FOLD2_CAMP_CENTER_GAP_PX = 162;
 // instead of two camps. Both blocks plus the gap come to 288px, so it still
 // fits the narrowest phones.
 const FOLD2_CAMP_EDGE_GAP_MOBILE_PX = 90;
-function campCenterGapPx(W) {
+// @fold3's own edge gap on mobile — the one fold that does NOT inherit @fold2's.
+// Once the blocks collapse into one rect-plus-label column per camp, the same
+// 90px reads too wide between the two label runs; 82 was picked by eye with the
+// `manual/` @fold3 camp-gap harness on 2026-09-12 (48px of visible corridor on a
+// 390px phone, down from 56). updateGroups LERPS between the two over alignT —
+// @fold3's own fly-into-column beat — so @fold2 keeps its tuned value and the
+// anchors never snap. Desktop stays on the single FOLD2_CAMP_CENTER_GAP_PX for
+// both folds.
+const FOLD3_CAMP_EDGE_GAP_MOBILE_PX = 82;
+// `edgeGapMobile` overrides FOLD2_CAMP_EDGE_GAP_MOBILE_PX for callers that want
+// a different fold's gap (or a lerp between two); omit it for @fold2's.
+function campCenterGapPx(W, edgeGapMobile) {
   if (!isMobile()) return FOLD2_CAMP_CENTER_GAP_PX;
   // The caller wants the HALF-gap (each camp anchors at W/2 ± this), and the
   // anchor is a block's CENTER — so half the block width is inside the gap.
   const blockW = (FOLD2_GRID_COLS - 1) * fold2ColPitchPx() + CLUSTER_SWATCH_SIZE;
-  return (FOLD2_CAMP_EDGE_GAP_MOBILE_PX + blockW) / 2;
+  const edge = edgeGapMobile == null ? FOLD2_CAMP_EDGE_GAP_MOBILE_PX : edgeGapMobile;
+  return (edge + blockW) / 2;
 }
 
 // 18 of @fold1's decorative dots (3 per group row) are picked out here to
@@ -310,10 +352,30 @@ function groupLabelWidth(g) {
     const cap = groupLabelColumnMaxWidth(g);
     groupLabelMeasureEl.textContent = g.label;
     if (cap != null) groupLabelMeasureEl.style.maxWidth = `${cap}px`;
-    groupLabelWidths[g.color] = groupLabelMeasureEl.offsetWidth;
+    // The BOX is `width: max-content` capped at maxWidth, so a wrapping label
+    // measures as the full cap — but its lines each break short of it, and the
+    // @fold3 column centers the title over this number (campFold3X,
+    // js/update-groups.js). Box-width there left the title visibly off-center
+    // from the ink on mobile. So measure the widest RENDERED LINE instead: a
+    // Range over the text node yields one client rect per line box. Desktop
+    // labels are `white-space: nowrap`, so this is identical to offsetWidth
+    // there — no behavior change above the breakpoint.
+    groupLabelWidths[g.color] = groupLabelInkWidth() || groupLabelMeasureEl.offsetWidth;
     groupLabelMeasureEl.style.maxWidth = "";
   }
   return groupLabelWidths[g.color];
+}
+// Widest line box of whatever groupLabelMeasureEl currently holds, in px.
+// Returns 0 if the Range API gives nothing back (no text node, old engine), so
+// callers can fall back to offsetWidth.
+function groupLabelInkWidth() {
+  const node = groupLabelMeasureEl.firstChild;
+  if (!node || !document.createRange) return 0;
+  const r = document.createRange();
+  r.selectNodeContents(groupLabelMeasureEl);
+  let w = 0;
+  for (const rect of r.getClientRects()) w = Math.max(w, rect.width);
+  return w;
 }
 // Same span, same cache lifetime — but the HEIGHT, which only says anything
 // under the breakpoint: desktop labels are `white-space: nowrap` one-liners, so
@@ -1057,6 +1119,34 @@ const p9TooltipDropTrigger = makeTrigger(P9_TOOLTIP_DROP_MS, () => {
   if (typeof fold8TooltipEl !== "undefined" && fold8TooltipEl) tooltipDockMobile(fold8TooltipEl);
 });
 
+// The mobile docked frame's «לחצו והחזיקו על נקודה» line types itself in and
+// out with the gesture it names. The picker is live on @fold9 and @fold13 only,
+// and the folds in between (@fold10–@fold12) have no dots worth holding — so
+// the line UNTYPES on @fold11's own crossing (fold11SizeApply below, the same
+// beat that flattens the sizes and launches the glide) and TYPES BACK on
+// @fold13's stick, arriving with the panel that makes the dots inspectable
+// again. It is text, so it may type rather than resize — the dots-never-fade
+// rule is about dots.
+//
+// Two writers, one trigger: rather than have each crossing push its own target
+// (which would fight whenever both are latched), both call p7SyncInspectHint
+// and the WANT is derived fresh from the page's actual state.
+const p7InspectHintTrigger = makeTrigger(P7_INSPECT_HINT_TYPE_MS, () => {
+  p7InspectHintApply(p7InspectHintTrigger.currentT());
+});
+function p7HintWanted() {
+  // Desktop never shows the line at all (.p7-inspect-hint is display:none
+  // outside the ≤600px block), so leave it typed and let CSS hide it —
+  // crossing the breakpoint on a resize then needs no re-sync.
+  if (typeof isMobile !== "function" || !isMobile()) return true;
+  const engaged = typeof page9StickyEl !== "undefined" && page9StickyEl &&
+                  page9StickyEl.classList.contains("engaged");
+  return !fold11SizePast() || !!engaged;
+}
+function p7SyncInspectHint(instant) {
+  p7InspectHintTrigger[instant ? "set" : "trigger"](p7HintWanted() ? 1 : 0);
+}
+
 const fold13Trigger           = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateFold13(...a));
 // Duration as a FUNCTION: @fold15's two beats are timed separately
 // (FOLD14_POP_MS + FOLD14_FLY_MS, js/fold11.js) and resolved per frame.
@@ -1124,15 +1214,17 @@ const checkFold2      = watchCardThreshold(
 const FOLD3_CARD_FRAC = 0.6;
 const checkFold3      = watchCardThreshold(
   page3TitleCardEl, () => (isMobile() ? FOLD3_CARD_FRAC : 0.5), fold3Trigger);
-// @fold4 fires EARLIER than the house 0.5 on mobile: the crossing has to leave
-// room for the whole hand-off — the rows and camp headers flying into the מקרא
-// panel, its 1s hold and its shrink back into the button — to play while the
-// fold is still on screen. A bigger fraction is an earlier crossing (the card's
-// top only has to reach further down the viewport); 0.8 fires it as the card
-// is still coming up, per explicit instruction (0.75 → 0.85 → 0.8, tuned by
-// eye; then 0.8 → 0.7, a bit later, per explicit instruction).
+// @fold4 fires LATER than the house 0.5 on mobile — well down the fold, with the
+// card most of the way up the screen. A bigger fraction is an EARLIER crossing
+// (the card's top only has to reach further down the viewport), so this is the
+// small end of the range: 0.24, picked by eye with the `manual/` @fold4 trigger
+// harness on 2026-09-12. It used to run early instead (0.75 → 0.85 → 0.8 → 0.7,
+// all by eye) to leave room for the whole hand-off — the rows and camp headers
+// flying into the מקרא panel, its 1s hold and its shrink back into the button —
+// to finish while the fold was still on screen; the late crossing is the
+// explicit call, so the tail now plays out as @fold5 comes up.
 // Desktop keeps 0.5: it has no panel demo, and its glide is settled.
-const FOLD6_CARD_FRAC = 0.7;
+const FOLD6_CARD_FRAC = 0.24;
 const checkFold6      = watchCardThreshold(
   page6TitleCardEl, () => (isMobile() ? FOLD6_CARD_FRAC : 0.5), fold6Trigger);
 const checkSquaresReveal = watchCardThreshold(squaresRevealCardEl, 0.5, squaresRevealTrigger);
@@ -1199,8 +1291,26 @@ function fold8MeasureTooltipHeight() {
 // watchCardThreshold compares the card's TOP against frac * innerHeight, hence
 // subtracting the card's own height here to express "the card's bottom".
 // Mobile keeps 0.5: its tooltip is docked at a fixed spot, nothing to collide.
+// Mobile's @fold7 crossing. The docked tooltip sits at a fixed spot on a phone,
+// so there is nothing to collide with and nothing to measure — the fraction is
+// just a chosen point in the card's rise, unlike desktop's solved value below.
+// `var`, not `const`: a manual/ harness drives it live (wiki/Dev-Workflow.md).
+//
+// It is read FRESH on every watchCardThreshold check, and the threshold it
+// makes is `FOLD8_MOBILE_CARD_FRAC * window.innerHeight`. On a phone that
+// height changes as the URL bar collapses, so the line this trigger fires on
+// moves while you scroll — keep that in mind if the fold ever reads as firing
+// twice.
+//
+// 0.17, picked by eye on 2026-09-12 with the @fold7 trigger harness at
+// 390x721. LOW, and deliberately: the threshold is compared against the card's
+// TOP, so a smaller fraction means the card has to climb FURTHER before the
+// fold fires — 0.17 holds the demo back until the card has nearly cleared the
+// top of the screen, where the docked frame can own the view. The old 0.5
+// fired with the card still mid-screen, a whole fold too early.
+var FOLD8_MOBILE_CARD_FRAC = 0.17;
 function fold8TooltipCardFrac() {
-  if (isMobile()) return 0.5;
+  if (isMobile()) return FOLD8_MOBILE_CARD_FRAC;
   const fallback = 0.5 - FOLD8_TOOLTIP_ABOVE_PX / window.innerHeight;
   const entry = typeof fold6SquareEls !== "undefined" ? fold6SquareEls[0] : null;
   const sq = entry ? entry.sq : null;
@@ -1337,7 +1447,7 @@ const checkFold10Grid = watchCardThreshold(fold10GridCardEl, 0.5, fold10GridTrig
 // Where p7SizeGridOnPage (page7.js) re-syncs from when @fold10 is re-entered
 // from below, a direction in which the watcher sees no crossing at all.
 function fold10GridPast() {
-  if (!fold10GridCardEl || isMobile()) return false;
+  if (!fold10GridCardEl) return false;
   return fold10GridCardEl.getBoundingClientRect().top <= window.innerHeight * 0.5;
 }
 
@@ -1376,6 +1486,10 @@ function fold11SizeApply(past, instant) {
   if (typeof p7ScopeRevealTrigger !== "undefined") {
     p7ScopeRevealTrigger[instant ? "set" : "trigger"](past ? 1 : 0);
   }
+  // Mobile's docked hint line untypes here and types back on @fold13's stick —
+  // see p7InspectHintTrigger above. Derived, not pushed, so this and the
+  // @fold13 crossing can both call it at any time.
+  p7SyncInspectHint(instant);
   if (past) {
     p7SizeGridSet(true, { uniform: true, instant });
     if (instant) p8Trigger();
@@ -1403,7 +1517,7 @@ const fold11SizeTrigger = {
 };
 const checkFold11Size = watchCardThreshold(fold11SizeCardEl, 0.5, fold11SizeTrigger);
 function fold11SizePast() {
-  if (!fold11SizeCardEl || isMobile()) return false;
+  if (!fold11SizeCardEl) return false;
   return fold11SizeCardEl.getBoundingClientRect().top <= window.innerHeight * 0.5;
 }
 
@@ -1537,11 +1651,25 @@ const FOLD4_HEADER_GAP_MOBILE_PX = 20;
 // values. It stays a separate constant (and a lerp) so the two folds can diverge
 // again without @fold3's value leaking back into @fold2.
 const FOLD3_HEADER_GAP_MOBILE_PX = FOLD4_HEADER_GAP_MOBILE_PX;
-// Mobile only: the מקרא bar's distance from the TOP EDGE of the viewport. The
-// button is the ONLY thing left on screen from @fold4 on (per explicit
+// Mobile only: the מקרא sheet's distance from the BOTTOM EDGE of the viewport.
+// The button is the ONLY thing left on screen from @fold4 on (per explicit
 // instruction) — the camp names live inside the panel, not on the page — so
 // this single number positions the whole bar and never changes after @fold4.
-const FOLD6_MLEGEND_TOP_MOBILE_PX = 16;
+const FOLD6_MLEGEND_BOTTOM_MOBILE_PX = 0;
+// The bar's bottom padding (.fold6-mlegend, 9px) — the card's outset UNDER the
+// title, which differs from FOLD6_CARD_PAD above it. Keep in sync with the CSS.
+const FOLD6_MLEGEND_PAD_BOTTOM_PX = 9;
+// true (shipped): the closed pose is a pill centred on the bar, and the open
+// trip widens it first — the width step of fold6MLegendPaintCard. false: the
+// closed sheet spans the full width like the open one.
+let FOLD6_MLEGEND_COMPACT_CLOSED = true;
+// The closed pill's size (explicit tuning): the width is measured off the
+// title plus FOLD6_MLEGEND_COMPACT_PAD_X each side (FOLD6_MLEGEND_COMPACT_W is
+// a fixed override when non-zero); the height is the exact px below (0 =
+// measured: button + FOLD6_CARD_PAD above + FOLD6_MLEGEND_PAD_BOTTOM_PX below).
+let FOLD6_MLEGEND_COMPACT_W = 0;
+let FOLD6_MLEGEND_COMPACT_PAD_X = 40;
+let FOLD6_MLEGEND_COMPACT_H = 40;
 // Both camp blocks are placed symmetrically about screen center from
 // FOLD2_CAMP_CENTER_GAP_PX (see the @fold2 grid block above) — there's no
 // longer a center divider to hang either column off (Figma node 279:1342
@@ -1847,6 +1975,8 @@ fold6MobileLegendEl.appendChild(fold6MobileCardEl);
 const fold6MobileLegendBtnEl = document.createElement("button");
 fold6MobileLegendBtnEl.type = "button";
 fold6MobileLegendBtnEl.className = "fold6-mlegend-btn";
+// The bare title — no chevron, no group swatches (both judged in a harness and
+// declined); the grab handle is CSS (.fold6-mlegend-btn::before).
 fold6MobileLegendBtnEl.textContent = FOLD6_MOBILE_LEGEND_LABEL;
 fold6MobileLegendBtnEl.setAttribute("aria-expanded", "false");
 fold6MobileLegendEl.appendChild(fold6MobileLegendBtnEl);
@@ -1884,7 +2014,7 @@ const fold6MobileCampHeadEls = {};
   // Kept for the FLY hand-off: the on-canvas camp headers fly onto these.
   fold6MobileCampHeadEls[campTitle] = head;
   col.appendChild(head);
-  camp.slice().sort((a, b) => a.fold6.y - b.fold6.y).forEach((g) => {
+  campRowOrder(camp, true).forEach((g) => {
     const row = document.createElement("div");
     row.className = "fold6-mlegend-row";
     const swatch = document.createElement("span");
@@ -1904,7 +2034,10 @@ const fold6MobileCampHeadEls = {};
     // column and shoved the dots sideways under their own text.
     // `g` and `label` are kept for the FLY hand-off below, which has to match
     // each on-canvas row to its own panel row and measure where that row sits.
-    fold6MobileRowEls.push({ g, swatch, label, spans: fold8SetupTypewriter(label, g.label) });
+    // `row` too: on mobile this element IS the filter button (updateGroups
+    // writes .is-armed / .is-filtered-off onto it, and the sheet's pointerup
+    // resolves a tap to it), so the hand-off needs the box, not just its parts.
+    fold6MobileRowEls.push({ g, row, swatch, label, spans: fold8SetupTypewriter(label, g.label) });
   });
   fold6MobileRowsEl.appendChild(col);
 });
@@ -1952,11 +2085,11 @@ function fold6SyncNoteHome() {
 }
 fold6SyncNoteHome();
 
-// The bar never moves: it parks at FOLD6_MLEGEND_TOP_MOBILE_PX below the top of
+// The bar never moves: it parks FOLD6_MLEGEND_BOTTOM_MOBILE_PX above the bottom of
 // the viewport and only fades. Still written from updateGroups (rather than as a
 // static CSS `top`) so the one constant above stays the single source of truth.
 function fold6PlaceMobileLegend() {
-  fold6MobileLegendEl.style.top = `${FOLD6_MLEGEND_TOP_MOBILE_PX}px`;
+  fold6MobileLegendEl.style.bottom = `${FOLD6_MLEGEND_BOTTOM_MOBILE_PX}px`;
 }
 
 // vis is fold6Trigger's eased progress (0 off, 1 fully present). Below the
@@ -2027,13 +2160,14 @@ function fold6SetMobileLegendVisible(vis) {
      - @fold5 (squaresRevealTrigger) closes it back into the מקרא button — the
        grey sample squares are the fold's subject and the open panel covers
        them;
-     - @fold6 (acledNoteTrigger) opens it again, which is what makes the ACLED
-       note's arrival visible: the note lives INSIDE the panel on mobile
-       (fold6SyncNoteHome), so revealing it under a closed card would reveal
-       nothing.
-   Scrolling back up runs the same states in reverse — @fold6 back to @fold5
-   closes, @fold5 back to @fold4 reopens — because `want` is derived from the
-   two triggers every frame rather than latched on a crossing.
+     - and it STAYS closed from there on. @fold6 does NOT reopen it (explicit
+       instruction): the ACLED card is that fold's subject and an auto-opening
+       panel covers it. The note still arrives inside the panel on its own ramp
+       (fold6SyncNoteHome), so it is simply waiting there for a reader who taps
+       מקרא — the auto-beat no longer opens the card to show it off.
+   Scrolling back up runs the same states in reverse — @fold5 back to @fold4
+   reopens — because `want` is derived from the trigger every frame rather than
+   latched on a crossing.
    Only the CHANGES are acted on: a reader who taps the button mid-fold keeps
    what they chose until the next beat, instead of the panel snapping back on
    the very next scroll frame. */
@@ -2042,7 +2176,7 @@ function fold6MLegendAutoBeat(vis) {
   // Above @fold4 the bar isn't there yet and the hand-off owns the card —
   // clearing the memo here is what re-arms the whole sequence on the way down.
   if (!isMobile() || vis <= 0) { fold6MLegendAutoWant = null; return; }
-  const want = !(squaresRevealTrigger.currentT() > 0 && acledNoteTrigger.currentT() <= 0);
+  const want = squaresRevealTrigger.currentT() <= 0;
   if (want === fold6MLegendAutoWant) return;
   fold6MLegendAutoWant = want;
   if (want !== fold6MLegendOpenWant) fold6SetMobileLegendOpen(want);
@@ -2080,22 +2214,29 @@ function fold6MLegendPaintCard(raw) {
   const hT = slice(FOLD6_MLEGEND_OPEN.h);
   const bar = fold6MobileLegendEl, btn = fold6MobileLegendBtnEl, card = fold6MobileCardEl;
   const barW = bar.offsetWidth;
-  const closedW = btn.offsetWidth + 2 * FOLD6_CARD_PAD;
-  const closedH = btn.offsetHeight + 2 * FOLD6_CARD_PAD;
+  const measuredH = btn.offsetHeight + FOLD6_CARD_PAD + FOLD6_MLEGEND_PAD_BOTTOM_PX;
+  const closedW = FOLD6_MLEGEND_COMPACT_CLOSED
+    ? (FOLD6_MLEGEND_COMPACT_W || btn.offsetWidth + 2 * FOLD6_MLEGEND_COMPACT_PAD_X) : barW;
+  const closedH = FOLD6_MLEGEND_COMPACT_CLOSED && FOLD6_MLEGEND_COMPACT_H
+    ? FOLD6_MLEGEND_COMPACT_H : measuredH;
   const w = closedW + (barW - closedW) * wT;
   const left = (barW - w) / 2;
+  // Anchored to the BOTTOM: the height step grows the sheet upward out of the
+  // screen edge rather than downward from the top.
   if (raw >= 1) {
     card.style.left = card.style.top = card.style.right = card.style.bottom = "0";
     card.style.width = card.style.height = "";
   } else {
     const h = closedH + (bar.offsetHeight - closedH) * hT;
-    card.style.right = card.style.bottom = "";
+    card.style.right = card.style.top = "";
     card.style.left = `${left}px`;
-    card.style.top = "0";
+    card.style.bottom = "0";
     card.style.width = `${w}px`;
     card.style.height = `${h}px`;
   }
   fold6MobilePanelEl.style.opacity = hT < 1 ? String(hT) : "";
+  // The title-line dots are the CLOSED pose's content: they leave as the panel
+  // arrives, on the same step, so the two never overlap.
   fold6MobilePanelEl.style.pointerEvents = hT < 1 ? "none" : "";
 }
 
@@ -2245,8 +2386,8 @@ let fold6MFlyTargets = null;
 let fold6MFlyHeadTargets = null;
 let fold6MFlyPanelRect = null;
 let fold6MFlyTargetsViewport = "";
-const FOLD6_MFLY_SWATCH_PX = 6;   // .fold6-mlegend-swatch
-const FOLD6_MFLY_GAP_PX    = 6;   // .fold6-mlegend-row gap
+const FOLD6_MFLY_SWATCH_PX = 8;   // .fold6-mlegend-swatch
+const FOLD6_MFLY_GAP_PX    = 10;  // .fold6-mlegend-row gap
 const FOLD6_MFLY_FONT_PX   = 14;  // .fold6-mlegend-label
 const FOLD6_MFLY_HEAD_PX   = 14;  // .fold6-mlegend-camp
 // There is no wrap-cap lerp, and no unwrap animation either (explicit
@@ -2344,25 +2485,26 @@ function fold6MFlyArriveT(e6) {
   return e6 >= 1 ? 1 : 0;
 }
 
-/* The flight can't be drawn by the .group-item / .camp-header elements
-   themselves: they live in .groups-overlay, inside .graphic-col, which is
-   `position: fixed; z-index: 0` and therefore a stacking context — every
-   z-index in it is trapped below BOTH the title block (z-index 4 on mobile)
-   and the open מקרא layer (1002). So the flight is drawn by stand-ins, and the
-   ask ("the title block above the groups, the open legend above the title
-   block, and the rows landing on top of the panel") is a z-index cycle: it can
-   only be satisfied per element, by WHERE that element currently is. Hence two
-   parking layers, and each stand-in is moved between them every frame:
+/* The flight is drawn by stand-ins rather than by the .group-item /
+   .camp-header elements themselves. Two parking layers, and each stand-in is
+   moved between them every frame:
 
-     - UNDER (z-index 1, a direct .layout child): above the canvas, below the
-       title block. Where a stand-in sits for most of its flight — it passes
-       behind the card, as asked.
+     - UNDER (a direct .layout child, z-index 1003 on mobile): the groups' own
+       band — over the legend, under the title block. Where a stand-in sits for
+       most of its flight.
      - OVER (inside the open מקרא layer, after the panel): once the stand-in
-       actually overlaps the panel's rect, i.e. only for the landing, where the
-       ask is the other way round.
+       actually overlaps the panel's rect, i.e. only for the landing, so it
+       paints after the panel within the panel's own layer.
 
    The switch happens at the panel's own top edge, so it is never visible: a
    stand-in can only be occluded by the thing it is not overlapping yet.
+
+   This used to be load-bearing, because the old ask ("title block above the
+   groups, open legend above the title block, rows landing on the panel") was a
+   z-index CYCLE, satisfiable only per element by where that element currently
+   was. The stack is now a plain order — bar, then groups, then title blocks —
+   so the cycle is gone and .groups-overlay, a direct .layout child since, could
+   in principle paint the flight itself. The stand-ins are kept for the landing.
    Coordinates need no translating between the two — every layer involved is
    `position: fixed; inset: 0`, so the viewport left/top updateGroups computes
    means the same thing in all of them. The real element stays in place, laid
@@ -2424,10 +2566,8 @@ function fold6MFlyHeadCloneFor(title) {
 // the anchor point (a wrapped label is centered on its swatch), so the switch
 // happens as the row starts to overlap the panel rather than after.
 // The test is "is this element INSIDE the panel's box", both edges — not
-// "below its top". The bar hangs from the top of the screen
-// (FOLD6_MLEGEND_TOP_MOBILE_PX), so its panel's top edge is above almost the
-// whole canvas: a one-sided test put every stand-in in the OVER layer for its
-// entire flight, i.e. over the title block, which is the opposite of the ask.
+// "below its top". A one-sided test put every stand-in in the OVER layer for
+// its entire flight, i.e. over the title block, which is the opposite of the ask.
 // 30 originally — flipped rows to the OVER layer a visible beat before they
 // touched the panel; tightened to the real one-line ink overhang.
 const FOLD6_MFLY_PARK_SLACK = 6;
@@ -2637,11 +2777,119 @@ window.addEventListener("resize", () => {
   if (isMobile()) fold6MLegendPaintCard(fold6MLegendOpenRaw);
 });
 
+// ── The sheet's gesture: ONE pointer pass that is both a drag and a tap ──────
+// The מקרא sheet has to be draggable AND its rows tappable, and the two cannot
+// be separate handlers: a row tap that starts with 2px of finger travel is still
+// a tap, and a drag that begins on a row is still a drag. So a single
+// pointerdown/move/up pass on the WHOLE bar decides between them at release,
+// by distance — under FOLD6_MLEGEND_DRAG_SLOP_PX it is a tap, over it a drag.
+//
+// Listening on the bar rather than the title is what makes the whole sheet
+// draggable. The cost is that capturing here re-targets the compatibility click
+// to the bar, so the title's own click can no longer be relied on for pointer
+// input — every pointer-driven activation is resolved in pointerup below, and
+// the click handler is left for KEYBOARD activation only (detail === 0).
+let fold6MLegendDrag = null;
+let fold6MLegendDragMoved = false;
+const FOLD6_MLEGEND_DRAG_SLOP_PX = 6;
+
 fold6MobileLegendBtnEl.addEventListener("click", (e) => {
   e.stopPropagation();
+  // Pointer taps are handled in pointerup; this is the keyboard path (Enter or
+  // Space on the focused button, which reports detail 0). Without the guard the
+  // sheet toggled twice for one tap on devices that still emit the click.
+  if (e.detail !== 0) { e.preventDefault(); return; }
   fold6StopMLegendIntro();
   fold6SetMobileLegendOpen(!fold6MLegendOpenWant);
 });
+
+// The scrub is rAF-COALESCED. pointermove fires faster than the display on a
+// phone (and coalesced events arrive in bursts), so painting the card straight
+// from the handler did the same layout several times between frames and the
+// sheet visibly stuttered under the finger. The handler now only records the
+// finger; one rAF paints the latest position per frame.
+let fold6MLegendDragRaf = 0;
+function fold6MLegendDragPaint() {
+  fold6MLegendDragRaf = 0;
+  if (!fold6MLegendDrag) return;
+  fold6MLegendPaintCard(fold6MLegendOpenRaw);
+}
+
+fold6MobileLegendEl.addEventListener("pointerdown", (e) => {
+  if (e.button) return;
+  fold6MLegendDragMoved = false;
+  fold6StopMLegendIntro();
+  if (fold6MLegendOpenRaf) cancelAnimationFrame(fold6MLegendOpenRaf);
+  fold6MLegendOpenRaf = 0;
+  fold6MobilePanelEl.hidden = false;
+  fold6MobileLegendEl.classList.add("is-open");
+  const closedH = FOLD6_MLEGEND_COMPACT_H
+    || fold6MobileLegendBtnEl.offsetHeight + FOLD6_CARD_PAD + FOLD6_MLEGEND_PAD_BOTTOM_PX;
+  fold6MLegendDrag = {
+    y0: e.clientY, raw0: fold6MLegendOpenRaw,
+    span: Math.max(1, fold6MobileLegendEl.offsetHeight - closedH),
+    moved: false,
+    // What was under the finger when it went down — the tap target. Read now,
+    // not at release: the sheet moves during a drag, so the element under the
+    // release point may not be the one the user aimed at.
+    row: e.target.closest ? e.target.closest(".fold6-mlegend-row") : null,
+    onTitle: !!(e.target.closest && e.target.closest(".fold6-mlegend-btn")),
+  };
+  fold6MobileLegendEl.setPointerCapture(e.pointerId);
+});
+
+fold6MobileLegendEl.addEventListener("pointermove", (e) => {
+  if (!fold6MLegendDrag) return;
+  const dy = fold6MLegendDrag.y0 - e.clientY;
+  if (Math.abs(dy) > FOLD6_MLEGEND_DRAG_SLOP_PX) fold6MLegendDrag.moved = true;
+  fold6MLegendOpenRaw = Math.max(0, Math.min(1, fold6MLegendDrag.raw0 + dy / fold6MLegendDrag.span));
+  if (!fold6MLegendDragRaf) fold6MLegendDragRaf = requestAnimationFrame(fold6MLegendDragPaint);
+});
+
+// Tapping a group row filters that group out — the mobile twin of clicking a
+// mini-legend row on desktop, and gated to exactly the same folds, so the two
+// breakpoints can never disagree about when the filter is live.
+function fold6MLegendRowTap(row) {
+  if (!row || typeof p7FilterToggle !== "function") return false;
+  if (currentPage < 8 || currentPage > 12) return false;
+  const entry = fold6MobileRowEls.find((r) => r.row === row);
+  if (!entry) return false;
+  p7FilterToggle(entry.g.actor);
+  // Frames for @fold13's canvas and the 8 claimed DOM squares — same follow-up
+  // the desktop click does; without it the change only lands on the next tick.
+  if (typeof p9FilterKick === "function") p9FilterKick();
+  updateGroups();
+  return true;
+}
+
+function fold6MLegendDragEnd() {
+  if (!fold6MLegendDrag) return;
+  const d = fold6MLegendDrag;
+  fold6MLegendDrag = null;
+  if (fold6MLegendDragRaf) cancelAnimationFrame(fold6MLegendDragRaf);
+  fold6MLegendDragRaf = 0;
+  fold6MLegendDragMoved = d.moved;
+  if (d.moved) {
+    // A real drag: settle to whichever pose the finger left it nearer to.
+    fold6SetMobileLegendOpen(fold6MLegendOpenRaw > 0.5);
+    return;
+  }
+  // A tap. A row wins over the sheet toggle — tapping a group must never also
+  // close the panel out from under the thing it just changed.
+  if (d.row && fold6MLegendOpenWant && fold6MLegendRowTap(d.row)) {
+    fold6MLegendPaintCard(fold6MLegendOpenRaw);
+    return;
+  }
+  if (d.onTitle) {
+    fold6SetMobileLegendOpen(!fold6MLegendOpenWant);
+    return;
+  }
+  // A tap on the sheet but not on the title or a row: put it back where it was
+  // rather than leaving it mid-scrub.
+  fold6SetMobileLegendOpen(fold6MLegendOpenWant);
+}
+fold6MobileLegendEl.addEventListener("pointerup", fold6MLegendDragEnd);
+fold6MobileLegendEl.addEventListener("pointercancel", fold6MLegendDragEnd);
 // Tap anywhere else — including on the page behind the bar, which is why this
 // listens on the document rather than on a backdrop element (there is none; the
 // artwork stays visible and interactive while the panel is open).

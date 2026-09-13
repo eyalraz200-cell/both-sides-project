@@ -8,13 +8,36 @@ const ctx    = canvas.getContext("2d");
 // One shared breakpoint for the whole page, matching trigger.css's own 600px
 // article breakpoint. JS layout code that needs to scale a desktop px
 // constant down on phones gates on isMobile(); CSS uses
-// `@media (max-width: 600px)`. Read live (not cached) so the existing
-// resize path in bootstrap.js picks up a desktop↔mobile crossing for free —
-// every caller runs inside layout code that resize already re-runs.
+// `@media (max-width: 600px)`.
+//
+// CACHED, and it has to be. `window.innerWidth` is a layout-flushing read, and
+// isMobile() is called from ~130 sites — several of them inside per-square draw
+// loops. Live-reading it cost **14.4% of all CPU** on a throttled phone scrolling
+// the early folds, and it was the single largest entry in the profile.
+//
+// The cache is refreshed from the SAME `innerWidth` comparison on resize, so the
+// value is identical to the live read, just not recomputed thousands of times a
+// frame. (Deliberately not matchMedia: on desktop `innerWidth` includes the
+// scrollbar and the media query does not, so the two disagree by a few px right
+// at the breakpoint.) This listener is registered in core.js, the first `js/`
+// file project.html loads, so it updates before any other resize handler runs
+// and no consumer can see a stale value. A mobile URL-bar collapse fires resize
+// with the width unchanged, which correctly leaves the value alone.
 const MOBILE_BP = 600;
-function isMobile() {
-  return window.innerWidth <= MOBILE_BP;
+let _isMobileCached = window.innerWidth <= MOBILE_BP;
+function isMobile() { return _isMobileCached; }
+// Viewport height, cached for the same reason: `window.innerHeight` is also a
+// layout-flushing read, and hot callers (tooltipDockRestPx was 4.1% of the
+// timeline profile alone) hit it every frame. Refreshed on the same events, so
+// a mobile URL/bottom-bar collapse — which does fire resize — still updates it.
+let _vpHCached = window.innerHeight;
+function viewportH() { return _vpHCached; }
+function refreshBreakpointCache() {
+  _isMobileCached = window.innerWidth <= MOBILE_BP;
+  _vpHCached = window.innerHeight;
 }
+window.addEventListener("resize", refreshBreakpointCache, { passive: true });
+window.addEventListener("orientationchange", refreshBreakpointCache, { passive: true });
 
 // ── Reduced motion ──
 // Read live off the MediaQueryList rather than cached, for the same reason
@@ -245,8 +268,18 @@ function init() {
 // instead: the deviation from 2px is under a couple of percent on any real
 // box, and invisible, where the collision was not.
 const DASH_PERIOD = 4;
+// getTotalLength() forces the SVG geometry to resolve and was 3% of the timeline
+// profile, re-measuring paths that had not changed. Memoised per element on its
+// own `d`, so a re-baked viewBox/path still re-measures on the next call.
+const _dashLenCache = new WeakMap();
 function fitDashArray(geomEl) {
-  const len = geomEl.getTotalLength ? geomEl.getTotalLength() : 0;
+  let len = 0;
+  if (geomEl.getTotalLength) {
+    const key = geomEl.getAttribute ? geomEl.getAttribute('d') : null;
+    const hit = _dashLenCache.get(geomEl);
+    if (hit && hit.key === key) len = hit.len;
+    else { len = geomEl.getTotalLength(); _dashLenCache.set(geomEl, { key, len }); }
+  }
   if (!len) return `${DASH_PERIOD / 2} ${DASH_PERIOD / 2}`;
   const period = len / Math.max(1, Math.round(len / DASH_PERIOD));
   return `${period / 2} ${period / 2}`;

@@ -14,9 +14,9 @@
 .layout
 ├── .graphic-col          z-index 0 — its own stacking context
 │   ├── #canvas           full-viewport canvas; all dot/square/axis rendering
-│   ├── #groupsOverlay    the 6 persistent group DOM nodes (see Groups-and-Legend)
 │   ├── #page0DotsOverlay @fold1's fixed decorative dot columns
 │   └── #fold6SquaresOverlay  the 8 sample squares
+├── #groupsOverlay        z-index 0, mobile 1003 — the 6 persistent group DOM nodes (see Groups-and-Legend)
 ├── #page9Tooltip         shared event tooltip (page7 + page9 + @fold7's demo)
 ├── #page9CatTooltip      tray-pill tooltip
 ├── #fold6NoteLayer       z-index 2 — the ACLED source note is reparented here at init
@@ -26,7 +26,11 @@
 
 **`.graphic-col` traps z-index.** Anything that must stack above `.text-col` has to be a
 direct `.layout` child, not nested inside `.graphic-col` — that's why the event
-tooltip, the category tooltip and the ACLED note layer live where they do. Without it
+tooltip, the category tooltip, the ACLED note layer and **`#groupsOverlay`** live where they
+do. The groups moved out so the mobile stack could be **bar → groups → title blocks**; the
+overlay is `position: fixed; inset: 0`, so nothing about where its rows land changed, and it
+sits before `.text-col` in source order so its desktop `z-index: 0` still paints under the
+cards exactly as it did from inside the column. Without it
 the ACLED link was unclickable, the category tooltip lost to the tray, and the mobile
 docked event frame was untappable (every touch landed on `section#page-8`, so the
 עוד toggle looked dead). Don't "tidy" them back inside.
@@ -219,7 +223,11 @@ snaps the bar back, so it appeared to "refuse to collapse" on every scroll after
 `isMobile()`, an unchanged width means bar movement and the handler does nothing but
 `draw()`. Nothing is lost — scroll geometry is `vh` (fixed on mobile, it does not track the
 bar) and `draw()` re-syncs the canvas backing store on every paint anyway. A width change
-is a real rotation/breakpoint crossing and still runs the full handler.
+is a real rotation/breakpoint crossing and still runs the full handler. The timeline's
+layout cache applies the same rule: `p7UpdateLayout` (page7.js) returns early on mobile
+when only `H` changed, so the solved square, rows and corridor never re-solve on a bar
+slide — the dots would otherwise visibly resize on every scroll that moves the bar. The
+field still re-centres because `p7VertTopY` reads the live height each paint.
 
 **Canvas backing-store sync:** the canvas's pixel buffer is sized in `init()` (js/core.js)
 and *re-checked on every `draw()` frame* against `clientWidth/Height × dpr` (rounded ints,
@@ -240,13 +248,13 @@ throughout. What the breakpoint actually changes:
 | `--card-w` (`style.css`) | 480px | `min(480px, 100vw - 48px)` |
 | `.text-section` gutter | 48px | 24px |
 | `.section-title` | 20px (`#page-15`: 40px) | 16px (`#page-15`: 28px) |
-| `.page0-title` (hero) | 42px, `top: calc(50% - 276px)` | 32px, `top: calc(50% - 240px)` — the top compensates for the 3 lines shrinking ~36px, holding the tuned title/subtitle dot-column gaps |
+| `.page0-title` / `.page0-subtitle` (hero) | title 42px/`1.31`, `top: calc(50% - 276px)`; subtitle 18px/`1.52`, `top: calc(50% - 189.1px)` | title 32px/**`1.45`**, `top: calc(50% - 228.6px)`; subtitle 18px (unchanged) /**`1.465`**, `top: calc(50% - 168.8px)` — baked 2026-09-12. **Mobile overrides the leading too, and must.** `line-height` is unitless, so dropping the title to 32px alone took its leading to 41.92 against the subtitle's unchanged 27.36: the desktop **2:1 nest** (55.02 / 27.36 = 2.011) that locks the two baseline grids fell to 1.532 and the subtitle's lines walked against the title's by ~12.8px per line down the block. The shipped pair is 46.4 / 26.37 = **1.760**, ~6.3px per line — picked by eye against live baseline rulers, not solved to a whole ratio. Each `top` is solved so that text's **last baseline** sits a trimmed gap above its own dot column (title 18.5px, subtitle 20.5px); the `50%` cancels viewport height out, so only the 390px width it was tuned at matters. **Leading and `top` are one setting** — move either and re-solve the other |
 | `.text-card-frame` padding | `21px 29px` | `16px 22px` (holds the 1.38 h:v ratio); exception: @fold13's title frame (`.page9-title-row`) runs `padding-block: 8px` — its single short line read as an oversized fill at 16px. The subtitle's `-8px` margin-top is derived from it (gap − 10) |
 | camp header → top swatch row (`js/update-groups.js`) | `FOLD4_HEADER_GAP` 44 frame-units center-to-center, `H`-scaled | `FOLD4_HEADER_GAP_MOBILE_PX` — a flat **24px visible** gap, measured off the header's rendered height |
-| camp gap (`campCenterGapPx`, `js/groups.js`) | flat 162px half-gap | a fixed **90px visible** gap between the blocks' facing edges (`FOLD2_CAMP_EDGE_GAP_MOBILE_PX`), i.e. a 97px half-gap at the 4-wide shape — chosen by eye |
+| camp gap (`campCenterGapPx`, `js/groups.js`) | flat 162px half-gap | a fixed **90px visible** gap between the blocks' facing edges (`FOLD2_CAMP_EDGE_GAP_MOBILE_PX`), i.e. a 97px half-gap at the 4-wide shape — chosen by eye. **@fold3 has its own**, `FOLD3_CAMP_EDGE_GAP_MOBILE_PX` **82**, lerped from @fold2's over `alignT` — see below |
 | `.group-label` | 18px, `nowrap` | 16px, wraps, `width: max-content` + `max-width: 100px`, `direction: rtl` |
 | group-label font-size (inline, `js/update-groups.js`) | 18 column / 14 legend | 16 column / 12 legend — via `groupLabelColumnFontSize()` / `groupLabelLegendFontSize()` |
-| @fold3 row step (`fold3RowStep`) | 34px flat | per row: this row's tallest wrapped label + 12px (`FOLD3_ROW_LABEL_GAP_PX`), floored at 32 — equal visible gaps |
+| @fold3 row step (`fold3RowStep`) | 34px flat (`FOLD3_ROW_PITCH_DESKTOP_PX`, inside `updateGroups`) | per row: this row's tallest wrapped label + **13px** (`FOLD3_ROW_LABEL_GAP_PX`), floored at 32 (`FOLD3_MIN_ROW_PITCH_MOBILE_PX`) — equal visible gaps. Both mobile numbers are module-scope `var`s at the top of js/update-groups.js so a manual/ harness can drive them live; the desktop pitch deliberately stays a function-local `const`, so raising the mobile gap cannot reach it |
 | @fold7 legend row pitch (`fold6RowPitchPx()`) | 24px | measured — tallest wrapped legend label + 6px |
 | Mini-legend + ACLED note | Six DOM group rows over the canvas; the note sits above their top row | **Both collapse into the מקרא bar** — a card styled like the desktop note (tint, no border, no chevron, title row = the מקרא button) that opens width-then-height into the legend + note; the six rows fly into it at `@fold4` and it is **left open** from there on, the ACLED note joining it a fold later. See [Groups-and-Legend](Groups-and-Legend.md#the-mobile-מקרא-bar) |
 | `#page-15` (@fold16, the credits card) frame / title | sized from the viewport edges: `height: calc(100vh - 96px)` (48px gap top and bottom), width solved in JS by `p12CardWidthFit()` (page12.js, at load, on `document.fonts.ready` and on a debounced resize) — the narrowest width in 320–900px at which the copy still clears the bottom padding, which is also the width that FILLS the fixed height, since a narrower column is a taller one; the CSS `width: 520px` is that answer for a 982px-tall viewport and the fallback if the script never runs. 40px side padding, 42px top/bottom, copy vertically centred in whatever height is left over (`#page-15 .text-card` is `fit-content` so it stays centred) / 40px | `min(450px, 100vw-48px)` border-box, height auto / 28px |
@@ -257,6 +265,15 @@ that positions a camp — the @fold2 grid, @fold3's `campFold3X` column, and bot
 headers — now goes through `campAnchorX`, which reads `campCenterGapPx(W)`. Never
 reintroduce a direct `W/2 ± FOLD2_CAMP_CENTER_GAP_PX` at a call site; the headers would
 detach from their blocks on a phone.
+
+**On mobile @fold3 runs a tighter gap than @fold2.** By @fold3 the blocks are gone and it's
+two label runs facing each other, where the shared 90px reads too wide.
+`FOLD3_CAMP_EDGE_GAP_MOBILE_PX` (**82**, picked by eye with a `manual/` harness on
+2026-09-12 — 48px of visible corridor on a 390px phone, down from 56) is passed to
+`campCenterGapPx(W, edgeGapMobile)` as a lerp from @fold2's value over **`alignT`**, the beat
+that flies the rects into their column. So @fold2 keeps its own tuned number, the anchors
+never snap, and the camp headers (which ride `campAnchorX` too) stay centred over their camp
+throughout. Desktop passes no override and keeps one gap for both folds.
 
 **An inline style beats the stylesheet.** `updateGroups()` writes
 `label.style.fontSize` on every frame, so the mobile `.group-label { font-size: 13px }`
@@ -291,6 +308,16 @@ changes the label's font-size and wrapping, so `js/bootstrap.js`'s resize handle
 column and the smaller mini-legend ask at different sizes and different caps — see
 [Groups-and-Legend](Groups-and-Legend.md).) The hidden measuring span carries
 the real `.group-label` class, so the wrapped width feeds the layout math automatically.
+
+**A wrapped label measures by its widest LINE, not its box.** On mobile `.group-label` is
+`width: max-content` capped at 100px (140px for the two groups carrying `labelCapMobile`),
+so a label that wraps has an `offsetWidth` of exactly the cap while its lines each break
+short of it. `campFold3X` centres the camp title over that width, so box-width left the
+title visibly off-centre from the ink — worst in גוש השינוי, whose two long labels both run
+the 140px cap. `groupLabelWidth()` therefore measures a `Range` over the span's text node
+and takes the widest of its per-line client rects (`groupLabelInkWidth()`), falling back to
+`offsetWidth` if the API yields nothing. Desktop labels are `white-space: nowrap`, so the
+two numbers are identical there and nothing above the breakpoint moves.
 
 **Wrapped Hebrew needs both `direction` and `text-align`.** The document is `dir=ltr`, so
 a label's *paragraph* direction is LTR even though its characters lay out RTL by bidi. On
@@ -376,3 +403,32 @@ Known open gaps, in severity order — **none of these are fixed**:
 **Removed — don't reintroduce:** `index.html`'s fixed ♿ `.shk-a11y-btn` (and its
 `trigger.css` rule). It had no handler on any page, so it advertised an accessibility panel
 that did not exist.
+
+## Per-frame cost — the layout-read rule
+
+Anything called from a draw loop, a scroll handler or `updateGroups` runs tens of thousands
+of times a second. Two classes of call are forbidden there, both because they force the
+browser to flush style/layout:
+
+- **`window.innerWidth` / `window.innerHeight`.** `isMobile()` and `viewportH()` (js/core.js)
+  are **cached**, refreshed from the same comparison on `resize`/`orientationchange`. The
+  listener is registered in `core.js`, the first `js/` file `project.html` loads, so it
+  updates before any other resize handler and no consumer sees a stale value. A mobile
+  URL-bar collapse fires resize with the width unchanged, so `isMobile()` correctly holds.
+  Never go back to reading `innerWidth` live: it was **14.4% of all CPU** on a throttled
+  phone scrolling the early folds — the single largest entry in the profile.
+- **Linear scans and DOM measurement** — `GROUPS.find()` per dot, `getTotalLength()` per
+  frame, `offsetWidth` per row. Memoise, or hoist out of the loop.
+
+Measured on a 393×852 phone profile at 6× CPU throttle, scrolling folds 1–5: median frame
+**27.1ms → ~9ms**, frames over the 16.7ms budget **94% → ~13%**. The fixes, largest first:
+cached `isMobile()`; a cache on `p7EventForActorOccurrence` (uncached it ran 3216 times in a
+40-step scroll, each a linear scan over several thousand events); hoisting breakpoint reads
+out of `p7DrawSideSquares`/`p7OrchestrateRows`/`p7DrawTimelineSquares`; a per-row memo for
+the row cursor with one frame-wide timestamp; batching opaque squares into one `Path2D` per
+colour; cached `viewportH()` and memoised `fitDashArray()`.
+
+The pinned timeline (@fold9) stays the heaviest fold — ~22ms/frame at 6× throttle — but it is
+now dominated by **browser rasterisation of the full-screen canvas**, not by JS: 14,451
+squares on a 1179×2556 backing store. Further gains there need a rendering change, not
+another micro-optimisation. See [Timeline](Timeline.md) for the draw-loop specifics.

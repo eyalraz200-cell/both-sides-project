@@ -76,9 +76,12 @@ dropped; a row with an unmapped actor is skipped and reported as a startup warni
 `server.py`'s `load_events()` rebuilds the JSON **in memory on every server start**, and
 `/events.json` serves that — so local dev is always current with the xlsx.
 
-**The committed static `events.json` is NOT auto-written.** Deployments that don't run
-`server.py` read that file. If the xlsx changes and a deployment needs it, dump
-`server.py`'s `/events.json` output to the file manually.
+**The committed static `events.json` is auto-written on server start** (`_sync_static_events()`)
+whenever the generated content differs from the file on disk — same bytes as `/events.json`
+(`ensure_ascii=False`, single line), so an unchanged xlsx leaves git clean. Deployments that
+don't run `server.py` (GitHub Pages) read that file: after editing either xlsx, restart the
+server and **commit the rewritten `events.json`**. A stale copy with no `crowd` field makes
+`p7BulgeTier` return 0 for every event, and @fold10's size grid then never resizes anything.
 
 Note that `server.py`'s mtime watcher polls `.html`/`.css`/`.js` files only (at the root
 and under `js/`) — it does **not** watch the xlsx. Editing the spreadsheet requires a server

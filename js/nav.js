@@ -1,6 +1,42 @@
 // ── Scrollytelling: which text section is active drives the pinned canvas ──
 const sections = Array.from(document.querySelectorAll(".text-section"));
 
+// ── The fold badge ──────────────────────────────────────────────────────────
+// A small fixed chip in the TOP-LEFT corner showing the current @foldN — the
+// NUMBER ALONE, nothing else. That is the standard for fold numbers anywhere
+// they're displayed: no "@fold" prefix, no id, no label. @foldN is the project's
+// canonical 1-indexed numbering (CLAUDE.md's fold reference), which is always
+// currentPage's id + 1.
+// Ctrl+Shift+F hides/shows it, and the choice persists in localStorage. The
+// access is wrapped in try/catch — browsers with storage blocked (Safari's
+// "Block all cookies", strict private browsing, some corporate policies) throw
+// a SecurityError on access rather than failing quietly, which would otherwise
+// kill this whole script and blank the page for anyone with those settings.
+const foldNumberBadge = document.getElementById("foldNumberBadge");
+if (foldNumberBadge) {
+  const FOLD_BADGE_VISIBLE_KEY = "foldNumberBadgeVisible";
+  let pref = null;
+  try { pref = localStorage.getItem(FOLD_BADGE_VISIBLE_KEY); } catch {}
+  // Shown unless it was explicitly switched off — it's a reading aid you want
+  // on by default while working on the folds.
+  if (pref !== "0") foldNumberBadge.classList.add("is-visible");
+  window.addEventListener("keydown", (e) => {
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "f") {
+      e.preventDefault();
+      const visible = foldNumberBadge.classList.toggle("is-visible");
+      try { localStorage.setItem(FOLD_BADGE_VISIBLE_KEY, visible ? "1" : "0"); } catch {}
+    }
+  });
+}
+
+function updateFoldNumberBadge() {
+  if (foldNumberBadge) foldNumberBadge.textContent = String(currentPage + 1);
+}
+// First paint: @fold1 is the page's starting state and never crosses
+// setActivePage (which returns early on page === currentPage), so the badge
+// would sit empty until the first scroll without this.
+updateFoldNumberBadge();
+
 function setActivePage(page) {
   // @fold9's size-grid toggle (page7.js) lives on that page only — snapped
   // off before any handoff below reads the timeline's positions.
@@ -82,6 +118,7 @@ function setActivePage(page) {
   }
 
   currentPage = page;
+  updateFoldNumberBadge();
   updateGroups();
   draw();
 

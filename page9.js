@@ -258,6 +258,10 @@ function p9TrayTopV2() {
 // layout's — ten pills deep, the longest one wide — and this is the clear air
 // left on EACH side of it inside the canvas gap.
 const P9_ZONE_GAP_SLACK_V2 = 64; // widened from 40 — a one-column-wide side sat too close to the zone
+// Tiers on AND a side still doesn't fit at full tier size (a big category on a
+// small desktop): that side may reclaim the gap, coming this close to the zone.
+// Every other case keeps P9_ZONE_GAP_SLACK_V2.
+const P9_ZONE_GAP_SLACK_TIGHT_V2 = 20;
 const P9_TRAY_ZONE_GAP_V2   = 18;
 const P9_COUNT_LABEL_ROOM_V2 = 28; // one 12px count line + breathing room above the grid
 // Clear air between the pill row and the TOP of a full-height extreme column
@@ -1104,11 +1108,11 @@ function p9ScopeTiered() {
 
 // This event's block width in CELLS, capped twice: by P9_SCOPE_TIER_CAP and by
 // the box itself, so a block can never be wider than the side it lives in.
-function p9ScopeCellsFor(ev, colsMax) {
+function p9ScopeCellsFor(ev, colsMax, cap) {
   if (!p9ScopeTiered()) return 1;
   const tier  = typeof p7BulgeTier === "function" ? p7BulgeTier(ev) : 0;
   const cells = (typeof P7_GRID_TIER_CELLS !== "undefined" && P7_GRID_TIER_CELLS[tier]) || 1;
-  return Math.max(1, Math.min(cells, P9_SCOPE_TIER_CAP, colsMax || Infinity));
+  return Math.max(1, Math.min(cells, cap ?? P9_SCOPE_TIER_CAP, colsMax || Infinity));
 }
 
 // Bottom-left skyline packer over CELL coordinates: columns count from the
@@ -1167,27 +1171,52 @@ function p9ScopeCacheKey(side, colsMax, rowsMax, visLen) {
 // in ~log2(colsMax) packs, and the whole thing is cached anyway.
 function p9ScopeSolveCols(visList, colsMin, colsMax, rowsMax) {
   if (!p9ScopeTiered()) return colsMin;
+  const wide = Math.max(colsMin, colsMax);
+  // Nothing fits even at the full width (a big category — הפגנה לא אלימה —
+  // on a small desktop): cap the biggest blocks one step at a time, only as
+  // far as needed to fit, rather than let the columns overflow. Every other
+  // case keeps the full P9_SCOPE_TIER_CAP.
+  let cap = P9_SCOPE_TIER_CAP;
+  while (cap > 1 && p9PackColumns(visList, wide, e => p9ScopeCellsFor(e, wide, cap)).rows > rowsMax) cap--;
+  p9ScopeSolveCols.lastCap = cap;
+  const packAt = (c) => p9PackColumns(visList, c, e => p9ScopeCellsFor(e, c, cap));
+  // Capped: use the whole width — narrowing at a cap that just fits the full
+  // width would only shrink the blocks further than needed.
+  if (cap < P9_SCOPE_TIER_CAP) return { cols: wide, layout: packAt(wide) };
   let lo = Math.max(1, colsMin), hi = Math.max(lo, colsMax), best = null;
-  const packAt = (c) => p9PackColumns(visList, c, e => p9ScopeCellsFor(e, c));
   while (lo <= hi) {
     const mid = (lo + hi) >> 1;
     const layout = packAt(mid);
     if (layout.rows <= rowsMax) { best = { cols: mid, layout }; hi = mid - 1; }
     else lo = mid + 1;
   }
-  // Nothing fits even at the full width — take the widest, which clips least.
-  return best || { cols: Math.max(colsMin, colsMax), layout: packAt(Math.max(colsMin, colsMax)) };
+  // Still nothing fits at cap 1 — take the widest, which clips least.
+  return best || { cols: wide, layout: packAt(wide) };
 }
 
-function p9ScopeLayoutFor(side, colsMin, colsMax, rowsMax, visList) {
-  const key  = p9ScopeCacheKey(side, colsMax, rowsMax, visList.length);
+function p9ScopeLayoutFor(side, colsMin, colsMax, rowsMax, visList, colsOwn) {
+  const key  = p9ScopeCacheKey(side, colsMax, rowsMax, visList.length) + "|" + (colsOwn || 0);
   const slot = p9.scopeLayout && p9.scopeLayout[side];
   if (slot && slot.key === key) return slot.layout;
   let layout;
   if (p9ScopeTiered()) {
-    const solved = p9ScopeSolveCols(visList, colsMin, colsMax, rowsMax);
+    let solved = p9ScopeSolveCols(visList, colsMin, colsMax, rowsMax);
+    // Didn't fit at the shared ceiling without capping: try this side's own room.
+    if (colsOwn > colsMax && solved.cols >= colsMax && solved.layout.rows <= rowsMax
+        && p9ScopeSolveCols.lastCap < P9_SCOPE_TIER_CAP) {
+      solved = p9ScopeSolveCols(visList, colsMin, colsOwn, rowsMax);
+    }
+    // Still capped: take the gap toward the drop zone too (V2 desktop only).
+    let inset = 0;
+    if (p9ScopeSolveCols.lastCap < P9_SCOPE_TIER_CAP && p9IsV2()) {
+      const extra = Math.floor((P9_ZONE_GAP_SLACK_V2 - P9_ZONE_GAP_SLACK_TIGHT_V2) / P9_CELL);
+      const own = Math.max(colsOwn || 0, colsMax);
+      solved = p9ScopeSolveCols(visList, colsMin, own + extra, rowsMax);
+      inset = extra * P9_CELL;
+    }
     layout = solved.layout;
     layout.cols = solved.cols;
+    layout.inset = inset;
   } else {
     layout = p9PackColumns(visList, colsMin, e => 1);
     layout.cols = colsMin;
@@ -1201,6 +1230,24 @@ function p9ScopeLayoutFor(side, colsMin, colsMax, rowsMax, visList) {
 // pitch, between which two screen y's. Untiered it is exactly today's box, so
 // nothing about the fold at rest changes. Tiered, the room mode picks how the
 // extra area is found.
+// Inner edges of the fixed side UI (legend swatches, scope pill), in canvas px. Falls back to the viewport edges.
+function p9ScopeSideUi(W, centerX, rightX0) {
+  let left = 0, right = W;
+  // Only the parts that never change width: the legend's swatches and the
+  // scope pill. Opening the legend (labels) or the ACLED note must NOT push
+  // the dots.
+  const els = document.querySelectorAll(".group-swatch, .p7-scope-btn");
+  for (const el of els) {
+    const r = el.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) continue;
+    const cs = getComputedStyle(el);
+    if (cs.visibility === "hidden" || +cs.opacity === 0) continue;
+    if (r.right <= centerX && r.right > left) left = r.right;
+    else if (r.left >= rightX0 && r.left < right) right = r.left;
+  }
+  return { left, right };
+}
+
 function p9ScopeBox(W, H, colsTotal, topY, midY, centerX, rightX0, CELL) {
   const box = { cols: colsTotal, colsMax: colsTotal, cellPx: CELL, topY, anchorY: midY };
   box.rowsMax = Math.max(1, Math.floor((midY - topY) / CELL));
@@ -1210,9 +1257,17 @@ function p9ScopeBox(W, H, colsTotal, topY, midY, centerX, rightX0, CELL) {
   // p9ScopeSolveCols). This is just the ceiling on that: how wide a side could
   // get while keeping P9_SCOPE_WIDEN_MARGIN clear of the edge. Both sides share
   // the one ceiling, taken from the narrower side.
-  const leftRoom  = centerX - P9_SCOPE_WIDEN_MARGIN;
-  const rightRoom = W - P9_SCOPE_WIDEN_MARGIN - rightX0;
+  // The edge is the side UI, not the viewport: the mini-legend, the scope
+  // pill and the ACLED note sit at both edges, and on a small desktop a big
+  // category (הפגנה לא אלימה) widened the columns underneath them.
+  const ui = p9ScopeSideUi(W, centerX, rightX0);
+  const leftRoom  = centerX - ui.left - P9_SCOPE_WIDEN_MARGIN;
+  const rightRoom = ui.right - P9_SCOPE_WIDEN_MARGIN - rightX0;
   box.colsMax = Math.max(colsTotal, Math.floor(Math.min(leftRoom, rightRoom) / CELL));
+  // Per-side ceilings: a side may use its own room when the shared one is too
+  // tight for it (p9ScopeSolveCols only reaches past colsMax to avoid capping).
+  box.colsMaxLeft  = Math.max(colsTotal, Math.floor(leftRoom / CELL));
+  box.colsMaxRight = Math.max(colsTotal, Math.floor(rightRoom / CELL));
   return box;
 }
 
@@ -1501,6 +1556,9 @@ function drawPage9(ctx, W, H) {
     let animRaw = 1;
     // Absolute ms at which this dot's size beat starts (its flight is over).
     let animSizeAt = 0;
+    // Size the dot passes through between the flight part and the staged part
+    // of its resize (see `staged` below).
+    let sizePivot = null;
     // Resolved up here, not after the flight: whether this dot resizes at all
     // decides whether its POSITION beat is compressed (see below).
     const targetSq = sizeOverride ?? SQ;
@@ -1580,8 +1638,18 @@ function drawPage9(ctx, W, H) {
         // morph's strict-fly. A dot whose size doesn't change (big desktop,
         // where legitSq === SQ) keeps the uncompressed clock exactly, and
         // plainGlide is excluded outright so page8's handoff is untouched.
+        // Only the TIER part of a size change is staged. The legit<->extreme
+        // grid size difference (legitSq vs SQ — depends on the viewport, e.g.
+        // small desktop) rides the flight itself so it isn't noticed; with the
+        // tiers on, the dot flies to/from SQ and the SQ<->tier step is the beat.
+        const grows0 = from.sq !== undefined && targetSq > from.sq;
+        const tierOn = typeof p9ScopeTiered === "function" && p9ScopeTiered();
+        sizePivot = from.sq === undefined ? targetSq
+          : grows0 ? (tierOn && targetSq > SQ + 0.01 ? Math.max(from.sq, SQ) : targetSq)
+          : (tierOn && from.sq > SQ + 0.01 ? Math.max(targetSq, SQ) : from.sq);
+        const staged = grows0 ? Math.abs(targetSq - sizePivot) > 0.01 : Math.abs(sizePivot - (from.sq ?? 0)) > 0.01;
         const resizes = from.sq !== undefined
-          && Math.abs(targetSq - from.sq) > 0.01
+          && Math.abs(targetSq - from.sq) > 0.01 && staged
           && !(p9.anim.plainGlide && p9.anim.fromSQ !== undefined);
         // ...and the mirror image on the way OUT. Removing a pill sends its
         // dots back to the legit grid, i.e. they SHRINK — and there the order
@@ -1652,7 +1720,12 @@ function drawPage9(ctx, W, H) {
       // order is reversed instead of mirrored (see `shrinks` above): the beat
       // runs first, at the head of the slot, and the flight home follows it.
       const sizeT = p7MorphWin(performance.now() - animSizeAt, [0, P9_DROP_SIZE_MS]);
-      sq = from.sq + (sq - from.sq) * sizeT;
+      const piv = sizePivot ?? sq;
+      const grows = sq > from.sq;
+      // Grow: flight carries from->pivot, the beat pivot->target.
+      // Shrink: the beat carries from->pivot, the flight pivot->target.
+      sq = from.sq + (piv - from.sq) * (grows ? animT : sizeT)
+                   + (sq - piv)      * (grows ? sizeT : animT);
     }
     // Now that this frame's size is known, put the (possibly mid-resize) block
     // back on its animated centre. Without an animation the centre is null and
@@ -1777,7 +1850,8 @@ function drawPage9(ctx, W, H) {
     const visIndex = new Map(vis.map((e, i) => [e, i]));
     const visN = vis.length;
     const layout = p9ScopeLayoutFor(rightAlign ? "left" : "right",
-      cols, scopeBox.colsMax, scopeBox.rowsMax, vis);
+      cols, scopeBox.colsMax, scopeBox.rowsMax, vis,
+      rightAlign ? scopeBox.colsMaxLeft : scopeBox.colsMaxRight);
     const slotOf = new Map();
     orderArr.forEach((e, i) => slotOf.set(e, visIndex.has(e) ? visIndex.get(e) : i));
     // Hover bulges are off while the tiers are showing: the blocks already ARE
@@ -1800,7 +1874,8 @@ function drawPage9(ctx, W, H) {
       const r = P ? P.r : Math.floor(rawI / cols);
       // A block of n cells spans n columns out from the gap and n rows up from
       // the anchor; at n === 1 this is the old single-cell arithmetic exactly.
-      let x = rightAlign ? centerX - (c + n) * cell : rightX0 + c * cell;
+      const inset = layout.inset || 0;
+      let x = rightAlign ? centerX + inset - (c + n) * cell : rightX0 - inset + c * cell;
       let y = scopeBox.anchorY - (r + n) * cell;
       let size = tiered ? n * cell - gapPx : undefined;
       if (bulges.length) {
@@ -1835,6 +1910,7 @@ function drawPage9(ctx, W, H) {
       [rightAlign ? "leftRows" : "rightRows"]: layout.rows,
       [rightAlign ? "leftClipped" : "rightClipped"]: clipped,
       [rightAlign ? "leftCols" : "rightCols"]: layout.cols,
+      [rightAlign ? "leftInset" : "rightInset"]: layout.inset || 0,
       colsMax: scopeBox.colsMax, cellPx: Math.round(cell * 100) / 100,
       rowsMax: scopeBox.rowsMax,
     });
@@ -2067,8 +2143,8 @@ function drawPage9(ctx, W, H) {
         ? Math.min(stats.leftCols  ?? extremeColsTotal, p9.leftTopOrder.length)  : 0;
       const rightDrawnCols = p9.rightTopOrder.length
         ? Math.min(stats.rightCols ?? extremeColsTotal, p9.rightTopOrder.length) : 0;
-      const leftPos  = p9AnimateLeftCountPos(centerX - leftDrawnCols * CELL / 2, countsY);
-      const rightPos = p9AnimateRightCountPos(rightX0 + rightDrawnCols * CELL / 2, countsY);
+      const leftPos  = p9AnimateLeftCountPos(centerX + ((p9.scopeStats && p9.scopeStats.leftInset) || 0) - leftDrawnCols * CELL / 2, countsY);
+      const rightPos = p9AnimateRightCountPos(rightX0 - ((p9.scopeStats && p9.scopeStats.rightInset) || 0) + rightDrawnCols * CELL / 2, countsY);
       drawEventsCount(leftCount,  leftPos.x,  leftPos.y);
       drawEventsCount(rightCount, rightPos.x, rightPos.y);
     }
@@ -2701,13 +2777,31 @@ function p9BuildPanel() {
     // אלימה) first. `order` re-sequences the flex row to the desktop reading
     // order (V2's single-row column order), per explicit instruction; both
     // desktop grids ignore it because every pill is explicitly placed.
-    pill.style.order = String(P9_TRAY_GRID_V2[idx].col);
-    // Desktop V2 pop-in index (teacher review 2026-09-03, H2): the pills pop
-    // in one after another from the RIGHT end of the band (col 1, the first
-    // in RTL reading order) to the left, the band's rule drawing under them
-    // in step — see the .page9-layout-v2.engaged rules in style.css, which
-    // read this as the per-pill transition delay.
-    pill.style.setProperty("--p9-pop-i", String(P9_TRAY_GRID_V2[idx].col - 1));
+    // `order` re-sequences the flex row to the desktop reading order (V2's
+    // single-row column order), per explicit instruction. It is published as a
+    // custom property rather than set directly, because mobile needs TWO
+    // sequences off the same roster and CSS can only hold one `order` at a
+    // time: the finished ROW runs col 1 at the right, and @fold12's vertical
+    // COLUMN runs the mirror of it (see --p9-order-col). The `order` property
+    // itself is assigned in style.css, per state. Both desktop grids ignore
+    // `order` entirely because every pill is explicitly placed.
+    const col = P9_TRAY_GRID_V2[idx].col;   // 1 = rightmost in the RTL row
+    pill.style.setProperty("--p9-order-row", String(col));
+    // @fold12's column, top to bottom = the finished row LEFT to RIGHT, per
+    // explicit instruction. That is what makes the convoy work: the top pill is
+    // the one with the furthest-left slot, so it leaves first and every cabin
+    // behind it stops SHORT of the one ahead — nothing ever overtakes a pill
+    // already parked. Run it the other way and each cabin has to fly past the
+    // whole train to reach its slot.
+    pill.style.setProperty("--p9-order-col", String(11 - col));
+    // Pop-in index, one per sequence, both 0-based and both counting from the
+    // end that pops FIRST. Row (teacher review 2026-09-03, H2): the pills pop
+    // one after another from the RIGHT end of the band to the left, the band's
+    // rule drawing under them in step — desktop V2's whole band, and on mobile
+    // @fold13's ⓘ + selection circle. Column: top to bottom, so @fold12's
+    // vertical line builds downward.
+    pill.style.setProperty("--p9-pop-i", String(col - 1));
+    pill.style.setProperty("--p9-pop-col-i", String(10 - col));
 
     // Handle first, label second: per explicit request, the grip dots sit on
     // the right edge of the pill — in this RTL flex row that means the handle
@@ -2718,6 +2812,21 @@ function p9BuildPanel() {
     handle.className = "page9-handle";
     for (let i = 0; i < 6; i++) handle.appendChild(document.createElement("span"));
     pill.appendChild(handle);
+
+    // Mobile-only selection affordance: an 18px circle on the pill's RIGHT
+    // edge (first DOM child after the hidden handle, so RTL puts it there —
+    // the slot the grip dots vacate under the breakpoint). Empty at rest,
+    // filled with a ✓ once the pill is .is-extreme, which is exactly the class
+    // the mobile tap handler toggles. Like the ✕ below it is NOT a control:
+    // the whole pill stays the one tap target, so a <span> with
+    // pointer-events:none and aria-hidden (the pill's own aria-pressed, kept
+    // by syncPillA11y, is what the a11y tree reads). It pops in on @fold13's
+    // .engaged with the ⓘ, one beat after the pills themselves arrive — see
+    // the 600px block in style.css.
+    const checkEl = document.createElement("span");
+    checkEl.className = "page9-pill-check";
+    checkEl.setAttribute("aria-hidden", "true");
+    pill.appendChild(checkEl);
 
     const labelEl = document.createElement("span");
     labelEl.className   = "page9-pill-label";
@@ -3114,7 +3223,10 @@ p9BuildPanel();
 // CSS-toggled <p>s so there is exactly one copy of each string, and re-synced
 // on resize so crossing the breakpoint corrects it live.
 const P9_SUBTITLE_DESKTOP = "גררו סוגי פעולות הנחשבות קיצוניות בעיניכם";
-const P9_SUBTITLE_MOBILE  = "בחרו סוגי פעולות הנחשבות קיצוניות בעיניכם";
+// «סמנו», not «בחרו»/«גררו»: mobile classifies by ticking the pill's own
+// selection circle in place (.page9-pill-check), so the verb names that mark
+// rather than a drag or a pick.
+const P9_SUBTITLE_MOBILE  = "סמנו פעולות הנחשבות לקיצוניות בעיניכם";
 function p9SyncSubtitle() {
   const el = document.querySelector(".page9-header-subtitle");
   if (el) el.textContent = isMobile() ? P9_SUBTITLE_MOBILE : P9_SUBTITLE_DESKTOP;
@@ -3374,10 +3486,26 @@ function p9HoverInit() {
     // when mirrored — the design's pointer corner, see style.css) a small
     // gap away from the dot on both axes, growing up and away from the
     // canvas's center gap, rather than flush against it.
-    const dotClientY = rect.top  + bestPos.y;
+    // The box hangs off the dot's own DRAWN box, not off its top-left corner —
+    // the same fix @fold10's size grid needed (page7.js's own hover, see its
+    // `ownSq`/`halfX` comment). With the flat square the two are the same thing
+    // to the eye, but under @fold13's «הצגת גודל האירועים» a block is tens of px
+    // wide and anchoring the rightward box to bestPos.x laid it ON the block
+    // instead of beside it (the mirrored side only looked right because
+    // bestPos.x IS that side's edge). Half-extent includes the hover bulge, same
+    // as the hit box above, but recomputed off bestEvent rather than reusing
+    // hovHalf: that was measured from the PREVIOUS hovered dot, and on the frame
+    // the hover first lands on a dot the two are different events. p9BulgeSize
+    // is live-eased, so the box tracks the bulge as it grows instead of jumping
+    // to its end size.
+    const ownSq  = bestPos.sq ?? P9_SQ;
+    const halfX  = Math.max(p9BulgeSize(bestEvent), ownSq) / 2;
+    const centerX = dotClientX + ownSq / 2;
+    const centerY = rect.top + bestPos.y + ownSq / 2;
+    const dotClientY = centerY - halfX;   // the drawn box's TOP edge
     const rawLeft = mirrored
-      ? dotClientX - TOOLTIP_GAP - tooltipEl.offsetWidth
-      : dotClientX + TOOLTIP_GAP;
+      ? centerX - halfX - TOOLTIP_GAP - tooltipEl.offsetWidth
+      : centerX + halfX + TOOLTIP_GAP;
     const left = Math.max(8, Math.min(rawLeft, window.innerWidth - tooltipEl.offsetWidth - 8));
     // Flip downward when opening upward would poke above the column area's
     // fixed ceiling (p9ExtremeTopY — the same boundary the grid itself grows
@@ -3389,7 +3517,7 @@ function p9HoverInit() {
     const flipped = rawTop < rect.top + p9ExtremeTopY(canvasEl.clientHeight);
     tooltipEl.classList.toggle("is-flipped", flipped);
     const top = flipped
-      ? dotClientY + (bestPos.sq ?? P9_SQ) + TOOLTIP_GAP
+      ? centerY + halfX + TOOLTIP_GAP
       : Math.max(rawTop, 8);
     tooltipEl.style.left = `${left}px`;
     tooltipEl.style.top  = `${top}px`;
@@ -3524,3 +3652,208 @@ function p9CategoryTooltipInit() {
 }
 
 p9CategoryTooltipInit();
+
+/* =========================================================================
+   THE CONVOY — @fold12's wrapped block → @fold13's single row (mobile only)
+   =========================================================================
+   Mobile's finished band is one horizontally-scrolling row of all 10 pills, of
+   which about three are on screen. That is the right shape to USE and the wrong
+   shape to ARRIVE in, so the two folds now carry two layouts: @fold12's
+   `.pills-in` pops the pills into a wrapped, centred block where all ten are
+   visible (`.page9-sticky:not(.engaged) #page9ZoneBelow`, style.css), and
+   @fold13's stick threads them out of it into the row.
+
+   "First up, THEN left — not together", per explicit instruction. Each cabin's
+   travel is TWO STRICT PHASES on its own clock, never blended:
+
+     1. UP    — y only. The cabin rises straight out of the column to the
+                finished row's line. Its x does not move by a single pixel.
+     2. LEFT  — x only, and only once phase 1 has fully landed. The cabin runs
+                along the row line into its slot.
+
+   Each leg is timed by SPEED, not duration, so no cabin ever overtakes another
+   — see P9_TRAIN_UP_SPEED / P9_TRAIN_ACROSS_SPEED below for why that is a
+   guarantee rather than a tuning.
+
+   Each phase is a {start, len} window on the cabin's own RAW progress with
+   p9Ease re-applied fresh per window — the house rule for multi-beat motion —
+   so the corner between them is a real stop-and-turn rather than a curve
+   through it.
+
+   Removed — don't reintroduce: a single quadratic bezier through
+   {block x, row y}. It blends the two, which resolves the vertical early and
+   then plays the whole long leftward run ALONG THE TOP — the "why do they fly
+   from the top?" reading.
+
+   Order of departure is read off the COLUMN, top to bottom. Each cabin leaves
+   P9_TRAIN_LEAD_MS after the one ahead, so the line never breaks. Reverse is the mirror in both senses: the order flips (the
+   last cabin in is the first to pull out) AND the phases swap, so it runs
+   sideways back out of the row first and only then drops into the column.
+
+   Standard FLIP, because the layout itself changes: measure the block, flip the
+   class, measure the row, then play the pills back from where they were. Nothing
+   about the DOM order or the flex `order` changes — only transforms — so the
+   drop/tap machinery underneath is untouched.
+
+   Position animates continuously per the house rule; the pills' own pop
+   transition, and the row's `overflow-x` clipping, are both suspended for the
+   duration by `.training` (style.css). */
+
+// The two phases are timed by SPEED, not by duration — every cabin moves at the
+// same pace and simply takes as long as its own distance needs. That is what
+// keeps them from colliding, and it is a guarantee rather than a tuning:
+//
+//   · Vertically, constant speed means consecutive cabins hold exactly the
+//     column pitch they started with all the way up. A fixed duration made a
+//     cabin five slots down cover five times the distance in the same time, so
+//     it closed on the one above it.
+//   · Horizontally, cabin k's slot is one pill-pitch right of cabin k-1's, and
+//     k departs later — so at equal speed k can never catch k-1, and the gap it
+//     settles into IS the resting pitch. A fixed duration made the long-haul
+//     cabins ~18x faster than the short ones, and they drove straight through
+//     the queue.
+//
+// Both are px/ms, picked by eye against the 390px viewport. The LEAD is what
+// separates departures, and it is the third thing the no-collision guarantee
+// rests on (the other two being equal speed and the right-aligned column):
+// a cabin has to have cleared the junction before the one behind it climbs into
+// it. 110 left a 9x8px corner graze between consecutive cabins — the arriving
+// one accelerates out of rest on p9Ease, so its first frames cover very little
+// ground. 140 measures clean: zero overlapping pairs across the whole run.
+const P9_TRAIN_UP_SPEED     = 0.8;  // px/ms, the climb out of the column
+const P9_TRAIN_ACROSS_SPEED = 1.6;  // px/ms, the run along the row
+const P9_TRAIN_LEAD_MS      = 140;  // how far each cabin trails the one ahead of it
+// NO minimum leg duration. A floor is the obvious thing to reach for so a short
+// hop still reads as a move, and it is exactly what breaks the no-collision
+// guarantee: it slows SHORT legs only, and short legs are where cabins are
+// closest together. A cabin one slot up from the column floor got floored to a
+// crawl while the one five slots below it ran at full speed and closed on it —
+// 24 overlapping pairs, worst 102x38px. Distance over speed, always; the only
+// special case is a leg with no distance at all, which takes no time (that is
+// how the top cabin skips its climb entirely).
+// Removed — don't reintroduce: P9_TRAIN_MIN_LEG_MS.
+// Two cabins count as the same column row only if their tops are within this —
+// a guard against sub-pixel layout noise, not a real tolerance (the column's
+// rows are a pill-height plus the 14px gap apart).
+const P9_TRAIN_ROW_EPS      = 6;
+function p9TrainLegMs(dist, speed) {
+  return dist < 0.5 ? 0 : dist / speed;
+}
+// Only a fallback for the band rule's CSS transition before a run has been
+// measured; p9TrainToggle overwrites --p9-train-total with the real figure.
+function p9TrainTotalMs() { return 1500; }
+
+let p9TrainRaf = null;
+
+// Viewport-space centre of an element, the one coordinate the bezier works in.
+function p9TrainCentre(el) {
+  const r = el.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+}
+
+// The departure sequence, read off the BLOCK layout: rows top to bottom, and
+// within each row rightmost first. Returns each pill's place in that queue, by
+// its index in `pills`.
+function p9TrainOrder(blockPos) {
+  return blockPos
+    .map((p, i) => ({ i, p }))
+    .sort((a, b) => {
+      const dy = a.p.y - b.p.y;
+      if (Math.abs(dy) > P9_TRAIN_ROW_EPS) return dy;   // higher row leaves first
+      return b.p.x - a.p.x;                             // then rightmost first (RTL)
+    })
+    .reduce((seq, e, n) => { seq[e.i] = n; return seq; }, []);
+}
+
+// `next` is the engaged state we're moving TO. Does the class toggle itself,
+// since the measurement has to straddle it.
+function p9TrainToggle(next) {
+  const sticky = document.querySelector(".page9-sticky");
+  if (!sticky) return;
+  const pills = Array.from(document.querySelectorAll("#page9ZoneBelow .page9-pill"));
+  // No pills on screen yet (the band never arrived), reduced motion, or the
+  // desktop layout: just flip the class and let CSS hold the end state.
+  if (!pills.length || !isMobile() || prefersReducedMotion()) {
+    sticky.classList.toggle("engaged", next);
+    return;
+  }
+
+  if (p9TrainRaf) { cancelAnimationFrame(p9TrainRaf); p9TrainRaf = null; }
+  // `.training` FIRST, and it kills the tray's own 0.85s slide transition
+  // (style.css) — which is what makes the next line safe.
+  sticky.classList.add("training");
+  // The band must be AT ITS RESTING SPOT before anything is measured. Engaging
+  // without `.pills-in` already on — a jump or a fast scroll straight into
+  // @fold13, where @fold12's crossing never got a tick — otherwise leaves the
+  // tray parked in its hidden pose, off the TOP edge
+  // (`translate(-50%, calc(-100% - 116px))`), and the FLIP faithfully measures
+  // it there: every pill then flies in from above the screen instead of rising
+  // out of the column. page9UpdateFromScroll has always carried this same
+  // safety net, but it ran AFTER this function, which is too late to be
+  // measured. With the transition suppressed the class lands instantly, so the
+  // read below is the real column.
+  if (next) sticky.classList.add("pills-in");
+  // FIRST — where every pill is right now, with the outgoing layout still on and
+  // any in-flight transform cleared, so we measure real layout rather than a
+  // half-played frame.
+  pills.forEach(p => { p.style.transform = ""; });
+  const from = pills.map(p9TrainCentre);
+
+  // LAST — flip to the incoming layout and measure again.
+  sticky.classList.toggle("engaged", next);
+  sticky.style.setProperty("--p9-train-total", `${p9TrainTotalMs()}ms`);
+  const to = pills.map(p9TrainCentre);
+
+  // Whichever end is the COLUMN gives the queue its order.
+  const block = next ? from : to;
+  const seq   = p9TrainOrder(block);
+  const last  = pills.length - 1;
+
+  // Per-cabin schedule, in ms: when it leaves, how long each of its two legs
+  // takes at the shared speed. Mirrored on the way out — the cabin that arrived
+  // last pulls out first.
+  const plan = pills.map((pill, i) => {
+    const lead = next ? seq[i] : last - seq[i];
+    return {
+      at:     lead * P9_TRAIN_LEAD_MS,
+      upMs:   p9TrainLegMs(Math.abs(to[i].y - from[i].y), P9_TRAIN_UP_SPEED),
+      acrMs:  p9TrainLegMs(Math.abs(to[i].x - from[i].x), P9_TRAIN_ACROSS_SPEED)
+    };
+  });
+  // The real length of THIS run — the band rule scales in over exactly it.
+  const totalMs = Math.max(...plan.map(p => p.at + p.upMs + p.acrMs));
+  sticky.style.setProperty("--p9-train-total", `${Math.round(totalMs)}ms`);
+
+  const start = performance.now();
+  function frame(now) {
+    let running = false;
+    pills.forEach((pill, i) => {
+      const q  = plan[i];
+      const el = now - start - q.at;               // this cabin's own clock
+      if (el < q.upMs + q.acrMs) running = true;
+      // Two legs on one clock, each eased fresh from its own raw slice. The
+      // second is still exactly 0 for the whole of the first, so the cabin
+      // genuinely stops at the corner.
+      const c = v => Math.max(0, Math.min(1, v));
+      const firstT  = p9Ease(q.upMs  ? c(el / q.upMs) : 1);
+      const secondT = p9Ease(q.acrMs ? c((el - q.upMs) / q.acrMs) : 1);
+      // Going in: UP is phase 1, LEFT is phase 2. Coming out, the mirror — it
+      // runs back across the row first, then drops into the column.
+      const yT = next ? firstT : secondT;
+      const xT = next ? secondT : firstT;
+      // `to[i]` is where CSS has already put the pill, so the transform is the
+      // offset from there.
+      const px = from[i].x + (to[i].x - from[i].x) * xT;
+      const py = from[i].y + (to[i].y - from[i].y) * yT;
+      pill.style.transform = `translate(${px - to[i].x}px, ${py - to[i].y}px)`;
+    });
+    if (running) { p9TrainRaf = requestAnimationFrame(frame); return; }
+    // Settled: hand the pills back to CSS, which is already holding the end
+    // state — clearing the inline transform must come with the class, or the
+    // pop transition would animate the removal of a zero offset.
+    p9TrainRaf = null;
+    pills.forEach(p => { p.style.transform = ""; });
+    sticky.classList.remove("training");
+  }
+  p9TrainRaf = requestAnimationFrame(frame);
+}

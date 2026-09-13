@@ -14,6 +14,21 @@ const SWATCH_VANISH_PX = 1;
 // same-frame calls queue one rerun next frame so no state change is dropped.
 let ugRanThisFrame = false;
 let ugRerunQueued  = false;
+// @fold3's MOBILE row spacing — the two numbers that decide the gap between one
+// group and the next on a phone. `var`, not `const`, and at module scope rather
+// than inside updateGroups(), so a manual/ harness can drive them live
+// (wiki/Dev-Workflow.md); updateGroups reads them fresh every frame either way.
+//
+// MOBILE ONLY. Desktop's spacing is FOLD3_ROW_PITCH_DESKTOP_PX, a flat pitch
+// that lives inside updateGroups() and must stay there — the whole point of the
+// split is that raising the mobile gap can never leak into the desktop column.
+//
+// FOLD3_ROW_LABEL_GAP_PX is the VISIBLE gap under a row's wrapped label;
+// FOLD3_MIN_ROW_PITCH_MOBILE_PX is the floor the resulting step is clamped to,
+// so short labels never pack tighter than this.
+var FOLD3_ROW_LABEL_GAP_PX = 13;
+var FOLD3_MIN_ROW_PITCH_MOBILE_PX = 32;
+
 function updateGroups() {
   if (ugRanThisFrame) {
     if (!ugRerunQueued) {
@@ -145,7 +160,8 @@ function updateGroups() {
   // decide: the desktop pitch must stay exactly the tuned 32 whatever the
   // one-line labels happen to measure, so the mobile gap can be raised without
   // any chance of it leaking into the desktop column.
-  const FOLD3_ROW_LABEL_GAP_PX = 12; // mobile only — see the max() below
+  // (hoisted to module scope as FOLD3_ROW_LABEL_GAP_PX — see the top of this
+  // file; `var` so a manual/ harness can drive it live. MOBILE ONLY.)
   // ONE knob per breakpoint, nothing else has a vote.
   // Desktop: the pitch is this flat number, full stop — 34 = a 23px visible gap
   // + the 11px swatch. No max() against label heights: desktop labels are
@@ -154,7 +170,7 @@ function updateGroups() {
   // Mobile keeps the label-height max(): its labels wrap to 2-3 lines, so a
   // flat pitch would let rows print over each other there.
   const FOLD3_ROW_PITCH_DESKTOP_PX = 34;
-  const FOLD3_MIN_ROW_PITCH_MOBILE_PX = 32;
+  // (hoisted too — FOLD3_MIN_ROW_PITCH_MOBILE_PX, module scope.)
   // Mobile rows are NOT one flat pitch: the labels are 1-3 lines tall, and on
   // mobile a label's FIRST line is what sits on the row y (firstLineShift,
   // below) — any further lines hang down from there. So the space a row uses
@@ -193,7 +209,15 @@ function updateGroups() {
   // @fold3's outward-trailing labels well past a 393px viewport, so the gap
   // shrinks with W there — enough to still read as two separate camps, but
   // narrow enough that both blocks and their labels stay on screen.
-  const campGapPx = campCenterGapPx(W);
+  // …and on mobile @fold3 runs a TIGHTER gap than @fold2 (the blocks are gone by
+  // then — it's two label runs facing each other, and 90px reads too wide between
+  // them). Lerped over alignT, the beat that flies the rects into their column,
+  // so @fold2 keeps its own value and the anchors never snap. Desktop has one gap
+  // for both folds, so it falls through to the plain call.
+  const campGapPx = isMobile()
+    ? campCenterGapPx(W, FOLD2_CAMP_EDGE_GAP_MOBILE_PX
+        + (FOLD3_CAMP_EDGE_GAP_MOBILE_PX - FOLD2_CAMP_EDGE_GAP_MOBILE_PX) * alignT)
+    : campCenterGapPx(W);
   const campAnchorX = isCoalition =>
     W / 2 + (isCoalition ? campGapPx : -campGapPx);
   // Left edge of each block's leftmost cell.
@@ -223,7 +247,7 @@ function updateGroups() {
   // has to reshuffle the rows past each other.
   const legendRow = (g) => {
     const camp = FOLD4_COALITION_ROWS.includes(g) ? FOLD4_COALITION_ROWS : FOLD4_CHANGE_ROWS;
-    return camp.slice().sort((a, b) => a.fold6.y - b.fold6.y).indexOf(g);
+    return campRowOrder(camp).indexOf(g);
   };
 
   GROUPS.forEach((g, i) => {
@@ -637,9 +661,9 @@ function updateGroups() {
     item.label.classList.toggle("is-plated", !fold6MobileLegend && !!g.fold6 && e6 >= 1);
 
     // Last thing in the row, after every inline style is written: while flying,
-    // the frame is handed to a stand-in living inside the מקרא layer, because
-    // this element can't out-stack that panel from inside .graphic-col (see
-    // fold6MFlyPaintClone in js/groups.js). The real item stays laid out —
+    // the frame is handed to a stand-in, which parks in whichever of the two fly
+    // layers suits where it currently is (see fold6MFlyPaintClone in
+    // js/groups.js). The real item stays laid out —
     // item.label.offsetWidth above depends on it — just not painted.
     if (flying) fold6MFlyPaintClone(g, item, e6 >= 1);
     else if (fold6MFlyClones.size) fold6MFlyHideClone(g, item);
@@ -869,6 +893,25 @@ function updateGroups() {
     fold6LegendHoverEls.forEach((el) => { el.style.display = "none"; });
   }
 
+  // ── The מקרא panel's rows are the MOBILE filter buttons ────────────────────
+  // Same two states the desktop strips carry, off the same conditions, so the
+  // two breakpoints can never disagree about which groups are out:
+  //   .is-armed        — this fold will answer a tap (@fold9…@fold13)
+  //   .is-filtered-off — this group is currently filtered out. It OUTLIVES the
+  //                      armed state: past @fold13 the filter still applies, so
+  //                      the panel must keep saying which groups are missing
+  //                      even though tapping can no longer change it.
+  if (typeof fold6MobileRowEls !== "undefined" && isMobile()) {
+    const mLive = typeof p7FilterOff !== "undefined";
+    const mArmed = mLive && currentPage >= 8 && currentPage <= 12;
+    const mLives = mLive && currentPage >= 8;
+    fold6MobileRowEls.forEach((r) => {
+      if (!r.row) return;
+      r.row.classList.toggle("is-armed", mArmed);
+      r.row.classList.toggle("is-filtered-off", !!(mLives && p7FilterOff.has(r.g.actor)));
+    });
+  }
+
   // ── The «הצגת גודל האירועים» toggle ───────────────────────────────────────────
   // Parked above the TOP row of the right-hand legend column, right edges
   // flush with it (the rows are right-aligned to W - fold6LegendInsetRight(),
@@ -997,14 +1040,12 @@ function updateGroups() {
   // are typed). Opacity is a hard 0/1 gate; the typewriter is the whole
   // reveal. Both reverse cleanly on scroll-up because the raw progress reverses.
   const noteRaw = acledNoteTrigger.currentRaw();
-  // On mobile @fold6 is ALSO the beat that opens the מקרא panel the note lives
-  // in (fold6MLegendAutoBeat, js/groups.js), so the type-in waits for the card:
-  // every beat's share of the trigger starts one FOLD6_MLEGEND_OPEN_MS in, and
-  // ends where it always did. Without the shift the note is hidden while the
-  // card opens (fold6MLegendOpenRaw < 1, below) and would then appear already a
-  // third typed on the frame the card lands — a pop, not a reveal.
-  const noteOpenShift =
-    fold6MobileLegend ? FOLD6_MLEGEND_OPEN_MS / GROUP_TRANSITION_MS : 0;
+  // No shift on either viewport. @fold6 used to open the מקרא panel on mobile and
+  // the type-in was delayed one FOLD6_MLEGEND_OPEN_MS to wait for the card; the
+  // fold no longer opens it (fold6MLegendAutoBeat, js/groups.js — explicit
+  // instruction), so there is nothing to wait for and the note types on the
+  // trigger's own beats, inside a panel the reader opens when they choose.
+  const noteOpenShift = 0;
   const noteBeatRaw = (b) => {
     const start = FOLD6_NOTE_BEATS[b].start + noteOpenShift;
     return Math.max(0, Math.min(1,
@@ -1156,17 +1197,18 @@ function updateGroups() {
   // reveal starts, so the frame grows to fit the note only once it's there.
   // Desktop is absolutely positioned — nothing reserves space — so it stays
   // opacity-only.
-  // ...and likewise while the card is still opening (fold6MLegendOpenRaw < 1):
-  // the note appearing then would push the frame taller under rows that are
-  // still arriving. On a normal read the two never overlap — the panel is left
-  // OPEN by @fold4's hand-off and the note's own crossing is a fold later — so
-  // this only catches a fast scroll that lands both at once.
+  // ...and likewise while the card is MID-OPEN (going open, not landed): the
+  // note appearing then would push the frame taller under rows that are still
+  // arriving. Gated on `OpenWant` as well as the raw, because since @fold6 stopped
+  // auto-opening the panel a closed card sits at raw 0 indefinitely — on the raw
+  // alone the note would be hidden forever and the frame would open empty when
+  // the reader finally taps מקרא.
   // The panel's rows/note divider goes with them — it only means anything with
   // the note under it — but it is mobile-only, so it is hidden outright on
   // desktop rather than sharing the mobile gate.
   fold6NoteCardEl.hidden =
   fold6NoteRuleEl.hidden = fold6NoteEl.hidden = fold6NoteTitleEl.hidden =
-    fold6MobileLegend && (noteRevealT <= 0 || fold6MLegendOpenRaw < 1);
+    fold6MobileLegend && (noteRevealT <= 0 || (fold6MLegendOpenWant && fold6MLegendOpenRaw < 1));
   fold6MobileNoteDividerEl.hidden = !fold6MobileLegend || fold6NoteTitleEl.hidden;
 
   // The מקרא bar appears with the same crossing that dissolves the six rows
