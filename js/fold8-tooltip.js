@@ -104,7 +104,10 @@ const TOOLTIP_DOCK_SQUARES_GAP_PX = 16; // gap between the frame's bottom edge a
 // than baked as one number, because the frame is the last thing in the stack
 // and a bar-collapse resize moves the edge it hangs from.
 function tooltipDockRestPx() {
-  return window.innerHeight - TOOLTIP_DOCK_BOTTOM_PX - TOOLTIP_DOCK_H_PX;
+  // viewportH(), not window.innerHeight — same cached value, refreshed on the
+  // same resize (js/core.js). This runs every frame; the live read was 4.1% of
+  // the timeline profile on a throttled phone.
+  return viewportH() - TOOLTIP_DOCK_BOTTOM_PX - TOOLTIP_DOCK_H_PX;
 }
 
 // Blends @fold13's drop onto whatever spot the earlier two produced, so the

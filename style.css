@@ -42,6 +42,28 @@ body {
   background: var(--bg);
 }
 
+/* The fold badge — the current @foldN as a bare number, small, top-left.
+   Nothing but the digits: no prefix, no label, no control. `display: none` by
+   default so the markup is inert until js/nav.js adds .is-visible (which it
+   does unless the reader switched it off with Ctrl+Shift+F). */
+.fold-number-badge {
+  display: none;
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1000;
+  font: 600 13px 'Assistant', sans-serif;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 2px 7px;
+  border-radius: 4px;
+  pointer-events: none;   /* purely a readout — never eats a click on the canvas */
+}
+
+.fold-number-badge.is-visible {
+  display: block;
+}
+
 /* .graphic-col is taken out of flow entirely (position: fixed), so it doesn't
    share width with .text-col — it's always the full viewport, genuinely
    centered. .text-col stays in normal flow (it alone drives the page's scroll
@@ -1458,6 +1480,24 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   display: none;
 }
 
+/* Same deal for the selection circle (page9.js): built into every pill, but
+   desktop shows the classification by MOVING the pill into #page9ZoneAbove, so
+   a checkbox beside the label would be a second, redundant readout. Mobile,
+   where the pill never leaves the tray, is the only place it says anything.
+   Two-class selector for the same specificity reason. */
+.page9-pill .page9-pill-check {
+  display: none;
+}
+
+/* The pill's place in the flex row. Published per pill as --p9-order-row by
+   page9.js (1 = rightmost in the RTL band) rather than set inline, because
+   mobile needs a SECOND sequence for @fold12's column and `order` can only hold
+   one at a time — see --p9-order-col in the 600px block. Inert on desktop,
+   whose two tray grids place every pill explicitly and ignore `order`. */
+.page9-pill {
+  order: var(--p9-order-row, 0);
+}
+
 /* Decorative ✕, built into every pill (page9.js) but PARKED — the only rule
    that would reveal it is gated on `.page9-x-affordance`, which nothing adds
    (see the "OPTIONAL" block above). So today this is simply always hidden.
@@ -1726,6 +1766,12 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   font-weight: inherit;
 }
 
+/* Device-dependent card copy. Only @fold7 needs it today: desktop hovers a
+   square, a phone presses and holds, so the instruction is a different
+   sentence rather than a reworded one. display:none (not visibility) so the
+   hidden variant contributes nothing to .text-card-frame's fit-content width. */
+.copy-mobile { display: none; }
+
 /* The ACLED acronym on the @fold6 card is a real external link (teacher review
    2026-09-03, E2): visibly underlined so it signals "go check the source". */
 .card-link {
@@ -1832,6 +1878,14 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   display: none;
 }
 
+/* A direct .layout child (project.html), NOT nested in .graphic-col: that column
+   is its own stacking context, so a group row inside it could never climb above
+   the מקרא bar's layer — and on mobile the groups have to paint OVER the legend
+   (see the mobile stack comment in the 600px block). `position: fixed; inset: 0`,
+   so where it lives in the tree changes nothing about where its rows land.
+   z-index 0 here is the DESKTOP behaviour, unchanged: it sits after .graphic-col
+   and before .text-col in source order, so it still paints over the canvas and
+   under the title cards exactly as it did from inside the column. */
 .groups-overlay {
   position: fixed;
   inset: 0;
@@ -2641,6 +2695,26 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 /* The size grid is desktop-only, so its switch is too. */
 @media (max-width: 600px) {
   .p7-scope-btn { display: none; }
+
+  /* @fold10's card sits BELOW centre on mobile too — the same device as the
+     desktop rule at the top of this file, and for a longer reason. Desktop's
+     16vh only has to let the year axis finish filling; mobile also has to let
+     the end-of-fill ZOOM-OUT play out (P7_ZOOMOUT_MS, page7.js) before the
+     title block arrives, so the reader sees the whole timeline at rest first.
+     Without this the card crossed mid-screen while the fill was still short of
+     the end and the zoom-out never got to run.
+     The zoom-out is a fixed-duration trigger (P7_ZOOMOUT_MS), so this vh is
+     what buys the ORDERING — it is the runway the clock has to elapse inside.
+     The two are a PAIR: shorten this and the title block lands mid-zoom.
+     Keep the pair in step, exactly as desktop does: padding-top p with
+     min-height (100 + d)vh centres the card at (p + 100 + d) / 2, so d = p.
+     `.text-section` already centres, so only the offset pair is set here; the
+     ID out-specifies `.text-section { padding: 0 24px }` further down, so the
+     side gutters are untouched and the top offset stands regardless of order. */
+  #page-9 {
+    padding-top: 75vh;
+    min-height: 175vh;
+  }
 }
 
 /* ── The note's CARD ────────────────────────────────────────────────────
@@ -2702,16 +2776,13 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    like the other direct-.layout-child overlays, and passes clicks through; only the
    bar itself takes pointer events (and only once updateGroups fades it in).
 
-   z-index 5 keeps the button tappable — the .text-section boxes are
-   full-viewport, so anything painting under them can't be reached by a tap —
-   and puts the legend above the title blocks, which lift themselves to 4 (see
-   .text-col, which deliberately has no z-index so that lift can escape it).
-   ALWAYS above them, open or closed (explicit instruction): it is the page's
-   one persistent legend from @fold4 on, and a title card sliding over the מקרא
-   button reads as the legend being gone. It used to sit at 3 while closed and
-   only outrank the card while open.
-   The one thing that still passes BEHIND a title block is @fold4's flight —
-   that is .fold6-mfly-layer-under's job (z-index 1, below), not this layer's.
+   A z-index above `auto` keeps the button tappable — the .text-section boxes
+   are full-viewport, so anything painting under them can't be reached by a tap.
+   It is the BOTTOM of the three-way stack the mobile block sets (bar → groups →
+   title blocks, explicit instruction): both the title blocks and the group rows
+   paint over it, open or closed. The real number is the mobile override there
+   (1002, above the docked tooltip); this base only applies above the
+   breakpoint, where the bar doesn't exist.
    The z-index has to live on the layer: it is the stacking context, so nothing
    inside it can ever climb past this number. */
 .fold6-mlegend-layer {
@@ -2723,16 +2794,20 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 
 /* Stand-ins for the six group rows and the two camp headers during @fold4's
    mobile FLY hand-off (see the block comment on fold6MFlyPark, js/groups.js).
-   There are two of these parking layers and each stand-in moves between them
-   mid-flight, because "title block above the rows, open legend above the title
-   block, rows landing on top of the panel" is a z-index cycle:
+   There are two parking layers and each stand-in moves between them mid-flight:
      - this one lives INSIDE .fold6-mlegend-layer, after the panel, and holds a
        stand-in only once it overlaps the panel — the landing;
-     - .fold6-mfly-layer-under is a direct .layout child at z-index 1 (above the
-       canvas, below the mobile title block's 4) and holds it the rest of the
-       time, so the flight passes behind the card.
-   The real elements can do neither, being trapped in .graphic-col's stacking
-   context. Nothing here is interactive; the panel below still takes the taps. */
+     - .fold6-mfly-layer-under is a direct .layout child and holds it the rest of
+       the time, in the groups' own band (1003 on mobile): over the legend, under
+       the title block.
+   The swap existed to break a z-index CYCLE ("title block above the rows, open
+   legend above the title block, rows landing on top of the panel"). That cycle
+   is gone now that the stack is a plain order — bar, then groups, then title
+   blocks — so both spots satisfy the rule and the hand-over is belt-and-braces
+   rather than load-bearing. It is kept because the landing still wants to paint
+   after the panel within the panel's own layer.
+   The real elements park here because they are `visibility: hidden` mid-flight;
+   nothing here is interactive, and the panel below still takes the taps. */
 .fold6-mfly-layer {
   position: absolute;
   inset: 0;
@@ -2883,9 +2958,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      stay in sync with TOOLTIP_DOCK_TOP_PX.
 
      It sits above the timeline grid: SBB_TIMELINE_MOBILE.top is 0.19H
-     (~160px on a 844px phone) and the מקרא bar ends around 46px
-     (FOLD6_MLEGEND_TOP_MOBILE_PX + its own height), so 62px + this height
-     clears both. It's a flat px, not a fraction of the viewport, so the frame
+     (~160px on a 844px phone), so 62px + this height clears it. (The מקרא
+     sheet lives at the BOTTOM edge — FOLD6_MLEGEND_BOTTOM_MOBILE_PX — and no
+     longer competes for the top.) It's a flat px, not a fraction of the viewport, so the frame
      doesn't drift between @fold7 (no grid on screen yet) and the timeline.
 
      The height is FIXED and the box clips: the frame must not resize as a
@@ -3033,7 +3108,15 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      jumps between the two states. */
   .page9-tooltip.is-docked.is-picker {
     align-items: center;
-    justify-content: center;
+    /* The hint sits in the band between the timeline box's bottom and the
+       מקרא bar, centred in it — NOT in the frame's middle: the frame hangs
+       18px past the screen edge (TOOLTIP_DOCK_BOTTOM_PX), so its middle is
+       inside the bar. The box ends 100px up (sbbTimelineMobileBottomPx), the
+       bar is 43px tall, so the band's centre is 71.5px up; the frame's outer
+       top is 82px up, hence the hint's 19px line starts 1px in — the 2px
+       border alone, no padding. */
+    justify-content: flex-start;
+    padding-top: 0;
     background: none;
     border-color: transparent;
   }
@@ -3104,6 +3187,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     width: min(200px, 100vw - 32px);
   }
 
+  /* The other half of the device-dependent card copy — see .copy-mobile above. */
+  .copy-desktop { display: none; }
+  .copy-mobile  { display: inline; }
+
   /* @fold1's hero: the logo's 30px inset and the title/subtitle's fixed
      widths are center-relative already, so they only need to not collide —
      tighten the logo inset so it clears the title's right edge. */
@@ -3121,27 +3208,37 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   .page0-title {
     width: min(185px, 50vw - 20px);
     /* 42px is a desktop-scale display size that eats a third of a phone
-       screen — 32px still reads as the hero and keeps the same 3-line break.
-       The base rule's top is pixel-tuned so the gap under the title matches
-       the gap under the subtitle (see the comment there), and that tuning is
-       a function of the title's rendered height: 3 lines shrink by ~36px
-       here, so the whole block is pushed down by the same 36px to hold the
-       measured gap. Re-measure both gaps if this size changes again. */
+       screen — 32px still reads as the hero and keeps the same 3-line break. */
     font-size: 32px;
-    /* -223 = the -240 that tuning produced, then the whole hero pulled down by
-       PAGE0_MOBILE_DROP (page1.js) = 1 dot step = 17px. Title, subtitle and
-       both dot columns all move by that same 17px, so every pixel-measured gap
-       between them is preserved — change one, change all three. */
-    top: calc(50% - 223px);
+    /* Mobile gets its OWN leading, unlike every earlier revision of this block,
+       which let both hero texts inherit the desktop 1.31/1.52. That inheritance
+       was the bug: line-height is unitless, so dropping the title to 32px took
+       its leading down to 41.92 while the subtitle stayed at 27.36 — the 2:1
+       nesting that locks the two baseline grids together on desktop (55.02 /
+       27.36 = 2.011) fell to 1.532, and the subtitle's lines walked against the
+       title's by ~12.8px per line down the block. 1.45 and the subtitle's 1.465
+       below were picked by eye on 2026-09-12 with the mobile hero `manual/`
+       harness (wiki/Dev-Workflow.md) against its live baseline rulers. */
+    line-height: 1.45;
+    /* Re-solved for the leading above — a line-height change always moves the
+       last baseline, so this number and the one above are ONE setting. -227.8
+       puts the title's last baseline 18.5px above its dot column's top edge,
+       measured TRIMMED (baseline to dot, not box bottom to dot — see the
+       desktop rule). The 50% cancels the viewport height out of the solve, so
+       the value holds at any phone height; only the 390px WIDTH it was tuned
+       at matters, since that is what fixes the 3-line wrap. */
+    top: calc(50% - 228.6px);
   }
 
-  /* The other half of the same 17px hero drop — see .page0-title above.
-     172.1 = the old 162 plus the same 10.1px the desktop rule moved when the
-     subtitle's line-height opened to 1.52: the font-size and the 125px width
-     are not overridden here, so mobile wraps to the same 4 lines and its last
-     baseline shifts by exactly the same amount. Re-solve both together. */
+  /* The subtitle keeps its 18px and its 125px width here — only the leading and
+     the top are re-tuned, in step with the title above (see that comment for
+     why mobile needs its own leading at all). Still 4 lines at this width. */
   .page0-subtitle {
-    top: calc(50% - 172.1px);
+    line-height: 1.465;
+    /* Same trimmed solve as the title: -167.8 puts the last baseline 20.5px
+       above its own dot column's top edge. Re-solve this whenever the leading
+       above moves — the two are one setting. */
+    top: calc(50% - 168.8px);
   }
 
   /* The pinned title card rests 4.4vh (~37px on an 844px phone) from the top
@@ -3261,6 +3358,113 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     position: absolute;
     inset: -4px;
   }
+
+  /* ── The selection circle: @fold13's beat, on the pill's RIGHT edge ──
+     Tap replaces drag here, so .is-extreme is the ONLY thing that says a
+     category has been classified — the pill never moves. This is that readout:
+     an empty 18px ring at rest, filled with a ✓ once selected. It is a <span>
+     with pointer-events:none (page9.js), so the whole pill stays the single tap
+     target and the circle only advertises what tapping does.
+     First DOM child after the (display:none) handle, so in this RTL flex row it
+     lands on the right, in the slot the grip dots vacate — the ⓘ stays on the
+     left. */
+  .page9-pill .page9-pill-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    /* A RECTANGLE, not a circle (the ⓘ beside it stays round — the two reading
+       differently is the point: one informs, one records a choice). Size and
+       corner are variables because both are driven by the check-mark harness;
+       the fallbacks are the shipped values. */
+    width: var(--p9-check-size, 18px);
+    height: var(--p9-check-size, 18px);
+    border-radius: var(--p9-check-radius, 4px);
+    border: 1px solid currentColor;
+    opacity: 0.75;
+    font: 600 11px 'Assistant', sans-serif;
+    line-height: 1;
+    pointer-events: none;
+  }
+  .page9-pill .page9-pill-check::before {
+    content: "\2713";
+    opacity: 0;
+    transition: opacity 140ms linear;
+  }
+  /* Selected: the ring fills and inverts against the pill's own #111/#fff flip
+     (.page9-pill.is-extreme above), so the ✓ reads at full contrast instead of
+     as a white-on-black hairline. */
+  .page9-pill.is-extreme .page9-pill-check {
+    background: #fff;
+    border-color: #fff;
+    color: #111;
+    opacity: 1;
+  }
+  .page9-pill.is-extreme .page9-pill-check::before {
+    opacity: 1;
+  }
+
+  /* ── The ⓘ and the selection circle: @fold13's beat, and its LAST one ──
+     Same treatment as desktop V2's grip handle, per explicit instruction: at
+     @fold12 the pill fits its text content, and at @fold13 it expands around
+     them. Collapsing takes all THREE properties for the same reason the handle
+     does — `scale(0)` is paint-time and would leave the 18px box (and the
+     pill's own 6px flex gap) sitting in the row — so `width: 0` retracts the
+     box and the negative margin swallows the gap. The margin goes on whichever
+     side that child's gap is drawn: the circle is the row's first visible item
+     so its gap is toward the label (inline-END); the ⓘ is the last, so its gap
+     is on the label side from the other direction (inline-START).
+
+     THE EXPANSION IS SEQUENCED AFTER THE CONVOY, not run with it — that is what
+     `:not(.training)` buys. An animating width reflows the whole nowrap row
+     sideways, and if it runs during the train a cabin still in its vertical
+     phase gets dragged horizontally by its neighbours growing: layout drag plus
+     the phase's own `y` is a diagonal, the "angular flying" the two-phase
+     motion exists to prevent. Measured with the two overlapping, the widths
+     took 27-29 distinct values across the run and `offsetLeft` wandered dozens
+     of px; sequenced, every pill holds one `offsetLeft`/`offsetTop`/`width`
+     from the convoy's first frame to its last, and the pills widen as their own
+     beat once the train has parked.
+
+     `.training` also forces the collapsed state with NO transition, which is
+     what makes the reverse clean: leaving @fold13 the affordances retract
+     instantly on the first frame, so p9TrainToggle measures both ends of that
+     run in the same (collapsed) layout the run itself will hold. */
+  .page9-sticky:not(.engaged) .page9-tray .page9-pill-info,
+  .page9-sticky:not(.engaged) .page9-tray .page9-pill-check,
+  .page9-sticky.training .page9-tray .page9-pill-info,
+  .page9-sticky.training .page9-tray .page9-pill-check {
+    width: 0;
+    overflow: hidden;
+    transform: scale(0);
+  }
+  .page9-sticky .page9-tray .page9-pill-check { margin-inline-end: -6px; }
+  .page9-sticky .page9-tray .page9-pill-info  { margin-inline-start: -6px; }
+  .page9-sticky.engaged:not(.training) .page9-tray .page9-pill-info,
+  .page9-sticky.engaged:not(.training) .page9-tray .page9-pill-check {
+    width: 18px;
+    margin-inline-start: 0;
+    margin-inline-end: 0;
+    transform: scale(1);
+    transition: width var(--p9-pop-ms) cubic-bezier(0.37, 0, 0.63, 1),
+                margin-inline-start var(--p9-pop-ms) cubic-bezier(0.37, 0, 0.63, 1),
+                margin-inline-end var(--p9-pop-ms) cubic-bezier(0.37, 0, 0.63, 1),
+                transform var(--p9-pop-ms) cubic-bezier(0.37, 0, 0.63, 1);
+    transition-delay: calc(var(--p9-pop-i, 0) * var(--p9-pop-stagger));
+  }
+  /* The circle's expanded width follows its own size knob. AFTER the rule
+     above, which sets a flat 18px for both children — same specificity, so
+     source order is what lets the check-mark harness move this one alone. */
+  .page9-sticky.engaged:not(.training) .page9-tray .page9-pill-check {
+    width: var(--p9-check-size, 18px);
+  }
+  /* No transition at all while the train runs — the collapse must be a snap on
+     the reverse, never an animation the FLIP would measure mid-flight. */
+  .page9-sticky.training .page9-tray .page9-pill-info,
+  .page9-sticky.training .page9-tray .page9-pill-check {
+    transition: none;
+  }
+
   /* Nothing is ever dropped into it, and its :empty hint would sit over the
      dot grid. */
   #page9ZoneAbove {
@@ -3349,27 +3553,37 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        the dot grid. 116px is P9_TRAY_TOP_M in page9.js, which derives the
        tooltip's drop spot and the grid's top from it; the two must stay in step
        (js/fold11.js's slide-out mirrors it too).
-       It hides by sliding UP off the top edge, so the translate has to clear its
-       own height AND the 116px offset. */
+       THE BAND DOES NOT SLIDE. Its transform is the at-rest value in BOTH
+       states and it is simply invisible until `.pills-in` — the same thing
+       desktop V2 does, and for the same reason twice over. One: the entrance
+       IS the pills popping (scale 0→1); a band that also flew down from above
+       the top edge read as the whole column "animating in from the top", which
+       is not an entrance anyone asked for and got louder the taller the column
+       got. Two: it is load-bearing for the convoy. The slide took 0.85s, and a
+       brisk scroll reached @fold13 while it was still running — so the FLIP
+       measured the pills mid-air, up off the screen, and every cabin then flew
+       in on a diagonal instead of going up and then left.
+       Removed — don't reintroduce: `translate(-50%, calc(-100% - 116px))` plus
+       a `transform` transition here. */
     top: 116px;
     bottom: auto;
-    transform: translate(-50%, calc(-100% - 116px));
+    transform: translate(-50%, 0);
     /* One rule, on the bottom edge only (Figma node 294-1272) — it separates the
        pill run from the tooltip frame below. Nothing divides it from the
-       subtitle above, which reads as part of the same header block. */
+       subtitle above, which reads as part of the same header block.
+       Drawn as an ::after rather than a real border-bottom, because it is a
+       BEAT: the band arrives at @fold12 carrying nothing but the pills, and the
+       rule draws itself in under them at @fold13 as the train forms — same
+       right-to-left scale-in desktop V2 uses. A real border would be there from
+       the moment the band was, and it would also sit under the wrapped block's
+       full height instead of under the finished single row. */
     border-radius: 0;
-    border-left: none;
-    border-right: none;
-    border-top: none;
-    border-bottom: 1px solid rgba(90, 90, 90, 0.18);
-    /* Same guard as the base rule, re-declared because this breakpoint replaces
-       the whole `transition` shorthand: the resting hidden transform above is a
-       percentage of the tray's OWN height, which isn't final on a refresh (see
-       the base .page9-tray rule for the full reasoning), so without this the
-       band flashes across the screen and then animates away. */
+    border: none;
+    /* `visibility` is the whole reveal now that the transform never moves. The
+       delay outlasts js/fold11.js's own inline slide-out, which is the one
+       thing that DOES still translate this band (on the way out at @fold14). */
     visibility: hidden;
-    transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1),
-                visibility 0s linear 0.85s;
+    transition: visibility 0s linear 0.85s;
   }
   /* Figma node 294-1272 has no "סוגי פעולות" label on the band — the subtitle
      directly above already names the gesture, and the label cost 12px of type
@@ -3378,10 +3592,152 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   .page9-tray-title {
     display: none;
   }
+  /* @fold12's block sits at the band's own `top: 116px`, per explicit
+     instruction — the pills arrive at the TOP of the screen and stay there; the
+     convoy reshapes the run in place rather than carrying it up from lower down.
+     (A 66vh waiting spot below the card was tried and rejected.) At @fold12's
+     own crossing the centred card starts just under the four-row block; it
+     scrolls up past it as the fold plays out, which is the card leaving, not a
+     collision to design around. */
+  /* ── Mobile engage, split across two folds to match desktop V2 ──
+     The band arrives on @fold12's own crossing (.pills-in, page8CheckScroll in
+     js/page8-9-scroll.js) carrying NOTHING but the pill labels, and @fold13's
+     stick (.engaged) brings everything else — the drop zone, the pinned
+     header, the docked frame's step-down and, on the pills themselves, the ⓘ
+     and the selection circle further down. Desktop has done exactly this since
+     the H2 review (see the .page9-layout-v2.pills-in block above); mobile used
+     to hold the whole band back to .engaged because every one of those rules is
+     scoped to .page9-layout-v2, which mobile is not.
+
+     .pills-in deliberately does NOT take the base rule's
+     `pointer-events: auto` — that stays on .engaged, so a tap on a pill at
+     @fold12 can't classify anything a fold before the drop zone exists.
+     The docked "לחצו והחזיקו" frame is untouched here: it steps down on
+     p9TooltipDropTrigger, fired from the same `isStuck` crossing as .engaged,
+     so it keeps its @fold11 resting spot right through @fold12. ── */
+  .page9-sticky.pills-in .page9-tray,
   .page9-sticky.engaged .page9-tray {
     visibility: visible;
-    transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1),
-                visibility 0s linear 0s;
+    transition: visibility 0s linear 0s;
+  }
+  /* The pop itself, same numbers and same stagger as desktop V2's: each pill
+     starts at scale(0) and pops in 280ms (PAGE0_POP_MS), delayed by its
+     --p9-pop-i × 60ms. That variable is P9_TRAY_GRID_V2[idx].col - 1
+     (page9.js) — the same number mobile's flex `order` uses — so index 0 is the
+     RIGHTMOST pill and the crest travels leftward, exactly like the band on a
+     desktop. Scrolling back up mirrors it: the leftmost shrinks first.
+     No ::after rule here — mobile's band draws its one rule as a real
+     border-bottom (above), which is part of the band rather than a beat. */
+  .page9-tray {
+    --p9-pop-ms: 280ms;
+    --p9-pop-stagger: 60ms;
+  }
+  .page9-sticky .page9-tray .page9-pill {
+    transform: scale(0);
+    transition: transform var(--p9-pop-ms) cubic-bezier(0.37, 0, 0.63, 1)
+                calc((9 - var(--p9-pop-col-i, 0)) * var(--p9-pop-stagger));
+  }
+  .page9-sticky.pills-in .page9-tray .page9-pill {
+    transform: scale(1);
+    transition-delay: calc(var(--p9-pop-col-i, 0) * var(--p9-pop-stagger));
+  }
+  /* While the convoy is running (p9TrainRun, page9.js) every pill's transform is
+     written per frame, so the pop transition above has to get out of the way —
+     the house rule for anything JS repaints every frame. */
+  .page9-sticky.training .page9-tray .page9-pill {
+    transition: none;
+  }
+  /* The BAND's own 0.85s slide goes too, and that one is load-bearing rather
+     than tidiness: p9TrainToggle adds `.pills-in` right before it measures, to
+     cover an engage that never got a tick over @fold12's crossing (a jump or a
+     fast scroll). With the transition live, the tray would still be animating
+     out of its hidden pose at measure time and the FLIP would read the pills
+     off the top edge — which is exactly the "they fly in from the top" bug.
+     Suppressed, the class lands instantly and the measurement is the real
+     column. Scoped to the tray itself, so the band rule's own ::after scale-in
+     over --p9-train-total is untouched. */
+  .page9-sticky.training .page9-tray {
+    transition: none;
+  }
+  /* …and the row's own scroller has to stop clipping for the duration. At rest
+     #page9ZoneBelow is `overflow-x: auto` — the whole point of the finished
+     band — so any pill translated outside its box is cut off. That box IS the
+     row, so through the convoy seven of the ten pills were flying through
+     clipped space and simply vanished mid-journey. `visible` for the run; the
+     scroller comes back the moment the train settles. Both axes, since the
+     block the pills leave from is taller than the row they arrive in.
+     The extra `.page9-tray` is for specificity alone: the reverse run is
+     `:not(.engaged)` all the way through, and that rule (further down) sets
+     `overflow-x: hidden` at the same weight — without the third class the train
+     would be clipped leaving @fold13 but not arriving. */
+  .page9-sticky.training .page9-tray #page9ZoneBelow {
+    overflow: visible;
+  }
+
+  /* ── @fold12: the pills arrive as a VERTICAL LINE ──
+     The band's finished shape is one horizontally-scrolling row (below), where
+     only ~3 of the 10 pills are on screen at a time — so a pop-in there plays
+     most of the fold's content off-screen. For the arrival beat the run stands
+     up into a single centred column instead: all ten visible, popping top to
+     bottom (the flex `order` that sequences the finished row right→left is the
+     same number that sequences this column top→bottom, so one stagger serves
+     both — see `--p9-pop-i`).
+     It also sets up @fold13's convoy for free. The column's TOP pill is already
+     on the finished row's line, so it slides straight sideways; every pill
+     below it rises to that line and then sweeps sideways — "first up, then to
+     the left" — which is exactly the bezier `p9TrainToggle` already draws
+     through `{block x, row y}`, with no special-casing. One pill per block row
+     means the convoy's own row ordering degenerates to plain top-to-bottom.
+     `align-items: center` rather than `stretch`: the pills are different widths
+     and a stretched column would read as a stack of bars, not as a queue. */
+  .page9-sticky:not(.engaged) #page9ZoneBelow {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    /* RIGHT-aligned (`start` is the right edge in RTL) on the row's own start
+       gutter, so the column's right edge and the finished row's right end are
+       the same line. This is NOT a composition choice — it is what "only up and
+       left" means geometrically, and it is the no-collision guarantee:
+
+       A cabin climbs at its COLUMN x and then runs sideways. If any slot sits
+       right of the column, the cabin bound for it has to move RIGHT (already
+       against the brief) and must cross every slot parked between — measured
+       centred, cabin 4 climbed at x=144 straight into cabin 3's parked slot of
+       131-256 and then slid right out of it: 20 overlapping pairs, worst
+       102x38px. Put the column at or right of every slot and the two problems
+       vanish together: nothing travels right, so nothing crosses anything.
+       The bottom cabin drops into place with no sideways move at all, and each
+       one above it goes further left than the last. */
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 14px;   /* tuned by eye on device, 2026-09-13 (was 6) */
+    overflow-x: hidden;
+    padding-inline: calc((100vw - min(480px, 100vw - 48px)) / 2) 12px;
+  }
+  /* Top to bottom = the finished row LEFT to RIGHT, the mirror of --p9-order-row
+     (page9.js publishes both). The furthest-travelling cabin leads, so nothing
+     ever overtakes a pill already parked in the row. */
+  .page9-sticky:not(.engaged) #page9ZoneBelow .page9-pill {
+    order: var(--p9-order-col, 0);
+  }
+
+  /* The band's rule — @fold13's beat, scaled in from the RIGHT over the convoy's
+     own full length (--p9-train-total, published by p9TrainRun) so its leading
+     edge travels with the train. Linear, for the same reason desktop V2's is:
+     it has to keep pace with a constant stagger, not ease against it. */
+  .page9-tray::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: rgba(90, 90, 90, 0.18);
+    transform: scaleX(0);
+    transform-origin: right center;
+    transition: transform var(--p9-train-total, 1430ms) linear;
+  }
+  .page9-sticky.engaged .page9-tray::after {
+    transform: scaleX(1);
   }
   /* P9_TRAY_GRID (page9.js) puts 5 hand-placed columns in each of the two tray
      rows — even at the reduced pill size above, a 5-pill row is wider than a
@@ -3409,7 +3765,11 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     flex-direction: row;
     flex-wrap: nowrap;
     justify-content: flex-start;
-    gap: 6px;
+    /* Separate from @fold12's column gap (14px, further up) on purpose: the
+       column is read as a stacked list and takes more air than this run, which
+       is read as one continuous band. Both tuned by eye on device, 2026-09-13
+       (both were 6). */
+    gap: 8px;
     width: 100%;
     overflow-x: auto;
     overscroll-behavior-x: contain;
@@ -3520,12 +3880,31 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      from @fold4 on — including the pinned timeline, which owns its own layout.
      Opacity and pointer-events are written per frame by updateGroups. */
 
-  /* The title block paints OVER the מקרא bar (explicit instruction). The bar's
-     layer is z-index 3 so its button stays tappable through the full-viewport
-     .text-section boxes; the card out-stacks it from inside .text-col, which is
-     only possible because .text-col has no z-index of its own. Mobile-only:
-     the bar doesn't exist above the breakpoint. */
-  .section-text.text-card { z-index: 4; }
+  /* THE MOBILE STACK, bottom to top (explicit instruction, and the order every
+     rule in this block serves):
+
+       canvas … → the מקרא bar (1002) → the groups (1003) → the title blocks (1004+)
+
+     i.e. a title block paints over BOTH, and the groups paint over the legend.
+     This reverses the older "the legend always wins, open or closed" rule — the
+     title block never crosses the groups, so there is no longer anything for the
+     legend to protect by sitting on top. The bar keeps 1002 (not a low number)
+     only so it stays above the docked event tooltip's 1000, exactly as before;
+     the cards are lifted past it rather than the bar being dropped, which leaves
+     every other tooltip relationship untouched.
+     Out-stacking works from inside .text-col only because .text-col has no
+     z-index of its own. Mobile-only: the bar doesn't exist above the
+     breakpoint. */
+  .section-text.text-card { z-index: 1004; }
+  /* The groups band. The overlay is a direct .layout child (project.html) —
+     that is what makes this number bite at all; nested in .graphic-col it was
+     trapped in that column's stacking context and could never reach past the
+     bar. Desktop keeps the base z-index: 0 and is unaffected. */
+  .groups-overlay { z-index: 1003; }
+  /* @fold4's flight parks its stand-ins here, so it rides in the groups' own
+     band: over the legend, under the title block. (Its base 1 put the flight
+     behind the card AND behind the bar, which was the old rule.) */
+  .fold6-mfly-layer-under { z-index: 1003; }
   /* Only the plain sections' cards need to be positioned for that z-index to
      bite — @fold13's and @fold14's are already sticky/fixed inside their own
      wrappers, and the child combinator keeps this rule from clobbering that. */
@@ -3543,10 +3922,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   #page-6 > .section-text.text-card,
   #page-7 > .section-text.text-card,
   #page-11 > .section-text.text-card,
-  .page9-title-row .text-card { z-index: 1001; }
-  /* …and the מקרא legend still wins over that, keeping the rule above (the
-     legend layer beats the card) true on these folds too — open or closed, same
-     as everywhere else. */
+  .page9-title-row .text-card { z-index: 1005; }
+  /* The מקרא legend sits UNDER both (see the stack comment above): above the
+     docked tooltip's 1000, below the cards' 1004/1005 and the groups' 1003. */
   .fold6-mlegend-layer { z-index: 1002; }
 
   /* The bar is the mobile twin of the desktop ACLED note: a tinted, borderless
@@ -3560,11 +3938,18 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   .fold6-mlegend {
     display: block;
     position: absolute;
-    /* top is written by fold6PlaceMobileLegend() from
-       FOLD6_MLEGEND_TOP_MOBILE_PX, the one constant that positions the bar. */
-    left: 12px;
-    right: 12px;
-    padding: 8px;
+    /* The title is draggable (js/groups.js): a vertical swipe on it must scrub
+       the sheet, not scroll the page. */
+    touch-action: none;
+    /* A BOTTOM SHEET: bottom is written by fold6PlaceMobileLegend() from
+       FOLD6_MLEGEND_BOTTOM_MOBILE_PX, the one constant that positions the bar.
+       Full bleed (no side inset) — the card is the bar's box, and only the
+       content keeps a 12px side inset. The 9px bottom padding is the card's
+       outset under the title (FOLD6_MLEGEND_PAD_BOTTOM_PX in js/groups.js
+       measures the closed card off it — keep them in sync). */
+    left: 0;
+    right: 0;
+    padding: 8px 12px 9px;
     box-sizing: border-box;
     opacity: 0;
     text-align: center;
@@ -3578,17 +3963,20 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     position: absolute;
     box-sizing: border-box;
     left: 0;
-    top: 0;
-    border-radius: var(--note-card-radius, 16px);
-    border: var(--note-card-border, none);
-    /* OPAQUE, unlike the desktop note card's 3.5% tint: this card is what
-       makes "the legend is above the title blocks" (explicit instruction)
+    bottom: 0;
+    /* Sheet corners: rounded on top only — the bottom edge IS the screen edge. */
+    border-radius: 16px 16px 0 0;
+    /* OPAQUE, and WHITE (explicit instruction — a sheet, not the desktop note's
+       tint): this card is what makes "the legend is above the title blocks"
        visible. The layer already out-stacks the cards (z-index 1002), but a
        translucent card let the title's text and dashed frame show straight
-       through the open panel, which reads as the title sitting on top. The
-       colour is that same tint composited onto --bg (#FDFCFF), so at rest it
-       looks identical to the desktop note card. */
-    background: var(--note-card-bg, #f4f3f6);
+       through the open panel, which reads as the title sitting on top. */
+    background: #fff;
+    /* A hairline on the top and sides (never the bottom — that edge is the
+       screen's) plus a faint lift off the artwork it rises over. */
+    border: 0.5px solid #d6d6d6;
+    border-bottom: 0;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.06);
     pointer-events: none;
     /* The bar's arrival pop (fold6SetMobileLegendVisible) scales the collapsed
        card together with the button. */
@@ -3608,7 +3996,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     color: #767676;
     background: none;
     border: 0;
-    padding: 0;
+    /* Room for the grab handle above the title: handle top offset (2) + handle
+       height (2) + the handle→מקרא gap (2). The button's height is what the
+       closed card is measured off, so the handle is inside the card for free. */
+    padding: 6px 0 0;
     cursor: pointer;
     /* Same treatment as the pill's ⓘ: this is a real <button>, so a tap draws
        the UA's own highlight over it — a grey halo — and leaves a focus ring
@@ -3619,6 +4010,19 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   .fold6-mlegend-btn:focus,
   .fold6-mlegend-btn:focus-visible {
     outline: none;
+  }
+  /* The sheet's grab handle — a 36×2 pill centred above the title. Purely a
+     sheet affordance; it is not what the button measures its width off. */
+  .fold6-mlegend-btn::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 2px;
+    border-radius: 1px;
+    background: #d4d3d8;
   }
   /* The rows. No frame of its own any more — the card behind the bar is the
      frame — just the gap under the title row and a little inner breathing room.
@@ -3675,13 +4079,33 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      Widths are the label box; +12px for the 6px swatch and 6px row gap.
      Coalition: keeps קבוצות ימין לאומיות (101px), wraps תנועות התנחלות (124px).
      Change:    keeps מפגינים ערבים ישראלים (123px), wraps מתנגדי הרפורמה… (207px). */
-  .fold6-mlegend-col.is-coalition { max-width: 124px; }
-  .fold6-mlegend-col.is-change    { max-width: 160px; }
+  /* ONE width for both camps, and it is DERIVED, not chosen:
+     160 = label wrap 118 + dot 8 + dot-to-label gap 10 + 2x12 row padding.
+     The two camps used to carry different caps (124 / 160) because their
+     longest keeper labels are ~1px apart and no shared width separated them —
+     a rule for bare text. The rows are cards now, and cards in one panel have
+     to read as one set, so both columns take the same width and every row
+     fills it. Change the wrap width or the padding and this number is the sum
+     again; it is not independently tunable.
+     `width` as well as `max-width`: the column is a flex item, and max-width
+     alone lets the shorter camp shrink-wrap under its cap, which puts the two
+     back at different widths. */
+  .fold6-mlegend-col.is-coalition,
+  .fold6-mlegend-col.is-change {
+    width: 160px;
+    max-width: 160px;
+    flex: 0 0 auto;
+    /* The rows stretch to the column instead of shrink-wrapping their text —
+       this is what makes every card the same width. */
+    align-items: stretch;
+  }
 
   /* The camp name heading each column — bold, so the panel keeps the same
      two-level read (camp → groups) the page had on screen at @fold3. */
   .fold6-mlegend-camp {
-    margin: 0 0 12px;
+    /* 8 to the first card, not 12: the cards carry their own padding now, so
+       the old gap read as a hole between the heading and the group it heads. */
+    margin: 0 0 8px;
     font: 700 14px 'Assistant', sans-serif;
     color: rgba(0, 0, 0, 0.85);
     /* The one centered thing — centered over its own column, as at @fold3.
@@ -3691,12 +4115,41 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     text-align: center;
   }
 
+  /* EACH GROUP IS A CARD. The rows are the legend's filter buttons, so they
+     have to read as tappable controls rather than lines of text — the fill and
+     radius are the ACLED note's own (rgba(0,0,0,0.035), 16px), chosen in a
+     compare/ pass against a hairline box, a chip and the house dash.
+     Every card is the same width (the column, above) and at least the same
+     height, so the six read as one set. */
   .fold6-mlegend-row {
     display: flex;
-    align-items: flex-start;
-    gap: 6px;
+    /* centred, not flex-start: with a fixed card height a top-aligned label
+       left a visible hole under the one-line groups. */
+    align-items: center;
+    /* dot -> label. FOLD6_MFLY_GAP_PX (js/groups.js) mirrors this — it is the
+       gap @fold4's fly animates the row down to, so the two move together. */
+    gap: 10px;
     margin-bottom: 6px;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 6px 12px;
+    /* The tallest card at the shipped copy is a two-line label; min-height
+       (not height) levels the rest up to it without clipping a card that wraps
+       further on a narrower phone. */
+    min-height: 44px;
+    background: rgba(0, 0, 0, 0.035);
+    border: none;
+    border-radius: 16px;
   }
+  /* The card is a filter BUTTON on the folds that can answer one. Only the
+     cursor and the dim say so — no hover treatment, since there is no hover on
+     a phone and the sheet is dragged by the same finger that taps. */
+  .fold6-mlegend-row.is-armed { cursor: pointer; }
+  /* Filtered out. Matches .group-item.is-filtered-off's own 0.28 so the two
+     breakpoints read identically, and transitions for the same reason that one
+     does — it is a pure state flip, not a per-frame JS repaint. */
+  .fold6-mlegend-row.is-filtered-off { opacity: 0.28; }
+  .fold6-mlegend-row { transition: opacity 260ms ease; }
 
   .fold6-mlegend-label { text-align: right; }
 
@@ -3705,9 +4158,15 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      makes with groupLabelInkShift. */
   .fold6-mlegend-swatch {
     flex: none;
-    width: 6px;
-    height: 6px;
-    margin-top: 4px;
+    /* 8px, mirrored by FOLD6_MFLY_SWATCH_PX (js/groups.js) — that constant is
+       the size @fold4's fly lands the legend swatch at, so it must move with
+       this or the dot arrives one size and snaps to another. */
+    width: 8px;
+    height: 8px;
+    /* 1, not 4: the row centres its children now, so this is only the last
+       optical nudge onto the label's text top rather than the old offset that
+       pushed the dot onto a top-aligned label's first line. */
+    margin-top: 1px;
   }
 
   /* Labels wrap as necessary (explicit instruction) — inside the column's half

@@ -53,12 +53,6 @@
            the canvas draws (p7BuildDataSummary at the end of initPage7,
            page7.js) rather than hardcoded, so it can't drift from the data. -->
       <section id="canvasA11ySummary" class="a11y-only" aria-label="תיאור מילולי של הנתונים"></section>
-      <!-- Single persistent overlay for the 6 camp groups from @fold2's
-           two-camp columns through @fold6's mini-legend glide — one set of
-           DOM nodes that's continuously repositioned/restyled as the user
-           scrolls, rather than separate per-fold overlays crossfading into
-           each other (see GROUPS in js/groups.js, updateGroups in js/update-groups.js). -->
-      <div class="groups-overlay" id="groupsOverlay" aria-hidden="true"></div>
       <!-- @fold1's dot columns — fixed to the viewport so they don't scroll
            away with the rest of @fold1's content (see buildPage0AllDots in
            page1.js); faded out via js/update-groups.js once @fold2's
@@ -69,6 +63,25 @@
            mini-legend — see FOLD6_SQUARES_OFFSET/layoutFold6Squares in js/groups.js. -->
       <div class="fold6-squares-overlay" id="fold6SquaresOverlay" aria-hidden="true"></div>
     </div>
+    <!-- Single persistent overlay for the 6 camp groups from @fold2's
+         two-camp columns through @fold6's mini-legend glide — one set of
+         DOM nodes that's continuously repositioned/restyled as the user
+         scrolls, rather than separate per-fold overlays crossfading into
+         each other (see GROUPS in js/groups.js, updateGroups in js/update-groups.js).
+         A direct .layout child, NOT nested in .graphic-col — same reasoning as
+         the tooltips below: that column is its own stacking context, so a group
+         row inside it could never climb above the מקרא bar's layer, and on
+         mobile the groups have to paint OVER the legend (explicit instruction).
+         It's `position: fixed; inset: 0`, so moving it out of .graphic-col
+         changes nothing about where anything lands. It stays BEFORE .text-col in
+         source order, which is what keeps its desktop z-index: 0 painting under
+         the title cards exactly as it did from inside .graphic-col. -->
+    <div class="groups-overlay" id="groupsOverlay" aria-hidden="true"></div>
+    <!-- Dev aid: the current @foldN, the number alone, top-left. Ctrl+Shift+F
+         hides/shows it (js/nav.js). A direct .layout child for the same reason
+         as the tooltips below — .graphic-col traps z-index. aria-hidden: it's a
+         debug readout, not content. -->
+    <div class="fold-number-badge" id="foldNumberBadge" aria-hidden="true"></div>
     <!-- Hover tooltip for the event dots (date + Hebrew description) —
          positioned/shown by p9HoverInit (page9.js), p7HoverInit/p7InspectInit
          (page7.js) and the fold8 demo (js/update-groups.js). A direct .layout
@@ -144,7 +157,12 @@
       </section>
       <section class="text-section" data-page="6" id="page-6">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">ריחוף העכבר מעל ריבוע חושף את תיאור הפעולה וממחיש את סדר גודלה.</h2>
+          <!-- @fold7 is the one card whose copy differs by input device: desktop
+             hovers, a phone presses and holds. Two spans swapped by the 600px
+             breakpoint (.copy-desktop / .copy-mobile, style.css) rather than
+             JS — the hidden one is display:none, so .text-card-frame's
+             width: fit-content still measures only the visible copy. -->
+        <h2 class="section-title text-card-frame"><span class="copy-desktop">ריחוף העכבר מעל ריבוע חושף את תיאור הפעולה וממחיש את סדר גודלה.</span><span class="copy-mobile">לחצו והחזיקו את האצבע על ריבוע כדי לחשוף את תיאור הפעולה ולראות את סדר גודלה.</span></h2>
         </div>
       </section>
       <section class="text-section" data-page="7" id="page-7">
@@ -181,7 +199,12 @@
       <section class="text-section page9-panel" data-page="12" id="page-12">
         <div class="page9-title-row">
           <div class="section-text text-card">
-            <h2 class="section-title text-card-frame">מה נחשב בעיניכם לפעולה לגיטימית, ומה לפעולה קיצונית?</h2>
+            <!-- Mobile gets its own, shorter headline — the same .copy-desktop /
+                 .copy-mobile span pair @fold7 uses. Mobile's gesture is "mark the
+                 extreme ones", not "sort both piles", so the two-clause desktop
+                 question asks more than the fold delivers there (and wraps to
+                 three lines on a phone). -->
+            <h2 class="section-title text-card-frame"><span class="copy-desktop">מה נחשב בעיניכם לפעולה לגיטימית, ומה לפעולה קיצונית?</span><span class="copy-mobile">מהי פעולה קיצונית בעיניכם?</span></h2>
             <p class="page9-header-subtitle">גררו סוגי פעולות הנחשבות קיצוניות בעיניכם</p>
           </div>
         </div>

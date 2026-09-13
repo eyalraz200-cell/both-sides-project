@@ -1,12 +1,31 @@
 let p12FreeformTargets = null;
-let p12FreeformW = 0, p12FreeformH = 0;
+let p12FreeformW = 0, p12FreeformH = 0, p12FreeformFiltSig = "";
+
+// WHICH DOTS THIS FOLD SHOWS. Two independent gates, and both have to hold:
+// the category was dropped "above" (@fold13's own doing), AND the dot's group
+// isn't filtered out through the mini-legend. The @fold9 filter is SET on the
+// timeline but LIVES from there on — page8.js and page9.js both honour it, so
+// @fold14/@fold15 must too, or a hidden group's dots snap back into the spread.
+function p12Shown(e) {
+  const idx = CATEGORY_TO_IDX[e.category];
+  if (idx === undefined || p9.sides[idx] !== "above") return false;
+  return !(typeof p7FilterHiddenEv === "function" && p7FilterHiddenEv(e));
+}
+// Cache key for the filter state: the targets PACK from the shown dots, so a
+// layout built under a different filter points at the wrong cells.
+function p12FiltSig() {
+  return (typeof p7FilterOff !== "undefined" && p7FilterOff)
+    ? [...p7FilterOff].sort().join("|") : "";
+}
 
 function p12EnsureFreeformTargets(W, H) {
-  if (p12FreeformTargets && p12FreeformW === W && p12FreeformH === H) {
+  const filtSig = p12FiltSig();
+  if (p12FreeformTargets && p12FreeformW === W && p12FreeformH === H &&
+      p12FreeformFiltSig === filtSig) {
     return p12FreeformTargets;
   }
   p12FreeformTargets = new Map();
-  p12FreeformW = W; p12FreeformH = H;
+  p12FreeformW = W; p12FreeformH = H; p12FreeformFiltSig = filtSig;
 
   // Mobile scatters at @fold13's own pitch (p9Metrics: 2px) — the desktop
   // P7_CELL pitch is more than double it and made the spread dots read
@@ -18,10 +37,7 @@ function p12EnsureFreeformTargets(W, H) {
 
   // Left half: col 0 is nearest to center (x = W/2 - CELL), grows leftward.
   const leftShuf = p7Shuffle(Array.from({ length: total }, (_, i) => i), 31337);
-  p7.leftEvents.filter(e => {
-    const idx = CATEGORY_TO_IDX[e.category];
-    return idx !== undefined && p9.sides[idx] === "above";
-  }).forEach((e, i) => {
+  p7.leftEvents.filter(p12Shown).forEach((e, i) => {
     if (i >= total) return;
     const cell = leftShuf[i];
     const col  = Math.floor(cell / rows);
@@ -31,10 +47,7 @@ function p12EnsureFreeformTargets(W, H) {
 
   // Right half: col 0 is nearest to center (x = W/2), grows rightward.
   const rightShuf = p7Shuffle(Array.from({ length: total }, (_, i) => i), 42424);
-  p7.rightEvents.filter(e => {
-    const idx = CATEGORY_TO_IDX[e.category];
-    return idx !== undefined && p9.sides[idx] === "above";
-  }).forEach((e, i) => {
+  p7.rightEvents.filter(p12Shown).forEach((e, i) => {
     if (i >= total) return;
     const cell = rightShuf[i];
     const col  = Math.floor(cell / rows);
@@ -75,7 +88,7 @@ var P12_DOT_COUNT = 9250;
 // don't reintroduce it.
 let p12PairTargets = null;
 let p12PairW = 0, p12PairH = 0, p12PairGapUsed = 0,
-    p12PairSpreadUsed = 0, p12PairMaxUsed = 0;
+    p12PairSpreadUsed = 0, p12PairMaxUsed = 0, p12PairFiltSig = "";
 
 // Lerp between two "#rrggbb" strings. @fold15's dots do not keep their group
 // colour: they RECOLOUR as they fly (see the fly beat in drawPage12), so the
@@ -99,20 +112,20 @@ function p12Rand(n, salt) {
 }
 
 function p12PairVisible(events) {
-  return events.filter(e => {
-    const idx = CATEGORY_TO_IDX[e.category];
-    return idx !== undefined && p9.sides[idx] === "above";
-  });
+  return events.filter(p12Shown);
 }
 
 function p12EnsurePairTargets(W, H) {
+  const filtSig = p12FiltSig();
   if (p12PairTargets && p12PairW === W && p12PairH === H &&
-      p12PairGapUsed === P12_PAIR_GAP && p12PairSpreadUsed === P12_PAIR_SPREAD && p12PairMaxUsed === P12_DOT_COUNT) {
+      p12PairGapUsed === P12_PAIR_GAP && p12PairSpreadUsed === P12_PAIR_SPREAD &&
+      p12PairMaxUsed === P12_DOT_COUNT && p12PairFiltSig === filtSig) {
     return p12PairTargets;
   }
   p12PairW = W; p12PairH = H;
   p12PairGapUsed = P12_PAIR_GAP;
   p12PairSpreadUsed = P12_PAIR_SPREAD; p12PairMaxUsed = P12_DOT_COUNT;
+  p12PairFiltSig = filtSig;
 
   const { SQ, CELL } = p9Metrics();
   // The slot is SQUARE and fits the couple's long axis either way round, so a
@@ -157,6 +170,13 @@ function p12EnsurePairTargets(W, H) {
   // category is dropped "above" at this point, so the visible dots of a camp
   // are usually all one group and the palette collapsed to a single colour
   // (the all-green fillers bug).
+  // THE LEGEND FILTER DOES NOT REACH THIS PALETTE. A filtered group keeps its
+  // real dots out of the field (p12Shown), but the newcomers are decorative,
+  // not events — they stand for the camp as a whole, so they draw on the camp's
+  // WHOLE colour roster either way. Narrowing it to the unfiltered groups is
+  // wrong twice over: it shrinks an already-thin palette toward the all-one-
+  // colour bug this line exists to avoid, and it would make a filter the reader
+  // set on the timeline quietly restyle a fold that isn't about groups at all.
   const paletteOf = (events, seed) => p7Shuffle(
     [...new Set(events.map(e => p7ActorColor(e.actor)))], seed);
   const palettes = [paletteOf(p7.leftEvents, 13579),
@@ -184,6 +204,9 @@ function p12EnsurePairTargets(W, H) {
   // The colour every dot RECOLOURS TO across the fly beat: one of all six group
   // colours, picked by hash so neighbours don't march through the roster in
   // order. Fillers get one too, on top of the pop-in colour they grow in with.
+  // ALWAYS the full six — the mini-legend filter does not reach this roster, same
+  // reason as the filler palette above: the recolour is about the two camps, not
+  // about which groups the reader left switched on upstream.
   const allColors = GROUPS.map(g => g.color);
   // The two dots of a couple must never land on the SAME colour — a same-colour
   // domino reads as one group sitting with itself, which is the opposite of

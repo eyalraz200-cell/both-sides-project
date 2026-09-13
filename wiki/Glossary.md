@@ -25,8 +25,8 @@ stays on the axis until reverse scroll un-reaches it. **Not** the per-event canv
 **"Axis appearing" vs "axis filling up"** — two distinct behaviors, easy to confuse:
 *appearing* is the 2800 ms build-in wipe (`p7AxisIntroT`); *filling up* is the dark
 "reached" bar growing as `p7.currentDate` advances. Both are currently gated off the same
-crossing. On desktop both run **top → bottom** down the vertical centre axis; on mobile
-right → left along the bottom axis.
+crossing. Both run **top → bottom** down the vertical centre axis, on desktop and on
+mobile alike (`P7_VERT_MOBILE.enabled` is true; the old horizontal bottom axis is gone).
 
 **"Band" / "widen"** — the two headline placements under comparison on the desktop
 vertical axis (`P7_VERT.eventMode`): *band* pauses the dot flow and prints the headline
@@ -66,4 +66,4 @@ as the persistent `.group-item`.
 grow to their crowd-tier block size and re-pack into a gap-exact skyline grid per camp, at
 the timeline's own gap. Scrolling back to `@fold9` flies them back. There is no button.
 Distinct from the hover **bulge** (same tiers, different multipliers). See
-[Timeline](Timeline.md#the-size-grid--p7sizegridset-page7js-desktop-only).
+[Timeline](Timeline.md#the-size-grid--p7sizegridset-page7js).

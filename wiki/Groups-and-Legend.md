@@ -31,6 +31,17 @@ the order is shared by @fold3's aligned column, @fold4 and the mini-legend, so t
 never reshuffle past each other on the glide. Reordering a camp = swapping two `fold6.y`
 values in `GROUPS`.
 
+**Mobile swaps two pairs.** Under the breakpoint the order is the desktop sort with
+`MOBILE_ROW_SWAPS` (`js/groups.js`) applied — מתנגדי הרפורמה המשפטית ↔ תומכי עסקת חטופים
+ומתנגדי המלחמה in גוש השינוי, and מפגינים חרדים ↔ קבוצות ימין לאומיות in מחנה הימין — so
+mobile reads **תנועות התנחלות / קבוצות ימין / מפגינים חרדים** and **תומכי עסקת חטופים /
+מתנגדי הרפורמה / מפגינים ערבים**, top→bottom. Everything that derives the order goes
+through one helper, `campRowOrder(camp, mobile)`: @fold3's column (`legendRow`) and the
+מקרא panel's rows both call it, which is why the @fold4 fly still lands each row on its own
+panel row with none of them crossing. It is a swap of the shared *order*, **not** a second
+set of `fold6.y` values — those are the real geometry of the desktop on-canvas mini-legend
+(`fold6RowY`), which this must not touch.
+
 The `actor` values are `full_v3.xlsx`'s own lowercase `main_actor` strings, matched
 verbatim. All six are present in the data, so every group appears on the real timeline.
 The camp membership they imply is duplicated as `ACTOR_SIDE` in `server.py`, which
@@ -209,7 +220,7 @@ does nothing whenever tallest-label + gap outvotes it. Mobile has no flat pitch 
 its labels wrap to 1-3 lines with the **first line** on the row y and the rest hanging
 below it (`firstLineShift`), so the **visible gap** is the constant instead. Each step
 from row *k* to *k+1* is
-`max(FOLD3_MIN_ROW_PITCH_MOBILE_PX = 32, rowH(k) + FOLD3_ROW_LABEL_GAP_PX = 12)`
+`max(FOLD3_MIN_ROW_PITCH_MOBILE_PX = 32, rowH(k) + FOLD3_ROW_LABEL_GAP_PX = 13)`
 (`fold3RowStep`), where `rowH(k)` is the tallest label at row index *k* across **both**
 camps — so the two side-by-side columns keep their rows on shared lines, and the gap
 between any two rows is the same whatever their line counts. `fold3RowY` is the prefix
@@ -262,7 +273,7 @@ frame, so the ring holds still while the characters grow leftward. The accessibl
 from a static `aria-label`, since the visible text is sliced. Then it stays for every fold
 after it, fading out with everything else on @fold14's `p9.fold13OutT` clock;
 `hidden` before that. Desktop only. Behaviour and what it
-toggles: [Timeline](Timeline.md#the-size-grid--p7sizegridset-page7js-desktop-only).
+toggles: [Timeline](Timeline.md#the-size-grid--p7sizegridset-page7js).
 
 The click is **page-gated** (js/groups.js): `currentPage < 12` → page7's
 `p7SizeGridSet(true, {uniform: !p7GridUniform})`; `currentPage === 12` →
@@ -533,69 +544,92 @@ mobile panel it has no width at all and fills the panel. It is RTL and right-ali
 note and changes its height; the legend rows do not move with it — the note just extends
 further down. **Removed — don't reintroduce:** a `fold6NoteShiftPx` row pre-shift.
 
-## The mobile מקרא bar
+## The mobile מקרא bar — a bottom sheet
 
 **Under 600px there is no on-canvas mini-legend.** From `@fold4` on, the legend is a
-persistent bar pinned to the top of the viewport (`js/groups.js`, `.fold6-mlegend`):
+persistent **bottom sheet** pinned to the bottom edge of the viewport (`js/groups.js`,
+`.fold6-mlegend`):
 
 ```
-          ╭ מקרא ╮                    ← closed: the title row alone, a tinted card
-          ╰──────╯                      centred on the bar (no chevron)
-
-╭──────────────────────────────────╮  ← open: the SAME card, stretched to the bar's
-│                       מקרא       │     full width (step 1) and then down (step 2)
-│ מחנה הימין          גוש השינוי  │
+╭──────────────────────────────────╮  ← open: the SAME card, grown UPWARD out of the
+│ מחנה הימין          גוש השינוי  │     bottom edge (height step)
 │ 3 coalition rows │ 3 change rows │
 │ איסוף הנתונים / ACLED note …     │
-╰──────────────────────────────────╯
+│               ──                 │
+│              מקרא                │
+└──────────────────────────────────┘  ← the bottom edge IS the screen edge
+
+              ╭──────────────╮          ← closed: a pill centred on the bar — the
+              │  ──  מקרא    │            grab handle over the bare title, sized
+              ╰──────────────╯            title + 40 each side × 40 high
 ```
 
-**The bar is styled as the desktop ACLED note card** (per explicit instruction) — the same
-tinted, borderless, 16px-radius card (`.fold6-mlegend-card` reads the `--note-card-*`
-tokens `.fold6-note-card` uses) and the same 14px/600/`#767676` title type. It carries **no
-chevron** (explicit instruction) — unlike the desktop note, this bar is the only thing on
-screen at its fold and its own opening is the affordance, so the button is the bare title and
-centring the button centres the title. The **title is part of the card**: the מקרא
-button is the collapsed pose's whole content, and opening stretches that card around
-it — **width first, then height** — exactly as the desktop note opens.
+**The sheet is a white card** (explicit instruction — `#fff`, not the desktop note's tint)
+with **rounded top corners only** (`border-radius: 16px 16px 0 0`), **full bleed** (the bar
+has no side inset; the content keeps a 12px side inset via the bar's padding) and a soft
+**hairline** (`0.5px solid #d6d6d6` on the top and sides — never the bottom, that edge
+is the screen's) with a faint **upward shadow** (`0 -4px 24px rgba(0,0,0,.06)`). It keeps the desktop note's 14px/600/`#767676` title type and carries **no chevron**
+(explicit instruction): the affordance is the **grab handle** — `.fold6-mlegend-btn::before`,
+a 36×2px `#d4d3d8` pill centred 2px above the title, with a 2px gap to the title (the
+button's `padding-top: 6px` = handle offset 2 + handle height 2 + gap 2). The button is
+the **bare title** — no chevron, and no group swatches on the title line (judged in a
+harness, declined). The **title and handle are part of the card**: the button is the
+collapsed pose's whole content, and opening grows that card upward around it.
 
 - It lives in its **own** layer, `#fold6MobileLegendLayer` (a direct `.layout` child, like
   `#fold6NoteLayer` and `#page9CatTooltip`). It is *not* in `#fold6NoteLayer`: that one is
   `aria-hidden` + `pointer-events: none`, which a button cannot be. The layer passes clicks
   through; only `.fold6-mlegend` takes pointer events, and only once `updateGroups` has
   faded it past halfway.
-- **Stacking — the legend is ALWAYS above the title blocks** (explicit instruction), open or
-  closed. The layer is `z-index: 5`, over `.section-text.text-card`'s **4** (mobile only,
-  with `.text-section > .section-text.text-card` supplying the `position: relative` — the
-  child combinator leaves `@fold13`/`@fold14`'s sticky/fixed cards alone), and on the folds
-  whose cards climb to 1001 to clear the docked tooltip it climbs with them to **1002**.
-  Out-stacking the full-viewport `.text-section` boxes is also what keeps the button
-  tappable at all. The card's lift to 4 only counts because **`.text-col` deliberately
-  carries no `z-index`** — giving it one re-opens a stacking context and traps every
-  descendant. Side effect of the same change: `.page9-tooltip`/`.page9-pill-ghost`
-  (`z-index: 1000`) now really are above everything, matching `#page9CatTooltip`.
+- **Stacking — the mobile stack, bottom to top** (explicit instruction): the **מקרא bar
+  (1002) → the groups (1003) → the title blocks (1004, and 1005 on the folds whose cards
+  have to clear the docked tooltip)**. So a title block paints over both, and the group rows
+  paint over the legend. Mobile only, with `.text-section > .section-text.text-card`
+  supplying the `position: relative` — the child combinator leaves `@fold13`/`@fold14`'s
+  sticky/fixed cards alone. The bar keeps a four-digit number (rather than being dropped to
+  a low one) purely to stay above the docked event tooltip's 1000, exactly as it was; the
+  cards were lifted past it instead, which leaves every other tooltip relationship alone.
+  `.groups-overlay` can take part at all only because it is a **direct `.layout` child**
+  (project.html) — inside `.graphic-col` its z-index was trapped in that column's stacking
+  context. Out-stacking the full-viewport `.text-section` boxes is also what keeps the מקרא
+  button tappable. The cards' lift only counts because **`.text-col` deliberately carries no
+  `z-index`** — giving it one re-opens a stacking context and traps every descendant.
   The number must live on the **layer**: it is the stacking context, so a z-index on
   `.fold6-mlegend` inside it could never climb past it.
-  **And the panel card is opaque** (`.fold6-mlegend-card` background `#f4f3f6` — the note
-  card's 3.5% tint composited onto `--bg`). Stacking alone wasn't enough: with the desktop
-  card's translucent tint, a title block's text and dashed frame showed straight through the
-  open panel and read as the title being on top.
+  **The panel card is opaque** (`.fold6-mlegend-card` background `#fff`) — kept from when
+  the legend sat on top, and still what stops the artwork behind it showing through.
   *Removed — don't reintroduce:* the `.fold6-mlegend-layer.is-open { z-index: 5 }` flip that
-  left the layer at 3 while closed and only lifted it while the panel was down. A title card
-  sliding over the מקרא button reads as the legend being gone. The layer's `is-open` class
-  went with it (the bar still gets its own).
-  **The one thing that still passes behind a title block is `@fold4`'s flight** — that is
-  `.fold6-mfly-layer-under`'s job (`z-index: 1`), not this layer's.
+  left the layer at 3 while closed and only lifted it while the panel was down (its
+  `is-open` class went with it; the bar still gets its own), and — superseded — the older
+  **"the legend is ALWAYS above the title blocks, open or closed"** rule that the flip was
+  replaced by. `@fold4`'s flight rides in the groups' own band now
+  (`.fold6-mfly-layer-under`, 1003), not below everything.
 - **The card is a sibling painted behind the content, sized by JS** — the desktop
   construction (`fold6NoteCardEl`) carried over. `fold6MobileCardEl` is the bar's first
   child, `position: absolute`, and `fold6MLegendPaintCard(raw)` (`js/groups.js`) writes its
-  `left/width/height` per frame of an open or close. It measures only the **button** and
-  the **bar**: the bar's own `padding` is the card's outset (`FOLD6_CARD_PAD` = 8, the
-  desktop card's number), so the collapsed pose is the button plus that outset, centred
-  on the bar, and the open pose is simply the bar's box. At rest open the card is pinned to
-  the bar's four edges rather than sized, so the ACLED note flowing into the panel at
-  `@fold6` grows it for free. It is first painted when the bar arrives
+  `left/width/height` per frame of an open or close, **anchored to the bar's bottom**
+  (`bottom: 0`, never `top`), so the height step grows the sheet upward out of the screen
+  edge. It measures only the **button** and the **bar**: the bar's padding is the card's
+  outset — `FOLD6_CARD_PAD` (8) above the title, `FOLD6_MLEGEND_PAD_BOTTOM_PX` (9, the
+  bar's CSS bottom padding — keep the two in sync) below it — so the closed height is the
+  button plus those, and the open pose is simply the bar's box. The **closed pose is a
+  pill** (`FOLD6_MLEGEND_COMPACT_CLOSED = true`): the measured title plus
+  `FOLD6_MLEGEND_COMPACT_PAD_X` (**40**) each side, **40** high (`FOLD6_MLEGEND_COMPACT_H`,
+  exact tuned px; `FOLD6_MLEGEND_COMPACT_W` is a fixed-width override when non-zero, and
+  `_H = 0` falls back to the measured height), centred on the bar, which the paint function's width step
+  widens to the full bar on the way open and the height step then raises. Setting
+  `FOLD6_MLEGEND_COMPACT_CLOSED = false` makes the closed pose full width. At rest open the card
+  is pinned to the bar's four edges rather than sized, so the ACLED note flowing into the
+  panel at `@fold6` grows it for free. It is first painted when the bar arrives
   (`fold6SetMobileLegendVisible`) and repainted on `resize` — never per scroll frame.
+- **The title drags.** A press on the button scrubs `fold6MLegendOpenRaw` with the finger
+  (up = opening, over the bar's open height minus the closed pill), painting each frame,
+  and release snaps to the nearer pose through `fold6SetMobileLegendOpen`; a press that
+  moved under 6px (`FOLD6_MLEGEND_DRAG_SLOP_PX`) is a tap and toggles as before, and one
+  that moved swallows its own compatibility click so a drag never double-toggles. The
+  pointer is captured on the **button** (capturing on the bar re-targets the click and
+  kills the tap), and the bar's `touch-action: none` keeps the page from scrolling under
+  the swipe.
 - **Opening: width, then height. Closing: height, then width.** `fold6SetMobileLegendOpen
   (open, {instant, onDone})` drives one raw progress `fold6MLegendOpenRaw` (0 closed … 1
   open) toward its target over `FOLD6_MLEGEND_OPEN_MS` (**550**) for the full trip, sliced
@@ -677,9 +711,9 @@ it — **width first, then height** — exactly as the desktop note opens.
   `ChangeEl` un-type at `@fold4` **exactly as on desktop** — there is no mobile branch on
   the untype factors and no mobile glide — so past `@fold4` the button is the only thing
   left of the camps.
-- **One number positions the bar:** `FOLD6_MLEGEND_TOP_MOBILE_PX` (**16px**), its distance
-  from the top edge. It never moves; `fold6PlaceMobileLegend()` writes that
-  constant as the `top` each frame, which is why `.fold6-mlegend` has none in the stylesheet.
+- **One number positions the bar:** `FOLD6_MLEGEND_BOTTOM_MOBILE_PX` (**0**), its distance
+  from the bottom edge. It never moves; `fold6PlaceMobileLegend()` writes that
+  constant as the `bottom` each frame, which is why `.fold6-mlegend` has none in the stylesheet.
 - **The button arrives early and pops.** It does *not* ride `fold6Trigger`'s full ~1.9s ramp
   — fading one small button over that long reads as never arriving. `fold6SetMobileLegendVisible`
   re-maps the progress onto a front-loaded slice, `FOLD6_MLEGEND_IN_SPAN` (**0.3**), and
@@ -691,19 +725,24 @@ it — **width first, then height** — exactly as the desktop note opens.
 - **The panel's own beats after the hand-off** (`fold6MLegendAutoBeat`, called from
   `updateGroups` right after `fold6SetMobileLegendVisible`). `@fold4` leaves the panel open;
   **`@fold5` (`squaresRevealTrigger`) closes it** — the grey sample squares are that fold's
-  subject and an open panel covers them — and **`@fold6` (`acledNoteTrigger`) opens it
-  again**, which is what makes the ACLED note's arrival visible at all, the note living
-  inside the panel. `want` is *derived from the two triggers every frame*, not latched on a
-  crossing, so scrolling back up runs the same states in reverse; only the **changes** are
-  acted on, so a reader who taps the button mid-fold keeps what they chose until the next
-  beat. The memo (`fold6MLegendAutoWant`) clears whenever the bar is gone, which re-arms the
-  whole sequence. Because `@fold6` opens the card *and* reveals the note, the note's beats
-  are shifted on mobile by `FOLD6_MLEGEND_OPEN_MS / GROUP_TRANSITION_MS` (`noteOpenShift`,
-  `js/update-groups.js`) so the type-in starts when the card lands instead of appearing
-  already a third typed.
+  subject and an open panel covers them — **and it stays closed from there on. `@fold6` does
+  NOT reopen it** (explicit instruction): the ACLED card is that fold's subject, and a panel
+  opening over it covers the thing being read. The note still arrives *inside* the closed
+  panel on its own `acledNoteTrigger` ramp, waiting for a reader who taps מקרא. `want` is
+  *derived from `squaresRevealTrigger` every frame*, not latched on a crossing, so scrolling
+  back up past `@fold5` reopens it; only the **changes** are acted on, so a reader who taps
+  the button mid-fold keeps what they chose until the next beat. The memo
+  (`fold6MLegendAutoWant`) clears whenever the bar is gone, which re-arms the sequence.
+  Two things follow from the fold not opening the card, both in `js/update-groups.js`:
+  `noteOpenShift` is **0** (there is no card-open to wait for, so the note types on the
+  trigger's own beats), and the note's `hidden` gate is `fold6MLegendOpenWant &&
+  fold6MLegendOpenRaw < 1` — mid-open only. On the raw alone a permanently-closed card sits
+  at 0 and would keep the note hidden forever, so the frame would open empty on the tap.
 - The panel's rows are a **separate static copy** of the six groups, not the animated
   `groupItems` — those are mid-flight whenever the panel is closed. Same two-column split,
-  same sides (coalition right, by `dir: rtl` + source order), each column sorted by `fold6.y`.
+  same sides (coalition right, by `dir: rtl` + source order), each column in `campRowOrder`'s
+  mobile order (see the roster section — it passes `mobile: true` outright, since the panel is
+  built once at parse time and only ever shown under the breakpoint).
 - The ACLED note and its title are **moved**, not duplicated, into the panel by
   `fold6SyncNoteHome()` — one set of nodes, one ACLED link. Crossing the breakpoint reparents
   them back; `.is-in-panel` undoes their `position: absolute`, and the inline
@@ -791,27 +830,24 @@ it — **width first, then height** — exactly as the desktop note opens.
     alongside its rows (`fold6MFlySetRowsShown` covers both) and appear on the same landing
     frame — a heading already sitting in the panel gives the arrival away.
   - **The flight is painted by stand-ins in TWO parking layers**, not by the `groupItems`
-    themselves (`fold6MFlyPaintClone`/`.fold6-mfly-layer`). `.groups-overlay` lives inside
-    `.graphic-col` (`position: fixed; z-index: 0` = a stacking context), so no z-index it
-    or its children carry can climb past the open layer's mobile `z-index: 1002` — the
-    rows flew *behind* the panel. Six bare `.group-item` copies parked in a
+    themselves (`fold6MFlyPaintClone`/`.fold6-mfly-layer`). Six bare `.group-item` copies parked in a
     `pointer-events: none` layer appended **after** the panel therefore wear the frame
     instead: `updateGroups` writes the row as usual, then copies its three `cssText`s onto
     the stand-in and hides the real one with `.is-mfly-hidden` (`visibility: hidden`, so it
     stays laid out — `item.label.offsetWidth` is read from it every frame). No coordinate
     translation is needed: every layer involved is `position: fixed; inset: 0`.
-    **Which** layer a stand-in sits in is decided per frame, per element (`fold6MFlyPark`),
-    because the requested order is a z-index cycle — title block above the rows, open legend
-    above the title block, rows landing on top of the panel. `.fold6-mfly-layer-under`
-    (inserted before the מקרא layer, `position: fixed; z-index: 1` — above the canvas, below
-    the mobile card's 4) carries the flight; `.fold6-mfly-layer` inside the open מקרא layer
-    carries the landing. The test is **"is this element inside the panel's box"** — both
+    **Which** layer a stand-in sits in is decided per frame, per element (`fold6MFlyPark`).
+    `.fold6-mfly-layer-under` (inserted before the מקרא layer, `position: fixed`, mobile
+    `z-index: 1003` — the groups' own band: over the legend, under the title block) carries
+    the flight; `.fold6-mfly-layer` inside the מקרא layer carries the landing, so it paints
+    after the panel within the panel's own layer. The swap used to be load-bearing, because
+    the old order was a z-index **cycle** (title block above the rows, open legend above the
+    title block, rows landing on the panel); with the stack now a plain bar → groups → cards
+    order, both spots satisfy it and the hand-over is belt-and-braces. The test is **"is this element inside the panel's box"** — both
     edges, `fold6MFlyPanelRect.top`/`.bottom` ± `FOLD6_MFLY_PARK_SLACK` (6, the ink above a
-    wrapped row's anchor). A one-sided "below the top" test is wrong and was corrected: the
-    bar hangs from the **top** of the screen (`FOLD6_MLEGEND_TOP_MOBILE_PX` = 16), so its
-    panel's top edge sits above nearly the whole canvas and every stand-in stayed in the OVER
-    layer for its whole flight — i.e. over the title block, the opposite of the ask. With
-    both edges the switch can never be seen: an element only changes layer over a region it
+    wrapped row's anchor). A one-sided "below the top" test is wrong and was corrected: it
+    put every stand-in in the OVER layer for its whole flight — i.e. over the title block,
+    the opposite of the ask. With both edges the switch can never be seen: an element only changes layer over a region it
     does not overlap yet. It is decided from the `y` `updateGroups` just wrote, never from a
     `getBoundingClientRect` on the stand-in — that would be a forced reflow per element per
     scroll frame.
@@ -956,9 +992,11 @@ it — **width first, then height** — exactly as the desktop note opens.
 - **`@fold3` also fires earlier on mobile** — `FOLD3_CARD_FRAC` (**0.6**, vs the house 0.5;
   `js/groups.js`, same `watchCardThreshold` function-frac form) — so the filler shrink and the
   group labels typing in get more of the fold on screen. Desktop keeps 0.5.
-- **`@fold4` itself fires earlier on mobile** — `FOLD6_CARD_FRAC` (**0.8**, vs the house
-  0.5; bigger is earlier) — so the whole hand-off, hold and shrink fit while the fold is
-  still on screen. Desktop keeps 0.5.
+- **`@fold4` itself fires LATE on mobile** — `FOLD6_CARD_FRAC` (**0.24**, vs the house 0.5;
+  bigger is earlier, so this is well below it), picked by eye on 2026-09-12. It used to fire
+  *early* (0.8, then 0.7) so the whole hand-off, hold and shrink finished while the fold was
+  still on screen; the late crossing is the explicit call, and the tail now plays out as
+  @fold5 comes up. Desktop keeps 0.5.
 - **Then it stays open through `@fold4`** (explicit instruction). There is no hold and no
   close *in the hand-off*: the rows land, `fold6MLegendRestRows` hands them back to CSS, and
   the panel is the legend from here on. `FOLD6_MLEGEND_INTRO_HOLD_MS` and
@@ -1019,3 +1057,42 @@ Dots enter and leave by **size**, never opacity — the project-wide rule is [An
 
 On the real timeline (@fold9) each legend row is also a **filter toggle** (`.fold6-legend-filter` strips, built by `fold6LegendFilterEl(g)` and positioned per frame by `updateGroups`; desktop only): click it and that group leaves the graph by size, and the filter stays in force through every later fold.
 Mechanics, hover/filtered-off styling and how the 8 claimed squares follow it: [Timeline](Timeline.md#the-legend-filter-fold9-desktop-only--p7filtertoggle-page7js).
+
+## The מקרא sheet's gesture (mobile)
+
+One pointer pass on the whole bar is **both** the drag and the tap — they cannot be
+separate handlers, because a row tap that starts with 2px of travel is still a tap and a
+drag that begins on a row is still a drag. `pointerdown`/`move`/`up` on
+`fold6MobileLegendEl` decide between them at release by distance:
+`FOLD6_MLEGEND_DRAG_SLOP_PX` (6) apart.
+
+- **Listening on the bar, not the title**, is what makes the whole sheet draggable. The
+  cost: capturing here re-targets the compatibility click to the bar, so the title's own
+  `click` can no longer carry pointer input. Every pointer activation is resolved in
+  `pointerup`; the `click` handler is left for KEYBOARD only (`detail === 0`), and
+  double-firing is what the guard there prevents.
+- **The scrub is rAF-coalesced.** `pointermove` fires faster than the display and arrives
+  in coalesced bursts, so painting the card straight from the handler re-laid it several
+  times per frame and the sheet stuttered under the finger. The handler records the
+  finger; one rAF paints the latest position.
+- **The tap target is read at pointerDOWN**, not at release: the sheet moves during a
+  drag, so the element under the release point may not be the one aimed at.
+- **A row tap wins over the sheet toggle** — tapping a group must never also close the
+  panel out from under the thing it just changed.
+
+### The rows are the mobile filter buttons
+
+`fold6MLegendRowTap` calls the same `p7FilterToggle` the desktop strips do, gated to the
+same folds (`currentPage` 8–12), then `p9FilterKick()` + `updateGroups()`. `p7FilterToggle`
+used to early-return on `isMobile()`; that gate is **gone** — everything downstream (the
+shrink, the re-pack, the fly, @fold10's grid repack) was already breakpoint-agnostic and
+only the entry point was closed. `p7.vert` still gates it: with no vertical layout there is
+nothing to re-pack.
+
+`updateGroups` writes two classes onto each card, off the same conditions the desktop
+strips use so the breakpoints can never disagree:
+
+| class | meaning |
+|---|---|
+| `.is-armed` | this fold will answer a tap (@fold9…@fold13) — `cursor: pointer`, nothing else, since a phone has no hover |
+| `.is-filtered-off` | this group is out. **Outlives** the armed state: past @fold13 the filter still applies, so the panel keeps saying which groups are missing even though tapping can no longer change it. 0.28, matching `.group-item.is-filtered-off` exactly |

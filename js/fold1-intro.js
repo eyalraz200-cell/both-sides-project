@@ -301,10 +301,22 @@ function page0CueSchedule(delayMs) {
   page0CueTimer = setTimeout(page0CueRun, delayMs);
 }
 
+// The six group swatches carry a CSS `transition: transform 260ms ease` for
+// the @fold9 legend filter-hover flip (style.css). The cue writes transform
+// every frame, so that transition damps the pulse: the swatches lagged the
+// 470ms shrink half and visibly bottomed out well short of PAGE0_CUE_SCALE
+// while the .page0-dots (no transition) hit it exactly — the flying dots
+// shrank less than the disappearing ones. Suppressed for the duration of a
+// pulse and handed straight back, so the filter-hover flip is untouched.
+function page0CueSetTransition(targets, value) {
+  targets.forEach((t) => { t.el.style.transition = value; });
+}
+
 function page0CueRun() {
   if (page0CueCancelled || window.scrollY > 0 || page0CueRunning) return;
   const targets = page0CueTargets();
   if (!targets.length) return;
+  page0CueSetTransition(targets, "none");
   const minRow = Math.min(...targets.map((t) => t.row));
   const maxRow = Math.max(...targets.map((t) => t.row));
   const totalMs = (maxRow - minRow) * PAGE0_CUE_ROW_STAGGER_MS + PAGE0_CUE_DOT_MS;
@@ -321,6 +333,7 @@ function page0CueRun() {
       t.el.style.transform = local <= 0 || local >= 1 ? t.rest : `scale(${1 + (PAGE0_CUE_SCALE - 1) * bump})`;
     });
     if (elapsed < totalMs) { requestAnimationFrame(frame); return; }
+    page0CueSetTransition(targets, "");
     page0CueRunning = false;
     page0CueSchedule(PAGE0_CUE_REPEAT_MS);
   }
@@ -332,7 +345,12 @@ function page0CueCancel() {
   page0CueCancelled = true;
   clearTimeout(page0CueTimer);
   if (page0CueRunning) {
-    page0CueTargets().forEach((t) => { t.el.style.transform = t.rest; });
+    const targets = page0CueTargets();
+    targets.forEach((t) => { t.el.style.transform = t.rest; });
+    // transition stays suppressed for this frame so the snap back to rest is
+    // instant, then handed back on the next one (clearing it in the same tick
+    // would let the swatches ease back into place instead).
+    requestAnimationFrame(() => page0CueSetTransition(targets, ""));
     page0CueRunning = false;
     updateGroups();
   }

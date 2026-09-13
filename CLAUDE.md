@@ -25,7 +25,7 @@ Two separate, unrelated HTML entry points sharing no layout:
 - **Serve:** `python3 server.py` → http://localhost:8080 (no-cache headers; auto-reloads the browser on any `.html`/`.css`/`.js` change at the root or under `js/` via mtime polling — it does NOT watch the xlsx). `--port N` and `--watch a.js,dir` narrow that. Requires `openpyxl` (`pip install openpyxl`). Vanilla JS, **no build step, no npm, no tests** — edit files directly.
 - **Never kill the dev server as a cleanup step** — leave `:8080` running. Restarting it on explicit request is fine.
 - **Verify a JS edit:** `node --check <file>.js` then `curl -o /dev/null -w "%{http_code}" http://localhost:8080/project.html` — a classic `<script>` that fails to parse takes every global in it down, and the visible symptom can surface in a different file.
-- **Regenerate `events.json`:** rebuilt in-memory on every server start (`load_events()` in `server.py`) from `full_v3.xlsx` plus `Events_with_description_he_medium.xlsx` (the `crowd` column — both are live dependencies), so local dev is always current. `page7.js` fetches `events.json` at runtime. The committed static `events.json` (used by deployments not running `server.py`) is NOT auto-written — if either xlsx changes and a deployment needs it, dump `server.py`'s `/events.json` output to the file manually (`ensure_ascii=False`, single line).
+- **Regenerate `events.json`:** rebuilt on every server start (`load_events()` in `server.py`) from `full_v3.xlsx` plus `Events_with_description_he_medium.xlsx` (the `crowd` column — both are live dependencies). `page7.js` fetches `events.json` at runtime. The server also **writes the committed static `events.json`** (what GitHub Pages serves) whenever the generated content differs (`_sync_static_events()`, `ensure_ascii=False`, single line) — an unchanged xlsx leaves git clean. After changing either xlsx: restart the server, then commit the rewritten `events.json`, or the deployed site drifts (a stale copy without `crowd` once made every dot tier 0, so @fold10 never resized).
 
 ## Files
 
@@ -59,9 +59,9 @@ Figma source: file `QASHSt1u7b6m6ASgrUPswf` ("Design"). Screens are revised one 
 | `@fold4` | `page-3` | Groups glide into the persistent mini-legend; camp headers un-type — `fold6Trigger` |
 | `@fold5` | `page-4` | «כל ריבוע מייצג פעולה פוליטית…»: 8 grey sample squares grow in — `squaresRevealTrigger` |
 | `@fold6` | `page-5` | ACLED methodology card (visible external link); the ACLED note fades into the mini-legend — `acledNoteTrigger` |
-| `@fold7` | `page-6` | Square labels type in (card at 0.5), then «ריחוף העכבר מעל ריבוע…» — the hover demo on the fold's own established crossing (`fold8TooltipCardFrac`): square 0 swells to `FOLD8_DEMO_GROW_PX`, the other 7 dim so the demo dot is singled out, and the tooltip grows-then-types (date + description) 250ms behind it — `fold7LabelTrigger`, `fold8TooltipTrigger`, `fold8DemoGrowTrigger`, `fold8SquareDimTrigger` |
+| `@fold7` | `page-6` | Square labels type in (card at 0.5), then «ריחוף העכבר מעל ריבוע…» (**mobile has its own copy**, «לחצו והחזיקו…», via the `.copy-desktop`/`.copy-mobile` span pair) — the hover demo on the fold's own established crossing (`fold8TooltipCardFrac`; flat `FOLD8_MOBILE_CARD_FRAC` on mobile): square 0 swells to `FOLD8_DEMO_GROW_PX`, the other 7 dim so the demo dot is singled out, and the tooltip grows-then-types (date + description) 250ms behind it — `fold7LabelTrigger`, `fold8TooltipTrigger`, `fold8DemoGrowTrigger`, `fold8SquareDimTrigger` |
 | `@fold8` | `page-7` | Squares gain colors and fly to their real timeline dots — `fold9Trigger`, `fold9FlyTrigger` |
-| `@fold9` | `page-8` | The real pinned timeline (`page7-scrub`, page7.js). Clicking a mini-legend row filters that group out — its dots shrink, the rest re-pack and fly (`p7FilterToggle`, desktop only). The filter is set here and on @fold10, and stays in force through every later fold |
+| `@fold9` | `page-8` | The real pinned timeline (`page7-scrub`, page7.js). Clicking a mini-legend row filters that group out — its dots shrink, the rest re-pack and fly (`p7FilterToggle`). **Both breakpoints**: desktop clicks the row's strip, mobile TAPS the matching card in the מקרא sheet (`fold6MLegendRowTap`, js/groups.js). The filter is set here and on @fold10, and stays in force through every later fold |
 | `@fold10` | `page-9` | The size grid: the timeline undraws and every dot on screen morphs to its crowd tier, re-packed at the timeline's own gap (`p7SizeGridOnPage`, page7.js) |
 | `@fold11` | `page-10` | **Size down, then fly** (`fold11SizeApply`): every square flattens to one uniform size in place, then the whole field glides to page9's legit zone (`p8Trigger`). The «הצגת גודל האירועים» pill (`p7ScopeBtnEl`) toggles the tiers from here until @fold14's fade-out. Its `PAGES` slot is `drawPage8` because this fold owns the glide |
 | `@fold12` | `page-11` | Bridge glide (page8.js) — the fold it plays over, but @fold11 is what triggers it |
@@ -89,6 +89,14 @@ The `actor` values are the xlsx's lowercase `main_actor` strings; the camp split
 - "Removed — don't reintroduce" callouts in the wiki are binding: the page-1→fold-3 legend morph, the vertical dashed guide-line system on page-11, the anchor squares/`drawGroupLegend`, and the old `main_*` scratch files all stay gone.
 - `.section-title` is one shared base rule (20px desktop, **16px under the 600px breakpoint**; `font-weight: 300` + `line-height: 1.5` — 300 resolves down to the real Thin OTF, the only alternative face in `fonts/` besides Regular). No **per-page** font-size/weight overrides, with **one named exception**: `#page-15 .section-title` (@fold16's credits headline) is 40px desktop / 28px mobile. Any other differently-sized title at the same viewport width is a regression. On the scrolling cards the title and the frame are the *same* `<h2>`, so `.text-card-frame`'s `margin: 0 auto` already zeroes the base rule's bottom margin — see [Architecture](wiki/Architecture.md).
 - Harness/scaffolding files are `_debug-*.js`, never ship, and follow the recipe + rules in [Dev-Workflow](wiki/Dev-Workflow.md).
+- **A mobile change must never touch desktop, and vice versa.** Tuning asked for at one
+  breakpoint applies to that breakpoint ONLY. Before editing any value, check whether the
+  constant/function it lives in is shared: if it is, **split it per breakpoint** (a
+  `*_MOBILE` / `*_DESKTOP` pair behind an `isMobile()` reader, the `p7Sq()` / `p7GapRatio()`
+  convention) rather than overwriting the shared one. This applies to behaviour too, not
+  just numbers — a new mechanism (a trigger replacing a ramp, dots drawn in a new state)
+  gets gated the same way, with the other breakpoint left on its existing code path.
+  A `_debug-*.js` harness being viewport-gated does **not** gate the values it drives.
 
 ## Conventions (short form — details in [Animation-System](wiki/Animation-System.md))
 

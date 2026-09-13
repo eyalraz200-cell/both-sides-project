@@ -36,11 +36,16 @@ const SBB_TIMELINE = {
 // tall phone or collided on a short one. They're plain px clearances instead,
 // turned into fractions against the live H by sbbTimeline() below:
 //
-//   top    = the axis headline's own bottom edge + SBB_TIMELINE_MOBILE_GAP_PX.
-//            The headline prints in the 'slot', anchored to the top of the
-//            viewport under the מקרא bar (P7_VERT_MOBILE.slotTopPx 64 + one
-//            19px title line, page7.js) — read as constants here rather than
-//            measured, because it is canvas text with no DOM box to ask.
+//   top    = whatever actually prints above the grid, + SBB_TIMELINE_MOBILE_GAP_PX.
+//            TWO CASES, picked at call time by sbbTimelineMobileTopPx():
+//              • headline in a TOP-ANCHORED slot — its own bottom edge
+//                (P7_VERT_MOBILE.slotTopPx 64 + one 19px title line, page7.js),
+//                read as constants rather than measured, because it is canvas
+//                text with no DOM box to ask.
+//              • headline anchored anywhere else ('side'/'dot'/'dotAbove', the
+//                shipping config) — nothing prints up there at all, so the only
+//                thing to clear is the fold badge. Reserving the slot's 83px
+//                regardless left a ~100px band of empty screen above the axis.
 //   bottom = the DOCKED TOOLTIP's top edge minus the same gap. The frame is the
 //            last thing in the mobile stack now (bar / headline / grid /
 //            frame), bottom-anchored by tooltipDockRestPx()
@@ -65,7 +70,10 @@ const SBB_TIMELINE = {
 //            (P7_AXIS_EVENT_LINE_HEIGHT_MOBILE) — check it by eye then.
 const SBB_TIMELINE_MOBILE_LEFT          = 0.03;  // fraction of W
 const SBB_TIMELINE_MOBILE_GAP_PX        = 18;    // shared clearance above AND below the grid
-let   SBB_TIMELINE_MOBILE_TOP_PX        = 64 + 19 + SBB_TIMELINE_MOBILE_GAP_PX;  // `let` only so a manual/ harness can drive it live
+let   SBB_TIMELINE_MOBILE_TOP_PX        = 64 + 19 + SBB_TIMELINE_MOBILE_GAP_PX;  // top-anchored headline slot; `let` only so a manual/ harness can drive it live
+// The fold badge is the only thing above the grid when the headline is not
+// top-anchored: it runs 12..33px, so 36 clears it with a hair to spare.
+const SBB_TIMELINE_MOBILE_TOP_BADGE_PX  = 36 + SBB_TIMELINE_MOBILE_GAP_PX;
 const SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX = 36 + 10 + SBB_TIMELINE_MOBILE_GAP_PX;
 // Vertical axis on mobile (P7_VERT_MOBILE.enabled, page7.js): there is no
 // bottom axis to clear, so the box's bottom is a plain inset from the viewport
@@ -73,6 +81,15 @@ const SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX = 36 + 10 + SBB_TIMELINE_MOBILE_GAP_PX;
 // shared gap. The headline slot costs nothing here: it is anchored to the TOP
 // of the viewport (slotAnchor 'top'), and only the 'grid' anchor reserves a
 // band under the dots.
+// See the `top =` note above: the slot reservation only applies when the
+// headline actually prints at the top of the viewport.
+function sbbTimelineMobileTopPx() {
+  const V = typeof P7_VERT_M === "undefined" ? null : P7_VERT_M;
+  const topAnchored = V && V.enabled && V.headline === 'slot'
+    && (V.slotAnchor === 'top' || V.slotAnchor === 'fill');
+  return topAnchored ? SBB_TIMELINE_MOBILE_TOP_PX : SBB_TIMELINE_MOBILE_TOP_BADGE_PX;
+}
+
 function sbbTimelineMobileBottomPx() {
   const V = typeof P7_VERT_M === "undefined" ? null : P7_VERT_M;
   if (!V || !V.enabled) return null;
@@ -95,7 +112,7 @@ function sbbTimeline(H) {
   const vertBottom = sbbTimelineMobileBottomPx();
   return {
     left:   SBB_TIMELINE_MOBILE_LEFT,
-    top:    SBB_TIMELINE_MOBILE_TOP_PX / h,
+    top:    sbbTimelineMobileTopPx() / h,
     bottom: vertBottom !== null ? (h - vertBottom) / h
           : (P7_AXIS_Y_FRAC_MOBILE * h - SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX) / h,
   };

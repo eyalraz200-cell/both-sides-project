@@ -31,7 +31,7 @@ const P7_MOBILE_FILL      = 0.86;
 // at all, so the floor is where truncation is preferred to invisibility.
 let   P7_MOBILE_SQ_MIN    = 1.25;  // `let` only so a manual/ harness can drive it live
 const P7_MOBILE_SQ_MAX    = 3;     // just under desktop's 3.5
-const P7_MOBILE_GAP_RATIO = 0.5;
+const P7_MOBILE_GAP_RATIO = 0.45;  // manual/ pick 2026-09-13, tuned with P7_VERT_SQ_BOOST + zoom
 const P7_MOBILE_SQ_STEP   = 0.05;
 let p7MobileSq = P7_MOBILE_SQ_MIN;  // rewritten by p7UpdateLayout
 
@@ -123,7 +123,10 @@ const p7 = {
   maxDate: "",
   leftPos:  [],
   rightPos: [],
-  CELL: 6, SQ: 4,
+  // Solved geometry, at zoom-out 1. Never read these directly for drawing —
+  // read p7.CELL / p7.SQ / p7.leftX0, the getters defined beside p7Fit, which
+  // blend these toward @fold9's end-of-fill fitted layout.
+  cellBase: 6, sqBase: 4, leftX0Base: 0,
   cols: 0, rows: 0,
   vert: null,   // p7BuildVerticalLayout result on desktop (see VERTICAL AXIS), null on mobile
   lastW: 0, lastH: 0, lastMaxEvents: -1, lastVertical: null,
@@ -261,10 +264,33 @@ const P7_VERT = {
   // already holds as objects — a null here would silently swallow the mobile
   // override.
   slotCard: { fill: null, color: '#000000', dateColor: 'rgba(0, 0, 0, 0.3)', padX: 12, padY: 8, radius: 4 },
-  slotAnchor: 'grid',  // 'slot' mode: where the line prints — 'grid' (centred in the reserved band under the grid) | 'bottom' (pinned to the viewport's bottom edge) | 'top' (pinned to the viewport's top edge)
+  slotAnchor: 'grid',  // 'slot' mode: where the line prints — 'grid' (centred in the reserved band under the grid) | 'bottom' (pinned to the viewport's bottom edge) | 'top' (pinned to the viewport's top edge) | 'fill' (centred on the axis, slotFillGapPx under the fill edge; flips above it when the box has no room below) | 'dot' (EVERY reached event keeps a card on its own dot, riding the camera — p7DrawVertDotCards) | 'dotAbove' (only the NEWEST reached event has a card, fading in above its dot; the previous one fades away) | 'side' (desktop-style: every reached event's plaque fades in BESIDE its dot, alternating sides, wrapped to sideWrapPx; the dots in the rows it covers are pushed outward so they stay uncovered)
+  dotGapPx: 6,         // 'dot' anchor: px between the dot's edge and its card; 'side': px between the plaque's far edge and the pushed dots
+  sideWrapPx: 150,     // 'side' anchor: the plaque's wrap width (mobile has no corridor to wrap to)
+  sidePush: false,     // 'side' anchor: true = the dots in the rows a plaque covers slide outward past it (p7VertCardPush); false = the plaque prints over them
+  sidePlace: 'alternate', // 'side' anchor: where the plaque sits vs its dot — 'alternate' | 'left' | 'right' | 'above'
+  sideLeadPx: 80,      // sidePhase 'before': the plaque fades out over the last sideLeadPx of the fill edge's approach, gone by the time it reaches the dot (scroll-driven, reversible)
+  sidePhase: 'after',  // 'side' anchor: 'after' = plaque fades in once the fill reaches the dot (desktop); 'before' = plaque (and a lead marker) stand at the dot ahead of the fill and fade OUT when it arrives; 'fly' = same lead, but never fades: when the fill reaches the dot the plaque glides from beside it to above it
+  sideFlyGapPx: 10,    // sidePhase 'fly': gap between the flown plaque's bottom and the dot
+  sideFlyFadePx: 150,  // sidePhase 'fly': once the fill edge is past the dot, the flown plaque fades out over this much further travel (scroll-driven, reversible)
   slotBottomPx: 0,     // 'bottom' anchor only: px from the viewport bottom to the BOTTOM of the text block
   slotTopPx: 0,        // 'top' anchor only: px from the viewport top to the TOP of the text block
   minSidePx: 96,       // mobile-only: a camp grid never gets narrower than this when the corridor is solved
+  // ── Camera (mobile compare/, 2026-09-11 — _debug-mobile-zoom.js drives these) ──
+  // zoom: the row plan is solved against `zoom` box heights instead of one, so
+  // the square grows and the field runs taller than the box; the box then shows
+  // a window onto it. 1 = the field fits the box (today).
+  zoom: 1,
+  // camera: how the window moves when the field is taller than the box —
+  // 'none' (the field's top pins to the box top, the rest hangs below; today) |
+  // 'fill' (the fill edge is held at fillAnchorFrac of the box; the field
+  // scrolls up under it) | 'pan' (the window slides from the field's top to its
+  // bottom in step with the fill fraction). A pure offset inside p7VertTopY,
+  // derived from the same LAGGED fill fraction the axis draws with, so the
+  // camera and the fill line never disagree. No effect while the field fits.
+  camera: 'none',
+  fillAnchorFrac: 0.6, // 'fill' camera: the fill edge's resting spot, 0 = box top … 1 = box bottom
+  slotFillGapPx: 14,   // slotAnchor 'fill': px between the fill edge and the headline plaque
   eventLine:  false,
   bandPx:     60,    // band mode: height reserved per headline (title line(s) + date)
   wideCorridorPx: 256, // widen mode: the corridor, full height (208 by eye 2026-09-05; +24 each side for the zig-zag side cards, 2026-09-06)
@@ -378,13 +404,20 @@ const P7_VERT_MOBILE = {
   // colours it and the frame closes the screen. No card, no date line
   // (type.showDate is false) — just the title, on the page background.
   headline: 'slot',
-  slotAnchor: 'top',
+  slotAnchor: 'side',
   // Started as 16 (FOLD6_MLEGEND_TOP_MOBILE_PX) + the bar's own 30px + one
   // SBB_TIMELINE_MOBILE_GAP_PX = 64, then nudged to 78 by eye (2026-09-05) for
   // the air it wanted under the מקרא bar. SBB_TIMELINE_MOBILE_TOP_PX no longer
   // continues from this number — the grid top was NOT moved with it, and the
   // slot has clearance to spare, so the two are independent now.
   slotTopPx: 78,
+  // Camera + plaque knobs (see P7_VERT). compare/ pick 2026-09-12, zoom re-tuned
+  // 2026-09-13: a 1.85× field whose fill edge is HELD at 0.6 of the box (the
+  // zoom was picked together with P7_VERT_SQ_BOOST and P7_MOBILE_GAP_RATIO —
+  // change them as a set), and no single top-slot headline —
+  // every event's plaque stands beside its own dot ahead of the fill, then flies
+  // to sit above the dot when the fill reaches it and fades out 150px later.
+  zoom: 1.85, camera: 'fill', fillAnchorFrac: 0.6, slotFillGapPx: 15, dotGapPx: 6, sideWrapPx: 150, sidePush: false, sidePlace: 'alternate', sidePhase: 'fly', sideLeadPx: 80, sideFlyGapPx: 10, sideFlyFadePx: 150,
   // The mobile headline is the only copy on a screen that is otherwise a field
   // of small coloured dots, so it gets a black plaque instead of sitting bare on
   // the page: it reads as a label of the axis rather than as body text, and it
@@ -442,10 +475,18 @@ function p7SolveMobileCorridor(W, H) {
 // one row, counted afresh from each 1 January (the rows themselves run on
 // unbroken — the year marker is a break in the drawn line only). Shared by
 // the solver (row count) and the layout builder (row of each day).
+// Mobile `zoom` divides the span: the plan is date-driven, so the row COUNT is
+// what sets the field's height — a 2× field is one with half the days per row,
+// not a bigger square alone (the square is capacity-bound by the camp's width
+// and would only grow √zoom). Fractional spans are fine: rowStart is already
+// fractional within a row.
+function p7VertDaysPerRow() {
+  return p7V().daysPerRow / (isMobile() ? (p7V().zoom || 1) : 1);
+}
 function p7VertRowPlan(CELL) {
   const minMs = p7DayMs(p7.minDate), maxMs = p7DayMs(p7.maxDate);
   const nDays = Math.max(1, Math.round((maxMs - minMs) / 86400000) + 1);
-  const dpr   = p7V().daysPerRow;
+  const dpr   = p7VertDaysPerRow();
   const rowStart = new Float64Array(nDays + 1);
   const rowsOf   = new Float64Array(nDays);
   const yearRow = new Map();   // year -> the integer row its 1 January starts (the line break)
@@ -471,16 +512,23 @@ function p7DayMs(dateStr) { return new Date(dateStr + "T00:00:00Z").getTime(); }
 
 function p7VertBandRows(CELL) { return Math.ceil(p7V().bandPx / CELL); }
 
-// Deliberate overshoot of the solve below, tuned by eye at 390×721 (2026-09-05).
-// The solver returns the largest square that still PACKS; the axis it produces
-// read too short against the docked tooltip, so the result is stretched 12%.
-// That intentionally breaks the solver's own fit test (the grid spills past the
-// box, so p7VertTopY's Math.max(0, …) pins row 0 at the box top and the whole
-// overshoot lands at the BOTTOM end) — which is exactly how it was tuned: the
-// top of the axis stayed put and the bottom was pulled down 16px. It is the
-// look that was picked, not a rounding artefact. Don't "fix" it back to 1.
-// MOBILE ONLY — desktop shares this solver and was not part of that tuning.
-const P7_VERT_SQ_BOOST = 1.12;
+// Deliberate TRIM of the solve below. The solver returns the largest square that
+// still PACKS, and that square reads too heavy for this field — the dots crowd
+// their own gaps and the camps lose their texture. manual/ pick 2026-09-13
+// (_debug-tl-zoom.js, since deleted): 0.88, alongside zoom 1.85 and gap 0.45,
+// the three tuned together against each other.
+//
+// It is applied on the way OUT of p7SolveVerticalSq, so it deliberately breaks
+// the solver's own fit test — below 1 the grid comes out SHORTER than the box it
+// was solved for, and p7VertTopY's centring takes up the slack. That is the look
+// that was picked, not a rounding artefact.
+//
+// > It was 1.12 (an overshoot) until 2026-09-13, tuned at 390×721 against a
+// > docked tooltip. Same knob, opposite direction — don't assume the name means
+// > it must be > 1.
+//
+// MOBILE ONLY — desktop shares this solver and was never part of either tuning.
+const P7_VERT_SQ_BOOST = 0.88;
 function p7VertSqBoost() { return isMobile() ? P7_VERT_SQ_BOOST : 1; }
 
 // Largest square (≤ P7_SQ, the mobile-style solve) whose grid holds the
@@ -492,7 +540,11 @@ function p7SolveVerticalSq(sideW, sideH, maxEvents) {
   const gapRatio = p7GapRatio();
   const bands = p7V().eventMode === "band" ? P7_AXIS_EVENTS.length : 0;
   const sqMin = p7SqMin();
-  for (let sq = p7SqMax(); sq >= sqMin - 1e-9; sq -= p7SqStep()) {
+  // `zoom` (mobile camera) exists to make the dots BIGGER, so the ceiling scales
+  // with it — capped at P7_MOBILE_SQ_MAX every zoom level solved to the same
+  // square and the field only grew as tall as the row plan's fixed spans.
+  const sqMax = p7SqMax() * (isMobile() ? (p7V().zoom || 1) : 1);
+  for (let sq = sqMax; sq >= sqMin - 1e-9; sq -= p7SqStep()) {
     const CELL = sq * (1 + gapRatio);
     const cols = Math.floor(sideW / CELL), rows = Math.floor(sideH / CELL);
     const cap  = Math.max(1, Math.floor(cols * p7V().fillRatio));
@@ -652,17 +704,232 @@ function p7VertYearHeaderH() {
   // (Raised by P7_VERT_FIRST_YEAR_RAISE_PX so the first event's dot, days
   // after 1 January, doesn't sit on the ring.)
   if (p7V().yearSide !== 'center') return (ring ? P7_AXIS_MARKER_RADIUS : 0) + P7_VERT_FIRST_YEAR_RAISE_PX;
-  return (ring ? P7_AXIS_MARKER_RADIUS * 2 + P7_VERT_YEAR_LABEL_GAP : 0) + (p7V().yearLabelPx + 3) + p7V().yearGapPad * 2;
+  return (ring ? P7_AXIS_MARKER_RADIUS * 2 + P7_VERT_YEAR_LABEL_GAP : 0) + (p7V().yearLabelPx + 3) + p7V().yearGapPad * 2
+       + (p7AxisHasMobileAbove() ? P7_VERT_FIRST_EV_HEADROOM_PX : 0);
 }
 function p7VertTopY(H) {
   const box  = sbbTimeline(H);
   const boxT = Math.round(H * box.top);
   if (!p7VerticalAxis() || !p7.vert || !p7.CELL) return boxT;
   const boxB = Math.round(H * box.bottom);
-  const len  = p7.vert.totalRows * p7.CELL + p7VertYearHeaderH();
-  return Math.round(boxT + Math.max(0, (boxB - boxT - len) / 2) + p7VertYearHeaderH());
+  const len  = p7VertFieldLen() + p7VertYearHeaderH();
+  // The slack normally splits evenly above and below. As the end-of-fill
+  // zoom-out lands, the field's top edge is lerped all the way to
+  // P7_ZOOMOUT_FIT_TOP_PX — above the box's own top — so the squashed timeline
+  // takes the height rather than floating in the middle of a box sized for a
+  // fold that still had a badge and a legend chip to clear.
+  const slack = Math.max(0, (boxB - boxT - len) / 2);
+  const top   = p7ZoomOutT ? p7ZoomLerp(boxT + slack, P7_ZOOMOUT_FIT_TOP_PX) : boxT + slack;
+  return Math.round(top + p7VertYearHeaderH())
+       - p7VertCameraOffset(boxB - boxT, len);
 }
-function p7RowY(row, H) { return p7VertTopY(H) + row * p7.CELL; }
+// The drawn height of the row field — the live length under the beat's vertical
+// squash. Everything that measures the field (p7VertTopY, p7VertCameraOffset,
+// p7FillEdgeY, p7VertOverflows, p7RowY) reads this, so the axis and the dots
+// compress by exactly the same amount and stay aligned.
+function p7VertFieldLen() {
+  if (!p7.vert) return 0;
+  return p7.vert.totalRows * p7.cellBase * p7ZoomOutYScale();
+}
+// THE camera: every vertical y (dots, axis, rings, event circles, the page8
+// glide's captured positions, the inspect hit-test) goes through p7VertTopY, so
+// this one offset moves the whole field as a unit. px the field is shifted UP
+// by; 0 whenever it fits the box (`zoom` 1) or camera is 'none'. Stateless —
+// read from the lagged fill fraction so it is the same on every call in a frame.
+function p7VertCameraOffset(boxH, len) {
+  const V = p7V(), over = len - boxH;
+  if (V.camera === 'none' || over <= 0) return 0;
+  const frac = p7AxisLaggedFillFrac ?? p7AxisFillFracTarget();
+  let off;
+  if (V.camera === 'pan') off = frac * over;
+  else off = p7VertYearHeaderH() + frac * p7VertFieldLen() - V.fillAnchorFrac * boxH;
+  off = Math.max(0, Math.min(over, off));
+  // The camera exists only to window an over-tall `zoom > 1` field, so it retires
+  // with the end-of-fill squash: without this it keeps holding the field up by
+  // `over` px and fights p7VertTopY's own P7_ZOOMOUT_FIT_TOP_PX anchor, landing
+  // the squashed timeline at y 2 instead of 40. Note the squashed field is sized
+  // against the SCREEN (it starts above the box's top), so it can still measure
+  // as taller than the box and leave `over` positive at t = 1 — hence a lerp to
+  // zero rather than relying on `over` going non-positive by itself.
+  return Math.round(p7ZoomOutT ? p7ZoomLerp(off, 0) : off);
+}
+// ── @fold9 end-of-fill ZOOM-OUT (mobile) ────────────────────────────────
+// The phone ships at P7_VERT.zoom 3 with the 'pan' camera, so the field is
+// three box-heights tall and only ever a window of it is on screen. Once the
+// fill reaches the last event there is nothing left to pan toward, so the whole
+// field scales down to fit the box in one beat — the timeline is finally seen
+// whole — and @fold10's title block rises over that.
+//
+// It is a VERTICAL-ONLY SQUASH of the real layout — not a zoom, and not a
+// re-solve. It does not have to be a faithful miniature; it is a VIEW of the
+// whole timeline. Two other mechanisms were built and rejected, and the reasons
+// are the design:
+//
+//  - A UNIFORM scale needs k ~ 0.35 to fit, which narrows each camp from the
+//    full 160px of available width to 56px and takes the square to 1.04px —
+//    under p7SolveMobileSq's 1.25px floor, "where a square stops reading as a
+//    mark at all". A small picture of the timeline, not a view of it.
+//  - RE-SOLVING the layout at zoom 1 gives legible dots and full width, but the
+//    packer spills dense days down into later rows, so a dot's y stops meaning
+//    its date: the busy camp runs hundreds of px past its own year label and the
+//    dots no longer line up with the axis at all.
+//
+// Squashing y only keeps the row plan exactly as solved, so the date -> y mapping
+// stays linear and every dot stays beside its own date — the dots and the dates
+// spread across the axis together, which is the entire point. The camps already
+// span the full width at the live layout (campW 160px of 160px available), so x
+// is left completely alone. The square does not scale with the squash either
+// (P7_ZOOMOUT_FIT_SQ_PX): rows overlap at k ~ 0.3, and that is fine and expected.
+//
+// The camera unwinds itself: p7VertCameraOffset returns 0 once `over` goes
+// non-positive, and it does as the field shortens — one beat, not two fighting.
+// A house fixed-duration makeTrigger, like every other fold beat — NOT a scrub.
+// It fires on a crossing and runs on its own clock; reversing mid-flight covers
+// only the remaining distance. Deliberate, and it has been tried the other way:
+// don't "fix" this into a scroll-linked ramp.
+//
+// The cost is that ORDERING (finished before @fold10's title block crosses
+// mid-screen) is bought with scroll DISTANCE rather than guaranteed by the
+// mechanism: the beat needs P7_ZOOMOUT_MS to elapse inside the runway between
+// full fill and that crossing. So the two numbers are a pair — this duration and
+// #page-9's mobile padding-top (style.css, max-width 600px) — and neither can be
+// changed alone. Measured at 393×852: the 75vh nudge leaves ~960px between full
+// fill and the crossing, which a deliberate scroll (~1500px/s) covers in ~640ms,
+// so 600ms lands the beat exactly on the title block's arrival. A hard flick can
+// still outrun it and reach @fold10 mid-zoom; that is the accepted trade for
+// keeping the beat on the house trigger system rather than scrubbing it.
+// Armed in ROWS from the end, not on a fill fraction. p7AxisFillFracTarget() is
+// p7CurRow() / totalRows and the cursor stops half a row short of the last one,
+// so the fraction plateaus just under 1 (0.9988 at 403 rows / 393×852) and any
+// fixed fraction threshold is both unreachable and viewport-dependent — the
+// plateau moves with the row count. Rows are the honest unit: arm once the
+// cursor is within ARM rows of the end, disarm at DISARM for hysteresis so a
+// scroll parked at the end can't chatter the beat.
+const P7_ZOOMOUT_ARM_ROWS    = 1;
+const P7_ZOOMOUT_DISARM_ROWS = 4;
+// Short for a fold beat (GROUP_TRANSITION_MS is 1900) because it is racing the
+// title block down the runway — see the note above before changing it.
+const P7_ZOOMOUT_MS = 600;
+
+// Where the squashed field's top edge lands, in px from the top of the viewport.
+// sbbTimeline starts ~101px down to clear the fold badge and the legend chip, but
+// at the end of the fill nothing is competing for that space, so the field is
+// allowed to climb out of the box and take the height. Only the squashed end of
+// the beat uses it; at t = 0 the field sits in the box exactly as before.
+const P7_ZOOMOUT_FIT_TOP_PX = 40;
+// The square at the squashed end. It does NOT scale with the squash: at k ~ 0.3 a
+// proportional square lands at ~1px, under p7SolveMobileSq's 1.25px floor, and
+// the field stops reading as marks at all. Held at a flat legible size instead —
+// the rows overlap, which is fine and expected: this is a VIEW of the whole
+// timeline, not a faithful miniature of it.
+const P7_ZOOMOUT_FIT_SQ_PX = 1.8;
+
+// 0 = the live layout, 1 = fully squashed. Eased by the trigger; read by the
+// geometry getters, p7VertFieldLen and the destY squash in p7DrawSideSquares.
+let p7ZoomOutT = 0;
+function p7ZoomLerp(a, b) { return a + (b - a) * p7ZoomOutT; }
+
+// The VERTICAL-ONLY squash factor. y is compressed to fit the available height;
+// x and the column pitch are left completely alone.
+//
+// That asymmetry is the whole design, and two rejected alternatives say why:
+//
+//  - A UNIFORM scale (k on both axes) narrows each camp from the full 160px of
+//    available width down to 56px and takes the square to 1.04px. It makes a
+//    small picture of the timeline instead of a view of it.
+//  - RE-SOLVING the layout at zoom 1 gives legible dots and full width, but the
+//    packer spills dense days down into later rows, so a dot's y stops meaning
+//    its date: the busy camp runs hundreds of px past its own year label and the
+//    dots no longer line up with the axis.
+//
+// Squashing y only keeps the row plan exactly as it is, so the date -> y mapping
+// stays linear and every dot stays beside its own date on the axis — which is
+// what this beat is for. The camps already span the full width at the live
+// layout (campW 160px of 160px available), so x needs nothing done to it.
+function p7ZoomOutKY(H) {
+  if (!p7.vert || !p7.cellBase) return 1;
+  const box  = sbbTimeline(H);
+  const avail = Math.round(H * box.bottom) - P7_ZOOMOUT_FIT_TOP_PX - p7VertYearHeaderH();
+  const live  = p7.vert.totalRows * p7.cellBase;
+  if (avail <= 0 || live <= 0) return 1;
+  return Math.min(1, avail / live);
+}
+// The live -> squashed y factor for this frame. 1 whenever the beat is idle.
+function p7ZoomOutYScale() {
+  return p7ZoomOutT ? p7ZoomLerp(1, p7ZoomOutKY(window.innerHeight)) : 1;
+}
+
+// Built on first use, not at parse time: makeTrigger lives in js/groups.js,
+// which project.html loads AFTER this file. Same lazy-resolve-at-call-time rule
+// every other cross-file global here follows.
+let p7ZoomOutTrig = null;
+function p7ZoomOutTrigger() {
+  if (!p7ZoomOutTrig) {
+    p7ZoomOutTrig = makeTrigger(P7_ZOOMOUT_MS, () => {
+      p7ZoomOutT = p7ZoomOutTrig.currentT();
+      p7StartAnimLoop();
+    });
+  }
+  return p7ZoomOutTrig;
+}
+
+// Called once per frame from p7AxisUpdateFillLag (the axis's own per-frame
+// tick), off the SCROLL-derived cursor rather than the lagged fill: the beat is
+// a crossing, and the lag is a trailing visual that would arm it late.
+function p7ZoomOutSync() {
+  if (!isMobile() || !p7VerticalAxis() || !p7.vert) return;
+  const left = p7.vert.totalRows - p7CurRow();
+  if (left <= P7_ZOOMOUT_ARM_ROWS) p7ZoomOutTrigger().trigger(1);
+  else if (left > P7_ZOOMOUT_DISARM_ROWS) p7ZoomOutTrigger().trigger(0);
+}
+
+// Geometry as DRAWN. Only the SQUARE changes with the beat — the cell pitch and
+// leftX0 are the live solve untouched, because the squash is vertical only (see
+// p7ZoomOutKY) and x is already correct. The vertical side is carried by
+// p7VertFieldLen / p7RowY / the destY squash instead, not by these.
+Object.defineProperties(p7, {
+  CELL:   { get() { return p7.cellBase; } },
+  SQ:     { get() { return p7ZoomOutT ? p7ZoomLerp(p7.sqBase, P7_ZOOMOUT_FIT_SQ_PX) : p7.sqBase; } },
+  leftX0: { get() { return p7.leftX0Base; } },
+});
+
+// True when the field runs taller than the box (zoom > 1, or a phone too short
+// for the plan): drawing is then clipped so the rows the camera has scrolled
+// past the bottom never paint over the docked tooltip.
+function p7VertOverflows(H) {
+  if (!p7VerticalAxis() || !p7.vert || !p7.CELL || !isMobile()) return false;
+  const box = sbbTimeline(H);
+  return p7VertFieldLen() + p7VertYearHeaderH() > Math.round(H * box.bottom) - Math.round(H * box.top);
+}
+// The clip runs from the TOP OF THE SCREEN to the box's bottom, not from the
+// box's top: rows the camera carries upward must keep going under the legend
+// chip and off the screen, like a list scrolling, not stop dead at the box
+// edge with a band of white above them. The bottom stays the box's — the
+// tooltip dock lives below it.
+function p7VertClipToBox(ctx, W, H) {
+  if (!p7VertOverflows(H)) return false;
+  const b = Math.round(H * sbbTimeline(H).bottom);
+  ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, b); ctx.clip();
+  return true;
+}
+// The fill edge on screen — the y the axis's drawn fill has reached (lagged,
+// like the line itself). What the 'fill' camera holds still and what the
+// 'fill' headline slot hangs under.
+function p7FillEdgeY(H) {
+  const frac = p7AxisLaggedFillFrac ?? p7AxisFillFracTarget();
+  return p7VertTopY(H) + frac * p7VertFieldLen();
+}
+// Row -> y. Expressed as a FRACTION of the field rather than row × CELL so the
+// axis, its year rings and its ticks stay glued to the field's drawn height
+// while the end-of-fill zoom-out is mid-beat: `row` is always a LIVE-layout row,
+// but the field is on its way to the fitted layout's shorter one, and row × CELL
+// would have the axis overshoot the dots by ~3x at t=1. Identical to row × CELL
+// whenever the beat is not running (len is exactly totalRows × cellBase then).
+function p7RowY(row, H) {
+  const v = p7.vert;
+  if (!v || !v.totalRows) return p7VertTopY(H);
+  return p7VertTopY(H) + (row / v.totalRows) * p7VertFieldLen();
+}
 function p7AxisY(dateStr, H) { return p7RowY(p7RowOfDate(dateStr), H); }
 // The fill edge in rows — the bottom of currentDate's rows.
 function p7CurRow() { return p7RowEndOfDate(p7.currentDate); }
@@ -705,11 +972,11 @@ function p7MonthKeyToStartStr(monthKey) {
 // the moment that month becomes the centered/highlighted one — a real elapsed-time
 // animation, independent of further scrolling (unlike the rest of page7, which is
 // otherwise purely scroll-driven). Each event gets its own start delay, spread across
-// P7_ANIM_TOTAL_DURATION in chronological order, then pops into place over P7_POP_DURATION
+// p7AnimTotalMs() in chronological order, then pops into place over p7PopMs()
 // (a quick scale+fade at its final grid cell — no flight, no travel).
 // Each month owns ONE number — a cascade cursor `c`, in ms, from 0 (the month is
-// entirely absent) to P7_ANIM_TOTAL_DURATION (every square settled). A square's
-// presence is a pure function of it, `p7Ease((c - itsDelay) / P7_POP_DURATION)`,
+// entirely absent) to p7AnimTotalMs() (every square settled). A square's
+// presence is a pure function of it, `p7Ease((c - itsDelay) / p7PopMs())`,
 // so the cursor advancing plays the cascade in and the cursor retreating plays it
 // back out — squares with the largest delay (the last to arrive) reaching 0 first,
 // i.e. last in, first out, for free.
@@ -724,8 +991,18 @@ function p7MonthKeyToStartStr(monthKey) {
 // p7MonthMaxReached is the highest month ever reached, so the draw loop knows to
 // keep rendering (and retracting) months ahead of the current one instead of just
 // snapping them away.
-const P7_ANIM_TOTAL_DURATION = 2200; // ms — full span of a month's staggered cascade
-const P7_POP_DURATION        = 220;  // ms — each individual square's own pop in/out
+// PER BREAKPOINT — these are NOT one shared pair. The mobile values came out of
+// a manual/ pass on 2026-09-12 (a fast, tight cascade: the dots snap in almost
+// individually, because the old swell read as sluggish once the phone's field
+// was this dense). Desktop was never part of that tuning and keeps its own
+// numbers. Live reads through p7AnimTotalMs()/p7PopMs(), same isMobile()
+// convention as p7Sq()/p7GapRatio() — never reference the constants directly.
+const P7_ANIM_TOTAL_MS_DESKTOP = 2200; // ms — full span of a month's staggered cascade
+const P7_POP_MS_DESKTOP        = 220;  // ms — each individual square's own pop in/out
+const P7_ANIM_TOTAL_MS_MOBILE  = 550;
+const P7_POP_MS_MOBILE         = 40;
+function p7AnimTotalMs() { return isMobile() ? P7_ANIM_TOTAL_MS_MOBILE : P7_ANIM_TOTAL_MS_DESKTOP; }
+function p7PopMs()       { return isMobile() ? P7_POP_MS_MOBILE       : P7_POP_MS_DESKTOP; }
 const p7MonthPhase = {};        // monthKey -> { fromC, toC, start } | undefined (never reached)
 let p7MonthMaxReached = -1;     // highest monthKey ever reached, forward
 let p7AnimRunning = false;
@@ -775,7 +1052,7 @@ let p7EntryAnim = null;
 // On the vertical axis the animation unit is a grid row, not a month. A row's
 // cascade starts the moment the axis's visible fill edge (the lagged one the
 // user actually sees, p7AxisLaggedFillFrac) passes its middle, and plays its
-// squares centre → side over P7_ANIM_TOTAL_DURATION; rows overlap freely — a
+// squares centre → side over p7AnimTotalMs(); rows overlap freely — a
 // row never waits for the one above it to finish, it waits for the axis. The
 // edge moves monotonically with scroll, so rows fire strictly top → bottom, and
 // a jump sweeps the (damped) edge through the rows in order instead of lighting
@@ -783,14 +1060,18 @@ let p7EntryAnim = null;
 // phases: rows the edge has left aim back at 0 and retract mirrored.
 const p7RowPhase = {};          // row -> { fromC, toC, start } | undefined (never reached)
 
-function p7RowCursor(r) {
+// `now` is passed in so a whole frame can share one timestamp — see the row
+// memo in p7DrawSideSquares. Reading performance.now() per dot was 4.5% of the
+// draw on a throttled phone, and a single frame wants one clock anyway.
+function p7RowCursorAt(r, now) {
   const ph = p7RowPhase[r];
   if (ph === undefined) return undefined;
   const span = ph.toC - ph.fromC;
   if (span === 0) return ph.toC;
-  const t = Math.min(1, (performance.now() - ph.start) / Math.abs(span));
+  const t = Math.min(1, (now - ph.start) / Math.abs(span));
   return ph.fromC + span * t;
 }
+function p7RowCursor(r) { return p7RowCursorAt(r, performance.now()); }
 
 function p7RowAim(r, toC) {
   const ph = p7RowPhase[r];
@@ -816,8 +1097,9 @@ function p7OrchestrateRows() {
   const v = p7.vert; if (!v) return;
   const edge = p7HasEngaged ? p7EdgeRow() : -1;
   const reachedThrough = Math.min(v.rows - 1, Math.floor(edge - 0.5));
+  const animMs = p7AnimTotalMs();   // hoisted: reads isMobile() -> innerWidth
   for (let r = 0; r <= reachedThrough; r++) {
-    if (p7RowAim(r, P7_ANIM_TOTAL_DURATION)) p7StartAnimLoop();
+    if (p7RowAim(r, animMs)) p7StartAnimLoop();
   }
   for (const key in p7RowPhase) {
     const r = Number(key);
@@ -884,7 +1166,7 @@ let p7RealTimelineReached = false;
 // p7HasEngaged true/false frame-to-frame. That flicker used to be visible as a
 // blank frame followed by the current month popping back to full and restarting
 // its retreat, once per flicker: engagement flips the month's cursor target
-// between 0 and P7_ANIM_TOTAL_DURATION, and back when it flips back. (The cursor
+// between 0 and p7AnimTotalMs(), and back when it flips back. (The cursor
 // now makes that merely a tiny jitter rather than a full replay, but the
 // hysteresis stays — a month shouldn't twitch direction on scroll noise.)
 // Once engaged, disengaging requires the
@@ -947,6 +1229,9 @@ function p7AxisUpdateFillLag() {
     // all the way to the end.
     p7AxisLaggedFillFrac = Math.abs(target - next) <= 0.0005 ? target : next;
   }
+  // Arm/disarm the end-of-fill zoom-out off the same per-frame tick. Deliberately
+  // after the lag update but off the unlagged target — see p7ZoomOutSync.
+  p7ZoomOutSync();
   if (p7AxisFillLagActive()) p7StartAnimLoop();
   return p7AxisLaggedFillFrac;
 }
@@ -1013,14 +1298,14 @@ function p7StartAnimLoop() {
 
 // Draws events[settledCount..monthEnd). Events strictly before settledCount are drawn
 // at rest by the caller. Events in range may belong to several different months (if
-// the user scrolled through more than one month within P7_ANIM_TOTAL_DURATION) — since
+// the user scrolled through more than one month within p7AnimTotalMs()) — since
 // events are date-sorted, each month's events are contiguous, so the per-month cascade
 // cursor is read only when the month actually changes while scanning, not on every
 // single event.
 //
 // There is no separate forward/reverse code path: a square's presence is a pure
 // function of its month's cursor (p7MonthCursor), which the tick in
-// p7DrawTimelineSquares aims at P7_ANIM_TOTAL_DURATION going forward and at 0 going
+// p7DrawTimelineSquares aims at p7AnimTotalMs() going forward and at 0 going
 // back. A cursor sliding backward retracts the month's squares in mirrored order (the
 // last to arrive is the first to leave) simply because they're the ones with the
 // largest delay.
@@ -1196,6 +1481,19 @@ let P7_GRID_UNIT_PX = 0;
 // block is allowed to reach, measured from the bottom edge. The WIDTH is
 // capped by P7_GRID_WIDTH_FRAC there too. Ignored when P7_GRID_GROW is "side".
 let P7_GRID_HEIGHT_FRAC = 1;    // manual/-baked 2026-09-08
+// Mobile gets its own pair, `manual/`-baked 2026-09-12 at 390x844 (the harness
+// tuned the frame in px: 316px wide, 554px tall of the 520px box). A phone has
+// the same 14451 dots in a third of the width, so the desktop 0.7 x 1 frame is
+// too small to breathe: the width goes nearly full-bleed, and the height passes
+// 1 deliberately — the block is ALLOWED to grow 5% past the timeline box's top
+// edge, which is empty there once the axis has undrawn. The camp gap is shared
+// (4px reads the same at both sizes).
+let P7_GRID_MOBILE_WIDTH_FRAC  = 0.808;
+let P7_GRID_MOBILE_HEIGHT_FRAC = 1.065;
+// Always read the frame through these, never the constants: `isMobile()` is read
+// live, so a resize across the 600px breakpoint re-solves the unit for free.
+function p7GridWidthFrac()  { return isMobile() ? P7_GRID_MOBILE_WIDTH_FRAC  : P7_GRID_WIDTH_FRAC; }
+function p7GridHeightFrac() { return isMobile() ? P7_GRID_MOBILE_HEIGHT_FRAC : P7_GRID_HEIGHT_FRAC; }
 // Headroom left to the lazy pack's order-dependent frontier, in cells — see the
 // solve in p7SizeGridLayout. Small: it costs a hair of unit size, and without it
 // HEIGHT_FRAC = 1 clips.
@@ -1673,7 +1971,7 @@ function p7GridCell(ev, isLeft) {
   return p7GridFlatten(p7GridClaim(L, b, ev, isLeft), L);
 }
 function p7GridKey(W, H) {
-  return `${W}x${H}@${window.devicePixelRatio || 1}:${P7_GRID_GROW}:${P7_GRID_SPREAD_FRAC}:${P7_GRID_SPREAD_LOOSE}:${P7_GRID_BIG_MIN}:${P7_GRID_WIDTH_FRAC}:${P7_GRID_HEIGHT_FRAC}:${P7_GRID_UNIT_PX}:${P7_GRID_CAMP_GAP}:${P7_GRID_ORDER}:${P7_GRID_GROUPING}:${P7_GRID_EDGE_JITTER}:${P7_GRID_BIG_SPREAD}:${P7_GRID_TIER_CELLS.join("/")}`;
+  return `${W}x${H}@${window.devicePixelRatio || 1}:${P7_GRID_GROW}:${P7_GRID_SPREAD_FRAC}:${P7_GRID_SPREAD_LOOSE}:${P7_GRID_BIG_MIN}:${p7GridWidthFrac()}:${p7GridHeightFrac()}:${P7_GRID_UNIT_PX}:${P7_GRID_CAMP_GAP}:${P7_GRID_ORDER}:${P7_GRID_GROUPING}:${P7_GRID_EDGE_JITTER}:${P7_GRID_BIG_SPREAD}:${P7_GRID_TIER_CELLS.join("/")}`;
 }
 // The empty grid: geometry only (unit, rows, the two camps' inner edges) plus
 // the two empty skylines p7GridCell fills in as squares arrive.
@@ -1704,7 +2002,7 @@ function p7BuildSizeGrid(W, H, unit, cellPx) {
   // P7_GRID_WIDTH_FRAC is the max WIDTH in every mode, including `up` (where
   // it caps how many lanes the block gets, so it grows taller instead of
   // wider); HEIGHT_FRAC only ever caps `up`'s depth axis.
-  const sideW = full * P7_GRID_WIDTH_FRAC;
+  const sideW = full * p7GridWidthFrac();
   // ---- the lattice is quantised to DEVICE pixels --------------------------
   // p7DrawSideSquares snaps every square to the device grid on its own
   // (`q()`), one dot at a time. On a lattice whose CELL and GAP are fractional
@@ -1737,12 +2035,12 @@ function p7BuildSizeGrid(W, H, unit, cellPx) {
   const qd    = v => Math.round((v + GAP / 2) * dpr) / dpr - GAP / 2;
   const rows  = Math.max(1, Math.floor(boxH / CELL));
   const wide  = P7_GRID_GROUPING === "none"
-    ? (W - 2 * sbbTimelineLeftX(W, H)) * P7_GRID_WIDTH_FRAC : sideW;
+    ? (W - 2 * sbbTimelineLeftX(W, H)) * p7GridWidthFrac() : sideW;
   return {
     key: p7GridKey(W, H), SQ: sq, CELL, GAP, rows, sideW, up, spread,
     cols: Math.max(1, Math.floor(sideW / CELL)),
     lanes: up ? Math.max(1, Math.floor(wide / CELL)) : rows,
-    depthPx: up ? boxH * P7_GRID_HEIGHT_FRAC : spread ? latW / 2 - half : sideW,
+    depthPx: up ? boxH * p7GridHeightFrac() : spread ? latW / 2 - half : sideW,
     // Snapped to a whole cell: an arbitrary px corridor would put the two camps
     // half a cell out of phase with each other, and the whole point of `spread`
     // is that both blocks live on ONE grid.
@@ -1837,7 +2135,16 @@ function p7SizeGridLayout(W, H) {
         // A rescale that rounds back onto the current cell would spin in place:
         // take one device pixel in the direction it asked for instead.
         if (next === L.CELL) next = L.CELL + (want < 1 ? -1 : 1) / dprS;
-        if (next < 2 / dprS) break;
+        // The rescale is a RATIO, so a frame far too small for the roster can
+        // ask for a sub-pixel cell in a single jump. Clamp to the floor and
+        // try it instead of bailing: bailing left `bestCell` unset and fell
+        // through to `L.SQ` of the LAST build — the biggest cell tried — so
+        // shrinking the frame made the dots grow and run off the top edge.
+        // Only give up once the floor itself is what we just built, i.e. the
+        // lattice cannot get any finer and the frame is genuinely too small.
+        const floorCell = 2 / dprS;
+        if (next < floorCell) next = floorCell;
+        if (next === L.CELL) break;
         L = p7BuildSizeGrid(W, H, 0, next);
       }
       unit = L.SQ;
@@ -2037,7 +2344,12 @@ function p7SizeGridOnPage(page) {
   // legend rows stop being clickable there and a filter with no way to undo it
   // is a trap.
   if (page < 9) p7FilterReset();
-  if (isMobile()) { p7SizeGridSet(false, { instant: true }); return; }
+  // NOT skipped on mobile. This used to force the grid OFF here on every page
+  // flip, back when the size grid was desktop-only. It isn't any more —
+  // checkFold10Grid/checkFold11Size fire on a phone too — so that blanket off
+  // fought its own triggers: the flip into @fold11 (and again into @fold12)
+  // snapped the whole field home to the timeline a moment before the fold's
+  // own beat flattened it. Mobile takes the same re-sync as desktop below.
   // @fold11's reverse is TWO beats — glide home, then grow the tiers back — and
   // the flip back to @fold10 lands ~0ms into the first one. Re-syncing here
   // would set the end state of both beats INSTANTLY, under a field that is
@@ -2133,7 +2445,10 @@ function p7FilterMorphActive() {
 // changes rows/cols, so a stale filtered layout would point at other cells).
 function p7FilterRebuild() {
   p7FilterLayout = (p7.ready && p7.vert && p7FilterActive())
-    ? p7BuildVerticalLayout(p7.rows, p7.cols, p7.CELL, (ev) => !p7FilterHiddenEv(ev))
+    // cellBase, not CELL: this re-packs the grid when a group is filtered out,
+    // and a solve must never see the zoom-out's scale or the repack would land
+    // on different cells depending on how far the beat had run.
+    ? p7BuildVerticalLayout(p7.rows, p7.cols, p7.cellBase, (ev) => !p7FilterHiddenEv(ev))
     : null;
 }
 // Snapshot where everything is RIGHT NOW (p7.lastPositions carries each
@@ -2184,7 +2499,14 @@ function p7FilterCommit(restoring, actor) {
   if (typeof p7StartAnimLoop === "function") p7StartAnimLoop();
 }
 function p7FilterToggle(actor) {
-  if (!p7.vert || isMobile()) return;
+  // No longer desktop-only. The מקרא panel's group rows are the mobile filter
+  // buttons (fold6MLegendRowTap, js/groups.js), so a phone reaches this the
+  // same way a click on a mini-legend row does. Everything downstream — the
+  // shrink, the re-pack, the fly, the @fold10 grid repack — was already
+  // breakpoint-agnostic; only the entry point was closed.
+  // `p7.vert` still gates it: without the vertical layout there is nothing to
+  // re-pack.
+  if (!p7.vert) return;
   const restoring = p7FilterOff.has(actor);
   if (restoring) p7FilterOff.delete(actor);
   else p7FilterOff.add(actor);
@@ -2203,9 +2525,13 @@ function p7FilterReset() {
 
 function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, monthEnd, settledCount, posMap) {
   const bulges = p7BulgeList(posMap, positions, events, cols, x0, topY, CELL, SQ);
-  const stagger = Math.max(0, P7_ANIM_TOTAL_DURATION - P7_POP_DURATION);
+  // Hoisted: both read isMobile(), which reads window.innerWidth — a
+  // layout-flushing read. Called per dot in the loop below they ran ~4.4k times
+  // per frame on a phone and dominated the draw. Per breakpoint, not per square.
+  const animMs = p7AnimTotalMs(), popMs = p7PopMs();
+  const stagger = Math.max(0, animMs - popMs);
   let groupMonthKey = null, groupStart = 0, groupEnd = 0;
-  let groupCursor = P7_ANIM_TOTAL_DURATION; // months with no phase at all read as settled
+  let groupCursor = animMs; // months with no phase at all read as settled
   // Desktop: per-event rank within its row + per-row counts (p7BuildVerticalLayout).
   const vertSide = p7.vert ? (positions === p7.rightPos ? p7.vert.right : p7.vert.left) : null;
   const rowRank  = vertSide ? vertSide.rowRank  : null;
@@ -2215,6 +2541,8 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
   const isLeft = positions !== p7.rightPos;
   // Destinations only — see the LEGEND FILTER section above.
   const filtSide = p7FilterLayout ? (isLeft ? p7FilterLayout.leftPos : p7FilterLayout.rightPos) : null;
+  // The end-of-fill zoom-out's vertical squash (1 while the beat is idle).
+  const yScale  = p7ZoomOutYScale();
   // Mobile squares are ~1.25–3 CSS px (p7SolveMobileSq) sitting at fractional
   // positions, so on a DPR>1 phone every edge lands mid-device-pixel and the
   // canvas antialiases it into a band of partial-alpha pixels. The loupe is a
@@ -2231,6 +2559,47 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
   // screen, where the coordinates happen to land clean, the difference is
   // obvious.
   const snapPx = true;
+  const isMob  = isMobile();   // hoisted: innerWidth read, was running per dot
+  // actor -> colour, built ONCE per call instead of a GROUPS.find() per dot
+  // (a linear scan over the roster, 14k+ times a frame). Rebuilt every call
+  // rather than cached across frames, so a live GROUPS colour edit still takes
+  // effect on the very next frame — p7ActorColor's contract is preserved.
+  const colorOf = new Map();
+  for (let gi = 0; gi < GROUPS.length; gi++) colorOf.set(GROUPS[gi].actor, GROUPS[gi].color || '#888');
+  // Canvas re-parses the colour string on every fillStyle assignment, so skip
+  // the ones that don't change anything. Dots are drawn in row order and only
+  // ever carry one of six colours, so this collapses almost all of them.
+  let lastFill = null, lastAlpha = -1;
+  // Row cursor memo. Every dot in a row shares one cursor, but this was being
+  // recomputed (with its own performance.now()) per dot — 13.4% + 4.5% of the
+  // draw. One timestamp and one value per ROW instead of per square.
+  // Opaque squares are accumulated into one Path2D per colour and filled in a
+  // single call: 14k+ individual fillRect()s were ~48% of the draw. The batch is
+  // FLUSHED whenever the colour changes or a translucent square comes up, so the
+  // painting order is byte-for-byte the order it was before. Only alpha-1
+  // squares are batched — at full opacity a merged path and separate rects are
+  // identical even where they overlap, which is not true below 1.
+  let batch = null, batchFill = null;
+  const flush = () => {
+    if (!batch) return;
+    if (lastAlpha !== 1) { ctx.globalAlpha = 1; lastAlpha = 1; }
+    if (lastFill !== batchFill) { ctx.fillStyle = batchFill; lastFill = batchFill; }
+    ctx.fill(batch);
+    batch = null; batchFill = null;
+  };
+  const rowNow = performance.now(), rowCur = new Map();
+  // Vertical cull band. With the mobile camera (P7_VERT.zoom > 1) the field is
+  // several box-heights tall and most of it is off screen behind
+  // p7VertClipToBox — but every square was still being measured into a path and
+  // handed to the rasteriser. Only the PAINT is skipped: posMap, the filter
+  // ghosts and every other bit of bookkeeping below still run for culled
+  // squares, so hit-testing and page8's glide (which read p7.lastPositions for
+  // events that are nowhere near the viewport) are unaffected.
+  const cullTop = -8, cullBot = (typeof viewportH === 'function' ? viewportH() : window.innerHeight) + 8;
+  const rowCursorOf = (r) => {
+    if (rowCur.has(r)) return rowCur.get(r);
+    const v = p7RowCursorAt(r, rowNow); rowCur.set(r, v); return v;
+  };
   const dpr    = window.devicePixelRatio || 1;
   const q      = v => Math.round(v * dpr) / dpr;
 
@@ -2246,6 +2615,17 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     const drow  = Math.floor(destCell / cols);
     let destX = x0 + col * CELL;
     let destY = topY + drow * CELL;
+    // End-of-fill zoom-out: the row offset is compressed about the field's top
+    // edge. x is deliberately untouched — see p7ZoomOutKY. Because this is the
+    // same factor p7VertFieldLen applies to the axis, a dot stays beside its own
+    // date all the way through the beat.
+    if (yScale !== 1) destY = topY + (destY - topY) * yScale;
+    // Mobile 'side' plaques (p7VertCardPush): dots in the rows a plaque covers
+    // slide outward past it, following its fade, so it never hides a dot.
+    for (let c = 0; c < p7VertCardPush.length; c++) {
+      const pc = p7VertCardPush[c];
+      if (pc.side === (isLeft ? 'left' : 'right') && destY + SQ > pc.top && destY < pc.bottom) destX += isLeft ? -pc.dx : pc.dx;
+    }
     // Hover bulge: shoved aside by any swelling neighbour (p7BulgeShift), or —
     // for the swelling square itself — kept centred on its cell and grown.
     let bulgeSize = 0;
@@ -2288,11 +2668,11 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
       // Desktop row system (p7RowPhase): presence is a pure function of the
       // row's cursor; the slot is the square's rank within its row by distance
       // from the corridor, so each row plays centre → side.
-      const rowCursor = p7RowCursor(row);
+      const rowCursor = rowCursorOf(row);
       if (rowCursor === undefined) continue;          // row never reached
       const n = rowCount[row];
       const delay = n > 1 ? (rowRank[i] / (n - 1)) * stagger : 0;
-      const presence = p7Ease(Math.min(1, Math.max(0, (rowCursor - delay) / P7_POP_DURATION)));
+      const presence = p7Ease(Math.min(1, Math.max(0, (rowCursor - delay) / popMs)));
       if (presence <= 0) continue;
       scale = 0.5 + 0.5 * presence;
       alpha = presence;
@@ -2303,7 +2683,7 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
         groupStart     = i;
         groupEnd       = p7BisectBefore(events, p7MonthKeyToStartStr(mk + 1));
         // No phase at all = a month below the animated range, i.e. long settled.
-        groupCursor    = p7MonthCursor(mk) ?? P7_ANIM_TOTAL_DURATION;
+        groupCursor    = p7MonthCursor(mk) ?? animMs;
       }
 
       const countInGroup = groupEnd - groupStart;
@@ -2313,7 +2693,7 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
       // is wherever the cursor says — mid-grow, mid-shrink or settled — no matter how
       // many times the user reversed direction on the way here.
       const delay = countInGroup > 1 ? (localIdx / (countInGroup - 1)) * stagger : 0;
-      const presence = p7Ease(Math.min(1, Math.max(0, (groupCursor - delay) / P7_POP_DURATION)));
+      const presence = p7Ease(Math.min(1, Math.max(0, (groupCursor - delay) / popMs)));
       if (presence <= 0) continue; // not popped in yet, or fully retreated
       // Nothing pops from nothing: start at a visible (if small) size rather than 0.
       scale = 0.5 + 0.5 * presence;
@@ -2403,8 +2783,7 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     const size = (bulgeSize || restSize) * scale;
     drawX = cx - size / 2; drawY = cy - size / 2;   // shrink/grow stays centred
     const off  = 0;
-    ctx.globalAlpha = drawAlpha;
-    ctx.fillStyle = p7ActorColor(events[i].actor);
+    const fill = colorOf.get(events[i].actor) || '#888';
     // The 1/dpr floor is a guard, not a routine path: the smallest real square
     // is scale 0.5 on sq 1.25, still ~2 device px.
     // Desktop snaps only once a square is SETTLED. Mid-pop, quantising the
@@ -2412,9 +2791,26 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     // three visible steps and the cascade reads as stuttering — worse than the
     // softness it fixes. Mobile still snaps throughout: the loupe magnifies
     // any fractional edge into a pale ring, which is the louder artifact there.
-    if (snapPx && (scale === 1 || isMobile())) ctx.fillRect(q(drawX + off), q(drawY + off), Math.max(1 / dpr, q(size)), Math.max(1 / dpr, q(size)));
-    else        ctx.fillRect(drawX + off, drawY + off, size, size);
+    const snap = snapPx && (scale === 1 || isMob);
+    const rx = snap ? q(drawX + off) : drawX + off;
+    const ry = snap ? q(drawY + off) : drawY + off;
+    const rw = snap ? Math.max(1 / dpr, q(size)) : size;
+    const rh = snap ? Math.max(1 / dpr, q(size)) : size;
+    if (ry + rh < cullTop || ry > cullBot) continue;   // off screen — nothing to paint
+    if (drawAlpha >= 1) {
+      // Fully opaque squares are BATCHED — see the flush() note above.
+      if (fill !== batchFill) { flush(); batch = new Path2D(); batchFill = fill; }
+      batch.rect(rx, ry, rw, rh);
+    } else {
+      // Anything mid-fade is drawn on its own, in order, so a translucent
+      // square never gets reordered past an opaque one behind it.
+      flush();
+      if (drawAlpha !== lastAlpha) { ctx.globalAlpha = drawAlpha; lastAlpha = drawAlpha; }
+      if (fill !== lastFill) { ctx.fillStyle = fill; lastFill = fill; }
+      ctx.fillRect(rx, ry, rw, rh);
+    }
   }
+  flush();
   ctx.globalAlpha = 1;
 }
 
@@ -2503,13 +2899,23 @@ function p7UpdateLayout(W, H) {
   // target — so this guard is what keeps those 8 from wrecking the field.
   if (!Number.isFinite(W) || !Number.isFinite(H)) return;
   if (W === p7.lastW && H === p7.lastH && maxEvents === p7.lastMaxEvents && p7.lastVertical === p7VerticalAxis()) return;
+  // Mobile: a height-only change is the URL/bottom bar sliding, not a new
+  // viewport. Re-solving the square against the shorter/taller box would make
+  // every dot visibly resize on each scroll that moves the bar, so the layout
+  // solved for the first height stands until the width changes (rotation /
+  // breakpoint) — same rule as the scroll geometry (vh, never dvh). The
+  // camera in p7VertTopY still reads the live H, so the field re-centres.
+  if (isMobile() && W === p7.lastW && p7.lastH && H !== p7.lastH && maxEvents === p7.lastMaxEvents && p7.lastVertical === p7VerticalAxis()) return;
   p7.lastVertical = p7VerticalAxis();
   p7.lastMaxEvents = maxEvents;
 
   const box    = sbbTimeline(H);
   const topY   = Math.round(H * box.top);
   const botY   = Math.round(H * box.bottom);
-  const sideH  = botY - topY;
+  // `zoom` (P7_VERT) lets the row plan be that many boxes tall: the square is
+  // solved and the rows counted against the VIRTUAL height, and the camera in
+  // p7VertTopY shows a box-sized window onto the result.
+  const sideH  = (botY - topY) * (p7VerticalAxis() ? (p7V().zoom || 1) : 1);
   // Solved before any geometry is read: p7GridGeometry/p7Sq below go through
   // p7Cell(), which returns this. The box itself doesn't depend on the square
   // size, so there's no circularity — sideW is the same measurement
@@ -2525,9 +2931,12 @@ function p7UpdateLayout(W, H) {
     p7Grid.layout = null;   // size grid (p7BuildSizeGrid) is per-viewport — rebuilt on demand
   }
   const { leftX0, cols, CELL } = p7GridGeometry(W, H);
-  p7.leftX0 = leftX0;
-  p7.CELL = CELL;
-  p7.SQ   = p7Sq();
+  // The BASE geometry — p7.leftX0/CELL/SQ are getters that scale these by the
+  // end-of-fill fitted layout (see p7Fit). p7GridGeometry solves against the
+  // unscaled p7Cell(), which is what keeps `cols` fixed while the beat runs.
+  p7.leftX0Base = leftX0;
+  p7.cellBase = CELL;
+  p7.sqBase   = p7Sq();
   p7.cols = cols;
 
   const rows  = Math.floor(sideH / CELL);
@@ -2699,13 +3108,31 @@ function p7TargetForActorOccurrence(actor, n, W, H) {
 // its eventual on-screen cell, for the fold-8 square tooltip
 // (js/fold8-tooltip.js — shows a
 // real event's own date+description instead of a static label).
+// CACHED, and unlike p7TargetCellCache this one is never cleared: it resolves to
+// an EVENT OBJECT, which is pure data — it does not depend on cols/rows/viewport
+// the way a cell number does, and event objects are stable references once
+// events.json is loaded. (p7.ready gates population, so nothing is cached from
+// before the load.)
+//
+// It has to be cached: this is called every frame while the fold-8 tooltip is
+// up, and each miss is a linear scan over several thousand events. Uncached it
+// ran 3216 times in a 40-step scroll and was ~7% of all CPU on a throttled
+// phone — the profile entry read as p7NthIndexOfActor, whose own comment
+// claimed it "only ever runs once per actor/occurrence pair". It didn't.
+const p7EventForActorCache = new Map();
 function p7EventForActorOccurrence(actor, n) {
   if (!p7.ready) return null;
+  const key = actor + "|" + n;
+  if (p7EventForActorCache.has(key)) return p7EventForActorCache.get(key);
+  let out = null;
   let idx = p7NthIndexOfActor(p7.leftEvents, actor, n);
-  if (idx !== -1) return p7.leftEvents[idx];
-  idx = p7NthIndexOfActor(p7.rightEvents, actor, n);
-  if (idx !== -1) return p7.rightEvents[idx];
-  return null;
+  if (idx !== -1) out = p7.leftEvents[idx];
+  else {
+    idx = p7NthIndexOfActor(p7.rightEvents, actor, n);
+    if (idx !== -1) out = p7.rightEvents[idx];
+  }
+  p7EventForActorCache.set(key, out);
+  return out;
 }
 
 // Inverse of p7NthIndexOfActor for one specific event, identified by the xlsx's
@@ -2798,6 +3225,9 @@ function p7DrawTimelineSquares(ctx, W, H) {
   // keep animating on their own clock — see p7DrawSideSquares/p7MonthCursor. The
   // loop's upper bound must cover the *whole* centered month (monthEndL/monthEndR),
   // not just events whose date has already been reached, so the full cascade can play.
+  // Hoisted once per draw: p7AnimTotalMs() reads isMobile() -> window.innerWidth,
+  // a layout-flushing read, and the month loops below would call it per month.
+  const animTotalMs = p7AnimTotalMs();
   const { y: curY, m: curM } = p7DateDayFrac(p7.currentDate);
   const curMonthKey = curY * 12 + curM;
 
@@ -2842,8 +3272,9 @@ function p7DrawTimelineSquares(ctx, W, H) {
     // the same instant (simpler than staggering month-to-month, and each month's
     // own events still cascade individually within it via p7DrawSideSquares'
     // own per-event delay), rather than one after another.
+    const backfillMs = p7AnimTotalMs();   // hoisted out of the loop, see p7PopMs
     for (let k = Math.max(p7MonthMaxReached + 1, p7MonthKeyOf(p7.minDate)); k <= curMonthKey; k++) {
-      if (p7MonthPhase[k] === undefined) p7MonthAim(k, P7_ANIM_TOTAL_DURATION); // from cursor 0
+      if (p7MonthPhase[k] === undefined) p7MonthAim(k, backfillMs); // from cursor 0
     }
     p7StartAnimLoop();
   } else if (p7HasEngaged && p7MonthPhase[curMonthKey] === undefined) {
@@ -2851,7 +3282,7 @@ function p7DrawTimelineSquares(ctx, W, H) {
     // moving forward, and we're now landing on it while scrolling backward —
     // it should just appear settled, not fire off a brand new entrance while
     // the user is scrolling the other way.
-    p7MonthSettle(curMonthKey, P7_ANIM_TOTAL_DURATION);
+    p7MonthSettle(curMonthKey, p7AnimTotalMs());
   }
 
   if (p7HasEngaged) {
@@ -2864,7 +3295,7 @@ function p7DrawTimelineSquares(ctx, W, H) {
     // there is no snapshot to take and no "was it mid-flight?" case to special-case.
     for (const key in p7MonthPhase) {
       const k = Number(key);
-      if (k <= curMonthKey && p7MonthAim(k, P7_ANIM_TOTAL_DURATION)) p7StartAnimLoop();
+      if (k <= curMonthKey && p7MonthAim(k, animTotalMs)) p7StartAnimLoop();
     }
   } else if (p7MonthMaxReached > -1) {
     // Disengaged (scrolled back up past this fold's own title — see
@@ -2916,7 +3347,7 @@ function p7DrawTimelineSquares(ctx, W, H) {
   let settledStr = p7.minDate;
   if (p7HasEngaged) {
     let earliestActiveMonthKey = curMonthKey;
-    for (let k = curMonthKey - 1; p7MonthPhase[k] !== undefined && p7MonthCursor(k) < P7_ANIM_TOTAL_DURATION; k--) {
+    for (let k = curMonthKey - 1; p7MonthPhase[k] !== undefined && p7MonthCursor(k) < animTotalMs; k--) {
       earliestActiveMonthKey = k;
     }
     settledStr = p7MonthKeyToStartStr(earliestActiveMonthKey);
@@ -2967,8 +3398,10 @@ function drawPage7(ctx, W, H) {
 
   p7UpdateEngagement();
   p7RealTimelineReached = true;
+  const clipped = p7VertClipToBox(ctx, W, H);
   p7DrawTimelineSquares(ctx, W, H);
   p7DrawInspectScrim(ctx, W, H);
+  if (clipped) ctx.restore();
 
   if (p7AxisTriggerIfNeeded()) p7DrawYearAxis(ctx, W, H);
 }
@@ -3255,14 +3688,22 @@ function p7AxisYearTicks() {
 // `desc` is the description that types into the plaque on hover (desktop side
 // plaques only — see P7_AXIS_DESC_* below); the source's trailing «מקור» is
 // deliberately omitted.
-const P7_AXIS_EVENTS = [
+const P7_AXIS_EVENTS_ALL = [
   // Nudged left to clear the "2023" year ring — 04.01 sits only 3 days from
   // minDate, so at its true x its dot all but touches the axis's right anchor.
-  { date: "2023-01-04", label: "הכרזת הרפורמה", maxWidth: null, xOffset: -14,
+  // mobileAbove: this one sits 3 days after minDate, i.e. hard against the top
+  // of the axis, where a side plaque has the year label and the screen edge to
+  // fight. It is placed ABOVE its dot from the start instead of flying in from
+  // the side — see p7AxisEvMobileAbove.
+  { date: "2023-01-04", label: "הכרזת הרפורמה", maxWidth: null, xOffset: -14, mobileAbove: true,
     desc: "הצגת תוכניתו של שר המשפטים יריב לוין לשינויים במערכת המשפט." },
-  { date: "2023-06-20", label: "הפיגוע בעלי", maxWidth: null,
+  // hideOnMobile: the phone's axis carries fewer plaques than the desktop one.
+  // At the mobile square/zoom the cards crowd each other, so the roster is
+  // thinned to the events the story actually needs — three are dropped
+  // (2026-09-13), leaving 6 of 9.
+  { date: "2023-06-20", label: "הפיגוע בעלי", maxWidth: null, hideOnMobile: true,
     desc: "פיגוע ירי סמוך ליישוב עלי, שבו נהרגו ארבעה ישראלים." },
-  { date: "2023-07-24", label: "ביטול עילת הסבירות", maxWidth: null,
+  { date: "2023-07-24", label: "ביטול עילת הסבירות", maxWidth: null, hideOnMobile: true,
     desc: "אישור התיקון שמנע ביקורת שיפוטית על סבירות החלטות הממשלה והשרים." },
   { date: "2023-10-07", label: "מתקפת 7 באוקטובר", maxWidth: null,
     desc: "מתקפה בהובלת חמאס על יישובים ובסיסים בדרום ישראל, שכללה הרג וחטיפת אזרחים ואנשי ביטחון." },
@@ -3270,7 +3711,7 @@ const P7_AXIS_EVENTS = [
     desc: "הודעת צה״ל על חילוץ גופותיהם של שישה חטופים שנרצחו בשבי ברפיח." },
   { date: "2025-03-18", label: "חידוש הלחימה בעזה", maxWidth: null,
     desc: "חידוש התקיפות הישראליות הנרחבות בעזה לאחר כחודשיים של הפסקת אש." },
-  { date: "2025-06-13", label: "מבצע ״עם כלביא״", maxWidth: null,
+  { date: "2025-06-13", label: "מבצע ״עם כלביא״", maxWidth: null, hideOnMobile: true,
     desc: "פתיחת המבצע הישראלי נגד מטרות גרעין וצבא באיראן, ובעקבותיו ירי איראני לעבר ישראל." },
   { date: "2025-10-13", label: "שחרור החטופים מעזה", maxWidth: null,
     desc: "שחרור עשרים החטופים החיים שנותרו בעזה במסגרת הסכם הפסקת אש." },
@@ -3282,6 +3723,25 @@ const P7_AXIS_EVENTS = [
   { date: "2026-07-17", label: "התפזרות הכנסת ה-25", maxWidth: null, xOffset: 26, above: true,
     desc: "אישור התפזרות הכנסת לקראת הבחירות באוקטובר." },
 ];
+
+// The list the whole file actually uses — `hideOnMobile` entries dropped under
+// the 600px breakpoint.
+//
+// Filtered HERE, at declaration, and not per draw: P7_AXIS_EVENT_STATE,
+// p7AxisEventSpans, p7SideCardDy, p7.vert.events and every label/marker pass are
+// all index-parallel to this array, so the set has to be fixed before any of
+// them are built. A per-frame skip would leave those arrays holding a slot for
+// an event that never draws, and every `i` in this file would mean two things.
+//
+// The literal 600 duplicates MOBILE_BP rather than calling isMobile(): both live
+// in js/core.js, which project.html loads AFTER page7.js, so neither exists yet
+// at this line. Keep the two in step by hand.
+//
+// A browser dragged across the breakpoint mid-session keeps the set it loaded
+// with until a reload — the same reload-scoped treatment the layout already
+// gives a desktop<->mobile crossing.
+const P7_AXIS_EVENTS = P7_AXIS_EVENTS_ALL.filter(
+  (ev) => !(ev.hideOnMobile && window.innerWidth <= 600));
 
 // Fixed real-time (wall-clock) fade durations — these only govern the crossfade
 // itself, not how long an event stays fully visible (that's driven by scroll: it
@@ -3307,6 +3767,81 @@ function p7AxisFadeInMs() {
 // the dot edge, carrying the far bar and the far half-dot with it.
 const P7_VERT_CARD_BEATS = { bar: { start: 0, len: 0.35 }, open: { start: 0.35, len: 0.65 } };
 const P7_AXIS_EVENT_FADE_OUT_MS = 1000;
+
+// ── Axis-event presentation knobs ───────────────────────────────────────
+// compare/ + manual/ picks, 2026-09-12 (_debug-zoomed-axis.js, since deleted).
+// See wiki/Timeline.md.
+//
+// Where the event fires, in ROWS relative to its own dot. 0 = the dot itself
+// (p7BuildVerticalLayout's reachRow). Positive fires LATER — the fill edge has
+// to travel this many rows PAST the dot first; negative fires early, above it.
+// MOBILE ONLY — desktop keeps 0 (fires at the dot). Same for every knob in this
+// block: the compare/manual pass that produced these ran under the 600px
+// breakpoint and desktop was never part of it.
+const P7_AXIS_TRIGGER_ROW_OFFSET_MOBILE = 25;
+function p7AxisTriggerRowOffset() { return isMobile() ? P7_AXIS_TRIGGER_ROW_OFFSET_MOBILE : 0; }
+// How a headline card LEAVES. It is a trigger-driven beat either way; the modes
+// differ in what the beat does to the card.
+//   'fade'         — the old behaviour: opacity to 0 in place.
+//   'collapse'     — scales into its own axis dot, no fade. The card visibly
+//                    goes back where it came from.
+//   'collapseY'    — collapses vertically into the dot's line only.
+//   'collapseX'    — collapses horizontally into the axis only.
+//   'collapseFade' — collapses AND fades, for when the pure collapse reads too
+//                    heavy against a busy field.
+const P7_AXIS_LEAVE_MODE_MOBILE = 'collapse';
+function p7AxisLeaveMode() { return isMobile() ? P7_AXIS_LEAVE_MODE_MOBILE : 'fade'; }
+// Draw an event's marker BEFORE the fill reaches it, in the unfilled axis
+// line's own colour and alpha (P7_AXIS_BG_ALPHA), turning solid black as the
+// fill arrives. The dot then reads as part of the axis all along rather than
+// appearing out of nothing on its trigger.
+const P7_AXIS_MARKER_UNREACHED_MOBILE = true;
+function p7AxisMarkerUnreached() { return isMobile() && P7_AXIS_MARKER_UNREACHED_MOBILE; }
+// What the marker does on its trigger, given the above.
+//   'grow' — starts small (P7_AXIS_MARKER_GROW_FROM of its resting radius) and
+//            grows to full as it is reached, recolouring on the way.
+//   'full' — already at its resting size before the fill arrives; ONLY the
+//            colour changes, so nothing on the axis moves when an event fires.
+// compare/ pick 2026-09-12: 'full'. The axis is a fixed row of dots that simply
+// darken as the fill passes them — nothing on it jumps or resizes on a trigger.
+const P7_AXIS_MARKER_ENTER_MOBILE = 'full';
+function p7AxisMarkerEnter() { return isMobile() ? P7_AXIS_MARKER_ENTER_MOBILE : 'grow'; }
+const P7_AXIS_MARKER_GROW_FROM = 1;    // 'grow' mode's starting fraction — unused (mobile is 'full', desktop never draws unreached markers)
+
+// The page ground the axis is painted on (--bg in style.css). Needed because
+// the marker colour below is composited by hand rather than by the canvas.
+const P7_PAPER_RGB = [253, 252, 255];
+
+// An axis marker's colour for a given reach progress: matching the unfilled
+// axis line at 0, solid black at 1.
+//
+// OPAQUE, not rgba. The marker sits ON the axis line, and a translucent fill
+// over an already-translucent line COMPOSITES — the two alphas stack and the
+// unreached dot shows up as a darker blob on the line instead of matching it.
+// So the equivalent flat colour is computed against the paper and painted at
+// full alpha: it reads exactly like the line where it overlaps, and there is
+// nothing to build up. (At t = 1 this is pure black either way.)
+function p7AxisMarkerColorAt(t) {
+  const a = P7_AXIS_BG_ALPHA + (1 - P7_AXIS_BG_ALPHA) * Math.min(1, Math.max(0, t));
+  const c = P7_PAPER_RGB.map(v => Math.round(v * (1 - a)));
+  return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+}
+
+// Applies P7_AXIS_LEAVE_MODE to ctx for one headline card. The caller must have
+// ctx.save()d. `op` is the card's 0..1 presence; (dotX, dotY) its own axis dot,
+// which is what every collapse mode scales toward.
+function p7AxisLeaveApply(ctx, op, dotX, dotY) {
+  const M = p7AxisLeaveMode();
+  if (M === 'fade') { ctx.globalAlpha = op; return; }
+  // Never scale to exactly 0 — a zero-determinant transform makes the whole
+  // path non-invertible and Chrome drops the draw entirely rather than
+  // rendering nothing, which on a reversal flashes the card back at full size.
+  const k = Math.max(0.0001, p9Ease(op));
+  ctx.globalAlpha = M === 'collapseFade' ? op : 1;
+  ctx.translate(dotX, dotY);
+  ctx.scale(M === 'collapseY' ? 1 : k, M === 'collapseX' ? 1 : k);
+  ctx.translate(-dotX, -dotY);
+}
 const P7_AXIS_EVENT_LABEL_OFFSET = 34; // px above the axis line (lifted to give date room below)
 const P7_AXIS_EVENT_FONT         = "500 14px 'Assistant', sans-serif";
 const P7_AXIS_DATE_FONT          = "400 14px 'Assistant', sans-serif";
@@ -3386,7 +3921,7 @@ const P7_AXIS_HOVER_ANIM_SPEED = 0.18; // per-frame lerp toward the hover target
 // — a fixed-tempo, reversible-mid-flight beat like the ACLED note's hover
 // (FOLD6_NOTE_HOVER_MS) rather than the per-frame lerp hoverT uses, so the
 // card-open and typing beats below can slice it into windows.
-const P7_AXIS_EVENT_STATE = P7_AXIS_EVENTS.map(() => ({ triggeredAt: null, leavingAt: null, hoverT: 0, reachedT: 0, descT: 0, othersT: 0 }));
+const P7_AXIS_EVENT_STATE = P7_AXIS_EVENTS.map(() => ({ triggeredAt: null, leavingAt: null, hoverT: 0, reachedT: 0, descT: 0, othersT: 0, aboveT: 0, outT: 0 }));
 
 // Hover description (desktop side plaques). Same shape as the ACLED note: the
 // card opens first, then the description types in over the rest; a hard
@@ -3566,7 +4101,7 @@ function p7UpdateAxisEventTriggers(W) {
   P7_AXIS_EVENTS.forEach((ev, i) => {
     const state = P7_AXIS_EVENT_STATE[i];
     const evMs = new Date(ev.date + "T00:00:00Z").getTime();
-    let reached;
+    let reached, atDot = null;
     if (p7VerticalAxis()) {
       // Vertical: one rule for every event — the fill edge (bottom of
       // currentDate's rows) has come down to the event's own reach row (the
@@ -3577,7 +4112,10 @@ function p7UpdateAxisEventTriggers(W) {
       // retreated to the PREVIOUS event's reach row — left a passed headline
       // sitting up through most of the way back; don't reintroduce it.
       const rows = p7.vert ? p7.vert.events : null;
-      reached = hasScrolled && !!p7.vert && !!rows && p7CurRow() >= rows[i].reachRow;
+      // atDot fires the FLY; `reached` (offset) fires the LEAVE. Two rows, two
+      // triggers — see p7AxisFlyTrigger.
+      atDot = hasScrolled && !!p7.vert && !!rows && p7CurRow() >= rows[i].reachRow;
+      reached = hasScrolled && !!p7.vert && !!rows && p7CurRow() >= rows[i].reachRow + p7AxisTriggerRowOffset();
     } else if (evMs > maxMs) {
       // An event dated past the dataset's end has no date the scrub can ever
       // reach — clamping its compare date to maxDate fired it only on the one
@@ -3599,19 +4137,25 @@ function p7UpdateAxisEventTriggers(W) {
       reached = hasScrolled && curMs >= evMs
         && p7AxisX(p7.currentDate, W) <= p7AxisEventTrueX(ev, i, W);
     }
+    // The fly is its own trigger on its own row; null atDot (the horizontal
+    // axis) falls back to the leave signal so nothing changes off this path.
+    if (isMobile()) p7AxisFlyTrigger(i).trigger((atDot === null ? reached : atDot) ? 1 : 0);
     if (reached) {
       if (state.triggeredAt === null) {
         state.triggeredAt = now;
         state.leavingAt = null;
+        p7AxisCardTrigger(i).trigger(1);
         p7StartAnimLoop();
       } else if (state.leavingAt !== null) {
         // Scrolled forward again before this event's own reverse fade-out
         // finished — cancel it, same reversible-mid-flight convention as
         // everywhere else in the project.
         state.leavingAt = null;
+        p7AxisCardTrigger(i).trigger(1);
       }
     } else if (state.triggeredAt !== null && state.leavingAt === null) {
       state.leavingAt = now;
+      p7AxisCardTrigger(i).trigger(0);
       p7StartAnimLoop();
     }
   });
@@ -3619,26 +4163,74 @@ function p7UpdateAxisEventTriggers(W) {
   // it entirely — otherwise it would linger in P7_AXIS_EVENT_STATE forever at
   // opacity 0 instead of being eligible to fade back in cleanly next time.
   P7_AXIS_EVENT_STATE.forEach((state) => {
-    if (state.leavingAt !== null && now - state.leavingAt >= P7_AXIS_EVENT_FADE_OUT_MS) {
+    // Keyed to the trigger's own duration now, not the old fade constant: the
+    // state must not be forgotten while its beat is still playing out.
+    if (state.leavingAt !== null && now - state.leavingAt >= (isMobile() ? p7AxisCardMs() : P7_AXIS_EVENT_FADE_OUT_MS)) {
       state.triggeredAt = null;
       state.leavingAt = null;
     }
   });
 }
 
-// Fades in on its own trigger, then holds at full opacity indefinitely — a
-// passed event STAYS (reaching the next one never fades it) until the user
-// scrolls back above this event's own date (leavingAt) or the axis undraws.
-function p7AxisEventOpacity(i, now) {
-  const state = P7_AXIS_EVENT_STATE[i];
-  if (state.triggeredAt === null) return 0;
-  let opacity = Math.min(1, (now - state.triggeredAt) / p7AxisFadeInMs());
-  if (state.leavingAt !== null) {
-    const fadeOut = 1 - (now - state.leavingAt) / P7_AXIS_EVENT_FADE_OUT_MS;
-    opacity = Math.min(opacity, Math.max(0, fadeOut));
+// How long a card's arrive/leave beat runs. manual/ pick 2026-09-12.
+const P7_AXIS_CARD_MS_MOBILE = 480;
+function p7AxisCardMs() { return P7_AXIS_CARD_MS_MOBILE; }
+// TWO INDEPENDENT TRIGGERS per axis event, fired at two different rows:
+//
+//   FLY   — fired by reaching the DOT (reachRow, no offset). The plaque glides
+//           from beside the dot to above it, and the marker recolours to black.
+//   LEAVE — fired at reachRow + P7_AXIS_TRIGGER_ROW_OFFSET. The card leaves
+//           (P7_AXIS_LEAVE_MODE: collapses into its dot).
+//
+// Not one trigger sliced into two windows: the offset knob has to move the
+// LEAVE point without dragging the fly with it, which a single clock can't do.
+
+// One house makeTrigger PER axis event — a fixed-duration 0<->1 beat fired by
+// the reach CROSSING, exactly like every other fold animation on the page.
+//
+// It replaces a wall-clock ramp read off `triggeredAt`/`leavingAt`, which was
+// re-derived from the live fill edge every frame and so behaved as a SCRUB:
+// nudging the scroll back and forth around an event's own row dragged its card
+// in and out with the scroll instead of playing one beat. Built lazily because
+// makeTrigger lives in js/groups.js, which project.html loads after this file.
+const p7AxisCardTrigs = [], p7AxisFlyTrigs = [];
+// The LEAVE trigger — fired at reachRow + P7_AXIS_TRIGGER_ROW_OFFSET.
+function p7AxisCardTrigger(i) {
+  if (!p7AxisCardTrigs[i]) {
+    p7AxisCardTrigs[i] = makeTrigger(() => p7AxisCardMs(), () => p7StartAnimLoop());
   }
-  return opacity;
+  return p7AxisCardTrigs[i];
 }
+// The FLY trigger — fired by reaching the dot itself.
+function p7AxisFlyTrigger(i) {
+  if (!p7AxisFlyTrigs[i]) {
+    p7AxisFlyTrigs[i] = makeTrigger(() => p7AxisCardMs(), () => p7StartAnimLoop());
+  }
+  return p7AxisFlyTrigs[i];
+}
+
+// A card's 0..1 presence — the trigger's eased progress, nothing else. Reversing
+// mid-flight covers only the remaining distance, per the house convention.
+function p7AxisEventOpacity(i, now) {
+  // DESKTOP keeps the original wall-clock ramp off triggeredAt/leavingAt. Only
+  // mobile moved to the trigger — the compare/manual pass that asked for it ran
+  // under the 600px breakpoint and desktop was never part of it.
+  if (!isMobile()) {
+    const state = P7_AXIS_EVENT_STATE[i];
+    if (state.triggeredAt === null) return 0;
+    let opacity = Math.min(1, (now - state.triggeredAt) / p7AxisFadeInMs());
+    if (state.leavingAt !== null) {
+      const fadeOut = 1 - (now - state.leavingAt) / P7_AXIS_EVENT_FADE_OUT_MS;
+      opacity = Math.min(opacity, Math.max(0, fadeOut));
+    }
+    return opacity;
+  }
+  return p7AxisFlyTrigger(i).currentT();
+}
+// Reaching the dot: the plaque glides beside -> above, the marker recolours.
+function p7AxisFlyT(i)   { return p7AxisFlyTrigger(i).currentT(); }
+// The trigger point: the card leaves.
+function p7AxisLeaveT(i) { return p7AxisCardTrigger(i).currentT(); }
 
 function p7DrawAxisEvents(ctx, W, axisY, curX, hoverActive, highlightX) {
   p7UpdateAxisEventTriggers(W);
@@ -3675,7 +4267,7 @@ function p7DrawAxisEvents(ctx, W, axisY, curX, hoverActive, highlightX) {
     state.reachedT += (reachedTarget - state.reachedT) * P7_AXIS_HOVER_ANIM_SPEED;
     if (Math.abs(reachedTarget - state.reachedT) < 0.001) state.reachedT = reachedTarget;
     if (!reached) state.hoverT = 0;
-    if (state.reachedT <= 0.001) return;
+    if (state.reachedT <= 0.001 && !p7AxisMarkerUnreached()) return;
     const isAxisHovered = hoveredAxisEvent === ev;
     // Ease hoverT toward its target (1 hovered, 0 not) once per frame — this is
     // what makes the hover grow/shrink animate instead of snap.
@@ -4043,6 +4635,20 @@ const P7_VERT_YEAR_LABEL_GAP    = 6;    // px between a year ring and its label
 // the ring. The first headline event (2023-01-04) lands 3 days — a fraction of
 // a row — under row 0, so a ring ON the top end collided with its dot.
 const P7_VERT_FIRST_YEAR_RAISE_PX = 14;
+// Extra header space reserved above row 0 on mobile when the first event is
+// `mobileAbove`: its plaque stands above the dot, so the year label has to clear
+// the PLAQUE, not just the ring, or the card prints straight over "2023".
+// A flat constant rather than a measured height on purpose — p7VertYearHeaderH
+// feeds the square solve and p7VertTopY, so it has to be stable geometry, not a
+// per-frame text measurement that changes as a label wraps.
+const P7_VERT_FIRST_EV_HEADROOM_PX = 34;
+// True when this event should be pinned above its dot instead of beside it.
+// MOBILE ONLY — desktop's side plaques are unaffected.
+function p7AxisEvMobileAbove(ev) { return isMobile() && !!ev && !!ev.mobileAbove; }
+// Does the roster have such an event at all? (Drives the header reserve above.)
+function p7AxisHasMobileAbove() {
+  return isMobile() && P7_AXIS_EVENTS.some((ev) => ev.mobileAbove);
+}
 const P7_AXIS_DOT_CATCHUP_PX    = 80;   // px of axis over which the fill edge, having skipped a headline circle/card, eases back into step with the true edge
 // Per headline event, the axis span its circle currently occupies — the dot
 // alone (±R) while closed, the whole open card while the circle has opened
@@ -4065,6 +4671,7 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   const topY    = p7VertTopY(H);
   const len     = v.totalRows * p7.CELL;
   const botY    = topY + len;
+  const clipped = p7VertClipToBox(ctx, W, H); // line + years only; the headline slot draws unclipped
   ctx.save();
 
   const introT = p7AxisIntroT();
@@ -4099,7 +4706,13 @@ function p7DrawYearAxisVertical(ctx, W, H) {
     // ABOVE the line instead of breaking it: the line alone is the time count,
     // so an event on the first days of the range lands on the line, not in a
     // label gap. Its block hangs `yearGapPad` above topY.
-    const yc  = row === 0 ? axisQ(topY - pad - blockH / 2) : axisQ(p7RowY(row, H));
+    // Row 0 also clears the first event's plaque when that plaque is pinned
+    // above its dot (mobileAbove): the dot is only days off the top of the axis,
+    // so the card lands in exactly the band this label wants. The lift is the
+    // same P7_VERT_FIRST_EV_HEADROOM_PX that p7VertYearHeaderH already reserved,
+    // so the year ends up ABOVE the card and nothing else moves.
+    const firstLift = row === 0 && p7AxisHasMobileAbove() ? P7_VERT_FIRST_EV_HEADROOM_PX : 0;
+    const yc  = row === 0 ? axisQ(topY - pad - blockH / 2 - firstLift) : axisQ(p7RowY(row, H));
     return { tick: t, row, yc, top: yc - blockH / 2 - pad, bottom: yc + blockH / 2 + pad };
   });
 
@@ -4252,6 +4865,7 @@ function p7DrawYearAxisVertical(ctx, W, H) {
     }
   }
   ctx.restore();
+  if (clipped) ctx.restore();
 
   // Dots pop on the DRAWN edge (fillY): the circle appears the instant the
   // fill reaches its top, never sitting on unfilled line.
@@ -4409,15 +5023,29 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     // (p7SideCardDy, written by the label pass below — one frame behind).
     const y = evY[i] + (p7SideCardDy[i] || 0);
     const state = P7_AXIS_EVENT_STATE[i];
-    // The dot stays (so the open card keeps its split circle) while the
-    // headline is held open by the reverse hysteresis, even though the fill
-    // edge has already retreated above it.
-    const reached = y <= curY || (state.triggeredAt !== null && state.leavingAt === null);
-    const reachedTarget = reached ? 1 : 0;
-    state.reachedT += (reachedTarget - state.reachedT) * P7_AXIS_HOVER_ANIM_SPEED;
-    if (Math.abs(reachedTarget - state.reachedT) < 0.001) state.reachedT = reachedTarget;
+    // reachedT IS the event's trigger, not a second opinion about it.
+    //
+    // It used to be a per-frame lerp toward `y <= curY` — a live readout of the
+    // fill edge, i.e. a SCRUB: the marker grew and shrank continuously as the
+    // scroll moved, and it ignored P7_AXIS_TRIGGER_ROW_OFFSET entirely, because
+    // that offset lives in p7UpdateAxisEventTriggers' row test. So the page had
+    // TWO disagreeing reach points — the card on its trigger, the marker on the
+    // raw fill edge — and moving the trigger point only moved one of them.
+    // Reading the trigger's own eased progress makes the marker, the card and
+    // the side-plaque fly one beat off one trigger point.
+    let reached;
+    if (isMobile()) {
+      state.reachedT = p7AxisFlyTrigger(i).currentT();
+      reached = state.triggeredAt !== null && state.leavingAt === null;
+    } else {
+      // DESKTOP: unchanged — the original lerp toward the live fill edge.
+      reached = y <= curY || (state.triggeredAt !== null && state.leavingAt === null);
+      const reachedTarget = reached ? 1 : 0;
+      state.reachedT += (reachedTarget - state.reachedT) * P7_AXIS_HOVER_ANIM_SPEED;
+      if (Math.abs(reachedTarget - state.reachedT) < 0.001) state.reachedT = reachedTarget;
+    }
     if (!reached) state.hoverT = 0;
-    if (state.reachedT <= 0.001) return;
+    if (state.reachedT <= 0.001 && !p7AxisMarkerUnreached()) return;
     const isAxisHovered = hoveredAxisEvent === ev;
     const hoverTarget = isAxisHovered ? 1 : 0;
     state.hoverT += (hoverTarget - state.hoverT) * P7_AXIS_HOVER_ANIM_SPEED;
@@ -4438,12 +5066,38 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     // reachedT itself is left alone so a cancelled outro resumes seamlessly.
     const outroShrink = p7AxisOutroStart === null ? 1
       : 1 - p9Ease(Math.min(1, (now - p7AxisOutroStart) / P7_AXIS_EVENT_FADE_OUT_MS));
-    const markerRadius = (P7_AXIS_MARKER_RADIUS_FADED +
-      (P7_AXIS_MARKER_RADIUS - P7_AXIS_MARKER_RADIUS_FADED) * prominence) * state.reachedT * outroShrink;
+    // The end-of-fill zoom-out takes the axis markers with it: once the field
+    // scales down to be seen whole they are a row of black dots down a corridor
+    // that is no longer the point, so they shrink away with the beat and grow
+    // back if it reverses. By SIZE, like every other dot on the page — never a
+    // fade. Desktop / any phone that never zooms out holds p7ZoomOutT at 0, so
+    // this is a no-op there.
+    // Resting radius for this event's current prominence — what "full size"
+    // means for it right now.
+    const restR = P7_AXIS_MARKER_RADIUS_FADED +
+      (P7_AXIS_MARKER_RADIUS - P7_AXIS_MARKER_RADIUS_FADED) * prominence;
+    // p7AxisMarkerEnter(): 'full' holds the resting size from before the fill
+    // arrives so only colour moves; 'grow' ramps up from GROW_FROM. With
+    // unreached markers off, the old behaviour (scale straight off reachedT) is
+    // preserved exactly.
+    // The size an UNREACHED marker sits at. It must be measured off
+    // P7_AXIS_MARKER_RADIUS, never off restR: prominence is 0 before the event
+    // fires, so restR has already collapsed to _FADED (2px) and scaling that
+    // gave 0.7px ('grow') vs 2px ('full') — both invisible on a phone, which is
+    // why the two modes looked identical. 'full' now means the marker's real
+    // full size (4px) before the fill arrives, so only colour moves on trigger.
+    const unreachedR = p7AxisMarkerEnter() === 'full'
+      ? P7_AXIS_MARKER_RADIUS
+      : P7_AXIS_MARKER_RADIUS * P7_AXIS_MARKER_GROW_FROM;
+    const markerRadius = (p7AxisMarkerUnreached()
+        ? unreachedR + (restR - unreachedR) * state.reachedT
+        : restR * state.reachedT) * outroShrink * (1 - p7ZoomOutT);
     const isHighlighted = highlightY !== null && Math.abs(y - highlightY) < 0.5;
     const markerColor = hoverActive
       ? (isHighlighted ? P7_AXIS_HOVER_COLOR : P7_AXIS_BG_COLOR)
-      : (isAxisHovered ? P7_AXIS_HOVER_COLOR : P7_AXIS_FILLED_COLOR);
+      : isAxisHovered ? P7_AXIS_HOVER_COLOR
+      : p7AxisMarkerUnreached() ? p7AxisMarkerColorAt(state.reachedT)
+      : P7_AXIS_FILLED_COLOR;
     p7.axisEventPositions.set(ev, { x: axisX, y, radius: markerRadius, color: markerColor });
     // Half-dot cards draw the dot themselves (only its inner half); the full
     // dot here fades out as the card fades in, so a faded event keeps its dot.
@@ -4768,6 +5422,8 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
 // higher index), older ones stay as dots. Reads reachedT, never eases it.
 function p7DrawVertHeadlineSlot(ctx, W, H, now) {
   const V = p7V(), TY = V.type;
+  p7VertCardPush = [];   // rebuilt by p7DrawVertDotCards in 'side' mode; empty otherwise
+  if (V.slotAnchor === 'dot' || V.slotAnchor === 'dotAbove' || V.slotAnchor === 'side') { p7DrawVertDotCards(ctx, W, H, now); return; }
   let best = -1, bestAt = -Infinity, bestOp = 0;
   P7_AXIS_EVENTS.forEach((ev, i) => {
     const st = P7_AXIS_EVENT_STATE[i];
@@ -4787,8 +5443,20 @@ function p7DrawVertHeadlineSlot(ctx, W, H, now) {
   // viewport's bottom edge, so the copy holds ONE screen position however the
   // grid above it solves. slotPx is still reserved in that case: it is what
   // keeps the grid's last row from reaching down into these lines.
+  // 'fill' — mobile compare/ — hangs the block slotFillGapPx under the fill
+  // edge (its plaque's top edge, when there is one), so the copy follows the
+  // fill down the box; when the box has no room left below the edge the block
+  // flips above it instead, and it never leaves the box.
+  const padY = V.slotCard && V.slotCard.fill ? V.slotCard.padY : 0;
   let ty = V.slotAnchor === 'bottom' ? H - V.slotBottomPx - blockH
     : V.slotAnchor === 'top'         ? V.slotTopPx
+    : V.slotAnchor === 'fill'        ? (() => {
+        const box = sbbTimeline(H), bT = Math.round(H * box.top), bB = Math.round(H * box.bottom);
+        const edge = p7FillEdgeY(H);
+        let y = edge + V.slotFillGapPx + padY;
+        if (y + blockH + padY > bB) y = edge - V.slotFillGapPx - padY - blockH;
+        return Math.round(Math.min(bB - blockH - padY, Math.max(bT + padY, y)));
+      })()
     : Math.round(H * sbbTimeline(H).bottom) + Math.max(0, (V.slotPx - blockH) / 2);
   ctx.globalAlpha = bestOp;
   ctx.textAlign = 'center';
@@ -4821,6 +5489,161 @@ function p7DrawVertHeadlineSlot(ctx, W, H, now) {
     p7VertLineText(ctx, p7FormatDateDMY(ev.date, "."), W / 2, ty + TY.gap, TY.date.lh);
   }
   ctx.globalAlpha = 1;
+}
+
+// slotAnchor 'dot' (mobile compare/, 2026-09-12): instead of ONE headline in a
+// fixed place, EVERY reached event keeps its own card, hung on its own dot, so
+// the cards ride the camera with the field like the dots do. The card is the
+// desktop side plaque's look (V.sideCard: grey, all corners rounded, 12px copy)
+// centred on the axis — a phone corridor has no room beside the line.
+// The NEWEST reached event's card fades in BELOW its dot, in the unfilled run
+// under the fill edge; the moment a later event is reached it glides up over
+// its dot and stays there — "sticks above" — so the spot under the edge is
+// always the latest headline's and the older ones stack above their dots.
+// Position moves continuously (p9Ease over P7_VERT_DOT_CARD_MS on the raw
+// aboveT); reversing the scroll plays it back. Cards fade; dots never do.
+// Clipped to the box like the field, so a card scrolled off rides out with it.
+// 'dotAbove' variant: only the newest reached event has a card, fading in
+// ABOVE its dot and staying; the previous card fades away (P7_VERT_DOT_CARD_MS,
+// per-event `outT`), never moving.
+const P7_VERT_DOT_CARD_MS = 400;
+// 'side' anchor: this frame's plaques as {side, top, bottom, dx} — the rows a
+// plaque spans push their same-side dots dx px outward (p7DrawSideSquares).
+let p7VertCardPush = [];
+let p7DotCardLastNow = null;
+function p7DrawVertDotCards(ctx, W, H, now) {
+  const V = p7V(), SC = V.sideCard, v = p7.vert;
+  if (!v || !SC) return;
+  const dt = Math.min(50, now - (p7DotCardLastNow ?? now));
+  p7DotCardLastNow = now;
+  let best = -1, bestAt = -Infinity;
+  // 'side' + sidePhase 'before': the plaque LEADS the fill — full while the
+  // event is unreached, fading out over the same window the desktop label
+  // fades in (p7AxisEventOpacity), back in when the scroll reverses.
+  // 'fly': the same lead, but the plaque never fades — on arrival it glides
+  // from beside the dot to above it (position on p9Ease(reachedT), never a snap).
+  const flies = V.slotAnchor === 'side' && V.sidePhase === 'fly';
+  const leads = (V.slotAnchor === 'side' && V.sidePhase === 'before') || flies;
+  const edgeY = leads ? p7FillEdgeY(H) : 0;
+  const ops = P7_AXIS_EVENTS.map((ev, i) => {
+    const st = P7_AXIS_EVENT_STATE[i];
+    if (flies) {
+      // Full until the event's TRIGGER fires, then out over beat 2 — one beat on
+      // its own clock, reversible mid-flight, like every other fold animation.
+      //
+      // This used to be `past / V.sideFlyFadePx`: the plaque's presence read
+      // straight off the live fill edge over 150px of scroll travel, so the card
+      // was dragged in and out BY THE SCROLL. That is the scrub — and note it
+      // never called p7AxisEventOpacity, so putting the cards on a trigger did
+      // nothing for the shipping config (sidePhase 'fly') until this changed too.
+      return Math.max(1 - p7AxisLeaveT(i), st.hoverT);
+    }
+    if (leads) {
+      // Scroll-driven: full while the (lagged) fill edge is sideLeadPx or more
+      // above the dot, out by the time it arrives; the time fade only caps it.
+      const ahead = p7RowY(v.events[i].row, H) - edgeY;
+      const lead = Math.min(1, Math.max(0, ahead / Math.max(1, V.sideLeadPx)));
+      return Math.max(Math.min(p9Ease(lead), 1 - p7AxisEventOpacity(i, now)), st.hoverT);
+    }
+    const op = Math.max(p7AxisEventOpacity(i, now), st.hoverT);
+    if (op <= 0 || st.reachedT <= 0.001) return 0;
+    const at = st.triggeredAt === null ? -Infinity : st.triggeredAt;
+    if (at > bestAt || (at === bestAt && i > best)) { best = i; bestAt = at; }
+    return op;
+  });
+  const onlyNewest = V.slotAnchor === 'dotAbove';
+  // 'side': the desktop side plaque on the phone — beside its dot, SC.gap off
+  // the line, alternating sides per event (even index left, odd right, as
+  // desktop's eventSide 'alternate'), centred on the dot, plain fade. The
+  // rows it covers push their same-side dots outward past its far edge
+  // (p7VertCardPush, read by p7DrawSideSquares one frame behind) so the
+  // plaque never hides a dot and no dot ever prints over the plaque.
+  const onSide = V.slotAnchor === 'side';
+  const axisX = Math.round(W / 2);
+  const maxW = onSide ? Math.min(V.sideWrapPx, W / 2 - SC.gap - 2 * SC.padX - 8)
+    : Math.min(V.type.maxWidth, W - 2 * p7.leftX0 - 2 * SC.padX);
+  const clipped = p7VertClipToBox(ctx, W, H);
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  P7_AXIS_EVENTS.forEach((ev, i) => {
+    const st = P7_AXIS_EVENT_STATE[i];
+    let op = ops[i];
+    // Above its dot once a newer event has been reached; back below when it
+    // is the newest again (reverse scroll) or has faded out entirely.
+    const dir = op > 0 && i !== best ? 1 : -1;
+    st.aboveT = Math.min(1, Math.max(0, st.aboveT + dir * dt / P7_VERT_DOT_CARD_MS));
+    // 'dotAbove': superseded cards fade away (outT 0→1) instead of stacking.
+    const outDir = onlyNewest && op > 0 && i !== best ? 1 : -1;
+    st.outT = Math.min(1, Math.max(0, (st.outT || 0) + outDir * dt / P7_VERT_DOT_CARD_MS));
+    if (onlyNewest) op *= 1 - p9Ease(st.outT);
+    if (op <= 0) return;
+    const dotY = p7RowY(v.events[i].row, H);
+    ctx.font = p7VertFont(SC.type);
+    const lines = p7WrapLabel(ctx, ev.label, maxW);
+    let tw = 0;
+    lines.forEach(t => { tw = Math.max(tw, ctx.measureText(t).width); });
+    const cw = Math.round(tw) + 2 * SC.padX, ch = lines.length * SC.type.lh + SC.padTop + SC.padBottom;
+    const below = dotY + P7_AXIS_MARKER_RADIUS + V.dotGapPx;
+    const above = dotY - P7_AXIS_MARKER_RADIUS - V.dotGapPx - ch;
+    const place = onSide ? V.sidePlace : '';
+    // `mobileAbove` opts an event out of the side placement entirely: sideDir 0
+    // centres it on the axis and puts it above the dot, and because the fly
+    // below is gated on sideDir it never travels — it is simply there, at the
+    // top of its dot, from the moment it appears.
+    const pinAbove = p7AxisEvMobileAbove(ev);
+    const sideDir = pinAbove ? 0
+      : place === 'alternate' ? (i % 2 ? 1 : -1) : place === 'left' ? -1 : place === 'right' ? 1 : 0;
+    let cy = onSide && sideDir ? Math.round(dotY - ch / 2)
+      : pinAbove || onlyNewest || place === 'above' ? Math.round(above) : Math.round(below + (above - below) * p9Ease(st.aboveT));
+    let cx = sideDir ? Math.round(sideDir > 0 ? axisX + SC.gap : axisX - SC.gap - cw) : Math.round(axisX - cw / 2);
+    if (flies && sideDir) {
+      // Side → above on arrival: both coordinates ride the FLY trigger.
+      const k = p7AxisFlyT(i);
+      const flyY = dotY - P7_AXIS_MARKER_RADIUS - V.sideFlyGapPx - ch;
+      cx = Math.round(cx + (axisX - cw / 2 - cx) * k);
+      cy = Math.round(cy + (flyY - cy) * k);
+    }
+    if (onSide) {
+      // Push the dots the plaque would cover: one side for a side plaque, both
+      // for an 'above' plaque straddling the line.
+      const reach = sideDir ? SC.gap + cw + V.dotGapPx : cw / 2 + V.dotGapPx;
+      const dx = Math.max(0, reach - p7CenterGap() / 2) * p9Ease(op);
+      if (dx > 0 && V.sidePush) {
+        if (sideDir >= 0) p7VertCardPush.push({ side: 'right', top: cy, bottom: cy + ch, dx });
+        if (sideDir <= 0) p7VertCardPush.push({ side: 'left', top: cy, bottom: cy + ch, dx });
+      }
+      // Lead marker: the event's axis dot shown AHEAD of the fill. It only ever
+      // existed because the main marker pass drew nothing until an event was
+      // reached — so with p7AxisMarkerUnreached() on, that pass now owns the
+      // unreached dot and this one must not draw at all.
+      //
+      // It was painting a SECOND dot on top of the knob-driven one, at a
+      // hardcoded P7_AXIS_MARKER_RADIUS in solid #000, which is why
+      // p7AxisMarkerEnter() / _GROW_FROM / the unreached colour all appeared to
+      // do nothing: the tuned marker was there, just hidden under this.
+      if (leads && !p7AxisMarkerUnreached() && st.reachedT < 0.999) {
+        ctx.beginPath();
+        // (1 - p7ZoomOutT): goes with the real markers when the end-of-fill
+        // zoom-out runs — see the markerRadius note above.
+        ctx.arc(axisX, dotY, P7_AXIS_MARKER_RADIUS * p9Ease(op) * (1 - p7ZoomOutT), 0, Math.PI * 2);
+        ctx.fillStyle = '#000';
+        ctx.fill();
+      }
+    }
+    // The card arrives and leaves by P7_AXIS_LEAVE_MODE — by default it
+    // COLLAPSES into its own axis dot rather than fading in place, so the beat
+    // reads as the card going back where it came from. Wrapped in its own
+    // save/restore because the collapse modes install a transform.
+    ctx.save();
+    p7AxisLeaveApply(ctx, op, axisX, dotY);
+    p7DrawHeadlineCard(ctx, SC, cx, cy, cw, ch);
+    ctx.fillStyle = SC.type.color;
+    lines.forEach((t, li) => p7VertLineText(ctx, t, cx + cw / 2, cy + SC.padTop + li * SC.type.lh, SC.type.lh));
+    ctx.restore();
+  });
+  ctx.restore();
+  if (clipped) ctx.restore();
 }
 
 // Exposed so scroll and animation-loop redraws can re-test the cursor against
@@ -5140,6 +5963,21 @@ const P7_INSPECT_SNAP_PX = 44; // furthest a dot can be from the finger and stil
 const P7_LONGPRESS_MS      = 300; // hold this long, without moving, to open the loupe
 const P7_LONGPRESS_SLOP_PX = 10;  // move further than this first and it's a scroll, not a hold
 const P7_INSPECT_HINT      = "לחצו והחזיקו על נקודה להצגת פרטי האירוע";
+// The hint's own type-in/out tempo. Its own constant rather than
+// GROUP_TRANSITION_MS: that 1900ms is the legend system's beat, and a single
+// 39-character line reading itself out over nearly two seconds drags — this is
+// roughly the fold8 tooltip's per-line feel. Driven by p7InspectHintTrigger
+// (js/groups.js), which owns WHEN it plays.
+const P7_INSPECT_HINT_TYPE_MS = 900;
+// The typewriter's revealed/hidden span pair, built by p7InspectInit below.
+// Module-level so the trigger can drive it without reaching into the closure.
+let p7HintSpans = null;
+// 0 = fully untyped, 1 = fully typed. Safe to call before p7InspectInit has
+// run (and on desktop, where the hint is display:none) — it simply no-ops.
+function p7InspectHintApply(t) {
+  if (!p7HintSpans) return;
+  fold8UpdateTypewriter(p7HintSpans, Math.round(p7HintSpans.fullText.length * t));
+}
 // The clipped-description toggle's two labels (p7-tip-more).
 const P7_TIP_MORE          = "עוד";
 const P7_TIP_LESS          = "פחות";
@@ -5190,9 +6028,15 @@ function p7InspectInit() {
   const canvasEl = document.getElementById("canvas");
 
   // --- the resting content: one line of text, no control -------------------
+  // Typed rather than printed: the line is a gesture instruction, and the
+  // gesture is only live on the two folds the picker serves, so it types itself
+  // in and out with them (p7InspectHintTrigger, js/groups.js — untyped on
+  // @fold11's crossing, typed back on @fold13's stick). Same two-span
+  // revealed/hidden rig every other typewriter on the page uses, so the line's
+  // box never reflows as the characters arrive.
   const hintEl = document.createElement("div");
   hintEl.className = "p7-inspect-hint";
-  hintEl.textContent = P7_INSPECT_HINT;
+  p7HintSpans = fold8SetupTypewriter(hintEl, P7_INSPECT_HINT);
 
   // --- "read the rest" -----------------------------------------------------
   // Most descriptions fit the frame's three clamped lines; the long tail does
@@ -5508,12 +6352,14 @@ function p7InspectInit() {
     const active = p7InspectPage() !== null;
     if (!active) {
       if (p7Inspect.event || p7InspectOwnsTooltip) release();
-      // @fold12's bridge (page 8) sits BETWEEN the two folds the picker serves,
-      // and updateGroups' keepEmptyFrame branch deliberately keeps the docked
-      // frame on screen through it (gliding down to p9DockTopM()). Without
-      // is-picker the hint is display:none, so the frame would make that whole
-      // glide as an empty box — keep the hint's class on, gesture still off.
-      tipEl.classList.toggle("is-picker", isMobile() && (currentPage === 10 || currentPage === 11));
+      // @fold10, @fold11 and @fold12's bridge (pages 9–11) sit BETWEEN the two
+      // folds the picker serves, and updateGroups' keepEmptyFrame branch
+      // deliberately keeps the docked frame on screen through them (gliding
+      // down to p9DockTopM()). Without is-picker the hint is display:none AND
+      // the frame regains its fill, so it would sit there as a blank grey slab
+      // (the @fold10 "grey frame at the bottom" bug when page 9 was left out
+      // of this range) — keep the hint's class on, gesture still off.
+      tipEl.classList.toggle("is-picker", isMobile() && currentPage >= 9 && currentPage <= 11);
       tipEl.classList.remove("is-inspect");
       return;
     }
@@ -5538,6 +6384,10 @@ function p7InspectInit() {
     }
   }
   p7InspectSync = sync;
+  // Prime the hint from the page's starting scroll position — set(), not
+  // trigger(), so a reload deep in the page doesn't play a type-in nobody asked
+  // for (and a reload at the top doesn't start with an empty frame).
+  if (typeof p7SyncInspectHint === "function") p7SyncInspectHint(true);
 
   // --- the press-and-hold gesture -----------------------------------------
   // There is no armed mode to enter, so the hold itself has to distinguish
