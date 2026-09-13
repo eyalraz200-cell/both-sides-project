@@ -3671,6 +3671,10 @@ p9CategoryTooltipInit();
      2. LEFT  — x only, and only once phase 1 has fully landed. The cabin runs
                 along the row line into its slot.
 
+   The column is CENTRED, which leaves exactly one cabin travelling right — the
+   one whose slot is the row's right-hand end, and the last to depart. It runs
+   its two legs the other way round (across, then up); see `upFirst` below.
+
    Each leg is timed by SPEED, not duration, so no cabin ever overtakes another
    — see P9_TRAIN_UP_SPEED / P9_TRAIN_ACROSS_SPEED below for why that is a
    guarantee rather than a tuning.
@@ -3813,15 +3817,36 @@ function p9TrainToggle(next) {
   // takes at the shared speed. Mirrored on the way out — the cabin that arrived
   // last pulls out first.
   const plan = pills.map((pill, i) => {
-    const lead = next ? seq[i] : last - seq[i];
+    const lead  = next ? seq[i] : last - seq[i];
+    const upMs  = p9TrainLegMs(Math.abs(to[i].y - from[i].y), P9_TRAIN_UP_SPEED);
+    const acrMs = p9TrainLegMs(Math.abs(to[i].x - from[i].x), P9_TRAIN_ACROSS_SPEED);
+    // WHICH LEG GOES FIRST. A cabin travelling LEFT climbs first, then runs —
+    // the specified "first up, then left". A cabin travelling RIGHT does the
+    // opposite: it runs across at the height it is already at, and only then
+    // climbs.
+    //
+    // With the column centred, exactly one cabin travels right — the one whose
+    // slot is the row's right-hand end, which is also the last to depart. If it
+    // climbed first it would arrive on the row line right inside the slot its
+    // neighbour has already parked in, and then slide right out of it: the one
+    // and only overlapping pair a centred column produces. Running across
+    // first keeps it below the row until it is at its own x, and it rises into
+    // clear space.
+    //
+    // The rule is direction-agnostic, which is what makes the reverse the exact
+    // mirror rather than a second animation: a cabin that went up-then-left on
+    // the way in is travelling right on the way out, so it runs across first
+    // and drops second — the same path, played backwards.
+    const upFirst = to[i].x <= from[i].x + 0.5;
     return {
-      at:     lead * P9_TRAIN_LEAD_MS,
-      upMs:   p9TrainLegMs(Math.abs(to[i].y - from[i].y), P9_TRAIN_UP_SPEED),
-      acrMs:  p9TrainLegMs(Math.abs(to[i].x - from[i].x), P9_TRAIN_ACROSS_SPEED)
+      at:  lead * P9_TRAIN_LEAD_MS,
+      upFirst,
+      aMs: upFirst ? upMs  : acrMs,   // first leg
+      bMs: upFirst ? acrMs : upMs     // second leg
     };
   });
   // The real length of THIS run — the band rule scales in over exactly it.
-  const totalMs = Math.max(...plan.map(p => p.at + p.upMs + p.acrMs));
+  const totalMs = Math.max(...plan.map(p => p.at + p.aMs + p.bMs));
   sticky.style.setProperty("--p9-train-total", `${Math.round(totalMs)}ms`);
 
   const start = performance.now();
@@ -3830,17 +3855,15 @@ function p9TrainToggle(next) {
     pills.forEach((pill, i) => {
       const q  = plan[i];
       const el = now - start - q.at;               // this cabin's own clock
-      if (el < q.upMs + q.acrMs) running = true;
+      if (el < q.aMs + q.bMs) running = true;
       // Two legs on one clock, each eased fresh from its own raw slice. The
       // second is still exactly 0 for the whole of the first, so the cabin
       // genuinely stops at the corner.
       const c = v => Math.max(0, Math.min(1, v));
-      const firstT  = p9Ease(q.upMs  ? c(el / q.upMs) : 1);
-      const secondT = p9Ease(q.acrMs ? c((el - q.upMs) / q.acrMs) : 1);
-      // Going in: UP is phase 1, LEFT is phase 2. Coming out, the mirror — it
-      // runs back across the row first, then drops into the column.
-      const yT = next ? firstT : secondT;
-      const xT = next ? secondT : firstT;
+      const legA = p9Ease(q.aMs ? c(el / q.aMs) : 1);
+      const legB = p9Ease(q.bMs ? c((el - q.aMs) / q.bMs) : 1);
+      const yT = q.upFirst ? legA : legB;
+      const xT = q.upFirst ? legB : legA;
       // `to[i]` is where CSS has already put the pill, so the transform is the
       // offset from there.
       const px = from[i].x + (to[i].x - from[i].x) * xT;

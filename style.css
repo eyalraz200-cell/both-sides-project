@@ -3693,25 +3693,24 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   .page9-sticky:not(.engaged) #page9ZoneBelow {
     flex-direction: column;
     flex-wrap: nowrap;
-    /* RIGHT-aligned (`start` is the right edge in RTL) on the row's own start
-       gutter, so the column's right edge and the finished row's right end are
-       the same line. This is NOT a composition choice — it is what "only up and
-       left" means geometrically, and it is the no-collision guarantee:
-
-       A cabin climbs at its COLUMN x and then runs sideways. If any slot sits
-       right of the column, the cabin bound for it has to move RIGHT (already
-       against the brief) and must cross every slot parked between — measured
-       centred, cabin 4 climbed at x=144 straight into cabin 3's parked slot of
-       131-256 and then slid right out of it: 20 overlapping pairs, worst
-       102x38px. Put the column at or right of every slot and the two problems
-       vanish together: nothing travels right, so nothing crosses anything.
-       The bottom cabin drops into place with no sideways move at all, and each
-       one above it goes further left than the last. */
-    align-items: flex-start;
+    /* CENTRED. The column is its own composition and reads as one — it is not
+       a rehearsal of the row's geometry.
+       That leaves exactly ONE cabin travelling right: the pill whose slot is
+       the row's right-hand end, which is also the LAST to depart. Every other
+       slot lies left of the centred column, so every other cabin goes up and
+       then left, as specified. That one exception is handled in p9TrainToggle
+       by running its legs the other way round — across first, then up — which
+       is what keeps it from climbing through the slot its neighbour has already
+       parked in (the whole collision, measured: it was the only overlapping
+       pair a centred column produced).
+       Removed — don't reintroduce: right-aligning the column on the row's own
+       start gutter. It made every path leftward for free, and cost the column
+       its centre. */
+    align-items: center;
     justify-content: flex-start;
     gap: 14px;   /* tuned by eye on device, 2026-09-13 (was 6) */
     overflow-x: hidden;
-    padding-inline: calc((100vw - min(480px, 100vw - 48px)) / 2) 12px;
+    padding-inline: 12px;
   }
   /* Top to bottom = the finished row LEFT to RIGHT, the mirror of --p9-order-row
      (page9.js publishes both). The furthest-travelling cabin leads, so nothing
