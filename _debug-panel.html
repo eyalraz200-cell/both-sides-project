@@ -19,8 +19,10 @@
          down under the open OS colour dialog — the picker "never worked".)
        - OWN COLOUR PICKER. No <input type=color>: a swatch opens an inline
          hue strip + saturation/value square + hex field.
-       - ONE HARNESS AT A TIME. A strip of harness names; only the chosen one is
-         shown and the keyboard drives it.
+       - ONE HARNESS AT A TIME, picked from the LEFT RAIL; only the chosen one
+         is shown and the keyboard drives it. The rail also carries the
+         page-wide switches (the dev fold badge) and the name of the checkout
+         being driven, which under one-worktree-per-chat is the chat.
        - MODE-SCOPED KNOBS. A knob with `modes: [...]` only shows while one of
          those modes is picked. Knobs are bucketed by `group` into collapsible
          sections.
@@ -37,24 +39,47 @@
   button[aria-selected="true"] { background: #e6e6e6; color: #111; border-color: #e6e6e6; }
   button:disabled { opacity: .35; cursor: default; }
 
-  /* ---- top: harness strip -------------------------------------------- */
-  #top { position: sticky; top: 0; z-index: 5; background: #181818; border-bottom: 1px solid #2c2c2c;
-         display: flex; align-items: center; gap: 6px; padding: 8px 12px; flex-wrap: wrap; }
-  #top h1 { font-size: 12px; margin: 0 6px 0 0; font-weight: 600; opacity: .7; }
-  #strip { display: flex; gap: 4px; flex-wrap: wrap; }
-  #strip button { border-radius: 99px; }
-  #strip .pf { opacity: .55; margin-inline-end: 6px; }
-  #strip button[aria-selected="true"] .pf { opacity: .5; }
-  .who { font-weight: 600; margin-inline-end: 4px; }
-  .who b { opacity: .55; font-weight: 600; }
-  #flash { color: #7fd; margin-left: auto; white-space: nowrap; }
+  /* ---- shell: left rail + main ---------------------------------------- */
+  #shell { display: flex; align-items: stretch; min-height: 100vh; }
+  #rail { flex: 0 0 176px; background: #171717; border-right: 1px solid #2a2a2a;
+          padding: 10px 8px; display: flex; flex-direction: column; gap: 4px;
+          position: sticky; top: 0; align-self: flex-start; height: 100vh; overflow-y: auto; }
+  #rail h1 { font-size: 10px; margin: 2px 4px 6px; font-weight: 600; opacity: .45;
+             text-transform: uppercase; letter-spacing: .08em; }
+  /* One harness per row, full width: a vertical list stays readable as harnesses
+     accumulate, where a top strip wrapped into an unreadable block. */
+  #strip { display: flex; flex-direction: column; gap: 3px; }
+  #strip button { border-radius: 5px; text-align: left; display: flex; flex-direction: column;
+                  gap: 1px; padding: 6px 8px; }
+  #strip .pf { font-size: 10px; opacity: .5; }
+  #strip button[aria-selected="true"] .pf { opacity: .55; }
+  /* Page-wide switches — they belong to the page, not to a harness, so they sit
+     under the list rather than inside any one panel. */
+  #globals { margin-top: auto; padding-top: 10px; border-top: 1px solid #2a2a2a; }
+  #globals .gname { margin: 0 4px 6px; }
+  #globals label { display: flex; gap: 6px; align-items: center; padding: 2px 4px; cursor: pointer; }
+  #chat { margin: 8px 4px 0; font-size: 10px; color: #6f6f6f; line-height: 1.4; word-break: break-all; }
+  #main { flex: 1 1 auto; min-width: 0; }
+  #flash { position: fixed; top: 10px; right: 12px; z-index: 9; color: #7fd; font-size: 11px;
+           background: #111; padding: 2px 6px; border-radius: 4px; }
+  #flash:empty { display: none; }
   .note { color: #888; padding: 24px 14px; }
+  @media (max-width: 640px) {
+    #shell { display: block; }
+    #rail { flex: none; width: auto; height: auto; position: static; border-right: none;
+            border-bottom: 1px solid #2a2a2a; }
+    #strip { flex-direction: row; flex-wrap: wrap; }
+    #globals { margin-top: 10px; }
+  }
 
   /* ---- one harness section -------------------------------------------- */
   .h { padding: 0 12px 40px; }
   .h[hidden] { display: none; }
-  .bar { position: sticky; top: 41px; z-index: 4; background: #111; display: flex; gap: 6px;
+  .bar { position: sticky; top: 0; z-index: 4; background: #111; display: flex; gap: 6px;
          flex-wrap: wrap; align-items: center; padding: 10px 0; border-bottom: 1px solid #222; }
+  /* Whose work this is — the checkout/branch being driven, i.e. the chat. */
+  .who { font-weight: 600; margin-inline-end: 6px; }
+  .who .b { opacity: .5; font-weight: 400; margin-inline-start: 5px; }
   .host { font-size: 10px; opacity: .6; margin-inline-start: auto; }
   .host button { padding: 1px 6px; font-size: 10px; }
   .body { display: grid; grid-template-columns: 1fr; gap: 0 24px; padding-top: 8px; }
@@ -104,15 +129,21 @@
   .cp .presets button { width: 18px; height: 18px; padding: 0; border-radius: 3px; border: 1px solid #444; }
 </style>
 
-<div id="top">
-  <h1>harness</h1>
-  <div id="strip"></div>
-  <span id="flash"></span>
+<div id="shell">
+  <nav id="rail">
+    <h1>harnesses</h1>
+    <div id="strip"></div>
+    <div id="globals">
+      <div class="gname">page</div>
+      <label><input type="checkbox" id="foldBadge"> fold number</label>
+      <div id="chat"></div>
+    </div>
+  </nav>
+  <main id="main"><span id="flash"></span><div id="host"><p class="note" id="note">
+    Looking for harnesses. Keep the project tab open at a viewport the harness is
+    gated to (a mobile-only harness needs device mode on before its reload).
+  </p></div></main>
 </div>
-<main id="host"><p class="note" id="note">
-  Looking for harnesses. Keep the project tab open at a viewport the harness is
-  gated to (a mobile-only harness needs device mode on before its reload).
-</p></main>
 
 <script src="_debug-bus.js"></script>
 <script>
@@ -285,25 +316,19 @@
       H.el.dataset.built = String((Number(H.el.dataset.built) || 0) + 1);
       H.ui = { modeBtns: {}, togs: {}, tabBtns: {}, rows: {}, groups: {} };
       H.bar.textContent = '';
-      /* Which harness these buttons belong to. The strip above says what is
-         AVAILABLE; with a Copy about to go into chat it has to be unambiguous
-         what is being copied, without looking back up at the pills. */
-      var who = el('span', 'who');
-      if (d.fold) who.appendChild(el('b', null, d.fold + ' '));
-      who.appendChild(document.createTextNode(d.title));
-      H.bar.appendChild(who);
+      /* WHOSE work this is. Several chats run several worktrees, each with its
+         own server and its own panel tab; without a name on the toolbar the
+         tabs are indistinguishable. Filled in by whoAmI() from /__who__ (the
+         checkout's git branch), which under one-worktree-per-chat is the chat. */
+      H.whoEl = el('span', 'who');
+      H.bar.appendChild(H.whoEl);
+      paintWho(H.whoEl);
       // FIXED order: Go · Copy · Reset · Hand back.
       if (d.goLabel) H.bar.appendChild(btn(d.goLabel, function () { H.send({ t: 'btn', name: 'go' }); }));
       H.bar.appendChild(btn('Copy', function () { H.send({ t: 'btn', name: 'copy' }); }));
       var rb = btn('Reset', function (e) { H.send({ t: 'btn', name: 'reset', ship: !!(e && e.shiftKey) }); });
       rb.title = 'back to the last Copy · Shift: shipped values';
       H.bar.appendChild(rb);
-      /* "Hand back" = stop driving this harness from here: the page's own
-         floating panel comes back and this section leaves the tab. The reverse
-         of Pop out; it does NOT reset or close anything. */
-      var db = btn('Hand back', function () { H.send({ t: 'bye' }); H.dead = true; remove(H); });
-      db.title = 'stop driving it from here — its panel reappears on the page';
-      H.bar.appendChild(db);
       H.hostsEl = el('span', 'host'); H.bar.appendChild(H.hostsEl); H.renderHosts();
 
       var body = H.body; body.textContent = '';
@@ -358,7 +383,9 @@
       var single = groups.length === 1 && groups[0] === '';
       groups.forEach(function (g, gi) {
         var container;
-        if (single) { container = el('div', 'span'); container.appendChild(el('div', 'gname', 'knobs')); }
+        // No heading for a single ungrouped set: "knobs" over the only list of
+        // knobs on screen is a label that tells the reader nothing.
+        if (single) { container = el('div', 'span'); }
         else {
           container = el('details', 'grp span'); container.open = gi === 0;
           var sum = el('summary', null, g || 'other'); var n = el('span', 'n'); sum.appendChild(n);
@@ -521,11 +548,11 @@
     Object.keys(seen).forEach(function (t) {
       var H = seen[t];
       var b = btn('', function () { activate(t); }, active === H);
-      /* The fold reads first: a strip of harnesses is a strip of FOLDS, and the
+      /* The fold reads first: a list of harnesses is a list of FOLDS, and the
          name alone ("axis-intro") does not say where on the page it lives. */
       var f = H.desc && H.desc.fold;
       if (f) b.appendChild(el('span', 'pf', f));
-      b.appendChild(document.createTextNode(t));
+      b.appendChild(el('span', null, t));
       strip.appendChild(b);
     });
   }
@@ -552,9 +579,53 @@
     if (!active || want === title) activate(title); else renderStrip();
   }
 
+  /* ---- who is being driven -------------------------------------------------
+     The dev server reports its checkout (branch) at /__who__. With one worktree
+     per chat that branch IS the chat, which is what the toolbar needs to say. */
+  var WHO = null;
+  function paintWho(node) {
+    if (!node) return;
+    node.textContent = '';
+    if (!WHO) { node.textContent = '…'; return; }
+    node.appendChild(document.createTextNode(WHO.branch || WHO.dir || '?'));
+    if (WHO.port) node.appendChild(el('span', 'b', ':' + WHO.port));
+  }
+  function whoAmI() {
+    fetch('/__who__', { cache: 'no-store' }).then(function (r) { return r.json(); })
+      .then(function (w) {
+        WHO = w;
+        document.getElementById('chat').textContent = (w.dir || '') + (w.branch ? ' · ' + w.branch : '');
+        Object.keys(seen).forEach(function (t) { paintWho(seen[t].whoEl); });
+      }).catch(function () {
+        /* An older server.py has no /__who__ (it 404s to an HTML page, so the
+           JSON parse throws). Say which server this is instead of sitting on a
+           spinner forever. */
+        WHO = { dir: location.host };
+        Object.keys(seen).forEach(function (t) { paintWho(seen[t].whoEl); });
+      });
+  }
+  whoAmI();
+
+  /* ---- page-wide switches --------------------------------------------------
+     The dev fold badge (js/nav.js) belongs to the page, not to any one harness,
+     so it is driven over the shared discovery channel: every harness on the page
+     listens, and each `iam` answer reports the badge's current state. */
+  var foldBox = document.getElementById('foldBadge');
+  var foldTouched = 0;
+  foldBox.onchange = function () {
+    foldTouched = Date.now();
+    disc.postMessage({ t: 'foldbadge', on: foldBox.checked });
+  };
+
   // Discovery. Every harness answers `who` on the shared channel with its title.
   var disc = HBus('harness:__all__');
-  disc.onmessage = function (ev) { if ((ev.data || {}).t === 'iam') add(ev.data.title); };
+  disc.onmessage = function (ev) {
+    var m = ev.data || {};
+    if (m.t !== 'iam') return;
+    add(m.title);
+    // Don't fight a click that hasn't been echoed back yet.
+    if (typeof m.foldBadge === 'boolean' && Date.now() - foldTouched > 1200) foldBox.checked = m.foldBadge;
+  };
   function ask() { disc.postMessage({ t: 'who' }); }
   ask();
   setInterval(ask, 1500);       // the project tab reloads constantly; re-greet returning harnesses

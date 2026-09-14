@@ -158,12 +158,14 @@ body {
 }
 .fold-picker-t {
   /* One line per fold — the list is for finding a fold, not for reading its
-     copy, and a wrapping title would make 16 rows unscannable. */
+     copy, and a wrapping title would make 16 rows unscannable. The names are
+     the latin ones we use for the folds in conversation (FOLD_NAMES in
+     js/nav.js), so this cell reads LTR while the panel around it stays neutral. */
   flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  direction: rtl;
+  direction: ltr;
   text-align: start;
 }
 /* The dismiss row, below a hairline so it never reads as a 17th fold. */
@@ -172,7 +174,6 @@ body {
   border-top: 1px solid rgba(255, 255, 255, 0.16);
   padding-top: 8px;
   color: rgba(255, 255, 255, 0.5);
-  direction: rtl;
   justify-content: flex-start;
 }
 @media (hover: hover) {

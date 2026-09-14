@@ -61,16 +61,32 @@ if (foldNumberBadge) {
 // would.
 const FOLD_PICKER_SCROLL_MS = 700;
 
-function foldPickerLabel(section) {
-  const h2 = section.querySelector(".section-title");
-  // Not every fold has a title card — the hero and the pinned timeline carry
-  // their text elsewhere — so those rows fall back to the section id rather
-  // than sitting blank. The id is the useful thing to see there anyway.
-  if (!h2) return section.id || "";
-  // Clone before stripping: the live node is the one on screen.
-  const clone = h2.cloneNode(true);
-  clone.querySelectorAll(".copy-desktop").forEach(el => el.remove());
-  return clone.textContent.replace(/\s+/g, " ").trim();
+// What each fold IS, in the words we use for it in conversation and in the
+// CLAUDE.md fold table — not the fold's own on-screen copy. The copy is a
+// paragraph of Hebrew body text: it fills the row, reads as prose rather than a
+// name, and two folds that share a phrasing become indistinguishable in the
+// list. These are @fold1…@fold16 in order, so the row index is the fold number.
+const FOLD_NAMES = [
+  "hero / intro",
+  "dots fly into the camp grids",
+  "filler rects shrink, labels type in",
+  "groups glide into the legend",
+  "sample squares grow in",
+  "ACLED methodology card",
+  "square labels + hover tooltip demo",
+  "squares colour and fly to the timeline",
+  "the real pinned timeline",
+  "size grid — dots morph to crowd tier",
+  "size down, then fly to the legit zone",
+  "bridge glide",
+  "drag and drop categorisation",
+  "closing statement",
+  "share block + domino pairing",
+  "outro / credits",
+];
+
+function foldPickerLabel(section, i) {
+  return FOLD_NAMES[i] || section.id || "";
 }
 
 // Animated, never an instant jump. A jump skips every pinned/scrubbed section it
@@ -112,7 +128,7 @@ function foldPickerInit() {
       n.textContent = String(i + 1);          // @foldN — the number alone, house style
       const t = document.createElement("span");
       t.className = "fold-picker-t";
-      t.textContent = foldPickerLabel(section);
+      t.textContent = foldPickerLabel(section, i);
       row.append(n, t);
       row.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -127,7 +143,7 @@ function foldPickerInit() {
     const hide = document.createElement("button");
     hide.type = "button";
     hide.className = "fold-picker-row fold-picker-hide";
-    hide.textContent = "הסתרת מספר הקיפול  ·  Ctrl+Shift+F";
+    hide.textContent = "hide the fold number  ·  Ctrl+Shift+F";
     hide.addEventListener("click", (e) => {
       e.stopPropagation();
       close();
