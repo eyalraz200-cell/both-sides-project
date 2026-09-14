@@ -1,46 +1,15 @@
-/* ============================================================================
-   CANONICAL HARNESS PANEL — base for every `manual/` and `compare/` harness.
-   SCAFFOLDING. Copy into the project as _debug-<thing>.js, fill in CONFIG,
-   add <script src="_debug-<thing>.js"></script>, delete both when done.
+/* SCAFFOLDING — _debug-mlegend-fill.js. Delete this file and its <script> tag
+   once the colour is baked into style.css.
 
-   Guarantees (see ~/.claude/CLAUDE.md "The harness panel"):
-     - floating, draggable, position remembered
-     - Copy · Reset · Pop out · Hide  — always these four, always this order
-     - H toggles hide; hidden state collapses to a chip, never un-dismissable
-     - Pop out reopens in a real window that can leave the browser
-     - Pop out reopens the panel in a real window that can leave the browser;
-       where window.open is refused (VS Code's built-in browser), copy
-       ~/.claude/templates/harness-panel.html into the project as
-       _debug-panel.html and open it in a second tab — it drives this panel
-       over a BroadcastChannel named 'harness:<title>'
-   ========================================================================== */
-/* VIEWPORT GATE — when a harness tunes one breakpoint only, gate it here, and
-   make the gate WAIT rather than bail. DevTools device emulation is normally
-   switched on AFTER the page has loaded, so a one-shot check at load time makes
-   the harness silently never exist (and never answer the `harness:__all__`
-   discovery ping, so it is missing from the panels tab too) until a reload:
-
-     (function (boot) {
-       var mq = window.matchMedia('(max-width: 600px)');
-       if (mq.matches) return boot();
-       var onMQ = function () {
-         if (!mq.matches) return;
-         mq.removeEventListener('change', onMQ);
-         boot();
-       };
-       mq.addEventListener('change', onMQ);
-     })(function () {   ... and close with });  instead of })();
-*/
-(function (boot) {
-  var mq = window.matchMedia('(max-width: 600px)');
-  if (mq.matches) return boot();
-  var onMQ = function () { if (!mq.matches) return; mq.removeEventListener('change', onMQ); boot(); };
-  mq.addEventListener('change', onMQ);
-})(function () {
+   MOBILE ONLY (`viewport: 'mobile'` below): the מקרא sheet it tints only exists
+   under the 600px breakpoint. The template's gate WAITS for that breakpoint
+   rather than bailing — DevTools device emulation is switched on after load. */
+(function () {
   // ---------------------------------------------------------------- CONFIG --
   var CONFIG = {
     title: 'mlegend-fill',
     remoteOnly: true,
+    viewport: 'mobile',
     label: 'legend sheet colour',
     tabs: [], tab: null, onTab: null,
     sliders: [],
@@ -58,6 +27,22 @@
     summary: function (v) { return ''; }
   };
   // ------------------------------------------------------------ END CONFIG --
+
+  // ------------------------------------------------------------- VIEWPORT --
+  var MQ_MOBILE = '(max-width: 600px)';
+  (function (boot) {
+    var want = CONFIG.viewport || 'both';
+    if (want === 'both') return boot();
+    var mq = window.matchMedia(MQ_MOBILE);
+    var ok = function () { return want === 'mobile' ? mq.matches : !mq.matches; };
+    if (ok()) return boot();
+    var onMQ = function () {
+      if (!ok()) return;
+      mq.removeEventListener('change', onMQ);
+      boot();
+    };
+    mq.addEventListener('change', onMQ);
+  })(function () {
 
   var style = document.createElement('style');
   document.head.appendChild(style);
@@ -953,6 +938,7 @@
          "legend sheet colour" — not the file's slug. CONFIG.title stays the bus
          channel and the Copy header; this is the label a human reads. */
       label: CONFIG.label || CONFIG.title,
+      viewport: CONFIG.viewport || 'both',
       /* The fold this harness tunes — shown on its pill in the remote tab, so a
          strip of harnesses reads as folds, not just names. Taken from
          CONFIG.fold when set, else lifted out of the Go label ("@fold8 fly"). */
@@ -1187,3 +1173,4 @@
 
   if (CONFIG.init) CONFIG.init(API);
 });
+})();

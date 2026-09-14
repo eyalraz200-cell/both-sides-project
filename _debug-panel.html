@@ -78,13 +78,16 @@
   #strip { display: flex; flex-direction: column; gap: 3px; }
   #strip button { border-radius: var(--radius); text-align: left; display: flex;
                   flex-direction: column; gap: 1px; padding: 6px 8px; }
-  #strip .pf { font-size: .85em; opacity: .5; }
+  #strip .pf { font-size: .85em; opacity: .5; display: flex; gap: 5px; align-items: center; }
+  #strip .vp { border: 1px solid currentColor; border-radius: 3px; padding: 0 3px;
+               font-size: .9em; opacity: .8; }
   #strip button[aria-selected="true"] .pf { opacity: .55; }
   /* Page-wide switches — they belong to the page, not to a harness, so they sit
      under the list rather than inside any one panel. */
   #globals { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); }
   #globals label { display: flex; gap: 6px; align-items: center; padding: 3px 4px;
                    cursor: pointer; white-space: nowrap; }
+  #popOut { width: 100%; margin-top: 8px; font-size: .9em; }
   /* How far the page is behind while auto-reload is off — the ONLY warning there
      is, since nothing is drawn on the page itself. A small count beside the
      switch, not a banner: it has to be noticeable, not loud. Still a button —
@@ -198,6 +201,7 @@
       <label><input type="checkbox" id="foldBadge"> Fold number</label>
       <label><input type="checkbox" id="autoReload"> Auto-reload<button id="behind"
         title="changes this page has not taken — click to load them"></button></label>
+      <button id="popOut" title="open this panel in the desktop browser">Open in browser</button>
       <details id="theme">
         <summary>Look</summary>
         <div class="set" id="palSet"></div>
@@ -619,7 +623,19 @@
       /* The fold reads first: a list of harnesses is a list of FOLDS, and the
          name alone ("axis-intro") does not say where on the page it lives. */
       var f = H.desc && H.desc.fold;
-      if (f) b.appendChild(el('span', 'pf', f));
+      var vp = H.desc && H.desc.viewport;
+      var top = el('span', 'pf');
+      if (f) top.appendChild(document.createTextNode(f));
+      /* Which breakpoint this harness tunes. A harness only injects where its
+         knobs mean something, so a rail row also says WHERE it is live — and a
+         missing row on a desktop is then explained rather than mysterious. */
+      if (vp && vp !== 'both') {
+        var vpEl = el('span', 'vp', vp);
+        vpEl.title = vp === 'mobile' ? 'mobile only — under 600px'
+                                     : 'desktop only — 600px and wider';
+        top.appendChild(vpEl);
+      }
+      if (top.childNodes.length) b.appendChild(top);
       b.appendChild(el('span', null, (H.desc && H.desc.label) || t));
       strip.appendChild(b);
     });
@@ -802,6 +818,26 @@
     });
     applyLook();
   })();
+
+  /* ---- out to a real browser ----------------------------------------------
+     This panel is usually read inside VS Code's Simple Browser, which is a
+     sandboxed webview: it refuses window.open outright and has no popup
+     permission to grant. So try the window, and when it is refused — or comes
+     back as the truthy object a blocker returns and closes itself — put the URL
+     on the clipboard instead, which is the one move left. */
+  document.getElementById('popOut').onclick = function () {
+    var w = null;
+    try { w = window.open(location.href, '_blank'); } catch (e) {}
+    if (w && !w.closed) { flash('opened'); return; }
+    var url = location.href;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(
+        function () { flash('URL copied — paste it in your browser'); },
+        function () { window.prompt('Open this in your browser:', url); });
+    } else {
+      window.prompt('Open this in your browser:', url);
+    }
+  };
 
   // Discovery. Every harness answers `who` on the shared channel with its title.
   var disc = HBus('harness:__all__');

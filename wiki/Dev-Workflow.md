@@ -213,6 +213,13 @@ numbers in the source.
   `off: [...]` on every `desc`/`state`, and both the on-page panel and the remote tab hide
   those rows, so the panel only ever shows sliders that move something in the current
   combination. Changing a mode re-renders the list.
+- **Declare the breakpoint, don't hand-roll the gate.** `CONFIG.viewport` is `'mobile'`,
+  `'desktop'` or `'both'` (the default), and the template injects the harness only where
+  its knobs mean something. The gate **waits** for the breakpoint rather than bailing —
+  DevTools device emulation is switched on after load, and a one-shot check made the
+  harness silently never exist (and never answer discovery, so it was missing from the
+  panel too) until a reload. The panel's rail marks anything that is not `'both'`, so a
+  row missing on a desktop is explained rather than mysterious.
 - Gate the harness on the viewport it actually tunes — a desktop panel must not render on
   a phone. **The gate WAITS, it does not bail.** DevTools device emulation is normally
   switched on *after* the page has loaded, so a one-shot check at load time makes the
@@ -258,6 +265,10 @@ for — the **remote panel**:
   shows — plain words for the thing being tuned (`axis draw-in`, `legend sheet colour`).
   `CONFIG.title` stays the bus channel and the Copy header, and stands in when no label is
   set, but a rail full of file slugs is a rail you have to decode.
+- **Open in browser** (foot of the rail) reopens the panel outside VS Code's Simple
+  Browser. That webview refuses `window.open` outright and has no popup permission to
+  grant, so when the window does not appear the button puts the URL on the clipboard
+  instead — paste it into a real browser.
 - **The panel's own look is themeable** (`Look` at the foot of the rail): 12 palettes and 6
   type styles. **No ALL CAPS anywhere** — a capital goes where a capital belongs, on the
   first letter of a label, via `--label-cap` on `::first-letter`. That pseudo-element only
