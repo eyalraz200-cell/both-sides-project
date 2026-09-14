@@ -235,10 +235,16 @@ for — the **remote panel**:
   `dots-glow`) — `CONFIG.fold`, or lifted out of the Go label when that names one. A
   vertical list stays readable as harnesses accumulate; the old top strip wrapped into a
   block.
-- **The toolbar names the CHECKOUT, not the harness** — `main :8080`, from the server's
-  `/__who__` (git branch + port). One worktree per chat means that branch is the chat, and
-  two panel tabs driving two chats are otherwise indistinguishable. An older `server.py`
-  with no `/__who__` falls back to the host.
+- **The toolbar names the SESSION and checkout, not the harness** — `visual editors  main
+  :8080`, from the server's `/__who__`. The browser cannot know which Claude session is
+  driving a page, so the session writes its own name to **`.session-name`** at the project
+  root (one line, untracked) and `server.py` reports it alongside the git branch and port.
+  Every session working in a worktree should write that file; with no file the branch
+  stands in, and an older `server.py` with no `/__who__` falls back to the host.
+- **No section headings in the panel** — not over the knobs, the toggles or the rail's
+  switches, and no host id in the corner. Labelled controls do not need a word above them,
+  and the id only ever mattered when a second page was running the same harness — which is
+  what the `drive <id> instead` button that appears then already says.
 - **Page-wide switches live at the foot of the rail**, not inside a harness: today that is
   the dev **fold number** badge. It rides the `harness:__all__` channel (`{t:'foldbadge',
   on}`), every harness on the page applies it via `setFoldBadgeVisible()`, and each `iam`
