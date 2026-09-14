@@ -56,13 +56,14 @@
   #globals { margin-top: auto; padding-top: 10px; border-top: 1px solid #2a2a2a; }
   #globals label { display: flex; gap: 6px; align-items: center; padding: 3px 4px; cursor: pointer;
                    white-space: nowrap; }
-  /* How far the page is behind while auto-reload is off. This is the ONLY
-     warning there is — nothing is drawn on the page itself, which is the
-     artwork being judged — so it is loud, and it is a button: click to catch up. */
-  #behind { margin: 6px 4px 0; color: #111; background: #ffd54a; border-color: #ffd54a;
-            border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600;
+  /* How far the page is behind while auto-reload is off — the ONLY warning there
+     is, since nothing is drawn on the page itself. A small count beside the
+     switch, not a banner: it has to be noticeable, not loud. Still a button —
+     click to catch up. */
+  #behind { margin-inline-start: 5px; padding: 0; border: none; background: none;
+            color: #ffd54a; font-size: 11px; font-weight: 700;
             font-variant-numeric: tabular-nums; }
-  #behind:hover { background: #ffdf75; border-color: #ffdf75; }
+  #behind:hover { color: #ffe485; text-decoration: underline; }
   #behind:empty { display: none; }
   #main { flex: 1 1 auto; min-width: 0; }
   #flash { position: fixed; top: 10px; right: 12px; z-index: 9; color: #7fd; font-size: 11px;
@@ -135,8 +136,8 @@
     <div id="strip"></div>
     <div id="globals">
       <label><input type="checkbox" id="foldBadge"> fold number</label>
-      <label><input type="checkbox" id="autoReload"> auto-reload</label>
-      <button id="behind" title="changes this page has not taken — click to load them"></button>
+      <label><input type="checkbox" id="autoReload"> auto-reload<button id="behind"
+        title="changes this page has not taken — click to load them"></button></label>
     </div>
   </nav>
   <main id="main"><span id="flash"></span><div id="host"><p class="note" id="note">
