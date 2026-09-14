@@ -4124,14 +4124,18 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     /* The title is draggable (js/groups.js): a vertical swipe on it must scrub
        the sheet, not scroll the page. */
     touch-action: none;
-    /* A BOTTOM SHEET: bottom is written by fold6PlaceMobileLegend() from
-       FOLD6_MLEGEND_BOTTOM_MOBILE_PX, the one constant that positions the bar.
-       Full bleed (no side inset) — the card is the bar's box, and only the
-       content keeps a 12px side inset. The 6px bottom padding is the card's
-       outset under the title (FOLD6_MLEGEND_PAD_BOTTOM_PX in js/groups.js
-       measures the closed card off it — keep them in sync). */
-    left: 0;
-    right: 0;
+    /* A FLOATING ACLED-NOTE CARD (chosen in a compare/ pass against the flush
+       bottom sheet it replaced — see Groups-and-Legend.md, which keeps the
+       sheet's exact values so it can be restored).
+       `bottom` is written by fold6PlaceMobileLegend() from
+       FOLD6_MLEGEND_BOTTOM_MOBILE_PX; --mlg-inset is the matching SIDE inset,
+       and the two are one decision — the card floats the same distance off all
+       three edges. The 6px bottom padding is the card's outset under the rows
+       (FOLD6_MLEGEND_PAD_BOTTOM_PX in js/groups.js measures the closed card off
+       it — keep them in sync). */
+    --mlg-inset: 12px;
+    left: var(--mlg-inset);
+    right: var(--mlg-inset);
     padding: 4px 12px 6px;
     box-sizing: border-box;
     opacity: 0;
@@ -4147,19 +4151,18 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     box-sizing: border-box;
     left: 0;
     bottom: 0;
-    /* Sheet corners: rounded on top only — the bottom edge IS the screen edge. */
-    border-radius: 16px 16px 0 0;
-    /* OPAQUE, and WHITE (explicit instruction — a sheet, not the desktop note's
-       tint): this card is what makes "the legend is above the title blocks"
-       visible. The layer already out-stacks the cards (z-index 1002), but a
-       translucent card let the title's text and dashed frame show straight
-       through the open panel, which reads as the title sitting on top. */
-    background: #fff;
-    /* A hairline on the top and sides (never the bottom — that edge is the
-       screen's) plus a faint lift off the artwork it rises over. */
-    border: 0.5px solid #d6d6d6;
-    border-bottom: 0;
-    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.06);
+    /* All four corners: the card floats clear of the screen edge now, so there
+       is no edge for a flat side to sit on. The מקרא pill overlaps the top edge
+       in the middle and carries the same fill, so the seam is invisible. */
+    border-radius: var(--mlg-radius, 8px);
+    /* The desktop ACLED note's skin (.fold6-note-card): a tint, no border, no
+       shadow. OPAQUE, though — the note's own rgba(0,0,0,.035) is translucent,
+       and this card has to cover the title block and the canvas behind it or
+       the dashed frame shows straight through and reads as sitting on top.
+       #F4F3F6 is that same 3.5% black composited over --bg (#FDFCFF). */
+    background: var(--mlg-fill, #f4f3f6);
+    border: 0;
+    box-shadow: none;
     pointer-events: none;
     /* The bar's arrival pop (fold6SetMobileLegendVisible) scales the collapsed
        card together with the button. */
@@ -4173,19 +4176,18 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   .fold6-mlegend-tab {
     position: absolute;
     box-sizing: border-box;
-    border-radius: 16px 16px 0 0;
-    background: #fff;
-    border: 0.5px solid #d6d6d6;
-    border-bottom: 0;
-    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.06);
+    /* Open, the pill is a tab joined to the card below it, so its bottom edge
+       is square; CLOSED it is the whole control and rounds all four. */
+    border-radius: var(--mlg-radius, 8px) var(--mlg-radius, 8px) 0 0;
+    background: var(--mlg-fill, #f4f3f6);
+    border: 0;
+    box-shadow: none;
     pointer-events: none;
     transform-origin: center;
   }
-  /* Once the sheet is under it the pill's shadow would fall ON the sheet — a
-     grey band just below the seam that read as a line between the two and as
-     two different fills. Closed, the pill sits on the screen edge and keeps
-     its lift. */
-  .fold6-mlegend.is-open .fold6-mlegend-tab { box-shadow: none; }
+  .fold6-mlegend:not(.is-open) .fold6-mlegend-tab {
+    border-radius: var(--mlg-radius, 8px);
+  }
 
   /* The title row — same type as .fold6-note-title on desktop. No chevron here
      (explicit instruction): unlike the desktop note, this bar is the only thing
@@ -4346,7 +4348,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        (not height) levels the rest up to it without clipping a card that wraps
        further on a narrower phone. */
     min-height: 44px;
-    background: rgba(0, 0, 0, 0.035);
+    /* WHITE, not the ACLED tint they used to carry: the card behind them is
+       that tint now, and tint-on-tint left six invisible cards. */
+    background: #fff;
     border: none;
     border-radius: 16px;
   }
