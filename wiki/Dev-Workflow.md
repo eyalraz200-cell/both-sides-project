@@ -387,6 +387,13 @@ Fill & border (fill, opacity, radius, border), Spacing (padding ×4, margin ×4,
 element is flex/grid), Size (width, height, hidden). Every row has ↺ back to the
 stylesheet value; edited rows carry an accent dot. `Esc` or **Clear** drops the selection.
 
+- **Text elements get a Text field** at the top of the Text group — the element's OWN
+  text (its direct text nodes; children stay). Every keystroke lands on the page live;
+  ↺ restores the original. Copy carries it as `textChange: [from, to]`.
+- **Cmd+Z / Cmd+Shift+Z** (Ctrl elsewhere) undo and redo across the whole panel —
+  inspector edits, text edits and harness knobs alike, one stack. Consecutive edits to the
+  same control within 800ms merge, so a slider drag is one step. An undo re-aims the
+  inspector at the level the edit was made on before re-sending it.
 - Page side is `_debug-inspect.js` (template `~/.claude/templates/harness-inspect.js`),
   loaded right after `_debug-bus.js`. It draws the selection outline on the page (the one
   piece of chrome an inspector cannot do without), applies edits as **inline overrides**,
