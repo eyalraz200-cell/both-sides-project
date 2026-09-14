@@ -191,7 +191,7 @@ airy rows:
 | Knob | Desktop | Mobile |
 |---|---|---|
 | edge inset (`fold6LegendInsetLeft/Right()`) | 31 | `FOLD6_LEGEND_INSET_MOBILE` = 12 |
-| label wrap cap (`groupLabelLegendMaxWidth()`) | none (nowrap) | `FOLD6_LABEL_MAX_WIDTH_MOBILE` = 150 |
+| label wrap cap (`groupLabelLegendMaxWidth()`) | none (nowrap) | `FOLD6_LABEL_MAX_WIDTH_MOBILE` = 150 (a `var`, harness-drivable; the real panel wrap width the flight uses is measured live by `fold6MFlyMeasure`, ~118 at 390px) |
 | label size (`groupLabelLegendFontSize()`) | 14 | 12 |
 
 **The mini-legend's own mobile look — 12px labels, the 150px cap, the 6px row gap — is
@@ -553,15 +553,16 @@ persistent **bottom sheet** pinned to the bottom edge of the viewport (`js/group
 ```
 ╭──────────────────────────────────╮  ← open: the SAME card, grown UPWARD out of the
 │ מחנה הימין          גוש השינוי  │     bottom edge (height step)
-│ 3 coalition rows │ 3 change rows │
-│ איסוף הנתונים / ACLED note …     │
-│               ──                 │
-│              מקרא                │
-└──────────────────────────────────┘  ← the bottom edge IS the screen edge
+              ╭──────────────╮
+              │  ──  מקרא    │          ← the pill stays put, a TAB joined to the sheet
+╭─────────────┘              └────────╮
+│ 3 coalition rows │ 3 change rows    │
+│ איסוף הנתונים / ACLED note …        │
+└─────────────────────────────────────┘  ← the bottom edge IS the screen edge
 
-              ╭──────────────╮          ← closed: a pill centred on the bar — the
+              ╭──────────────╮          ← closed: the same pill on the screen edge — the
               │  ──  מקרא    │            grab handle over the bare title, sized
-              ╰──────────────╯            title + 40 each side × 40 high
+              ╰──────────────╯            title + 44 each side × 40 high
 ```
 
 **The sheet is a white card** (explicit instruction — `#fff`, not the desktop note's tint)
@@ -570,11 +571,15 @@ has no side inset; the content keeps a 12px side inset via the bar's padding) an
 **hairline** (`0.5px solid #d6d6d6` on the top and sides — never the bottom, that edge
 is the screen's) with a faint **upward shadow** (`0 -4px 24px rgba(0,0,0,.06)`). It keeps the desktop note's 14px/600/`#767676` title type and carries **no chevron**
 (explicit instruction): the affordance is the **grab handle** — `.fold6-mlegend-btn::before`,
-a 36×2px `#d4d3d8` pill centred 2px above the title, with a 2px gap to the title (the
-button's `padding-top: 6px` = handle offset 2 + handle height 2 + gap 2). The button is
+a 28×1.5px `#d4d3d8` pill centred 4px above the button's box (`top: -4px`; the button has no
+padding-top — all tuned by eye). The button is
 the **bare title** — no chevron, and no group swatches on the title line (judged in a
-harness, declined). The **title and handle are part of the card**: the button is the
-collapsed pose's whole content, and opening grows that card upward around it.
+harness, declined). The **title and handle live in the pill** (`.fold6-mlegend-tab`,
+`fold6MobileTabEl`) — ONE element in every state (explicit instruction): closed, it is the
+whole legend; open, it stays exactly where it is as a **tab joined to the top of the sheet**
+(same box, fill, hairline and handle by construction — nothing is restyled between poses).
+It overlaps the sheet by 1px and paints after it, so the sheet's top hairline is hidden
+under the pill's fill where the two meet.
 
 - It lives in its **own** layer, `#fold6MobileLegendLayer` (a direct `.layout` child, like
   `#fold6NoteLayer` and `#page9CatTooltip`). It is *not* in `#fold6NoteLayer`: that one is
@@ -610,17 +615,28 @@ collapsed pose's whole content, and opening grows that card upward around it.
   `left/width/height` per frame of an open or close, **anchored to the bar's bottom**
   (`bottom: 0`, never `top`), so the height step grows the sheet upward out of the screen
   edge. It measures only the **button** and the **bar**: the bar's padding is the card's
-  outset — `FOLD6_CARD_PAD` (8) above the title, `FOLD6_MLEGEND_PAD_BOTTOM_PX` (9, the
-  bar's CSS bottom padding — keep the two in sync) below it — so the closed height is the
-  button plus those, and the open pose is simply the bar's box. The **closed pose is a
-  pill** (`FOLD6_MLEGEND_COMPACT_CLOSED = true`): the measured title plus
-  `FOLD6_MLEGEND_COMPACT_PAD_X` (**40**) each side, **40** high (`FOLD6_MLEGEND_COMPACT_H`,
+  outset — `FOLD6_CARD_PAD` (8) above the title, `FOLD6_MLEGEND_PAD_BOTTOM_PX` (6, the
+  bar's CSS bottom padding — keep the two in sync; the bar's top padding is 4) below it.
+  The **pill** (`FOLD6_MLEGEND_COMPACT_CLOSED = true`) is the measured title plus
+  `FOLD6_MLEGEND_COMPACT_PAD_X` (**44**) each side, **40** high (`FOLD6_MLEGEND_COMPACT_H`,
   exact tuned px; `FOLD6_MLEGEND_COMPACT_W` is a fixed-width override when non-zero, and
-  `_H = 0` falls back to the measured height), centred on the bar, which the paint function's width step
-  widens to the full bar on the way open and the height step then raises. Setting
-  `FOLD6_MLEGEND_COMPACT_CLOSED = false` makes the closed pose full width. At rest open the card
-  is pinned to the bar's four edges rather than sized, so the ACLED note flowing into the
-  panel at `@fold6` grows it for free. It is first painted when the bar arrives
+  `_H = 0` falls back to the measured height), centred horizontally on the bar. **Pill,
+  title and rows move as one piece** (explicit instruction): the pill's bottom edge is
+  always the sheet's top edge (`cardTop`), so it rides up on the sheet as it grows, and
+  the title button (relative `top`) and the rows panel (`translateY`) are shifted by the
+  same amount to stay inside it — closed, the pill sits on the screen edge; open, it is
+  the tab on top of the sheet, centred on the button's flow position (`restTabTop`, which
+  is what fixes the open height). `offsetTop` of the relatively-positioned button includes
+  its own shift, so the paint strips it first. `fold6MFlyMeasure` runs while the sheet is still
+  opening, so it strips that same shift (read off the button's `top`) from every y it
+  measures — the flight aims at the rows' REST positions, not where they are mid-open. The **sheet** (`.fold6-mlegend-card`) sits
+  UNDER the pill: the width step widens it from the pill's width to the bar's while it
+  still has no height (invisible), then the height step grows it up from the screen edge
+  (`sheetH × hT`); it is `visibility: hidden` at raw 0. At rest open the card is pinned
+  to the bar's sides and bottom with `top` at the pill's underside rather than sized, so
+  the ACLED note flowing into the panel at `@fold6` grows it for free. The close's final
+  paint runs AFTER the panel is hidden, since hiding it changes the bar height everything
+  is placed off. It is first painted when the bar arrives
   (`fold6SetMobileLegendVisible`) and repainted on `resize` — never per scroll frame.
 - **The title drags.** A press on the button scrubs `fold6MLegendOpenRaw` with the finger
   (up = opening, over the bar's open height minus the closed pill), painting each frame,
@@ -723,8 +739,11 @@ collapsed pose's whole content, and opening grows that card upward around it.
   while the on-canvas rows are still leaving behind it. The `@fold4` intro below still waits
   for the *unmapped* progress to reach 1.
 - **The panel's own beats after the hand-off** (`fold6MLegendAutoBeat`, called from
-  `updateGroups` right after `fold6SetMobileLegendVisible`). `@fold4` leaves the panel open;
-  **`@fold5` (`squaresRevealTrigger`) closes it** — the grey sample squares are that fold's
+  `updateGroups` right after `fold6SetMobileLegendVisible`). `@fold4`'s hand-off closes the
+  panel itself `FOLD6_MFLY_CLOSE_GAP_MS` (`var`, js/groups.js) after the rows land
+  (`fold6MFlyArrive` — wall-clock from the landing frame, cancelled if the trigger reverses
+  first, `fold6EndMLegendIntro` once the close lands); **`@fold5` (`squaresRevealTrigger`)
+  closes it** too, for the non-fly variant and a panel reopened by hand — — the grey sample squares are that fold's
   subject and an open panel covers them — **and it stays closed from there on. `@fold6` does
   NOT reopen it** (explicit instruction): the ACLED card is that fold's subject, and a panel
   opening over it covers the thing being read. The note still arrives *inside* the closed
@@ -787,14 +806,24 @@ collapsed pose's whole content, and opening grows that card upward around it.
     animation that joined a wrapped label into one line over `flyT`): the stand-in is a plain
     wrapping label, so it flies with one fixed shape and swaps into the panel row without
     re-breaking. **That shape is the PANEL's, from the first frame** (explicit instruction —
-    "the wrapping should happen at the start not the end"): the cap is frozen for the whole
-    flight at `flyTgt.cap`, which `fold6MFlyMeasure` reads off the column's per-camp
-    `max-width` minus the swatch and the row gap — the width the panel label really wraps
-    inside. So a label that will be two lines in the panel re-breaks once, on the frame the
-    flight starts, under motion; at the landing nothing changes, where a re-break would be a
-    static snap with nothing to hide it. There is no cap LERP either — a sliding cap
-    re-breaks every few frames, and a re-break hops a word to another line in one frame no
-    matter how the box is anchored ("position never snaps"). What makes a same-shape flight land
+    "the wrapping should happen at the start not the end"): the LINE BREAKS are frozen for
+    the whole flight at the panel's wrap, `flyTgt.cap`, which `fold6MFlyMeasure` reads off
+    the column's per-camp `max-width` minus the row's own padding (the width the panel
+    label really wraps inside; a group with `labelCapLegend` in `GROUPS` — קבוצות ימין
+    לאומיות, 100 — gets its own narrower cap instead, so it wraps in the legend while
+    the other five don't). So a label that will be two lines in the panel re-breaks once,
+    on the frame the flight starts, under motion; at the landing nothing changes, where a
+    re-break would be a static snap with nothing to hide it. **The cap number itself is
+    not constant, though: the sizes animate during the flight** (explicit instruction —
+    no snap at take-off). The font lerps 16 → 14 and the cap each frame is
+    `flyTgt.cap × (fontSize / FOLD6_MFLY_FONT_PX)` — scaled with the type, so the box
+    shrinks in step with the glyphs and the same words break at the same places every
+    frame (text width is linear in font size). Never freeze one without the other: a
+    frozen cap under a lerping font is tighter than either end (תומכי עסקת חטופים went to
+    3 lines mid-flight), and a frozen font snaps the size on frame one. A cap that slid
+    *independently* of the font would re-break every few frames, and a re-break hops a
+    word to another line in one frame no matter how the box is anchored ("position never
+    snaps"). What makes a same-shape flight land
     correctly is that nothing reads a wrapped **height**: the flight aims the label's FIRST
     LINE at the panel row's first line (`fold6MFlyMeasure`'s `ly`, the
     `is-mfly-topanchor` block in `js/update-groups.js`), so either end may be one, two or
@@ -823,6 +852,8 @@ collapsed pose's whole content, and opening grows that card upward around it.
   - **The two camp headers fly too** (`placeCampHeader`, `js/update-groups.js`): they travel
     onto the panel's own `.fold6-mlegend-camp` headings (kept in `fold6MobileCampHeadEls` as
     the panel is built), 18px → `FOLD6_MFLY_HEAD_PX` (14), keeping every character — the
+    heading is styled as `.camp-header`'s exact face and ink (660 / `#000`) so the landing
+    swap changes only the size, never the weight or colour — the
     mirrored un-typing (`fold6BeatT("headerCoalition"/"headerChange")`) is suppressed while
     flying. Both ends are center anchors (`.camp-header` is `translate(-50%, -50%)`,
     the target is the heading's measured center), so it is a plain `e6Fly` lerp with the same
@@ -851,8 +882,8 @@ collapsed pose's whole content, and opening grows that card upward around it.
     does not overlap yet. It is decided from the `y` `updateGroups` just wrote, never from a
     `getBoundingClientRect` on the stand-in — that would be a forced reflow per element per
     scroll frame.
-  - **The stutter budget**: during the flight the hidden real label's wrap cap is
-    **frozen** (nothing reads its layout mid-flight) and the stand-in's text is written
+  - **The stutter budget**: during the flight the hidden real label's line breaks are
+    **frozen** (the cap only scales with the font; nothing reads its layout mid-flight) and the stand-in's text is written
     once, not per frame — with no unwrap to animate, the flight costs no text re-layout at
     all, only the `top`/`left`/`font-size` writes every row makes. The `fontSize` itself stays **continuous** (per
     explicit instruction): rounding it to whole px cut more re-layouts still, but 18 → 14
@@ -997,11 +1028,11 @@ collapsed pose's whole content, and opening grows that card upward around it.
   *early* (0.8, then 0.7) so the whole hand-off, hold and shrink finished while the fold was
   still on screen; the late crossing is the explicit call, and the tail now plays out as
   @fold5 comes up. Desktop keeps 0.5.
-- **Then it stays open through `@fold4`** (explicit instruction). There is no hold and no
-  close *in the hand-off*: the rows land, `fold6MLegendRestRows` hands them back to CSS, and
-  the panel is the legend from here on. `FOLD6_MLEGEND_INTRO_HOLD_MS` and
-  `fold6CloseMLegendIntro` are gone. The later open/close beats are
-  `fold6MLegendAutoBeat`'s, not the hand-off's.
+- **Then, in the fly variant, it closes itself** (explicit instruction): the rows land,
+  the panel holds `FOLD6_MFLY_CLOSE_GAP_MS`, then shrinks back into the מקרא pill
+  (`fold6MFlyArrive`); `fold6MLegendRestRows` hands the rows back to CSS on that close. The
+  old typewriter variant has no hold and no close of its own. The later open/close beats are
+  `fold6MLegendAutoBeat`'s.
 - **The ACLED note is ADDED at `@fold6`, on its own card**, and `@fold6` is also the beat
   that reopens the panel around it. `checkAcledNote` is a plain
   `watchCardThreshold(acledNoteCardEl, 0.5, …)` on **both** viewports.

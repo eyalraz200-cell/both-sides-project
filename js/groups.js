@@ -38,7 +38,17 @@ const GROUPS = [
   { color: "#F9B624", label: "תנועות התנחלות באיו״ש",           actor: "settlers",
     fold4: { x: 887,  y: 488, swatchFirst: true }, fold6: { x: 31, y: 512 } },
   { color: "#F024FF", label: "קבוצות ימין לאומיות",      actor: "right wing protesters",
-    fold4: { x: 887,  y: 514, swatchFirst: true }, fold6: { x: 31, y: 560 } },
+    fold4: { x: 887,  y: 514, swatchFirst: true }, fold6: { x: 31, y: 560 },
+    // Per-group wrap cap for the מקרא CARD (not @fold3 — that is labelCapMobile).
+    // This is the ONE label whose shape would otherwise change on the @fold4
+    // flight: it sits on two lines at @fold3's 100px cap, but the card's own
+    // 118px box fits it on ONE, so it re-broke the instant it took off. Capping
+    // it here holds the SAME two lines in the card, so the flight carries one
+    // shape end to end. 100 matches its @fold3 cap deliberately — that is what
+    // makes the two agree at both 16px and 14px.
+    // Narrowing the shared card box instead was measured and rejected: at 100 it
+    // takes three OTHER labels out of agreement.
+    labelCapLegend: 100 },
   { color: "#6B89FF", label: "מתנגדי הרפורמה המשפטית", actor: "protesters against government",
     fold4: { x: 725,  y: 488, swatchFirst: true }, fold6: { x: 31, y: 512 },
     // Per-group @fold3 wrap cap on mobile (see groupLabelColumnMaxWidth). Tuned
@@ -428,8 +438,19 @@ function groupLabelLegendFontSize() { return isMobile() ? 12 : 14; }
 // to two — which is what keeps the legend's rows tight (see fold6RowPitchPx).
 // Every caller passes the group: the column cap is per-group, and the caps
 // must be applied inline wherever a label (or its measurer) is laid out.
-const GROUP_LABEL_MAX_WIDTH_MOBILE = 100;   // must match .group-label's mobile cap in style.css
-const FOLD6_LABEL_MAX_WIDTH_MOBILE = 150;
+// MOBILE ONLY (both are read only through the isMobile() branches below, so
+// desktop never sees them). `var`, not `const`: a compare/ harness drives them
+// live — see wiki/Dev-Workflow.md.
+//
+// These two plus the מקרא card's own wrap are what a label re-breaks BETWEEN on
+// its @fold4 flight, and the flight freezes one shape for the whole trip
+// (fold6MFlyPaintClone) — so wherever they disagree, the text re-wraps in the
+// first frame of the flight and the words that change line hop.
+var GROUP_LABEL_MAX_WIDTH_MOBILE = 100;   // must match .group-label's mobile cap in style.css
+// The resting mini-legend label's cap. NOTE it does not currently agree with the
+// width the מקרא card actually gives a label (160 card - 24 padding - 8 dot -
+// 10 gap = 118).
+var FOLD6_LABEL_MAX_WIDTH_MOBILE = 150;
 function groupLabelColumnMaxWidth(g) {
   return isMobile() ? ((g && g.labelCapMobile) || GROUP_LABEL_MAX_WIDTH_MOBILE) : null;
 }
@@ -1656,9 +1677,9 @@ const FOLD3_HEADER_GAP_MOBILE_PX = FOLD4_HEADER_GAP_MOBILE_PX;
 // instruction) — the camp names live inside the panel, not on the page — so
 // this single number positions the whole bar and never changes after @fold4.
 const FOLD6_MLEGEND_BOTTOM_MOBILE_PX = 0;
-// The bar's bottom padding (.fold6-mlegend, 9px) — the card's outset UNDER the
+// The bar's bottom padding (.fold6-mlegend, 6px) — the card's outset UNDER the
 // title, which differs from FOLD6_CARD_PAD above it. Keep in sync with the CSS.
-const FOLD6_MLEGEND_PAD_BOTTOM_PX = 9;
+const FOLD6_MLEGEND_PAD_BOTTOM_PX = 6;
 // true (shipped): the closed pose is a pill centred on the bar, and the open
 // trip widens it first — the width step of fold6MLegendPaintCard. false: the
 // closed sheet spans the full width like the open one.
@@ -1668,7 +1689,7 @@ let FOLD6_MLEGEND_COMPACT_CLOSED = true;
 // a fixed override when non-zero); the height is the exact px below (0 =
 // measured: button + FOLD6_CARD_PAD above + FOLD6_MLEGEND_PAD_BOTTOM_PX below).
 let FOLD6_MLEGEND_COMPACT_W = 0;
-let FOLD6_MLEGEND_COMPACT_PAD_X = 40;
+let FOLD6_MLEGEND_COMPACT_PAD_X = 44;
 let FOLD6_MLEGEND_COMPACT_H = 40;
 // Both camp blocks are placed symmetrically about screen center from
 // FOLD2_CAMP_CENTER_GAP_PX (see the @fold2 grid block above) — there's no
@@ -1972,6 +1993,13 @@ const FOLD6_MOBILE_LEGEND_LABEL = "מקרא";
 const fold6MobileCardEl = document.createElement("div");
 fold6MobileCardEl.className = "fold6-mlegend-card";
 fold6MobileLegendEl.appendChild(fold6MobileCardEl);
+// The מקרא pill — ONE element in every state (explicit instruction): closed it
+// is the whole legend, open it stays put as a tab joined to the top of the
+// sheet, same box, same fill, same handle. Painted after the card so it covers
+// the sheet's top hairline where the two meet.
+const fold6MobileTabEl = document.createElement("div");
+fold6MobileTabEl.className = "fold6-mlegend-tab";
+fold6MobileLegendEl.appendChild(fold6MobileTabEl);
 const fold6MobileLegendBtnEl = document.createElement("button");
 fold6MobileLegendBtnEl.type = "button";
 fold6MobileLegendBtnEl.className = "fold6-mlegend-btn";
@@ -2037,6 +2065,9 @@ const fold6MobileCampHeadEls = {};
     // `row` too: on mobile this element IS the filter button (updateGroups
     // writes .is-armed / .is-filtered-off onto it, and the sheet's pointerup
     // resolves a tap to it), so the hand-off needs the box, not just its parts.
+    // A group may hold its own card wrap cap (labelCapLegend) — see GROUPS.
+    // Inline, not a class: the flight reads it back off the element below.
+    if (g.labelCapLegend) label.style.maxWidth = `${g.labelCapLegend}px`;
     fold6MobileRowEls.push({ g, row, swatch, label, spans: fold8SetupTypewriter(label, g.label) });
   });
   fold6MobileRowsEl.appendChild(col);
@@ -2123,6 +2154,7 @@ function fold6SetMobileLegendVisible(vis) {
     // …and the collapsed card with it (it IS the button's frame); an open or
     // opening card is left alone for the same reason the bar is.
     fold6MobileCardEl.style.transform = fold6MLegendOpenRaw > 0 ? "" : pop;
+    fold6MobileTabEl.style.transform  = fold6MLegendOpenRaw > 0 ? "" : pop;
     // The card has no size of its own — its first paint happens here, as the
     // bar arrives (and again on resize, below), never per scroll frame.
     fold6MLegendPaintCard(fold6MLegendOpenRaw);
@@ -2213,27 +2245,53 @@ function fold6MLegendPaintCard(raw) {
   const wT = slice(FOLD6_MLEGEND_OPEN.w);
   const hT = slice(FOLD6_MLEGEND_OPEN.h);
   const bar = fold6MobileLegendEl, btn = fold6MobileLegendBtnEl, card = fold6MobileCardEl;
-  const barW = bar.offsetWidth;
+  const tab = fold6MobileTabEl;
+  const barW = bar.offsetWidth, barH = bar.offsetHeight;
   const measuredH = btn.offsetHeight + FOLD6_CARD_PAD + FOLD6_MLEGEND_PAD_BOTTOM_PX;
   const closedW = FOLD6_MLEGEND_COMPACT_CLOSED
     ? (FOLD6_MLEGEND_COMPACT_W || btn.offsetWidth + 2 * FOLD6_MLEGEND_COMPACT_PAD_X) : barW;
   const closedH = FOLD6_MLEGEND_COMPACT_CLOSED && FOLD6_MLEGEND_COMPACT_H
     ? FOLD6_MLEGEND_COMPACT_H : measuredH;
+  // The pill, the title and the sheet MOVE AS ONE (explicit instruction): the
+  // pill's bottom edge is always the sheet's top edge, so it rides up on the
+  // sheet as it grows and never parts from it — closed it sits on the screen
+  // edge, open it is a tab on top of the sheet. The title button is in flow at
+  // the bar's top, so it is shifted (relative `top`) to stay centred in the
+  // pill wherever the pill is this frame. At rest open the pill is centred on
+  // the button's own flow position (restTabTop), which is what fixes the
+  // sheet's open height.
+  // offsetTop of a position:relative element INCLUDES its own `top` — strip
+  // the shift written below last frame to get the flow position back.
+  const btnFlowTop = btn.offsetTop - (parseFloat(btn.style.top) || 0);
+  const restTabTop = btnFlowTop + btn.offsetHeight / 2 - closedH / 2;
+  const sheetH = Math.max(0, barH - (restTabTop + closedH));
+  const cardTop = raw >= 1 ? restTabTop + closedH : barH - sheetH * hT;
+  const tabTop = cardTop - closedH;
+  tab.style.left   = `${(barW - closedW) / 2}px`;
+  tab.style.top    = `${tabTop}px`;
+  tab.style.width  = `${closedW}px`;
+  tab.style.height = `${closedH + (raw > 0 ? 1 : 0)}px`;
+  btn.style.top    = `${tabTop - restTabTop}px`;
+  // …and the rows ride the same shift, so the whole sheet — pill, title, rows —
+  // moves as one piece instead of the rows hanging in the air above a sheet
+  // that hasn't reached them yet. translateZ(0) is the panel's own CSS
+  // (compositor layer), restated because an inline transform replaces it.
+  fold6MobilePanelEl.style.transform = `translateZ(0) translateY(${tabTop - restTabTop}px)`;
+  // The sheet: width step first (invisible while it has no height), then the
+  // height step grows it up out of the screen edge under the pill.
   const w = closedW + (barW - closedW) * wT;
-  const left = (barW - w) / 2;
-  // Anchored to the BOTTOM: the height step grows the sheet upward out of the
-  // screen edge rather than downward from the top.
   if (raw >= 1) {
-    card.style.left = card.style.top = card.style.right = card.style.bottom = "0";
+    card.style.left = card.style.right = card.style.bottom = "0";
+    card.style.top = `${cardTop}px`;
     card.style.width = card.style.height = "";
   } else {
-    const h = closedH + (bar.offsetHeight - closedH) * hT;
     card.style.right = card.style.top = "";
-    card.style.left = `${left}px`;
+    card.style.left = `${(barW - w) / 2}px`;
     card.style.bottom = "0";
     card.style.width = `${w}px`;
-    card.style.height = `${h}px`;
+    card.style.height = `${barH - cardTop}px`;
   }
+  card.style.visibility = raw > 0 ? "" : "hidden";
   fold6MobilePanelEl.style.opacity = hT < 1 ? String(hT) : "";
   // The title-line dots are the CLOSED pose's content: they leave as the panel
   // arrives, on the same step, so the two never overlap.
@@ -2259,11 +2317,13 @@ function fold6SetMobileLegendOpen(open, opts) {
   const target = open ? 1 : 0;
   const finish = () => {
     fold6MLegendOpenRaw = target;
-    fold6MLegendPaintCard(target);
     if (!open) {
       fold6MobilePanelEl.hidden = true;
       fold6MobileLegendEl.classList.remove("is-open");
     }
+    // Painted AFTER the panel is hidden: the pill and title are placed off the
+    // bar's height, which the hidden panel has just changed.
+    fold6MLegendPaintCard(target);
     const done = fold6MLegendOpenDone;
     fold6MLegendOpenDone = null;
     if (done) done();
@@ -2418,6 +2478,11 @@ function fold6MFlyMeasure() {
   const key = `${window.innerWidth}x${window.innerHeight}`;
   if (fold6MFlyTargets && fold6MFlyTargetsViewport === key) return true;
   if (fold6MobilePanelEl.hidden) return false;
+  // The panel is usually still OPENING when this runs, and while it opens the
+  // rows ride down with the pill (the translateY fold6MLegendPaintCard writes,
+  // the same shift as the button's `top`). The targets are the rows' REST
+  // positions, so that shift comes off every y measured here.
+  const dy = parseFloat(fold6MobileLegendBtnEl.style.top) || 0;
   const m = new Map();
   fold6MobileRowEls.forEach((r) => {
     const s = r.swatch.getBoundingClientRect();
@@ -2428,7 +2493,29 @@ function fold6MFlyMeasure() {
     // flight freezes the label at THIS cap from its first frame, so a label
     // that will wrap in the panel is already wrapped when it takes off and
     // nothing re-breaks at the landing (explicit instruction).
-    const colMax = parseFloat(getComputedStyle(r.label.parentElement.parentElement).maxWidth);
+    // The width the label WRAPS INSIDE. Derived from the COLUMN's max-width,
+    // minus everything that sits between it and the text: the row's own
+    // horizontal padding, the swatch, and the flex gap. The padding term is the
+    // one that was missing — the rows gained `padding: 6px 12px` when the cards
+    // were baked, so this returned 142 while the label really wraps inside 118,
+    // and every label flew at a cap 24px wider than the one it landed in. That
+    // is what made a two-line label un-wrap for the trip and wrap again on
+    // arrival. A per-group labelCapLegend narrows it further.
+    const rowCS = getComputedStyle(r.row);
+    const colCap = parseFloat(getComputedStyle(r.label.parentElement.parentElement).maxWidth);
+    // ONLY the row's padding comes off here — the swatch and the swatch-to-label
+    // gap are subtracted further down, where `cap` is stored. Taking them off
+    // twice yields 100 and wraps every label a line early.
+    const avail = colCap
+      - (parseFloat(rowCS.paddingLeft) || 0) - (parseFloat(rowCS.paddingRight) || 0);
+    // labelCapLegend is the LABEL's own box, already final — but `cap` below
+    // takes the swatch and the swatch-to-label gap off whatever is handed to
+    // it, so those are added back here to survive that subtraction. Without it
+    // the capped group flew at 82 instead of 100, narrower than either end.
+    const ownMax = parseFloat(getComputedStyle(r.label).maxWidth);
+    const colMax = Number.isFinite(ownMax)
+      ? ownMax + s.width + Math.abs(s.left - l.right)
+      : avail;
     // lx/ly are the label's offset from the swatch's top-left — exactly the
     // frame .group-item positions its own label in. Lerping toward them lands
     // the text on the panel row's pixels instead of merely near them, which is
@@ -2447,7 +2534,7 @@ function fold6MFlyMeasure() {
     // For a one-line label this is the box's middle, exactly as before.
     const lh = parseFloat(getComputedStyle(r.label).lineHeight) || l.height;
     m.set(r.g, {
-      x: s.left, y: s.top,
+      x: s.left, y: s.top - dy,
       lx: l.left - s.left, lxRight: l.right - s.left,
       ly: l.top + Math.min(l.height, lh) / 2 - s.top,
       cap: isFinite(colMax) ? colMax - s.width - Math.abs(s.left - l.right) : null,
@@ -2458,9 +2545,11 @@ function fold6MFlyMeasure() {
     const h = fold6MobileCampHeadEls[title].getBoundingClientRect();
     // .camp-header is translate(-50%, -50%) — its left/top IS its
     // center, so the target is the heading's center too.
-    fold6MFlyHeadTargets.set(title, { x: h.left + h.width / 2, y: h.top + h.height / 2 });
+    fold6MFlyHeadTargets.set(title, { x: h.left + h.width / 2, y: h.top + h.height / 2 - dy });
   });
-  fold6MFlyPanelRect = fold6MobilePanelEl.getBoundingClientRect();
+  const pr = fold6MobilePanelEl.getBoundingClientRect();
+  fold6MFlyPanelRect = { left: pr.left, right: pr.right, width: pr.width, height: pr.height,
+    top: pr.top - dy, bottom: pr.bottom - dy };
   fold6MFlyTargets = m;
   fold6MFlyTargetsViewport = key;
   return true;
@@ -2628,6 +2717,11 @@ function fold6MFlyPaintClone(g, item, landed) {
   // against the base rule's transform and lands a whole label-width to the
   // right, still anchored on the measurements the class exists to avoid.
   if (c.label.className !== item.label.className) c.label.className = item.label.className;
+  // The type is NOT frozen: it lerps 16 -> 14 across the flight (carried over by
+  // the cssText copy), and the cap lerps WITH it, scaled to the font, so the
+  // line breaks stay put while the whole box shrinks (see capNow in
+  // js/update-groups.js). Freezing the type at 14 made the sizes snap at
+  // take-off (explicit instruction: they animate during the flight).
   c.el.style.display     = "";
   fold6MFlyPark(c.el, parseFloat(item.el.style.top) || 0);
 }
@@ -2673,9 +2767,28 @@ function fold6MFlySetRowsShown(t) {
 // left OPEN at @fold4 — @fold5 closes it and @fold6 opens it again
 // (fold6MLegendAutoBeat), but that is a later beat, not this one — so arriving
 // is just the last frame of the flight.
+// Once the rows have LANDED the panel stays open for FOLD6_MFLY_CLOSE_GAP_MS
+// (explicit instruction), then closes itself into the מקרא pill — the reader
+// has seen the legend arrive and the fold's copy is what is next. The wait is
+// wall-clock from the landing frame; a reversal before it fires (t back under
+// 1) cancels it, and the intro is over once the close lands.
+var FOLD6_MFLY_CLOSE_GAP_MS = 150;
 function fold6MFlyArrive(t) {
   if (!fold6MLegendIntroActive) return;
   fold6MFlySetRowsShown(t);
+  if (t < 1) {
+    if (fold6MLegendIntroTimer) { clearTimeout(fold6MLegendIntroTimer); fold6MLegendIntroTimer = 0; }
+    return;
+  }
+  if (fold6MLegendIntroTimer || !fold6MLegendOpenWant) return;
+  fold6MLegendIntroTimer = setTimeout(() => {
+    fold6MLegendIntroTimer = 0;
+    if (!fold6MLegendIntroActive || fold6Trigger.currentRaw() < 1) return;
+    fold6SetMobileLegendOpen(false, { onDone: () => {
+      fold6EndMLegendIntro();
+      fold6MLegendRestRows();
+    } });
+  }, FOLD6_MFLY_CLOSE_GAP_MS);
 }
 
 /* The hand-off played BACKWARDS — scroll back up and the legend visibly

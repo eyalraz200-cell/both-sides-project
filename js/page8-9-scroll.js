@@ -26,26 +26,12 @@ let page8Ticking = false;
 // Crossing-based detection only fires once per actual direction change.
 let page8TitleWasPast = null;
 
-// @fold12's crossing line, as a fraction of the viewport height: the fold fires
-// once the title's own CENTRE has risen past it. 0.5 is the house midpoint
-// crossing every other fold uses; a SMALLER number holds the fold back (the
-// line sits higher, so the card has further to travel), a larger one fires it
-// earlier. A `var` on window, live-read per tick, so the @fold12 harness
-// (_debug-fold12-trigger.js) can drive it by eye — bake whatever it lands on
-// back into this default and delete the harness.
-window.FOLD12_CARD_FRAC = window.FOLD12_CARD_FRAC ?? 0.5;
-function fold12CardFrac() { return window.FOLD12_CARD_FRAC; }
-// The crossing's y in viewport px — the harness draws its marker at this exact
-// value rather than recomputing the rule, so the line on screen cannot drift
-// from the line the fold actually fires on.
-function fold12TriggerY() { return window.innerHeight * fold12CardFrac(); }
-function fold12CardCentreY() {
-  const r = page8TitleEl.getBoundingClientRect();
-  return r.top + r.height / 2;
-}
-
+// @fold12's crossing: the title's own CENTRE passing the viewport midpoint —
+// the house 0.5 every other fold uses. Confirmed by eye on device against a
+// harness that swept 0.05-0.95 (2026-09-13); 0.5 is where it stays.
 function page8CheckScroll() {
-  const nowPast = fold12CardCentreY() <= fold12TriggerY();
+  const rect = page8TitleEl.getBoundingClientRect();
+  const nowPast = rect.top + rect.height / 2 <= window.innerHeight / 2;
   // (The mobile docked-tooltip drop that clears room for the tray band is NOT
   // fired here: per explicit instruction the "לחצו והחזיקו" frame keeps the
   // resting spot it has on @fold11 for the whole of @fold12, so the drop to
@@ -127,6 +113,27 @@ function page9UpdateTitleFlush(isStuck) {
   page9TitleCardEl.style.setProperty("--p9-title-flush", `${shift}px`);
 }
 
+// Mobile only: the pill band pins itself under the titles, over the spot the
+// docked tooltip frame has been sitting in, so the frame steps down to
+// p9DockTopM() (page9.js) to clear it.
+//
+// It waits for the CONVOY to finish, not just for the stick — @fold13 plays in
+// two beats on mobile (pills first, then everything else), and the frame moving
+// while the train is still running is exactly the kind of competing motion that
+// split the fold's attention. `.training` is p9TrainToggle's own flag, so the
+// condition reads "engaged and the train has parked"; the train's settle
+// handler calls this directly, because a reader who has stopped scrolling gets
+// no further tick to fire it on.
+//
+// Derived rather than pushed, so every caller can call it at any time —
+// trigger() early-returns when already at rest at the target.
+function p9SyncTooltipDrop() {
+  if (typeof p9TooltipDropTrigger === "undefined" || !page9StickyEl) return;
+  const cl   = page9StickyEl.classList;
+  const down = cl.contains("engaged") && !cl.contains("training") && isMobile();
+  p9TooltipDropTrigger.trigger(down ? 1 : 0);
+}
+
 function page9UpdateFromScroll() {
   // Use the title *row* container's position rather than the card's own
   // getBoundingClientRect() — once the card switches to position:fixed its
@@ -176,17 +183,7 @@ function page9UpdateFromScroll() {
   // must be in, even if @fold12's crossing was never ticked (a load or jump
   // straight into @fold13 fires no scroll event over that title).
   if (isStuck) page9StickyEl.classList.add("pills-in");
-  // Mobile only: the pill band pins itself under the titles, over the spot the
-  // docked tooltip frame has been sitting in, so the frame steps down to
-  // p9DockTopM() (page9.js) to clear it. Fired from this same `isStuck`
-  // crossing so the frame moves exactly as the band's own chrome engages —
-  // @fold12 brings only the pills, and the "לחצו והחזיקו" hint stays where
-  // @fold11 left it until then. Set unconditionally rather than on a crossing
-  // so it resolves on the first tick and stays latched while scrolled past;
-  // trigger() early-returns when already at rest at the target.
-  if (typeof p9TooltipDropTrigger !== "undefined") {
-    p9TooltipDropTrigger.trigger(isStuck && isMobile() ? 1 : 0);
-  }
+  p9SyncTooltipDrop();
   // The frame's «לחצו והחזיקו» line types back in here (it untyped on @fold11's
   // crossing) — the target is derived inside, so calling it every tick is free
   // and it reverses on the way back up with the panel.

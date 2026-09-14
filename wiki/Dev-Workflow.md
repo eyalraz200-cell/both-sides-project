@@ -80,6 +80,26 @@ on — `#foldNumberBadge` (`.fold-number-badge` in style.css, driven by
 screen.** No `@fold` prefix, no page id, no label, no control. It's `pointer-events:
 none`, so it never eats a click on the canvas.
 
+**On mobile the chip is also a fold PICKER.** Ctrl+Shift+F is how the badge is dismissed and
+a phone has neither key, so there the chip earns a tap: it opens a list of all 16 folds and
+jumps to the one you pick (`foldPickerInit`, js/nav.js; `.fold-picker` rules live inside
+style.css's 600px block). Rows are built from the sections themselves — the number plus that
+fold's own `.section-title`, with the `.copy-desktop` half of any breakpoint-split headline
+stripped out, falling back to the section id for the folds that carry no title card (@fold1
+and @fold9) — so the list cannot drift out of step with `project.html`. The current fold is
+marked and scrolled to inside the panel, so it opens oriented. A tap on a row, a tap outside,
+or widening past the breakpoint all dismiss it.
+
+The jump is **animated** (`FOLD_PICKER_SCROLL_MS`, 700ms, fixed duration rather than fixed
+speed), never an instant `scrollTo`, for the same reason harnesses must not jump on load: an
+instant jump skips every pinned/scrubbed section it passes and latches those folds into their
+end state, leaving later ones stuck on screen — the page then looks broken because of the
+navigation aid.
+
+**Desktop is untouched**: the badge keeps `pointer-events: none` there, which is the whole
+reason it can never eat a click on the canvas, and the keyboard shortcut already covers it.
+Verified — clicking it at 1440px builds no panel.
+
 On by default; **Ctrl+Shift+F** toggles it and the choice persists in `localStorage`
 (`foldNumberBadgeVisible`, read/written inside `try/catch` — browsers with storage blocked
 throw a `SecurityError` on access, which would otherwise take the whole script down).
@@ -237,47 +257,9 @@ made the real device the one place the panel could not reach.
 
 ## Currently in the repo
 
-- **`_debug-fold13-check.js`** — a `manual/` harness for **@fold13's selection mark**
-  (2026-09-13). Mobile-gated (desktop shows a classification by moving the pill into
-  `#page9ZoneAbove`, so `.page9-pill-check` is `display: none` there). Two knobs, written as
-  custom properties onto `.page9-sticky` with the shipped values as CSS fallbacks:
-  `--p9-check-size` (the square's side, 18px — note it sets the pill's content *height* once
-  it outgrows the label's 12px line box, so the pill, the band, and everything derived from
-  the band's height move with it) and `--p9-check-radius` (the corner, 4px — `0` is a hard
-  square, half the size is back to a circle). The ⓘ beside it is deliberately left round and
-  is **not** driven here. Toggle `t` ticks every mark so the selected look is what you judge;
-  it only paints the class, it never calls `commitDropState`, so nothing downstream moves.
-  `apply()` re-runs `p9MeasureTrayLayout()`. **Marker:** the mark's measured box, the pill's
-  height and the band's height, bottom-left. Go → `#page-12`. Bake both as the fallbacks on
-  `.page9-pill .page9-pill-check` and delete the file **and** its `<script>` tag.
-- **`_debug-fold12-trigger.js`** — a `manual/` harness for **where @fold12 fires**
-  (2026-09-12). Mobile-gated. One knob, `crossing (× viewport height)`, writing
-  `window.FOLD12_CARD_FRAC` — the fraction of the viewport the title card's **centre** has to
-  rise past (`fold12CardFrac`/`fold12TriggerY`, `js/page8-9-scroll.js`; shipped **0.5**, the
-  house midpoint). **Smaller holds the fold back** (the line sits higher, so the card travels
-  further), larger fires it earlier. It drives `.pills-in` — the pill band arriving a fold
-  early, as a wrapped block on mobile — plus `p8Trigger`/`p8TriggerReverse`. `apply()` calls
-  `page8CheckScroll()` directly, so dragging the slider past the card fires the fold under
-  your finger rather than on the next scroll frame. **Marker** (on by default, `o` toggles —
-  this knob tunes *when* something fires, so it may not ship feedback that is only the effect
-  itself): a 26px tick in the LEFT margin at the crossing line with its fraction, and a
-  second tick for the card's own centre, coloured **armed** (blue, still below) / **firing**
-  (red, within 24px) / **fired** (grey, past) with the live gap in px. Go → `#page-11`. Bake
-  the pick as the default on `window.FOLD12_CARD_FRAC` and delete the file **and** its
-  `<script>` tag in `project.html`.
-- **`_debug-mlegend-close.js`** — a `compare/` harness for **how long the mobile מקרא panel
-  stays open** after @fold4's hand-off (2026-09-12). Mobile-gated. `0` = the shipped
-  behaviour (closes on @fold5's `squaresRevealTrigger`); `1` = stays open to @fold7's **card**
-  crossing (`fold7LabelTrigger`); `2` = stays open to @fold7's **established** crossing
-  (`fold8TooltipTrigger`, the one the hover demo hangs off). It swaps only the `want`
-  expression inside `fold6MLegendAutoBeat` (`js/groups.js`), keeping the memo, the
-  reversibility and the "a reader's own tap wins until the next beat" rule intact; nothing
-  is written to source. **Marker:** a small right-margin readout listing all three triggers
-  with their live progress (armed / firing / fired) and the panel's own open state, so which
-  trigger fired is seen rather than inferred. Go → `#page-3`. Delete it (file **and**
-  `<script>` tag in `project.html`) once decided.
-
-
+Nothing but the transport. `_debug-bus.js` (loaded by `project.html`) and `_debug-panel.html`
+stay until the last harness is gone for good; every `manual/`/`compare/` harness built so far
+has been baked and deleted.
 
 
 

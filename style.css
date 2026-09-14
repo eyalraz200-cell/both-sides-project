@@ -64,6 +64,86 @@ body {
   display: block;
 }
 
+/* ── The fold picker (mobile only) ──────────────────────────────────────────
+   Ctrl+Shift+F is how the badge is dismissed and a phone has neither key, so on
+   mobile the chip earns a tap: it opens a list of all 16 folds and jumps to the
+   one you pick (foldPickerInit, js/nav.js). Desktop keeps the badge inert —
+   `pointer-events: none` up in the base rule is the whole reason it can never
+   eat a click on the canvas, and the keyboard shortcut already covers it there.
+   Everything below is inside the 600px block for that reason. */
+@media (max-width: 600px) {
+  .fold-number-badge.is-visible {
+    pointer-events: auto;
+    cursor: pointer;
+    /* A 13px chip is a ~20px tap target; the pseudo-element grows the touchable
+       box to ~44px each way without moving a pixel of layout. */
+    position: fixed;
+  }
+  .fold-number-badge.is-visible::after {
+    content: "";
+    position: absolute;
+    inset: -12px;
+  }
+
+  .fold-picker {
+    display: none;
+    position: fixed;
+    top: 40px;
+    left: 12px;
+    z-index: 1001;          /* over the badge, which is 1000 */
+    max-height: 70vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    /* Nearly opaque: at 0.88 the hero art read straight through the list and
+       the Hebrew titles were unscannable over it. */
+    background: rgba(0, 0, 0, 0.95);
+    border-radius: 6px;
+    padding: 4px 0;
+    /* The list is a dev aid over live artwork, so it stays narrow and dark
+       rather than trying to look like part of the page. */
+    min-width: 200px;
+    max-width: calc(100vw - 24px);
+  }
+  .fold-picker.is-open {
+    display: block;
+  }
+  .fold-picker-row {
+    all: unset;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 7px 12px;
+    font: 400 12px 'Assistant', sans-serif;
+    color: rgba(255, 255, 255, 0.75);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .fold-picker-row.is-current {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.14);
+  }
+  .fold-picker-n {
+    flex: 0 0 auto;
+    min-width: 16px;
+    text-align: end;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .fold-picker-t {
+    /* One line per fold — the list is for finding a fold, not for reading its
+       copy, and a wrapping title would make 16 rows unscannable. */
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    direction: rtl;
+    text-align: start;
+  }
+}
+
 /* .graphic-col is taken out of flow entirely (position: fixed), so it doesn't
    share width with .text-col — it's always the full viewport, genuinely
    centered. .text-col stays in normal flow (it alone drives the page's scroll
@@ -384,12 +464,20 @@ body {
 /* position:fixed — never scrolls, always at the same viewport position.
    (The .page9-header / .page9-zone-wrap-extreme engage-fade props live in
    each rule's single declaration block below.) */
-.page9-sticky.engaged .page9-zone-wrap-extreme {
+/* `:not(.training)` on both: on mobile @fold13 plays in TWO beats, per explicit
+   instruction — the pill convoy first (p9TrainToggle, page9.js, which holds
+   `.training` for its duration), then everything else. The panel arriving
+   underneath the train competed with it for attention and made the fold read as
+   one busy moment instead of two clear ones. Inert on desktop and under reduced
+   motion: neither ever gets `.training` (p9TrainToggle bails before adding it),
+   so `:not(.training)` is simply always true there and this reads exactly as
+   `.engaged` did. */
+.page9-sticky.engaged:not(.training) .page9-zone-wrap-extreme {
   opacity: 1;
   pointer-events: auto;
 }
 
-.page9-sticky.engaged .page9-header {
+.page9-sticky.engaged:not(.training) .page9-header {
   opacity: 1;
   pointer-events: auto;
 }
@@ -738,7 +826,7 @@ body {
               transform var(--p9-pop-ms) cubic-bezier(0.37, 0, 0.63, 1);
 }
 .page9-sticky.page9-layout-v2.engaged .page9-tray .page9-pill .page9-handle {
-  width: 8px;   /* 2 columns of 3px + the 2px column gap */
+  width: 7px;   /* 2 columns of 2.5px + the 2px column gap */
   margin-inline-end: 0;
   transform: scale(1);
   transition-delay: calc(var(--p9-pop-i, 0) * var(--p9-pop-stagger));
@@ -748,7 +836,7 @@ body {
    handle is collapsed at measure time, or the pills overflow their tracks the
    moment @fold13 pops the dots in. No transition — this state is never seen. */
 .page9-sticky.page9-layout-v2.page9-measuring-handles .page9-tray .page9-pill .page9-handle {
-  width: 8px;
+  width: 7px;
   margin-inline-end: 0;
   transform: none;
   transition: none;
@@ -862,6 +950,48 @@ body {
 }
 body.page9-pills-tight .page9-pill.page9-pill-ghost {
   font-size: 16px;
+}
+
+/* ── Desktop pills, tuned on a manual/ harness ──
+   16px / weight 400 at every desktop width (outranks the 20/18px tiers above),
+   a 4-dot (2×2) grip of 2.5px dots, and no rule under the band. The ghost
+   (lives on <body>, outside .page9-layout-v2) gets the same, so a dragged
+   pill looks exactly like the one it was lifted from. Mobile keeps its own. */
+@media (min-width: 601px) {
+  .page9-sticky.page9-layout-v2.page9-layout-v2 .page9-pill,
+  body .page9-pill.page9-pill-ghost.page9-pill-ghost {
+    font-size: 16px;
+    font-weight: 400;
+    white-space: nowrap;   /* a label never wraps, whatever its track width */
+    flex-shrink: 0;
+  }
+  .page9-sticky.page9-layout-v2 .page9-pill .page9-handle,
+  body .page9-pill.page9-pill-ghost .page9-handle {
+    grid-template-columns: repeat(2, 2.5px);
+    grid-template-rows: repeat(2, 2.5px);
+  }
+  .page9-sticky.page9-layout-v2 .page9-pill .page9-handle span,
+  body .page9-pill.page9-pill-ghost .page9-handle span {
+    width: 2.5px;
+    height: 2.5px;
+  }
+  .page9-sticky.page9-layout-v2 .page9-pill .page9-handle span:nth-child(n+5),
+  body .page9-pill.page9-pill-ghost .page9-handle span:nth-child(n+5) {
+    display: none;
+  }
+  .page9-sticky.page9-layout-v2 .page9-tray::after {
+    display: none;
+  }
+  .page9-sticky.page9-layout-v2 .page9-tray-row {
+    column-gap: 8px;
+  }
+  .page9-sticky.page9-layout-v2 .page9-tray .page9-pill,
+  body .page9-pill.page9-pill-ghost.page9-pill-ghost {
+    /* --p9-pill-pad is set by p9MeasureTrayLayout (page9.js) only when the
+       row would come closer than P9_TRAY_EDGE_MARGIN to the screen edge. */
+    padding-left: var(--p9-pill-pad, 16px);
+    padding-right: var(--p9-pill-pad, 16px);
+  }
 }
 
 /* The drop zone stays BETWEEN the two canvas column-blocks, as in the legacy
@@ -3290,12 +3420,17 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 
   /* Tap replaces drag under this breakpoint (page9.js's click handler), so the
      pill never leaves the tray — the selected state is shown in place instead
-     of by the pill moving into #page9ZoneAbove. Colors mirror .page9-pill's own
-     dropped look so "extreme" reads the same on both breakpoints. */
+     of by the pill moving into #page9ZoneAbove.
+     A LIGHT GREY fill, not the black one desktop's dropped pill uses: the
+     selection square inside it is the thing that has to read as "ticked", and
+     on black the square could only be white — inverted from every other mark on
+     the fold, so a *selected* pill looked like the odd one out. Grey lets the
+     square go solid black, i.e. the same colour as the label beside it, and
+     keeps the pill's own text dark throughout. */
   .page9-pill.is-extreme {
-    background: #111;
-    border-color: #111;
-    color: #fff;
+    background: #E3E3E3;
+    border-color: #E3E3E3;
+    color: #111;
   }
   /* The 6 grip dots advertise a drag that doesn't exist here. Must repeat the
      base rule's two-class selector (.page9-pill .page9-handle, which sets
@@ -3373,34 +3508,33 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    /* A RECTANGLE, not a circle (the ⓘ beside it stays round — the two reading
-       differently is the point: one informs, one records a choice). Size and
-       corner are variables because both are driven by the check-mark harness;
-       the fallbacks are the shipped values. */
-    width: var(--p9-check-size, 18px);
-    height: var(--p9-check-size, 18px);
-    border-radius: var(--p9-check-radius, 4px);
+    /* A hard SQUARE, not a circle — the ⓘ beside it stays round, and the two
+       reading differently is the point: one informs, one records a choice.
+       12px with a 0 corner, tuned by eye on device 2026-09-13 (was an 18px
+       circle, then an 18px/4px rounded rect). At 12 it no longer outgrows the
+       label's own 12px line box, so unlike the ⓘ it does NOT set the pill's
+       height. Still variables, because that is what the check-mark harness
+       drives; the fallbacks are the shipped values. */
+    width: var(--p9-check-size, 12px);
+    height: var(--p9-check-size, 12px);
+    border-radius: var(--p9-check-radius, 0px);
     border: 1px solid currentColor;
     opacity: 0.75;
     font: 600 11px 'Assistant', sans-serif;
     line-height: 1;
     pointer-events: none;
   }
-  .page9-pill .page9-pill-check::before {
-    content: "\2713";
-    opacity: 0;
-    transition: opacity 140ms linear;
-  }
-  /* Selected: the ring fills and inverts against the pill's own #111/#fff flip
-     (.page9-pill.is-extreme above), so the ✓ reads at full contrast instead of
-     as a white-on-black hairline. */
+  /* No ✓ glyph, per explicit instruction — the FILL is the whole signal. An
+     empty outline means unselected, a solid block means selected, and at 12px a
+     tick inside it was a scribble competing with the label rather than reading
+     as a state. Removed — don't reintroduce: a `::before` carrying "\2713". */
+  /* Selected: the square fills solid BLACK on the pill's light grey
+     (.page9-pill.is-extreme above) — the same ink as the label next to it, so
+     the mark reads as part of the pill rather than as a hole punched in it. No
+     glyph needed inside it; the fill is the whole signal. */
   .page9-pill.is-extreme .page9-pill-check {
-    background: #fff;
-    border-color: #fff;
-    color: #111;
-    opacity: 1;
-  }
-  .page9-pill.is-extreme .page9-pill-check::before {
+    background: #111;
+    border-color: #111;
     opacity: 1;
   }
 
@@ -3456,7 +3590,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      above, which sets a flat 18px for both children — same specificity, so
      source order is what lets the check-mark harness move this one alone. */
   .page9-sticky.engaged:not(.training) .page9-tray .page9-pill-check {
-    width: var(--p9-check-size, 18px);
+    width: var(--p9-check-size, 12px);
   }
   /* No transition at all while the train runs — the collapse must be a snap on
      the reverse, never an animation the FLIP would measure mid-flight. */
@@ -3712,6 +3846,17 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     overflow-x: hidden;
     padding-inline: 12px;
   }
+  /* @fold12's column starts ON @fold13's pill line — the band's own `top`, the
+     same 116px the finished row sits at, so the column's TOP pill and the row's
+     pills share a level. That is what makes the convoy read: the top cabin is
+     already where it is going vertically, so its climb is a no-op and it simply
+     slides, and every cabin below it rises to a line that was visible all along.
+     The column runs 130→648 and the legit strip starts at 790, so it clears the
+     dots without needing to be centred against them.
+     Removed — don't reintroduce: spanning the tray from the top of the screen to
+     --p9-legit-top and centring the column in it. It bought vertical centring and
+     cost the two folds their shared line. */
+
   /* Top to bottom = the finished row LEFT to RIGHT, the mirror of --p9-order-row
      (page9.js publishes both). The furthest-travelling cabin leads, so nothing
      ever overtakes a pill already parked in the row. */
@@ -3733,9 +3878,12 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     background: rgba(90, 90, 90, 0.18);
     transform: scaleX(0);
     transform-origin: right center;
-    transition: transform var(--p9-train-total, 1430ms) linear;
+    /* Its own clock, not the convoy's: it is no longer drawn WITH the train but
+       after it, as the first thing of "the rest". Linear so its leading edge
+       travels evenly, the same reason desktop V2's does. */
+    transition: transform var(--p9-rule-ms, 560ms) linear;
   }
-  .page9-sticky.engaged .page9-tray::after {
+  .page9-sticky.engaged:not(.training) .page9-tray::after {
     transform: scaleX(1);
   }
   /* P9_TRAY_GRID (page9.js) puts 5 hand-placed columns in each of the two tray
@@ -3943,12 +4091,12 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     /* A BOTTOM SHEET: bottom is written by fold6PlaceMobileLegend() from
        FOLD6_MLEGEND_BOTTOM_MOBILE_PX, the one constant that positions the bar.
        Full bleed (no side inset) — the card is the bar's box, and only the
-       content keeps a 12px side inset. The 9px bottom padding is the card's
+       content keeps a 12px side inset. The 6px bottom padding is the card's
        outset under the title (FOLD6_MLEGEND_PAD_BOTTOM_PX in js/groups.js
        measures the closed card off it — keep them in sync). */
     left: 0;
     right: 0;
-    padding: 8px 12px 9px;
+    padding: 4px 12px 6px;
     box-sizing: border-box;
     opacity: 0;
     text-align: center;
@@ -3982,6 +4130,27 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     transform-origin: center;
   }
 
+  /* The מקרא pill (js/groups.js: fold6MobileTabEl) — the closed legend, and the
+     tab on top of the open sheet; sized and placed by fold6MLegendPaintCard.
+     Same fill, hairline and lift as the sheet, and the one place the grab
+     handle lives (the button's ::before sits inside it). */
+  .fold6-mlegend-tab {
+    position: absolute;
+    box-sizing: border-box;
+    border-radius: 16px 16px 0 0;
+    background: #fff;
+    border: 0.5px solid #d6d6d6;
+    border-bottom: 0;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.06);
+    pointer-events: none;
+    transform-origin: center;
+  }
+  /* Once the sheet is under it the pill's shadow would fall ON the sheet — a
+     grey band just below the seam that read as a line between the two and as
+     two different fills. Closed, the pill sits on the screen edge and keeps
+     its lift. */
+  .fold6-mlegend.is-open .fold6-mlegend-tab { box-shadow: none; }
+
   /* The title row — same type as .fold6-note-title on desktop. No chevron here
      (explicit instruction): unlike the desktop note, this bar is the only thing
      on screen at its fold and its own opening is the affordance, so the button
@@ -3995,10 +4164,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     color: #767676;
     background: none;
     border: 0;
-    /* Room for the grab handle above the title: handle top offset (2) + handle
-       height (2) + the handle→מקרא gap (2). The button's height is what the
-       closed card is measured off, so the handle is inside the card for free. */
-    padding: 6px 0 0;
+    /* No room reserved above the title: the grab handle hangs 4px ABOVE the
+       button's box (::before, top: -4px), inside the pill, which is centred on
+       the button by fold6MLegendPaintCard (tuned by eye, manual/ harness). */
+    padding: 0;
     cursor: pointer;
     /* Same treatment as the pill's ⓘ: this is a real <button>, so a tap draws
        the UA's own highlight over it — a grey halo — and leaves a focus ring
@@ -4010,16 +4179,16 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   .fold6-mlegend-btn:focus-visible {
     outline: none;
   }
-  /* The sheet's grab handle — a 36×2 pill centred above the title. Purely a
+  /* The sheet's grab handle — a 28×1.5 pill centred above the title. Purely a
      sheet affordance; it is not what the button measures its width off. */
   .fold6-mlegend-btn::before {
     content: "";
     position: absolute;
-    top: 2px;
+    top: -4px;
     left: 50%;
     transform: translateX(-50%);
-    width: 36px;
-    height: 2px;
+    width: 28px;
+    height: 1.5px;
     border-radius: 1px;
     background: #d4d3d8;
   }
@@ -4029,7 +4198,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      rows fade in as the card makes room for them and are gone before it
      collapses back to the title. */
   .fold6-mlegend-panel {
-    margin-top: 8px;
+    /* Sheet top → camp headings (tuned by eye, manual/ harness). */
+    margin-top: 20px;
     padding: 2px 4px 0;
     text-align: initial;
     /* The open panel sits in a position:fixed full-viewport layer over a canvas
@@ -4105,8 +4275,12 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     /* 8 to the first card, not 12: the cards carry their own padding now, so
        the old gap read as a hole between the heading and the group it heads. */
     margin: 0 0 8px;
-    font: 700 14px 'Assistant', sans-serif;
-    color: rgba(0, 0, 0, 0.85);
+    /* The SAME face and ink as .camp-header (660 on the variable font, solid
+       black): at @fold4 the camp header flies onto this heading and swaps for
+       it on the landing frame, so any difference here is a visible snap. Only
+       the size changes in flight (18 → FOLD6_MFLY_HEAD_PX, js/update-groups.js). */
+    font: 660 14px 'Assistant', sans-serif;
+    color: #000;
     /* The one centered thing — centered over its own column, as at @fold3.
        align-self stretches it to the column's full width first, otherwise a
        flex-start column would shrink-wrap it and centering would be a no-op. */
