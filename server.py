@@ -281,8 +281,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             # buttons, so a panel driving one of several worktrees says which
             # chat's work it is editing. One worktree per chat is the setup
             # (see wiki/Dev-Workflow.md), which makes the branch that identity.
-            self._json({"branch": _git_branch(), "dir": WATCH_DIR.name, "port": PORT,
-                        "session": _session_name()})
+            self._json({"branch": _git_branch(), "dir": WATCH_DIR.name, "port": PORT})
         elif self.path == "/__mtime__":
             self._json({"t": last_modified})
         elif self.path == "/events.json":
@@ -304,17 +303,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def log_message(self, fmt, *args):
         pass
-
-def _session_name():
-    """Whatever `.session-name` says — the Claude session driving this checkout.
-    The browser cannot know it, so the session writes its own name there and the
-    harness panel shows it next to the branch. Untracked (.gitignore): it is per
-    chat, not per repo."""
-    try:
-        return (WATCH_DIR / ".session-name").read_text().strip() or None
-    except OSError:
-        return None
-
 
 def _git_branch():
     try:
