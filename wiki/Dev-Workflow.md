@@ -41,8 +41,9 @@ A tab now reloads itself **only** while its auto-reload switch is on:
   can be frozen while another keeps up.
 - A frozen tab is showing stale code, and a silently stale tab is a trap — you report a bug
   that is already fixed, or tune against values that have moved. The warning therefore
-  lives in the **panel's rail**: a yellow badge under the switch showing the NUMBER of
-  changes this tab has not taken (the number alone, house style). Clicking it reloads the
+  lives in the **panel's rail**: a small yellow NUMBER beside the switch, the count of
+  changes this tab has not taken (the number alone, house style — noticeable, not a
+  banner). Clicking it reloads the
   page without switching auto-reload on — the one-off "show me the latest". **Nothing is
   drawn on the page itself**: the page is the artwork being judged, and a badge over it is
   exactly what harnesses are forbidden from doing. `window.autoReloadState()` exposes
