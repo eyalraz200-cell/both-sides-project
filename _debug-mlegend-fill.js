@@ -900,6 +900,7 @@
       setFoldBadgeVisible(!!m.on);
       announce();
     }
+    if (m.t === 'reloadnow' && window.reloadNow) { window.reloadNow(); return; }
     if (m.t === 'autoreload' && window.setAutoReload) {
       // Switching it back ON reloads the page immediately when it is behind, so
       // this may well be the last thing this instance ever does.
