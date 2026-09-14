@@ -19,32 +19,41 @@ const sections = Array.from(document.querySelectorAll(".text-section"));
 // is added here. Nothing else can switch it on: the Ctrl+Shift+F listener and
 // the mobile picker are both inside this branch.
 const foldNumberBadge = isLocalHost() ? document.getElementById("foldNumberBadge") : null;
+// Dismissing the badge leaves a 7px DOT in its place rather than nothing: with
+// the number gone there was no way back on a phone (Ctrl+Shift+F needs keys a
+// phone doesn't have), so the aid could be switched off for good by one tap.
+// Same rule the harness panel's chip follows — never un-dismissable.
+function setFoldBadgeVisible(visible) {
+  if (!foldNumberBadge) return;
+  foldNumberBadge.classList.toggle("is-visible", visible);
+  foldNumberBadge.classList.toggle("is-dot", !visible);
+  foldNumberBadge.title = visible ? "fold — click to jump (Ctrl+Shift+F hides)"
+                                  : "show the fold number";
+  try { localStorage.setItem("foldNumberBadgeVisible", visible ? "1" : "0"); } catch {}
+}
 if (foldNumberBadge) {
-  const FOLD_BADGE_VISIBLE_KEY = "foldNumberBadgeVisible";
   let pref = null;
-  try { pref = localStorage.getItem(FOLD_BADGE_VISIBLE_KEY); } catch {}
+  try { pref = localStorage.getItem("foldNumberBadgeVisible"); } catch {}
   // Shown unless it was explicitly switched off — it's a reading aid you want
   // on by default while working on the folds.
-  if (pref !== "0") foldNumberBadge.classList.add("is-visible");
+  setFoldBadgeVisible(pref !== "0");
   window.addEventListener("keydown", (e) => {
     if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "f") {
       e.preventDefault();
-      const visible = foldNumberBadge.classList.toggle("is-visible");
-      try { localStorage.setItem(FOLD_BADGE_VISIBLE_KEY, visible ? "1" : "0"); } catch {}
+      setFoldBadgeVisible(!foldNumberBadge.classList.contains("is-visible"));
     }
   });
 }
 
-// ── The fold picker (mobile) ────────────────────────────────────────────────
-// Ctrl+Shift+F is how the badge is dismissed, and a phone has no Ctrl and no
-// Shift — so on mobile the badge is a chip you can only look at. Tapping it now
-// opens a list of all 16 folds and jumps to the one you pick, which is the
-// thing you actually want a fold readout for while working on a phone.
+// ── The fold picker (both breakpoints) ──────────────────────────────────────
+// Clicking or tapping the badge opens a list of all 16 folds and jumps to the
+// one you pick. It was mobile-only on the grounds that Ctrl+Shift+F covered
+// desktop, but that shortcut only TOGGLES the badge — it never navigates — so
+// desktop had no way to jump to a fold at all. The badge is therefore clickable
+// on both breakpoints now (see the `pointer-events` note in style.css).
 //
-// Mobile only, deliberately: on desktop the badge stays `pointer-events: none`
-// so it can never eat a click on the canvas underneath (that is the reason it
-// was inert in the first place), and the keyboard shortcut already covers the
-// one thing the chip does there.
+// The panel's last row dismisses the badge to its dot, which is how the toggle
+// is reachable without a keyboard.
 //
 // It is built from the sections themselves — number plus that fold's own title,
 // with the `.copy-desktop` half of any breakpoint-split headline stripped out —
@@ -113,6 +122,18 @@ function foldPickerInit() {
       });
       panel.appendChild(row);
     });
+    // …and the dismiss row. Not a fold, so it sits below a hairline and carries
+    // the shortcut as its hint rather than a number.
+    const hide = document.createElement("button");
+    hide.type = "button";
+    hide.className = "fold-picker-row fold-picker-hide";
+    hide.textContent = "הסתרת מספר הקיפול  ·  Ctrl+Shift+F";
+    hide.addEventListener("click", (e) => {
+      e.stopPropagation();
+      close();
+      setFoldBadgeVisible(false);
+    });
+    panel.appendChild(hide);
     // A direct .layout child for the same reason the badge is: .graphic-col is
     // its own stacking context and traps any z-index inside it.
     (document.querySelector(".layout") || document.body).appendChild(panel);
@@ -133,19 +154,23 @@ function foldPickerInit() {
   function isOpen() { return !!panel && panel.classList.contains("is-open"); }
 
   foldNumberBadge.addEventListener("click", (e) => {
-    if (!isMobile()) return;
     e.stopPropagation();
+    // Dismissed to its dot: the click brings the number back rather than
+    // opening a picker the user cannot see the handle for.
+    if (!foldNumberBadge.classList.contains("is-visible")) {
+      setFoldBadgeVisible(true);
+      return;
+    }
     isOpen() ? close() : open();
   });
-  // Any tap outside dismisses it, and so does leaving the breakpoint — a picker
-  // left open while the page is widened would sit over the desktop layout with
-  // no way to shut it.
+  // Any click/tap outside dismisses it, and so does Escape — the panel sits over
+  // live artwork, so getting rid of it must never take aim.
   document.addEventListener("click", (e) => {
     if (isOpen() && !e.target.closest(".fold-picker")) close();
   });
-  window.addEventListener("resize", () => { if (!isMobile()) close(); });
+  window.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
 }
-// isMobile() lives in js/core.js, a LATER <script> than this one, so the init
+// The sections have to exist before the rows can be built from them, so the init
 // waits rather than running at top level.
 document.addEventListener("DOMContentLoaded", foldPickerInit);
 
