@@ -24,11 +24,33 @@
     /^172\.(1[6-9]|2\d|3[01])\./.test(host);
   if (!isLocal) return;
 
+  /* SCROLL RESTORE — an auto-reload used to land at the top (or wherever the
+     browser's own restore guessed), so every edit meant scrolling back to the
+     fold under review. The position is saved right before reloading and put
+     back once layout has settled; ScrollTrigger.refresh() re-syncs any pins
+     the restore skipped over. */
+  const YKEY = "reload:y";
+  try {
+    const y = sessionStorage.getItem(YKEY);
+    if (y !== null) {
+      sessionStorage.removeItem(YKEY);
+      if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+      const restore = () => {
+        window.scrollTo(0, Number(y));
+        if (window.ScrollTrigger && ScrollTrigger.refresh) ScrollTrigger.refresh();
+      };
+      addEventListener("load", () => requestAnimationFrame(() => requestAnimationFrame(restore)));
+    }
+  } catch (e) {}
+
   let last = null;
   setInterval(() => {
     fetch("/__mtime__").then(r => r.json()).then(({ t }) => {
       if (last === null) { last = t; return; }
-      if (t !== last) location.reload();
+      if (t !== last) {
+        try { sessionStorage.setItem(YKEY, String(window.scrollY)); } catch (e) {}
+        location.reload();
+      }
     }).catch(() => {});
   }, 800);
 })();

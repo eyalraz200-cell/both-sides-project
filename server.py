@@ -8,6 +8,7 @@ WATCH_EXTS = {".html", ".css", ".js"}
 # Flags — the defaults are the everyday server:
 #   python3 server.py                     → :8080, reloads on any html/css/js at the
 #     project root or under js/ (the xlsx is NOT watched — restart after editing it)
+#   python3 server.py --port 0               → a free port (one server PER WORKTREE / chat)
 #   python3 server.py --port 8081 --watch page9.js,js  → a SECOND instance serving the
 #     same files, whose auto-reload only fires for those paths. Point one browser tab
 #     at :8081 to work on one fold without every unrelated edit (another chat, another
@@ -311,12 +312,16 @@ def _lan_ip():
 
 
 threading.Thread(target=watch, daemon=True).start()
+# ThreadingHTTPServer, not HTTPServer: /__bus__ long-polls park for up to 25s and a
+# single-threaded server would stall every other request behind them.
+# `--port 0` asks the OS for a free port — one server per git worktree / chat, so
+# an edit in one worktree never reloads another's tabs (see wiki/Dev-Workflow.md).
+_srv = http.server.ThreadingHTTPServer(("", PORT), Handler)
+PORT = _srv.server_address[1]
 print(f"Serving at http://localhost:{PORT}  "
       f"(auto-reload on: {', '.join(WATCH_ONLY) if WATCH_ONLY else 'all html/css/js'})")
 _ip = _lan_ip()
 if _ip:
     print(f"  on your phone (same Wi-Fi):  http://{_ip}:{PORT}/project.html")
     print(f"  harness panel tab:           http://{_ip}:{PORT}/_debug-panel.html")
-# ThreadingHTTPServer, not HTTPServer: /__bus__ long-polls park for up to 25s and a
-# single-threaded server would stall every other request behind them.
-http.server.ThreadingHTTPServer(("", PORT), Handler).serve_forever()
+_srv.serve_forever()
