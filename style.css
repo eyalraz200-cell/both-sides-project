@@ -3125,7 +3125,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 
      It sits above the timeline grid: SBB_TIMELINE_MOBILE.top is 0.19H
      (~160px on a 844px phone), so 62px + this height clears it. (The מקרא
-     sheet lives at the BOTTOM edge — FOLD6_MLEGEND_BOTTOM_MOBILE_PX — and no
+     sheet lives at the BOTTOM edge — FOLD6_MLEGEND_EDGE_GAP_PX — and no
      longer competes for the top.) It's a flat px, not a fraction of the viewport, so the frame
      doesn't drift between @fold7 (no grid on screen yet) and the timeline.
 
@@ -4066,15 +4066,14 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   /* THE MOBILE STACK, bottom to top (explicit instruction, and the order every
      rule in this block serves):
 
-       canvas … → the מקרא bar (1002) → the groups (1003) → the title blocks (1004+)
+       canvas … → the groups (1003) → the title blocks (1004+) → the מקרא card (1006)
 
-     i.e. a title block paints over BOTH, and the groups paint over the legend.
-     This reverses the older "the legend always wins, open or closed" rule — the
-     title block never crosses the groups, so there is no longer anything for the
-     legend to protect by sitting on top. The bar keeps 1002 (not a low number)
-     only so it stays above the docked event tooltip's 1000, exactly as before;
-     the cards are lifted past it rather than the bar being dropped, which leaves
-     every other tooltip relationship untouched.
+     The card sits at the TOP of the viewport now, where a title block shares
+     its space — so it has to win, or the one control the reader can press
+     renders behind the copy and cannot be seen or aimed at. (While the card was
+     a bottom sheet nothing reached it and the order was the other way round:
+     1002, under the cards. That is the line to restore along with the sheet.)
+     1006 also keeps it above the docked event tooltip's 1000, as it always was.
      Out-stacking works from inside .text-col only because .text-col has no
      z-index of its own. Mobile-only: the bar doesn't exist above the
      breakpoint. */
@@ -4108,7 +4107,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   .page9-title-row .text-card { z-index: 1005; }
   /* The מקרא legend sits UNDER both (see the stack comment above): above the
      docked tooltip's 1000, below the cards' 1004/1005 and the groups' 1003. */
-  .fold6-mlegend-layer { z-index: 1002; }
+  .fold6-mlegend-layer { z-index: 1006; }
 
   /* The bar is the mobile twin of the desktop ACLED note: a tinted, borderless
      card (.fold6-mlegend-card, same radius/tint as .fold6-note-card) painted
@@ -4124,18 +4123,26 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     /* The title is draggable (js/groups.js): a vertical swipe on it must scrub
        the sheet, not scroll the page. */
     touch-action: none;
-    /* A FLOATING ACLED-NOTE CARD (chosen in a compare/ pass against the flush
-       bottom sheet it replaced — see Groups-and-Legend.md, which keeps the
-       sheet's exact values so it can be restored).
-       `bottom` is written by fold6PlaceMobileLegend() from
-       FOLD6_MLEGEND_BOTTOM_MOBILE_PX; --mlg-inset is the matching SIDE inset,
-       and the two are one decision — the card floats the same distance off all
-       three edges. The 6px bottom padding is the card's outset under the rows
-       (FOLD6_MLEGEND_PAD_BOTTOM_PX in js/groups.js measures the closed card off
-       it — keep them in sync). */
-    --mlg-inset: 8px;
-    left: var(--mlg-inset);
-    right: var(--mlg-inset);
+    /* A FLOATING ACLED-NOTE CARD pinned to the TOP of the viewport, its closed
+       מקרא pill in the top-RIGHT corner (both chosen in a compare/ pass — see
+       Groups-and-Legend.md, which also keeps the flush bottom sheet this
+       replaced, values and all, so it can be restored).
+       `top` is written by fold6PlaceMobileLegend() from
+       FOLD6_MLEGEND_EDGE_GAP_PX; the two side gaps are below. The 6px bottom
+       padding is the card's outset under the rows (FOLD6_MLEGEND_PAD_BOTTOM_PX
+       in js/groups.js measures the closed card off it — keep them in sync). */
+    /* THE RIGHT EDGE LINES UP WITH THE TITLE BLOCKS (explicit instruction), and
+       it is DERIVED from `--card-w` rather than hard-coded 24px: between 528px
+       and 600px the card stops growing and the gutter widens, so a literal
+       would drift out of alignment exactly there. Same expression as
+       #page9ZoneBelow's padding-inline, which lines the first @dragcard up
+       under the same edge. --mlg-gap-left is free to differ; it only shows
+       while the card is open and spanning the bar. */
+    --mlg-gutter: calc((100vw - min(480px, 100vw - 48px)) / 2);
+    --mlg-gap-right: var(--mlg-gutter);
+    --mlg-gap-left: var(--mlg-gutter);
+    left: var(--mlg-gap-left);
+    right: var(--mlg-gap-right);
     padding: 4px 12px 6px;
     box-sizing: border-box;
     opacity: 0;

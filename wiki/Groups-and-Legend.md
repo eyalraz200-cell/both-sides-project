@@ -544,24 +544,22 @@ mobile panel it has no width at all and fills the panel. It is RTL and right-ali
 note and changes its height; the legend rows do not move with it — the note just extends
 further down. **Removed — don't reintroduce:** a `fold6NoteShiftPx` row pre-shift.
 
-## The mobile מקרא bar — a bottom sheet
+## The mobile מקרא bar — a floating card, top-right
 
 **Under 600px there is no on-canvas mini-legend.** From `@fold4` on, the legend is a
-persistent **bottom sheet** pinned to the bottom edge of the viewport (`js/groups.js`,
-`.fold6-mlegend`):
+persistent **floating card** pinned to the top edge of the viewport, closing into a pill in
+the top-right corner (`js/groups.js`, `.fold6-mlegend`):
 
 ```
-╭──────────────────────────────────╮  ← open: the SAME card, grown UPWARD out of the
-│ מחנה הימין          גוש השינוי  │     bottom edge (height step)
- ╭───────────────────────────────────╮  ← open: the SAME card, its bottom edge fixed
- │               מקרא                │     and its TOP grown upward
+                            ╭──────────────╮  ← closed: the card shrunk to a pill in
+                            │     מקרא     │    the TOP-RIGHT corner. Its right edge
+                            ╰──────────────╯    is flush with the title blocks below
+
+ ╭───────────────────────────────────╮  ← open: the SAME card, its top edge fixed
+ │               מקרא                │     and its BOTTOM grown downward
  │ 3 coalition rows │ 3 change rows  │
  │ איסוף הנתונים / ACLED note …      │
- ╰───────────────────────────────────╯  ← 8px clear of all three screen edges
-
-              ╭──────────────╮          ← closed: the same card, shrunk to a pill —
-              │     מקרא     │            the bare title, sized
-              ╰──────────────╯            title + 28 each side × 34 high
+ ╰───────────────────────────────────╯
 ```
 
 **It is a floating ACLED-note card.** Chosen in a `compare/` pass against the flush white
@@ -570,9 +568,19 @@ chrome. The skin is the desktop note's (`.fold6-note-card`): **a tint, no border
 shadow**, `--mlg-radius` **8px**. The tint is applied **opaque** (`--mlg-fill`, `#F4F3F6`)
 rather than as the note's own `rgba(0,0,0,.035)` — this card has to cover the title block
 and the canvas behind it, and a translucent one let the dashed frame show straight through,
-which reads as the title sitting on top. It **floats 8px clear of the sides and the screen
-bottom**: `--mlg-inset` (style.css) and `FOLD6_MLEGEND_BOTTOM_MOBILE_PX` (js/groups.js) are
-**one decision in two files** — the same gap off all three edges, so move them together.
+which reads as the title sitting on top. It is pinned to the **TOP** of the viewport with its closed pill in the **top-RIGHT**
+corner, both picked in a `compare/` pass against the bottom edge and the other two
+alignments (`FOLD6_MLEGEND_EDGE` / `FOLD6_MLEGEND_ALIGN`, js/groups.js — `let`, and both
+branches are still live; bake one and delete the other once the pose is final). It sits
+`FOLD6_MLEGEND_EDGE_GAP_PX` (**8px**) off that top edge.
+**Its right edge lines up with the title blocks** (explicit instruction), and that
+alignment is **derived, not hard-coded**: `--mlg-gutter` is
+`calc((100vw - min(480px, 100vw - 48px)) / 2)`, the same expression `#page9ZoneBelow`'s
+`padding-inline` uses to line the first @dragcard up under that same edge. A literal `24px`
+is right at 390px and **wrong between 528px and 600px**, where `--card-w` stops growing and
+the gutter widens — verified flush at both 390 and 560. `--mlg-gap-right` and
+`--mlg-gap-left` default to that gutter, and anything tuning them must offset *from* it
+rather than replace it, or the alignment silently breaks at the wide end.
 All four corners are rounded, since there is no screen edge for a flat side to sit on. **The six group rows are `#fff`**, not the tint they used to carry: the card
 behind them is that tint now, and tint-on-tint left six invisible cards.
 
@@ -582,9 +590,16 @@ line — the card's own open is the affordance. *Removed — don't reintroduce:*
 (`.fold6-mlegend-btn::before`, a 28×1.5px `#d4d3d8` pill centred 4px above the button's box)
 and the chevron that was judged against it. **`.fold6-mlegend-card` is the ONE frame in every state** (explicit instruction — "it should
 just be part of the frame"): closed, that card IS the מקרא pill; open, the same box has
-grown. Its **bottom edge never moves** — only its top travels, from `barH − closedH` (the
-pill) up to `0` (the whole bar), on the height step, after the width step has widened it
-from `closedW` to the bar. So the card literally grows out of the button that was pressed.
+grown. **The edge it is pinned to never moves; the opposite edge travels** — at the top its
+`height` grows from `closedH` to the bar's, at the bottom its `top` rises from
+`barH − closedH` to `0`. Either way that is the height step, after the width step has
+widened it from `closedW` to the bar, so the card literally grows out of the button that
+was pressed. The **drag follows the edge** too: a top card opens as the finger comes
+*down* (`FOLD6_MLEGEND_EDGE` flips the sign on `dy`). Horizontally, `FOLD6_MLEGEND_ALIGN`
+places the closed pill — right, left or centred — and every alignment converges on
+`left: 0` once open, so it only decides which corner the card unfurls from; the title is
+nudged onto the pill's own centre while closed, since it is `text-align: center` in a
+full-width bar.
 The **title rides inside its top band**, and its distance from the card's top edge is itself
 lerped: centred in the pill while closed, at the bar's own `padding-top` once open, where it
 heads a card full of rows. The rows ride the same shift (`translateY` on

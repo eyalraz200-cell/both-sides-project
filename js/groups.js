@@ -1674,11 +1674,23 @@ const FOLD3_HEADER_GAP_MOBILE_PX = FOLD4_HEADER_GAP_MOBILE_PX;
 // The button is the ONLY thing left on screen from @fold4 on (per explicit
 // instruction) — the camp names live inside the panel, not on the page — so
 // this single number positions the whole bar and never changes after @fold4.
-// How far the floating card sits off the screen bottom. Paired with
+// WHICH EDGE the card lives on, and where the closed pill sits along it.
+// Both are `let` so a compare/ harness can flip them live. Once the pose is
+// decided, bake the winner and delete the branch that lost — every read of
+// these is marked.
+//   edge : "bottom" (the card's bottom is pinned and its TOP rises)
+//          "top"    (its top is pinned and its BOTTOM descends)
+//   align: "center" | "right" | "left" — the CLOSED pill's spot along that
+//          edge; open, the card always spans the bar, so alignment only says
+//          which corner it grows out of.
+let FOLD6_MLEGEND_EDGE  = "top";
+let FOLD6_MLEGEND_ALIGN = "right";
+
+// How far the floating card sits off the screen edge it is pinned to. Paired with
 // --mlg-inset in style.css (the same distance on the sides) — the card
 // floats the same gap off all three edges, so move the two together.
 // `let`, not `const`: a manual/ harness drives it live.
-let FOLD6_MLEGEND_BOTTOM_MOBILE_PX = 8;
+let FOLD6_MLEGEND_EDGE_GAP_PX = 8;
 // The bar's bottom padding (.fold6-mlegend, 6px) — the card's outset UNDER the
 // title, which differs from FOLD6_CARD_PAD above it. Keep in sync with the CSS.
 const FOLD6_MLEGEND_PAD_BOTTOM_PX = 6;
@@ -2111,11 +2123,17 @@ function fold6SyncNoteHome() {
 }
 fold6SyncNoteHome();
 
-// The bar never moves: it parks FOLD6_MLEGEND_BOTTOM_MOBILE_PX above the bottom of
-// the viewport and only fades. Still written from updateGroups (rather than as a
-// static CSS `top`) so the one constant above stays the single source of truth.
+// The bar never moves: it parks FOLD6_MLEGEND_EDGE_GAP_PX off whichever screen
+// edge FOLD6_MLEGEND_EDGE names, and the card grows away from that edge.
 function fold6PlaceMobileLegend() {
-  fold6MobileLegendEl.style.bottom = `${FOLD6_MLEGEND_BOTTOM_MOBILE_PX}px`;
+  const off = `${FOLD6_MLEGEND_EDGE_GAP_PX}px`;
+  if (FOLD6_MLEGEND_EDGE === "top") {
+    fold6MobileLegendEl.style.top = off;
+    fold6MobileLegendEl.style.bottom = "";
+  } else {
+    fold6MobileLegendEl.style.bottom = off;
+    fold6MobileLegendEl.style.top = "";
+  }
 }
 
 // vis is fold6Trigger's eased progress (0 off, 1 fully present). Below the
@@ -2245,23 +2263,37 @@ function fold6MLegendPaintCard(raw) {
     ? (FOLD6_MLEGEND_COMPACT_W || btn.offsetWidth + 2 * FOLD6_MLEGEND_COMPACT_PAD_X) : barW;
   const closedH = FOLD6_MLEGEND_COMPACT_CLOSED && FOLD6_MLEGEND_COMPACT_H
     ? FOLD6_MLEGEND_COMPACT_H : measuredH;
+  const atTop = FOLD6_MLEGEND_EDGE === "top";
+
   // ONE FRAME IN EVERY STATE (explicit instruction — "it should just be part of
-  // the frame"). There is no separate tab or handle any more: this card IS the
-  // closed מקרא pill, and opening simply grows that same box. Its BOTTOM edge
-  // never moves; only its top does, from `barH - closedH` (the pill) up to 0
-  // (the whole bar).
-  const closedTop = barH - closedH;
-  const top = closedTop * (1 - hT);
+  // the frame"). There is no separate tab or handle: this card IS the closed
+  // מקרא pill, and opening grows that same box. The edge it is pinned to never
+  // moves; the OTHER edge is the one that travels.
   const w = closedW + (barW - closedW) * wT;
-  card.style.left   = `${(barW - w) / 2}px`;
-  card.style.width  = `${w}px`;
-  card.style.top    = `${top}px`;
-  card.style.bottom = "0";
-  // top + bottom define the height, so the card follows the bar when the ACLED
-  // note flows into the panel at @fold6 and makes it taller.
-  card.style.height = "";
-  // The TITLE rides inside the card's top band, and its distance from the
-  // card's top edge is itself lerped: centred in the pill while closed
+  // Where the closed pill sits along its edge. Open, the card spans the bar, so
+  // every alignment converges on left 0 — the alignment only decides which
+  // corner the card unfurls from.
+  const left = FOLD6_MLEGEND_ALIGN === "right" ? barW - w
+             : FOLD6_MLEGEND_ALIGN === "left"  ? 0
+             : (barW - w) / 2;
+  card.style.left  = `${left}px`;
+  card.style.width = `${w}px`;
+  if (atTop) {
+    // Top edge: the card's top is fixed and its BOTTOM descends.
+    card.style.top = "0";
+    card.style.bottom = "";
+    card.style.height = `${closedH + (barH - closedH) * hT}px`;
+  } else {
+    // Bottom edge: the card's bottom is fixed and its TOP rises. `height` is
+    // left empty so the two edges define it and the card follows the bar when
+    // the ACLED note flows into the panel at @fold6 and makes it taller.
+    card.style.bottom = "0";
+    card.style.top = `${(barH - closedH) * (1 - hT)}px`;
+    card.style.height = "";
+  }
+
+  // The TITLE rides inside the card's title band, and its distance from the
+  // card's near edge is itself lerped: centred in the pill while closed
   // (nothing else is in there), at the bar's own padding-top once open (where
   // it heads a card full of rows). Without the lerp the title sat high in the
   // closed pill.
@@ -2270,11 +2302,19 @@ function fold6MLegendPaintCard(raw) {
   const btnFlowTop = btn.offsetTop - (parseFloat(btn.style.top) || 0);
   const offClosed = (closedH - btn.offsetHeight) / 2;
   const off = offClosed + (btnFlowTop - offClosed) * hT;
-  const shift = top + off - btnFlowTop;
+  // At the top edge the card's own top IS the bar's top, so the title only has
+  // to make up that lerped inset; at the bottom edge it rides the travelling
+  // top as well.
+  const cardTop = atTop ? 0 : (barH - closedH) * (1 - hT);
+  const shift = cardTop + off - btnFlowTop;
   btn.style.top = `${shift}px`;
-  // …and the rows ride the same shift, so the whole card — frame, title, rows —
-  // moves as one piece instead of the rows hanging in the air above a frame
-  // that hasn't reached them yet. translateZ(0) is the panel's own CSS
+  // …and horizontally, when the closed pill is in a CORNER: the button is
+  // text-align:center in the full-width bar, so it has to be nudged onto the
+  // pill's own centre, fading out as the card reaches full width.
+  btn.style.left = `${(left + w / 2) - barW / 2}px`;
+  // The rows ride the same vertical shift, so the whole card — frame, title and
+  // rows — moves as one piece instead of the rows hanging in the air outside a
+  // frame that has not reached them yet. translateZ(0) is the panel's own CSS
   // (compositor layer), restated because an inline transform replaces it.
   fold6MobilePanelEl.style.transform = `translateZ(0) translateY(${shift}px)`;
   fold6MobilePanelEl.style.opacity = hT < 1 ? String(hT) : "";
@@ -2938,7 +2978,9 @@ fold6MobileLegendEl.addEventListener("pointerdown", (e) => {
 
 fold6MobileLegendEl.addEventListener("pointermove", (e) => {
   if (!fold6MLegendDrag) return;
-  const dy = fold6MLegendDrag.y0 - e.clientY;
+  // Positive dy = "more open". A bottom card opens as the finger goes UP; a top
+  // card opens as it comes DOWN.
+  const dy = (FOLD6_MLEGEND_EDGE === "top" ? -1 : 1) * (fold6MLegendDrag.y0 - e.clientY);
   if (Math.abs(dy) > FOLD6_MLEGEND_DRAG_SLOP_PX) fold6MLegendDrag.moved = true;
   fold6MLegendOpenRaw = Math.max(0, Math.min(1, fold6MLegendDrag.raw0 + dy / fold6MLegendDrag.span));
   if (!fold6MLegendDragRaf) fold6MLegendDragRaf = requestAnimationFrame(fold6MLegendDragPaint);
