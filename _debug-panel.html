@@ -1,0 +1,567 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>harness panel</title>
+<!-- ============================================================================
+     REMOTE HARNESS PANEL v2 — SCAFFOLDING, never ships.
+     Copy into the project as _debug-panel.html next to _debug-bus.js, open it in
+     a second tab (or on the laptop while the page runs on a phone). It asks
+     `harness:__all__` who is there and hosts EVERY harness on the page, one at a
+     time, driving each over its `harness:<title>` channel through _debug-bus.js.
+
+     It knows nothing about any project: each harness sends a descriptor and
+     this renders whatever it describes.
+
+     v2 rules (why this file was rewritten):
+       - BUILD ONCE, PATCH FOREVER. A harness's DOM is built once per descriptor.
+         State echoes patch values into the existing inputs; nothing is ever
+         rebuilt on a timer. (v1 rebuilt on every echo and tore the colour input
+         down under the open OS colour dialog — the picker "never worked".)
+       - OWN COLOUR PICKER. No <input type=color>: a swatch opens an inline
+         hue strip + saturation/value square + hex field.
+       - ONE HARNESS AT A TIME. A strip of harness names; only the chosen one is
+         shown and the keyboard drives it.
+       - MODE-SCOPED KNOBS. A knob with `modes: [...]` only shows while one of
+         those modes is picked. Knobs are bucketed by `group` into collapsible
+         sections.
+       - PER-KNOB RESET. ↺ on every row: click = last checkpoint, Shift = shipped.
+     ======================================================================== -->
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #111; color: #e6e6e6;
+         font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  button { font: inherit; background: #262626; color: #e6e6e6; border: 1px solid #3c3c3c;
+           border-radius: 5px; padding: 4px 9px; cursor: pointer; line-height: 1.3; }
+  button:hover { background: #333; }
+  button[aria-selected="true"] { background: #e6e6e6; color: #111; border-color: #e6e6e6; }
+  button:disabled { opacity: .35; cursor: default; }
+
+  /* ---- top: harness strip -------------------------------------------- */
+  #top { position: sticky; top: 0; z-index: 5; background: #181818; border-bottom: 1px solid #2c2c2c;
+         display: flex; align-items: center; gap: 6px; padding: 8px 12px; flex-wrap: wrap; }
+  #top h1 { font-size: 12px; margin: 0 6px 0 0; font-weight: 600; opacity: .7; }
+  #strip { display: flex; gap: 4px; flex-wrap: wrap; }
+  #strip button { border-radius: 99px; }
+  #flash { color: #7fd; margin-left: auto; white-space: nowrap; }
+  .note { color: #888; padding: 24px 14px; }
+
+  /* ---- one harness section -------------------------------------------- */
+  .h { padding: 0 12px 40px; }
+  .h[hidden] { display: none; }
+  .bar { position: sticky; top: 41px; z-index: 4; background: #111; display: flex; gap: 6px;
+         flex-wrap: wrap; align-items: center; padding: 10px 0; border-bottom: 1px solid #222; }
+  .host { font-size: 10px; opacity: .6; margin-inline-start: auto; }
+  .host button { padding: 1px 6px; font-size: 10px; }
+  .body { display: grid; grid-template-columns: 1fr; gap: 0 24px; padding-top: 8px; }
+  @media (min-width: 700px) { .body { grid-template-columns: 1fr 1fr; } .span { grid-column: 1 / -1; } }
+
+  .gname { color: #8a8a8a; text-transform: uppercase; letter-spacing: .08em; font-size: 10px;
+           margin: 12px 0 6px; }
+  .seg { display: flex; flex-wrap: wrap; gap: 4px; }
+  .seg button { border-radius: 4px; }
+  .seg button .k { opacity: .5; margin-inline-end: 5px; }
+  label.tog { display: inline-flex; gap: 6px; align-items: center; margin: 0 14px 6px 0; cursor: pointer; }
+
+  details.grp { border-top: 1px solid #222; margin-top: 10px; }
+  details.grp[hidden] { display: none; }
+  details.grp > summary { cursor: pointer; padding: 8px 0; color: #8a8a8a; text-transform: uppercase;
+                          letter-spacing: .08em; font-size: 10px; user-select: none; }
+  details.grp > summary .n { opacity: .6; margin-inline-start: 6px; text-transform: none; letter-spacing: 0; }
+
+  .row { margin: 0 0 14px; }
+  .row[hidden] { display: none; }
+  .lab { display: flex; align-items: center; gap: 8px; }
+  .lab .name { flex: 1; min-width: 0; }
+  .lab .val { color: #7fd; min-width: 4ch; text-align: right; }
+  .lab .rs { padding: 0 6px; font-size: 13px; line-height: 1.2; opacity: .55; border-color: transparent; background: none; }
+  .lab .rs:hover { opacity: 1; background: #262626; }
+  .src { color: #6a6a6a; font-size: 10px; margin-top: 2px; word-break: break-all; }
+  input[type=range] { width: 100%; margin: 6px 0 0; accent-color: #7fd; }
+
+  /* ---- colour knob ----------------------------------------------------- */
+  .sw { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+  .swatch { width: 40px; height: 28px; border-radius: 4px; border: 1px solid #555; cursor: pointer; padding: 0;
+            background: #000; flex: none; }
+  .hex { flex: 1; min-width: 0; font: inherit; background: #1c1c1c; color: #e6e6e6; border: 1px solid #3c3c3c;
+         border-radius: 4px; padding: 5px 8px; text-transform: lowercase; }
+  .cp { display: none; margin-top: 8px; padding: 10px; background: #1a1a1a; border: 1px solid #333;
+        border-radius: 6px; max-width: 260px; }
+  .cp.open { display: block; }
+  .cp .sv { position: relative; width: 100%; aspect-ratio: 1.6; border-radius: 4px; cursor: crosshair;
+            background-image: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, transparent);
+            touch-action: none; }
+  .cp .hue { position: relative; height: 14px; margin-top: 10px; border-radius: 4px; cursor: pointer; touch-action: none;
+             background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00); }
+  .cp .dot { position: absolute; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff;
+             box-shadow: 0 0 0 1px #000; transform: translate(-50%, -50%); pointer-events: none; }
+  .cp .hue .dot { top: 50%; }
+  .cp .presets { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+  .cp .presets button { width: 18px; height: 18px; padding: 0; border-radius: 3px; border: 1px solid #444; }
+</style>
+
+<div id="top">
+  <h1>harness</h1>
+  <div id="strip"></div>
+  <span id="flash"></span>
+</div>
+<main id="host"><p class="note" id="note">
+  Looking for harnesses. Keep the project tab open at a viewport the harness is
+  gated to (a mobile-only harness needs device mode on before its reload).
+</p></main>
+
+<script src="_debug-bus.js"></script>
+<script>
+(function () {
+  var ONLY = new URLSearchParams(location.search).get('t');   // optional: one harness
+  var seen = {};            // title -> Harness
+  window.__seen = seen;     // probe hook
+  var active = null;        // the harness the strip shows and the keyboard drives
+  var ACTKEY = 'hp:remote:active';
+
+  function flash(msg) {
+    var f = document.getElementById('flash');
+    f.textContent = msg; clearTimeout(flash.t);
+    flash.t = setTimeout(function () { f.textContent = ''; }, 1400);
+  }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function btn(label, fn, sel) {
+    var b = el('button', null, label);
+    if (sel !== undefined) b.setAttribute('aria-selected', !!sel);
+    b.onclick = fn;
+    return b;
+  }
+
+  // ------------------------------------------------------------ colour math --
+  function hexToHsv(hex) {
+    var m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+    if (!m) return { h: 0, s: 0, v: 0 };
+    var n = parseInt(m[1], 16), r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+    var max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min, h = 0;
+    if (d) {
+      if (max === r) h = ((g - b) / d) % 6;
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h *= 60; if (h < 0) h += 360;
+    }
+    return { h: h, s: max ? d / max : 0, v: max };
+  }
+  function hsvToHex(h, s, v) {
+    var c = v * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = v - c, r = 0, g = 0, b = 0;
+    if (h < 60) { r = c; g = x; } else if (h < 120) { r = x; g = c; } else if (h < 180) { g = c; b = x; }
+    else if (h < 240) { g = x; b = c; } else if (h < 300) { r = x; b = c; } else { r = c; b = x; }
+    var to = function (q) { return ('0' + Math.round((q + m) * 255).toString(16)).slice(-2); };
+    return '#' + to(r) + to(g) + to(b);
+  }
+
+  // ------------------------------------------------------------- Harness ----
+  function Harness(title) {
+    var H = this;
+    H.title = title;
+    H.desc = null; H.descJSON = null;
+    H.V = null; H.mode = null; H.T = null; H.tab = null; H.off = [];
+    H.touched = {};                      // key -> ms of the last local edit
+    H.dragging = null;                   // key of the knob under the pointer
+    H.ch = HBus('harness:' + title);
+    H.seq = 0; H.pending = {};
+
+    H.el = el('section', 'h'); H.el.hidden = true;
+    H.bar = el('div', 'bar');
+    H.body = el('div', 'body');
+    H.el.appendChild(H.bar); H.el.appendChild(H.body);
+
+    /* One HOST per title. Several pages can run the same harness on one bus
+       (phone + laptop tab + a headless probe); the first to answer is the host
+       and only its state is shown / its commands taken. A host silent for 6 s
+       is dropped. */
+    H.host = null; H.hostSeen = 0; H.others = {};
+    H.send = function (m) { if (H.host) m.to = H.host; H.ch.postMessage(m); };
+    H.isHost = function (m) {
+      var now = Date.now();
+      if (!m.inst) return true;
+      if (H.host === m.inst) { H.hostSeen = now; return true; }
+      if (!H.host || now - H.hostSeen > 6000) { H.host = m.inst; H.hostSeen = now; H.others = {}; return true; }
+      H.others[m.inst] = now;
+      return false;
+    };
+    H.switchTo = function (inst) { H.host = inst; H.hostSeen = Date.now(); delete H.others[inst]; H.send({ t: 'hello' }); };
+    H.adopt = function (m) { H.V = m.V; H.mode = m.mode; H.T = m.T; H.tab = m.tab; H.off = m.off || []; };
+
+    H.knob = function (key) { return H.desc.knobs.filter(function (s) { return s.key === key; })[0]; };
+    H.bag = function (key) {
+      var k = H.knob(key);
+      if (H.tab && k && k.global) return H.V.__global;
+      return H.tab ? H.V[H.tab] : H.V;
+    };
+    H.modeOf = function (g) { return H.desc.modeGrouped ? (H.mode && H.mode[g]) || null : H.mode || null; };
+    H.pickedModes = function () {
+      if (!H.desc.modeGrouped) return [H.mode || null];
+      return H.desc.modeGroups.map(function (g) { return H.mode && H.mode[g]; });
+    };
+    /* A knob is live when the host says so (`off`) AND — computed here too, so a
+       local mode click reshapes the list before the echo lands — its `modes`
+       list, if any, contains a picked mode. */
+    H.live = function (s) {
+      if (H.off.indexOf(s.key) >= 0) return false;
+      if (s.modes && s.modes.length) {
+        var picked = H.pickedModes();
+        if (!s.modes.some(function (id) { return picked.indexOf(id) >= 0; })) return false;
+      }
+      return true;
+    };
+    H.recent = function (key) { return H.dragging === key || Date.now() - (H.touched[key] || 0) < 600; };
+
+    H.setModeLocal = function (g, id) {
+      if (H.desc.modeGrouped) { H.mode = H.mode || {}; H.mode[g] = id; } else H.mode = id;
+      // The host recomputes `off` for the new mode; until its echo lands, the
+      // local `modes` filter is the truth and a stale `off` must not hide rows.
+      H.off = [];
+      H.patch();
+    };
+    H.sendSet = function (key, val) {
+      var p = H.pending[key];
+      if (p) { p.val = val; return; }
+      p = H.pending[key] = { val: val };
+      setTimeout(function () {
+        delete H.pending[key];
+        H.send({ t: 'set', key: key, val: p.val, seq: ++H.seq });
+      }, 40);
+    };
+    H.edit = function (key, val) {
+      H.touched[key] = Date.now();
+      H.bag(key)[key] = val;
+      H.sendSet(key, val);
+      H.refreshRow(key);
+    };
+
+    H.ch.onmessage = function (ev) {
+      var m = ev.data || {};
+      if (m.t === 'desc' || m.t === 'state') { if (!H.isHost(m)) { H.hostsSoon(); return; } }
+      if (m.t === 'desc') {
+        var j = JSON.stringify(m.desc);
+        H.adopt(m);
+        if (j !== H.descJSON) { H.descJSON = j; H.desc = m.desc; H.build(); }
+        else H.patch();
+        return;
+      }
+      if (m.t === 'state') { H.adopt(m); if (H.desc) H.patch(); return; }
+      if (m.t === 'payload') {
+        navigator.clipboard.writeText(m.text).then(
+          function () { flash('copied · ' + H.title); },
+          function () { alert(m.text); });
+      }
+    };
+
+    // ------------------------------------------------------------- hosts --
+    H.renderHosts = function () {
+      if (!H.hostsEl) return;
+      var now = Date.now();
+      H.hostsEl.textContent = 'page ' + (H.host || '?');
+      Object.keys(H.others).forEach(function (id) {
+        if (now - H.others[id] > 8000) { delete H.others[id]; return; }
+        var b = btn('also ' + id, function () { H.switchTo(id); H.renderHosts(); });
+        b.title = 'another page is running this harness — click to drive that one';
+        H.hostsEl.appendChild(document.createTextNode(' '));
+        H.hostsEl.appendChild(b);
+      });
+    };
+    var hostsT = null;
+    H.hostsSoon = function () { if (hostsT) return; hostsT = setTimeout(function () { hostsT = null; H.renderHosts(); }, 300); };
+
+    // ------------------------------------------------------------- build --
+    /* Runs ONCE per descriptor. Everything that changes with state lives in
+       H.ui and is refreshed by patch(). */
+    H.build = function () {
+      var d = H.desc;
+      H.el.dataset.built = String((Number(H.el.dataset.built) || 0) + 1);
+      H.ui = { modeBtns: {}, togs: {}, tabBtns: {}, rows: {}, groups: {} };
+      H.bar.textContent = '';
+      // FIXED order: Go · Copy · Reset · Dock.
+      if (d.goLabel) H.bar.appendChild(btn(d.goLabel, function () { H.send({ t: 'btn', name: 'go' }); }));
+      H.bar.appendChild(btn('Copy', function () { H.send({ t: 'btn', name: 'copy' }); }));
+      var rb = btn('Reset', function (e) { H.send({ t: 'btn', name: 'reset', ship: !!(e && e.shiftKey) }); });
+      rb.title = 'back to the last Copy · Shift: shipped values';
+      H.bar.appendChild(rb);
+      H.bar.appendChild(btn('Dock', function () { H.send({ t: 'bye' }); H.dead = true; remove(H); }));
+      H.hostsEl = el('span', 'host'); H.bar.appendChild(H.hostsEl); H.renderHosts();
+
+      var body = H.body; body.textContent = '';
+
+      // tabs (subjects)
+      if (d.tabs.length) {
+        var tw = el('div', 'span'); tw.appendChild(el('div', 'gname', 'subject'));
+        var ts = el('div', 'seg');
+        d.tabs.forEach(function (t) {
+          var b = btn(t.label, function () { H.tab = t.id; H.send({ t: 'tab', id: t.id }); H.patch(); });
+          H.ui.tabBtns[t.id] = b; ts.appendChild(b);
+        });
+        tw.appendChild(ts); body.appendChild(tw);
+      }
+
+      // modes: one segmented row per group
+      d.modeGroups.forEach(function (g) {
+        var set = d.modes.filter(function (m) { return m.group === g; });
+        if (!set.length) return;
+        var w = el('div', 'span'); w.appendChild(el('div', 'gname', d.modeGrouped ? g : 'mode'));
+        var seg = el('div', 'seg');
+        var mk = function (id, key, label) {
+          var b = btn('', function () { H.send({ t: 'mode', group: g, id: id }); H.setModeLocal(g, id); });
+          if (key) b.appendChild(el('span', 'k', key));
+          b.appendChild(document.createTextNode(label));
+          H.ui.modeBtns[g + ' ' + (id || '')] = b; seg.appendChild(b);
+        };
+        mk(null, '0', d.offLabels[g] || 'off / current');
+        set.forEach(function (m) { mk(m.id, m.key, m.label); });
+        w.appendChild(seg); body.appendChild(w);
+      });
+
+      // toggles
+      if (d.toggles.length) {
+        var tg = el('div', 'span'); tg.appendChild(el('div', 'gname', 'toggles'));
+        d.toggles.forEach(function (t) {
+          var l = el('label', 'tog'); var cb = el('input'); cb.type = 'checkbox';
+          cb.onchange = function () { H.T = H.T || {}; H.T[t.id] = cb.checked; H.send({ t: 'toggle', id: t.id, on: cb.checked }); };
+          l.appendChild(cb); l.appendChild(document.createTextNode((t.key ? t.key + ' · ' : '') + t.label));
+          H.ui.togs[t.id] = cb; tg.appendChild(l);
+        });
+        body.appendChild(tg);
+      }
+
+      // knobs, bucketed by group
+      var groups = []; var byG = {};
+      d.knobs.forEach(function (s) {
+        var g = s.group || '';
+        if (!byG[g]) { byG[g] = []; groups.push(g); }
+        byG[g].push(s);
+      });
+      var single = groups.length === 1 && groups[0] === '';
+      groups.forEach(function (g, gi) {
+        var container;
+        if (single) { container = el('div', 'span'); container.appendChild(el('div', 'gname', 'knobs')); }
+        else {
+          container = el('details', 'grp span'); container.open = gi === 0;
+          var sum = el('summary', null, g || 'other'); var n = el('span', 'n'); sum.appendChild(n);
+          container.appendChild(sum); H.ui.groups[g] = { det: container, n: n };
+        }
+        var grid = el('div', 'body'); container.appendChild(grid);
+        byG[g].forEach(function (s) { grid.appendChild(H.buildRow(s)); });
+        body.appendChild(container);
+      });
+      H.patch();
+    };
+
+    H.buildRow = function (s) {
+      var row = el('div', 'row'); row.dataset.knob = s.key;
+      var lab = el('div', 'lab');
+      lab.appendChild(el('span', 'name', s.label));
+      var val = el('span', 'val'); lab.appendChild(val);
+      var rs = btn('↺', function (e) {
+        H.touched[s.key] = 0;
+        H.send({ t: 'reset', key: s.key, ship: !!(e && e.shiftKey) });
+      });
+      rs.className = 'rs'; rs.title = 'reset this one · Shift: shipped value';
+      lab.appendChild(rs); row.appendChild(lab);
+      var ui = { row: row, val: val, s: s };
+      if (s.color) H.buildColor(s, row, ui); else H.buildSlider(s, row, ui);
+      if (s.source) row.appendChild(el('div', 'src', s.source));
+      H.ui.rows[s.key] = ui;
+      return row;
+    };
+
+    H.buildSlider = function (s, row, ui) {
+      var inp = el('input'); inp.type = 'range';
+      inp.min = s.min; inp.max = s.max; inp.step = s.step;
+      inp.oninput = function () { H.edit(s.key, parseFloat(inp.value)); };
+      inp.onpointerdown = function () { H.dragging = s.key; H.touched[s.key] = Date.now(); };
+      inp.onpointerup = inp.onpointercancel = function () { H.dragging = null; H.touched[s.key] = Date.now(); };
+      inp.onkeydown = function (e) { e.stopPropagation(); };
+      row.appendChild(inp); ui.inp = inp;
+    };
+
+    H.buildColor = function (s, row, ui) {
+      var sw = el('div', 'sw');
+      var swatch = el('button', 'swatch'); swatch.title = 'pick';
+      var hex = el('input', 'hex'); hex.type = 'text'; hex.spellcheck = false; hex.placeholder = '#rrggbb';
+      sw.appendChild(swatch); sw.appendChild(hex); row.appendChild(sw);
+
+      var cp = el('div', 'cp');
+      var sv = el('div', 'sv'); var svDot = el('div', 'dot'); sv.appendChild(svDot);
+      var hue = el('div', 'hue'); var hueDot = el('div', 'dot'); hue.appendChild(hueDot);
+      cp.appendChild(sv); cp.appendChild(hue);
+      var presets = el('div', 'presets');
+      ['#ffffff', '#000000', '#888888', '#F9B624', '#454545', '#F024FF', '#6B89FF', '#FF1A94', '#31CE1C']
+        .forEach(function (c) {
+          var b = el('button'); b.style.background = c; b.title = c;
+          b.onclick = function () { commit(c.toLowerCase()); };
+          presets.appendChild(b);
+        });
+      cp.appendChild(presets);
+      row.appendChild(cp);
+
+      var hsv = { h: 0, s: 0, v: 0 };
+      function paint() {
+        var hx = hsvToHex(hsv.h, hsv.s, hsv.v);
+        swatch.style.background = hx;
+        if (document.activeElement !== hex) hex.value = hx;
+        sv.style.backgroundColor = hsvToHex(hsv.h, 1, 1);
+        svDot.style.left = (hsv.s * 100) + '%'; svDot.style.top = ((1 - hsv.v) * 100) + '%';
+        hueDot.style.left = (hsv.h / 360 * 100) + '%';
+        ui.val.textContent = hx;
+      }
+      function commit(hx) { hsv = hexToHsv(hx); paint(); H.edit(s.key, hx); }
+      function fromHsv() { paint(); H.edit(s.key, hsvToHex(hsv.h, hsv.s, hsv.v)); }
+      function drag(area, onMove) {
+        area.onpointerdown = function (e) {
+          area.setPointerCapture(e.pointerId);
+          H.dragging = s.key;
+          var move = function (ev) {
+            var r = area.getBoundingClientRect();
+            var x = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width));
+            var y = Math.min(1, Math.max(0, (ev.clientY - r.top) / r.height));
+            onMove(x, y); fromHsv();
+          };
+          move(e);
+          area.onpointermove = move;
+          area.onpointerup = area.onpointercancel = function () {
+            area.onpointermove = null; H.dragging = null; H.touched[s.key] = Date.now();
+          };
+          e.preventDefault();
+        };
+      }
+      drag(sv, function (x, y) { hsv.s = x; hsv.v = 1 - y; });
+      drag(hue, function (x) { hsv.h = x * 359.99; });
+      hex.oninput = function () {
+        var h = hex.value.trim();
+        if (/^#?[0-9a-f]{6}$/i.test(h)) commit((h[0] === '#' ? h : '#' + h).toLowerCase());
+      };
+      hex.onfocus = function () { H.touched[s.key] = Date.now(); };
+      hex.onkeydown = function (e) { e.stopPropagation(); if (e.key === 'Escape') hex.blur(); };
+      swatch.onclick = function () {
+        var open = !cp.classList.contains('open');
+        document.querySelectorAll('.cp.open').forEach(function (o) { o.classList.remove('open'); });
+        if (open) cp.classList.add('open');
+      };
+      ui.setColor = function (hx) { hsv = hexToHsv(hx); paint(); };
+      ui.cp = cp;
+    };
+
+    // ------------------------------------------------------------- patch --
+    /* Bring the existing DOM in line with H.V / H.mode / H.T / H.tab. Never
+       touches a knob that was edited here in the last 600 ms or is under the
+       pointer — the echo of our own change must not fight the hand. */
+    H.patch = function () {
+      var d = H.desc, ui = H.ui;
+      if (!d || !ui) return;
+      Object.keys(ui.tabBtns).forEach(function (id) { ui.tabBtns[id].setAttribute('aria-selected', id === H.tab); });
+      d.modeGroups.forEach(function (g) {
+        var cur = H.modeOf(g) || '';
+        Object.keys(ui.modeBtns).forEach(function (k) {
+          var sp = k.indexOf(' '); if (k.slice(0, sp) !== g) return;
+          ui.modeBtns[k].setAttribute('aria-selected', k.slice(sp + 1) === cur);
+        });
+      });
+      Object.keys(ui.togs).forEach(function (id) { ui.togs[id].checked = !!(H.T && H.T[id]); });
+      var counts = {};
+      d.knobs.forEach(function (s) {
+        var r = ui.rows[s.key]; if (!r) return;
+        var live = H.live(s);
+        r.row.hidden = !live;
+        if (live) { var g = s.group || ''; counts[g] = (counts[g] || 0) + 1; }
+        if (!H.recent(s.key)) H.refreshRow(s.key);
+      });
+      Object.keys(ui.groups).forEach(function (g) {
+        var n = counts[g] || 0;
+        ui.groups[g].n.textContent = n ? '(' + n + ')' : '';
+        ui.groups[g].det.hidden = !n;
+      });
+    };
+    H.refreshRow = function (key) {
+      var r = H.ui.rows[key]; if (!r || !H.V) return;
+      var v = H.bag(key)[key];
+      if (v === undefined) return;
+      if (r.s.color) { r.setColor(String(v)); }
+      else {
+        r.val.textContent = v;
+        if (H.dragging !== key && document.activeElement !== r.inp) r.inp.value = v;
+      }
+    };
+
+    H.send({ t: 'hello' });
+    H.beat = setInterval(function () { if (H.desc && !H.dead) H.send({ t: 'ping' }); }, 2000);
+    var hello = setInterval(function () {
+      if (H.desc || H.dead) clearInterval(hello); else H.send({ t: 'hello' });
+    }, 400);
+  }
+
+  // ------------------------------------------------------------ strip -----
+  var strip = document.getElementById('strip');
+  function renderStrip() {
+    strip.textContent = '';
+    Object.keys(seen).forEach(function (t) {
+      strip.appendChild(btn(t, function () { activate(t); }, active === seen[t]));
+    });
+  }
+  function activate(title) {
+    var H = seen[title]; if (!H) return;
+    active = H;
+    Object.keys(seen).forEach(function (t) { seen[t].el.hidden = seen[t] !== H; });
+    try { localStorage.setItem(ACTKEY, title); } catch (e) {}
+    renderStrip();
+  }
+  function remove(H) {
+    H.el.remove(); delete seen[H.title]; clearInterval(H.beat);
+    if (active === H) { active = null; var rest = Object.keys(seen); if (rest.length) activate(rest[0]); }
+    renderStrip();
+  }
+  function add(title) {
+    if (ONLY && title !== ONLY) return;
+    if (seen[title]) { if (!seen[title].dead) seen[title].send({ t: 'hello' }); return; }
+    var note = document.getElementById('note'); if (note) note.remove();
+    var H = new Harness(title);
+    seen[title] = H;
+    document.getElementById('host').appendChild(H.el);
+    var want = null; try { want = localStorage.getItem(ACTKEY); } catch (e) {}
+    if (!active || want === title) activate(title); else renderStrip();
+  }
+
+  // Discovery. Every harness answers `who` on the shared channel with its title.
+  var disc = HBus('harness:__all__');
+  disc.onmessage = function (ev) { if ((ev.data || {}).t === 'iam') add(ev.data.title); };
+  function ask() { disc.postMessage({ t: 'who' }); }
+  ask();
+  setInterval(ask, 1500);       // the project tab reloads constantly; re-greet returning harnesses
+  if (ONLY) add(ONLY);
+
+  function bye() { Object.keys(seen).forEach(function (k) { seen[k].send({ t: 'bye' }); }); }
+  addEventListener('beforeunload', bye);
+  addEventListener('pagehide', bye);
+
+  // Close any open colour popover on an outside click.
+  addEventListener('pointerdown', function (e) {
+    if (e.target.closest('.cp') || e.target.closest('.swatch')) return;
+    document.querySelectorAll('.cp.open').forEach(function (o) { o.classList.remove('open'); });
+  });
+
+  // Keys drive the ACTIVE harness: mode keys, toggle keys, 0 = off.
+  addEventListener('keydown', function (e) {
+    var H = active;
+    if (!H || !H.desc || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (/^(INPUT|TEXTAREA)$/.test(e.target.tagName || '')) return;
+    var k = e.key;
+    if (k === 'Escape') { document.querySelectorAll('.cp.open').forEach(function (o) { o.classList.remove('open'); }); return; }
+    if (k === '0') {
+      H.desc.modeGroups.forEach(function (g) { H.send({ t: 'mode', group: g, id: null }); H.setModeLocal(g, null); });
+      return;
+    }
+    var m = H.desc.modes.filter(function (m) { return m.key === k; })[0];
+    if (m) { H.send({ t: 'mode', group: m.group, id: m.id }); H.setModeLocal(m.group, m.id); return; }
+    var t = H.desc.toggles.filter(function (t) { return t.key === k; })[0];
+    if (t) { H.T = H.T || {}; H.T[t.id] = !H.T[t.id]; H.send({ t: 'toggle', id: t.id, on: H.T[t.id] }); H.patch(); }
+  });
+})();
+</script>

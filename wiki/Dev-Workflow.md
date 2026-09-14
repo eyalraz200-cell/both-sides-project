@@ -14,6 +14,25 @@ the content changed (commit it — see [Data](Data.md)) — but does **not** wat
 spreadsheet edits need a restart. `--port` and `--watch` narrow a second
 instance (next section).
 
+### One worktree + one server per chat (`--port 0`)
+
+Several Claude chats editing one checkout all feed the same `:8080`, so every chat's edit
+reloads every tab. The fix is isolation, not a narrower watch:
+
+```
+git worktree add ../both-sides-<topic> -b <topic>   # one per chat / task
+cd ../both-sides-<topic> && python3 server.py --port 0   # prints its own free port
+```
+
+Each worktree has its own files and its own server, so a tab only reloads for the edits of
+the chat that owns it, and two chats can never half-apply edits to the same `style.css`.
+Merge the branch when the task is done (`git merge <topic>` from `main`, then
+`git worktree remove ../both-sides-<topic>`). The harness bus (`/__bus__`) is per server too:
+open that worktree's `_debug-panel.html` on the same port.
+
+`reload.js` saves `scrollY` before an auto-reload and restores it after `load` (then
+`ScrollTrigger.refresh()`), so a reload lands back on the fold under review.
+
 ### A second, narrower instance (`--port` / `--watch`)
 
 ```
@@ -114,6 +133,10 @@ numbers in the source.
 **Recipe:**
 
 1. Copy `~/.claude/templates/harness-panel.js` → `_debug-<thing>.js` in the project root.
+   **Regenerating an existing harness from a newer template** = its head up to `END CONFIG`
+   + the template's tail — but a viewport-gated harness ends in `});`, not the template's
+   `})();`. Get that wrong and every global in the file dies with an opaque
+   "(intermediate value) is not a function" on load.
 2. Splice the new CONFIG between `var CONFIG = {` and the `END CONFIG` marker line.
    Fields: `title`, `sliders[{key, label, min, max, step, value, source}]`,
    `apply(v, mode, tab, on)`, `init(api)`, `custom(box, api, doc)`, `summary(v, mode)`,
@@ -193,10 +216,10 @@ for — the **remote panel**:
 - It is a generic, project-agnostic page. Each harness sends it a descriptor (title, modes,
   toggles, knobs, ranges, `source` strings, Go label) and it renders whatever that
   describes, so the one file serves every harness.
-- **One tab hosts every harness on the page.** It asks `who` on a shared
-  `harness:__all__` channel; each harness answers with its title, and each answer becomes
-  a collapsible section. The first section in is open and owns the keyboard; clicking a
-  section makes it the one the keys drive. `?t=<title>` narrows the tab to one
+- **One tab hosts every harness on the page, one at a time.** It asks `who` on a shared
+  `harness:__all__` channel; each harness answers with its title and becomes a pill in the
+  top strip. Only the picked harness is rendered and the keys drive it (the pick is
+  remembered in `localStorage`). `?t=<title>` narrows the tab to one
   harness — an opt-in, never handed out: it silently hides every other harness, which
   reads as "only one harness showed up". The Pop-out clipboard URL is the bare one.
 - Each section then talks to its harness over `harness:<panel title>`, which is why two
@@ -240,12 +263,27 @@ made the real device the one place the panel could not reach.
 - The discovery `who` repeats every 1.5s, so **reloading the project tab re-hands its
   harnesses to the remote** without reloading the remote. A title already known that
   answers again is a reloaded page and gets greeted a second time.
-- Values echo both ways, but the remote never rebuilds its knob list while you are
-  editing: "busy" is pointer-down on a knob **or** a local edit within the last 500ms.
-  While busy, an incoming `state` (or a re-sent, unchanged `desc` — discovery re-greets
-  every live harness every 1.5s) is patched into the existing inputs in place, sparing
-  the key being edited, and the full rebuild is deferred until idle, re-checked on
-  firing. Slider ticks are coalesced to one `set` per key per 40ms and carry a `seq`;
+- **Build once, patch forever.** The remote builds a harness's DOM once per descriptor
+  (a changed descriptor = an edited harness after a reload) and never rebuilds on a
+  timer. Every `state` echo (and the unchanged `desc` re-sent on each 1.5s discovery
+  round) is patched into the existing inputs in place, skipping any knob under the
+  pointer or edited locally in the last 600ms. This is what makes the colour picker
+  work: v1 rebuilt on every echo and tore the input down under the open dialog.
+- **Own colour picker** — a swatch opens an inline hue strip + saturation/value square +
+  hex field + preset swatches (the six group colours, white, black, grey). Never
+  `<input type=color>`: the native dialog is unreliable in webviews and on phones.
+- **Knobs are scoped and grouped.** A knob with `modes: ['a', 'b']` only shows while one
+  of those modes is picked (the page computes it into `off`; the remote applies the same
+  rule locally so a mode click reshapes the list before the echo lands). Knobs with a
+  `group` sit in collapsible sections, the first open, each showing its live count. Two
+  columns from 700px.
+- **Per-knob reset.** Every row has `↺`: click = that knob back to the last checkpoint
+  (`{t:'reset', key}`), Shift-click = its shipped value (`ship: true`). The toolbar Reset
+  still does the whole harness.
+- **Labels are what you see change**, in plain words (`gap between dots`, `wipe
+  duration`), never CSS names; the property and `file:line` live in `source`, shown small
+  under the knob and included in Copy.
+- Slider ticks are coalesced to one `set` per key per 40ms and carry a `seq`;
   the harness drops a `set` older than the last one it applied for that key (parallel
   HTTP connections do not preserve order) and throttles its own `state` echo to one per
   80ms. Mode buttons/keys repaint their own selection **optimistically** — waiting for
