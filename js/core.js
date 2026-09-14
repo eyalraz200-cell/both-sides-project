@@ -4,6 +4,25 @@ window.scrollTo(0, 0);
 const canvas = document.getElementById("canvas");
 const ctx    = canvas.getContext("2d");
 
+// ── Is this a LOCAL dev host? ───────────────────────────────────────────────
+// The one gate for anything that must never reach the deployed site (GitHub
+// Pages): the fold badge and its mobile picker, and reload.js's mtime poller,
+// all ask this. Private/loopback/Bonjour/file:// only — the LAN ranges are in
+// here because a phone hitting the Mac directly (http://192.168.x.x:8080) is
+// still development, and gating those out silently turned the dev aids off on
+// device. Any public host is NOT local, so nothing below ever ships.
+// Deliberately a plain function on window, not a module export: every script
+// here is a classic <script> sharing one global scope.
+function isLocalHost() {
+  const host = location.hostname;
+  return host === "localhost" || host === "127.0.0.1" || host === "[::1]" ||
+    host === "" ||                       // file://
+    host.endsWith(".local") ||           // Bonjour name, e.g. testing on a phone
+    /^10\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+}
+
 // ── Mobile breakpoint ──
 // One shared breakpoint for the whole page, matching trigger.css's own 600px
 // article breakpoint. JS layout code that needs to scale a desktop px

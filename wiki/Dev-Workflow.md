@@ -95,6 +95,18 @@ A small fixed chip in the **top-left** corner of `project.html` showing which fo
 on — `#foldNumberBadge` (`.fold-number-badge` in style.css, driven by
 `updateFoldNumberBadge()` in js/nav.js off `currentPage + 1`).
 
+**DEV ONLY — it must NEVER appear on the deployed site** (explicit, binding instruction).
+The gate is `isLocalHost()` (js/core.js): js/nav.js only looks the element up when that is
+true, so on any public host `foldNumberBadge` is `null`, the `.is-visible` class is never
+added, and the base rule's `display: none` holds. Both the Ctrl+Shift+F listener and the
+mobile picker live inside that same branch, so nothing can switch it back on — a stale
+`foldNumberBadgeVisible: "1"` in a visitor's `localStorage` included. `isLocalHost()` counts
+loopback, `file://`, `.local` Bonjour names and the private LAN ranges (a phone hitting the
+Mac at `http://192.168.x.x:8080` is still development); everything else is not local.
+`reload.js` keeps its **own** copy of that test on purpose — it is what picks up the fix
+when js/core.js is the file that failed to parse, so it must not depend on js/core.js
+having run. Keep the two in sync.
+
 **The number alone — that is the standard for fold numbers wherever they're shown on
 screen.** No `@fold` prefix, no page id, no label, no control. It's `pointer-events:
 none`, so it never eats a click on the canvas.
@@ -119,7 +131,7 @@ navigation aid.
 reason it can never eat a click on the canvas, and the keyboard shortcut already covers it.
 Verified — clicking it at 1440px builds no panel.
 
-On by default; **Ctrl+Shift+F** toggles it and the choice persists in `localStorage`
+On by default **on a local host**; **Ctrl+Shift+F** toggles it and the choice persists in `localStorage`
 (`foldNumberBadgeVisible`, read/written inside `try/catch` — browsers with storage blocked
 throw a `SecurityError` on access, which would otherwise take the whole script down).
 The first paint happens at load, since @fold1 is the starting state and never crosses
