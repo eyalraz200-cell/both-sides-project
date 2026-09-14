@@ -397,7 +397,12 @@ stylesheet value; edited rows carry an accent dot. `Esc` or **Clear** drops the 
   reports; the stylesheet uses logical ones.
 - It rides the bus like everything else (`harness:__inspect__`), so it works with the page
   on a phone and the panel on the laptop. Its discovery answer carries `inspect: true` and
-  the panel does not list it as a harness.
+  the panel does not list it as a harness. Messages are **addressed per page** (`inst` /
+  `to`, the harness convention): the page you picked on last is the one being edited, and
+  the phone, a desktop tab and a headless probe on the same bus never restyle each other.
+- **Copy never falls back to an alert.** VS Code's Simple Browser refuses the clipboard
+  API; when the write fails the payload opens in a selectable sheet inside the panel,
+  pre-selected and copied via `execCommand` where that still works. Same for a harness Copy.
 
 ## Currently in the repo
 

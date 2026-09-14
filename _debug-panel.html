@@ -117,6 +117,14 @@
   #flash { position: fixed; top: 10px; right: 12px; z-index: 9; color: var(--accent);
            font-size: .9em; background: var(--bg); padding: 2px 6px; border-radius: 4px; }
   #flash:empty { display: none; }
+  #copySheet { position: fixed; inset: 12px; z-index: 20; background: var(--bg-rail);
+               border: 1px solid var(--line-el); border-radius: 8px; display: flex;
+               flex-direction: column; padding: 10px; gap: 8px; }
+  #copySheet .cs-head { display: flex; justify-content: space-between; align-items: center;
+                        gap: 8px; color: var(--text-dim); font-size: .9em; }
+  #copySheet textarea { flex: 1; font: inherit; background: var(--bg); color: var(--text);
+                        border: 1px solid var(--line-el); border-radius: 6px; padding: 8px;
+                        resize: none; white-space: pre; }
   .note { color: var(--text-dim); padding: 24px 14px; }
   @media (max-width: 640px) {
     #shell { display: block; }
@@ -280,6 +288,31 @@
     else if (h < 240) { g = x; b = c; } else if (h < 300) { r = x; b = c; } else { r = c; b = x; }
     var to = function (q) { return ('0' + Math.round((q + m) * 255).toString(16)).slice(-2); };
     return '#' + to(r) + to(g) + to(b);
+  }
+
+  // --------------------------------------------------------- clipboard ----
+  /* The clipboard API needs a secure context AND a permitted frame — VS Code's
+     Simple Browser refuses it. When the write fails the text goes into a sheet
+     the user can select and copy by hand, never into an alert (which cannot be
+     selected from at all). */
+  function toClipboard(text, what) {
+    var fail = function () { copySheet(text, what); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { flash('copied · ' + what); }, fail);
+    } else fail();
+  }
+  function copySheet(text, what) {
+    var old = document.getElementById('copySheet'); if (old) old.remove();
+    var wrap = el('div'); wrap.id = 'copySheet';
+    var head = el('div', 'cs-head');
+    head.appendChild(el('span', null, what + ' — the clipboard was refused here; select all and copy'));
+    var x = btn('Close', function () { wrap.remove(); }); head.appendChild(x);
+    var ta = el('textarea'); ta.value = text; ta.readOnly = true; ta.spellcheck = false;
+    ta.onkeydown = function (e) { e.stopPropagation(); };
+    wrap.appendChild(head); wrap.appendChild(ta);
+    document.body.appendChild(wrap);
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); flash('copied · ' + what); } catch (e) {}
   }
 
   // ------------------------------------------------------------ colour ----
@@ -456,11 +489,7 @@
         return;
       }
       if (m.t === 'state') { H.adopt(m); if (H.desc) H.patch(); return; }
-      if (m.t === 'payload') {
-        navigator.clipboard.writeText(m.text).then(
-          function () { flash('copied · ' + H.title); },
-          function () { alert(m.text); });
-      }
+      if (m.t === 'payload') toClipboard(m.text, H.title);
     };
 
     // ------------------------------------------------------------- hosts --
@@ -721,6 +750,7 @@
     title: '__inspect__',
     ch: HBus('harness:__inspect__'),
     chain: null, i: -1, props: null, edits: {}, rect: null, sel: '',
+    host: null,                            // the page whose pick we are editing
     touched: {}, dragging: null,
     desc: { modes: [], toggles: [] },      // so the harness key handler stays quiet
     ui: null
@@ -730,7 +760,7 @@
   INS.bar = el('div', 'bar'); INS.body = el('div');
   INS.el.appendChild(INS.bar); INS.el.appendChild(INS.body);
   document.getElementById('host').appendChild(INS.el);
-  INS.send = function (m) { INS.ch.postMessage(m); };
+  INS.send = function (m) { if (INS.host) m.to = INS.host; INS.ch.postMessage(m); };
   INS.recent = function (k) { return INS.dragging === k || Date.now() - (INS.touched[k] || 0) < 600; };
 
   // Which properties, and how each is edited. `kind`: num (slider, px unless
@@ -925,6 +955,10 @@
   INS.ch.onmessage = function (ev) {
     var m = ev.data || {};
     if (m.t === 'picked') {
+      /* Whichever page was picked on LAST is the one being edited — the phone
+         and the desktop tab may both be open, and a pick is the user saying
+         "this one". Messages from any other page are ignored from then on. */
+      INS.host = m.inst || null;
       INS.chain = m.chain; INS.i = m.i; INS.edits = {}; INS.touched = {};
       if (!INS.ui) INS.build();
       var note = document.getElementById('note'); if (note) note.remove();
@@ -933,18 +967,15 @@
       INS.patch();
       return;
     }
+    if (m.inst && INS.host && m.inst !== INS.host) return;   // not the page we are editing
     if (m.t === 'props') {
       if (m.i !== INS.i) INS.i = m.i;
       INS.props = m.computed; INS.edits = m.edits || {}; INS.rect = m.rect; INS.sel = m.sel;
       INS.patch();
       return;
     }
-    if (m.t === 'payload') {
-      navigator.clipboard.writeText(m.text).then(function () { flash('copied · element edits'); },
-                                                function () { alert(m.text); });
-      return;
-    }
-    if (m.t === 'none') { INS.none(); return; }
+    if (m.t === 'payload') { toClipboard(m.text, 'element edits'); return; }
+    if (m.t === 'none') { if (!m.inst || m.inst === INS.host) INS.none(); return; }
   };
   INS.ch.postMessage({ t: 'hello' });
   document.getElementById('inspectRow').onclick = function () { activate('__inspect__'); };
