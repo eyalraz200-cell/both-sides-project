@@ -4213,6 +4213,34 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      ::before, centred 4px above the button's box. The floating card carries the
      bare title; the card's own open IS the affordance. (Its twin, a chevron,
      was judged in the same compare/ pass and declined with it.) */
+  /* The close button — top-LEFT of the open card, opposite the מקרא title
+     (explicit instruction). Absolutely placed off the bar's own padding so it
+     sits on the card's top band whatever the card is doing; `top` is written
+     per frame by fold6MLegendPaintCard, which rides it with the title. A bare
+     glyph, in the title's own grey, at the title's size — it is a quiet way out
+     of the card, not a second piece of chrome competing with מקרא. */
+  .fold6-mlegend-close {
+    position: absolute;
+    left: 12px;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #767676;
+    font: 18px/1 'Assistant', sans-serif;
+    cursor: pointer;
+    opacity: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .fold6-mlegend-close:focus,
+  .fold6-mlegend-close:focus-visible { outline: none; }
+  /* The glyph is a pseudo-element rather than text content so nothing can
+     select it and no font fallback can swap it for a different-looking ×. */
+  .fold6-mlegend-close::before {
+    content: "\00d7";
+  }
+
   /* The rows. No frame of its own any more — the card behind the bar is the
      frame — just the gap under the title row and a little inner breathing room.
      Its opacity rides the card's HEIGHT step (fold6MLegendPaintCard), so the
@@ -4282,8 +4310,23 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      back at different widths. */
   .fold6-mlegend-col.is-coalition,
   .fold6-mlegend-col.is-change {
-    width: 160px;
-    max-width: 160px;
+    /* SOLVED from the card's own width, never a literal (explicit instruction —
+       "all of the group cards inside it visible fully"). A flat 160px is wider
+       than half the card once the card is inset to the title blocks' gutter:
+       two columns + the 12px gap came to 332 inside 318, so the left column
+       hung 6px outside the card and clipped its three group cards.
+       The card is exactly `--card-w` wide (its gaps are the title blocks' own
+       gutter, and that gutter is defined as half of what is left over), so the
+       column is half of that minus the chrome between the two: the bar's 12px
+       side padding twice, the panel's 4px twice, and the 12px column gap = 44.
+       Keep --mlg-col-chrome in step with those three if any of them moves.
+       `width` as well as `max-width`, and both in px rather than a percentage:
+       `fold6MFlyMeasure` (js/groups.js) reads this computed max-width to work
+       out the wrap the @fold4 flight has to freeze the labels at, and a
+       percentage would come back un-resolved. */
+    --mlg-col-chrome: 44px;
+    width: calc((min(480px, 100vw - 48px) - var(--mlg-col-chrome)) / 2);
+    max-width: calc((min(480px, 100vw - 48px) - var(--mlg-col-chrome)) / 2);
     flex: 0 0 auto;
     /* The rows stretch to the column instead of shrink-wrapping their text —
        this is what makes every card the same width. */

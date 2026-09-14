@@ -585,8 +585,19 @@ All four corners are rounded, since there is no screen edge for a flat side to s
 behind them is that tint now, and tint-on-tint left six invisible cards.
 
 It keeps the desktop note's 14px/600/`#767676` title type and carries **nothing but the
-title** (explicit instruction): no chevron, no grab handle, no group swatches on the title
-line — the card's own open is the affordance. *Removed — don't reintroduce:* the handle
+title and a `×`** (explicit instruction): no chevron, no grab handle, no group swatches on
+the title line. The **close button** (`.fold6-mlegend-close`, `fold6MobileCloseBtnEl`) sits
+at the open card's **top-left**, opposite the מקרא title and centred on its line, in the
+same grey at the same size — a quiet way out, not a second piece of chrome competing with
+the title. It belongs to the OPEN pose: its opacity rides the height step and it is
+pointer-dead below full, so a tap on the closed pill can never land on it. **Its opacity is
+written as an explicit number every frame, never `""`** — the CSS base is `opacity: 0` so
+it cannot flash before the first paint, and clearing the inline value falls straight back
+to that and leaves the button permanently invisible. **A tapped `×` is resolved in
+`fold6MLegendDragEnd`, not by its own `click` handler**: the bar captures the pointer on
+`pointerdown`, which retargets the resulting click to the bar, so the button's listener
+never sees a real tap — it is kept only for keyboard activation (`e.detail === 0`, the same
+test the title button uses). *Removed — don't reintroduce:* the handle
 (`.fold6-mlegend-btn::before`, a 28×1.5px `#d4d3d8` pill centred 4px above the button's box)
 and the chevron that was judged against it. **`.fold6-mlegend-card` is the ONE frame in every state** (explicit instruction — "it should
 just be part of the frame"): closed, that card IS the מקרא pill; open, the same box has
@@ -673,6 +684,18 @@ still opening, and the flight aims at the rows' REST positions).
   close's final paint runs after the panel is hidden (hiding it changes the bar height
   everything is placed off). At rest open the card spans the bar, so the ACLED note flowing
   into the panel at `@fold6` grows it for free.
+- **The two columns are SOLVED from the card's width, never a literal**
+  (`.fold6-mlegend-col.is-coalition` / `.is-change`, style.css). The card is exactly
+  `--card-w` wide — its side gaps are the title blocks' own gutter, which is defined as
+  half of what is left over — so each column is half of that minus the chrome between them:
+  the bar's 12px side padding twice, the panel's 4px twice and the 12px column gap, i.e.
+  `--mlg-col-chrome` (44px). Keep that in step if any of the three moves. The flat **160px**
+  it replaced was wider than half the card once the card was inset to the gutter: two
+  columns plus the gap came to 332 inside 318, so the left column hung 6px outside the card
+  and **clipped its three group cards**. Both `width` and `max-width` are set, and both in
+  px rather than a percentage, because `fold6MFlyMeasure` reads this computed `max-width` to
+  work out the wrap the `@fold4` flight freezes the labels at — a percentage comes back
+  un-resolved. Verified: nothing clips and the flight still lands exactly, at 390 and 560.
 - **The title drags.** A press on the button scrubs `fold6MLegendOpenRaw` with the finger
   (up = opening, over the bar's open height minus the closed pill), painting each frame,
   and release snaps to the nearer pose through `fold6SetMobileLegendOpen`; a press that
