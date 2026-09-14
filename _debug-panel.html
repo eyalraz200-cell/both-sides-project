@@ -84,7 +84,7 @@
   #strip button.dormant { opacity: .45; cursor: default; border-style: dashed; }
   #strip button[aria-selected="true"] .pf { opacity: .55; }
   /* The Element row: pinned above the harnesses, shown once something is picked.
-     Not a harness — it is whatever the last Cmd+right-click / double-tap hit. */
+     Not a harness — it is whatever the last Cmd+click / double-tap hit. */
   #inspectRow { border-radius: var(--radius); text-align: left; display: flex; flex-direction: column;
                 gap: 1px; padding: 6px 8px; margin-bottom: 8px; border-style: dashed; }
   #inspectRow[hidden] { display: none; }
@@ -237,7 +237,7 @@
     </div>
   </nav>
   <main id="main"><span id="flash"></span><div id="host"><p class="note" id="note">
-    Looking for the page… Cmd + right-click (or double-tap on a phone) any element to
+    Looking for the page… Cmd + click (or double-tap on a phone) any element to
     inspect it; harnesses appear here as the page announces them.
   </p></div></main>
 </div>
@@ -766,8 +766,8 @@
     if (document.getElementById('note')) return;
     var n = el('p', 'note'); n.id = 'note';
     n.textContent = Object.keys(dormantRows).length
-      ? 'The harnesses on this page only run under another breakpoint. Cmd + right-click (or double-tap on a phone) any element to inspect it.'
-      : 'No harness on the open page. Cmd + right-click (or double-tap on a phone) any element to inspect it.';
+      ? 'The harnesses on this page only run under another breakpoint. Cmd + click (or double-tap on a phone) any element to inspect it.'
+      : 'No harness on the open page. Cmd + click (or double-tap on a phone) any element to inspect it.';
     document.getElementById('host').appendChild(n);
   }
 
@@ -783,7 +783,7 @@
   }
 
   /* ---- the element inspector ------------------------------------------------
-     Cmd+right-click (desktop) or a double-tap (phone) on the page picks an
+     Cmd+click (desktop) or a double-tap (phone) on the page picks an
      element; _debug-inspect.js sends its nesting chain here and this section
      shows it: a breadcrumb to choose WHICH level is being styled — a text sits
      inside a card inside a column, and the padding you want is rarely on the

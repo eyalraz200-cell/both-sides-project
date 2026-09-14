@@ -3,7 +3,7 @@
    Copy into the project as _debug-inspect.js, load it after _debug-bus.js,
    delete it with the last _debug-*.js.
 
-   What it does: Cmd + right-click (desktop) or a double-tap (phone) on any
+   What it does: Cmd + click (desktop) or a double-tap (phone) on any
    element opens an "Element" tab in the harness panel (_debug-panel.html) with
    the element's NESTING CHAIN — pick which level you are styling — and live
    style controls. Edits land as inline overrides here; Copy hands back the
@@ -141,12 +141,20 @@
     sendPicked();
     sendProps();
   }
-  // Desktop: Cmd + right-click. The context menu is the price of the modifier
-  // being on the mouse; preventDefault keeps it closed.
-  addEventListener('contextmenu', function (e) {
-    if (!e.metaKey) return;
+  // Desktop: Cmd + click. Captured on mousedown so the page's own handlers
+  // (drag-and-drop, the legend filter, links) never see it — a pick must not
+  // also act on the thing picked. The paired click is swallowed too.
+  var swallowClick = false;
+  addEventListener('mousedown', function (e) {
+    if (!e.metaKey || e.button !== 0) return;
     e.preventDefault(); e.stopPropagation();
+    swallowClick = true;
     pick(document.elementFromPoint(e.clientX, e.clientY));
+  }, true);
+  addEventListener('click', function (e) {
+    if (!swallowClick) return;
+    swallowClick = false;
+    e.preventDefault(); e.stopPropagation();
   }, true);
   // Phone: two taps within 350ms and 30px. touchend, not click — a synthetic
   // click on a phone comes 300ms late and dblclick is unreliable on iOS.

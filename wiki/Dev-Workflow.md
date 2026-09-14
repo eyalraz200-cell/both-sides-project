@@ -378,7 +378,7 @@ made the real device the one place the panel could not reach.
 
 ### The element inspector (`_debug-inspect.js` + the panel's Element tab)
 
-**Cmd + right-click** an element on the desktop page, or **double-tap** it on a phone, and
+**Cmd + click** an element on the desktop page, or **double-tap** it on a phone, and
 the panel opens an **Element** row above the harness list with that element's **nesting
 chain** as a breadcrumb — `div.layout › section#page-1 › div.section-text › h2` — because
 the padding you want is rarely on the thing you hit. Pick the level (click, or `[` out /
