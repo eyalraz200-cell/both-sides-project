@@ -18,6 +18,18 @@
   if (!window.HBus) return;
   var CH = HBus('harness:__inspect__');
   var DISC = HBus('harness:__all__');
+  /* INSTANCE ID — several pages share one bus (a phone, a desktop tab, a headless
+     probe). Every message out carries `inst`; commands in carry `to`, and one
+     addressed to another page is ignored. Otherwise a slider dragged for one
+     page restyled every page, and every page answered a Copy. Per tab, not per
+     load, so a reload keeps the panel talking to the same page. */
+  var INST = null;
+  try { INST = sessionStorage.getItem('harness:inst'); } catch (e) {}
+  if (!INST) {
+    INST = Math.random().toString(36).slice(2, 8);
+    try { sessionStorage.setItem('harness:inst', INST); } catch (e) {}
+  }
+  function post(m) { m.inst = INST; CH.postMessage(m); }
 
   // Own chrome and the dev aids never get picked.
   var IGNORE = '#foldNumberBadge, .fold-picker, .hp-panel, .hp-chip, .hp-manual, #hpInspectBox';
@@ -162,12 +174,12 @@
   }
   function editsOf(el) { return edits.get(el) || {}; }
   function sendPicked() {
-    CH.postMessage({ t: 'picked', chain: chain.map(describe), i: sel });
+    post({ t: 'picked', chain: chain.map(describe), i: sel });
   }
   function sendProps() {
     var el = chain[sel]; if (!el) return;
     var r = el.getBoundingClientRect();
-    CH.postMessage({ t: 'props', i: sel, sel: selectorFor(el), computed: computedOf(el),
+    post({ t: 'props', i: sel, sel: selectorFor(el), computed: computedOf(el),
                      edits: editsOf(el), rect: { w: Math.round(r.width), h: Math.round(r.height) } });
   }
   function setProp(el, camel, val) {
@@ -228,8 +240,10 @@
   // ------------------------------------------------------------ messages --
   CH.onmessage = function (ev) {
     var m = ev.data || {};
+    if (m.inst) return;                                   // another page's echo
+    if (m.to && m.to !== INST) return;                    // addressed elsewhere
     var el = chain[sel];
-    if (m.t === 'hello') { if (chain.length) { sendPicked(); sendProps(); } else CH.postMessage({ t: 'none' }); return; }
+    if (m.t === 'hello') { if (chain.length) { sendPicked(); sendProps(); } else post({ t: 'none' }); return; }
     if (m.t === 'select') {
       if (chain[m.i]) { sel = m.i; startTrack(); sendProps(); }
       return;
@@ -238,16 +252,16 @@
     if (m.t === 'set')   { setProp(el, m.prop, m.val); sendProps(); return; }
     if (m.t === 'unset') { unsetProp(el, m.prop); sendProps(); return; }
     if (m.t === 'revert'){ revert(el); sendProps(); return; }
-    if (m.t === 'copy')  { CH.postMessage({ t: 'payload', text: payload() }); return; }
-    if (m.t === 'clear') { chain = []; sel = -1; stopTrack(); CH.postMessage({ t: 'none' }); return; }
+    if (m.t === 'copy')  { post({ t: 'payload', text: payload() }); return; }
+    if (m.t === 'clear') { chain = []; sel = -1; stopTrack(); post({ t: 'none' }); return; }
   };
   DISC.onmessage = function (ev) {
     if ((ev.data || {}).t === 'who') {
-      try { DISC.postMessage({ t: 'iam', title: '__inspect__', inspect: true, hasSelection: chain.length > 0 }); } catch (e) {}
+      try { DISC.postMessage({ t: 'iam', title: '__inspect__', inspect: true, inst: INST, hasSelection: chain.length > 0 }); } catch (e) {}
     }
   };
   addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && chain.length) { chain = []; sel = -1; stopTrack(); CH.postMessage({ t: 'none' }); }
+    if (e.key === 'Escape' && chain.length) { chain = []; sel = -1; stopTrack(); post({ t: 'none' }); }
   });
 
   if (document.readyState === 'loading') addEventListener('DOMContentLoaded', restore); else restore();
