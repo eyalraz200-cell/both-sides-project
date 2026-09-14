@@ -554,32 +554,50 @@ persistent **bottom sheet** pinned to the bottom edge of the viewport (`js/group
 ╭──────────────────────────────────╮  ← open: the SAME card, grown UPWARD out of the
 │ מחנה הימין          גוש השינוי  │     bottom edge (height step)
               ╭──────────────╮
-              │  ──  מקרא    │          ← the pill stays put, a TAB joined to the sheet
-╭─────────────┘              └────────╮
-│ 3 coalition rows │ 3 change rows    │
-│ איסוף הנתונים / ACLED note …        │
-└─────────────────────────────────────┘  ← the bottom edge IS the screen edge
+              │  ──  מקרא    │          ← the pill stays put, a TAB joined to the card
+ ╭────────────┘              └───────╮
+ │ 3 coalition rows │ 3 change rows  │
+ │ איסוף הנתונים / ACLED note …      │
+ ╰───────────────────────────────────╯  ← 12px clear of all three screen edges
 
-              ╭──────────────╮          ← closed: the same pill on the screen edge — the
+              ╭──────────────╮          ← closed: the same pill, floating — the
               │  ──  מקרא    │            grab handle over the bare title, sized
               ╰──────────────╯            title + 44 each side × 40 high
 ```
 
-**The sheet is a white card** (explicit instruction — `#fff`, not the desktop note's tint)
-with **rounded top corners only** (`border-radius: 16px 16px 0 0`), **full bleed** (the bar
-has no side inset; the content keeps a 12px side inset via the bar's padding) and a soft
-**hairline** (`0.5px solid #d6d6d6` on the top and sides — never the bottom, that edge
-is the screen's) with a faint **upward shadow** (`0 -4px 24px rgba(0,0,0,.06)`). It keeps the desktop note's 14px/600/`#767676` title type and carries **no chevron**
+**It is a floating ACLED-note card.** Chosen in a `compare/` pass against the flush white
+bottom sheet it replaced, the ACLED tint winning over a white sheet that still read as
+chrome. The skin is the desktop note's (`.fold6-note-card`): **a tint, no border, no
+shadow**, `--mlg-radius` **8px**. The tint is applied **opaque** (`--mlg-fill`, `#F4F3F6`)
+rather than as the note's own `rgba(0,0,0,.035)` — this card has to cover the title block
+and the canvas behind it, and a translucent one let the dashed frame show straight through,
+which reads as the title sitting on top. It **floats 12px clear of the sides and the screen
+bottom**: `--mlg-inset` (style.css) and `FOLD6_MLEGEND_BOTTOM_MOBILE_PX` (js/groups.js) are
+**one decision in two files** — the same gap off all three edges, so move them together.
+All four corners are rounded, since there is no screen edge for a flat side to sit on; the
+מקרא pill overlaps the top edge by 1px in the middle and carries the same fill, so the seam
+is invisible. **The six group rows are `#fff`**, not the tint they used to carry: the card
+behind them is that tint now, and tint-on-tint left six invisible cards.
+
+It keeps the desktop note's 14px/600/`#767676` title type and carries **no chevron**
 (explicit instruction): the affordance is the **grab handle** — `.fold6-mlegend-btn::before`,
 a 28×1.5px `#d4d3d8` pill centred 4px above the button's box (`top: -4px`; the button has no
-padding-top — all tuned by eye). The button is
-the **bare title** — no chevron, and no group swatches on the title line (judged in a
-harness, declined). The **title and handle live in the pill** (`.fold6-mlegend-tab`,
-`fold6MobileTabEl`) — ONE element in every state (explicit instruction): closed, it is the
-whole legend; open, it stays exactly where it is as a **tab joined to the top of the sheet**
-(same box, fill, hairline and handle by construction — nothing is restyled between poses).
-It overlaps the sheet by 1px and paints after it, so the sheet's top hairline is hidden
-under the pill's fill where the two meet.
+padding-top — all tuned by eye). The button is the **bare title** — no chevron, and no group
+swatches on the title line (judged in a harness, declined). The **title and handle live in
+the pill** (`.fold6-mlegend-tab`, `fold6MobileTabEl`) — ONE element in every state (explicit
+instruction): closed, it is the whole legend; open, it stays exactly where it is as a **tab
+joined to the top of the card** (same box, fill and handle by construction — nothing is
+restyled between poses, only the pill's bottom corners square off, via `.is-open`).
+
+> **Removed, but keep it restorable — the flush white bottom sheet.** The user may go back
+> to it. It was: `.fold6-mlegend` full bleed (`left/right: 0`, `FOLD6_MLEGEND_BOTTOM_MOBILE_PX
+> = 0`); card and pill `background: #fff`, `border: 0.5px solid #d6d6d6` with `border-bottom:
+> 0`, `box-shadow: 0 -4px 24px rgba(0,0,0,.06)` — and that shadow suppressed on the pill while
+> `.is-open`, or it fell on the card below as a grey band that read as a seam; `border-radius:
+> 16px 16px 0 0` on both (top corners only, because the bottom edge WAS the screen edge), the
+> pill never rounding all four; and `.fold6-mlegend-row` on the ACLED tint
+> `rgba(0,0,0,.035)`. Everything else — the geometry, the width-then-height opening, the
+> pill riding the card, the drag — is unchanged between the two and needs no work either way.
 
 - It lives in its **own** layer, `#fold6MobileLegendLayer` (a direct `.layout` child, like
   `#fold6NoteLayer` and `#page9CatTooltip`). It is *not* in `#fold6NoteLayer`: that one is
@@ -601,8 +619,10 @@ under the pill's fill where the two meet.
   `z-index`** — giving it one re-opens a stacking context and traps every descendant.
   The number must live on the **layer**: it is the stacking context, so a z-index on
   `.fold6-mlegend` inside it could never climb past it.
-  **The panel card is opaque** (`.fold6-mlegend-card` background `#fff`) — kept from when
-  the legend sat on top, and still what stops the artwork behind it showing through.
+  **The panel card is opaque** (`.fold6-mlegend-card` background `--mlg-fill`, the ACLED
+  tint composited over `--bg` rather than the translucent `rgba(0,0,0,.035)` itself) — kept
+  from when the legend sat on top, and still what stops the artwork behind it showing
+  through.
   *Removed — don't reintroduce:* the `.fold6-mlegend-layer.is-open { z-index: 5 }` flip that
   left the layer at 3 while closed and only lifted it while the panel was down (its
   `is-open` class went with it; the bar still gets its own), and — superseded — the older

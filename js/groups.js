@@ -1323,13 +1323,11 @@ function fold8MeasureTooltipHeight() {
 // moves while you scroll — keep that in mind if the fold ever reads as firing
 // twice.
 //
-// 0.17, picked by eye on 2026-09-12 with the @fold7 trigger harness at
-// 390x721. LOW, and deliberately: the threshold is compared against the card's
-// TOP, so a smaller fraction means the card has to climb FURTHER before the
-// fold fires — 0.17 holds the demo back until the card has nearly cleared the
-// top of the screen, where the docked frame can own the view. The old 0.5
-// fired with the card still mid-screen, a whole fold too early.
-var FOLD8_MOBILE_CARD_FRAC = 0.17;
+// 0.8, picked by eye on 2026-09-14 with the @fold7 trigger harness. HIGH:
+// the threshold is compared against the card's TOP, so 0.8 fires as soon as
+// the card's top has risen past 80% of the screen height — early, so the demo
+// plays while the card is still coming up rather than after it has left.
+var FOLD8_MOBILE_CARD_FRAC = 0.8;
 function fold8TooltipCardFrac() {
   if (isMobile()) return FOLD8_MOBILE_CARD_FRAC;
   const fallback = 0.5 - FOLD8_TOOLTIP_ABOVE_PX / window.innerHeight;
@@ -1676,7 +1674,11 @@ const FOLD3_HEADER_GAP_MOBILE_PX = FOLD4_HEADER_GAP_MOBILE_PX;
 // The button is the ONLY thing left on screen from @fold4 on (per explicit
 // instruction) — the camp names live inside the panel, not on the page — so
 // this single number positions the whole bar and never changes after @fold4.
-const FOLD6_MLEGEND_BOTTOM_MOBILE_PX = 0;
+// How far the floating card sits off the screen bottom. Paired with
+// --mlg-inset in style.css (the same distance on the sides) — the card
+// floats the same gap off all three edges, so move the two together.
+// `let`, not `const`: a manual/ harness drives it live.
+let FOLD6_MLEGEND_BOTTOM_MOBILE_PX = 12;
 // The bar's bottom padding (.fold6-mlegend, 6px) — the card's outset UNDER the
 // title, which differs from FOLD6_CARD_PAD above it. Keep in sync with the CSS.
 const FOLD6_MLEGEND_PAD_BOTTOM_PX = 6;
