@@ -81,6 +81,7 @@
   #strip .pf { font-size: .85em; opacity: .5; display: flex; gap: 5px; align-items: center; }
   #strip .vp { border: 1px solid currentColor; border-radius: 3px; padding: 0 3px;
                font-size: .9em; opacity: .8; }
+  #strip button.dormant { opacity: .45; cursor: default; border-style: dashed; }
   #strip button[aria-selected="true"] .pf { opacity: .55; }
   /* The Element row: pinned above the harnesses, shown once something is picked.
      Not a harness — it is whatever the last Cmd+right-click / double-tap hit. */
@@ -236,8 +237,8 @@
     </div>
   </nav>
   <main id="main"><span id="flash"></span><div id="host"><p class="note" id="note">
-    Looking for harnesses. Keep the project tab open at a viewport the harness is
-    gated to (a mobile-only harness needs device mode on before its reload).
+    Looking for the page… Cmd + right-click (or double-tap on a phone) any element to
+    inspect it; harnesses appear here as the page announces them.
   </p></div></main>
 </div>
 
@@ -690,6 +691,18 @@
   var strip = document.getElementById('strip');
   function renderStrip() {
     strip.textContent = '';
+    Object.keys(dormantRows).forEach(function (t) {
+      if (seen[t]) return;
+      var m = dormantRows[t].m;
+      var b = el('button', 'dormant');
+      b.disabled = true;
+      b.title = 'exists on the page but only under the ' + m.viewport + ' breakpoint';
+      var top = el('span', 'pf');
+      if (m.fold) top.appendChild(document.createTextNode(m.fold));
+      top.appendChild(el('span', 'vp', m.viewport + ' only'));
+      b.appendChild(top); b.appendChild(el('span', null, m.label || t));
+      strip.appendChild(b);
+    });
     Object.keys(seen).forEach(function (t) {
       var H = seen[t];
       var b = btn('', function () { activate(t); }, active === H);
@@ -728,6 +741,36 @@
     if (active === H) { active = null; var rest = Object.keys(seen); if (rest.length) activate(rest[0]); }
     renderStrip();
   }
+  /* A harness that exists on the page but is gated to the OTHER breakpoint.
+     Listed greyed, with its breakpoint, so an empty-looking rail says why. A
+     dormant row is dropped the moment the real harness answers, and after 6s
+     of silence (the page closed). */
+  var dormantRows = {};
+  function addDormant(m) {
+    if (seen[m.title]) return;
+    var d = dormantRows[m.title];
+    if (!d) d = dormantRows[m.title] = { m: m, seen: 0 };
+    d.seen = Date.now();
+    renderStrip();
+  }
+  setInterval(function () {
+    var now = Date.now(), changed = false;
+    Object.keys(dormantRows).forEach(function (t) {
+      if (now - dormantRows[t].seen > 6000 || seen[t]) { delete dormantRows[t]; changed = true; }
+    });
+    if (changed) renderStrip();
+    // Nothing open in the main area → say what to do, don't sit blank.
+    if (!active) showNote(); else { var n = document.getElementById('note'); if (n) n.remove(); }
+  }, 2000);
+  function showNote() {
+    if (document.getElementById('note')) return;
+    var n = el('p', 'note'); n.id = 'note';
+    n.textContent = Object.keys(dormantRows).length
+      ? 'The harnesses on this page only run under another breakpoint. Cmd + right-click (or double-tap on a phone) any element to inspect it.'
+      : 'No harness on the open page. Cmd + right-click (or double-tap on a phone) any element to inspect it.';
+    document.getElementById('host').appendChild(n);
+  }
+
   function add(title) {
     if (ONLY && title !== ONLY) return;
     if (seen[title]) { if (!seen[title].dead) seen[title].send({ t: 'hello' }); return; }
@@ -1170,6 +1213,7 @@
     var m = ev.data || {};
     if (m.t !== 'iam') return;
     if (m.inspect) return;               // the element inspector is not a harness
+    if (m.dormant) { addDormant(m); return; }
     add(m.title);
     // Don't fight a click that hasn't been echoed back yet.
     var settled = Date.now() - switchTouched > 1200;

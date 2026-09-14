@@ -62,9 +62,24 @@
     var mq = window.matchMedia(MQ_MOBILE);
     var ok = function () { return want === 'mobile' ? mq.matches : !mq.matches; };
     if (ok()) return boot();
+    /* DORMANT: the wrong breakpoint for this harness. It does not inject, but it
+       still answers discovery — as dormant, with its breakpoint — so the panel
+       can list it greyed out ("mobile only") instead of showing an empty rail
+       that reads as "nothing exists". */
+    var dormant = null;
+    try { if (window.HBus) dormant = HBus('harness:__all__'); } catch (e) {}
+    if (dormant) dormant.onmessage = function (ev) {
+      if ((ev.data || {}).t !== 'who') return;
+      try {
+        dormant.postMessage({ t: 'iam', title: CONFIG.title, dormant: true, viewport: want,
+                              label: CONFIG.label || CONFIG.title,
+                              fold: CONFIG.fold || ((/@fold\s*\d+/i.exec(CONFIG.goLabel || '') || [null])[0]) });
+      } catch (e) {}
+    };
     var onMQ = function () {
       if (!ok()) return;
       mq.removeEventListener('change', onMQ);
+      if (dormant) { dormant.onmessage = null; }
       boot();
     };
     mq.addEventListener('change', onMQ);

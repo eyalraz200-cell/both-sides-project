@@ -218,8 +218,11 @@ numbers in the source.
   its knobs mean something. The gate **waits** for the breakpoint rather than bailing —
   DevTools device emulation is switched on after load, and a one-shot check made the
   harness silently never exist (and never answer discovery, so it was missing from the
-  panel too) until a reload. The panel's rail marks anything that is not `'both'`, so a
-  row missing on a desktop is explained rather than mysterious.
+  panel too) until a reload. The panel's rail marks anything that is not `'both'`. A
+  harness on the page but gated to the OTHER breakpoint still answers discovery as
+  **dormant**, and the rail lists it greyed with `mobile only` / `desktop only` — so an
+  empty-looking rail says why instead of reading as "nothing exists". The main area keeps
+  a hint (inspect an element) whenever nothing is open.
 - Gate the harness on the viewport it actually tunes — a desktop panel must not render on
   a phone. **The gate WAITS, it does not bail.** DevTools device emulation is normally
   switched on *after* the page has loaded, so a one-shot check at load time makes the
