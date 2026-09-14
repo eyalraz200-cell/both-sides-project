@@ -12,7 +12,13 @@ const sections = Array.from(document.querySelectorAll(".text-section"));
 // "Block all cookies", strict private browsing, some corporate policies) throw
 // a SecurityError on access rather than failing quietly, which would otherwise
 // kill this whole script and blank the page for anyone with those settings.
-const foldNumberBadge = document.getElementById("foldNumberBadge");
+// DEV ONLY, and that is binding: the badge and its picker are a working aid and
+// must NEVER appear on the deployed site (explicit instruction). isLocalHost()
+// (js/core.js) is the gate — on any public host this resolves to null and the
+// markup stays inert, since the element is `display: none` until .is-visible
+// is added here. Nothing else can switch it on: the Ctrl+Shift+F listener and
+// the mobile picker are both inside this branch.
+const foldNumberBadge = isLocalHost() ? document.getElementById("foldNumberBadge") : null;
 if (foldNumberBadge) {
   const FOLD_BADGE_VISIBLE_KEY = "foldNumberBadgeVisible";
   let pref = null;

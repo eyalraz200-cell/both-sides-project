@@ -8,6 +8,9 @@
    below silences the *rejection*, but not the browser's own network-error
    log line, so swallowing the error is not enough: the poller must not run. */
 (function () {
+  // Deliberately its OWN copy of isLocalHost() (js/core.js) rather than a call
+  // to it: this poller is what picks up the fix when core.js is the file that
+  // threw, so it must not depend on core.js having parsed. Keep the two in sync.
   const host = location.hostname;
   const isLocal =
     host === "localhost" || host === "127.0.0.1" || host === "[::1]" ||
