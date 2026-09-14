@@ -586,22 +586,18 @@
     if (!node) return;
     node.textContent = '';
     if (!WHO) { node.textContent = '…'; return; }
-    /* The Claude session's own name leads — that is what the user calls this
-       chat — with the branch and port after it in the dim half. The browser
-       cannot know the session, so the session writes it to `.session-name` and
-       the server reports it (see server.py `_session_name`). */
-    node.appendChild(document.createTextNode(WHO.session || WHO.branch || WHO.dir || '?'));
-    var tail = [];
-    if (WHO.session && WHO.branch) tail.push(WHO.branch);
-    if (WHO.port) tail.push(':' + WHO.port);
-    if (tail.length) node.appendChild(el('span', 'b', tail.join(' ')));
+    /* Branch and port — where this page came from. NOT a chat name: several
+       chats share one checkout, so any per-chat marker in it would be written
+       by whichever chat ran last and would name the wrong one. */
+    node.appendChild(document.createTextNode(WHO.branch || WHO.dir || '?'));
+    if (WHO.port) node.appendChild(el('span', 'b', ':' + WHO.port));
   }
   function whoAmI() {
     fetch('/__who__', { cache: 'no-store' }).then(function (r) { return r.json(); })
       .then(function (w) {
         WHO = w;
         document.getElementById('chat').textContent = (w.dir || '') + (w.branch ? ' · ' + w.branch : '');
-        document.title = (w.session || w.branch || 'harness') + ' — harness';
+        document.title = (w.branch || 'harness') + ' — harness';
         Object.keys(seen).forEach(function (t) { paintWho(seen[t].whoEl); });
       }).catch(function () {
         /* An older server.py has no /__who__ (it 404s to an HTML page, so the
