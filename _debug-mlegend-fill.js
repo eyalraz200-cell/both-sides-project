@@ -869,6 +869,14 @@
      answers with its title. One tab then hosts them all. */
   var DISC = null;
   try { if (window.HBus) DISC = HBus('harness:__all__'); } catch (e) {}
+  function announce() {
+    var a = readAuto();
+    try {
+      DISC.postMessage({ t: 'iam', title: CONFIG.title, inst: INST,
+                         foldBadge: foldBadgeState(),
+                         autoReload: a ? a.on : null, behind: a ? a.behind : 0 });
+    } catch (e) {}
+  }
   /* PAGE-WIDE controls ride the discovery channel rather than a harness's own:
      they belong to the page, not to one panel, and the remote tab shows them
      once. `foldbadge` drives the dev fold badge (js/nav.js) — the number in the
@@ -878,14 +886,25 @@
     var b = document.getElementById('foldNumberBadge');
     return b ? b.classList.contains('is-visible') : null;
   }
+  /* The dev auto-reload (reload.js) is the other page-wide switch: several
+     sessions edit one checkout, so every save reloads every tab — including the
+     one being tuned. Off freezes this page; reload.js paints its own "N changes"
+     chip so a frozen tab is never silently stale. */
+  function readAuto() {
+    try { return window.autoReloadState ? window.autoReloadState() : null; } catch (e) { return null; }
+  }
   if (DISC) DISC.onmessage = function (ev) {
     var m = ev.data || {};
-    if (m.t === 'who') {
-      try { DISC.postMessage({ t: 'iam', title: CONFIG.title, inst: INST, foldBadge: foldBadgeState() }); } catch (e) {}
-    }
+    if (m.t === 'who') announce();
     if (m.t === 'foldbadge' && typeof setFoldBadgeVisible === 'function') {
       setFoldBadgeVisible(!!m.on);
-      try { DISC.postMessage({ t: 'iam', title: CONFIG.title, inst: INST, foldBadge: foldBadgeState() }); } catch (e) {}
+      announce();
+    }
+    if (m.t === 'autoreload' && window.setAutoReload) {
+      // Switching it back ON reloads the page immediately when it is behind, so
+      // this may well be the last thing this instance ever does.
+      window.setAutoReload(!!m.on);
+      announce();
     }
   };
 

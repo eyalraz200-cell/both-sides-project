@@ -54,8 +54,13 @@
   /* Page-wide switches — they belong to the page, not to a harness, so they sit
      under the list rather than inside any one panel. */
   #globals { margin-top: auto; padding-top: 10px; border-top: 1px solid #2a2a2a; }
-  #globals label { display: flex; gap: 6px; align-items: center; padding: 2px 4px; cursor: pointer; }
-  #chat { margin: 8px 4px 0; font-size: 10px; color: #6f6f6f; line-height: 1.4; word-break: break-all; }
+  #globals label { display: flex; gap: 6px; align-items: center; padding: 3px 4px; cursor: pointer;
+                   white-space: nowrap; }
+  /* How far the page is behind while auto-reload is off — the same warning the
+     page's own chip carries, so a frozen page is never silently stale. */
+  #behind { margin-inline-start: 4px; color: #111; background: #ffd54a; border-radius: 3px;
+            padding: 1px 5px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+  #behind:empty { display: none; }
   #main { flex: 1 1 auto; min-width: 0; }
   #flash { position: fixed; top: 10px; right: 12px; z-index: 9; color: #7fd; font-size: 11px;
            background: #111; padding: 2px 6px; border-radius: 4px; }
@@ -74,9 +79,6 @@
   .h[hidden] { display: none; }
   .bar { position: sticky; top: 0; z-index: 4; background: #111; display: flex; gap: 6px;
          flex-wrap: wrap; align-items: center; padding: 10px 0; border-bottom: 1px solid #222; }
-  /* Whose work this is — the checkout/branch being driven, i.e. the chat. */
-  .who { font-weight: 600; margin-inline-end: 6px; }
-  .who .b { opacity: .5; font-weight: 400; margin-inline-start: 5px; }
   .host { font-size: 10px; opacity: .6; margin-inline-start: auto; }
   .host button { padding: 1px 6px; font-size: 10px; }
   .body { display: grid; grid-template-columns: 1fr; gap: 0 24px; padding-top: 8px; }
@@ -102,7 +104,6 @@
   .lab .val { color: #7fd; min-width: 4ch; text-align: right; }
   .lab .rs { padding: 0 6px; font-size: 13px; line-height: 1.2; opacity: .55; border-color: transparent; background: none; }
   .lab .rs:hover { opacity: 1; background: #262626; }
-  .src { color: #6a6a6a; font-size: 10px; margin-top: 2px; word-break: break-all; }
   input[type=range] { width: 100%; margin: 6px 0 0; accent-color: #7fd; }
 
   /* ---- colour knob ----------------------------------------------------- */
@@ -131,7 +132,8 @@
     <div id="strip"></div>
     <div id="globals">
       <label><input type="checkbox" id="foldBadge"> fold number</label>
-      <div id="chat"></div>
+      <label><input type="checkbox" id="autoReload"> auto-reload
+        <span id="behind"></span></label>
     </div>
   </nav>
   <main id="main"><span id="flash"></span><div id="host"><p class="note" id="note">
@@ -314,13 +316,6 @@
       H.el.dataset.built = String((Number(H.el.dataset.built) || 0) + 1);
       H.ui = { modeBtns: {}, togs: {}, tabBtns: {}, rows: {}, groups: {} };
       H.bar.textContent = '';
-      /* WHOSE work this is. Several chats run several worktrees, each with its
-         own server and its own panel tab; without a name on the toolbar the
-         tabs are indistinguishable. Filled in by whoAmI() from /__who__ (the
-         checkout's git branch), which under one-worktree-per-chat is the chat. */
-      H.whoEl = el('span', 'who');
-      H.bar.appendChild(H.whoEl);
-      paintWho(H.whoEl);
       // FIXED order: Go · Copy · Reset · Hand back.
       if (d.goLabel) H.bar.appendChild(btn(d.goLabel, function () { H.send({ t: 'btn', name: 'go' }); }));
       H.bar.appendChild(btn('Copy', function () { H.send({ t: 'btn', name: 'copy' }); }));
@@ -410,7 +405,9 @@
       lab.appendChild(rs); row.appendChild(lab);
       var ui = { row: row, val: val, s: s };
       if (s.color) H.buildColor(s, row, ui); else H.buildSlider(s, row, ui);
-      if (s.source) row.appendChild(el('div', 'src', s.source));
+      /* The knob's `source` (file:line, CSS property) is NOT drawn: it is for the
+         bake, not for the eye, and a grey code path under every row made the
+         panel a wall of text. Copy still carries it — that is where it is read. */
       H.ui.rows[s.key] = ui;
       return row;
     };
@@ -578,46 +575,25 @@
     if (!active || want === title) activate(title); else renderStrip();
   }
 
-  /* ---- who is being driven -------------------------------------------------
-     The dev server reports its checkout (branch) at /__who__. With one worktree
-     per chat that branch IS the chat, which is what the toolbar needs to say. */
-  var WHO = null;
-  function paintWho(node) {
-    if (!node) return;
-    node.textContent = '';
-    if (!WHO) { node.textContent = '…'; return; }
-    /* Branch and port — where this page came from. NOT a chat name: several
-       chats share one checkout, so any per-chat marker in it would be written
-       by whichever chat ran last and would name the wrong one. */
-    node.appendChild(document.createTextNode(WHO.branch || WHO.dir || '?'));
-    if (WHO.port) node.appendChild(el('span', 'b', ':' + WHO.port));
-  }
-  function whoAmI() {
-    fetch('/__who__', { cache: 'no-store' }).then(function (r) { return r.json(); })
-      .then(function (w) {
-        WHO = w;
-        document.getElementById('chat').textContent = (w.dir || '') + (w.branch ? ' · ' + w.branch : '');
-        document.title = (w.branch || 'harness') + ' — harness';
-        Object.keys(seen).forEach(function (t) { paintWho(seen[t].whoEl); });
-      }).catch(function () {
-        /* An older server.py has no /__who__ (it 404s to an HTML page, so the
-           JSON parse throws). Say which server this is instead of sitting on a
-           spinner forever. */
-        WHO = { dir: location.host };
-        Object.keys(seen).forEach(function (t) { paintWho(seen[t].whoEl); });
-      });
-  }
-  whoAmI();
-
   /* ---- page-wide switches --------------------------------------------------
      The dev fold badge (js/nav.js) belongs to the page, not to any one harness,
      so it is driven over the shared discovery channel: every harness on the page
      listens, and each `iam` answer reports the badge's current state. */
   var foldBox = document.getElementById('foldBadge');
-  var foldTouched = 0;
+  var autoBox = document.getElementById('autoReload');
+  var behindEl = document.getElementById('behind');
+  var switchTouched = 0;
   foldBox.onchange = function () {
-    foldTouched = Date.now();
+    switchTouched = Date.now();
     disc.postMessage({ t: 'foldbadge', on: foldBox.checked });
+  };
+  /* Auto-reload is ON by default — a page that silently stops updating is a trap,
+     so freezing one is always a deliberate act. Switching it back on reloads the
+     page at once when it is behind. */
+  autoBox.onchange = function () {
+    switchTouched = Date.now();
+    disc.postMessage({ t: 'autoreload', on: autoBox.checked });
+    if (autoBox.checked) behindEl.textContent = '';
   };
 
   // Discovery. Every harness answers `who` on the shared channel with its title.
@@ -627,7 +603,10 @@
     if (m.t !== 'iam') return;
     add(m.title);
     // Don't fight a click that hasn't been echoed back yet.
-    if (typeof m.foldBadge === 'boolean' && Date.now() - foldTouched > 1200) foldBox.checked = m.foldBadge;
+    var settled = Date.now() - switchTouched > 1200;
+    if (typeof m.foldBadge === 'boolean' && settled) foldBox.checked = m.foldBadge;
+    if (typeof m.autoReload === 'boolean' && settled) autoBox.checked = m.autoReload;
+    behindEl.textContent = (!m.autoReload && m.behind) ? m.behind + ' behind' : '';
   };
   function ask() { disc.postMessage({ t: 'who' }); }
   ask();
