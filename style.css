@@ -4202,9 +4202,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     color: #767676;
     background: none;
     border: 0;
-    /* No room reserved above the title: the grab handle hangs 4px ABOVE the
-       button's box (::before, top: -4px), inside the pill, which is centred on
-       the button by fold6MLegendPaintCard (tuned by eye, manual/ harness). */
+    /* No padding at all — the bare title is the whole control, and the pill is
+       centred on it by fold6MLegendPaintCard (tuned by eye, manual/ harness). */
     padding: 0;
     cursor: pointer;
     /* Same treatment as the pill's ⓘ: this is a real <button>, so a tap draws
@@ -4217,19 +4216,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   .fold6-mlegend-btn:focus-visible {
     outline: none;
   }
-  /* The sheet's grab handle — a 28×1.5 pill centred above the title. Purely a
-     sheet affordance; it is not what the button measures its width off. */
-  .fold6-mlegend-btn::before {
-    content: "";
-    position: absolute;
-    top: -4px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 28px;
-    height: 1.5px;
-    border-radius: 1px;
-    background: #d4d3d8;
-  }
+  /* Removed — don't reintroduce: the grab handle, a 28×1.5px #d4d3d8 pill on
+     ::before, centred 4px above the button's box. The floating card carries the
+     bare title; the card's own open IS the affordance. (Its twin, a chevron,
+     was judged in the same compare/ pass and declined with it.) */
   /* The rows. No frame of its own any more — the card behind the bar is the
      frame — just the gap under the title row and a little inner breathing room.
      Its opacity rides the card's HEIGHT step (fold6MLegendPaintCard), so the

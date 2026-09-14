@@ -554,14 +554,14 @@ persistent **bottom sheet** pinned to the bottom edge of the viewport (`js/group
 ╭──────────────────────────────────╮  ← open: the SAME card, grown UPWARD out of the
 │ מחנה הימין          גוש השינוי  │     bottom edge (height step)
               ╭──────────────╮
-              │  ──  מקרא    │          ← the pill stays put, a TAB joined to the card
+              │     מקרא     │          ← the pill stays put, a TAB joined to the card
  ╭────────────┘              └───────╮
  │ 3 coalition rows │ 3 change rows  │
  │ איסוף הנתונים / ACLED note …      │
  ╰───────────────────────────────────╯  ← 12px clear of all three screen edges
 
-              ╭──────────────╮          ← closed: the same pill, floating — the
-              │  ──  מקרא    │            grab handle over the bare title, sized
+              ╭──────────────╮          ← closed: the same pill, floating —
+              │     מקרא     │            the bare title, sized
               ╰──────────────╯            title + 44 each side × 40 high
 ```
 
@@ -579,12 +579,11 @@ All four corners are rounded, since there is no screen edge for a flat side to s
 is invisible. **The six group rows are `#fff`**, not the tint they used to carry: the card
 behind them is that tint now, and tint-on-tint left six invisible cards.
 
-It keeps the desktop note's 14px/600/`#767676` title type and carries **no chevron**
-(explicit instruction): the affordance is the **grab handle** — `.fold6-mlegend-btn::before`,
-a 28×1.5px `#d4d3d8` pill centred 4px above the button's box (`top: -4px`; the button has no
-padding-top — all tuned by eye). The button is the **bare title** — no chevron, and no group
-swatches on the title line (judged in a harness, declined). The **title and handle live in
-the pill** (`.fold6-mlegend-tab`, `fold6MobileTabEl`) — ONE element in every state (explicit
+It keeps the desktop note's 14px/600/`#767676` title type and carries **nothing but the
+title** (explicit instruction): no chevron, no grab handle, no group swatches on the title
+line — the card's own open is the affordance. *Removed — don't reintroduce:* the handle
+(`.fold6-mlegend-btn::before`, a 28×1.5px `#d4d3d8` pill centred 4px above the button's box)
+and the chevron that was judged against it. The **title lives in the pill** (`.fold6-mlegend-tab`, `fold6MobileTabEl`) — ONE element in every state (explicit
 instruction): closed, it is the whole legend; open, it stays exactly where it is as a **tab
 joined to the top of the card** (same box, fill and handle by construction — nothing is
 restyled between poses, only the pill's bottom corners square off, via `.is-open`).
