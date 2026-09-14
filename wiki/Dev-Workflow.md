@@ -258,8 +258,11 @@ for — the **remote panel**:
   shows — plain words for the thing being tuned (`axis draw-in`, `legend sheet colour`).
   `CONFIG.title` stays the bus channel and the Copy header, and stands in when no label is
   set, but a rail full of file slugs is a rail you have to decode.
-- **The panel's own look is themeable** (`look` at the foot of the rail): 12 palettes and 6
-  type styles, including uppercase-label sets. Every rule in the panel reads from tokens on
+- **The panel's own look is themeable** (`Look` at the foot of the rail): 12 palettes and 6
+  type styles. **No ALL CAPS anywhere** — a capital goes where a capital belongs, on the
+  first letter of a label, via `--label-cap` on `::first-letter`. That pseudo-element only
+  takes on a BLOCK container, so a label wrapped for it must be `inline-block`, and it must
+  wrap the WORD: on a mode button it would otherwise capitalise the key letter in front. Every rule in the panel reads from tokens on
   `:root` (`--bg`, `--bg-rail`, `--bg-el`, `--line`, `--text`, `--text-dim`, `--accent`,
   `--warn`, `--font`, `--fs`, `--label-tt`…), so a new theme is a row in the `PALETTES` /
   `TYPES` table and nothing else — anything hard-coded in the CSS is a bug, because it will

@@ -52,6 +52,7 @@
     --lh:        1.45;
     --radius:    5px;
     --label-tt:  none;      /* text-transform for knob/mode labels */
+    --label-cap: uppercase; /* ::first-letter — sentence case, never ALL CAPS */
     --label-ls:  0;         /* letter-spacing to match */
     --label-fw:  400;
   }
@@ -117,19 +118,27 @@
   .body { display: grid; grid-template-columns: 1fr; gap: 0 24px; padding-top: 8px; }
   @media (min-width: 700px) { .body { grid-template-columns: 1fr 1fr; } .span { grid-column: 1 / -1; } }
 
-  .gname { color: var(--text-dim); text-transform: uppercase; letter-spacing: .08em;
-           font-size: .85em; margin: 12px 0 6px; }
+  /* A heading is a word with a capital, not a shouted run of letters. */
+  .gname { color: var(--text-dim); font-size: .9em; margin: 12px 0 6px; }
+  .gname::first-letter { text-transform: uppercase; }
   .seg { display: flex; flex-wrap: wrap; gap: 4px; }
   .seg button { border-radius: 4px; text-transform: var(--label-tt); letter-spacing: var(--label-ls); }
+  /* The capital belongs to the WORD, not to the key letter in front of it —
+     ::first-letter on the button itself would capitalise the key. It only takes
+     on a BLOCK container, so the wrapper has to be inline-block, not a bare
+     inline span. */
+  .seg button .ml, label.tog .ml { display: inline-block; }
+  .seg button .ml::first-letter, label.tog .ml::first-letter { text-transform: var(--label-cap); }
   .seg button .k { opacity: .5; margin-inline-end: 5px; }
-  label.tog { display: inline-flex; gap: 6px; align-items: center; margin: 0 14px 6px 0;
+  label.tog { display: inline-flex; gap: 4px; align-items: center; margin: 0 14px 6px 0;
               cursor: pointer; text-transform: var(--label-tt); letter-spacing: var(--label-ls); }
+  label.tog .k { opacity: .5; }
 
   details.grp { border-top: 1px solid var(--line); margin-top: 10px; }
   details.grp[hidden] { display: none; }
   details.grp > summary { cursor: pointer; padding: 8px 0; color: var(--text-dim);
-                          text-transform: uppercase; letter-spacing: .08em; font-size: .85em;
-                          user-select: none; }
+                          font-size: .9em; user-select: none; }
+  details.grp > summary::first-letter { text-transform: uppercase; }
   details.grp > summary .n { opacity: .6; margin-inline-start: 6px; text-transform: none;
                              letter-spacing: 0; }
 
@@ -138,6 +147,7 @@
   .lab { display: flex; align-items: center; gap: 8px; }
   .lab .name { flex: 1; min-width: 0; text-transform: var(--label-tt);
                letter-spacing: var(--label-ls); font-weight: var(--label-fw); }
+  .lab .name::first-letter { text-transform: var(--label-cap); }
   .lab .val { color: var(--accent); min-width: 4ch; text-align: right;
               font-variant-numeric: tabular-nums; }
   .lab .rs { padding: 0 6px; font-size: 1.05em; line-height: 1.2; opacity: .55;
@@ -169,8 +179,7 @@
 
   /* ---- the theme picker (compare/) ------------------------------------- */
   #theme { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
-  #theme summary { cursor: pointer; color: var(--text-dim); font-size: .85em;
-                   text-transform: uppercase; letter-spacing: .08em; padding: 2px 4px;
+  #theme summary { cursor: pointer; color: var(--text-dim); font-size: .9em; padding: 2px 4px;
                    user-select: none; list-style: none; }
   #theme summary::-webkit-details-marker { display: none; }
   #theme .set { display: flex; flex-wrap: wrap; gap: 3px; margin: 6px 0 2px; }
@@ -186,11 +195,11 @@
   <nav id="rail">
     <div id="strip"></div>
     <div id="globals">
-      <label><input type="checkbox" id="foldBadge"> fold number</label>
-      <label><input type="checkbox" id="autoReload"> auto-reload<button id="behind"
+      <label><input type="checkbox" id="foldBadge"> Fold number</label>
+      <label><input type="checkbox" id="autoReload"> Auto-reload<button id="behind"
         title="changes this page has not taken — click to load them"></button></label>
       <details id="theme">
-        <summary>look</summary>
+        <summary>Look</summary>
         <div class="set" id="palSet"></div>
         <div class="set" id="typeSet"></div>
         <div class="hint" id="themeHint"></div>
@@ -389,7 +398,7 @@
 
       // tabs (subjects)
       if (d.tabs.length) {
-        var tw = el('div', 'span'); tw.appendChild(el('div', 'gname', 'subject'));
+        var tw = el('div', 'span'); tw.appendChild(el('div', 'gname', 'Subject'));
         var ts = el('div', 'seg');
         d.tabs.forEach(function (t) {
           var b = btn(t.label, function () { H.tab = t.id; H.send({ t: 'tab', id: t.id }); H.patch(); });
@@ -402,15 +411,15 @@
       d.modeGroups.forEach(function (g) {
         var set = d.modes.filter(function (m) { return m.group === g; });
         if (!set.length) return;
-        var w = el('div', 'span'); w.appendChild(el('div', 'gname', d.modeGrouped ? g : 'mode'));
+        var w = el('div', 'span'); w.appendChild(el('div', 'gname', d.modeGrouped ? g : 'Mode'));
         var seg = el('div', 'seg');
         var mk = function (id, key, label) {
           var b = btn('', function () { H.send({ t: 'mode', group: g, id: id }); H.setModeLocal(g, id); });
           if (key) b.appendChild(el('span', 'k', key));
-          b.appendChild(document.createTextNode(label));
+          b.appendChild(el('span', 'ml', label));
           H.ui.modeBtns[g + ' ' + (id || '')] = b; seg.appendChild(b);
         };
-        mk(null, '0', d.offLabels[g] || 'off / current');
+        mk(null, '0', d.offLabels[g] || 'Off / current');
         set.forEach(function (m) { mk(m.id, m.key, m.label); });
         w.appendChild(seg); body.appendChild(w);
       });
@@ -422,7 +431,9 @@
         d.toggles.forEach(function (t) {
           var l = el('label', 'tog'); var cb = el('input'); cb.type = 'checkbox';
           cb.onchange = function () { H.T = H.T || {}; H.T[t.id] = cb.checked; H.send({ t: 'toggle', id: t.id, on: cb.checked }); };
-          l.appendChild(cb); l.appendChild(document.createTextNode((t.key ? t.key + ' · ' : '') + t.label));
+          l.appendChild(cb);
+          if (t.key) l.appendChild(el('span', 'k', t.key + ' · '));
+          l.appendChild(el('span', 'ml', t.label));
           H.ui.togs[t.id] = cb; tg.appendChild(l);
         });
         body.appendChild(tg);
@@ -670,40 +681,40 @@
      type style. Both persist. */
   var PALETTES = [
     { id: 'charcoal', label: 'charcoal', v: {
-      '--bg':'#111111','--bg-rail':'#171717','--bg-el':'#262626','--bg-el-hi':'#333333',
-      '--line':'#2a2a2a','--line-el':'#3c3c3c','--text':'#e6e6e6','--text-dim':'#8a8a8a',
+      '--bg':'#1e1f22','--bg-rail':'#26272b','--bg-el':'#32343a','--bg-el-hi':'#3c3f46',
+      '--line':'#33353b','--line-el':'#474a52','--text':'#e6e6e6','--text-dim':'#8a8a8a',
       '--accent':'#77ffdd','--accent-ink':'#111111','--warn':'#ffd54a' } },
     { id: 'ink', label: 'ink', v: {
-      '--bg':'#0b0f14','--bg-rail':'#101720','--bg-el':'#1a2430','--bg-el-hi':'#243140',
-      '--line':'#1b2530','--line-el':'#2b3a4a','--text':'#dbe6f0','--text-dim':'#7d8fa3',
+      '--bg':'#141b24','--bg-rail':'#1b2530','--bg-el':'#26323f','--bg-el-hi':'#31404f',
+      '--line':'#25313d','--line-el':'#3a4b5c','--text':'#dbe6f0','--text-dim':'#7d8fa3',
       '--accent':'#4fd2ff','--accent-ink':'#06101a','--warn':'#ffc857' } },
     { id: 'graphite', label: 'graphite', v: {
-      '--bg':'#1a1a1a','--bg-rail':'#212121','--bg-el':'#2e2e2e','--bg-el-hi':'#3b3b3b',
-      '--line':'#303030','--line-el':'#464646','--text':'#ededed','--text-dim':'#969696',
+      '--bg':'#24252a','--bg-rail':'#2c2e34','--bg-el':'#383a42','--bg-el-hi':'#454852',
+      '--line':'#3a3d45','--line-el':'#525663','--text':'#ededed','--text-dim':'#969696',
       '--accent':'#ffb020','--accent-ink':'#1a1200','--warn':'#ff7a59' } },
     { id: 'slate', label: 'slate', v: {
-      '--bg':'#14151c','--bg-rail':'#1b1d26','--bg-el':'#272a36','--bg-el-hi':'#343849',
-      '--line':'#262935','--line-el':'#3a3f52','--text':'#e3e5ef','--text-dim':'#8d92a8',
+      '--bg':'#1e2029','--bg-rail':'#262934','--bg-el':'#323646','--bg-el-hi':'#3e4356',
+      '--line':'#333848','--line-el':'#4a5066','--text':'#e3e5ef','--text-dim':'#8d92a8',
       '--accent':'#a78bfa','--accent-ink':'#16101f','--warn':'#fbbf24' } },
     { id: 'espresso', label: 'espresso', v: {
-      '--bg':'#17120f','--bg-rail':'#1f1814','--bg-el':'#2d231d','--bg-el-hi':'#3b2e26',
-      '--line':'#2b221c','--line-el':'#463830','--text':'#f0e6de','--text-dim':'#a08d7e',
+      '--bg':'#221b16','--bg-rail':'#2b221c','--bg-el':'#3a2e26','--bg-el-hi':'#493a30',
+      '--line':'#382c24','--line-el':'#54433a','--text':'#f0e6de','--text-dim':'#a08d7e',
       '--accent':'#ff8a3d','--accent-ink':'#1a0e05','--warn':'#ffd76a' } },
     { id: 'forest', label: 'forest', v: {
-      '--bg':'#0d1310','--bg-rail':'#121b16','--bg-el':'#1c2a21','--bg-el-hi':'#27382c',
-      '--line':'#1b2620','--line-el':'#2e4335','--text':'#e0ece3','--text-dim':'#84a091',
+      '--bg':'#151d18','--bg-rail':'#1b261f','--bg-el':'#26352b','--bg-el-hi':'#324437',
+      '--line':'#2a382e','--line-el':'#3d5144','--text':'#e0ece3','--text-dim':'#84a091',
       '--accent':'#8ee34a','--accent-ink':'#0b1508','--warn':'#ffd166' } },
     { id: 'plum', label: 'plum', v: {
-      '--bg':'#150f18','--bg-rail':'#1d1522','--bg-el':'#2a1f31','--bg-el-hi':'#382a41',
-      '--line':'#281d2f','--line-el':'#43304e','--text':'#f0e4f5','--text-dim':'#a98cb5',
+      '--bg':'#1e1722','--bg-rail':'#271d2d','--bg-el':'#352840','--bg-el-hi':'#43334f',
+      '--line':'#392b45','--line-el':'#523c60','--text':'#f0e4f5','--text-dim':'#a98cb5',
       '--accent':'#ff5fa2','--accent-ink':'#1a0713','--warn':'#ffd166' } },
     { id: 'midnight', label: 'midnight', v: {
-      '--bg':'#0a0e1a','--bg-rail':'#101528','--bg-el':'#1a2038','--bg-el-hi':'#252d4a',
-      '--line':'#1a2036','--line-el':'#2d3656','--text':'#e8ecff','--text-dim':'#8189ad',
+      '--bg':'#121727','--bg-rail':'#19203a','--bg-el':'#242d4c','--bg-el-hi':'#313c60',
+      '--line':'#28304f','--line-el':'#3d4872','--text':'#e8ecff','--text-dim':'#8189ad',
       '--accent':'#ffd34d','--accent-ink':'#0d1020','--warn':'#ff8fa3' } },
     { id: 'contrast', label: 'contrast', v: {
-      '--bg':'#000000','--bg-rail':'#000000','--bg-el':'#1c1c1c','--bg-el-hi':'#2e2e2e',
-      '--line':'#3a3a3a','--line-el':'#585858','--text':'#ffffff','--text-dim':'#b0b0b0',
+      '--bg':'#0e0e0e','--bg-rail':'#141414','--bg-el':'#242424','--bg-el-hi':'#333333',
+      '--line':'#3d3d3d','--line-el':'#5c5c5c','--text':'#ffffff','--text-dim':'#b0b0b0',
       '--accent':'#ffffff','--accent-ink':'#000000','--warn':'#ffe600' } },
     { id: 'paper', label: 'paper', v: {
       '--bg':'#f5f5f2','--bg-rail':'#eceae4','--bg-el':'#e2dfd7','--bg-el-hi':'#d6d2c8',
@@ -714,34 +725,36 @@
       '--line':'#e0d8c9','--line-el':'#c7bca7','--text':'#2b2118','--text-dim':'#7a6c5c',
       '--accent':'#c0532a','--accent-ink':'#fff6ef','--warn':'#8a6b00' } },
     { id: 'nord', label: 'nord', v: {
-      '--bg':'#2e3440','--bg-rail':'#343c4a','--bg-el':'#3f4858','--bg-el-hi':'#4b5566',
-      '--line':'#3b4453','--line-el':'#4f5a6b','--text':'#eceff4','--text-dim':'#a3adbd',
+      '--bg':'#323a47','--bg-rail':'#3a4353','--bg-el':'#454f61','--bg-el-hi':'#525d71',
+      '--line':'#414a5a','--line-el':'#5b6678','--text':'#eceff4','--text-dim':'#a3adbd',
       '--accent':'#88c0d0','--accent-ink':'#22272f','--warn':'#ebcb8b' } },
   ];
   var MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
   var SANS = "system-ui, -apple-system, 'Segoe UI', sans-serif";
   var TYPES = [
-    { id: 'mono', label: 'mono', key: 'q', v: {
+    /* No ALL CAPS anywhere: a capital goes where a capital belongs — the first
+       letter of a label — and the variants differ in face, size and weight. */
+    { id: 'Mono', label: 'Mono', key: 'q', v: {
       '--font': MONO, '--fs': '12px', '--lh': '1.45',
-      '--label-tt': 'none', '--label-ls': '0', '--label-fw': '400' } },
-    { id: 'mono-big', label: 'mono big', key: 'w', v: {
+      '--label-tt': 'none', '--label-cap': 'uppercase', '--label-ls': '0', '--label-fw': '400' } },
+    { id: 'Mono big', label: 'Mono big', key: 'w', v: {
       '--font': MONO, '--fs': '13.5px', '--lh': '1.55',
-      '--label-tt': 'none', '--label-ls': '0', '--label-fw': '400' } },
-    { id: 'mono-tight', label: 'mono tight', key: 'e', v: {
+      '--label-tt': 'none', '--label-cap': 'uppercase', '--label-ls': '0', '--label-fw': '400' } },
+    { id: 'Mono tight', label: 'Mono tight', key: 'e', v: {
       '--font': MONO, '--fs': '11px', '--lh': '1.3',
-      '--label-tt': 'none', '--label-ls': '0', '--label-fw': '400' } },
-    { id: 'sans', label: 'sans', key: 'r', v: {
+      '--label-tt': 'none', '--label-cap': 'uppercase', '--label-ls': '0', '--label-fw': '400' } },
+    { id: 'Sans', label: 'Sans', key: 'r', v: {
       '--font': SANS, '--fs': '13px', '--lh': '1.45',
-      '--label-tt': 'none', '--label-ls': '0', '--label-fw': '500' } },
-    { id: 'sans-caps', label: 'SANS CAPS', key: 't', v: {
-      '--font': SANS, '--fs': '12px', '--lh': '1.5',
-      '--label-tt': 'uppercase', '--label-ls': '.06em', '--label-fw': '600' } },
-    { id: 'mono-caps', label: 'MONO CAPS', key: 'y', v: {
-      '--font': MONO, '--fs': '11.5px', '--lh': '1.5',
-      '--label-tt': 'uppercase', '--label-ls': '.08em', '--label-fw': '500' } },
+      '--label-tt': 'none', '--label-cap': 'uppercase', '--label-ls': '0', '--label-fw': '500' } },
+    { id: 'Sans bold', label: 'Sans bold', key: 't', v: {
+      '--font': SANS, '--fs': '12.5px', '--lh': '1.5',
+      '--label-tt': 'none', '--label-cap': 'uppercase', '--label-ls': '.01em', '--label-fw': '600' } },
+    { id: 'All lowercase', label: 'All lowercase', key: 'y', v: {
+      '--font': MONO, '--fs': '12px', '--lh': '1.5',
+      '--label-tt': 'lowercase', '--label-cap': 'lowercase', '--label-ls': '0', '--label-fw': '400' } },
   ];
   var THEMEKEY = 'hp:remote:look';
-  var look = { pal: 'charcoal', type: 'mono' };
+  var look = { pal: 'charcoal', type: 'Mono' };
   try { look = JSON.parse(localStorage.getItem(THEMEKEY)) || look; } catch (e) {}
 
   function applyLook() {
