@@ -553,16 +553,15 @@ persistent **bottom sheet** pinned to the bottom edge of the viewport (`js/group
 ```
 ╭──────────────────────────────────╮  ← open: the SAME card, grown UPWARD out of the
 │ מחנה הימין          גוש השינוי  │     bottom edge (height step)
-              ╭──────────────╮
-              │     מקרא     │          ← the pill stays put, a TAB joined to the card
- ╭────────────┘              └───────╮
+ ╭───────────────────────────────────╮  ← open: the SAME card, its bottom edge fixed
+ │               מקרא                │     and its TOP grown upward
  │ 3 coalition rows │ 3 change rows  │
  │ איסוף הנתונים / ACLED note …      │
- ╰───────────────────────────────────╯  ← 12px clear of all three screen edges
+ ╰───────────────────────────────────╯  ← 8px clear of all three screen edges
 
-              ╭──────────────╮          ← closed: the same pill, floating —
+              ╭──────────────╮          ← closed: the same card, shrunk to a pill —
               │     מקרא     │            the bare title, sized
-              ╰──────────────╯            title + 44 each side × 40 high
+              ╰──────────────╯            title + 28 each side × 34 high
 ```
 
 **It is a floating ACLED-note card.** Chosen in a `compare/` pass against the flush white
@@ -571,32 +570,43 @@ chrome. The skin is the desktop note's (`.fold6-note-card`): **a tint, no border
 shadow**, `--mlg-radius` **8px**. The tint is applied **opaque** (`--mlg-fill`, `#F4F3F6`)
 rather than as the note's own `rgba(0,0,0,.035)` — this card has to cover the title block
 and the canvas behind it, and a translucent one let the dashed frame show straight through,
-which reads as the title sitting on top. It **floats 12px clear of the sides and the screen
+which reads as the title sitting on top. It **floats 8px clear of the sides and the screen
 bottom**: `--mlg-inset` (style.css) and `FOLD6_MLEGEND_BOTTOM_MOBILE_PX` (js/groups.js) are
 **one decision in two files** — the same gap off all three edges, so move them together.
-All four corners are rounded, since there is no screen edge for a flat side to sit on; the
-מקרא pill overlaps the top edge by 1px in the middle and carries the same fill, so the seam
-is invisible. **The six group rows are `#fff`**, not the tint they used to carry: the card
+All four corners are rounded, since there is no screen edge for a flat side to sit on. **The six group rows are `#fff`**, not the tint they used to carry: the card
 behind them is that tint now, and tint-on-tint left six invisible cards.
 
 It keeps the desktop note's 14px/600/`#767676` title type and carries **nothing but the
 title** (explicit instruction): no chevron, no grab handle, no group swatches on the title
 line — the card's own open is the affordance. *Removed — don't reintroduce:* the handle
 (`.fold6-mlegend-btn::before`, a 28×1.5px `#d4d3d8` pill centred 4px above the button's box)
-and the chevron that was judged against it. The **title lives in the pill** (`.fold6-mlegend-tab`, `fold6MobileTabEl`) — ONE element in every state (explicit
-instruction): closed, it is the whole legend; open, it stays exactly where it is as a **tab
-joined to the top of the card** (same box, fill and handle by construction — nothing is
-restyled between poses, only the pill's bottom corners square off, via `.is-open`).
+and the chevron that was judged against it. **`.fold6-mlegend-card` is the ONE frame in every state** (explicit instruction — "it should
+just be part of the frame"): closed, that card IS the מקרא pill; open, the same box has
+grown. Its **bottom edge never moves** — only its top travels, from `barH − closedH` (the
+pill) up to `0` (the whole bar), on the height step, after the width step has widened it
+from `closedW` to the bar. So the card literally grows out of the button that was pressed.
+The **title rides inside its top band**, and its distance from the card's top edge is itself
+lerped: centred in the pill while closed, at the bar's own `padding-top` once open, where it
+heads a card full of rows. The rows ride the same shift (`translateY` on
+`.fold6-mlegend-panel`) so frame, title and rows move as one piece — without it the rows
+hang in the air above a frame that has not reached them yet. `offsetTop` of the
+relatively-positioned button includes its own shift, so the paint strips it first, and
+`fold6MFlyMeasure` strips the same shift from every y it measures (it runs while the card is
+still opening, and the flight aims at the rows' REST positions).
+
+> *Removed — don't reintroduce:* `.fold6-mlegend-tab` / `fold6MobileTabEl`, the pill as a
+> SEPARATE element sitting on the card's top edge like a tab, with its bottom corners
+> squared off via `.is-open` and a 1px overlap to hide the seam. One element does it now.
 
 > **Removed, but keep it restorable — the flush white bottom sheet.** The user may go back
 > to it. It was: `.fold6-mlegend` full bleed (`left/right: 0`, `FOLD6_MLEGEND_BOTTOM_MOBILE_PX
 > = 0`); card and pill `background: #fff`, `border: 0.5px solid #d6d6d6` with `border-bottom:
 > 0`, `box-shadow: 0 -4px 24px rgba(0,0,0,.06)` — and that shadow suppressed on the pill while
 > `.is-open`, or it fell on the card below as a grey band that read as a seam; `border-radius:
-> 16px 16px 0 0` on both (top corners only, because the bottom edge WAS the screen edge), the
-> pill never rounding all four; and `.fold6-mlegend-row` on the ACLED tint
+> 16px 16px 0 0` (top corners only, because the bottom edge WAS the screen edge);
+> and `.fold6-mlegend-row` on the ACLED tint
 > `rgba(0,0,0,.035)`. Everything else — the geometry, the width-then-height opening, the
-> pill riding the card, the drag — is unchanged between the two and needs no work either way.
+> drag — is unchanged between the two and needs no work either way.
 
 - It lives in its **own** layer, `#fold6MobileLegendLayer` (a direct `.layout` child, like
   `#fold6NoteLayer` and `#page9CatTooltip`). It is *not* in `#fold6NoteLayer`: that one is
@@ -631,32 +641,23 @@ restyled between poses, only the pill's bottom corners square off, via `.is-open
 - **The card is a sibling painted behind the content, sized by JS** — the desktop
   construction (`fold6NoteCardEl`) carried over. `fold6MobileCardEl` is the bar's first
   child, `position: absolute`, and `fold6MLegendPaintCard(raw)` (`js/groups.js`) writes its
-  `left/width/height` per frame of an open or close, **anchored to the bar's bottom**
-  (`bottom: 0`, never `top`), so the height step grows the sheet upward out of the screen
-  edge. It measures only the **button** and the **bar**: the bar's padding is the card's
+  `left/width/top` per frame of an open or close, **anchored to the bar's bottom**
+  (`bottom: 0` always; `top` is the thing that travels, and `height` is left empty so the
+  two edges define it and the card follows the bar when the note grows it), so the height
+  step raises the card's top rather than pushing its bottom anywhere. It measures only the **button** and the **bar**: the bar's padding is the card's
   outset — `FOLD6_CARD_PAD` (8) above the title, `FOLD6_MLEGEND_PAD_BOTTOM_PX` (6, the
   bar's CSS bottom padding — keep the two in sync; the bar's top padding is 4) below it.
   The **pill** (`FOLD6_MLEGEND_COMPACT_CLOSED = true`) is the measured title plus
-  `FOLD6_MLEGEND_COMPACT_PAD_X` (**44**) each side, **40** high (`FOLD6_MLEGEND_COMPACT_H`,
+  `FOLD6_MLEGEND_COMPACT_PAD_X` (**28**) each side, **34** high (`FOLD6_MLEGEND_COMPACT_H`,
   exact tuned px; `FOLD6_MLEGEND_COMPACT_W` is a fixed-width override when non-zero, and
-  `_H = 0` falls back to the measured height), centred horizontally on the bar. **Pill,
-  title and rows move as one piece** (explicit instruction): the pill's bottom edge is
-  always the sheet's top edge (`cardTop`), so it rides up on the sheet as it grows, and
-  the title button (relative `top`) and the rows panel (`translateY`) are shifted by the
-  same amount to stay inside it — closed, the pill sits on the screen edge; open, it is
-  the tab on top of the sheet, centred on the button's flow position (`restTabTop`, which
-  is what fixes the open height). `offsetTop` of the relatively-positioned button includes
-  its own shift, so the paint strips it first. `fold6MFlyMeasure` runs while the sheet is still
-  opening, so it strips that same shift (read off the button's `top`) from every y it
-  measures — the flight aims at the rows' REST positions, not where they are mid-open. The **sheet** (`.fold6-mlegend-card`) sits
-  UNDER the pill: the width step widens it from the pill's width to the bar's while it
-  still has no height (invisible), then the height step grows it up from the screen edge
-  (`sheetH × hT`); it is `visibility: hidden` at raw 0. At rest open the card is pinned
-  to the bar's sides and bottom with `top` at the pill's underside rather than sized, so
-  the ACLED note flowing into the panel at `@fold6` grows it for free. The close's final
-  paint runs AFTER the panel is hidden, since hiding it changes the bar height everything
-  is placed off. It is first painted when the bar arrives
-  (`fold6SetMobileLegendVisible`) and repainted on `resize` — never per scroll frame.
+  `_H = 0` falls back to the measured height), centred horizontally on the bar — and that
+  pill IS `.fold6-mlegend-card` at `hT = 0`, not a second element. Opening keeps the card's
+  **bottom edge fixed** and raises its top to `0`; the title and the rows ride the same
+  shift so the whole thing moves as one piece. See the frame paragraph above for the
+  details, including why `offsetTop` has to be stripped of last frame's shift and why the
+  close's final paint runs after the panel is hidden (hiding it changes the bar height
+  everything is placed off). At rest open the card spans the bar, so the ACLED note flowing
+  into the panel at `@fold6` grows it for free.
 - **The title drags.** A press on the button scrubs `fold6MLegendOpenRaw` with the finger
   (up = opening, over the bar's open height minus the closed pill), painting each frame,
   and release snaps to the nearer pose through `fold6SetMobileLegendOpen`; a press that
