@@ -118,9 +118,8 @@ function updateGroups() {
   // absolutely positioned by the block further down; the legend rows center on
   // the viewport middle without it (fold6RowIndexY). On MOBILE there is no
   // on-canvas mini-legend at all any more — the legend collapsed into the מקרא
-  // drop-down (js/groups.js), and the note was reparented INTO that panel,
-  // where it flows. So every measured value here is desktop-only.
-  fold6SyncNoteHome();
+  // card (js/groups.js), and the ACLED credit is a corner link there rather
+  // than this note. So every measured value here is desktop-only.
   const fold6MobileLegend = isMobile();
   const fold6NoteWidthPx = FOLD6_NOTE_WIDTH;
   let fold6NoteHeightPx = 0;
@@ -1207,10 +1206,19 @@ function updateGroups() {
   // The panel's rows/note divider goes with them — it only means anything with
   // the note under it — but it is mobile-only, so it is hidden outright on
   // desktop rather than sharing the mobile gate.
+  // MOBILE HAS NO NOTE AT ALL now — the credit is the corner link below — so
+  // every one of these is simply hidden under the breakpoint.
   fold6NoteCardEl.hidden =
-  fold6NoteRuleEl.hidden = fold6NoteEl.hidden = fold6NoteTitleEl.hidden =
-    fold6MobileLegend && (noteRevealT <= 0 || (fold6MLegendOpenWant && fold6MLegendOpenRaw < 1));
-  fold6MobileNoteDividerEl.hidden = !fold6MobileLegend || fold6NoteTitleEl.hidden;
+  fold6NoteRuleEl.hidden = fold6NoteEl.hidden = fold6NoteTitleEl.hidden = fold6MobileLegend;
+  // The corner link rides the same crossing the note used to (acledNoteTrigger)
+  // and @fold14's shared fade-out, and is pointer-dead until it is properly
+  // there so it can never take a tap meant for the artwork behind it.
+  // The open/close fade is applied by the card's own paint, not here — see
+  // fold6MSetAcledReveal (js/groups.js).
+  {
+    const outT = (typeof p9 !== "undefined" && p9.fold13OutT) || 0;
+    fold6MSetAcledReveal(fold6MobileLegend ? noteRevealT * (1 - outT) : 0);
+  }
 
   // The מקרא bar appears with the same crossing that dissolves the six rows
   // into it (e6), and stays for the rest of the page — it is the mini-legend

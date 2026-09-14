@@ -4149,18 +4149,17 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     text-align: center;
   }
 
-  /* Sized and placed every frame of an open/close by fold6MLegendPaintCard
-     (js/groups.js); at rest open it is pinned to the bar's four edges instead,
-     so the ACLED note flowing into the panel at @fold6 grows it for free. First
-     child of the bar, so it paints under the button and the panel. */
+  /* THE one frame, in every state: closed it is the מקרא button, open it is the
+     legend. Sized and placed every frame of an open/close by
+     fold6MLegendPaintCard (js/groups.js). First child of the bar, so it paints
+     under the title and the rows. */
   .fold6-mlegend-card {
     position: absolute;
     box-sizing: border-box;
     left: 0;
     bottom: 0;
-    /* All four corners: the card floats clear of the screen edge now, so there
-       is no edge for a flat side to sit on. The מקרא pill overlaps the top edge
-       in the middle and carries the same fill, so the seam is invisible. */
+    /* All four corners: the card floats clear of every screen edge, so there is
+       none for a flat side to sit on. */
     border-radius: var(--mlg-radius, 8px);
     /* The desktop ACLED note's skin (.fold6-note-card): a tint, no border, no
        shadow. OPAQUE, though — the note's own rgba(0,0,0,.035) is translucent,
@@ -4174,6 +4173,13 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     /* The bar's arrival pop (fold6SetMobileLegendVisible) scales the collapsed
        card together with the button. */
     transform-origin: center;
+  }
+  /* A small lift while it is the closed BUTTON, so it reads as something to
+     press rather than a patch of tint. It goes the moment the card starts
+     opening (`.is-open` lands on pointerdown): at full size a shadow only
+     smears the card's own edge across the veil behind it. */
+  .fold6-mlegend:not(.is-open) .fold6-mlegend-card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
   }
 
   /* Removed — don't reintroduce: `.fold6-mlegend-tab` (`fold6MobileTabEl`), the
@@ -4213,6 +4219,28 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      ::before, centred 4px above the button's box. The floating card carries the
      bare title; the card's own open IS the affordance. (Its twin, a chevron,
      was judged in the same compare/ pass and declined with it.) */
+  /* The ACLED credit on mobile (js/groups.js: fold6MobileAcledLinkEl) — a bare
+     `acleddata.com` in the viewport's top-LEFT corner, opposite the legend's own
+     top-right button, arriving on @fold6's crossing. It replaces the full note
+     that used to be re-parented into the legend panel.
+     Its top and left match the card's: the same gap off the top edge, and the
+     title blocks' own gutter on the side, so the two corners read as a pair.
+     Type is the note's — 14px/1.4 in the title's grey — underlined because it
+     is the one link on the screen and nothing else marks it as one. */
+  .fold6-macled-link {
+    position: fixed;
+    top: 8px;
+    left: calc((100vw - min(480px, 100vw - 48px)) / 2);
+    font: 14px/1.4 'Assistant', sans-serif;
+    color: #767676;
+    text-decoration: underline;
+    /* The layer passes pointer events through; this opts back in, and
+       updateGroups switches it off again until the link is properly there. */
+    pointer-events: none;
+    opacity: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   /* The veil over the page behind the open legend (js/groups.js:
      fold6MobileVeilEl), its opacity driven per frame from the card's own open
      progress. Picked in a compare/ pass: a DARKENED PAGE GROUND rather than

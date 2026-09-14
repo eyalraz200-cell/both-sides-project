@@ -1885,9 +1885,8 @@ const fold6NoteLayerEl = document.getElementById("fold6NoteLayer");
 // The CARD the note sits in. Deliberately a SIBLING drawn behind the title and
 // the body, not a wrapper around them: the two are absolutely positioned and
 // their left/top/width are written per frame by updateGroups, and on mobile
-// they are re-parented one by one into the מקרא panel (fold6SyncNoteHome) where
-// they flow instead. Reparenting them under a wrapper would have meant redoing
-// both of those; as a sibling the card just tracks the block it frames, sized
+// they do not exist at all (the credit is a corner link instead). Wrapping them
+// would have meant redoing that; as a sibling the card just tracks the block it frames, sized
 // from the very numbers that already drive the vertical rule. Appended FIRST so
 // it paints underneath (these are all position:absolute in one layer, so DOM
 // order is paint order — no z-index needed).
@@ -2112,47 +2111,50 @@ const fold6MobileCampHeadEls = {};
 });
 fold6MobilePanelEl.appendChild(fold6MobileRowsEl);
 
-// The hairline between the six group rows and the ACLED note (explicit
-// instruction). The note is ADDED to an already-open panel a fold after the
-// rows land, so without a separator the two blocks read as one list that grew a
-// paragraph; the rule says "different kind of thing". Appended here, before the
-// note is re-parented in by fold6SyncNoteHome, so DOM order puts it between
-// them. Same 1px / rgba(0,0,0,0.12) as the note's own vertical rule on desktop
-// — the note keeps one hairline either way, it just turns to lie along the
-// block it separates. Hidden with the note (js/update-groups.js): a divider
-// with nothing under it is a line to nowhere.
-const fold6MobileNoteDividerEl = document.createElement("div");
-fold6MobileNoteDividerEl.className = "fold6-mlegend-divider";
-fold6MobileNoteDividerEl.hidden = true;
-fold6MobilePanelEl.appendChild(fold6MobileNoteDividerEl);
 fold6MobileLegendEl.appendChild(fold6MobilePanelEl);
 fold6MobileLegendLayerEl.appendChild(fold6MobileLegendEl);
 
-// The note and its divider are MOVED into the panel on mobile rather than
-// duplicated — one set of nodes, one ACLED link, so the credit can't drift out
-// of sync between the two viewports. Their desktop selves are absolutely
-// positioned with inline left/top/width written every tick by updateGroups;
-// inside the panel they flow, so the inline values have to be cleared on the
-// way in (and are simply re-written on the way back out).
-let fold6NoteHome = "layer";
-function fold6SyncNoteHome() {
-  const want = isMobile() ? "panel" : "layer";
-  if (want === fold6NoteHome) return;
-  fold6NoteHome = want;
-  const parent = want === "panel" ? fold6MobilePanelEl : fold6NoteLayerEl;
-  // The card is NOT in this list — it stays in the layer. Inside the panel the
-  // note flows and the panel is its own frame already, so the card hides there
-  // (.fold6-note-card.is-in-panel), exactly as the rule does.
-  [fold6NoteRuleEl, fold6NoteTitleEl, fold6NoteEl].forEach((el) => {
-    el.style.left = el.style.top = el.style.width = el.style.opacity = "";
-    parent.appendChild(el);
-  });
-  fold6NoteEl.classList.toggle("is-in-panel", want === "panel");
-  fold6NoteTitleEl.classList.toggle("is-in-panel", want === "panel");
-  fold6NoteRuleEl.classList.toggle("is-in-panel", want === "panel");
-  fold6NoteCardEl.classList.toggle("is-in-panel", want === "panel");
+/* THE ACLED CREDIT ON MOBILE — a corner link, not a note in the legend
+   (explicit instruction). The full sentence used to be re-parented into the
+   מקרא panel at @fold6; it is now replaced by a bare `acleddata.com` link in
+   the viewport's top-LEFT corner, opposite the legend's own top-right pill, on
+   the same crossing (acledNoteTrigger, via updateGroups).
+
+   *Removed — don't reintroduce:* `fold6SyncNoteHome()`, which moved
+   fold6NoteRuleEl / fold6NoteTitleEl / fold6NoteEl between the note layer and
+   the panel and toggled `.is-in-panel` on all four note elements, and
+   `fold6MobileNoteDividerEl` (`.fold6-mlegend-divider`), the hairline that
+   separated the six rows from that note. The desktop note is untouched and
+   keeps every one of those nodes — only mobile's copy of the credit changed.
+
+   It lives in the legend's own layer so it clears the title blocks exactly as
+   the card does, and opts back into pointer events (the layer passes them
+   through). */
+const fold6MobileAcledLinkEl = document.createElement("a");
+fold6MobileAcledLinkEl.className = "fold6-macled-link";
+fold6MobileAcledLinkEl.href = "https://acleddata.com/";
+fold6MobileAcledLinkEl.target = "_blank";
+fold6MobileAcledLinkEl.rel = "noopener";
+fold6MobileAcledLinkEl.textContent = "acleddata.com";
+fold6MobileLegendLayerEl.appendChild(fold6MobileAcledLinkEl);
+// How far the link has been REVEALED — @fold6's crossing times @fold14's
+// fade-out, written by updateGroups. Kept separate from the open/close fade
+// below because the two run on different clocks: updateGroups only ticks with
+// the page, while an open animates on its own rAF, so the card's own paint has
+// to be what multiplies them or the link stays lit through a tap-to-open.
+let fold6MAcledRevealT = 0;
+function fold6MSetAcledReveal(t) {
+  fold6MAcledRevealT = t;
+  fold6MPaintAcledLink(fold6MLegendOpenRaw);
 }
-fold6SyncNoteHome();
+function fold6MPaintAcledLink(raw) {
+  // Gone while the legend is OPEN: the open card spans the full width and its
+  // × sits in this same top-left corner, so the two would overlap outright.
+  // Closed, they are a pair of corners; open, the corner is the card's.
+  const t = fold6MAcledRevealT * (1 - raw);
+  fold6MobileAcledLinkEl.style.opacity = String(t);
+  fold6MobileAcledLinkEl.style.pointerEvents = t > 0.5 ? "auto" : "none";
+}
 
 // The bar never moves: it parks FOLD6_MLEGEND_EDGE_GAP_PX off whichever screen
 // edge FOLD6_MLEGEND_EDGE names, and the card grows away from that edge.
@@ -2238,7 +2240,7 @@ function fold6SetMobileLegendVisible(vis) {
      - and it STAYS closed from there on. @fold6 does NOT reopen it (explicit
        instruction): the ACLED card is that fold's subject and an auto-opening
        panel covers it. The note still arrives inside the panel on its own ramp
-       (fold6SyncNoteHome), so it is simply waiting there for a reader who taps
+       (the corner link), so it is simply waiting there for a reader who taps
        מקרא — the auto-beat no longer opens the card to show it off.
    Scrolling back up runs the same states in reverse — @fold5 back to @fold4
    reopens — because `want` is derived from the trigger every frame rather than
@@ -2354,6 +2356,7 @@ function fold6MLegendPaintCard(raw) {
   // mid-drag), rather than waiting for the rows' beat. Explicit number for the
   // same reason as the × below.
   fold6MobileVeilEl.style.opacity = String(raw);
+  fold6MPaintAcledLink(raw);
   // The close button belongs to the OPEN pose: it arrives on the same step as
   // the rows and is dead until they are fully there, so a tap on the pill can
   // never land on it.
@@ -2459,9 +2462,6 @@ let fold6MLegendIntroActive = false;
 // gates it.
 function fold6EndMLegendIntro() {
   fold6MLegendIntroActive = false;
-  if (isMobile() && acledNoteTrigger.currentT() > 0) {
-    fold6NoteRuleEl.hidden = fold6NoteEl.hidden = false;
-  }
 }
 
 function fold6MLegendPaintRow(r, popT, typeT) {
@@ -2882,7 +2882,6 @@ function fold6MFlyMaybeReopen() {
   if (!fold6MFlyEnabled() || fold6MLegendIntroActive) return;
   if (fold6MLegendOpenWant) return; // hand-opened panel: leave it be
   fold6MLegendIntroActive = true;
-  fold6NoteRuleEl.hidden = fold6NoteEl.hidden = true;
   fold6PlayMLegendFlyIntro();
 }
 
@@ -2925,11 +2924,6 @@ function fold6PlayMLegendIntro() {
     fold6PlayMLegendFlyIntro();
     return;
   }
-  // Pulled out of the panel's layout right here for the same reason
-  // fold6EndMLegendIntro puts it back by hand: replaying the demo after @fold6
-  // has already revealed the note (scrolled back up and down again) would
-  // otherwise leave it in the frame until the next updateGroups frame.
-  fold6NoteRuleEl.hidden = fold6NoteEl.hidden = true;
   // Rows zeroed BEFORE the card opens, so the frame never shows full rows for
   // the one frame between opening and the first tick. The frame itself is the
   // card's own open — width, then height — exactly the move a tap makes.
@@ -3094,6 +3088,22 @@ document.addEventListener("click", (e) => {
     fold6SetMobileLegendOpen(false);
   }
 });
+// …and SCROLLING past it closes it too (explicit instruction): the card is a
+// fixed overlay, so a reader who scrolls on has plainly finished with it.
+//
+// Gated on the hand-off NOT being in flight. @fold4 opens the panel *while the
+// reader is scrolling* — that is the whole point of the flight — so an
+// ungated listener would slam it shut on the very next scroll frame, and the
+// six rows would land in a card that is already closing.
+// Passive: this only reads state, and a non-passive scroll listener blocks the
+// compositor on every tick.
+window.addEventListener("scroll", () => {
+  if (!fold6MLegendOpenWant || fold6MLegendIntroActive) return;
+  // A drag on the card itself sets touch-action: none, so a scroll arriving
+  // mid-drag is not the reader scrolling the page past it.
+  if (fold6MLegendDrag) return;
+  fold6SetMobileLegendOpen(false);
+}, { passive: true });
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && fold6MLegendOpenWant) {
     fold6StopMLegendIntro();

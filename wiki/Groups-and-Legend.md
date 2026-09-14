@@ -582,6 +582,10 @@ the gutter widens — verified flush at both 390 and 560. `--mlg-gap-right` and
 `--mlg-gap-left` default to that gutter, and anything tuning them must offset *from* it
 rather than replace it, or the alignment silently breaks at the wide end.
 All four corners are rounded, since there is no screen edge for a flat side to sit on.
+It carries a **small drop shadow while it is the closed button**
+(`0 2px 8px rgba(0,0,0,.10)`, on `:not(.is-open)` only) so it reads as something to press
+rather than a patch of tint; the shadow goes the moment it starts opening, where at full
+size it would only smear the card's own edge across the veil.
 **The page behind it is dimmed while it is open** (`.fold6-mlegend-veil`,
 `fold6MobileVeilEl` — first child of the layer, so it paints under the card and over
 everything the layer already out-stacks). Picked in a `compare/` pass: the veil is a
@@ -829,24 +833,35 @@ still opening, and the flight aims at the rows' REST positions).
   same sides (coalition right, by `dir: rtl` + source order), each column in `campRowOrder`'s
   mobile order (see the roster section — it passes `mobile: true` outright, since the panel is
   built once at parse time and only ever shown under the breakpoint).
-- The ACLED note and its title are **moved**, not duplicated, into the panel by
-  `fold6SyncNoteHome()` — one set of nodes, one ACLED link. Crossing the breakpoint reparents
-  them back; `.is-in-panel` undoes their `position: absolute`, and the inline
-  `left/top/width/opacity` are cleared on the way in. They still fade on
-  `acledNoteTrigger`, so opening the panel before `@fold6` shows no credit.
-  **No chevron in the panel** (explicit instruction): `.fold6-note-title.is-in-panel::after`
-  is `content: none`. On desktop the chevron is the note CARD's affordance and rides its
-  left edge; in the panel the card is hidden and the note flows into a legend that is
-  already open, so there is nothing for it to promise and no edge to ride.
-- **A hairline separates the rows from the note** (explicit instruction):
-  `.fold6-mlegend-divider`, a 1px `rgba(0,0,0,0.12)` rule built in `js/groups.js` and
-  appended to the panel *before* `fold6SyncNoteHome` re-parents the note in, so DOM order
-  puts it between the two blocks. Same hairline the note has on desktop as its vertical
-  rule, turned to lie across what it separates. `updateGroups` hides it whenever the note
-  title is hidden, and outright on desktop — a divider with nothing under it is a line to
-  nowhere.
-- Open/close: tap the button, tap outside, or Escape. Resizing to desktop closes it
-  (`fold6SetMobileLegendVisible(0)`).
+- **There is NO ACLED note in the legend** (explicit instruction). Mobile's credit is a bare
+  **`acleddata.com` link in the viewport's top-LEFT corner** (`.fold6-macled-link`,
+  `fold6MobileAcledLinkEl`), opposite the legend's own top-right button, arriving on the same
+  crossing the note used to (`acledNoteTrigger`) and leaving on `@fold14`'s shared fade-out.
+  It shares the card's `top` and takes the title blocks' own gutter on the side, so the two
+  corners read as a pair. It lives in the legend's layer, so it clears the title blocks the
+  same way the card does, and opts back into pointer events the layer passes through.
+  **It fades out while the legend is OPEN** — the open card spans the full width and its `×`
+  sits in that same corner, so the two would overlap outright. That fade is applied by
+  `fold6MLegendPaintCard`, NOT by `updateGroups`: the two run on different clocks, and an
+  open animates on its own rAF, so a reveal written only on `updateGroups` ticks left the
+  link lit right through a tap-to-open. `updateGroups` sets the reveal amount
+  (`fold6MSetAcledReveal`) and the card's paint multiplies it by the open progress.
+  The **desktop note is untouched** — every one of its nodes, its chevron and its typing
+  still work exactly as before; only mobile's copy of the credit changed.
+
+  *Removed — don't reintroduce:* `fold6SyncNoteHome()`, which re-parented
+  `fold6NoteRuleEl` / `fold6NoteTitleEl` / `fold6NoteEl` between the note layer and the
+  panel and toggled `.is-in-panel` on all four note elements; and
+  `fold6MobileNoteDividerEl` (`.fold6-mlegend-divider`), the 1px `rgba(0,0,0,.12)` hairline
+  that separated the six rows from that note. `.fold6-note-title.is-in-panel::after`'s
+  `content: none` (no chevron in the panel) went with them.
+- Open/close: tap the button, tap **anywhere** outside it, **scroll the page**, or Escape.
+  Resizing to desktop closes it (`fold6SetMobileLegendVisible(0)`). The scroll listener is
+  **gated on the hand-off not being in flight** (`fold6MLegendIntroActive`) and on no drag
+  being in progress: `@fold4` opens the panel *while the reader is scrolling* — that is the
+  whole point of the flight — so an ungated listener would slam it shut on the very next
+  scroll frame and the six rows would land in a card that is already closing. It is
+  `passive`, since it only reads state.
 - **The `@fold4` hand-off has two versions, switched by `window.FOLD4_FLY`** (default
   **on** = the fly version). `fold6MFlyEnabled()` (`js/groups.js`) is the single gate; the
   only gate — set the global from the console to compare. Everything in the two bullets
