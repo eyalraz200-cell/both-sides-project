@@ -276,6 +276,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     except ValueError:
                         since = -1
             self._json(bus_read(since))
+        elif self.path == "/__who__":
+            # WHO IS THIS SERVER — the harness panel tab shows it next to the
+            # buttons, so a panel driving one of several worktrees says which
+            # chat's work it is editing. One worktree per chat is the setup
+            # (see wiki/Dev-Workflow.md), which makes the branch that identity.
+            self._json({"branch": _git_branch(), "dir": WATCH_DIR.name, "port": PORT})
         elif self.path == "/__mtime__":
             self._json({"t": last_modified})
         elif self.path == "/events.json":
@@ -297,6 +303,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def log_message(self, fmt, *args):
         pass
+
+def _git_branch():
+    try:
+        import subprocess
+        return subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                              cwd=str(WATCH_DIR), capture_output=True, text=True,
+                              timeout=2).stdout.strip() or None
+    except Exception:
+        return None
+
 
 def _lan_ip():
     """The address a phone on the same Wi-Fi can reach. The UDP socket picks the

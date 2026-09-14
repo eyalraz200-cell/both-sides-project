@@ -904,8 +904,24 @@
      answers with its title. One tab then hosts them all. */
   var DISC = null;
   try { if (window.HBus) DISC = HBus('harness:__all__'); } catch (e) {}
+  /* PAGE-WIDE controls ride the discovery channel rather than a harness's own:
+     they belong to the page, not to one panel, and the remote tab shows them
+     once. `foldbadge` drives the dev fold badge (js/nav.js) — the number in the
+     top-left corner sits over the artwork, so it has to be switchable from the
+     tab like anything else the harness paints. */
+  function foldBadgeState() {
+    var b = document.getElementById('foldNumberBadge');
+    return b ? b.classList.contains('is-visible') : null;
+  }
   if (DISC) DISC.onmessage = function (ev) {
-    if ((ev.data || {}).t === 'who') { try { DISC.postMessage({ t: 'iam', title: CONFIG.title, inst: INST }); } catch (e) {} }
+    var m = ev.data || {};
+    if (m.t === 'who') {
+      try { DISC.postMessage({ t: 'iam', title: CONFIG.title, inst: INST, foldBadge: foldBadgeState() }); } catch (e) {}
+    }
+    if (m.t === 'foldbadge' && typeof setFoldBadgeVisible === 'function') {
+      setFoldBadgeVisible(!!m.on);
+      try { DISC.postMessage({ t: 'iam', title: CONFIG.title, inst: INST, foldBadge: foldBadgeState() }); } catch (e) {}
+    }
   };
 
   /* INSTANCE ID. Every page running this harness on the same dev server (the

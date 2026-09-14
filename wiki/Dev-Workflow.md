@@ -229,11 +229,20 @@ for — the **remote panel**:
 - It is a generic, project-agnostic page. Each harness sends it a descriptor (title, modes,
   toggles, knobs, ranges, `source` strings, Go label) and it renders whatever that
   describes, so the one file serves every harness.
-- **One tab hosts every harness on the page, one at a time.** It asks `who` on a shared
-  `harness:__all__` channel; each harness answers with its title and becomes a pill in the
-  top strip, **labelled with its fold** (`@fold9 dots-glow`) — `CONFIG.fold`, or lifted
-  out of the Go label when that names one. The picked harness repeats fold + title at the
-  left of its own toolbar, so a Copy about to go into chat is never ambiguous. Only the picked harness is rendered and the keys drive it (the pick is
+- **One tab hosts every harness on the page, one at a time, from a LEFT RAIL.** It asks
+  `who` on a shared `harness:__all__` channel; each harness answers with its title and
+  becomes a row in the rail, **labelled with its fold** above its name (`@fold9` /
+  `dots-glow`) — `CONFIG.fold`, or lifted out of the Go label when that names one. A
+  vertical list stays readable as harnesses accumulate; the old top strip wrapped into a
+  block.
+- **The toolbar names the CHECKOUT, not the harness** — `main :8080`, from the server's
+  `/__who__` (git branch + port). One worktree per chat means that branch is the chat, and
+  two panel tabs driving two chats are otherwise indistinguishable. An older `server.py`
+  with no `/__who__` falls back to the host.
+- **Page-wide switches live at the foot of the rail**, not inside a harness: today that is
+  the dev **fold number** badge. It rides the `harness:__all__` channel (`{t:'foldbadge',
+  on}`), every harness on the page applies it via `setFoldBadgeVisible()`, and each `iam`
+  answer reports the badge's state back so the checkbox self-corrects. Only the picked harness is rendered and the keys drive it (the pick is
   remembered in `localStorage`). `?t=<title>` narrows the tab to one
   harness — an opt-in, never handed out: it silently hides every other harness, which
   reads as "only one harness showed up". The Pop-out clipboard URL is the bare one.
@@ -306,9 +315,10 @@ made the real device the one place the panel could not reach.
 - `server.py` speaks **HTTP/1.1** so the socket is reused between clicks; every response it
   writes by hand must therefore carry `Content-Length` or the client waits for an EOF that
   a kept-alive connection never sends.
-- **Hand back** (the old "Dock") tells one harness to stop being remote-driven: its
-  floating in-page panel reappears and its section leaves the tab. The reverse of Pop out;
-  it resets nothing.
+- **There is no "Dock"/"Hand back" button.** It used to return a harness to its in-page
+  panel, but with `remoteOnly: true` the default there is no in-page panel to return to —
+  pressing it just made the harness vanish. Close the tab (or press `H` on the page) to get
+  the in-page panel back.
 - `_debug-panel.html` is scaffolding like the rest — delete it with the last `_debug-*.js`.
 
 ## Currently in the repo
