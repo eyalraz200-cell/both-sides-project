@@ -251,9 +251,22 @@ for — the **remote panel**:
 - **One tab hosts every harness on the page, one at a time, from a LEFT RAIL.** It asks
   `who` on a shared `harness:__all__` channel; each harness answers with its title and
   becomes a row in the rail, **labelled with its fold** above its name (`@fold9` /
-  `dots-glow`) — `CONFIG.fold`, or lifted out of the Go label when that names one. A
-  vertical list stays readable as harnesses accumulate; the old top strip wrapped into a
+  `dot size and glow`) — `CONFIG.fold`, or lifted out of the Go label when that names one.
+  A vertical list stays readable as harnesses accumulate; the old top strip wrapped into a
   block.
+- **Name a harness for a person, not for the filesystem.** `CONFIG.label` is what the rail
+  shows — plain words for the thing being tuned (`axis draw-in`, `legend sheet colour`).
+  `CONFIG.title` stays the bus channel and the Copy header, and stands in when no label is
+  set, but a rail full of file slugs is a rail you have to decode.
+- **The panel's own look is themeable** (`look` at the foot of the rail): 12 palettes and 6
+  type styles, including uppercase-label sets. Every rule in the panel reads from tokens on
+  `:root` (`--bg`, `--bg-rail`, `--bg-el`, `--line`, `--text`, `--text-dim`, `--accent`,
+  `--warn`, `--font`, `--fs`, `--label-tt`…), so a new theme is a row in the `PALETTES` /
+  `TYPES` table and nothing else — anything hard-coded in the CSS is a bug, because it will
+  not follow the theme. Digits 1-9 pick a palette and `q w e r t y` a type style, but a key
+  the open harness claims for a mode or toggle always wins, and `0` is never taken (it
+  clears the modes). Light palettes flip `color-scheme` so the native controls follow. The
+  pick persists in `localStorage`.
 - **Nothing on the toolbar but the buttons** — no harness name, no branch, no port, no
   host id. The rail already says which harness is open, and the id only ever mattered when
   a second page was running the same harness, which is what the `drive <id> instead`

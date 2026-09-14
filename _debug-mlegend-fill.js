@@ -41,6 +41,7 @@
   var CONFIG = {
     title: 'mlegend-fill',
     remoteOnly: true,
+    label: 'legend sheet colour',
     tabs: [], tab: null, onTab: null,
     sliders: [],
     colors: [
@@ -948,6 +949,10 @@
   function descriptor() {
     return {
       title: CONFIG.title,
+      /* What the rail calls this harness. A NAME FOR A PERSON — "axis draw-in",
+         "legend sheet colour" — not the file's slug. CONFIG.title stays the bus
+         channel and the Copy header; this is the label a human reads. */
+      label: CONFIG.label || CONFIG.title,
       /* The fold this harness tunes — shown on its pill in the remote tab, so a
          strip of harnesses reads as folds, not just names. Taken from
          CONFIG.fold when set, else lifted out of the Go label ("@fold8 fly"). */
