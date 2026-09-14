@@ -1703,8 +1703,8 @@ let FOLD6_MLEGEND_COMPACT_CLOSED = true;
 // a fixed override when non-zero); the height is the exact px below (0 =
 // measured: button + FOLD6_CARD_PAD above + FOLD6_MLEGEND_PAD_BOTTOM_PX below).
 let FOLD6_MLEGEND_COMPACT_W = 0;
-let FOLD6_MLEGEND_COMPACT_PAD_X = 28;
-let FOLD6_MLEGEND_COMPACT_H = 34;
+let FOLD6_MLEGEND_COMPACT_PAD_X = 21;
+let FOLD6_MLEGEND_COMPACT_H = 36;
 // Both camp blocks are placed symmetrically about screen center from
 // FOLD2_CAMP_CENTER_GAP_PX (see the @fold2 grid block above) — there's no
 // longer a center divider to hang either column off (Figma node 279:1342
@@ -1997,6 +1997,17 @@ fold6NoteLayerEl.appendChild(fold6NoteRuleEl);
    be reachable by assistive tech and by taps — that layer is aria-hidden and
    pointer-events:none, both correct for a decorative credit line. */
 const fold6MobileLegendLayerEl = document.getElementById("fold6MobileLegendLayer");
+// The page behind the open legend is dimmed (chosen in a compare/ pass against
+// a plain black veil and a backdrop blur). The tint is a DARKENED PAGE GROUND,
+// not neutral black: --bg is #FDFCFF, and laying black over a warm white cast
+// it grey. First child of the layer, so it paints under the card and over
+// everything the layer already out-stacks.
+// pointer-events stay off: a tap outside the card already closes it (the
+// document handler further down), and a veil that ate the tap would break that.
+const fold6MobileVeilEl = document.createElement("div");
+fold6MobileVeilEl.className = "fold6-mlegend-veil";
+fold6MobileVeilEl.setAttribute("aria-hidden", "true");
+fold6MobileLegendLayerEl.appendChild(fold6MobileVeilEl);
 const fold6MobileLegendEl = document.createElement("div");
 fold6MobileLegendEl.className = "fold6-mlegend";
 const FOLD6_MOBILE_LEGEND_LABEL = "מקרא";
@@ -2338,6 +2349,11 @@ function fold6MLegendPaintCard(raw) {
   // (compositor layer), restated because an inline transform replaces it.
   fold6MobilePanelEl.style.transform = `translateZ(0) translateY(${shift}px)`;
   fold6MobilePanelEl.style.opacity = hT < 1 ? String(hT) : "";
+  // The veil rides the RAW progress, not the height step: it has to start
+  // darkening the moment the card begins to move (including under a finger
+  // mid-drag), rather than waiting for the rows' beat. Explicit number for the
+  // same reason as the × below.
+  fold6MobileVeilEl.style.opacity = String(raw);
   // The close button belongs to the OPEN pose: it arrives on the same step as
   // the rows and is dead until they are fully there, so a tap on the pill can
   // never land on it.

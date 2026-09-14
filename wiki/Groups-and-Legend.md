@@ -551,12 +551,12 @@ persistent **floating card** pinned to the top edge of the viewport, closing int
 the top-right corner (`js/groups.js`, `.fold6-mlegend`):
 
 ```
-                            ╭──────────────╮  ← closed: the card shrunk to a pill in
-                            │     מקרא     │    the TOP-RIGHT corner. Its right edge
-                            ╰──────────────╯    is flush with the title blocks below
+                                ╭─────────╮  ← closed: the card shrunk to a pill in
+                                │  מקרא   │    the TOP-RIGHT corner. Its right edge
+                                ╰─────────╯    is flush with the title blocks below
 
  ╭───────────────────────────────────╮  ← open: the SAME card, its top edge fixed
- │               מקרא                │     and its BOTTOM grown downward
+ │ ×             מקרא                │     and its BOTTOM grown downward
  │ 3 coalition rows │ 3 change rows  │
  │ איסוף הנתונים / ACLED note …      │
  ╰───────────────────────────────────╯
@@ -581,7 +581,16 @@ is right at 390px and **wrong between 528px and 600px**, where `--card-w` stops 
 the gutter widens — verified flush at both 390 and 560. `--mlg-gap-right` and
 `--mlg-gap-left` default to that gutter, and anything tuning them must offset *from* it
 rather than replace it, or the alignment silently breaks at the wide end.
-All four corners are rounded, since there is no screen edge for a flat side to sit on. **The six group rows are `#fff`**, not the tint they used to carry: the card
+All four corners are rounded, since there is no screen edge for a flat side to sit on.
+**The page behind it is dimmed while it is open** (`.fold6-mlegend-veil`,
+`fold6MobileVeilEl` — first child of the layer, so it paints under the card and over
+everything the layer already out-stacks). Picked in a `compare/` pass: the veil is a
+**darkened page ground** (`rgba(40,36,52,.35)`) rather than neutral black, which cast the
+warm `#FDFCFF` page grey, and there is **no backdrop blur** — it lost, and it would cost a
+full-viewport filter over a canvas that repaints every frame. Its opacity rides the card's
+**raw** progress, not the height step, so it starts darkening the moment the card moves,
+including under a finger mid-drag. `pointer-events` stay off: a tap outside the card
+already closes it, and a veil that ate that tap would break it. **The six group rows are `#fff`**, not the tint they used to carry: the card
 behind them is that tint now, and tint-on-tint left six invisible cards.
 
 It keeps the desktop note's 14px/600/`#767676` title type and carries **nothing but the
@@ -674,7 +683,7 @@ still opening, and the flight aims at the rows' REST positions).
   outset — `FOLD6_CARD_PAD` (8) above the title, `FOLD6_MLEGEND_PAD_BOTTOM_PX` (6, the
   bar's CSS bottom padding — keep the two in sync; the bar's top padding is 4) below it.
   The **pill** (`FOLD6_MLEGEND_COMPACT_CLOSED = true`) is the measured title plus
-  `FOLD6_MLEGEND_COMPACT_PAD_X` (**28**) each side, **34** high (`FOLD6_MLEGEND_COMPACT_H`,
+  `FOLD6_MLEGEND_COMPACT_PAD_X` (**21**) each side, **36** high (`FOLD6_MLEGEND_COMPACT_H`,
   exact tuned px; `FOLD6_MLEGEND_COMPACT_W` is a fixed-width override when non-zero, and
   `_H = 0` falls back to the measured height), centred horizontally on the bar — and that
   pill IS `.fold6-mlegend-card` at `hT = 0`, not a second element. Opening keeps the card's

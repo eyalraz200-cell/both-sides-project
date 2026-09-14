@@ -4213,6 +4213,19 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      ::before, centred 4px above the button's box. The floating card carries the
      bare title; the card's own open IS the affordance. (Its twin, a chevron,
      was judged in the same compare/ pass and declined with it.) */
+  /* The veil over the page behind the open legend (js/groups.js:
+     fold6MobileVeilEl), its opacity driven per frame from the card's own open
+     progress. Picked in a compare/ pass: a DARKENED PAGE GROUND rather than
+     neutral black, which cast the warm #FDFCFF page grey, and no backdrop blur
+     (it costs a full-viewport filter on a canvas that repaints every frame). */
+  .fold6-mlegend-veil {
+    position: fixed;
+    inset: 0;
+    background: rgba(40, 36, 52, 0.35);
+    pointer-events: none;
+    opacity: 0;
+  }
+
   /* The close button — top-LEFT of the open card, opposite the מקרא title
      (explicit instruction). Absolutely placed off the bar's own padding so it
      sits on the card's top band whatever the card is doing; `top` is written
