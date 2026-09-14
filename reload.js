@@ -57,8 +57,12 @@
 
      A frozen tab is showing stale code, and a silently stale tab is a trap: you
      report a bug that is already fixed, or tune against values that have moved.
-     So it is never silent — as soon as the files move on, a chip in the corner
-     says how many changes this tab is behind, and clicking it catches up. */
+     The warning is therefore in the HARNESS PANEL, not here — the panel's rail
+     shows how many changes this tab is behind, next to the switch that caused
+     it. Nothing is drawn on the page itself: the page is the artwork being
+     judged, and a badge over it is the very thing harnesses are forbidden from
+     doing. `behind` is exposed through window.autoReloadState() and each
+     harness reports it on the bus. */
   const AUTOKEY = "reload:auto";
   let auto = false;
   try { auto = sessionStorage.getItem(AUTOKEY) === "1"; } catch (e) {}
@@ -67,20 +71,6 @@
   let seen = null;     // the newest mtime the server has reported
   let behind = 0;      // changes this tab has not taken
 
-  const chip = document.createElement("div");
-  chip.id = "reloadPausedChip";
-  chip.style.cssText =
-    "position:fixed;left:12px;bottom:12px;z-index:1000;display:none;cursor:pointer;" +
-    "font:600 11px/1 'Assistant',sans-serif;color:#111;background:#ffd54a;" +
-    "padding:6px 9px;border-radius:4px;box-shadow:0 2px 10px rgba(0,0,0,.35)";
-  chip.title = "this tab is frozen — click to load the latest code";
-  chip.addEventListener("click", reloadNow);
-  addEventListener("DOMContentLoaded", () => document.body.appendChild(chip));
-
-  function paintChip() {
-    chip.style.display = (!auto && behind > 0) ? "block" : "none";
-    chip.textContent = behind === 1 ? "1 change · reload" : behind + " changes · reload";
-  }
   function reloadNow() {
     try { sessionStorage.setItem(YKEY, String(window.scrollY)); } catch (e) {}
     location.reload();
@@ -94,20 +84,20 @@
     // Switching it back on catches up straight away — that is what the switch
     // means, and waiting for the next edit to land would be a puzzle.
     if (auto && behind > 0) return reloadNow();
-    paintChip();
   };
   window.autoReloadState = () => ({ on: auto, behind: behind });
+  // The panel's "N behind" badge is a button: this is what it calls.
+  window.reloadNow = reloadNow;
 
   setInterval(() => {
     fetch("/__mtime__").then(r => r.json()).then(({ t }) => {
       if (last === null) { last = seen = t; return; }
       if (t === seen) return;
-      // Count each distinct mtime the server reports, so the chip says how many
-      // saves this tab is behind rather than merely that it is behind.
+      // Count each distinct mtime the server reports, so the panel can say how
+      // many saves this tab is behind rather than merely that it is behind.
       seen = t;
       behind++;
-      if (auto) return reloadNow();
-      paintChip();
+      if (auto) reloadNow();
     }).catch(() => {});
   }, 800);
 })();

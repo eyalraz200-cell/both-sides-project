@@ -40,9 +40,13 @@ A tab now reloads itself **only** while its auto-reload switch is on:
   `window.setAutoReload(on)` on the page. It is **per tab** (`sessionStorage`), so one tab
   can be frozen while another keeps up.
 - A frozen tab is showing stale code, and a silently stale tab is a trap — you report a bug
-  that is already fixed, or tune against values that have moved. So as soon as the files
-  move on, a yellow chip in the bottom-left says how many changes this tab is behind;
-  clicking it reloads. The panel's rail shows the same count.
+  that is already fixed, or tune against values that have moved. The warning therefore
+  lives in the **panel's rail**: a yellow badge under the switch showing the NUMBER of
+  changes this tab has not taken (the number alone, house style). Clicking it reloads the
+  page without switching auto-reload on — the one-off "show me the latest". **Nothing is
+  drawn on the page itself**: the page is the artwork being judged, and a badge over it is
+  exactly what harnesses are forbidden from doing. `window.autoReloadState()` exposes
+  `{on, behind}`; `window.reloadNow()` is what the badge calls, over the bus.
 - Switching auto-reload back on reloads immediately when the tab is behind.
 - `reload.js` saves `scrollY` before reloading and restores it after `load` (then
   `ScrollTrigger.refresh()`), so catching up lands back on the fold under review.

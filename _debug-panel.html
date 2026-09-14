@@ -56,10 +56,13 @@
   #globals { margin-top: auto; padding-top: 10px; border-top: 1px solid #2a2a2a; }
   #globals label { display: flex; gap: 6px; align-items: center; padding: 3px 4px; cursor: pointer;
                    white-space: nowrap; }
-  /* How far the page is behind while auto-reload is off — the same warning the
-     page's own chip carries, so a frozen page is never silently stale. */
-  #behind { margin-inline-start: 4px; color: #111; background: #ffd54a; border-radius: 3px;
-            padding: 1px 5px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+  /* How far the page is behind while auto-reload is off. This is the ONLY
+     warning there is — nothing is drawn on the page itself, which is the
+     artwork being judged — so it is loud, and it is a button: click to catch up. */
+  #behind { margin: 6px 4px 0; color: #111; background: #ffd54a; border-color: #ffd54a;
+            border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600;
+            font-variant-numeric: tabular-nums; }
+  #behind:hover { background: #ffdf75; border-color: #ffdf75; }
   #behind:empty { display: none; }
   #main { flex: 1 1 auto; min-width: 0; }
   #flash { position: fixed; top: 10px; right: 12px; z-index: 9; color: #7fd; font-size: 11px;
@@ -132,8 +135,8 @@
     <div id="strip"></div>
     <div id="globals">
       <label><input type="checkbox" id="foldBadge"> fold number</label>
-      <label><input type="checkbox" id="autoReload"> auto-reload
-        <span id="behind"></span></label>
+      <label><input type="checkbox" id="autoReload"> auto-reload</label>
+      <button id="behind" title="changes this page has not taken — click to load them"></button>
     </div>
   </nav>
   <main id="main"><span id="flash"></span><div id="host"><p class="note" id="note">
@@ -595,6 +598,11 @@
     disc.postMessage({ t: 'autoreload', on: autoBox.checked });
     if (autoBox.checked) behindEl.textContent = '';
   };
+  // Catch up without switching auto-reload on — the one-off "show me the latest".
+  behindEl.onclick = function () {
+    disc.postMessage({ t: 'reloadnow' });
+    behindEl.textContent = '';
+  };
 
   // Discovery. Every harness answers `who` on the shared channel with its title.
   var disc = HBus('harness:__all__');
@@ -606,7 +614,9 @@
     var settled = Date.now() - switchTouched > 1200;
     if (typeof m.foldBadge === 'boolean' && settled) foldBox.checked = m.foldBadge;
     if (typeof m.autoReload === 'boolean' && settled) autoBox.checked = m.autoReload;
-    behindEl.textContent = (!m.autoReload && m.behind) ? m.behind + ' behind' : '';
+    // The number alone — the house standard for counts on screen, same as the
+    // fold badge. The tooltip carries what it means.
+    behindEl.textContent = (!m.autoReload && m.behind) ? String(m.behind) : '';
   };
   function ask() { disc.postMessage({ t: 'who' }); }
   ask();
