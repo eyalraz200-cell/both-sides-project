@@ -2015,6 +2015,26 @@ fold6MobileLegendBtnEl.className = "fold6-mlegend-btn";
 fold6MobileLegendBtnEl.textContent = FOLD6_MOBILE_LEGEND_LABEL;
 fold6MobileLegendBtnEl.setAttribute("aria-expanded", "false");
 fold6MobileLegendEl.appendChild(fold6MobileLegendBtnEl);
+// The close button — top-LEFT of the open card (explicit instruction), opposite
+// the מקרא title. Only the open pose has it: it fades in with the rows and is
+// pointer-dead while the card is a pill, where the pill itself is the toggle.
+// A real <button> so it is reachable and announced; the drag handler below
+// ignores it (it is not a row and not the title), and the tap is handled here.
+const fold6MobileCloseBtnEl = document.createElement("button");
+fold6MobileCloseBtnEl.type = "button";
+fold6MobileCloseBtnEl.className = "fold6-mlegend-close";
+fold6MobileCloseBtnEl.setAttribute("aria-label", "סגירת המקרא");
+fold6MobileLegendEl.appendChild(fold6MobileCloseBtnEl);
+// KEYBOARD ONLY. A real tap never reaches this: the bar captures the pointer on
+// pointerdown, which retargets the resulting click to the bar itself, so the
+// press is resolved in fold6MLegendDragEnd (d.onClose) along with row taps and
+// the title toggle. `detail === 0` is the same test the title button uses to
+// tell an Enter/Space activation from a pointer one.
+fold6MobileCloseBtnEl.addEventListener("click", (e) => {
+  if (e.detail !== 0) { e.preventDefault(); return; }
+  fold6StopMLegendIntro();
+  fold6SetMobileLegendOpen(false);
+});
 
 // Nothing but the button shows on screen. The camp names are INSIDE the panel,
 // heading their own column (per explicit instruction) — the real @fold2 headers
@@ -2318,6 +2338,19 @@ function fold6MLegendPaintCard(raw) {
   // (compositor layer), restated because an inline transform replaces it.
   fold6MobilePanelEl.style.transform = `translateZ(0) translateY(${shift}px)`;
   fold6MobilePanelEl.style.opacity = hT < 1 ? String(hT) : "";
+  // The close button belongs to the OPEN pose: it arrives on the same step as
+  // the rows and is dead until they are fully there, so a tap on the pill can
+  // never land on it.
+  // Always an explicit number, never "" — the CSS base is `opacity: 0` (so the
+  // button is invisible before the first paint), and clearing the inline value
+  // would fall straight back to that and leave it permanently hidden.
+  fold6MobileCloseBtnEl.style.opacity = String(hT);
+  fold6MobileCloseBtnEl.style.pointerEvents = hT < 1 ? "none" : "auto";
+  // It rides the card's own top band, like the title.
+  // Centred on the title's line, so the two read as one row.
+  const btnMid = btnFlowTop + btn.offsetHeight / 2;
+  fold6MobileCloseBtnEl.style.top =
+    `${shift + btnMid - fold6MobileCloseBtnEl.offsetHeight / 2}px`;
   // The rows are the OPEN pose's content: they arrive on the height step, so
   // they never take a tap while the card is still a pill.
   fold6MobilePanelEl.style.pointerEvents = hT < 1 ? "none" : "";
@@ -2972,6 +3005,8 @@ fold6MobileLegendEl.addEventListener("pointerdown", (e) => {
     // release point may not be the one the user aimed at.
     row: e.target.closest ? e.target.closest(".fold6-mlegend-row") : null,
     onTitle: !!(e.target.closest && e.target.closest(".fold6-mlegend-btn")),
+    // A press that starts on the close button is that button's, not a drag.
+    onClose: !!(e.target.closest && e.target.closest(".fold6-mlegend-close")),
   };
   fold6MobileLegendEl.setPointerCapture(e.pointerId);
 });
@@ -3014,8 +3049,12 @@ function fold6MLegendDragEnd() {
     fold6SetMobileLegendOpen(fold6MLegendOpenRaw > 0.5);
     return;
   }
-  // A tap. A row wins over the sheet toggle — tapping a group must never also
-  // close the panel out from under the thing it just changed.
+  // A tap. The close button first: the bar captured this pointer, so the click
+  // it produces is retargeted to the bar and the button's own handler never
+  // sees it — this pass is where a tapped × is actually resolved.
+  if (d.onClose) { fold6SetMobileLegendOpen(false); return; }
+  // A row wins over the card's toggle — tapping a group must never also close
+  // the panel out from under the thing it just changed.
   if (d.row && fold6MLegendOpenWant && fold6MLegendRowTap(d.row)) {
     fold6MLegendPaintCard(fold6MLegendOpenRaw);
     return;
