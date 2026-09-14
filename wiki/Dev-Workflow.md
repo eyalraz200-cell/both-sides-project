@@ -230,7 +230,9 @@ for — the **remote panel**:
   describes, so the one file serves every harness.
 - **One tab hosts every harness on the page, one at a time.** It asks `who` on a shared
   `harness:__all__` channel; each harness answers with its title and becomes a pill in the
-  top strip. Only the picked harness is rendered and the keys drive it (the pick is
+  top strip, **labelled with its fold** (`@fold9 dots-glow`) — `CONFIG.fold`, or lifted
+  out of the Go label when that names one. The picked harness repeats fold + title at the
+  left of its own toolbar, so a Copy about to go into chat is never ambiguous. Only the picked harness is rendered and the keys drive it (the pick is
   remembered in `localStorage`). `?t=<title>` narrows the tab to one
   harness — an opt-in, never handed out: it silently hides every other harness, which
   reads as "only one harness showed up". The Pop-out clipboard URL is the bare one.
@@ -303,6 +305,9 @@ made the real device the one place the panel could not reach.
 - `server.py` speaks **HTTP/1.1** so the socket is reused between clicks; every response it
   writes by hand must therefore carry `Content-Length` or the client waits for an EOF that
   a kept-alive connection never sends.
+- **Hand back** (the old "Dock") tells one harness to stop being remote-driven: its
+  floating in-page panel reappears and its section leaves the tab. The reverse of Pop out;
+  it resets nothing.
 - `_debug-panel.html` is scaffolding like the rest — delete it with the last `_debug-*.js`.
 
 ## Currently in the repo

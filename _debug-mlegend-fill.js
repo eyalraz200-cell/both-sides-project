@@ -912,6 +912,10 @@
   function descriptor() {
     return {
       title: CONFIG.title,
+      /* The fold this harness tunes — shown on its pill in the remote tab, so a
+         strip of harnesses reads as folds, not just names. Taken from
+         CONFIG.fold when set, else lifted out of the Go label ("@fold8 fly"). */
+      fold: CONFIG.fold || ((/@fold\s*\d+/i.exec(CONFIG.goLabel || '') || [null])[0]),
       goLabel: CONFIG.goTo ? (CONFIG.goLabel || 'Go') : null,
       tabs: CONFIG.tabs.map(function (t) { return { id: t.id, label: t.label }; }),
       modeGrouped: MODE_GROUPED,

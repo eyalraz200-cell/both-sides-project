@@ -43,6 +43,10 @@
   #top h1 { font-size: 12px; margin: 0 6px 0 0; font-weight: 600; opacity: .7; }
   #strip { display: flex; gap: 4px; flex-wrap: wrap; }
   #strip button { border-radius: 99px; }
+  #strip .pf { opacity: .55; margin-inline-end: 6px; }
+  #strip button[aria-selected="true"] .pf { opacity: .5; }
+  .who { font-weight: 600; margin-inline-end: 4px; }
+  .who b { opacity: .55; font-weight: 600; }
   #flash { color: #7fd; margin-left: auto; white-space: nowrap; }
   .note { color: #888; padding: 24px 14px; }
 
@@ -245,7 +249,7 @@
       if (m.t === 'desc') {
         var j = JSON.stringify(m.desc);
         H.adopt(m);
-        if (j !== H.descJSON) { H.descJSON = j; H.desc = m.desc; H.build(); }
+        if (j !== H.descJSON) { H.descJSON = j; H.desc = m.desc; H.build(); renderStrip(); }
         else H.patch();
         return;
       }
@@ -281,13 +285,25 @@
       H.el.dataset.built = String((Number(H.el.dataset.built) || 0) + 1);
       H.ui = { modeBtns: {}, togs: {}, tabBtns: {}, rows: {}, groups: {} };
       H.bar.textContent = '';
-      // FIXED order: Go · Copy · Reset · Dock.
+      /* Which harness these buttons belong to. The strip above says what is
+         AVAILABLE; with a Copy about to go into chat it has to be unambiguous
+         what is being copied, without looking back up at the pills. */
+      var who = el('span', 'who');
+      if (d.fold) who.appendChild(el('b', null, d.fold + ' '));
+      who.appendChild(document.createTextNode(d.title));
+      H.bar.appendChild(who);
+      // FIXED order: Go · Copy · Reset · Hand back.
       if (d.goLabel) H.bar.appendChild(btn(d.goLabel, function () { H.send({ t: 'btn', name: 'go' }); }));
       H.bar.appendChild(btn('Copy', function () { H.send({ t: 'btn', name: 'copy' }); }));
       var rb = btn('Reset', function (e) { H.send({ t: 'btn', name: 'reset', ship: !!(e && e.shiftKey) }); });
       rb.title = 'back to the last Copy · Shift: shipped values';
       H.bar.appendChild(rb);
-      H.bar.appendChild(btn('Dock', function () { H.send({ t: 'bye' }); H.dead = true; remove(H); }));
+      /* "Hand back" = stop driving this harness from here: the page's own
+         floating panel comes back and this section leaves the tab. The reverse
+         of Pop out; it does NOT reset or close anything. */
+      var db = btn('Hand back', function () { H.send({ t: 'bye' }); H.dead = true; remove(H); });
+      db.title = 'stop driving it from here — its panel reappears on the page';
+      H.bar.appendChild(db);
       H.hostsEl = el('span', 'host'); H.bar.appendChild(H.hostsEl); H.renderHosts();
 
       var body = H.body; body.textContent = '';
@@ -503,7 +519,14 @@
   function renderStrip() {
     strip.textContent = '';
     Object.keys(seen).forEach(function (t) {
-      strip.appendChild(btn(t, function () { activate(t); }, active === seen[t]));
+      var H = seen[t];
+      var b = btn('', function () { activate(t); }, active === H);
+      /* The fold reads first: a strip of harnesses is a strip of FOLDS, and the
+         name alone ("axis-intro") does not say where on the page it lives. */
+      var f = H.desc && H.desc.fold;
+      if (f) b.appendChild(el('span', 'pf', f));
+      b.appendChild(document.createTextNode(t));
+      strip.appendChild(b);
     });
   }
   function activate(title) {
