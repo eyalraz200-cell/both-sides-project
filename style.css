@@ -4133,7 +4133,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        three edges. The 6px bottom padding is the card's outset under the rows
        (FOLD6_MLEGEND_PAD_BOTTOM_PX in js/groups.js measures the closed card off
        it — keep them in sync). */
-    --mlg-inset: 12px;
+    --mlg-inset: 8px;
     left: var(--mlg-inset);
     right: var(--mlg-inset);
     padding: 4px 12px 6px;
@@ -4169,25 +4169,11 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     transform-origin: center;
   }
 
-  /* The מקרא pill (js/groups.js: fold6MobileTabEl) — the closed legend, and the
-     tab on top of the open sheet; sized and placed by fold6MLegendPaintCard.
-     Same fill, hairline and lift as the sheet, and the one place the grab
-     handle lives (the button's ::before sits inside it). */
-  .fold6-mlegend-tab {
-    position: absolute;
-    box-sizing: border-box;
-    /* Open, the pill is a tab joined to the card below it, so its bottom edge
-       is square; CLOSED it is the whole control and rounds all four. */
-    border-radius: var(--mlg-radius, 8px) var(--mlg-radius, 8px) 0 0;
-    background: var(--mlg-fill, #f4f3f6);
-    border: 0;
-    box-shadow: none;
-    pointer-events: none;
-    transform-origin: center;
-  }
-  .fold6-mlegend:not(.is-open) .fold6-mlegend-tab {
-    border-radius: var(--mlg-radius, 8px);
-  }
+  /* Removed — don't reintroduce: `.fold6-mlegend-tab` (`fold6MobileTabEl`), the
+     מקרא pill as a SEPARATE element joined to the card's top edge like a tab.
+     There is one frame in every state now (explicit instruction — "it should
+     just be part of the frame"): `.fold6-mlegend-card` IS the closed pill, and
+     opening grows that same box. */
 
   /* The title row — same type as .fold6-note-title on desktop. No chevron here
      (explicit instruction): unlike the desktop note, this bar is the only thing

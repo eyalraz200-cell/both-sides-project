@@ -1678,7 +1678,7 @@ const FOLD3_HEADER_GAP_MOBILE_PX = FOLD4_HEADER_GAP_MOBILE_PX;
 // --mlg-inset in style.css (the same distance on the sides) — the card
 // floats the same gap off all three edges, so move the two together.
 // `let`, not `const`: a manual/ harness drives it live.
-let FOLD6_MLEGEND_BOTTOM_MOBILE_PX = 12;
+let FOLD6_MLEGEND_BOTTOM_MOBILE_PX = 8;
 // The bar's bottom padding (.fold6-mlegend, 6px) — the card's outset UNDER the
 // title, which differs from FOLD6_CARD_PAD above it. Keep in sync with the CSS.
 const FOLD6_MLEGEND_PAD_BOTTOM_PX = 6;
@@ -1691,8 +1691,8 @@ let FOLD6_MLEGEND_COMPACT_CLOSED = true;
 // a fixed override when non-zero); the height is the exact px below (0 =
 // measured: button + FOLD6_CARD_PAD above + FOLD6_MLEGEND_PAD_BOTTOM_PX below).
 let FOLD6_MLEGEND_COMPACT_W = 0;
-let FOLD6_MLEGEND_COMPACT_PAD_X = 44;
-let FOLD6_MLEGEND_COMPACT_H = 40;
+let FOLD6_MLEGEND_COMPACT_PAD_X = 28;
+let FOLD6_MLEGEND_COMPACT_H = 34;
 // Both camp blocks are placed symmetrically about screen center from
 // FOLD2_CAMP_CENTER_GAP_PX (see the @fold2 grid block above) — there's no
 // longer a center divider to hang either column off (Figma node 279:1342
@@ -1995,13 +1995,6 @@ const FOLD6_MOBILE_LEGEND_LABEL = "מקרא";
 const fold6MobileCardEl = document.createElement("div");
 fold6MobileCardEl.className = "fold6-mlegend-card";
 fold6MobileLegendEl.appendChild(fold6MobileCardEl);
-// The מקרא pill — ONE element in every state (explicit instruction): closed it
-// is the whole legend, open it stays put as a tab joined to the top of the
-// sheet, same box, same fill, same handle. Painted after the card so it covers
-// the sheet's top hairline where the two meet.
-const fold6MobileTabEl = document.createElement("div");
-fold6MobileTabEl.className = "fold6-mlegend-tab";
-fold6MobileLegendEl.appendChild(fold6MobileTabEl);
 const fold6MobileLegendBtnEl = document.createElement("button");
 fold6MobileLegendBtnEl.type = "button";
 fold6MobileLegendBtnEl.className = "fold6-mlegend-btn";
@@ -2156,7 +2149,6 @@ function fold6SetMobileLegendVisible(vis) {
     // …and the collapsed card with it (it IS the button's frame); an open or
     // opening card is left alone for the same reason the bar is.
     fold6MobileCardEl.style.transform = fold6MLegendOpenRaw > 0 ? "" : pop;
-    fold6MobileTabEl.style.transform  = fold6MLegendOpenRaw > 0 ? "" : pop;
     // The card has no size of its own — its first paint happens here, as the
     // bar arrives (and again on resize, below), never per scroll frame.
     fold6MLegendPaintCard(fold6MLegendOpenRaw);
@@ -2247,56 +2239,47 @@ function fold6MLegendPaintCard(raw) {
   const wT = slice(FOLD6_MLEGEND_OPEN.w);
   const hT = slice(FOLD6_MLEGEND_OPEN.h);
   const bar = fold6MobileLegendEl, btn = fold6MobileLegendBtnEl, card = fold6MobileCardEl;
-  const tab = fold6MobileTabEl;
   const barW = bar.offsetWidth, barH = bar.offsetHeight;
   const measuredH = btn.offsetHeight + FOLD6_CARD_PAD + FOLD6_MLEGEND_PAD_BOTTOM_PX;
   const closedW = FOLD6_MLEGEND_COMPACT_CLOSED
     ? (FOLD6_MLEGEND_COMPACT_W || btn.offsetWidth + 2 * FOLD6_MLEGEND_COMPACT_PAD_X) : barW;
   const closedH = FOLD6_MLEGEND_COMPACT_CLOSED && FOLD6_MLEGEND_COMPACT_H
     ? FOLD6_MLEGEND_COMPACT_H : measuredH;
-  // The pill, the title and the sheet MOVE AS ONE (explicit instruction): the
-  // pill's bottom edge is always the sheet's top edge, so it rides up on the
-  // sheet as it grows and never parts from it — closed it sits on the screen
-  // edge, open it is a tab on top of the sheet. The title button is in flow at
-  // the bar's top, so it is shifted (relative `top`) to stay centred in the
-  // pill wherever the pill is this frame. At rest open the pill is centred on
-  // the button's own flow position (restTabTop), which is what fixes the
-  // sheet's open height.
+  // ONE FRAME IN EVERY STATE (explicit instruction — "it should just be part of
+  // the frame"). There is no separate tab or handle any more: this card IS the
+  // closed מקרא pill, and opening simply grows that same box. Its BOTTOM edge
+  // never moves; only its top does, from `barH - closedH` (the pill) up to 0
+  // (the whole bar).
+  const closedTop = barH - closedH;
+  const top = closedTop * (1 - hT);
+  const w = closedW + (barW - closedW) * wT;
+  card.style.left   = `${(barW - w) / 2}px`;
+  card.style.width  = `${w}px`;
+  card.style.top    = `${top}px`;
+  card.style.bottom = "0";
+  // top + bottom define the height, so the card follows the bar when the ACLED
+  // note flows into the panel at @fold6 and makes it taller.
+  card.style.height = "";
+  // The TITLE rides inside the card's top band, and its distance from the
+  // card's top edge is itself lerped: centred in the pill while closed
+  // (nothing else is in there), at the bar's own padding-top once open (where
+  // it heads a card full of rows). Without the lerp the title sat high in the
+  // closed pill.
   // offsetTop of a position:relative element INCLUDES its own `top` — strip
-  // the shift written below last frame to get the flow position back.
+  // the shift written last frame to get the flow position back.
   const btnFlowTop = btn.offsetTop - (parseFloat(btn.style.top) || 0);
-  const restTabTop = btnFlowTop + btn.offsetHeight / 2 - closedH / 2;
-  const sheetH = Math.max(0, barH - (restTabTop + closedH));
-  const cardTop = raw >= 1 ? restTabTop + closedH : barH - sheetH * hT;
-  const tabTop = cardTop - closedH;
-  tab.style.left   = `${(barW - closedW) / 2}px`;
-  tab.style.top    = `${tabTop}px`;
-  tab.style.width  = `${closedW}px`;
-  tab.style.height = `${closedH + (raw > 0 ? 1 : 0)}px`;
-  btn.style.top    = `${tabTop - restTabTop}px`;
-  // …and the rows ride the same shift, so the whole sheet — pill, title, rows —
-  // moves as one piece instead of the rows hanging in the air above a sheet
+  const offClosed = (closedH - btn.offsetHeight) / 2;
+  const off = offClosed + (btnFlowTop - offClosed) * hT;
+  const shift = top + off - btnFlowTop;
+  btn.style.top = `${shift}px`;
+  // …and the rows ride the same shift, so the whole card — frame, title, rows —
+  // moves as one piece instead of the rows hanging in the air above a frame
   // that hasn't reached them yet. translateZ(0) is the panel's own CSS
   // (compositor layer), restated because an inline transform replaces it.
-  fold6MobilePanelEl.style.transform = `translateZ(0) translateY(${tabTop - restTabTop}px)`;
-  // The sheet: width step first (invisible while it has no height), then the
-  // height step grows it up out of the screen edge under the pill.
-  const w = closedW + (barW - closedW) * wT;
-  if (raw >= 1) {
-    card.style.left = card.style.right = card.style.bottom = "0";
-    card.style.top = `${cardTop}px`;
-    card.style.width = card.style.height = "";
-  } else {
-    card.style.right = card.style.top = "";
-    card.style.left = `${(barW - w) / 2}px`;
-    card.style.bottom = "0";
-    card.style.width = `${w}px`;
-    card.style.height = `${barH - cardTop}px`;
-  }
-  card.style.visibility = raw > 0 ? "" : "hidden";
+  fold6MobilePanelEl.style.transform = `translateZ(0) translateY(${shift}px)`;
   fold6MobilePanelEl.style.opacity = hT < 1 ? String(hT) : "";
-  // The title-line dots are the CLOSED pose's content: they leave as the panel
-  // arrives, on the same step, so the two never overlap.
+  // The rows are the OPEN pose's content: they arrive on the height step, so
+  // they never take a tap while the card is still a pill.
   fold6MobilePanelEl.style.pointerEvents = hT < 1 ? "none" : "";
 }
 
