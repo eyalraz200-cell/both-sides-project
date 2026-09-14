@@ -29,51 +29,79 @@
        - PER-KNOB RESET. ↺ on every row: click = last checkpoint, Shift = shipped.
      ======================================================================== -->
 <style>
-  :root { color-scheme: dark; }
+  /* ---- TOKENS -------------------------------------------------------------
+     Every colour, face and size in this panel comes from one of these. The
+     theme picker at the foot of the rail swaps them wholesale, so a new palette
+     or type style is a row in the THEMES / TYPES tables below and nothing else.
+     Anything hard-coded here is a bug: it will not follow the theme. */
+  :root {
+    color-scheme: dark;
+    --bg:        #111111;   /* the work area */
+    --bg-rail:   #171717;   /* the left rail */
+    --bg-el:     #262626;   /* buttons, inputs */
+    --bg-el-hi:  #333333;   /* hover */
+    --line:      #2a2a2a;   /* dividers */
+    --line-el:   #3c3c3c;   /* control borders */
+    --text:      #e6e6e6;
+    --text-dim:  #8a8a8a;
+    --accent:    #77ffdd;   /* live values, the on state */
+    --accent-ink:#111111;   /* text on an accent fill */
+    --warn:      #ffd54a;   /* the stale-page count */
+    --font:      ui-monospace, SFMono-Regular, Menlo, monospace;
+    --fs:        12px;
+    --lh:        1.45;
+    --radius:    5px;
+    --label-tt:  none;      /* text-transform for knob/mode labels */
+    --label-ls:  0;         /* letter-spacing to match */
+    --label-fw:  400;
+  }
   * { box-sizing: border-box; }
-  body { margin: 0; background: #111; color: #e6e6e6;
-         font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; }
-  button { font: inherit; background: #262626; color: #e6e6e6; border: 1px solid #3c3c3c;
-           border-radius: 5px; padding: 4px 9px; cursor: pointer; line-height: 1.3; }
-  button:hover { background: #333; }
-  button[aria-selected="true"] { background: #e6e6e6; color: #111; border-color: #e6e6e6; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: var(--fs)/var(--lh) var(--font); }
+  button { font: inherit; background: var(--bg-el); color: var(--text);
+           border: 1px solid var(--line-el); border-radius: var(--radius);
+           padding: 4px 9px; cursor: pointer; line-height: 1.3; }
+  button:hover { background: var(--bg-el-hi); }
+  button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink);
+                                 border-color: var(--accent); }
   button:disabled { opacity: .35; cursor: default; }
+  input[type=checkbox] { accent-color: var(--accent); }
 
   /* ---- shell: left rail + main ---------------------------------------- */
   #shell { display: flex; align-items: stretch; min-height: 100vh; }
-  #rail { flex: 0 0 176px; background: #171717; border-right: 1px solid #2a2a2a;
+  #rail { flex: 0 0 176px; background: var(--bg-rail); border-right: 1px solid var(--line);
           padding: 10px 8px; display: flex; flex-direction: column; gap: 4px;
           position: sticky; top: 0; align-self: flex-start; height: 100vh; overflow-y: auto; }
   /* One harness per row, full width: a vertical list stays readable as harnesses
      accumulate, where a top strip wrapped into an unreadable block. */
   #strip { display: flex; flex-direction: column; gap: 3px; }
-  #strip button { border-radius: 5px; text-align: left; display: flex; flex-direction: column;
-                  gap: 1px; padding: 6px 8px; }
-  #strip .pf { font-size: 10px; opacity: .5; }
+  #strip button { border-radius: var(--radius); text-align: left; display: flex;
+                  flex-direction: column; gap: 1px; padding: 6px 8px; }
+  #strip .pf { font-size: .85em; opacity: .5; }
   #strip button[aria-selected="true"] .pf { opacity: .55; }
   /* Page-wide switches — they belong to the page, not to a harness, so they sit
      under the list rather than inside any one panel. */
-  #globals { margin-top: auto; padding-top: 10px; border-top: 1px solid #2a2a2a; }
-  #globals label { display: flex; gap: 6px; align-items: center; padding: 3px 4px; cursor: pointer;
-                   white-space: nowrap; }
+  #globals { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); }
+  #globals label { display: flex; gap: 6px; align-items: center; padding: 3px 4px;
+                   cursor: pointer; white-space: nowrap; }
   /* How far the page is behind while auto-reload is off — the ONLY warning there
      is, since nothing is drawn on the page itself. A small count beside the
      switch, not a banner: it has to be noticeable, not loud. Still a button —
      click to catch up. */
   #behind { margin-inline-start: 5px; padding: 0; border: none; background: none;
-            color: #ffd54a; font-size: 11px; font-weight: 700;
+            color: var(--warn); font-size: .9em; font-weight: 700;
             font-variant-numeric: tabular-nums; }
-  #behind:hover { color: #ffe485; text-decoration: underline; }
+  #behind:hover { filter: brightness(1.2); text-decoration: underline; }
   #behind:empty { display: none; }
   #main { flex: 1 1 auto; min-width: 0; }
-  #flash { position: fixed; top: 10px; right: 12px; z-index: 9; color: #7fd; font-size: 11px;
-           background: #111; padding: 2px 6px; border-radius: 4px; }
+  #flash { position: fixed; top: 10px; right: 12px; z-index: 9; color: var(--accent);
+           font-size: .9em; background: var(--bg); padding: 2px 6px; border-radius: 4px; }
   #flash:empty { display: none; }
-  .note { color: #888; padding: 24px 14px; }
+  .note { color: var(--text-dim); padding: 24px 14px; }
   @media (max-width: 640px) {
     #shell { display: block; }
     #rail { flex: none; width: auto; height: auto; position: static; border-right: none;
-            border-bottom: 1px solid #2a2a2a; }
+            border-bottom: 1px solid var(--line); }
     #strip { flex-direction: row; flex-wrap: wrap; }
     #globals { margin-top: 10px; }
   }
@@ -81,43 +109,51 @@
   /* ---- one harness section -------------------------------------------- */
   .h { padding: 0 12px 40px; }
   .h[hidden] { display: none; }
-  .bar { position: sticky; top: 0; z-index: 4; background: #111; display: flex; gap: 6px;
-         flex-wrap: wrap; align-items: center; padding: 10px 0; border-bottom: 1px solid #222; }
-  .host { font-size: 10px; opacity: .6; margin-inline-start: auto; }
-  .host button { padding: 1px 6px; font-size: 10px; }
+  .bar { position: sticky; top: 0; z-index: 4; background: var(--bg); display: flex; gap: 6px;
+         flex-wrap: wrap; align-items: center; padding: 10px 0;
+         border-bottom: 1px solid var(--line); }
+  .host { font-size: .85em; opacity: .6; margin-inline-start: auto; }
+  .host button { padding: 1px 6px; font-size: .85em; }
   .body { display: grid; grid-template-columns: 1fr; gap: 0 24px; padding-top: 8px; }
   @media (min-width: 700px) { .body { grid-template-columns: 1fr 1fr; } .span { grid-column: 1 / -1; } }
 
-  .gname { color: #8a8a8a; text-transform: uppercase; letter-spacing: .08em; font-size: 10px;
-           margin: 12px 0 6px; }
+  .gname { color: var(--text-dim); text-transform: uppercase; letter-spacing: .08em;
+           font-size: .85em; margin: 12px 0 6px; }
   .seg { display: flex; flex-wrap: wrap; gap: 4px; }
-  .seg button { border-radius: 4px; }
+  .seg button { border-radius: 4px; text-transform: var(--label-tt); letter-spacing: var(--label-ls); }
   .seg button .k { opacity: .5; margin-inline-end: 5px; }
-  label.tog { display: inline-flex; gap: 6px; align-items: center; margin: 0 14px 6px 0; cursor: pointer; }
+  label.tog { display: inline-flex; gap: 6px; align-items: center; margin: 0 14px 6px 0;
+              cursor: pointer; text-transform: var(--label-tt); letter-spacing: var(--label-ls); }
 
-  details.grp { border-top: 1px solid #222; margin-top: 10px; }
+  details.grp { border-top: 1px solid var(--line); margin-top: 10px; }
   details.grp[hidden] { display: none; }
-  details.grp > summary { cursor: pointer; padding: 8px 0; color: #8a8a8a; text-transform: uppercase;
-                          letter-spacing: .08em; font-size: 10px; user-select: none; }
-  details.grp > summary .n { opacity: .6; margin-inline-start: 6px; text-transform: none; letter-spacing: 0; }
+  details.grp > summary { cursor: pointer; padding: 8px 0; color: var(--text-dim);
+                          text-transform: uppercase; letter-spacing: .08em; font-size: .85em;
+                          user-select: none; }
+  details.grp > summary .n { opacity: .6; margin-inline-start: 6px; text-transform: none;
+                             letter-spacing: 0; }
 
   .row { margin: 0 0 14px; }
   .row[hidden] { display: none; }
   .lab { display: flex; align-items: center; gap: 8px; }
-  .lab .name { flex: 1; min-width: 0; }
-  .lab .val { color: #7fd; min-width: 4ch; text-align: right; }
-  .lab .rs { padding: 0 6px; font-size: 13px; line-height: 1.2; opacity: .55; border-color: transparent; background: none; }
-  .lab .rs:hover { opacity: 1; background: #262626; }
-  input[type=range] { width: 100%; margin: 6px 0 0; accent-color: #7fd; }
+  .lab .name { flex: 1; min-width: 0; text-transform: var(--label-tt);
+               letter-spacing: var(--label-ls); font-weight: var(--label-fw); }
+  .lab .val { color: var(--accent); min-width: 4ch; text-align: right;
+              font-variant-numeric: tabular-nums; }
+  .lab .rs { padding: 0 6px; font-size: 1.05em; line-height: 1.2; opacity: .55;
+             border-color: transparent; background: none; color: var(--text); }
+  .lab .rs:hover { opacity: 1; background: var(--bg-el); }
+  input[type=range] { width: 100%; margin: 6px 0 0; accent-color: var(--accent); }
 
   /* ---- colour knob ----------------------------------------------------- */
   .sw { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
-  .swatch { width: 40px; height: 28px; border-radius: 4px; border: 1px solid #555; cursor: pointer; padding: 0;
-            background: #000; flex: none; }
-  .hex { flex: 1; min-width: 0; font: inherit; background: #1c1c1c; color: #e6e6e6; border: 1px solid #3c3c3c;
-         border-radius: 4px; padding: 5px 8px; text-transform: lowercase; }
-  .cp { display: none; margin-top: 8px; padding: 10px; background: #1a1a1a; border: 1px solid #333;
-        border-radius: 6px; max-width: 260px; }
+  .swatch { width: 40px; height: 28px; border-radius: 4px; border: 1px solid var(--line-el);
+            cursor: pointer; padding: 0; background: #000; flex: none; }
+  .hex { flex: 1; min-width: 0; font: inherit; background: var(--bg-el); color: var(--text);
+         border: 1px solid var(--line-el); border-radius: 4px; padding: 5px 8px;
+         text-transform: lowercase; }
+  .cp { display: none; margin-top: 8px; padding: 10px; background: var(--bg-rail);
+        border: 1px solid var(--line-el); border-radius: 6px; max-width: 260px; }
   .cp.open { display: block; }
   .cp .sv { position: relative; width: 100%; aspect-ratio: 1.6; border-radius: 4px; cursor: crosshair;
             background-image: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, transparent);
@@ -128,7 +164,22 @@
              box-shadow: 0 0 0 1px #000; transform: translate(-50%, -50%); pointer-events: none; }
   .cp .hue .dot { top: 50%; }
   .cp .presets { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
-  .cp .presets button { width: 18px; height: 18px; padding: 0; border-radius: 3px; border: 1px solid #444; }
+  .cp .presets button { width: 18px; height: 18px; padding: 0; border-radius: 3px;
+                        border: 1px solid var(--line-el); }
+
+  /* ---- the theme picker (compare/) ------------------------------------- */
+  #theme { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+  #theme summary { cursor: pointer; color: var(--text-dim); font-size: .85em;
+                   text-transform: uppercase; letter-spacing: .08em; padding: 2px 4px;
+                   user-select: none; list-style: none; }
+  #theme summary::-webkit-details-marker { display: none; }
+  #theme .set { display: flex; flex-wrap: wrap; gap: 3px; margin: 6px 0 2px; }
+  #theme .set button { padding: 2px 6px; font-size: .85em; border-radius: 4px; }
+  /* A palette reads as itself: each swatch wears the colours it would apply. */
+  #theme .pal { width: 30px; height: 20px; padding: 0; position: relative; overflow: hidden; }
+  #theme .pal i { position: absolute; inset: 0; }
+  #theme .pal i + i { inset: auto 0 0 0; height: 6px; }
+  #theme .hint { color: var(--text-dim); font-size: .8em; padding: 2px 4px 0; opacity: .8; }
 </style>
 
 <div id="shell">
@@ -138,6 +189,12 @@
       <label><input type="checkbox" id="foldBadge"> fold number</label>
       <label><input type="checkbox" id="autoReload"> auto-reload<button id="behind"
         title="changes this page has not taken — click to load them"></button></label>
+      <details id="theme">
+        <summary>look</summary>
+        <div class="set" id="palSet"></div>
+        <div class="set" id="typeSet"></div>
+        <div class="hint" id="themeHint"></div>
+      </details>
     </div>
   </nav>
   <main id="main"><span id="flash"></span><div id="host"><p class="note" id="note">
@@ -552,7 +609,7 @@
          name alone ("axis-intro") does not say where on the page it lives. */
       var f = H.desc && H.desc.fold;
       if (f) b.appendChild(el('span', 'pf', f));
-      b.appendChild(el('span', null, t));
+      b.appendChild(el('span', null, (H.desc && H.desc.label) || t));
       strip.appendChild(b);
     });
   }
@@ -605,6 +662,134 @@
     behindEl.textContent = '';
   };
 
+  /* ---- the look: palettes and type styles (a compare/ picker) --------------
+     The panel is looked at for hours at a time, so its own palette is worth
+     picking rather than inheriting. Every rule above reads from the tokens in
+     :root, so a theme is only a table of values — nothing else has to change.
+     Keys 1-9 and then 0 pick a palette (0 = the default); q w e r t y pick a
+     type style. Both persist. */
+  var PALETTES = [
+    { id: 'charcoal', label: 'charcoal', v: {
+      '--bg':'#111111','--bg-rail':'#171717','--bg-el':'#262626','--bg-el-hi':'#333333',
+      '--line':'#2a2a2a','--line-el':'#3c3c3c','--text':'#e6e6e6','--text-dim':'#8a8a8a',
+      '--accent':'#77ffdd','--accent-ink':'#111111','--warn':'#ffd54a' } },
+    { id: 'ink', label: 'ink', v: {
+      '--bg':'#0b0f14','--bg-rail':'#101720','--bg-el':'#1a2430','--bg-el-hi':'#243140',
+      '--line':'#1b2530','--line-el':'#2b3a4a','--text':'#dbe6f0','--text-dim':'#7d8fa3',
+      '--accent':'#4fd2ff','--accent-ink':'#06101a','--warn':'#ffc857' } },
+    { id: 'graphite', label: 'graphite', v: {
+      '--bg':'#1a1a1a','--bg-rail':'#212121','--bg-el':'#2e2e2e','--bg-el-hi':'#3b3b3b',
+      '--line':'#303030','--line-el':'#464646','--text':'#ededed','--text-dim':'#969696',
+      '--accent':'#ffb020','--accent-ink':'#1a1200','--warn':'#ff7a59' } },
+    { id: 'slate', label: 'slate', v: {
+      '--bg':'#14151c','--bg-rail':'#1b1d26','--bg-el':'#272a36','--bg-el-hi':'#343849',
+      '--line':'#262935','--line-el':'#3a3f52','--text':'#e3e5ef','--text-dim':'#8d92a8',
+      '--accent':'#a78bfa','--accent-ink':'#16101f','--warn':'#fbbf24' } },
+    { id: 'espresso', label: 'espresso', v: {
+      '--bg':'#17120f','--bg-rail':'#1f1814','--bg-el':'#2d231d','--bg-el-hi':'#3b2e26',
+      '--line':'#2b221c','--line-el':'#463830','--text':'#f0e6de','--text-dim':'#a08d7e',
+      '--accent':'#ff8a3d','--accent-ink':'#1a0e05','--warn':'#ffd76a' } },
+    { id: 'forest', label: 'forest', v: {
+      '--bg':'#0d1310','--bg-rail':'#121b16','--bg-el':'#1c2a21','--bg-el-hi':'#27382c',
+      '--line':'#1b2620','--line-el':'#2e4335','--text':'#e0ece3','--text-dim':'#84a091',
+      '--accent':'#8ee34a','--accent-ink':'#0b1508','--warn':'#ffd166' } },
+    { id: 'plum', label: 'plum', v: {
+      '--bg':'#150f18','--bg-rail':'#1d1522','--bg-el':'#2a1f31','--bg-el-hi':'#382a41',
+      '--line':'#281d2f','--line-el':'#43304e','--text':'#f0e4f5','--text-dim':'#a98cb5',
+      '--accent':'#ff5fa2','--accent-ink':'#1a0713','--warn':'#ffd166' } },
+    { id: 'midnight', label: 'midnight', v: {
+      '--bg':'#0a0e1a','--bg-rail':'#101528','--bg-el':'#1a2038','--bg-el-hi':'#252d4a',
+      '--line':'#1a2036','--line-el':'#2d3656','--text':'#e8ecff','--text-dim':'#8189ad',
+      '--accent':'#ffd34d','--accent-ink':'#0d1020','--warn':'#ff8fa3' } },
+    { id: 'contrast', label: 'contrast', v: {
+      '--bg':'#000000','--bg-rail':'#000000','--bg-el':'#1c1c1c','--bg-el-hi':'#2e2e2e',
+      '--line':'#3a3a3a','--line-el':'#585858','--text':'#ffffff','--text-dim':'#b0b0b0',
+      '--accent':'#ffffff','--accent-ink':'#000000','--warn':'#ffe600' } },
+    { id: 'paper', label: 'paper', v: {
+      '--bg':'#f5f5f2','--bg-rail':'#eceae4','--bg-el':'#e2dfd7','--bg-el-hi':'#d6d2c8',
+      '--line':'#d8d4cb','--line-el':'#bfbab0','--text':'#21201d','--text-dim':'#6d6a62',
+      '--accent':'#2f5bd0','--accent-ink':'#ffffff','--warn':'#b35c00' } },
+    { id: 'bone', label: 'bone', v: {
+      '--bg':'#fbf7f0','--bg-rail':'#f2ece1','--bg-el':'#e8e0d2','--bg-el-hi':'#ddd3c2',
+      '--line':'#e0d8c9','--line-el':'#c7bca7','--text':'#2b2118','--text-dim':'#7a6c5c',
+      '--accent':'#c0532a','--accent-ink':'#fff6ef','--warn':'#8a6b00' } },
+    { id: 'nord', label: 'nord', v: {
+      '--bg':'#2e3440','--bg-rail':'#343c4a','--bg-el':'#3f4858','--bg-el-hi':'#4b5566',
+      '--line':'#3b4453','--line-el':'#4f5a6b','--text':'#eceff4','--text-dim':'#a3adbd',
+      '--accent':'#88c0d0','--accent-ink':'#22272f','--warn':'#ebcb8b' } },
+  ];
+  var MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
+  var SANS = "system-ui, -apple-system, 'Segoe UI', sans-serif";
+  var TYPES = [
+    { id: 'mono', label: 'mono', key: 'q', v: {
+      '--font': MONO, '--fs': '12px', '--lh': '1.45',
+      '--label-tt': 'none', '--label-ls': '0', '--label-fw': '400' } },
+    { id: 'mono-big', label: 'mono big', key: 'w', v: {
+      '--font': MONO, '--fs': '13.5px', '--lh': '1.55',
+      '--label-tt': 'none', '--label-ls': '0', '--label-fw': '400' } },
+    { id: 'mono-tight', label: 'mono tight', key: 'e', v: {
+      '--font': MONO, '--fs': '11px', '--lh': '1.3',
+      '--label-tt': 'none', '--label-ls': '0', '--label-fw': '400' } },
+    { id: 'sans', label: 'sans', key: 'r', v: {
+      '--font': SANS, '--fs': '13px', '--lh': '1.45',
+      '--label-tt': 'none', '--label-ls': '0', '--label-fw': '500' } },
+    { id: 'sans-caps', label: 'SANS CAPS', key: 't', v: {
+      '--font': SANS, '--fs': '12px', '--lh': '1.5',
+      '--label-tt': 'uppercase', '--label-ls': '.06em', '--label-fw': '600' } },
+    { id: 'mono-caps', label: 'MONO CAPS', key: 'y', v: {
+      '--font': MONO, '--fs': '11.5px', '--lh': '1.5',
+      '--label-tt': 'uppercase', '--label-ls': '.08em', '--label-fw': '500' } },
+  ];
+  var THEMEKEY = 'hp:remote:look';
+  var look = { pal: 'charcoal', type: 'mono' };
+  try { look = JSON.parse(localStorage.getItem(THEMEKEY)) || look; } catch (e) {}
+
+  function applyLook() {
+    var st = document.documentElement.style;
+    var pal = PALETTES.filter(function (p) { return p.id === look.pal; })[0] || PALETTES[0];
+    var typ = TYPES.filter(function (t) { return t.id === look.type; })[0] || TYPES[0];
+    Object.keys(pal.v).forEach(function (k) { st.setProperty(k, pal.v[k]); });
+    Object.keys(typ.v).forEach(function (k) { st.setProperty(k, typ.v[k]); });
+    // Light palettes need the form controls to follow, or the checkboxes and
+    // range thumbs stay dark-mode and look pasted on.
+    st.setProperty('color-scheme', /paper|bone/.test(pal.id) ? 'light' : 'dark');
+    try { localStorage.setItem(THEMEKEY, JSON.stringify(look)); } catch (e) {}
+    paintLook();
+  }
+  function paintLook() {
+    var hint = document.getElementById('themeHint');
+    var pal = PALETTES.filter(function (p) { return p.id === look.pal; })[0] || PALETTES[0];
+    var typ = TYPES.filter(function (t) { return t.id === look.type; })[0] || TYPES[0];
+    hint.textContent = pal.label + ' · ' + typ.label;
+    Array.prototype.forEach.call(document.querySelectorAll('#palSet button'), function (b) {
+      b.setAttribute('aria-selected', b.dataset.id === look.pal);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#typeSet button'), function (b) {
+      b.setAttribute('aria-selected', b.dataset.id === look.type);
+    });
+  }
+  (function buildLook() {
+    var ps = document.getElementById('palSet');
+    PALETTES.forEach(function (p, i) {
+      var b = el('button', 'pal');
+      b.dataset.id = p.id;
+      // The swatch wears the palette: ground, plus a bar of its accent.
+      b.title = p.label + '  ·  key ' + ((i + 1) % 10);
+      var g = el('i'); g.style.background = p.v['--bg'];
+      var acc = el('i'); acc.style.background = p.v['--accent'];
+      b.appendChild(g); b.appendChild(acc);
+      b.onclick = function () { look.pal = p.id; applyLook(); };
+      ps.appendChild(b);
+    });
+    var ts = document.getElementById('typeSet');
+    TYPES.forEach(function (t) {
+      var b = btn(t.label, function () { look.type = t.id; applyLook(); });
+      b.dataset.id = t.id; b.title = 'key ' + t.key;
+      ts.appendChild(b);
+    });
+    applyLook();
+  })();
+
   // Discovery. Every harness answers `who` on the shared channel with its title.
   var disc = HBus('harness:__all__');
   disc.onmessage = function (ev) {
@@ -632,6 +817,23 @@
   addEventListener('pointerdown', function (e) {
     if (e.target.closest('.cp') || e.target.closest('.swatch')) return;
     document.querySelectorAll('.cp.open').forEach(function (o) { o.classList.remove('open'); });
+  });
+
+  /* The LOOK picker's keys. Digits 1-9 pick a palette and q w e r t y a type
+     style — but only when the open harness has not claimed that key for a mode
+     or a toggle, because a harness's own keys always win. `0` is never taken:
+     it belongs to "clear the modes". Palettes past the ninth are click-only. */
+  addEventListener('keydown', function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (/^(INPUT|TEXTAREA)$/.test(e.target.tagName || '')) return;
+    var k = e.key, d = active && active.desc;
+    if (d && (d.modes.some(function (m) { return m.key === k; })
+           || d.toggles.some(function (t) { return t.key === k; }))) return;
+    if (/^[1-9]$/.test(k) && PALETTES[Number(k) - 1]) {
+      look.pal = PALETTES[Number(k) - 1].id; applyLook(); return;
+    }
+    var ty = TYPES.filter(function (t) { return t.key === k; })[0];
+    if (ty) { look.type = ty.id; applyLook(); }
   });
 
   // Keys drive the ACTIVE harness: mode keys, toggle keys, 0 = off.
