@@ -30,8 +30,22 @@ Merge the branch when the task is done (`git merge <topic>` from `main`, then
 `git worktree remove ../both-sides-<topic>`). The harness bus (`/__bus__`) is per server too:
 open that worktree's `_debug-panel.html` on the same port.
 
-`reload.js` saves `scrollY` before an auto-reload and restores it after `load` (then
-`ScrollTrigger.refresh()`), so a reload lands back on the fold under review.
+### Auto-reload is OFF by default (`reload.js`)
+
+Several Claude sessions edit this one checkout at once, and every save used to reload every
+open tab — so reading or tuning in one tab was interrupted by work happening in another.
+A tab now reloads itself **only** while its auto-reload switch is on:
+
+- The switch lives at the foot of the harness panel's rail, and as
+  `window.setAutoReload(on)` on the page. It is **per tab** (`sessionStorage`), so one tab
+  can be frozen while another keeps up.
+- A frozen tab is showing stale code, and a silently stale tab is a trap — you report a bug
+  that is already fixed, or tune against values that have moved. So as soon as the files
+  move on, a yellow chip in the bottom-left says how many changes this tab is behind;
+  clicking it reloads. The panel's rail shows the same count.
+- Switching auto-reload back on reloads immediately when the tab is behind.
+- `reload.js` saves `scrollY` before reloading and restores it after `load` (then
+  `ScrollTrigger.refresh()`), so catching up lands back on the fold under review.
 
 ### A second, narrower instance (`--port` / `--watch`)
 
@@ -235,19 +249,20 @@ for — the **remote panel**:
   `dots-glow`) — `CONFIG.fold`, or lifted out of the Go label when that names one. A
   vertical list stays readable as harnesses accumulate; the old top strip wrapped into a
   block.
-- **The toolbar names the CHECKOUT, not the harness** — `main :8080`, the git branch and
-  port from the server's `/__who__`. Deliberately **not** a Claude session name: several
-  chats share one checkout, so any per-chat marker in the project would be written by
-  whichever chat ran last and would name the wrong one. An older `server.py` with no
-  `/__who__` falls back to the host.
-- **No section headings in the panel** — not over the knobs, the toggles or the rail's
-  switches, and no host id in the corner. Labelled controls do not need a word above them,
-  and the id only ever mattered when a second page was running the same harness — which is
-  what the `drive <id> instead` button that appears then already says.
-- **Page-wide switches live at the foot of the rail**, not inside a harness: today that is
-  the dev **fold number** badge. It rides the `harness:__all__` channel (`{t:'foldbadge',
-  on}`), every harness on the page applies it via `setFoldBadgeVisible()`, and each `iam`
-  answer reports the badge's state back so the checkbox self-corrects. Only the picked harness is rendered and the keys drive it (the pick is
+- **Nothing on the toolbar but the buttons** — no harness name, no branch, no port, no
+  host id. The rail already says which harness is open, and the id only ever mattered when
+  a second page was running the same harness, which is what the `drive <id> instead`
+  button that appears then already says. No section headings either, over the knobs, the
+  toggles or the rail's switches: labelled controls do not need a word above them.
+- **A knob's `source` is not drawn.** `file:line` under every row made the panel a wall of
+  grey code paths. It is for the bake, not the eye — **Copy** still carries it, which is
+  where it is read.
+- **Page-wide switches live at the foot of the rail**, not inside a harness: the dev
+  **fold number** badge and **auto-reload**. Both ride the `harness:__all__` channel
+  (`{t:'foldbadge'|'autoreload', on}`), every harness on the page applies it
+  (`setFoldBadgeVisible()` / `window.setAutoReload()`), and each `iam` answer reports the
+  state back so the checkboxes self-correct. See the auto-reload section under Running
+  it. Only the picked harness is rendered and the keys drive it (the pick is
   remembered in `localStorage`). `?t=<title>` narrows the tab to one
   harness — an opt-in, never handed out: it silently hides every other harness, which
   reads as "only one harness showed up". The Pop-out clipboard URL is the bare one.
