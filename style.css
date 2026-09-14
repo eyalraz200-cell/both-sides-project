@@ -44,8 +44,8 @@ body {
 
 /* The fold badge — the current @foldN as a bare number, small, top-left.
    Nothing but the digits: no prefix, no label, no control. `display: none` by
-   default so the markup is inert until js/nav.js adds .is-visible (which it
-   does unless the reader switched it off with Ctrl+Shift+F). */
+   default so the markup is inert until js/nav.js adds .is-visible or .is-dot
+   (it only ever does so on a local host — see js/nav.js). */
 .fold-number-badge {
   display: none;
   position: fixed;
@@ -57,91 +57,126 @@ body {
   background: rgba(0, 0, 0, 0.6);
   padding: 2px 7px;
   border-radius: 4px;
-  pointer-events: none;   /* purely a readout — never eats a click on the canvas */
+  /* CLICKABLE ON BOTH BREAKPOINTS: the badge is the fold picker's handle
+     everywhere, so it can no longer be `pointer-events: none`. It is a ~30×20
+     chip pinned in the top-left corner — no canvas interaction lives there
+     (the drag zone, the timeline and the legend are all further in) — and when
+     dismissed it shrinks to the dot below, which is smaller still. */
+  pointer-events: auto;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .fold-number-badge.is-visible {
   display: block;
 }
 
-/* ── The fold picker (mobile only) ──────────────────────────────────────────
-   Ctrl+Shift+F is how the badge is dismissed and a phone has neither key, so on
-   mobile the chip earns a tap: it opens a list of all 16 folds and jumps to the
-   one you pick (foldPickerInit, js/nav.js). Desktop keeps the badge inert —
-   `pointer-events: none` up in the base rule is the whole reason it can never
-   eat a click on the canvas, and the keyboard shortcut already covers it there.
-   Everything below is inside the 600px block for that reason. */
-@media (max-width: 600px) {
-  .fold-number-badge.is-visible {
-    pointer-events: auto;
-    cursor: pointer;
-    /* A 13px chip is a ~20px tap target; the pseudo-element grows the touchable
-       box to ~44px each way without moving a pixel of layout. */
-    position: fixed;
-  }
-  .fold-number-badge.is-visible::after {
-    content: "";
-    position: absolute;
-    inset: -12px;
-  }
+/* DISMISSED — a 7px dot, not gone. The badge must never be un-dismissable: with
+   no chip to tap there is no way back on a phone, which is the same rule the
+   harness panel's chip follows. Click it (or Ctrl+Shift+F) to bring the number
+   back. The digits stay in the element and are clipped away, so nothing has to
+   be re-rendered when it returns. */
+.fold-number-badge.is-dot {
+  display: block;
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  text-indent: -99px;
+  background: rgba(255, 255, 255, 0.35);
+  opacity: .9;
+}
+/* Both states get a generous invisible tap/click target without moving a pixel
+   of layout — 7px is far below the ~44px a finger needs. */
+.fold-number-badge::after {
+  content: "";
+  position: absolute;
+  inset: -12px;
+}
+.fold-number-badge.is-dot::after { inset: -16px; }
 
-  .fold-picker {
-    display: none;
-    position: fixed;
-    top: 40px;
-    left: 12px;
-    z-index: 1001;          /* over the badge, which is 1000 */
-    max-height: 70vh;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
-    /* Nearly opaque: at 0.88 the hero art read straight through the list and
-       the Hebrew titles were unscannable over it. */
-    background: rgba(0, 0, 0, 0.95);
-    border-radius: 6px;
-    padding: 4px 0;
-    /* The list is a dev aid over live artwork, so it stays narrow and dark
-       rather than trying to look like part of the page. */
-    min-width: 200px;
-    max-width: calc(100vw - 24px);
-  }
-  .fold-picker.is-open {
-    display: block;
-  }
-  .fold-picker-row {
-    all: unset;
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    width: 100%;
-    box-sizing: border-box;
-    padding: 7px 12px;
-    font: 400 12px 'Assistant', sans-serif;
-    color: rgba(255, 255, 255, 0.75);
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .fold-picker-row.is-current {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.14);
-  }
-  .fold-picker-n {
-    flex: 0 0 auto;
-    min-width: 16px;
-    text-align: end;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-  }
-  .fold-picker-t {
-    /* One line per fold — the list is for finding a fold, not for reading its
-       copy, and a wrapping title would make 16 rows unscannable. */
-    flex: 1 1 auto;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    direction: rtl;
-    text-align: start;
-  }
+/* ── The fold picker ────────────────────────────────────────────────────────
+   Clicking/tapping the badge on EITHER breakpoint opens a list of all 16 folds
+   and jumps to the one you pick (foldPickerInit, js/nav.js), plus a last row
+   that dismisses the badge to its dot. It used to be mobile-only, on the
+   grounds that Ctrl+Shift+F covered desktop — but the shortcut only toggles,
+   it never navigates, so desktop had no way to jump to a fold at all. */
+.fold-picker {
+  display: none;
+  position: fixed;
+  top: 40px;
+  left: 12px;
+  z-index: 1001;          /* over the badge, which is 1000 */
+  max-height: 70vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  /* Nearly opaque: at 0.88 the hero art read straight through the list and
+     the Hebrew titles were unscannable over it. */
+  background: rgba(0, 0, 0, 0.95);
+  border-radius: 6px;
+  padding: 4px 0;
+  /* The list is a dev aid over live artwork, so it stays narrow and dark
+     rather than trying to look like part of the page. A fixed box with no width
+     shrink-to-fits, so without this cap the long Hebrew titles stretched it
+     most of the way across a desktop viewport. */
+  min-width: 200px;
+  max-width: 340px;
+}
+@media (max-width: 600px) {
+  /* Mobile keeps the width it always had — the viewport is the only cap that
+     matters there. */
+  .fold-picker { max-width: calc(100vw - 24px); }
+}
+.fold-picker.is-open {
+  display: block;
+}
+.fold-picker-row {
+  all: unset;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 12px;
+  font: 400 12px 'Assistant', sans-serif;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.fold-picker-row.is-current {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+}
+.fold-picker-n {
+  flex: 0 0 auto;
+  min-width: 16px;
+  text-align: end;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.fold-picker-t {
+  /* One line per fold — the list is for finding a fold, not for reading its
+     copy, and a wrapping title would make 16 rows unscannable. */
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: start;
+}
+/* The dismiss row, below a hairline so it never reads as a 17th fold. */
+.fold-picker-hide {
+  margin-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  padding-top: 8px;
+  color: rgba(255, 255, 255, 0.5);
+  direction: rtl;
+  justify-content: flex-start;
+}
+@media (hover: hover) {
+  .fold-picker-row:hover { background: rgba(255, 255, 255, 0.09); color: #fff; }
 }
 
 /* .graphic-col is taken out of flow entirely (position: fixed), so it doesn't
