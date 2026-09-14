@@ -373,9 +373,36 @@ made the real device the one place the panel could not reach.
   the in-page panel back.
 - `_debug-panel.html` is scaffolding like the rest — delete it with the last `_debug-*.js`.
 
+### The element inspector (`_debug-inspect.js` + the panel's Element tab)
+
+**Cmd + right-click** an element on the desktop page, or **double-tap** it on a phone, and
+the panel opens an **Element** row above the harness list with that element's **nesting
+chain** as a breadcrumb — `div.layout › section#page-1 › div.section-text › h2` — because
+the padding you want is rarely on the thing you hit. Pick the level (click, or `[` out /
+`]` in), then edit: Text (size, weight, line height, letter spacing, align, case, colour),
+Fill & border (fill, opacity, radius, border), Spacing (padding ×4, margin ×4, gap when the
+element is flex/grid), Size (width, height, hidden). Every row has ↺ back to the
+stylesheet value; edited rows carry an accent dot. `Esc` or **Clear** drops the selection.
+
+- Page side is `_debug-inspect.js` (template `~/.claude/templates/harness-inspect.js`),
+  loaded right after `_debug-bus.js`. It draws the selection outline on the page (the one
+  piece of chrome an inspector cannot do without), applies edits as **inline overrides**,
+  and keeps them in `sessionStorage` by selector so an auto-reload does not wipe them.
+- **Copy** hands back the **visual-edit change-list** — a bullet summary plus a JSON array
+  of `{selector, tag, text, op:"style", changes:{camelProp:[from,to]}, viewportPx}` — which
+  Claude applies to the real stylesheet the way the visual-edit skill describes
+  (shared rules over one-off overrides, responsive units preserved, `left`/`right` back to
+  `start`/`end` on this RTL page). Nothing here writes to source.
+- Align values are **physical** (`left`/`right`) because that is what `getComputedStyle`
+  reports; the stylesheet uses logical ones.
+- It rides the bus like everything else (`harness:__inspect__`), so it works with the page
+  on a phone and the panel on the laptop. Its discovery answer carries `inspect: true` and
+  the panel does not list it as a harness.
+
 ## Currently in the repo
 
-Nothing but the transport. `_debug-bus.js` (loaded by `project.html`) and `_debug-panel.html`
+Nothing but the transport and the inspector. `_debug-bus.js`, `_debug-inspect.js` (both
+loaded by `project.html`) and `_debug-panel.html`
 stay until the last harness is gone for good; every `manual/`/`compare/` harness built so far
 has been baked and deleted.
 

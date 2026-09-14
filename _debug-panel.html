@@ -82,6 +82,22 @@
   #strip .vp { border: 1px solid currentColor; border-radius: 3px; padding: 0 3px;
                font-size: .9em; opacity: .8; }
   #strip button[aria-selected="true"] .pf { opacity: .55; }
+  /* The Element row: pinned above the harnesses, shown once something is picked.
+     Not a harness — it is whatever the last Cmd+right-click / double-tap hit. */
+  #inspectRow { border-radius: var(--radius); text-align: left; display: flex; flex-direction: column;
+                gap: 1px; padding: 6px 8px; margin-bottom: 8px; border-style: dashed; }
+  #inspectRow[hidden] { display: none; }
+  #inspectRow .pf { font-size: .85em; opacity: .5; }
+  /* Nesting chain: outermost first, so it reads like a path. */
+  .crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 0; margin: 8px 0 4px; }
+  .crumbs button { padding: 2px 7px; font-size: .95em; border-radius: 4px; }
+  .crumbs .sep { opacity: .35; padding: 0 3px; }
+  .isum { color: var(--text-dim); font-size: .9em; margin: 0 0 8px; word-break: break-all; }
+  .isum b { color: var(--text); font-weight: 500; }
+  .row.edited .name::before { content: ''; display: inline-block; width: 6px; height: 6px;
+                               border-radius: 50%; background: var(--accent); margin-inline-end: 6px;
+                               vertical-align: middle; }
+  .hint4 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
   /* Page-wide switches — they belong to the page, not to a harness, so they sit
      under the list rather than inside any one panel. */
   #globals { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); }
@@ -196,6 +212,7 @@
 
 <div id="shell">
   <nav id="rail">
+    <button id="inspectRow" hidden><span class="pf">element</span><span id="inspectName">—</span></button>
     <div id="strip"></div>
     <div id="globals">
       <label><input type="checkbox" id="foldBadge"> Fold number</label>
@@ -263,6 +280,89 @@
     else if (h < 240) { g = x; b = c; } else if (h < 300) { r = x; b = c; } else { r = c; b = x; }
     var to = function (q) { return ('0' + Math.round((q + m) * 255).toString(16)).slice(-2); };
     return '#' + to(r) + to(g) + to(b);
+  }
+
+  // ------------------------------------------------------------ colour ----
+  /* One colour control for every colour on the panel — a harness knob and an
+     inspector property alike. Swatch + hex field, and an inline popover with a
+     saturation/value square, a hue strip and the project's own presets. Never
+     <input type=color>: the native dialog is unreliable in webviews and on
+     phones. Returns { set(hex) } for patching from outside. */
+  var PRESETS = ['#ffffff', '#000000', '#888888', '#F9B624', '#454545', '#F024FF', '#6B89FF', '#FF1A94', '#31CE1C'];
+  function colorControl(row, o) {
+    o = o || {};
+    var sw = el('div', 'sw');
+    var swatch = el('button', 'swatch'); swatch.title = 'pick';
+    var hex = el('input', 'hex'); hex.type = 'text'; hex.spellcheck = false; hex.placeholder = '#rrggbb';
+    sw.appendChild(swatch); sw.appendChild(hex); row.appendChild(sw);
+
+    var cp = el('div', 'cp');
+    var sv = el('div', 'sv'); var svDot = el('div', 'dot'); sv.appendChild(svDot);
+    var hue = el('div', 'hue'); var hueDot = el('div', 'dot'); hue.appendChild(hueDot);
+    cp.appendChild(sv); cp.appendChild(hue);
+    var presets = el('div', 'presets');
+    PRESETS.forEach(function (c) {
+      var b = el('button'); b.style.background = c; b.title = c;
+      b.onclick = function () { commit(c.toLowerCase()); };
+      presets.appendChild(b);
+    });
+    cp.appendChild(presets);
+    row.appendChild(cp);
+
+    var hsv = { h: 0, s: 0, v: 0 };
+    function paint() {
+      var hx = hsvToHex(hsv.h, hsv.s, hsv.v);
+      swatch.style.background = hx;
+      if (document.activeElement !== hex) hex.value = hx;
+      sv.style.backgroundColor = hsvToHex(hsv.h, 1, 1);
+      svDot.style.left = (hsv.s * 100) + '%'; svDot.style.top = ((1 - hsv.v) * 100) + '%';
+      hueDot.style.left = (hsv.h / 360 * 100) + '%';
+      if (o.onPaint) o.onPaint(hx);
+    }
+    function commit(hx) { hsv = hexToHsv(hx); paint(); if (o.onInput) o.onInput(hx); }
+    function fromHsv() { paint(); if (o.onInput) o.onInput(hsvToHex(hsv.h, hsv.s, hsv.v)); }
+    function drag(area, onMove) {
+      area.onpointerdown = function (e) {
+        area.setPointerCapture(e.pointerId);
+        if (o.onDragStart) o.onDragStart();
+        var move = function (ev) {
+          var r = area.getBoundingClientRect();
+          var x = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width));
+          var y = Math.min(1, Math.max(0, (ev.clientY - r.top) / r.height));
+          onMove(x, y); fromHsv();
+        };
+        move(e);
+        area.onpointermove = move;
+        area.onpointerup = area.onpointercancel = function () {
+          area.onpointermove = null; if (o.onDragEnd) o.onDragEnd();
+        };
+        e.preventDefault();
+      };
+    }
+    drag(sv, function (x, y) { hsv.s = x; hsv.v = 1 - y; });
+    drag(hue, function (x) { hsv.h = x * 359.99; });
+    hex.oninput = function () {
+      var h = hex.value.trim();
+      if (/^#?[0-9a-f]{6}$/i.test(h)) commit((h[0] === '#' ? h : '#' + h).toLowerCase());
+    };
+    hex.onfocus = function () { if (o.onFocus) o.onFocus(); };
+    hex.onkeydown = function (e) { e.stopPropagation(); if (e.key === 'Escape') hex.blur(); };
+    swatch.onclick = function () {
+      var open = !cp.classList.contains('open');
+      document.querySelectorAll('.cp.open').forEach(function (x) { x.classList.remove('open'); });
+      if (open) cp.classList.add('open');
+    };
+    return { set: function (hx) { hsv = hexToHsv(hx); paint(); }, cp: cp };
+  }
+  /* rgb()/rgba() from getComputedStyle → #rrggbb (alpha dropped; transparent → null). */
+  function cssToHex(v) {
+    if (!v) return null;
+    if (/^#[0-9a-f]{6}$/i.test(v)) return v.toLowerCase();
+    var m = /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?/.exec(v);
+    if (!m) return null;
+    if (m[4] !== undefined && Number(m[4]) === 0) return null;
+    var to = function (n) { return ('0' + Number(n).toString(16)).slice(-2); };
+    return '#' + to(m[1]) + to(m[2]) + to(m[3]);
   }
 
   // ------------------------------------------------------------- Harness ----
@@ -499,70 +599,14 @@
     };
 
     H.buildColor = function (s, row, ui) {
-      var sw = el('div', 'sw');
-      var swatch = el('button', 'swatch'); swatch.title = 'pick';
-      var hex = el('input', 'hex'); hex.type = 'text'; hex.spellcheck = false; hex.placeholder = '#rrggbb';
-      sw.appendChild(swatch); sw.appendChild(hex); row.appendChild(sw);
-
-      var cp = el('div', 'cp');
-      var sv = el('div', 'sv'); var svDot = el('div', 'dot'); sv.appendChild(svDot);
-      var hue = el('div', 'hue'); var hueDot = el('div', 'dot'); hue.appendChild(hueDot);
-      cp.appendChild(sv); cp.appendChild(hue);
-      var presets = el('div', 'presets');
-      ['#ffffff', '#000000', '#888888', '#F9B624', '#454545', '#F024FF', '#6B89FF', '#FF1A94', '#31CE1C']
-        .forEach(function (c) {
-          var b = el('button'); b.style.background = c; b.title = c;
-          b.onclick = function () { commit(c.toLowerCase()); };
-          presets.appendChild(b);
-        });
-      cp.appendChild(presets);
-      row.appendChild(cp);
-
-      var hsv = { h: 0, s: 0, v: 0 };
-      function paint() {
-        var hx = hsvToHex(hsv.h, hsv.s, hsv.v);
-        swatch.style.background = hx;
-        if (document.activeElement !== hex) hex.value = hx;
-        sv.style.backgroundColor = hsvToHex(hsv.h, 1, 1);
-        svDot.style.left = (hsv.s * 100) + '%'; svDot.style.top = ((1 - hsv.v) * 100) + '%';
-        hueDot.style.left = (hsv.h / 360 * 100) + '%';
-        ui.val.textContent = hx;
-      }
-      function commit(hx) { hsv = hexToHsv(hx); paint(); H.edit(s.key, hx); }
-      function fromHsv() { paint(); H.edit(s.key, hsvToHex(hsv.h, hsv.s, hsv.v)); }
-      function drag(area, onMove) {
-        area.onpointerdown = function (e) {
-          area.setPointerCapture(e.pointerId);
-          H.dragging = s.key;
-          var move = function (ev) {
-            var r = area.getBoundingClientRect();
-            var x = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width));
-            var y = Math.min(1, Math.max(0, (ev.clientY - r.top) / r.height));
-            onMove(x, y); fromHsv();
-          };
-          move(e);
-          area.onpointermove = move;
-          area.onpointerup = area.onpointercancel = function () {
-            area.onpointermove = null; H.dragging = null; H.touched[s.key] = Date.now();
-          };
-          e.preventDefault();
-        };
-      }
-      drag(sv, function (x, y) { hsv.s = x; hsv.v = 1 - y; });
-      drag(hue, function (x) { hsv.h = x * 359.99; });
-      hex.oninput = function () {
-        var h = hex.value.trim();
-        if (/^#?[0-9a-f]{6}$/i.test(h)) commit((h[0] === '#' ? h : '#' + h).toLowerCase());
-      };
-      hex.onfocus = function () { H.touched[s.key] = Date.now(); };
-      hex.onkeydown = function (e) { e.stopPropagation(); if (e.key === 'Escape') hex.blur(); };
-      swatch.onclick = function () {
-        var open = !cp.classList.contains('open');
-        document.querySelectorAll('.cp.open').forEach(function (o) { o.classList.remove('open'); });
-        if (open) cp.classList.add('open');
-      };
-      ui.setColor = function (hx) { hsv = hexToHsv(hx); paint(); };
-      ui.cp = cp;
+      var c = colorControl(row, {
+        onInput: function (hx) { H.edit(s.key, hx); },
+        onDragStart: function () { H.dragging = s.key; },
+        onDragEnd: function () { H.dragging = null; H.touched[s.key] = Date.now(); },
+        onFocus: function () { H.touched[s.key] = Date.now(); },
+        onPaint: function (hx) { ui.val.textContent = hx; }
+      });
+      ui.setColor = c.set;
     };
 
     // ------------------------------------------------------------- patch --
@@ -641,10 +685,13 @@
     });
   }
   function activate(title) {
-    var H = seen[title]; if (!H) return;
+    var H = title === '__inspect__' ? INS : seen[title]; if (!H) return;
     active = H;
     Object.keys(seen).forEach(function (t) { seen[t].el.hidden = seen[t] !== H; });
-    try { localStorage.setItem(ACTKEY, title); } catch (e) {}
+    INS.el.hidden = H !== INS;
+    document.getElementById('inspectRow').setAttribute('aria-selected', H === INS);
+    // The element pick is transient — never remembered as the tab to reopen.
+    if (H !== INS) { try { localStorage.setItem(ACTKEY, title); } catch (e) {} }
     renderStrip();
   }
   function remove(H) {
@@ -662,6 +709,253 @@
     var want = null; try { want = localStorage.getItem(ACTKEY); } catch (e) {}
     if (!active || want === title) activate(title); else renderStrip();
   }
+
+  /* ---- the element inspector ------------------------------------------------
+     Cmd+right-click (desktop) or a double-tap (phone) on the page picks an
+     element; _debug-inspect.js sends its nesting chain here and this section
+     shows it: a breadcrumb to choose WHICH level is being styled — a text sits
+     inside a card inside a column, and the padding you want is rarely on the
+     thing you hit — and then the style controls, Figma-inspector style. Edits
+     go back as inline overrides; Copy hands back the visual-edit change-list. */
+  var INS = {
+    title: '__inspect__',
+    ch: HBus('harness:__inspect__'),
+    chain: null, i: -1, props: null, edits: {}, rect: null, sel: '',
+    touched: {}, dragging: null,
+    desc: { modes: [], toggles: [] },      // so the harness key handler stays quiet
+    ui: null
+  };
+  window.__INS = INS;                   // probe hook
+  INS.el = el('section', 'h'); INS.el.hidden = true;
+  INS.bar = el('div', 'bar'); INS.body = el('div');
+  INS.el.appendChild(INS.bar); INS.el.appendChild(INS.body);
+  document.getElementById('host').appendChild(INS.el);
+  INS.send = function (m) { INS.ch.postMessage(m); };
+  INS.recent = function (k) { return INS.dragging === k || Date.now() - (INS.touched[k] || 0) < 600; };
+
+  // Which properties, and how each is edited. `kind`: num (slider, px unless
+  // `unit`), seg (one of), color, or flag (display:none). `when` hides a row
+  // that means nothing for this element.
+  var IPROPS = [
+    { g: 'Text', key: 'fontSize', label: 'Font size', kind: 'num', min: 6, max: 120, step: 0.5 },
+    { g: 'Text', key: 'fontWeight', label: 'Weight', kind: 'seg', opts: ['300', '400', '500', '600', '700'] },
+    { g: 'Text', key: 'lineHeight', label: 'Line height', kind: 'num', min: 0.8, max: 3, step: 0.05, unit: '' },
+    { g: 'Text', key: 'letterSpacing', label: 'Letter spacing', kind: 'num', min: -3, max: 12, step: 0.1 },
+    /* Physical values, because that is what getComputedStyle reports (on this
+       RTL page `start` comes back as `right`). Claude turns them back into
+       start/end when writing the stylesheet. */
+    { g: 'Text', key: 'textAlign', label: 'Align', kind: 'seg', opts: ['left', 'center', 'right', 'justify'] },
+    { g: 'Text', key: 'textTransform', label: 'Case', kind: 'seg', opts: ['none', 'uppercase', 'capitalize', 'lowercase'] },
+    { g: 'Text', key: 'color', label: 'Text colour', kind: 'color' },
+    { g: 'Fill & border', key: 'backgroundColor', label: 'Fill', kind: 'color' },
+    { g: 'Fill & border', key: 'opacity', label: 'Opacity', kind: 'num', min: 0, max: 1, step: 0.02, unit: '' },
+    { g: 'Fill & border', key: 'borderRadius', label: 'Corner radius', kind: 'num', min: 0, max: 80, step: 1 },
+    { g: 'Fill & border', key: 'borderWidth', label: 'Border width', kind: 'num', min: 0, max: 12, step: 0.5 },
+    { g: 'Fill & border', key: 'borderColor', label: 'Border colour', kind: 'color' },
+    { g: 'Spacing', key: 'paddingTop', label: 'Padding top', kind: 'num', min: 0, max: 160, step: 1 },
+    { g: 'Spacing', key: 'paddingRight', label: 'Padding right', kind: 'num', min: 0, max: 160, step: 1 },
+    { g: 'Spacing', key: 'paddingBottom', label: 'Padding bottom', kind: 'num', min: 0, max: 160, step: 1 },
+    { g: 'Spacing', key: 'paddingLeft', label: 'Padding left', kind: 'num', min: 0, max: 160, step: 1 },
+    { g: 'Spacing', key: 'marginTop', label: 'Margin top', kind: 'num', min: -100, max: 200, step: 1 },
+    { g: 'Spacing', key: 'marginRight', label: 'Margin right', kind: 'num', min: -100, max: 200, step: 1 },
+    { g: 'Spacing', key: 'marginBottom', label: 'Margin bottom', kind: 'num', min: -100, max: 200, step: 1 },
+    { g: 'Spacing', key: 'marginLeft', label: 'Margin left', kind: 'num', min: -100, max: 200, step: 1 },
+    { g: 'Spacing', key: 'gap', label: 'Gap', kind: 'num', min: 0, max: 120, step: 1,
+      when: function (c) { return /flex|grid/.test(c.__display || ''); } },
+    { g: 'Size', key: 'width', label: 'Width', kind: 'num', min: 0, max: 1400, step: 1 },
+    { g: 'Size', key: 'height', label: 'Height', kind: 'num', min: 0, max: 1400, step: 1 },
+    { g: 'Size', key: 'display', label: 'Hidden', kind: 'flag' }
+  ];
+  var IGROUPS = ['Text', 'Fill & border', 'Spacing', 'Size'];
+  var IOPEN = { 'Text': true, 'Fill & border': true, 'Spacing': false, 'Size': false };
+
+  function crumbLabel(d) {
+    return d.tag + (d.id ? '#' + d.id : d.cls ? '.' + d.cls.split(' ')[0] : '');
+  }
+  function numOf(v, p, c) {
+    if (v == null) return null;
+    if (p.key === 'lineHeight') {
+      if (v === 'normal') return 1.2;
+      var fs = parseFloat(c.fontSize) || 16;
+      return /px$/.test(v) ? parseFloat(v) / fs : parseFloat(v);
+    }
+    if (v === 'normal' || v === 'auto' || v === 'none') return 0;
+    return parseFloat(v);
+  }
+  function valueOut(p, n) {
+    if (p.unit === '') return String(Math.round(n * 1000) / 1000);
+    return (Math.round(n * 100) / 100) + 'px';
+  }
+
+  INS.build = function () {
+    INS.bar.textContent = '';
+    INS.bar.appendChild(btn('Copy', function () { INS.send({ t: 'copy' }); }));
+    var rv = btn('Revert', function () { INS.touched = {}; INS.send({ t: 'revert' }); });
+    rv.title = 'undo every edit on this element';
+    INS.bar.appendChild(rv);
+    var cl = btn('Clear', function () { INS.send({ t: 'clear' }); INS.none(); });
+    cl.title = 'drop the selection (Esc)';
+    INS.bar.appendChild(cl);
+
+    var body = INS.body; body.textContent = '';
+    INS.ui = { crumbs: el('div', 'crumbs'), sum: el('div', 'isum'), rows: {}, groups: {} };
+    body.appendChild(INS.ui.crumbs); body.appendChild(INS.ui.sum);
+    IGROUPS.forEach(function (g) {
+      var det = el('details', 'grp'); det.open = !!IOPEN[g];
+      det.addEventListener('toggle', function () { IOPEN[g] = det.open; });
+      var sum = el('summary', null, g); det.appendChild(sum);
+      var grid = el('div', 'body');
+      IPROPS.filter(function (p) { return p.g === g; }).forEach(function (p) { grid.appendChild(INS.row(p)); });
+      det.appendChild(grid); body.appendChild(det);
+      INS.ui.groups[g] = det;
+    });
+  };
+
+  INS.row = function (p) {
+    var row = el('div', 'row'); row.dataset.knob = p.key;
+    var lab = el('div', 'lab');
+    lab.appendChild(el('span', 'name', p.label));
+    var val = el('span', 'val'); lab.appendChild(val);
+    var rs = btn('↺', function () { INS.touched[p.key] = 0; INS.send({ t: 'unset', prop: p.key }); });
+    rs.className = 'rs'; rs.title = 'back to the stylesheet value';
+    lab.appendChild(rs); row.appendChild(lab);
+    var ui = { row: row, val: val, p: p };
+    if (p.kind === 'num') {
+      var inp = el('input'); inp.type = 'range'; inp.min = p.min; inp.max = p.max; inp.step = p.step;
+      inp.oninput = function () {
+        var n = parseFloat(inp.value);
+        INS.touched[p.key] = Date.now();
+        val.textContent = valueOut(p, n);
+        INS.send({ t: 'set', prop: p.key, val: valueOut(p, n) });
+        // A border you can see needs a style; the stylesheet's default is none.
+        if (p.key === 'borderWidth' && n > 0 && INS.props && /none|hidden/.test(INS.props.borderStyle || ''))
+          INS.send({ t: 'set', prop: 'borderStyle', val: 'solid' });
+      };
+      inp.onpointerdown = function () { INS.dragging = p.key; };
+      inp.onpointerup = inp.onpointercancel = function () { INS.dragging = null; INS.touched[p.key] = Date.now(); };
+      inp.onkeydown = function (e) { e.stopPropagation(); };
+      row.appendChild(inp); ui.inp = inp;
+    } else if (p.kind === 'seg') {
+      var seg = el('div', 'seg'); ui.btns = {};
+      p.opts.forEach(function (o) {
+        var b = btn(o, function () { INS.touched[p.key] = Date.now(); INS.send({ t: 'set', prop: p.key, val: o }); INS.mark(p.key, o); });
+        ui.btns[o] = b; seg.appendChild(b);
+      });
+      row.appendChild(seg);
+    } else if (p.kind === 'color') {
+      ui.color = colorControl(row, {
+        onInput: function (hx) { INS.touched[p.key] = Date.now(); val.textContent = hx; INS.send({ t: 'set', prop: p.key, val: hx }); },
+        onDragStart: function () { INS.dragging = p.key; },
+        onDragEnd: function () { INS.dragging = null; INS.touched[p.key] = Date.now(); },
+        onFocus: function () { INS.touched[p.key] = Date.now(); }
+      });
+    } else if (p.kind === 'flag') {
+      var l = el('label', 'tog'); var cb = el('input'); cb.type = 'checkbox';
+      cb.onchange = function () {
+        INS.touched[p.key] = Date.now();
+        if (cb.checked) INS.send({ t: 'set', prop: 'display', val: 'none' });
+        else INS.send({ t: 'unset', prop: 'display' });
+      };
+      l.appendChild(cb); l.appendChild(el('span', 'ml', 'display: none'));
+      row.appendChild(l); ui.cb = cb;
+    }
+    INS.ui.rows[p.key] = ui;
+    return row;
+  };
+  INS.mark = function (key, o) {
+    var ui = INS.ui.rows[key]; if (!ui || !ui.btns) return;
+    Object.keys(ui.btns).forEach(function (k) { ui.btns[k].setAttribute('aria-selected', k === o); });
+    ui.val.textContent = o;
+  };
+
+  /* Everything that changes with the pick or the level. Never touches a control
+     edited here in the last 600ms or under the pointer. */
+  INS.patch = function () {
+    if (!INS.ui || !INS.chain) return;
+    var c = INS.ui.crumbs; c.textContent = '';
+    for (var k = INS.chain.length - 1; k >= 0; k--) {
+      (function (d) {
+        var b = btn(crumbLabel(d), function () { INS.select(d.i); }, d.i === INS.i);
+        b.title = d.sel + (d.text ? '\n"' + d.text + '"' : '');
+        c.appendChild(b);
+      })(INS.chain[k]);
+      if (k > 0) c.appendChild(el('span', 'sep', '›'));
+    }
+    var d = INS.chain[INS.i];
+    INS.ui.sum.textContent = '';
+    if (d) {
+      INS.ui.sum.appendChild(el('b', null, INS.sel || d.sel));
+      if (d.text) INS.ui.sum.appendChild(document.createTextNode('  "' + d.text + '"'));
+      if (INS.rect) INS.ui.sum.appendChild(document.createTextNode('  ' + INS.rect.w + '×' + INS.rect.h));
+    }
+    var name = d ? crumbLabel(d) : '—';
+    document.getElementById('inspectName').textContent = name;
+
+    var cs = INS.props || {};
+    IPROPS.forEach(function (p) {
+      var ui = INS.ui.rows[p.key]; if (!ui) return;
+      ui.row.hidden = !!(p.when && !p.when(cs));
+      ui.row.classList.toggle('edited', !!(INS.edits && INS.edits[p.key]));
+      if (INS.recent(p.key)) return;
+      var v = cs[p.key];
+      if (p.kind === 'num') {
+        var n = numOf(v, p, cs);
+        if (n == null || isNaN(n)) { ui.val.textContent = v || ''; return; }
+        // A value past the slider's range stretches the range rather than lying.
+        if (n > Number(ui.inp.max)) ui.inp.max = Math.ceil(n * 1.5);
+        if (n < Number(ui.inp.min)) ui.inp.min = Math.floor(n * 1.5);
+        ui.inp.value = n; ui.val.textContent = valueOut(p, n);
+      } else if (p.kind === 'seg') {
+        INS.mark(p.key, v);
+      } else if (p.kind === 'color') {
+        var hx = cssToHex(v);
+        if (hx) { ui.color.set(hx); ui.val.textContent = hx; }
+        else { ui.val.textContent = 'none'; }
+      } else if (p.kind === 'flag') {
+        ui.cb.checked = v === 'none';
+      }
+    });
+  };
+  INS.select = function (i) { INS.i = i; INS.send({ t: 'select', i: i }); INS.patch(); };
+  INS.none = function () {
+    INS.chain = null; INS.i = -1; INS.props = null; INS.edits = {};
+    document.getElementById('inspectRow').hidden = true;
+    if (active === INS) { active = null; var rest = Object.keys(seen); if (rest.length) activate(rest[0]); else INS.el.hidden = true; }
+  };
+  INS.ch.onmessage = function (ev) {
+    var m = ev.data || {};
+    if (m.t === 'picked') {
+      INS.chain = m.chain; INS.i = m.i; INS.edits = {}; INS.touched = {};
+      if (!INS.ui) INS.build();
+      var note = document.getElementById('note'); if (note) note.remove();
+      document.getElementById('inspectRow').hidden = false;
+      activate('__inspect__');
+      INS.patch();
+      return;
+    }
+    if (m.t === 'props') {
+      if (m.i !== INS.i) INS.i = m.i;
+      INS.props = m.computed; INS.edits = m.edits || {}; INS.rect = m.rect; INS.sel = m.sel;
+      INS.patch();
+      return;
+    }
+    if (m.t === 'payload') {
+      navigator.clipboard.writeText(m.text).then(function () { flash('copied · element edits'); },
+                                                function () { alert(m.text); });
+      return;
+    }
+    if (m.t === 'none') { INS.none(); return; }
+  };
+  INS.ch.postMessage({ t: 'hello' });
+  document.getElementById('inspectRow').onclick = function () { activate('__inspect__'); };
+  // [ and ] walk the chain out and in; Esc drops the selection.
+  addEventListener('keydown', function (e) {
+    if (active !== INS || !INS.chain) return;
+    if (/^(INPUT|TEXTAREA)$/.test(e.target.tagName || '')) return;
+    if (e.key === '[' && INS.i < INS.chain.length - 1) INS.select(INS.i + 1);
+    else if (e.key === ']' && INS.i > 0) INS.select(INS.i - 1);
+    else if (e.key === 'Escape') { INS.send({ t: 'clear' }); INS.none(); }
+  });
 
   /* ---- page-wide switches --------------------------------------------------
      The dev fold badge (js/nav.js) belongs to the page, not to any one harness,
@@ -844,6 +1138,7 @@
   disc.onmessage = function (ev) {
     var m = ev.data || {};
     if (m.t !== 'iam') return;
+    if (m.inspect) return;               // the element inspector is not a harness
     add(m.title);
     // Don't fight a click that hasn't been echoed back yet.
     var settled = Date.now() - switchTouched > 1200;
