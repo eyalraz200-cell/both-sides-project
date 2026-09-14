@@ -97,7 +97,13 @@ function sbbTimelineMobileBottomPx() {
   const frame = (typeof TOOLTIP_DOCK_BOTTOM_PX === "undefined")
     ? V.bottomInsetPx
     : TOOLTIP_DOCK_BOTTOM_PX + TOOLTIP_DOCK_H_PX + SBB_TIMELINE_MOBILE_GAP_PX;
-  return Math.max(V.bottomInsetPx, frame) + slot;
+  // ...plus whatever the LAST axis plaque hangs below the axis end. Its dot sits
+  // on the final row, which the camera brings down to this very edge, so without
+  // this the plaque prints over the docked frame's instruction line at the end
+  // of every scrub. 0 unless the roster has a `mobileBelow` event.
+  const plaque = (typeof p7AxisLastPlaqueOverhangPx === "function")
+    ? p7AxisLastPlaqueOverhangPx() : 0;
+  return Math.max(V.bottomInsetPx, frame) + slot + plaque;
 }
 
 

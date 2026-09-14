@@ -496,19 +496,20 @@ function updateGroups() {
     // un-types where @fold3 left it — so the shift must hold. Riding e6 there
     // slid the whole label up by half its extra wrapped height as it untyped.
     // The wrap cap this frame — needed here, before the shift, and written onto
-    // the element further down. While flying it is FROZEN, and frozen at the
-    // label's PANEL cap (flyTgt.cap, measured off the column's per-camp
-    // max-width in fold6MFlyMeasure), not at the rest cap: the wrap has to
-    // happen at the START of the flight, not at the end (explicit instruction).
-    // The label therefore takes off already in the shape it will land in — one
-    // re-break on the first frame of a move, under motion — and nothing changes
-    // at the swap, where a re-break would be a static snap with nothing to hide
-    // it. There is no cap LERP either: a cap that slid would re-break every few
-    // frames, and however the box is anchored a re-break hops a word to another
-    // line in one frame ("position never snaps").
+    // the element further down. While flying the LINE BREAKS are frozen at the
+    // label's PANEL wrap (flyTgt.cap, measured off the column's per-camp
+    // max-width in fold6MFlyMeasure): the wrap happens at the START of the
+    // flight, not at the end (explicit instruction), so nothing changes at the
+    // swap, where a re-break would be a static snap. The cap itself is not a
+    // constant, though — the type lerps 16 -> 14 across the flight, and the cap
+    // is the panel cap SCALED BY THAT FONT, so the box shrinks in step with the
+    // glyphs and the same words break at the same places every frame (text
+    // width is linear in font size). A frozen cap under a lerping font was
+    // tighter than either end and put תומכי on 3 lines; a frozen font snapped
+    // the size at take-off.
     const capCol = groupLabelColumnMaxWidth(g), capLegend = groupLabelLegendMaxWidth();
     const capNow = capCol == null || capLegend == null ? null
-      : flying ? (flyTgt && flyTgt.cap != null ? flyTgt.cap : capCol)
+      : flying ? (flyTgt && flyTgt.cap != null ? flyTgt.cap * (labelFontSize / FOLD6_MFLY_FONT_PX) : capCol)
       : capCol + (capLegend - capCol) * (g.fold6 && raw2 >= FOLD2_BEATS.move.start + MOVE_SPAN ? fold6ShapeT : 0);
     // While FLYING the shift is recomputed from THIS frame's size and cap, and
     // is NOT faded out — that is what stops the re-wrap from being visible.

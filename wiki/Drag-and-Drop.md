@@ -644,6 +644,11 @@ was touched**.
   keeping row 1's hand-tuned order and 6–10 taking row 2's. **All grid reads go through
   `p9TrayGrid()`** (build loop, `p9MeasureTrayLayout`, `placePillInZone`, `p9ResetDrops`) —
   never the constant directly.
+- **Pill look (all desktop widths, `@media (min-width: 601px)` block after the tight tier in
+  style.css):** **16px, weight 400** — outranks the 20/18px tiers below, so the tiers no
+  longer change the font; a **4-dot (2×2) grip of 2.5px dots** (spans 5–6 hidden; the
+  collapsed-handle width is 7px); **no rule under the band** (`.page9-tray::after` hidden).
+  Pills are 16px side padding with an 8px gap between them. The row keeps **≥40px from each screen edge** (`P9_TRAY_EDGE_MARGIN`): when it would not, `p9MeasureTrayLayout` shrinks only the side padding (`--p9-pill-pad` on `<html>`, floor `P9_PILL_PAD_MIN` 6px) — text and gap never change. Labels are `white-space: nowrap` — a pill never wraps. The drag ghost gets the identical rules. Mobile keeps its own pill styles.
 - **Regular-desktop tier (≤1600px):** `window.innerWidth <= P9_DESKTOP_REGULAR_MAX` (1600,
   `p9IsRegularDesktop()`). **TRIAL under judgment:** the tier currently keeps the single-row
   `P9_TRAY_GRID_V2` with pills shrunk to **18px** by the `@media (max-width: 1600px)` rule in
@@ -1027,10 +1032,16 @@ latter written as `.page9-pill .page9-handle`, matching the base rule's two-clas
 since a media query adds no specificity and a bare `.page9-handle` loses the cascade.
 
 **The selection circle** (`span.page9-pill-check`, built for every pill, `display: none` on
-desktop) is what makes that in-place toggle legible: an 18px `currentColor` **rounded rectangle** (`--p9-check-size` 18px,
-`--p9-check-radius` 4px — both driven by the check-mark harness) on the pill's **right** edge — the first DOM child after the hidden handle, so RTL puts it in the slot the
-grip dots vacate, with the ⓘ on the left. The ⓘ beside it stays round, deliberately — one informs, the other records a choice. Empty at rest; `.is-extreme` fills it white with a
-`#111` ✓, inverted against the pill's own black-on-white flip. It is **not a control**: a
+desktop) is what makes that in-place toggle legible: a 12px `currentColor` **hard square** (`--p9-check-size` 12px,
+`--p9-check-radius` 0 — tuned by eye on device; it started as an 18px circle) on the pill's **right** edge — the first DOM child after the hidden handle, so RTL puts it in the slot the
+grip dots vacate, with the ⓘ on the left. The ⓘ beside it stays round, deliberately — one informs, the other records a choice. Empty
+outline at rest; `.is-extreme` fills it **solid black** on the pill's own **light grey**
+(`#E3E3E3`) — the fill is the whole signal. The pill deliberately does NOT take desktop's
+black dropped look on mobile: the square inside it is the thing that has to read as "ticked",
+and on black it could only be white — inverted from every other mark on the fold, so a
+*selected* pill looked like the odd one out. Grey lets the square go the same ink as the
+label beside it, and the pill's text stays dark throughout. **Removed — don't reintroduce:** a `::before` ✓ inside it. At 12px
+the glyph read as a scribble competing with the label rather than as a state, inverted against the pill's own black-on-white flip. It is **not a control**: a
 `<span>`, `pointer-events: none`, `aria-hidden` — the whole pill stays the one tap target and
 `aria-pressed` (kept by `syncPillA11y`) is what the a11y tree reads. Same rule as the parked
 `.page9-pill-x`.
@@ -1067,16 +1078,28 @@ The panel does **not** arrive all at once, on **either breakpoint**. Two classes
   nor the selection circle. Nothing is classifiable on this fold, so those would advertise
   affordances the fold can't honour; all three are @fold13's beat instead (below), and the
   pill is narrower by exactly their footprint here.
-- **`.engaged` — @fold13's stick.** Everything else: the full-bleed `::after` rule, the
-  drop zone (`.page9-zone-wrap-extreme`), the pinned `.page9-header`, the tray's
-  `pointer-events: auto`, the mobile docked-frame drop (`p9TooltipDropTrigger`), **mobile's
-  own band rule** (`.page9-tray::after`, scaled in from the right over the convoy's full
-  length so its leading edge travels with the train) and **the convoy itself** — and the
-  per-pill affordances **popping in**, each pill widening around its own on the same
-  `--p9-pop-i × --p9-pop-stagger` right→left crest the pills used a fold earlier: the
-  **grip handles** on desktop V2, the **ⓘ and the selection circle** on mobile.
+- **`.engaged` — @fold13's stick.** Everything else: the drop zone
+  (`.page9-zone-wrap-extreme`), the pinned `.page9-header`, the tray's `pointer-events: auto`,
+  the mobile docked-frame drop (`p9TooltipDropTrigger`), the convoy, and the per-pill
+  affordances (the **grip handles** on desktop V2, the **ⓘ and selection square** on mobile,
+  each pill widening around its own on the `--p9-pop-i × --p9-pop-stagger` right→left crest).
   `page9UpdateFromScroll` also *adds* `.pills-in` whenever it engages, as a safety net for a
   load or jump straight into @fold13 that fires no scroll event over @fold12's title.
+
+  **On mobile that is not one moment but two, per explicit instruction: the pill convoy
+  plays alone, and only when it has parked does the rest arrive.** `.training` is the gate —
+  p9TrainToggle holds it for the run, and every held-back piece keys off
+  `.engaged:not(.training)` in style.css: the `::after` rule (now on its own `--p9-rule-ms`
+  clock, no longer scaled over the convoy's length), `.page9-zone-wrap-extreme`,
+  `.page9-header`, and the two pill affordances. The docked frame's step-down is the one
+  piece that is not CSS, so `p9TrainToggle`'s settle handler calls `p9SyncTooltipDrop()`
+  directly — a reader who has stopped scrolling gets no further tick to fire it on.
+  Measured: train alone to t+1.4s (rule 0, zone 0, header 0, marks collapsed, frame still at
+  its @fold11 spot), everything else from t+1.5s, all settled by t+2.4s.
+
+  Desktop and reduced motion are untouched by the split: neither ever gets `.training`
+  (p9TrainToggle bails before adding it), so `:not(.training)` is always true and those rules
+  read exactly as plain `.engaged` did.
 
 The two breakpoints share `--p9-pop-i` (`P9_TRAY_GRID_V2[idx].col - 1`, page9.js) — the same
 number mobile's flex `order` uses — so index 0 is the rightmost pill and the crest travels
@@ -1096,17 +1119,20 @@ layouts:
   line, all ten pills visible, popping **top to bottom** (`--p9-pop-col-i`). Two details are
   load-bearing rather than cosmetic:
 
-  - **Right-aligned** (`align-items: flex-start`, `start` being the right edge in RTL) on the
-    row's own start gutter, so the column's right edge and the finished row's right end are
-    the same line. This is not a composition choice — it is what "only up and left" *means*
-    geometrically, and it is also the no-collision guarantee. A cabin climbs at its column x
-    and then runs sideways; if any slot sits right of the column, the cabin bound for it has
-    to move **right** and must cross every slot parked in between. Measured with the column
-    centred: cabin 4 climbed at x=144 straight into cabin 3's parked slot of 131–256 and slid
-    right out of it — 20 overlapping pairs, worst 102×38px. Put the column at or right of
-    every slot and both problems go at once. The bottom cabin now drops into place with no
-    sideways move at all (0 frames of x travel, measured), and each one above it goes further
-    left than the last.
+  - **Centred horizontally**, and sitting at the band's own `top: 116px` — so the column's
+    **top pill and @fold13's row share a level**. That is what makes the convoy read: the top
+    cabin is already where it is going vertically, so its climb is a no-op and it simply
+    slides, and every cabin below it rises to a line that was visible all along. The column
+    runs 130→636 and the legit strip starts at 790, so it clears the dots without help.
+    **Removed — don't reintroduce:** spanning the tray from the top of the screen to a
+    published `--p9-legit-top` and centring the column in it. It bought vertical centring and
+    cost the two folds their shared line.
+  - **Exactly one cabin travels right** — the pill whose slot is the row's right-hand end,
+    which is also the last to depart. Every other slot lies left of the centred column, so
+    every other cabin goes up and then left as specified. That one runs its legs the other way
+    round; see `upFirst` in `p9TrainToggle`. **Removed — don't reintroduce:** right-aligning
+    the column on the row's start gutter. It made every path leftward for free and cost the
+    column its centre.
   - **Top to bottom = the finished row LEFT to RIGHT** — the mirror of the row's own order,
     per explicit instruction. The top pill owns the furthest-left slot, so it leaves first and
     every cabin behind it stops *short* of the one ahead: nothing overtakes a pill already
@@ -1134,9 +1160,9 @@ layouts:
   row. **First up, THEN left — not together**, per explicit instruction. Each
   cabin's travel is **two strict phases** on its own clock:
 
-  1. **UP** (`P9_TRAIN_UP_MS`, 260) — `y` only. The cabin rises straight out of the column to
+  1. **UP** — `y` only. The cabin rises straight out of the column to
      the finished row's line; its `x` does not move by a single pixel.
-  2. **LEFT** (`P9_TRAIN_ACROSS_MS`, 460) — `x` only, and only once phase 1 has fully landed.
+  2. **LEFT** — `x` only, and only once phase 1 has fully landed.
      It runs along the row line into its slot.
 
   Each leg is eased fresh from its own raw slice, and the second is exactly 0 for the whole
@@ -1145,8 +1171,8 @@ layouts:
   simply slides. Measured: 1 diagonal frame per cabin, the single frame where leg 1 hands off
   to leg 2.
 
-  **Both legs are timed by SPEED, not duration** — `P9_TRAIN_UP_SPEED` (0.8 px/ms) and
-  `P9_TRAIN_ACROSS_SPEED` (1.6 px/ms) — so every cabin moves at the same pace and simply takes
+  **Both legs are timed by SPEED, not duration** — `P9_TRAIN_UP_SPEED` (1.6 px/ms) and
+  `P9_TRAIN_ACROSS_SPEED` (3.2 px/ms) — so every cabin moves at the same pace and simply takes
   as long as its own distance needs. That is the second half of the no-collision guarantee,
   and it is a guarantee rather than a tuning. Vertically, equal speed means consecutive cabins
   hold the column pitch they started with all the way up; a fixed duration made a cabin five
@@ -1158,10 +1184,14 @@ layouts:
   (`P9_TRAIN_MIN_LEG_MS`). A floor slows *short* legs only, which is exactly where cabins are
   closest together, and it broke the invariant it was meant to protect.
 
-  `P9_TRAIN_LEAD_MS` is 140, the third leg of the guarantee: a cabin must clear the junction
-  before the one behind climbs into it. 110 left a 9×8px corner graze, because an arriving
-  cabin accelerates out of rest on `p9Ease` and covers very little ground in its first frames.
-  At 140 the whole run measures **zero overlapping pill pairs**.
+  `P9_TRAIN_LEAD_MS` is 90, the third leg of the guarantee: a cabin must clear the junction
+  before the one behind climbs into it. Speeding the cabins up and shortening the lead
+  together is safe, and it is worth knowing why — the clearance a cabin has when the next
+  arrives is `ACROSS_SPEED × (lead + one slot's climb)`, and the climb term shrinks by exactly
+  the factor `UP_SPEED` grows by, so raising both speeds leaves it unchanged and only
+  `ACROSS_SPEED × lead` moves. The whole run measures **1140ms with zero overlapping pill
+  pairs**, tuned down from 1920ms (0.8/1.6/140) via 1430ms (1.2/2.4/110) — every step
+  re-measured for collisions rather than reasoned about.
 
   **Removed — don't reintroduce:** a single quadratic bezier through `{column x, row y}`. It
   blends the two moves, which resolves the vertical early and then plays the whole long
@@ -1207,6 +1237,15 @@ clipped space and simply vanished mid-journey. `.page9-sticky.training .page9-tr
 settles. The third class is for specificity alone — the reverse run is `:not(.engaged)` the
 whole way, and that rule sets `overflow-x: hidden` at the same weight, so without it the
 train would be clipped leaving @fold13 but not arriving.
+
+**`p9TrayH()` always reports the band's ROW height on mobile, never its live box.** The band
+has two shapes there, and everything downstream of that number — `p9DockTopM`, and through it
+`p9ExtremeTopY` and `p9MidY`, i.e. the whole mobile dot layout — is geometry the dots have to
+hold across *both* folds. Reading the live box let @fold12's ~506px column shove the dot field
+~440px down the screen, so the legit strip never appeared on that fold at all and the column
+landed on top of the dots; it only snapped right once @fold13 collapsed the band to a row. The
+row height is the same arithmetic the CSS does (the tray's padding plus one pill), and a pill
+is the same height in both shapes — the ⓘ sets it, and only its *width* collapses at @fold12.
 
 **The mobile band does NOT slide.** Its transform is the at-rest `translate(-50%, 0)` in
 both states and it is simply invisible until `.pills-in` — the same thing desktop V2 does,

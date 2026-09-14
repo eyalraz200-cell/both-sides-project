@@ -29,6 +29,120 @@ if (foldNumberBadge) {
   });
 }
 
+// ── The fold picker (mobile) ────────────────────────────────────────────────
+// Ctrl+Shift+F is how the badge is dismissed, and a phone has no Ctrl and no
+// Shift — so on mobile the badge is a chip you can only look at. Tapping it now
+// opens a list of all 16 folds and jumps to the one you pick, which is the
+// thing you actually want a fold readout for while working on a phone.
+//
+// Mobile only, deliberately: on desktop the badge stays `pointer-events: none`
+// so it can never eat a click on the canvas underneath (that is the reason it
+// was inert in the first place), and the keyboard shortcut already covers the
+// one thing the chip does there.
+//
+// It is built from the sections themselves — number plus that fold's own title,
+// with the `.copy-desktop` half of any breakpoint-split headline stripped out —
+// so it cannot drift out of step with project.html the way a hand-written list
+// would.
+const FOLD_PICKER_SCROLL_MS = 700;
+
+function foldPickerLabel(section) {
+  const h2 = section.querySelector(".section-title");
+  // Not every fold has a title card — the hero and the pinned timeline carry
+  // their text elsewhere — so those rows fall back to the section id rather
+  // than sitting blank. The id is the useful thing to see there anyway.
+  if (!h2) return section.id || "";
+  // Clone before stripping: the live node is the one on screen.
+  const clone = h2.cloneNode(true);
+  clone.querySelectorAll(".copy-desktop").forEach(el => el.remove());
+  return clone.textContent.replace(/\s+/g, " ").trim();
+}
+
+// Animated, never an instant jump. A jump skips every pinned/scrubbed section it
+// passes, which latches those folds into their end state and leaves later ones
+// stuck on screen — the page then looks broken because of the navigation aid.
+// Fixed duration rather than fixed speed, so a jump across the whole page takes
+// the same time as a jump to the next fold.
+let foldPickerRaf = null;
+function foldPickerScrollTo(y) {
+  if (foldPickerRaf) cancelAnimationFrame(foldPickerRaf);
+  const from = window.scrollY;
+  const dist = y - from;
+  if (Math.abs(dist) < 1) return;
+  const start = performance.now();
+  const ease = typeof p9Ease === "function" ? p9Ease : (t => t);
+  const step = (now) => {
+    const t = Math.min(1, (now - start) / FOLD_PICKER_SCROLL_MS);
+    window.scrollTo(0, Math.round(from + dist * ease(t)));
+    foldPickerRaf = t < 1 ? requestAnimationFrame(step) : null;
+  };
+  foldPickerRaf = requestAnimationFrame(step);
+}
+
+function foldPickerInit() {
+  if (!foldNumberBadge) return;
+  let panel = null;
+
+  function build() {
+    panel = document.createElement("div");
+    panel.className = "fold-picker";
+    panel.setAttribute("aria-hidden", "true");
+    sections.forEach((section, i) => {
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "fold-picker-row";
+      row.dataset.fold = String(i + 1);
+      const n = document.createElement("span");
+      n.className = "fold-picker-n";
+      n.textContent = String(i + 1);          // @foldN — the number alone, house style
+      const t = document.createElement("span");
+      t.className = "fold-picker-t";
+      t.textContent = foldPickerLabel(section);
+      row.append(n, t);
+      row.addEventListener("click", (e) => {
+        e.stopPropagation();
+        close();
+        const top = section.getBoundingClientRect().top + window.scrollY;
+        foldPickerScrollTo(top);
+      });
+      panel.appendChild(row);
+    });
+    // A direct .layout child for the same reason the badge is: .graphic-col is
+    // its own stacking context and traps any z-index inside it.
+    (document.querySelector(".layout") || document.body).appendChild(panel);
+  }
+
+  function open() {
+    if (!panel) build();
+    panel.classList.add("is-open");
+    // Mark the fold you're on, so the list opens oriented rather than needing
+    // to be read from the top.
+    panel.querySelectorAll(".fold-picker-row").forEach(r => {
+      r.classList.toggle("is-current", Number(r.dataset.fold) === currentPage + 1);
+    });
+    const cur = panel.querySelector(".fold-picker-row.is-current");
+    if (cur) cur.scrollIntoView({ block: "center" });   // inside the panel only
+  }
+  function close() { if (panel) panel.classList.remove("is-open"); }
+  function isOpen() { return !!panel && panel.classList.contains("is-open"); }
+
+  foldNumberBadge.addEventListener("click", (e) => {
+    if (!isMobile()) return;
+    e.stopPropagation();
+    isOpen() ? close() : open();
+  });
+  // Any tap outside dismisses it, and so does leaving the breakpoint — a picker
+  // left open while the page is widened would sit over the desktop layout with
+  // no way to shut it.
+  document.addEventListener("click", (e) => {
+    if (isOpen() && !e.target.closest(".fold-picker")) close();
+  });
+  window.addEventListener("resize", () => { if (!isMobile()) close(); });
+}
+// isMobile() lives in js/core.js, a LATER <script> than this one, so the init
+// waits rather than running at top level.
+document.addEventListener("DOMContentLoaded", foldPickerInit);
+
 function updateFoldNumberBadge() {
   if (foldNumberBadge) foldNumberBadge.textContent = String(currentPage + 1);
 }

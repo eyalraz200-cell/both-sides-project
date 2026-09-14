@@ -301,12 +301,33 @@ axis so the first event's label can center over its own circle).
   of them are built. The filter duplicates the literal `600` because `MOBILE_BP`/`isMobile()`
   live in `js/core.js`, which loads **after** `page7.js` — keep the two in step by hand. A
   window dragged across the breakpoint keeps the set it loaded with until a reload
-- **`mobileAbove`** — an event flagged with it is pinned **above its dot**, centred on the
-  axis, instead of taking a side plaque: `sideDir` is forced to 0, which also gates out the
-  `'fly'` travel, so it is simply there from the moment it appears. Only
+- **`mobileAbove`** — a flagged event is **PINNED**: it sits above its dot, centred on the
+  axis, from the start, and it **never leaves**. `sideDir` is forced to 0, which both centres
+  it and gates out the `'fly'` travel; and the `ops` map returns a flat `1` for it, so there
+  is no leave beat and therefore no `P7_AXIS_LEAVE_MODE` collapse either (the collapse is
+  driven by that same presence value). It is a fixed label on the head of the axis, not an
+  event that plays. Only
   **הכרזת הרפורמה** carries it — that event is 3 days after `minDate`, hard against the top
   of the axis, where a side plaque has the year label and the screen edge to fight.
   `p7AxisEvMobileAbove(ev)` / `p7AxisHasMobileAbove()`, mobile only.
+- **The box reserves the last plaque's overhang** — `p7AxisLastPlaqueOverhangPx()`
+  (marker radius + `dotGapPx` + card height + `P7_AXIS_LAST_PLAQUE_GAP_PX` 23), added to
+  `sbbTimelineMobileBottomPx()`. On the zoomed-**in** scrub the camera brings the final dot
+  all the way down to the box's bottom edge, and a `mobileBelow` plaque then hangs its whole
+  height under it — straight over the docked frame's «לחצו והחזיקו…» line. Derived from the
+  card's type constants rather than measured: the frame's own top is JS-driven and *moves*
+  with scroll, so it cannot be read from a layout path. Net at the end of the scrub: last dot
+  692, pill bottom 729, instruction 752 — **23px** clear.
+  **The plaque layer's clip has to be extended to match** — `p7VertClipToBox(ctx, W, H,
+  extraBottom)`, called from `p7DrawVertDotCards` with that same overhang. The reserve puts
+  the card in the band just *under* the box, so clipping the layer at the box edge cut off
+  the very card the reserve exists for and the last event vanished entirely. Only that layer
+  is extended; the dots and the axis line still stop at the box edge.
+- **`mobileBelow`** — the mirror, and the same opt-out of the side/fly path: the plaque hangs
+  **below** its dot, centred on the axis. Only **התפזרות הכנסת ה-25** carries it — that event
+  is past `maxDate`, so its dot is pinned to the very END of the axis (`row = totalRows`),
+  where a side or dot-centred plaque straddles the line's end. Note its separate `above: true`
+  is the **desktop** rule for the same event and is unrelated.
   Its knock-on: **the year label has to clear the plaque, not just the ring.**
   `p7VertYearHeaderH()` reserves an extra `P7_VERT_FIRST_EV_HEADROOM_PX` (**34**) when the
   roster has such an event, and the row-0 year block is lifted by the same amount, so
@@ -1902,6 +1923,20 @@ merged path and separate rects are identical even where they overlap, which is *
 below 1. Verified byte-for-byte — rendering the same settled frame batched and unbatched gave
 **0 differing pixels** at both breakpoints.
 
+### The axis build-in — `p7AxisShouldShow`, `P7_AXIS_INTRO_AT_MOBILE`
+
+The wipe latches the first frame `p7AxisShouldShow()` goes true, which on the timeline path
+means @fold8's fly has started. **`p7AxisIntroAt()`** makes that a tunable threshold on
+`fold9FlyTrigger`'s **raw** progress rather than a bare `> 0`: 0 fires the instant the fly
+begins (the original behaviour), 1 holds the wipe until the squares have landed.
+`P7_AXIS_INTRO_AT_MOBILE` is **mobile only** — desktop returns 0 and is untouched.
+`P7_AXIS_INTRO_DURATION` (2800ms) is the wipe itself.
+
+> Currently **0** on both, i.e. unchanged behaviour — under manual/ tuning via
+> `_debug-axis-intro.js`, which also draws the gauge (`window.__axisIntroMarks`): a short
+> track in the left margin with a tick at the threshold and a live marker for the fly
+> progress tested against it, so the crossing is seen rather than inferred.
+
 ### Axis-event presentation knobs — `P7_AXIS_*` (page7.js)
 
 **MOBILE ONLY.** Baked from a compare/ + manual/ pass on 2026-09-12 (`_debug-zoomed-axis.js`,
@@ -1982,34 +2017,66 @@ With `zoom` above 1 only a box-sized window of the field is ever on screen. When
 reaches the last event there is nothing left to pan toward, so in one beat the field
 compresses to show the whole timeline at once, and @fold10's title block rises over that.
 
-**It is a vertical-only squash of the real layout** — not a zoom, and not a re-solve. It is a
-*view* of the whole timeline, not a faithful miniature. Two other mechanisms were built and
-rejected, and the reasons are the design:
+**It re-fits the real layout to a uniformly smaller cell, keeping the row plan.** Not a
+zoom, not a re-solve of the dates. Three mechanisms were tried; the reasons are the design:
 
 | tried | why it's wrong |
 |---|---|
-| **Uniform scale** | Needs `k ≈ 0.35` to fit, which narrows each camp from the full 160px of available width to **56px** and takes the square to **1.04px** — under `p7SolveMobileSq`'s 1.25px floor, *"where a square stops reading as a mark at all"*. A small picture of the timeline, not a view of it. |
-| **Re-solve at `zoom: 1`** | Legible dots (2.41px) and full width, but the packer spills dense days down into later rows, so **a dot's y stops meaning its date**: the busy camp runs hundreds of px past its own year label and the dots no longer line up with the axis. |
+| **Uniform scale, `cols` fixed** | Each camp narrows from the full 160px of available width to 56px and the square drops to ~1px. A shrunken *picture* of the timeline, not a view of it. |
+| **Re-solve at `zoom: 1`** | Legible dots and full width, but the packer spills dense days into later rows, so **a dot's y stops meaning its date** — the busy camp runs hundreds of px past its own year label. |
+| **Squash y only** | Dates stay put, but the cell goes **anisotropic**: at 393×852 the row pitch falls to 2.2px while the column pitch stays 3.64px, so a flat 1.8px square leaves a **0.4px** vertical gap against a **1.84px** horizontal one. The dots all but touch vertically and the field reads as vertical **bars**. |
 
-Squashing **y only** keeps the row plan exactly as solved, so the date → y mapping stays
-linear and every dot stays beside its own date — the dots and the dates spread across the
-axis together, which is the entire point. `x` is left completely alone: the camps already
-span the full width at the live layout (campW 160px of 160px available), so there is nothing
-to fix there.
+What ships is the fourth: **cell and square both scale by `p7ZoomOutKY`, and `cols` is
+re-solved against the smaller cell** (`p7Squash`), which repacks the camps back out to the
+full width. Gaps come out equal on both axes. The **row plan is untouched** — same zoom, same
+`daysPerRow`, same row count — so a date maps to the row it always did and every dot stays
+beside its own date; more columns also means *less* spill than the live layout, not more.
+
+At 393×852: cell 3.64 → **2.2px**, square 2.51 → **1.46px**, gaps even both ways, camps still
+spanning the full width.
+
+**The fit reserves a gap at both ends.** `p7ZoomOutKY` solves against
+`boxBottom − P7_ZOOMOUT_FIT_TOP_PX (40) − p7ZoomOutBottomReserve() − yearHeaderH`. The bottom
+reserve has to be asked for explicitly: the box's own bottom is already only
+`SBB_TIMELINE_MOBILE_GAP_PX` above the docked tooltip, and the squash is the one state where
+the field fills its box *exactly*.
+
+**The squashed view spreads across the whole box, and past it.** `p7ZoomOutBottomReserve()` is
+`P7_ZOOMOUT_FIT_BOTTOM_GAP_PX` = **0** — nothing hangs below the axis end there, so any reserve
+is height the whole-timeline view cannot get back. It also *gains*
+`p7ZoomOutBottomBonus()` = `p7AxisLastPlaqueOverhangPx()` (**60px** at 393×852): the box holds
+that band back for the last `mobileBelow` plaque, which the squashed view never draws. Both the
+solve and `p7VertClipToBox` open by it (the clip by `p7ZoomOutT × bonus`, so it tracks the beat),
+or the axis end is shaved off exactly where it was gained. Measured at 393×852: field **63 → 752**
+against boxTop 54 / boxBottom 692 — the line runs right down to the tooltip's own gap. The first-event headroom is handed back too: `p7VertYearHeaderDrawH()` fades
+`P7_VERT_FIRST_EV_HEADROOM_PX` out with the beat, so «2023» ends up sitting directly above the
+axis instead of a plaque-sized gap above it. That is a **draw-path** header, deliberately
+separate from `p7VertYearHeaderH()` — the latter feeds `p7SolveVerticalSq`'s fit test and has
+to stay a constant the solve can rely on, or the layout would re-solve differently depending
+on how far the beat had run. Net at 393×852: field 63→692, the full box.
+
+**The squashed view carries no plaques at all** — `zoomFade` (`1 − p7ZoomOutT`) multiplies
+every branch of the `ops` map, pinned entries included, so the cards leave through
+`P7_AXIS_LEAVE_MODE` as the beat runs. At that scale they cover the field they annotate, and
+the point of the beat is the shape of the timeline. So the lowest thing drawn is the axis end
+itself, and the reserve is a plain gap; the last plaque's overhang is reserved by the **box**
+instead (below), for the zoomed-in scrub where the card does render.
+
+
 
 `p7ZoomOutKY(H)` = `(boxBottom − P7_ZOOMOUT_FIT_TOP_PX − yearHeaderH) / (totalRows ×
-cellBase)`, clamped to ≤ 1; `p7ZoomOutYScale()` lerps 1 → that over the beat and is 1
-whenever it is idle. Three consumers, and no others:
+cellBase)`, clamped to ≤ 1. `p7Squash(W, H)` caches the squashed layout against it (keyed on
+W/H/event-count/ky); `p7ZoomOutYScale()` lerps 1 → ky and survives as the fallback for when
+that layout can't be built. Consumers:
 
 - **`p7VertFieldLen()`** — the live length under the squash. `p7VertTopY`,
   `p7VertCameraOffset`, `p7FillEdgeY`, `p7VertOverflows` and `p7RowY` all measure the field
   through it, so **the axis and the dots compress by exactly the same amount** and stay
   aligned. `p7RowY` maps row → y as a *fraction* of it rather than `row × CELL`.
-- **`destY` in `p7DrawSideSquares`** — the row offset compressed about the field's top edge.
-  `destX` is untouched.
-- **`p7.SQ`** — lerps to `P7_ZOOMOUT_FIT_SQ_PX` (**1.8px**). The square deliberately does
-  **not** scale with the squash: at `k ≈ 0.38` a proportional square lands near 1px, under
-  the legibility floor. Rows therefore overlap, and that is fine and expected.
+- **`destX`/`destY` in `p7DrawSideSquares`** — each dot travels to **its own cell in the
+  squashed layout**. Because the row is identical in both, it only ever moves sideways and
+  up.
+- **`p7.SQ`** — lerps to the squashed square (`sqBase × ky`).
 
 `p7.CELL` and `p7.leftX0` are plain reads of the live solve (`p7.cellBase` / `p7.leftX0Base`)
 — they exist as getters only because `p7.SQ` beside them needs to be one.

@@ -95,6 +95,12 @@ function p9TrayGrid() {
 // as a click (desktop click-to-classify, see the pointerdown handler in
 // p9BuildPanel) rather than a drag.
 const P9_CLICK_SLOP_PX = 4;
+// Desktop pill row: minimum px between the row and each screen edge, and the
+// pill side padding that gives way (down to the floor) to keep it. Padding
+// must match the var(--p9-pill-pad, 16px) fallback in style.css.
+const P9_TRAY_EDGE_MARGIN = 40;
+const P9_PILL_PAD         = 16;
+const P9_PILL_PAD_MIN     = 6;
 // FLY, THEN RESIZE — a dropped dot's trip is two beats on its own clock: it
 // FLIES over the first P9_DROP_SIZE_START of its slot (position fully landed by
 // then) and only then RESIZES, over a fixed P9_DROP_SIZE_MS. Raise the share
@@ -305,7 +311,30 @@ function p9LegitBarH(_W) {
 // correct even while the tray still sits at translateY(100%) before .engaged —
 // the divider doesn't jump when the tray slides up.
 function p9TrayH() {
-  return document.querySelector(".page9-tray")?.offsetHeight || 0;
+  const tray = document.querySelector(".page9-tray");
+  if (!tray) return 0;
+  // ALWAYS the band's ROW height on mobile, never its live box. The band has
+  // two shapes there — @fold12's ten-pill column and @fold13's single row — and
+  // everything downstream of this (p9DockTopM, and through it p9ExtremeTopY and
+  // p9MidY, i.e. the whole mobile dot layout) is geometry the dots have to hold
+  // across BOTH folds. Reading the live box made the column's ~506px height
+  // shove the entire dot field ~440px down the screen on @fold12, so the legit
+  // strip never appeared there and the column landed on top of the dots; the
+  // layout only snapped right once @fold13 collapsed the band to a row.
+  // The row's height is the same arithmetic the CSS does — the tray's own
+  // padding plus one pill — and a pill is the same height in both shapes (the
+  // ⓘ sets it, and only its WIDTH collapses at @fold12).
+  if (typeof isMobile === "function" && isMobile()) {
+    const pill = tray.querySelector(".page9-pill");
+    if (pill) {
+      const cs = getComputedStyle(tray);
+      return Math.round(
+        (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0) +
+        pill.offsetHeight,
+      );
+    }
+  }
+  return tray.offsetHeight || 0;
 }
 
 // Where the docked tooltip frame comes to rest on mobile at @fold13 — directly
@@ -3104,6 +3133,22 @@ function p9BuildPanel() {
     // wrap. Same trick, and the same lifetime, as the nowrap above: forced for
     // the read, released after the bake.
     if (!mobile) panel.classList.add("page9-measuring-handles");
+    // Edge room: the row keeps at least P9_TRAY_EDGE_MARGIN from each screen
+    // edge. When it wouldn't, only the pills' side padding gives (16px down to
+    // P9_PILL_PAD_MIN) — text size and gap stay put. Measured at full padding.
+    // On <html> so the drag ghost (on <body>) inherits the same padding.
+    const rootStyle = document.documentElement.style;
+    rootStyle.removeProperty("--p9-pill-pad");
+    if (p9IsV2()) {
+      const nPills = trayRows[0].querySelectorAll(".page9-pill").length || 10;
+      // + 2px per track: the baked tracks below are each pill's width + 2.
+      const excess = trayRows[0].offsetWidth + 2 * nPills
+                   - (document.documentElement.clientWidth - 2 * P9_TRAY_EDGE_MARGIN);
+      if (excess > 0) {
+        const pad = Math.max(P9_PILL_PAD_MIN, P9_PILL_PAD - excess / (2 * nPills));
+        rootStyle.setProperty("--p9-pill-pad", pad + "px");
+      }
+    }
     panel.classList.remove("page9-pills-tight");
     const pillsTight = p9IsV2() && trayRows[0].offsetWidth > document.documentElement.clientWidth;
     panel.classList.toggle("page9-pills-tight", pillsTight);
@@ -3694,6 +3739,13 @@ p9CategoryTooltipInit();
    last cabin in is the first to pull out) AND the phases swap, so it runs
    sideways back out of the row first and only then drops into the column.
 
+   The convoy is @fold13's FIRST beat and it plays alone, per explicit
+   instruction: the band's rule, the drop zone, the pinned header, the pills' own
+   ⓘ and selection square and the docked frame's step-down all wait for it to
+   finish. `.training` is the gate — style.css keys them off
+   `.engaged:not(.training)`, and the settle handler below calls
+   p9SyncTooltipDrop for the one that is not CSS.
+
    Standard FLIP, because the layout itself changes: measure the block, flip the
    class, measure the row, then play the pills back from where they were. Nothing
    about the DOM order or the flex `order` changes — only transforms — so the
@@ -3724,9 +3776,9 @@ p9CategoryTooltipInit();
 // it. 110 left a 9x8px corner graze between consecutive cabins — the arriving
 // one accelerates out of rest on p9Ease, so its first frames cover very little
 // ground. 140 measures clean: zero overlapping pairs across the whole run.
-const P9_TRAIN_UP_SPEED     = 0.8;  // px/ms, the climb out of the column
-const P9_TRAIN_ACROSS_SPEED = 1.6;  // px/ms, the run along the row
-const P9_TRAIN_LEAD_MS      = 140;  // how far each cabin trails the one ahead of it
+const P9_TRAIN_UP_SPEED     = 1.6;  // px/ms, the climb out of the column
+const P9_TRAIN_ACROSS_SPEED = 3.2;  // px/ms, the run along the row
+const P9_TRAIN_LEAD_MS      = 90;  // how far each cabin trails the one ahead of it
 // NO minimum leg duration. A floor is the obvious thing to reach for so a short
 // hop still reads as a move, and it is exactly what breaks the no-collision
 // guarantee: it slows SHORT legs only, and short legs are where cabins are
@@ -3877,6 +3929,13 @@ function p9TrainToggle(next) {
     p9TrainRaf = null;
     pills.forEach(p => { p.style.transform = ""; });
     sticky.classList.remove("training");
+    // BEAT TWO. Dropping `.training` is what releases everything the fold held
+    // back behind the convoy — the band's rule, the drop zone, the pinned
+    // header and the pills' own ⓘ + selection square all key off
+    // `.engaged:not(.training)` in style.css. The docked frame's step-down is
+    // the one piece that isn't CSS, so it gets called by hand: a reader who has
+    // stopped scrolling gets no further tick to fire it on.
+    if (typeof p9SyncTooltipDrop === "function") p9SyncTooltipDrop();
   }
   p9TrainRaf = requestAnimationFrame(frame);
 }
