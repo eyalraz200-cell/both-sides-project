@@ -99,6 +99,9 @@
                                border-radius: 50%; background: var(--accent); margin-inline-end: 6px;
                                vertical-align: middle; }
   .hint4 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  .itext { width: 100%; margin-top: 6px; font: inherit; background: var(--bg-el); color: var(--text);
+           border: 1px solid var(--line-el); border-radius: 4px; padding: 6px 8px; resize: vertical;
+           direction: rtl; unicode-bidi: plaintext; }
   /* Page-wide switches — they belong to the page, not to a harness, so they sit
      under the list rather than inside any one panel. */
   #globals { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); }
@@ -291,6 +294,41 @@
     return '#' + to(r) + to(g) + to(b);
   }
 
+  // ------------------------------------------------------------ history ----
+  /* One undo stack for the whole panel: inspector edits and harness knobs alike.
+     Cmd+Z / Cmd+Shift+Z (Ctrl on other keyboards). Each entry knows how to undo
+     and redo itself by re-sending the message that caused it. Consecutive edits
+     to the same key within 800ms merge into one entry — a slider drag is one
+     move, not a hundred. */
+  var HIST = { past: [], future: [], last: null };
+  HIST.push = function (e) {
+    var now = Date.now();
+    if (HIST.last && HIST.last.key === e.key && now - HIST.last.t < 800) {
+      HIST.last.redo = e.redo; HIST.last.t = now;      // merge: keep the first undo, latest redo
+    } else {
+      HIST.past.push(e); e.t = now; HIST.last = e;
+      if (HIST.past.length > 200) HIST.past.shift();
+    }
+    HIST.future = [];
+  };
+  HIST.undo = function () {
+    var e = HIST.past.pop(); if (!e) return flash('nothing to undo');
+    HIST.last = null; e.undo(); HIST.future.push(e); flash('undo · ' + e.label);
+  };
+  HIST.redo = function () {
+    var e = HIST.future.pop(); if (!e) return flash('nothing to redo');
+    HIST.last = null; e.redo(); HIST.past.push(e); flash('redo · ' + e.label);
+  };
+  addEventListener('keydown', function (e) {
+    if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+    if (e.key.toLowerCase() !== 'z') return;
+    // Inside a text field the field's own undo wins, except in the inspector's
+    // text box which routes through the page.
+    if (/^(INPUT|TEXTAREA)$/.test(e.target.tagName || '') && !e.target.classList.contains('itext')) return;
+    e.preventDefault();
+    if (e.shiftKey) HIST.redo(); else HIST.undo();
+  }, true);
+
   // --------------------------------------------------------- clipboard ----
   /* The clipboard API needs a secure context AND a permitted frame — VS Code's
      Simple Browser refuses it. When the write fails the text goes into a sheet
@@ -472,11 +510,16 @@
         H.send({ t: 'set', key: key, val: p.val, seq: ++H.seq });
       }, 40);
     };
-    H.edit = function (key, val) {
+    H.edit = function (key, val, silent) {
+      var prev = H.bag(key)[key];
       H.touched[key] = Date.now();
       H.bag(key)[key] = val;
       H.sendSet(key, val);
       H.refreshRow(key);
+      if (silent) return;
+      HIST.push({ key: H.title + ':' + key, label: H.title + ' · ' + key,
+        undo: function () { H.edit(key, prev, true); },
+        redo: function () { H.edit(key, val, true); } });
     };
 
     H.ch.onmessage = function (ev) {
@@ -810,6 +853,8 @@
   // `unit`), seg (one of), color, or flag (display:none). `when` hides a row
   // that means nothing for this element.
   var IPROPS = [
+    { g: 'Text', key: '__text', label: 'Text', kind: 'text', span: true,
+      when: function (c, st) { return st && st.text != null; } },
     { g: 'Text', key: 'fontSize', label: 'Font size', kind: 'num', min: 6, max: 120, step: 0.5 },
     { g: 'Text', key: 'fontWeight', label: 'Weight', kind: 'seg', opts: ['300', '400', '500', '600', '700'] },
     { g: 'Text', key: 'lineHeight', label: 'Line height', kind: 'num', min: 0.8, max: 3, step: 0.05, unit: '' },
@@ -889,20 +934,33 @@
     var lab = el('div', 'lab');
     lab.appendChild(el('span', 'name', p.label));
     var val = el('span', 'val'); lab.appendChild(val);
-    var rs = btn('↺', function () { INS.touched[p.key] = 0; INS.send({ t: 'unset', prop: p.key }); });
+    var rs = btn('↺', function () {
+      INS.touched[p.key] = 0;
+      if (p.kind === 'text') { INS.sendText(null); return; }
+      INS.sendSet(p.key, null);
+    });
     rs.className = 'rs'; rs.title = 'back to the stylesheet value';
     lab.appendChild(rs); row.appendChild(lab);
     var ui = { row: row, val: val, p: p };
-    if (p.kind === 'num') {
+    if (p.span) row.classList.add('span');
+    if (p.kind === 'text') {
+      // The element's OWN text. A textarea, since headlines wrap; Enter commits
+      // nothing special — every keystroke goes to the page live.
+      var ta = el('textarea', 'itext'); ta.rows = 2; ta.spellcheck = false;
+      ta.oninput = function () { INS.touched[p.key] = Date.now(); INS.sendText(ta.value); };
+      ta.onfocus = function () { INS.touched[p.key] = Date.now(); };
+      ta.onkeydown = function (e) { if (e.key === 'Escape') ta.blur(); e.stopPropagation(); };
+      row.appendChild(ta); ui.ta = ta;
+    } else if (p.kind === 'num') {
       var inp = el('input'); inp.type = 'range'; inp.min = p.min; inp.max = p.max; inp.step = p.step;
       inp.oninput = function () {
         var n = parseFloat(inp.value);
         INS.touched[p.key] = Date.now();
         val.textContent = valueOut(p, n);
-        INS.send({ t: 'set', prop: p.key, val: valueOut(p, n) });
+        INS.sendSet(p.key, valueOut(p, n));
         // A border you can see needs a style; the stylesheet's default is none.
         if (p.key === 'borderWidth' && n > 0 && INS.props && /none|hidden/.test(INS.props.borderStyle || ''))
-          INS.send({ t: 'set', prop: 'borderStyle', val: 'solid' });
+          INS.sendSet('borderStyle', 'solid', true);
       };
       inp.onpointerdown = function () { INS.dragging = p.key; };
       inp.onpointerup = inp.onpointercancel = function () { INS.dragging = null; INS.touched[p.key] = Date.now(); };
@@ -911,13 +969,13 @@
     } else if (p.kind === 'seg') {
       var seg = el('div', 'seg'); ui.btns = {};
       p.opts.forEach(function (o) {
-        var b = btn(o, function () { INS.touched[p.key] = Date.now(); INS.send({ t: 'set', prop: p.key, val: o }); INS.mark(p.key, o); });
+        var b = btn(o, function () { INS.touched[p.key] = Date.now(); INS.sendSet(p.key, o); INS.mark(p.key, o); });
         ui.btns[o] = b; seg.appendChild(b);
       });
       row.appendChild(seg);
     } else if (p.kind === 'color') {
       ui.color = colorControl(row, {
-        onInput: function (hx) { INS.touched[p.key] = Date.now(); val.textContent = hx; INS.send({ t: 'set', prop: p.key, val: hx }); },
+        onInput: function (hx) { INS.touched[p.key] = Date.now(); val.textContent = hx; INS.sendSet(p.key, hx); },
         onDragStart: function () { INS.dragging = p.key; },
         onDragEnd: function () { INS.dragging = null; INS.touched[p.key] = Date.now(); },
         onFocus: function () { INS.touched[p.key] = Date.now(); }
@@ -926,14 +984,41 @@
       var l = el('label', 'tog'); var cb = el('input'); cb.type = 'checkbox';
       cb.onchange = function () {
         INS.touched[p.key] = Date.now();
-        if (cb.checked) INS.send({ t: 'set', prop: 'display', val: 'none' });
-        else INS.send({ t: 'unset', prop: 'display' });
+        INS.sendSet('display', cb.checked ? 'none' : null);
       };
       l.appendChild(cb); l.appendChild(el('span', 'ml', 'display: none'));
       row.appendChild(l); ui.cb = cb;
     }
     INS.ui.rows[p.key] = ui;
     return row;
+  };
+  /* Every edit goes through these two, so history sees all of them. `val`
+     null = back to the stylesheet (unset). */
+  INS.sendSet = function (key, val, silent) {
+    var prev = (INS.edits && INS.edits[key]) ? INS.edits[key][1] : null;
+    var host = INS.host, level = INS.i;
+    if (val === null) INS.send({ t: 'unset', prop: key }); else INS.send({ t: 'set', prop: key, val: val });
+    if (!INS.edits) INS.edits = {};
+    if (val === null) delete INS.edits[key]; else INS.edits[key] = [(INS.edits[key] || [null])[0], val];
+    if (silent) return;
+    HIST.push({ key: 'ins:' + host + ':' + level + ':' + key, label: key,
+      undo: function () { INS.reaim(host, level); INS.sendSet(key, prev, true); },
+      redo: function () { INS.reaim(host, level); INS.sendSet(key, val, true); } });
+  };
+  INS.sendText = function (value, silent) {
+    var prev = INS.textEdited ? INS.text : null;
+    var host = INS.host, level = INS.i;
+    if (value === null) INS.send({ t: 'untext' }); else INS.send({ t: 'text', value: value });
+    if (silent) return;
+    HIST.push({ key: 'ins:' + host + ':' + level + ':text', label: 'text',
+      undo: function () { INS.reaim(host, level); INS.sendText(prev, true); },
+      redo: function () { INS.reaim(host, level); INS.sendText(value, true); } });
+  };
+  /* An undo may land after the selection moved: put it back on the level the
+     edit was made at (same page), so the page applies it to the right element. */
+  INS.reaim = function (host, level) {
+    if (INS.host !== host || !INS.chain) return;
+    if (INS.i !== level && INS.chain[level]) { INS.i = level; INS.send({ t: 'select', i: level }); }
   };
   INS.mark = function (key, o) {
     var ui = INS.ui.rows[key]; if (!ui || !ui.btns) return;
@@ -967,11 +1052,14 @@
     var cs = INS.props || {};
     IPROPS.forEach(function (p) {
       var ui = INS.ui.rows[p.key]; if (!ui) return;
-      ui.row.hidden = !!(p.when && !p.when(cs));
-      ui.row.classList.toggle('edited', !!(INS.edits && INS.edits[p.key]));
+      ui.row.hidden = !!(p.when && !p.when(cs, INS));
+      ui.row.classList.toggle('edited', p.kind === 'text' ? !!INS.textEdited : !!(INS.edits && INS.edits[p.key]));
       if (INS.recent(p.key)) return;
       var v = cs[p.key];
-      if (p.kind === 'num') {
+      if (p.kind === 'text') {
+        if (document.activeElement !== ui.ta) ui.ta.value = INS.text || '';
+        ui.val.textContent = '';
+      } else if (p.kind === 'num') {
         var n = numOf(v, p, cs);
         if (n == null || isNaN(n)) { ui.val.textContent = v || ''; return; }
         // A value past the slider's range stretches the range rather than lying.
@@ -1014,6 +1102,7 @@
     if (m.t === 'props') {
       if (m.i !== INS.i) INS.i = m.i;
       INS.props = m.computed; INS.edits = m.edits || {}; INS.rect = m.rect; INS.sel = m.sel;
+      INS.text = m.text; INS.textEdited = !!m.textEdited;
       INS.patch();
       return;
     }

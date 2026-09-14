@@ -52,6 +52,7 @@
   var chain = [];          // elements, innermost first
   var sel = -1;            // index into chain
   var edits = new Map();   // element → { camel: [from, to] }
+  var texts = new Map();   // element → [from, to]  (its own text, edited in the panel)
   var STORE = 'inspect:edits';
 
   // ----------------------------------------------------------- selectors --
@@ -173,6 +174,31 @@
   }, { passive: false, capture: true });
 
   // --------------------------------------------------------------- state --
+  /* The element's OWN text — its direct text nodes, not its children's. That is
+     what the panel lets you edit; a wrapper with children keeps them. */
+  function fullOwnText(el) {
+    var t = '';
+    Array.prototype.forEach.call(el.childNodes, function (n) { if (n.nodeType === 3) t += n.textContent; });
+    return t;
+  }
+  function hasOwnText(el) { return /\S/.test(fullOwnText(el)); }
+  function setText(el, value) {
+    var rec = texts.get(el);
+    if (!rec) rec = [fullOwnText(el), value]; else rec[1] = value;
+    texts.set(el, rec);
+    // First text node takes the new value; the others go, children stay.
+    var first = null;
+    Array.prototype.slice.call(el.childNodes).forEach(function (n) {
+      if (n.nodeType !== 3) return;
+      if (!first) first = n; else el.removeChild(n);
+    });
+    if (first) first.textContent = value; else el.insertBefore(document.createTextNode(value), el.firstChild);
+    persist();
+  }
+  function unsetText(el) {
+    var rec = texts.get(el); if (!rec) return;
+    setText(el, rec[0]); texts.delete(el); persist();
+  }
   function computedOf(el) {
     var cs = getComputedStyle(el), out = {};
     Object.keys(PROPS).forEach(function (k) { out[k] = cs.getPropertyValue(PROPS[k]); });
@@ -188,7 +214,9 @@
     var el = chain[sel]; if (!el) return;
     var r = el.getBoundingClientRect();
     post({ t: 'props', i: sel, sel: selectorFor(el), computed: computedOf(el),
-                     edits: editsOf(el), rect: { w: Math.round(r.width), h: Math.round(r.height) } });
+           edits: editsOf(el), rect: { w: Math.round(r.width), h: Math.round(r.height) },
+           text: hasOwnText(el) || texts.has(el) ? fullOwnText(el) : null,
+           textEdited: texts.has(el) });
   }
   function setProp(el, camel, val) {
     if (!PROPS[camel]) return;
@@ -207,17 +235,18 @@
     persist();
   }
   function revert(el) {
-    var e = edits.get(el); if (!e) return;
-    Object.keys(e).forEach(function (k) { el.style.removeProperty(PROPS[k]); });
-    edits.delete(el);
+    var e = edits.get(el);
+    if (e) { Object.keys(e).forEach(function (k) { el.style.removeProperty(PROPS[k]); }); edits.delete(el); }
+    if (texts.has(el)) unsetText(el);
     persist();
   }
   /* Edits survive the dev auto-reload: stored by selector, re-applied on load.
      The `from` values are kept so the change-list stays honest after a reload. */
   function persist() {
-    var out = [];
-    edits.forEach(function (e, el) { if (el.isConnected) out.push({ sel: selectorFor(el), edits: e }); });
-    try { sessionStorage.setItem(STORE, JSON.stringify(out)); } catch (er) {}
+    var out = {};
+    edits.forEach(function (e, el) { if (el.isConnected) { var k = selectorFor(el); out[k] = out[k] || { sel: k }; out[k].edits = e; } });
+    texts.forEach(function (t, el) { if (el.isConnected) { var k = selectorFor(el); out[k] = out[k] || { sel: k }; out[k].text = t; } });
+    try { sessionStorage.setItem(STORE, JSON.stringify(Object.keys(out).map(function (k) { return out[k]; }))); } catch (er) {}
   }
   function restore() {
     var saved = null;
@@ -226,20 +255,31 @@
     saved.forEach(function (rec) {
       var el = null; try { el = document.querySelector(rec.sel); } catch (er) {}
       if (!el) return;
-      edits.set(el, rec.edits);
-      Object.keys(rec.edits).forEach(function (k) { el.style.setProperty(PROPS[k], rec.edits[k][1]); });
+      if (rec.edits) {
+        edits.set(el, rec.edits);
+        Object.keys(rec.edits).forEach(function (k) { el.style.setProperty(PROPS[k], rec.edits[k][1]); });
+      }
+      if (rec.text) { setText(el, rec.text[1]); texts.set(el, rec.text); }
     });
   }
 
   // ---------------------------------------------------------------- copy --
   function payload() {
     var lines = ['[element edits]'], json = [];
-    edits.forEach(function (e, el) {
-      if (!el.isConnected || !Object.keys(e).length) return;
+    var all = [];
+    edits.forEach(function (e, el) { if (all.indexOf(el) < 0) all.push(el); });
+    texts.forEach(function (t, el) { if (all.indexOf(el) < 0) all.push(el); });
+    all.forEach(function (el) {
+      if (!el.isConnected) return;
+      var e = edits.get(el) || {}, tx = texts.get(el);
+      if (!Object.keys(e).length && !tx) return;
       var d = describe(el, 0);
       lines.push('· ' + d.sel + (d.text ? '  "' + d.text + '"' : ''));
       Object.keys(e).forEach(function (k) { lines.push('    ' + PROPS[k] + ': ' + e[k][0] + ' → ' + e[k][1]); });
-      json.push({ selector: d.sel, tag: d.tag, text: d.text, op: 'style', changes: e, viewportPx: innerWidth });
+      if (tx) lines.push('    text: "' + tx[0].trim() + '" → "' + tx[1].trim() + '"');
+      var entry = { selector: d.sel, tag: d.tag, text: d.text, op: 'style', changes: e, viewportPx: innerWidth };
+      if (tx) entry.textChange = [tx[0], tx[1]];
+      json.push(entry);
     });
     if (!json.length) return '[element edits]\n(none)';
     return lines.join('\n') + '\n\n' + JSON.stringify(json, null, 1);
@@ -259,6 +299,8 @@
     if (!el) return;
     if (m.t === 'set')   { setProp(el, m.prop, m.val); sendProps(); return; }
     if (m.t === 'unset') { unsetProp(el, m.prop); sendProps(); return; }
+    if (m.t === 'text')  { setText(el, String(m.value)); sendProps(); return; }
+    if (m.t === 'untext'){ unsetText(el); sendProps(); return; }
     if (m.t === 'revert'){ revert(el); sendProps(); return; }
     if (m.t === 'copy')  { post({ t: 'payload', text: payload() }); return; }
     if (m.t === 'clear') { chain = []; sel = -1; stopTrack(); post({ t: 'none' }); return; }
