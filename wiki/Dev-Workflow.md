@@ -298,7 +298,7 @@ for — the **remote panel**:
   `:root` (`--bg`, `--bg-rail`, `--bg-el`, `--line`, `--text`, `--text-dim`, `--accent`,
   `--warn`, `--font`, `--fs`, `--label-tt`…), so a new theme is a row in the `PALETTES` /
   `TYPES` table and nothing else — anything hard-coded in the CSS is a bug, because it will
-  not follow the theme. Digits 1-9 pick a palette and `q w e r t y` a type style, but a key
+  not follow the theme. Digits 1-9 pick a palette and `q w e t y u` a type style (**`r` reloads the page being driven** — the site, not the panel — without switching auto-reload on), but a key
   the open harness claims for a mode or toggle always wins, and `0` is never taken (it
   clears the modes). Light palettes flip `color-scheme` so the native controls follow. The
   pick persists in `localStorage`.
