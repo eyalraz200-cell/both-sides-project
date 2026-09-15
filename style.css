@@ -1139,7 +1139,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 .page9-sticky.page9-layout-v2 #page9ZoneAbove:empty,
 .page9-sticky.page9-layout-v2 #page9ZoneAbove.tray-pill-hover {
   background: rgb(245, 245, 251);
-  border-color: rgba(0, 0, 0, 0.18);
+  border-color: rgba(0, 0, 0, 0.1);
 }
 /* Only the very first state — empty, with the "גררו..." hint — insets its sides
    further, so the hint line isn't near the dashed edge. Box-sizing is
@@ -1340,7 +1340,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    breakpoint so the mobile band — where the zone is narrower and the hint has
    far less room — keeps the smaller size. */
 @media (min-width: 601px) {
-  #page9ZoneAbove:empty::after { font-size: 16px; }
+  #page9ZoneAbove:empty::after { font-size: 16px; color: rgba(0, 0, 0, 0.25); }
+  /* Desktop-tuned subtitle (harness); mobile keeps the base 600 / 0.45. */
+  .page9-header-subtitle { font-weight: 400; color: rgba(0, 0, 0, 0.35); }
 }
 
 /* Dropped-chip chrome, per a series of explicit requests that moved it away
