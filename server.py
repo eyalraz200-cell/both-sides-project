@@ -263,6 +263,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             bus_post({"ch": entry.get("ch", ""), "from": entry.get("from", ""),
                       "msg": entry.get("msg")})
             self._json({"ok": True})
+        elif route == "/__copy__":
+            # The panel's Copy button, mirrored: the payload also lands in
+            # _debug-copy.json so Claude sees it on its next message without
+            # the user pasting. Newest last; the hook empties it after reading.
+            self._json({"ok": True, "queued": copy_queue(entry)})
         elif route == "/__trash__":
             # The harness panel's Delete button. Nothing is deleted here: the
             # request is queued in _debug-trash.json, which a Claude Code hook
@@ -327,6 +332,24 @@ def trash_queue(entry):
     q.append(rec)
     TRASH.write_text(json.dumps(q, ensure_ascii=False, indent=1) + "\n")
     return q
+
+
+COPYQ = WATCH_DIR / "_debug-copy.json"
+
+
+def copy_queue(entry):
+    """Append a Copy payload; one entry per press, same harness replaces its older one."""
+    try:
+        q = json.loads(COPYQ.read_text()) if COPYQ.exists() else []
+    except ValueError:
+        q = []
+    rec = {"from": entry.get("from"), "label": entry.get("label"), "fold": entry.get("fold"),
+           "file": entry.get("file"), "when": time.strftime("%Y-%m-%d %H:%M"),
+           "text": entry.get("text", "")}
+    q = [r for r in q if r.get("from") != rec["from"]]
+    q.append(rec)
+    COPYQ.write_text(json.dumps(q, ensure_ascii=False, indent=1) + "\n")
+    return len(q)
 
 
 def _git_branch():

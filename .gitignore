@@ -10,3 +10,4 @@ raw-*.csv
 *.MP4
 *.mp4
 _debug-trash.json
+_debug-copy.json

@@ -277,6 +277,12 @@ for — the **remote panel**:
   strikes the row through meanwhile and the harness hands itself back. A harness knows its
   own file from `document.currentScript` (captured below the config-end marker, so the
   splice recipe carries it).
+- **Copy is mirrored to Claude too.** Besides the clipboard, every Copy POSTs `/__copy__`
+  and lands in **`_debug-copy.json`** (untracked); the same hook shows it at the start of the
+  next message, so a pick reaches the chat without a paste. **Routing:** a queue cannot
+  know which chat built a harness, so the rule is on the reader — each chat acts only on
+  entries for harnesses it built itself (matched by file/label), removes just those from the
+  file, and leaves the rest, saying so in a line. Delete entries may be acted on by any chat.
 - **Regenerating a harness from the template**: the file's head up to the config-end
   marker + the template's tail. Match that marker with `grep … | head -1` — a comment that
   merely mentions the marker's words once broke the splice.
