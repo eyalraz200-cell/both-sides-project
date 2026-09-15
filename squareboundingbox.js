@@ -87,16 +87,26 @@ function sbbTimelineMobileTopPx() {
   const V = typeof P7_VERT_M === "undefined" ? null : P7_VERT_M;
   const topAnchored = V && V.enabled && V.headline === 'slot'
     && (V.slotAnchor === 'top' || V.slotAnchor === 'fill');
-  return topAnchored ? SBB_TIMELINE_MOBILE_TOP_PX : SBB_TIMELINE_MOBILE_TOP_BADGE_PX;
+  // ...plus the picker's instruction band when it sits ABOVE the timeline
+  // (p7HintBandTopH, page7.js). 0 on the other placement, and 0 while it is not
+  // showing — the timeline takes that space back.
+  const band = (typeof p7HintBandTopH === "function") ? p7HintBandTopH() : 0;
+  return (topAnchored ? SBB_TIMELINE_MOBILE_TOP_PX : SBB_TIMELINE_MOBILE_TOP_BADGE_PX) + band;
 }
 
 function sbbTimelineMobileBottomPx() {
   const V = typeof P7_VERT_M === "undefined" ? null : P7_VERT_M;
   if (!V || !V.enabled) return null;
   const slot = (V.headline === 'slot' && V.slotAnchor === 'grid') ? V.slotPx : 0;
-  const frame = (typeof TOOLTIP_DOCK_BOTTOM_PX === "undefined")
-    ? V.bottomInsetPx
-    : TOOLTIP_DOCK_BOTTOM_PX + TOOLTIP_DOCK_H_PX + SBB_TIMELINE_MOBILE_GAP_PX;
+  // The docked frame is NOT reserved for any more. It used to carry the
+  // «לחצו והחזיקו» instruction line at rest, which had to stay clear of the
+  // grid — that line is removed, and its whole band went to the timeline. What
+  // is left is the frame's picked state, which is a TOOLTIP: it may sit over
+  // the chart like every other one. So the box just stops short of the screen
+  // edge by V.bottomInsetPx, and the axis runs all the way down to it.
+  // ...and the same band when it sits BELOW (the shipped placement).
+  const frame = V.bottomInsetPx
+    + ((typeof p7HintBandBottomH === "function") ? p7HintBandBottomH() : 0);
   // ...plus whatever the LAST axis plaque hangs below the axis end. Its dot sits
   // on the final row, which the camera brings down to this very edge, so without
   // this the plaque prints over the docked frame's instruction line at the end

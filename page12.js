@@ -375,17 +375,20 @@ function p12ShareInit() {
     whatsapp: `https://wa.me/?text=${enc(title + " " + url)}`,
     x:        `https://twitter.com/intent/tweet?text=${enc(title)}&url=${enc(url)}`,
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}`,
+    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${enc(url)}`,
   };
   wrap.querySelectorAll("[data-share]").forEach(el => {
     const kind = el.dataset.share;
     if (hrefs[kind]) { el.href = hrefs[kind]; return; }
     if (kind !== "copy") return;
-    const label = el.textContent;
+    // Icon button: the confirmation swaps the tooltip text (data-tip) and the
+    // link glyph for a check (.is-copied, style.css), then restores both.
+    const label = el.dataset.tip;
     el.addEventListener("click", () => {
       const done = () => {
-        el.textContent = "הקישור הועתק";
+        el.dataset.tip = "הקישור הועתק";
         el.classList.add("is-copied");
-        setTimeout(() => { el.textContent = label; el.classList.remove("is-copied"); }, 1600);
+        setTimeout(() => { el.dataset.tip = label; el.classList.remove("is-copied"); }, 1600);
       };
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(url).then(done, done);
@@ -437,9 +440,14 @@ function p12CardWidthFit() {
 const P12_OUTRO_END = 48;
 function p12SpacingFit() {
   const H = window.innerHeight;
+  // Solved on card 1's WRAPPER now, not the section: the closing statement
+  // continues as two 100vh .page13-follow blocks after it, so the wrapper's
+  // height is what puts card 2's centre 100vh below card 1's (and, down the
+  // chain, @fold15's share card 100vh below card 3's).
   const sec = document.getElementById("page-13");
-  const card = sec && sec.querySelector(".text-card-frame");
-  if (card) sec.style.minHeight = Math.round(H / 2 + card.offsetHeight / 2) + "px";
+  const wrap = sec && sec.querySelector(".page12-sticky-center");
+  const card = wrap && wrap.querySelector(".text-card-frame");
+  if (card) wrap.style.height = Math.round(H / 2 + card.offsetHeight / 2) + "px";
 
   // @fold15 → @fold16: the outro card is near-viewport-tall (100vh − 96px), so
   // "centred in a 100vh section" reads WRONG — it leaves only 50vh − half the

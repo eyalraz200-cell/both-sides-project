@@ -1809,9 +1809,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    Every width, desktop and mobile alike. The two fixtures are still different
    SHAPES — desktop is a free-floating box anchored to the dot it describes,
    mobile is the docked frame (.is-docked, with its own picker and expanded
-   states) — but they now share one look. Mobile's own two bits of type,
-   .p7-inspect-hint and .p7-tip-more, are re-toned to white alphas in the
-   ≤600px block to sit on the fill.
+   states) — but they now share one look. Mobile's own bit of type,
+   .p7-tip-more, is re-toned to white alphas in the ≤600px block to sit on the
+   fill.
 
    The dash <svg> is still BUILT by updateTooltipDash() on every hover — it's
    only hidden here, and `color` is still the TRUE (undarkened) group colour on
@@ -1843,7 +1843,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    look lives in the media query at the bottom of this file. */
 .p7-inspect-hint,
 .p7-tip-more,
-.p7-loupe { display: none; }
+.p7-loupe,
+/* The picker's instruction band is mobile-only — desktop has hover and needs no
+   gesture label. Everything that gives it a look is in the ≤600px block. */
+.p7-hint-band { display: none; }
 
 /* Hover tooltip for a category pill in page-12's tray (#page9ZoneBelow only —
    dropped pills in the extreme zone get a different hover treatment, see
@@ -2098,6 +2101,13 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   inset: 0;
   z-index: 0;
   pointer-events: none;
+  /* The 8 sample squares are DOM, not canvas, so the timeline's own clip cannot
+     reach them — they printed over the picker's hint band while the camera
+     carried them up off the top of the chart. `clip-path`, not `top`: an inset
+     clip hides without moving, where shifting the overlay's edge would move
+     every square's coordinate origin with it. 0 everywhere but the folds that
+     raise the band (p7HintBandApply, page7.js). */
+  clip-path: inset(var(--sq-clip-top, 0px) 0 0 0);
 }
 
 .fold6-square-wrap {
@@ -2120,6 +2130,30 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      default off because updateGroups writes an inline opacity on every square
      on every frame (js/update-groups.js), so nothing has to turn this back on. */
   opacity: 0;
+}
+
+/* @fold7 fake cursor (desktop). A drawn pointer, not the real one: it glides
+   from the 8 squares' centre to square 0 on fold7CursorTrigger (js/groups.js),
+   positioned + faded by JS every frame (js/update-groups.js) — so no
+   transition on transform/opacity. Its hot spot is FOLD7_CURSOR_TIP.
+   A direct .layout child so it paints above the canvas. `.is-dismissed` (a
+   real hover took over) is a pure state flip, so it may transition. */
+.fold7-cursor {
+  position: fixed;
+  left: 0;
+  top: 0;
+  /* The arrow's own aspect (viewBox 14.7 × 20.7), so the box hugs the glyph —
+     no transparent margin around it. --cursor-size is its HEIGHT. */
+  height: var(--cursor-size, 24px);
+  width: calc(var(--cursor-size, 24px) * 0.71);
+  pointer-events: none;
+  z-index: 1006;
+  background: no-repeat center / contain;
+  opacity: 0;
+}
+.fold7-cursor { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='3.9 1.9 14.7 20.7'%3E%3Cpath d='M4.5 2.5 L4.5 19.5 L9 15.3 L12.2 22 L15 20.7 L11.9 14.2 L18 14.2 Z' fill='%23111' stroke='%23fff' stroke-width='0.9' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+.fold7-cursor.is-dismissed {
+  visibility: hidden;
 }
 
 /* right: 8px — the anchor IS the square's left edge, so this offset is the
@@ -2195,16 +2229,37 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      centre for that quarter viewport instead of scrolling it away — which is
      exactly how a 200vh attempt read as "stuck". Height here is spacing only
      while the wrapper is static; sticky turns it into hold time.
-     The height is SOLVED by p12SpacingFit() (page12.js) as 50vh + half this
-     card, which is the one value that puts @fold15's centred card exactly
-     100vh below this card's centre — the same centre-to-centre distance as
-     every other pair of title blocks. The 50vh here is only the no-JS
-     fallback. Don't replace it with a fixed vh: any fixed value is off by the
+     The spacing is SOLVED by p12SpacingFit() (page12.js) on the wrapper as
+     50vh + half card 1, followed by two 100vh .page13-follow blocks — see
+     there. Don't replace it with a fixed vh: any fixed value is off by the
      half-card it ignores (the fade/gate/freeze all measure offsetTop, not this
      height, so they don't care). */
-  min-height: 50vh;
   display: block;
   padding: 0;
+}
+
+/* The closing statement's cards 2 and 3 (project.html). Ordinary house title
+   blocks — each centred in a 100vh run — placed after card 1's wrapper, whose
+   height is solved to 50vh + half card 1 (p12SpacingFit). So card centres sit
+   halfCard, 100vh + halfCard, 200vh + halfCard below the section top, and
+   @fold15's share card 300vh + halfCard: 100vh apart, house rhythm. The gate,
+   fold13ScrollT and .frozen all measure #page-13's offsetTop / the wrapper's
+   top, so the extra height moves none of them. Carries the gutter itself
+   because #page-13 zeroes the .text-section padding. */
+.page13-follow {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 48px;
+  box-sizing: border-box;
+  direction: rtl;
+  text-align: right;
+}
+@media (max-width: 600px) {
+  .page13-follow {
+    padding: 0 24px;
+  }
 }
 
 /* @fold15 (#page-14, the share block) is an ordinary house fold — 100vh, card
@@ -2234,9 +2289,11 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   /* The shared wrapper is 100vh tall for the outro's sticky centring; here it
      is static and would hold #page-13 open to a full viewport regardless of
      the section's 45vh, keeping @fold15's share card a screen away. Let it
-     wrap the card only — the section's min-height is what spaces the folds.
+     hold card 1 plus the solved spacing: p12SpacingFit (page12.js) sets its
+     height to 50vh + half card 1, which puts card 2's centre (in the first
+     .page13-follow) exactly 100vh below card 1's. 50vh is the no-JS fallback.
      checkFold13 / p13SyncGateVisibility only read its top / opacity. */
-  height: auto;
+  height: 50vh;
 }
 
 /* @fold14's card scrolls up and away like every other title fold's, rather
@@ -2390,32 +2447,101 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 12px;
   margin-top: 16px;
   font-family: 'Assistant', sans-serif;
 }
 
-.page12-share-btn {
-  font: 600 13px 'Assistant', sans-serif;
-  color: #111;
-  background: none;
-  border: 1.5px solid #111;
-  border-radius: 999px;
-  padding: 3px 11px;
-  text-decoration: none;
-  cursor: pointer;
-  line-height: 1.2;
-  /* Instant hover, no transition (explicit instruction, 2026-09-06). */
+/* Icon buttons (WhatsApp / X / Facebook / LinkedIn / copy link): inline SVG
+   glyphs in currentColor, a round button sized by --share-icon, the glyph by
+   --share-glyph. Three looks, one class on #page12Share: .is-outline (a ring,
+   inverts on hover), .is-filled (black disc), .is-brand (each platform's own
+   colour). Hover is instant — no transition (explicit instruction). */
+.page12-share {
+  --share-icon: 36px;
+  --share-glyph: 50%;
 }
+.page12-share-btn {
+  position: relative;
+  box-sizing: border-box;
+  width: var(--share-icon);
+  height: var(--share-icon);
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid #111;
+  background: none;
+  color: #111;
+  cursor: pointer;
+  text-decoration: none;
+  font: inherit;
+}
+.page12-share-btn svg {
+  width: var(--share-glyph);
+  height: var(--share-glyph);
+  display: block;
+}
+.page12-share-btn .page12-share-ico-done { display: none; }
+.page12-share-btn.is-copied .page12-share-ico-link { display: none; }
+.page12-share-btn.is-copied .page12-share-ico-done { display: block; }
 
-.page12-share-btn:hover,
-.page12-share-btn:focus-visible,
-.page12-share-btn.is-copied {
+.page12-share.is-outline .page12-share-btn:hover,
+.page12-share.is-outline .page12-share-btn:focus-visible,
+.page12-share.is-outline .page12-share-btn.is-copied {
   background: #111;
   color: #fff;
 }
+.page12-share.is-filled .page12-share-btn {
+  background: #111;
+  border-color: #111;
+  color: #fff;
+}
+.page12-share.is-filled .page12-share-btn:hover,
+.page12-share.is-filled .page12-share-btn:focus-visible {
+  background: #444;
+  border-color: #444;
+}
+.page12-share-btn[data-share="whatsapp"] { --brand: #25D366; }
+.page12-share-btn[data-share="x"]        { --brand: #000; }
+.page12-share-btn[data-share="facebook"] { --brand: #1877F2; }
+.page12-share-btn[data-share="linkedin"] { --brand: #0A66C2; }
+.page12-share-btn[data-share="copy"]     { --brand: #555; }
+.page12-share.is-brand .page12-share-btn {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+.page12-share.is-brand .page12-share-btn:hover,
+.page12-share.is-brand .page12-share-btn:focus-visible {
+  box-shadow: inset 0 0 0 100px rgba(0, 0, 0, 0.12);
+}
 
-/* @fold15: an ordinary house fold — one viewport, card centred. With #page-13 solved to 50vh + half its card and
+/* The platform name on hover — a small dark label above the button. A pure
+   state flip, so it may fade. */
+.page12-share-btn::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #111;
+  color: #fff;
+  font: 400 12px/1.4 'Assistant', sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.page12-share-btn:hover::after,
+.page12-share-btn:focus-visible::after,
+.page12-share-btn.is-copied::after {
+  opacity: 1;
+}
+
+/* @fold15: an ordinary house fold — one viewport, card centred. With #page-13's three cards spaced 100vh apart and
    #page-15 centring the outro in its first viewport, the three card centres
    sit exactly 100vh apart, like every other consecutive pair. */
 #page-14 {
@@ -2768,9 +2894,11 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    the rows' side, so the note reads as attached to the rule below it rather
    than floating between two equal gaps. */
 .fold6-mlegend-divider {
-  height: 1px;
-  margin: 14px 0 0;
-  background: rgba(0, 0, 0, 0.12);
+  height: var(--mlg-rule-w, 1px);
+  margin: 8px 0 0;
+  /* The same hairline as the one under the title (the card's ::before) — both
+     lightened together, and both on the group cards' own box. */
+  background: var(--mlg-rule, rgba(0, 0, 0, 0.12));
 }
 
 
@@ -2873,15 +3001,23 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      the end and the zoom-out never got to run.
      The zoom-out is a fixed-duration trigger (P7_ZOOMOUT_MS), so this vh is
      what buys the ORDERING — it is the runway the clock has to elapse inside.
-     The two are a PAIR: shorten this and the title block lands mid-zoom.
+     The two are a PAIR: shorten this too far and the title block lands mid-zoom.
      Keep the pair in step, exactly as desktop does: padding-top p with
      min-height (100 + d)vh centres the card at (p + 100 + d) / 2, so d = p.
      `.text-section` already centres, so only the offset pair is set here; the
      ID out-specifies `.text-section { padding: 0 24px }` further down, so the
      side gutters are untouched and the top offset stands regardless of order. */
   #page-9 {
-    padding-top: 75vh;
-    min-height: 175vh;
+    /* 55, not 75. Measured at 393x852: the zoom-out arms ~400px before #page-8
+       ends and lands ~40px into this section at a normal reading scroll, so the
+       last 20vh of the old runway was dead scroll — the whole timeline sitting
+       at rest with nothing happening and no card yet on screen. 55vh keeps the
+       ordering the pair exists for (the beat still finishes before the card is
+       on screen, let alone before its crossing) and drops ~170px of that wait.
+       Do not cut it to the beat's own length: the runway has to hold at a
+       reading scroll, not just a slow one. */
+    padding-top: 55vh;
+    min-height: 155vh;
   }
 }
 
@@ -2961,29 +3097,20 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 }
 
 /* Stand-ins for the six group rows and the two camp headers during @fold4's
-   mobile FLY hand-off (see the block comment on fold6MFlyPark, js/groups.js).
-   There are two parking layers and each stand-in moves between them mid-flight:
-     - this one lives INSIDE .fold6-mlegend-layer, after the panel, and holds a
-       stand-in only once it overlaps the panel — the landing;
-     - .fold6-mfly-layer-under is a direct .layout child and holds it the rest of
-       the time, in the groups' own band (1003 on mobile): over the legend, under
-       the title block.
-   The swap existed to break a z-index CYCLE ("title block above the rows, open
-   legend above the title block, rows landing on top of the panel"). That cycle
-   is gone now that the stack is a plain order — bar, then groups, then title
-   blocks — so both spots satisfy the rule and the hand-over is belt-and-braces
-   rather than load-bearing. It is kept because the landing still wants to paint
-   after the panel within the panel's own layer.
+   mobile FLY hand-off. ONE parking layer, inside .fold6-mlegend-layer and after
+   the panel, so a stand-in paints IN FRONT OF THE LEGEND for the whole flight
+   (explicit instruction) rather than only once it reaches the sheet.
+   *Removed — don't reintroduce:* `.fold6-mfly-layer-under`, a second layer that
+   was a direct `.layout` child at z-index 1003 and held each stand-in until it
+   overlapped the panel. 1003 was above the legend's old 1002; once the legend
+   went to 1006 to clear the title blocks, that layer silently fell behind it and
+   the rows flew under the sheet.
    The real elements park here because they are `visibility: hidden` mid-flight;
    nothing here is interactive, and the panel below still takes the taps. */
 .fold6-mfly-layer {
   position: absolute;
   inset: 0;
   pointer-events: none;
-}
-.fold6-mfly-layer-under {
-  position: fixed;
-  z-index: 1;
 }
 /* The real row/header while its stand-in is flying: still laid out (updateGroups
    measures its label width every frame) but not painted. */
@@ -3103,11 +3230,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      frame's height and line-heights below are solved against this size —
      change them together. */
   .page9-tooltip-date,
-  .page9-tooltip-desc,
-  /* The empty docked frame's hint reads at the same size as the description
-     that replaces it, so the frame's type doesn't change size once an event is
-     picked — it's the same line of the same box, just different words. */
-  .p7-inspect-hint {
+  .page9-tooltip-desc {
     font-size: 15px;
   }
 
@@ -3259,30 +3382,86 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      on release — so no עוד/פחות while `is-holding` is on. */
   .page9-tooltip.is-holding .p7-tip-more { display: none; }
 
+  /* ---- The picker's instruction band (p7HintBandInit, page7.js) ----------
+     «לחצו והחזיקו על נקודה…», the label for the press-and-hold gesture. Its own
+     full-bleed band rather than the docked frame's resting content (which is
+     what it used to be): it spans the whole screen width, where the frame is a
+     300px box, and it carries a backdrop blur that has to sit behind the text
+     and in front of the canvas — the frame can be neither.
+
+     `position: fixed`, so it holds its edge while the timeline scrubs behind it.
+     Height is the LINE's own height plus its padding — "its weight" — and the
+     blur covers exactly that band, full width. `--hint-blur` is written by
+     p7HintBandApply (a manual/ harness drives it live).
+
+     backdrop-filter, not a translucent fill: the dots behind it are 2px marks,
+     and a flat wash over them either hides them or does nothing, where a blur
+     softens them into a ground the type can sit on and still reads as the
+     timeline continuing underneath. -webkit- prefix for iOS Safari, which still
+     needs it. The band is pointer-events: none — the gesture is a hold anywhere
+     on the chart, including through this. */
+  .p7-hint-band {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    z-index: 999;              /* under the docked frame (1000), over the canvas */
+    padding: 9px 24px;
+    pointer-events: none;
+  }
+  /* NO BLUR. It was a masked-gradient backdrop-filter on a ::before; removed on
+     explicit instruction — this rule replaced it. **Don't reintroduce** (its
+     knobs, P7_HINT_FADE_PX / P7_HINT_SOLID_PCT, went with it).
+
+     THE LINE under the hint is where the timeline clips (p7HintClipTopY,
+     page7.js): the axis and its dots are cut off at it, so nothing of the
+     timeline ever prints above the hint. Full-bleed, so it reads as the edge of
+     the chart's own area rather than as an underline belonging to the text. */
+  .p7-hint-band.is-below { /* `bottom` is written by p7HintBandApply */ }
+  .p7-hint-band.is-above { top: 0; }
+  /* The rule DRAWS IN with the line above it — it is not a border, because a
+     border is simply there the instant the band is, and the band exists (empty)
+     for the whole of the axis's build-in. A pseudo-element scaled on X instead,
+     off --hint-rule (0..1), which p7HintBandApply drives from the SAME clock as
+     the typewriter (p7HintTypeT). transform, not width: no layout per frame.
+     Origin right — RTL, so it unrolls the way the sentence is read. */
+  .p7-hint-band.is-above::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: var(--rule, rgba(0, 0, 0, 0.14));
+    transform: scaleX(var(--hint-rule, 0));
+    transform-origin: right center;
+  }
+  .p7-hint-band .p7-inspect-hint {
+    display: block;
+    direction: rtl;
+    /* Longhands, not the `font` shorthand — same reason as everywhere else in
+       this file: a shorthand would reset the size back out from under the
+       line-height set with it. */
+    font-family: 'Assistant', sans-serif;
+    font-weight: 400;
+    font-size: 15px;
+    line-height: 1.3;
+    text-align: center;
+    color: #858585;            /* FOLD8_TOOLTIP_REST_COLOR, the resting grey */
+  }
+
   /* ---- Mobile event picker (p7InspectInit, page7.js) ----------------------
      Touch has no hover, so the real timeline's per-dot tooltip needs a
-     deliberate gesture instead. The control lives INSIDE the docked frame —
-     it is the frame's resting content when nothing is selected — rather than
-     next to the מקרא button, which is a separate, unrelated affordance.
+     deliberate gesture instead: a press-and-hold anywhere on the chart.
 
-     In this resting state there is no card at all: no fill, no border, no
-     dash — just the hint line, floating on the page background. A filled box
-     with nothing in it read as a UI element waiting to be operated; the words
-     alone read as the instruction they are. The box comes back the instant an
-     event is picked (is-picker is dropped and the group-coloured frame from
-     the base rule takes over), and it comes back IN THE SAME PLACE: the
-     100px height and the centring below are kept even while empty, so the
-     hint sits exactly where the filled frame's middle will be and nothing
-     jumps between the two states. */
+     The resting state is EMPTY — no fill, no border, no dash — except on
+     @fold13, where it carries the «לחצו והחזיקו על נקודה» line (explicit
+     instruction, 2026-09-14; static, no typewriter, see `.is-hint` below).
+     The old typed version on the timeline folds stays removed. The box comes back
+     the instant an event is picked, when is-picker is dropped and the
+     group-coloured frame from the base rule takes over. */
   .page9-tooltip.is-docked.is-picker {
     align-items: center;
-    /* The hint sits in the band between the timeline box's bottom and the
-       מקרא bar, centred in it — NOT in the frame's middle: the frame hangs
-       18px past the screen edge (TOOLTIP_DOCK_BOTTOM_PX), so its middle is
-       inside the bar. The box ends 100px up (sbbTimelineMobileBottomPx), the
-       bar is 43px tall, so the band's centre is 71.5px up; the frame's outer
-       top is 82px up, hence the hint's 19px line starts 1px in — the 2px
-       border alone, no padding. */
     justify-content: flex-start;
     padding-top: 0;
     background: none;
@@ -3291,27 +3470,20 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   .page9-tooltip.is-docked.is-picker .page9-tooltip-date,
   .page9-tooltip.is-docked.is-picker .page9-tooltip-desc { display: none; }
 
-  /* The frame's resting content: a label, not a control. The gesture is a
-     press-and-hold anywhere on the chart, so there is nothing here to tap —
-     the frame stays pointer-events:none — there is nothing here to tap. */
-  .p7-inspect-hint {
-    display: none;
-    /* Longhands, not the `font` shorthand: this block comes AFTER the
-       .page9-tooltip-date/-desc rule that sets the shared 14px, and the
-       shorthand would reset font-size back out from under it. */
+  /* @fold13's resting instruction line (page7.js hintEl, `.is-hint` set by the
+     picker's sync() on page 12 only). Sits at the frame's top edge; the extreme
+     columns start P9_HINT_H_M below it, and a picked event's frame overlays
+     them. Takes the frame's resting grey via currentColor. */
+  .page9-tooltip.is-picker.is-hint .p7-inspect-hint {
+    display: block;
+    width: 100%;
     font-weight: 400;
     font-family: 'Assistant', sans-serif;
-    /* `currentColor`, not a fixed value: the picker state has no fill to sit
-       on (see .is-picker above), so the type prints straight onto the page
-       background and must take the frame's own colour instead of the white it
-       used when there was a coloured box behind it. setTooltipColor
-       (js/core.js) writes `color` on every update — the resting grey
-       FOLD8_TOOLTIP_REST_COLOR while nothing is picked, which is exactly the
-       tone this line wants. */
+    font-size: 15px;
+    line-height: 19px;
     color: currentColor;
     text-align: center;
   }
-  .page9-tooltip.is-picker .p7-inspect-hint { display: block; }
 
   /* A press-and-hold is also iOS's own gesture for "select text / show the
      callout menu", and it fires on the surrounding page even though a <canvas>
@@ -3354,6 +3526,34 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   .page9-cat-tooltip {
     width: min(200px, 100vw - 32px);
   }
+
+  /* @fold7's touch demo (js/groups.js fold7TouchEl + fold7LoupeEl): the
+     picker's press-and-hold played for the reader. The glass is a real
+     .p7-loupe (same disc, ring and shadow), painted by fold7PaintLoupe; the
+     hand is this zero-size anchor at the fingertip. transform/opacity and the
+     glass's left/top are written every frame, so no transitions here. */
+  .fold7-touch {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    z-index: 1006;
+    opacity: 0;
+  }
+  .fold7-loupe.is-dismissed { visibility: hidden; }
+  /* A pointing hand, fingertip (viewBox 10,2 of 24) on the disc's centre. */
+  .fold7-touch-pointer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: var(--cursor-size, 24px);
+    height: var(--cursor-size, 24px);
+    transform: translate(-41.7%, -8.3%);
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8.5 3.5a1.5 1.5 0 0 1 3 0v6.2a1.4 1.4 0 0 1 2.8.3v.5a1.4 1.4 0 0 1 2.8.3v.6a1.4 1.4 0 0 1 2.8.4V16c0 3.3-2.4 5.5-5.6 5.5h-1.3c-2 0-3.3-.8-4.4-2.3L5 14.9a1.4 1.4 0 0 1 2.1-1.8l1.4 1.4z' fill='%23fff' stroke='%23111' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center / contain;
+  }
+  .fold7-touch.is-dismissed { visibility: hidden; }
 
   /* The other half of the device-dependent card copy — see .copy-mobile above. */
   .copy-desktop { display: none; }
@@ -3422,11 +3622,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      under the bar's bottom edge. Lower this and the subtitle's own negative
      margin-top below travels with it. */
   :root {
-    /* 60: the collapsed מקרא card ends at 52 (top 16 + ~20px title row + the
-       card's 2×8px outset), and the gap from it to the title is 8px per explicit
-       instruction; the tray band and everything hanging off it sit the same
-       distance down (P9_TRAY_TOP_M 116). */
-    --card-top: 60px;
+    /* 24, manual/-baked 2026-09-14: the מקרא card no longer sits above the
+       title, so the whole @fold13 header block moved up. The tray band follows
+       (top 80 here, P9_TRAY_TOP_M in page9.js — keep the two in step). */
+    --card-top: 24px;
   }
 
   /* Figma node 294-1279 ("dragcard" in the full @fold13 frame): 16px Assistant
@@ -3438,6 +3637,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      pill is free to be its Figma size. */
   .page9-pill {
     font-size: 16px;
+    /* Desktop's computed weight (400) — the base rule's 600 read too heavy. */
+    font-weight: 400;
     line-height: 12px;
     padding: 8px 10px;
     gap: 6px;
@@ -3697,7 +3898,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      title descender to the subtitle's cap height, it reads ~9px larger.
 
      Small enough that the header block still clears the pill band at its
-     original top:116px — nothing below has to move. */
+     original top — nothing below has to move. */
   .page9-title-row .page9-header-subtitle {
     text-align: right;
     margin-top: -8px;
@@ -3722,7 +3923,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     /* NOT a bottom sheet on mobile: Figma node 294-1272 pins the pills as a
        band directly under the title card, above the docked tooltip frame (which
        steps down out of the way — p9TooltipDropTrigger, js/groups.js) and above
-       the dot grid. 116px is P9_TRAY_TOP_M in page9.js, which derives the
+       the dot grid. 80px is P9_TRAY_TOP_M in page9.js, which derives the
        tooltip's drop spot and the grid's top from it; the two must stay in step
        (js/fold11.js's slide-out mirrors it too).
        THE BAND DOES NOT SLIDE. Its transform is the at-rest value in BOTH
@@ -3737,7 +3938,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        in on a diagonal instead of going up and then left.
        Removed — don't reintroduce: `translate(-50%, calc(-100% - 116px))` plus
        a `transform` transition here. */
-    top: 116px;
+    top: 80px;
     bottom: auto;
     transform: translate(-50%, 0);
     /* One rule, on the bottom edge only (Figma node 294-1272) — it separates the
@@ -3764,7 +3965,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   .page9-tray-title {
     display: none;
   }
-  /* @fold12's block sits at the band's own `top: 116px`, per explicit
+  /* @fold12's block sits at the band's own `top`, per explicit
      instruction — the pills arrive at the TOP of the screen and stay there; the
      convoy reshapes the run in place rather than carrying it up from lower down.
      (A 66vh waiting spot below the card was tried and rejected.) At @fold12's
@@ -3885,7 +4086,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     padding-inline: 12px;
   }
   /* @fold12's column starts ON @fold13's pill line — the band's own `top`, the
-     same 116px the finished row sits at, so the column's TOP pill and the row's
+     same top the finished row sits at, so the column's TOP pill and the row's
      pills share a level. That is what makes the convoy read: the top cabin is
      already where it is going vertically, so its climb is a no-op and it simply
      slides, and every cabin below it rises to a line that was visible all along.
@@ -4085,10 +4286,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      trapped in that column's stacking context and could never reach past the
      bar. Desktop keeps the base z-index: 0 and is unaffected. */
   .groups-overlay { z-index: 1003; }
-  /* @fold4's flight parks its stand-ins here, so it rides in the groups' own
-     band: over the legend, under the title block. (Its base 1 put the flight
-     behind the card AND behind the bar, which was the old rule.) */
-  .fold6-mfly-layer-under { z-index: 1003; }
+  /* @fold4's flight is NOT in this band — it parks inside the מקרא layer, after
+     the panel, so it paints in front of the legend the whole way. */
   /* Only the plain sections' cards need to be positioned for that z-index to
      bite — @fold13's and @fold14's are already sticky/fixed inside their own
      wrappers, and the child combinator keeps this rule from clobbering that. */
@@ -4141,14 +4340,42 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        under the same edge. --mlg-gap-left is free to differ; it only shows
        while the card is open and spanning the bar. */
     --mlg-gutter: calc((100vw - min(480px, 100vw - 48px)) / 2);
-    --mlg-gap-right: var(--mlg-gutter);
-    --mlg-gap-left: var(--mlg-gutter);
+    /* THE SIDE GAPS, and the pose they belong to (js/groups.js:
+       FOLD6_MLEGEND_POSE — keep the class here in step with it).
+       `.is-sheet`: FULL BLEED, no gutter at all — the sheet spans the screen.
+       `.is-card`:  16px OUTSIDE the title blocks' gutter each side, so the card
+       is a touch wider than the copy it sits over. Derived from the gutter, not
+       written as a literal: the gutter widens between 528px and 600px where
+       --card-w stops growing, and a literal drifts exactly there. Matches
+       FOLD6_MLEGEND_OVERHANG_PX, which insets the CLOSED button back to flush. */
+    --mlg-gap-right: 0px;
+    --mlg-gap-left: 0px;
+    /* The sheet's top corners (Figma 345:2295). The floating `.is-card` pose
+       rounds all four with the same value. */
+    --mlg-radius: 20px;
+    /* Where the sheet's CONTENT sits: the bar's own side padding plus the rows
+       panel's. Everything inside the sheet — the title, both hairlines and the
+       ACLED section — lines up on this, because it is the group cards' own box
+       (explicit instruction). Keep it in step with those two paddings. */
+    --mlg-content-inset: 16px;
+    /* THE OPEN CARD'S WIDTH, derived from the two gaps rather than assumed. The
+       columns are solved from it (below), so moving either gap re-solves them
+       for free — the alternative, restating `--card-w` down there, silently
+       stopped matching the moment a gap was nudged and the left column clipped
+       again. */
+    --mlg-card-w: calc(100vw - var(--mlg-gap-left) - var(--mlg-gap-right));
     left: var(--mlg-gap-left);
     right: var(--mlg-gap-right);
-    padding: 4px 12px 6px;
+    /* 13 above the title and 8 under the last card, off the Figma sheet —
+       FOLD6_MLEGEND_PAD_BOTTOM_PX (js/groups.js) mirrors that 8. */
+    padding: 13px 12px 12px;
     box-sizing: border-box;
     opacity: 0;
     text-align: center;
+  }
+  .fold6-mlegend.is-card {
+    --mlg-gap-right: calc(var(--mlg-gutter) - 16px);
+    --mlg-gap-left: calc(var(--mlg-gutter) - 16px);
   }
 
   /* THE one frame, in every state: closed it is the מקרא button, open it is the
@@ -4160,9 +4387,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     box-sizing: border-box;
     left: 0;
     bottom: 0;
-    /* All four corners: the card floats clear of every screen edge, so there is
-       none for a flat side to sit on. */
-    border-radius: var(--mlg-radius, 8px);
+    /* A SHEET rounds its top corners only — its bottom edge IS the screen's.
+       The floating card clears every edge, so it rounds all four. */
+    border-radius: var(--mlg-radius, 8px) var(--mlg-radius, 8px) 0 0;
     /* The desktop ACLED note's skin (.fold6-note-card): a tint, no border, no
        shadow. OPAQUE, though — the note's own rgba(0,0,0,.035) is translucent,
        and this card has to cover the title block and the canvas behind it or
@@ -4176,12 +4403,54 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        card together with the button. */
     transform-origin: center;
   }
+  .fold6-mlegend.is-card .fold6-mlegend-card {
+    border-radius: var(--mlg-radius, 8px);
+  }
   /* A small lift while it is the closed BUTTON, so it reads as something to
      press rather than a patch of tint. It goes the moment the card starts
      opening (`.is-open` lands on pointerdown): at full size a shadow only
-     smears the card's own edge across the veil behind it. */
+     smears the card's own edge across the veil behind it. A sheet keeps the
+     lift open too — its edge meets the artwork rather than a veil-backed
+     gutter — but never under its bottom edge, which is off-screen. */
   .fold6-mlegend:not(.is-open) .fold6-mlegend-card {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
+    box-shadow: 0 -1px 0 rgba(0, 0, 0, 0.2);
+  }
+  .fold6-mlegend.is-sheet.is-open .fold6-mlegend-card {
+    box-shadow: 0 -4px 6.2px rgba(0, 0, 0, 0.07);
+  }
+
+  /* THE GRAB HANDLE (Figma: "Line 17"). Drawn on the CARD rather than on the
+     title, because the card's top edge is the sheet's in every state — closed
+     the card IS the מקרא button and the handle sits 8px inside its top, open it
+     stays 8px inside the sheet's. 12×2, round-capped, so a 1px radius. */
+  .fold6-mlegend-card::after {
+    content: "";
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 12px;
+    height: 2px;
+    border-radius: 1px;
+    background: rgba(0, 0, 0, 0.16);
+  }
+  /* THE HAIRLINE UNDER THE TITLE (Figma: "Line 18") — full bleed, so it is on
+     the card (which spans the sheet) rather than on the rows block, which sits
+     inside the bar's 12px side padding. Open only: closed, there is nothing
+     under the title to divide it from. */
+  .fold6-mlegend.is-open .fold6-mlegend-card::before {
+    content: "";
+    position: absolute;
+    /* How far down the sheet the rule under the title sits, and how thick both
+       rules are — variables so a manual/ harness can drive them. */
+    top: var(--mlg-rule-top, 45px);
+    /* FULL BLEED, edge to edge (explicit instruction) — unlike the second
+       hairline further down, which sits on the group cards' own box. This one
+       closes off the title band, so it reads as the sheet's own rule. */
+    left: 0;
+    right: 0;
+    height: var(--mlg-rule-w, 1px);
+    background: var(--mlg-rule, rgba(0, 0, 0, 0.12));
   }
 
   /* Removed — don't reintroduce: `.fold6-mlegend-tab` (`fold6MobileTabEl`), the
@@ -4221,27 +4490,6 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      ::before, centred 4px above the button's box. The floating card carries the
      bare title; the card's own open IS the affordance. (Its twin, a chevron,
      was judged in the same compare/ pass and declined with it.) */
-  /* The ACLED credit on mobile (js/groups.js: fold6MobileAcledLinkEl) — a bare
-     `acleddata.com` in the viewport's top-LEFT corner, opposite the legend's own
-     top-right button, arriving on @fold6's crossing. It replaces the full note
-     that used to be re-parented into the legend panel.
-     Its top and left match the card's: the same gap off the top edge, and the
-     title blocks' own gutter on the side, so the two corners read as a pair.
-     Type is the note's — 14px/1.4 in the title's grey — underlined because it
-     is the one link on the screen and nothing else marks it as one. */
-  .fold6-macled-link {
-    position: fixed;
-    top: 8px;
-    left: calc((100vw - min(480px, 100vw - 48px)) / 2);
-    font: 14px/1.4 'Assistant', sans-serif;
-    color: #767676;
-    text-decoration: underline;
-    /* The layer passes pointer events through; this opts back in, and
-       updateGroups switches it off again until the link is properly there. */
-    pointer-events: none;
-    opacity: 0;
-    -webkit-tap-highlight-color: transparent;
-  }
 
   /* The veil over the page behind the open legend (js/groups.js:
      fold6MobileVeilEl), its opacity driven per frame from the card's own open
@@ -4264,14 +4512,14 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      of the card, not a second piece of chrome competing with מקרא. */
   .fold6-mlegend-close {
     position: absolute;
-    left: 12px;
+    left: 14px;
     width: 24px;
     height: 24px;
     padding: 0;
     border: 0;
     background: none;
     color: #767676;
-    font: 18px/1 'Assistant', sans-serif;
+    font: 24px/1 'Assistant', sans-serif;
     cursor: pointer;
     opacity: 0;
     -webkit-tap-highlight-color: transparent;
@@ -4290,8 +4538,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      rows fade in as the card makes room for them and are gone before it
      collapses back to the title. */
   .fold6-mlegend-panel {
-    /* Sheet top → camp headings (tuned by eye, manual/ harness). */
-    margin-top: 20px;
+    /* The cards start 61px down the sheet (Figma): 13 of bar padding + the
+       title's 19.6 line + this + the 2px below leaves them exactly there.
+       The hairline crosses at 45, drawn on the card. */
+    margin-top: 26.4px;
     padding: 2px 4px 0;
     text-align: initial;
     /* The open panel sits in a position:fixed full-viewport layer over a canvas
@@ -4308,6 +4558,88 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      right) — again by dir=rtl plus source order, not by float. The panel is now
      full-width, so the two columns sit one per half rather than bunched in the
      middle. */
+  /* «איסוף הנתונים» (js/groups.js: fold6MobileDataHeadEl / BodyEl). The
+     divider is the shared .fold6-mlegend-divider; the header is the desktop
+     note title's type (.fold6-note-title) with its chevron, the body the
+     desktop note's (.fold6-note). Collapsed by default — the body's height and
+     opacity are written per frame by fold6MDataPaint, so no transition here. */
+  /* «הצגת גודל האירועים» row in the מקרא panel (js/groups.js:
+     fold6MobileScopeEl) — the desktop .p7-scope-btn's type and ring, in flow
+     under the groups. `is-on` fills the ring, as on desktop. */
+  .fold6-mlegend-scope {
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+    margin: 12px 0 0;
+    padding: 0 4px;
+    border: 0;
+    background: none;
+    direction: ltr;
+    font: 14px/17px 'Assistant', sans-serif;
+    color: rgba(0, 0, 0, 0.81);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .fold6-mlegend-scope[hidden] { display: none; }
+  .fold6-mlegend-scope::before {
+    content: "";
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.45);
+    transition: background-color 180ms ease, border-color 180ms ease;
+  }
+  .fold6-mlegend-scope.is-on::before {
+    background-color: rgba(0, 0, 0, 0.81);
+    border-color: rgba(0, 0, 0, 0.81);
+  }
+
+  .fold6-mlegend-data-head {
+    position: relative;
+    display: block;
+    width: 100%;
+    margin: 12px 0 0;
+    padding: 0 0 0 16px;
+    border: 0;
+    background: none;
+    direction: rtl;
+    text-align: right;
+    /* 500, picked by eye — it heads a section rather than the panel. */
+    font: 500 14px/1.4 'Assistant', sans-serif;
+    color: #767676;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .fold6-mlegend-data-head::after {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    border-left: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: translateY(-50%) rotate(calc(-45deg + var(--note-open, 0) * 180deg));
+    color: #7a7a7a;
+  }
+  .fold6-mlegend-data-head[hidden], .fold6-mlegend-data-body[hidden] { display: none; }
+  .fold6-mlegend-data-body {
+    height: 0;
+    opacity: 0;
+    overflow: hidden;
+  }
+  .fold6-mlegend-data-body p {
+    margin: 0;
+    padding-top: 4px;
+    direction: rtl;
+    text-align: right;
+    font: 14px/1.4 'Assistant', sans-serif;
+    color: rgba(0, 0, 0, 0.85);
+  }
+
   .fold6-mlegend-rows {
     direction: rtl;
     display: flex;
@@ -4358,9 +4690,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        than half the card once the card is inset to the title blocks' gutter:
        two columns + the 12px gap came to 332 inside 318, so the left column
        hung 6px outside the card and clipped its three group cards.
-       The card is exactly `--card-w` wide (its gaps are the title blocks' own
-       gutter, and that gutter is defined as half of what is left over), so the
-       column is half of that minus the chrome between the two: the bar's 12px
+       The column is half the card's own width (`--mlg-card-w`, derived from the
+       two side gaps, so nudging either re-solves this) minus the chrome between
+       the two: the bar's 12px
        side padding twice, the panel's 4px twice, and the 12px column gap = 44.
        Keep --mlg-col-chrome in step with those three if any of them moves.
        `width` as well as `max-width`, and both in px rather than a percentage:
@@ -4368,32 +4700,20 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        out the wrap the @fold4 flight has to freeze the labels at, and a
        percentage would come back un-resolved. */
     --mlg-col-chrome: 44px;
-    width: calc((min(480px, 100vw - 48px) - var(--mlg-col-chrome)) / 2);
-    max-width: calc((min(480px, 100vw - 48px) - var(--mlg-col-chrome)) / 2);
+    width: calc((var(--mlg-card-w) - var(--mlg-col-chrome)) / 2);
+    max-width: calc((var(--mlg-card-w) - var(--mlg-col-chrome)) / 2);
     flex: 0 0 auto;
     /* The rows stretch to the column instead of shrink-wrapping their text —
        this is what makes every card the same width. */
     align-items: stretch;
   }
 
-  /* The camp name heading each column — bold, so the panel keeps the same
-     two-level read (camp → groups) the page had on screen at @fold3. */
-  .fold6-mlegend-camp {
-    /* 8 to the first card, not 12: the cards carry their own padding now, so
-       the old gap read as a hole between the heading and the group it heads. */
-    margin: 0 0 8px;
-    /* The SAME face and ink as .camp-header (660 on the variable font, solid
-       black): at @fold4 the camp header flies onto this heading and swaps for
-       it on the landing frame, so any difference here is a visible snap. Only
-       the size changes in flight (18 → FOLD6_MFLY_HEAD_PX, js/update-groups.js). */
-    font: 660 14px 'Assistant', sans-serif;
-    color: #000;
-    /* The one centered thing — centered over its own column, as at @fold3.
-       align-self stretches it to the column's full width first, otherwise a
-       flex-start column would shrink-wrap it and centering would be a no-op. */
-    align-self: stretch;
-    text-align: center;
-  }
+  /* Removed — don't reintroduce: `.fold6-mlegend-camp`, the camp name heading
+     each column (700/14px, centred over its own column, 8px to the first card).
+     The legend carries no camp headings (explicit instruction — a compare/ pass
+     against keeping their space and against a hairline between the camps); the
+     two columns stand on their own. js/groups.js no longer builds them, which
+     is also what takes the on-canvas camp headers out of the @fold4 flight. */
 
   /* EACH GROUP IS A CARD. The rows are the legend's filter buttons, so they
      have to read as tappable controls rather than lines of text — the fill and
@@ -4412,16 +4732,28 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     margin-bottom: 6px;
     width: 100%;
     box-sizing: border-box;
-    padding: 6px 12px;
-    /* The tallest card at the shipped copy is a two-line label; min-height
-       (not height) levels the rest up to it without clipping a card that wraps
-       further on a narrower phone. */
-    min-height: 44px;
-    /* WHITE, not the ACLED tint they used to carry: the card behind them is
-       that tint now, and tint-on-tint left six invisible cards. */
-    background: #fff;
+    /* Both axes as variables, and the vertical one is read by `min-height`
+       below too — so anything tuning the padding must move the VAR, not the
+       `padding` shorthand, or the floor keeps the old value and the card stops
+       getting shorter however far the padding is wound down. */
+    --mlg-row-pad-y: 4px;
+    --mlg-row-pad-x: 13px;
+    padding: var(--mlg-row-pad-y) var(--mlg-row-pad-x);
+    /* EVERY CARD THE SAME HEIGHT (explicit instruction — מפגינים חרדים, the one
+       one-line label, was the odd one out). This is only the FLOOR, covering
+       the two-line case before JS has measured: the real levelling is
+       fold6MEqualiseRows (js/groups.js), which hands all six the tallest one's
+       measured height, because the line count is not fixed — at 320px one label
+       wraps to three. Solved from the type rather than written as a literal so
+       it follows the padding and the font. */
+    --mlg-row-lines: 2;
+    min-height: calc(var(--mlg-row-lines) * 1.15 * 14px + 2 * var(--mlg-row-pad-y));
+    /* Grey, a shade off the legend's own tint behind it, with a 1px seat under
+       each card (Figma 345:2312, darkened by eye). */
+    background: #e1e1e1;
     border: none;
-    border-radius: 16px;
+    border-radius: 10px;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.07);
   }
   /* The card is a filter BUTTON on the folds that can answer one. Only the
      cursor and the dim say so — no hover treatment, since there is no hover on

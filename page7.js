@@ -626,7 +626,19 @@ function p7BuildVerticalLayout(rows, cols, CELL, visible) {
   });
 
 
-  const lastRow = rows - 1;
+  // The spill floor is the AXIS's last row, not the grid's. `rows` is the grid
+  // row count (357 at 393x852) and totalRows is the axis's own (298), so a
+  // `rows - 1` floor let a dense day's overflow run into rows 298..356 — below
+  // the end of the axis entirely. Those dots were then never drawn at all:
+  // p7OrchestrateRows only reaches `floor(edge - 0.5)` and the fill edge tops
+  // out at ~297.55, so nothing past row 297 ever aims at full. The coalition
+  // camp is the dense one, so it lost ~600 dots off its bottom and ended
+  // visibly higher than the change camp, which spills far less.
+  //
+  // Capping here packs that overflow into the last rows the axis actually has
+  // (claim() already falls back to overlapping when a row is genuinely full),
+  // so both camps end together, on the axis.
+  const lastRow = Math.min(rows, totalRows) - 1;
   function placeSide(evs, seed, side) {
     const rng  = p7Rng(seed);
     const used = []; // row -> Uint8Array(cols), lazily
@@ -729,21 +741,47 @@ function p7VertYearHeaderDrawH() {
   if (!p7ZoomOutT || !p7AxisHasMobileAbove()) return base;
   return base - P7_VERT_FIRST_EV_HEADROOM_PX * p7ZoomOutT;
 }
-function p7VertTopY(H) {
+// The LIVE top edge — the pre-zoom-out layout, with no part of the beat in it.
+// p7VertTopY lerps between this and the squashed top; see the note there for why
+// the beat must not be mixed into the terms.
+function p7VertTopYLive(H) {
   const box  = sbbTimeline(H);
   const boxT = Math.round(H * box.top);
   if (!p7VerticalAxis() || !p7.vert || !p7.CELL) return boxT;
   const boxB = Math.round(H * box.bottom);
-  const len  = p7VertFieldLen() + p7VertYearHeaderDrawH();
-  // The slack normally splits evenly above and below. As the end-of-fill
-  // zoom-out lands, the field's top edge is lerped all the way to
-  // P7_ZOOMOUT_FIT_TOP_PX — above the box's own top — so the squashed timeline
-  // takes the height rather than floating in the middle of a box sized for a
-  // fold that still had a badge and a legend chip to clear.
+  const len  = p7.vert.totalRows * p7.cellBase + p7VertYearHeaderH();
   const slack = Math.max(0, (boxB - boxT - len) / 2);
-  const top   = p7ZoomOutT ? p7ZoomLerp(boxT + slack, P7_ZOOMOUT_FIT_TOP_PX) : boxT + slack;
-  return Math.round(top + p7VertYearHeaderDrawH())
+  return Math.round(boxT + slack + p7VertYearHeaderH())
        - p7VertCameraOffset(boxB - boxT, len);
+}
+// The top edge as DRAWN.
+//
+// The zoom-out is a lerp between two FIXED endpoints — the live top and the
+// squashed top — and never a formula with `p7ZoomOutT` sprinkled through its
+// terms. It used to be the latter, and the terms did not move together: the
+// camera offset is clamped to `len - boxH`, and `len` SHRINKS as the beat runs,
+// so the clamp collapsed on a curve of its own. The field's bottom end went
+// 692 → 792 → 693 — a visible dip DOWN and back UP in the middle of a beat whose
+// only job is to zoom out. Two fixed endpoints cannot do that.
+// A flat vertical nudge on the WHOLE field — axis line, year marks, dots, event
+// plaques, the hover hit-test, page8's glide capture, all of it. It rides
+// p7VertTopY because that is THE camera point: every y on the vertical path
+// derives from it, so one offset here moves the timeline as a unit and nothing
+// can drift out of step with it. MOBILE ONLY; `let` for the manual/ harness.
+let P7_FIELD_Y_MOBILE = -40;
+function p7FieldYOffset() { return isMobile() ? P7_FIELD_Y_MOBILE : 0; }
+function p7VertTopY(H) {
+  const live = p7VertTopYLive(H) + p7FieldYOffset();
+  if (!p7ZoomOutT || !p7VerticalAxis() || !p7.vert || !p7.CELL) return live;
+  // The squashed end: top edge parked at P7_ZOOMOUT_FIT_TOP_PX, no camera (there
+  // is nothing left to pan toward), header minus the headroom it hands back.
+  const hdrSq = p7VertYearHeaderH()
+    - (p7AxisHasMobileAbove() ? P7_VERT_FIRST_EV_HEADROOM_PX : 0);
+  // NO p7FieldYOffset on the squashed end. That nudge is a framing choice for
+  // the zoomed-IN scrub; the squash is a FIT — it is solved to fill the space
+  // between the hint's rule and the bottom exactly, so adding the offset would
+  // push it straight back through the rule and undo the fit.
+  return Math.round(live + (p7ZoomOutFitTop() + hdrSq - live) * p7ZoomOutT);
 }
 // The drawn height of the row field — the live length under the beat's vertical
 // squash. Everything that measures the field (p7VertTopY, p7VertCameraOffset,
@@ -766,14 +804,12 @@ function p7VertCameraOffset(boxH, len) {
   if (V.camera === 'pan') off = frac * over;
   else off = p7VertYearHeaderH() + frac * p7VertFieldLen() - V.fillAnchorFrac * boxH;
   off = Math.max(0, Math.min(over, off));
-  // The camera exists only to window an over-tall `zoom > 1` field, so it retires
-  // with the end-of-fill squash: without this it keeps holding the field up by
-  // `over` px and fights p7VertTopY's own P7_ZOOMOUT_FIT_TOP_PX anchor, landing
-  // the squashed timeline at y 2 instead of 40. Note the squashed field is sized
-  // against the SCREEN (it starts above the box's top), so it can still measure
-  // as taller than the box and leave `over` positive at t = 1 — hence a lerp to
-  // zero rather than relying on `over` going non-positive by itself.
-  return Math.round(p7ZoomOutT ? p7ZoomLerp(off, 0) : off);
+  // No zoom-out term here. The camera exists only to window an over-tall
+  // `zoom > 1` field, and it retires with the squash — but that retirement is
+  // p7VertTopY's to run, as one lerp between two fixed endpoints. Doing it here
+  // too both double-counted it and put the shrinking `len` inside the clamp,
+  // which is what made the field dip down and back up mid-beat.
+  return Math.round(off);
 }
 // ── @fold9 end-of-fill ZOOM-OUT (mobile) ────────────────────────────────
 // The phone ships at P7_VERT.zoom 3 with the 'pan' camera, so the field is
@@ -839,6 +875,17 @@ const P7_ZOOMOUT_MS = 600;
 // allowed to climb out of the box and take the height. Only the squashed end of
 // the beat uses it; at t = 0 the field sits in the box exactly as before.
 const P7_ZOOMOUT_FIT_TOP_PX = 40;
+// ...but never above the picker's hint rule, which is a hard edge the chart may
+// not cross (p7HintClipTopY). Without this the squashed field was solved and
+// parked at a flat 40 while the band's rule sat at 42, so the whole-timeline
+// view was quietly clipped along its top — the one state where every row is
+// meant to be on screen at once. SBB_TIMELINE_MOBILE_GAP_PX of air under the
+// rule, the same clearance the box keeps everywhere else.
+function p7ZoomOutFitTop() {
+  const rule = p7HintClipTopY();
+  const gap  = typeof SBB_TIMELINE_MOBILE_GAP_PX === "undefined" ? 18 : SBB_TIMELINE_MOBILE_GAP_PX;
+  return Math.max(P7_ZOOMOUT_FIT_TOP_PX, rule ? rule + gap : 0);
+}
 // ...and the clear air it keeps at the BOTTOM, above the docked tooltip and its
 // «לחצו והחזיקו…» instruction line. The squash is the one state where the field
 // fills its box exactly — the box's own bottom is already only
@@ -935,7 +982,7 @@ function p7ZoomLerp(a, b) { return a + (b - a) * p7ZoomOutT; }
 function p7ZoomOutKY(H) {
   if (!p7.vert || !p7.cellBase) return 1;
   const box  = sbbTimeline(H);
-  const avail = Math.round(H * box.bottom) + p7ZoomOutBottomBonus() - P7_ZOOMOUT_FIT_TOP_PX
+  const avail = Math.round(H * box.bottom) + p7ZoomOutBottomBonus() - p7ZoomOutFitTop()
               - p7ZoomOutBottomReserve() - (p7VertYearHeaderH() - P7_VERT_FIRST_EV_HEADROOM_PX * (p7AxisHasMobileAbove() ? 1 : 0));
   const live  = p7.vert.totalRows * p7.cellBase;
   if (avail <= 0 || live <= 0) return 1;
@@ -1002,14 +1049,55 @@ function p7VertOverflows(H) {
 // (p7AxisLastPlaqueOverhangPx), so that card is meant to print in the band just
 // under the box — clipping it at the box edge cut off the very card the reserve
 // exists for.
+// How far below the box the axis LINE (and its year marks) may draw:
+// all the way OFF THE SCREEN.
+//
+// While the timeline is still filling, the line is a time axis that simply has
+// not got to its end yet — it runs past the bottom edge the way a list scrolls
+// past it, with no gap held anywhere. Any clearance at the bottom only makes it
+// stop short of nothing. The end of the fill needs no special case: the camera
+// parks the field's end at the box's bottom by then, so the line stops there on
+// its own, and the squash ends it at boxBottom + p7ZoomOutBottomBonus — both
+// well inside this.
+//
+// The dots do NOT follow it off the screen — only the line. (Below the fill edge
+// there are no dots to show anyway; the ones that would print in this band are
+// the debris complaint, see p7VertSquareClipExtra.)
+function p7VertLineClipExtra(H) { return Math.max(0, H - Math.round(H * sbbTimeline(H).bottom)); }
+function p7VertSquareClipExtra() { return Math.round(p7ZoomOutT * p7ZoomOutBottomBonus()); }
+// THE LINE under the hint — the y the timeline clips at. The band sits at the
+// top of the screen and its bottom border is the chart's own top edge, so the
+// axis and its dots are cut off there and no part of the timeline ever prints
+// above the hint. 0 when the band is elsewhere or not showing, which restores
+// the old behaviour (the clip starting at the top of the SCREEN).
+function p7HintClipTopY() {
+  if (!isMobile() || P7_HINT_PLACE_MOBILE !== 'above') return 0;
+  const h = p7HintBandH();
+  return h ? h + P7_HINT_Y_MOBILE : 0;
+}
 function p7VertClipToBox(ctx, W, H, extraBottom) {
-  if (!p7VertOverflows(H)) return false;
-  // The squash runs the field down into the last-plaque reserve (see
-  // p7ZoomOutBottomBonus), so the clip has to open by the same amount as the
-  // beat runs or the axis end is shaved off exactly where it was gained.
-  const b = Math.round(H * sbbTimeline(H).bottom)
-          + Math.max(extraBottom || 0, p7ZoomOutT * p7ZoomOutBottomBonus());
-  ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, b); ctx.clip();
+  // The hint's rule clips whether the field overflows or not: it is an edge of
+  // the chart's own area, not a consequence of the field being too tall. The
+  // overflow test only ever governed the BOTTOM.
+  if (!p7VertOverflows(H)) {
+    const only = p7HintClipTopY();
+    if (!only) return false;
+    ctx.save(); ctx.beginPath(); ctx.rect(0, only, W, H - only); ctx.clip();
+    return true;
+  }
+  // Callers ask for the band below the box explicitly; nothing is granted by
+  // default. The three layers want different amounts and must not be lumped
+  // together — see p7VertLineClipExtra (the axis LINE) and the plaque layer's
+  // own p7AxisLastPlaqueOverhangPx. The SQUARES get the box, full stop: dots
+  // printing under the axis's own end read as debris floating below the
+  // timeline.
+  const b = Math.round(H * sbbTimeline(H).bottom) + (extraBottom || 0);
+  // The top was 0 — the screen's own edge — so rows the camera carries upward
+  // kept going off the top like a list scrolling. They still do; the edge they
+  // vanish at is now the hint's rule (p7HintClipTopY) rather than the screen's,
+  // whenever the hint is up there.
+  const t = p7HintClipTopY();
+  ctx.save(); ctx.beginPath(); ctx.rect(0, t, W, b - t); ctx.clip();
   return true;
 }
 // The fill edge on screen — the y the axis's drawn fill has reached (lagged,
@@ -1584,12 +1672,18 @@ let P7_GRID_HEIGHT_FRAC = 1;    // manual/-baked 2026-09-08
 // Mobile gets its own pair, `manual/`-baked 2026-09-12 at 390x844 (the harness
 // tuned the frame in px: 316px wide, 554px tall of the 520px box). A phone has
 // the same 14451 dots in a third of the width, so the desktop 0.7 x 1 frame is
-// too small to breathe: the width goes nearly full-bleed, and the height passes
-// 1 deliberately — the block is ALLOWED to grow 5% past the timeline box's top
-// edge, which is empty there once the axis has undrawn. The camp gap is shared
+// too small to breathe: the width goes nearly full-bleed. The height was
+// re-tuned to 0.88 on 2026-09-14 together with the lower baseline below (the
+// box got taller, so a smaller share keeps the block's top in place). The camp gap is shared
 // (4px reads the same at both sizes).
 let P7_GRID_MOBILE_WIDTH_FRAC  = 0.808;
-let P7_GRID_MOBILE_HEIGHT_FRAC = 1.065;
+let P7_GRID_MOBILE_HEIGHT_FRAC = 0.88;   // manual/-baked 2026-09-14
+// The size grid's BASELINE, as px off the viewport's bottom edge, per
+// breakpoint. null = the timeline box's own bottom (sbbTimeline), which on a
+// phone still reserves the docked frame + last axis plaque the timeline needs.
+let P7_GRID_BASE_INSET_MOBILE = 48;   // manual/-baked 2026-09-14
+let P7_GRID_BASE_INSET_DESKTOP = null;
+function p7GridBaseInset() { return isMobile() ? P7_GRID_BASE_INSET_MOBILE : P7_GRID_BASE_INSET_DESKTOP; }
 // Always read the frame through these, never the constants: `isMobile()` is read
 // live, so a resize across the 600px breakpoint re-solves the unit for free.
 function p7GridWidthFrac()  { return isMobile() ? P7_GRID_MOBILE_WIDTH_FRAC  : P7_GRID_WIDTH_FRAC; }
@@ -2071,14 +2165,15 @@ function p7GridCell(ev, isLeft) {
   return p7GridFlatten(p7GridClaim(L, b, ev, isLeft), L);
 }
 function p7GridKey(W, H) {
-  return `${W}x${H}@${window.devicePixelRatio || 1}:${P7_GRID_GROW}:${P7_GRID_SPREAD_FRAC}:${P7_GRID_SPREAD_LOOSE}:${P7_GRID_BIG_MIN}:${p7GridWidthFrac()}:${p7GridHeightFrac()}:${P7_GRID_UNIT_PX}:${P7_GRID_CAMP_GAP}:${P7_GRID_ORDER}:${P7_GRID_GROUPING}:${P7_GRID_EDGE_JITTER}:${P7_GRID_BIG_SPREAD}:${P7_GRID_TIER_CELLS.join("/")}`;
+  return `${W}x${H}@${window.devicePixelRatio || 1}:${P7_GRID_GROW}:${P7_GRID_SPREAD_FRAC}:${P7_GRID_SPREAD_LOOSE}:${P7_GRID_BIG_MIN}:${p7GridWidthFrac()}:${p7GridHeightFrac()}:${P7_GRID_UNIT_PX}:${P7_GRID_CAMP_GAP}:${P7_GRID_ORDER}:${P7_GRID_GROUPING}:${P7_GRID_EDGE_JITTER}:${P7_GRID_BIG_SPREAD}:${P7_GRID_TIER_CELLS.join("/")}:${p7GridBaseInset()}`;
 }
 // The empty grid: geometry only (unit, rows, the two camps' inner edges) plus
 // the two empty skylines p7GridCell fills in as squares arrive.
 function p7BuildSizeGrid(W, H, unit, cellPx) {
   const box   = sbbTimeline(H);
   const top   = box.top * H;
-  const boxH  = (box.bottom - box.top) * H;
+  const inset = p7GridBaseInset();
+  const boxH  = (inset == null ? box.bottom * H : H - inset) - top;
   const half  = P7_GRID_CAMP_GAP / 2;                                     // the corridor each camp gives up
   const up    = P7_GRID_GROW === "up";
   const spread = P7_GRID_GROW === "spread";
@@ -3513,7 +3608,7 @@ function drawPage7(ctx, W, H) {
 
   p7UpdateEngagement();
   p7RealTimelineReached = true;
-  const clipped = p7VertClipToBox(ctx, W, H);
+  const clipped = p7VertClipToBox(ctx, W, H, p7VertSquareClipExtra());
   p7DrawTimelineSquares(ctx, W, H);
   p7DrawInspectScrim(ctx, W, H);
   if (clipped) ctx.restore();
@@ -3635,9 +3730,16 @@ function p7AxisShouldShow() {
   // wiping through a field still in the air.
   if (p7GridMorph && p7GridMorph.dir === "off"
       && performance.now() - p7GridMorph.start < p7MorphTotalMs(p7GridMorph.flat)) return false;
-  // > p7AxisIntroAt(), not > 0: the mobile knob can hold the wipe back until the
-  // fly is that far along (see p7AxisIntroAt). At 0 this is the original test.
-  if (typeof fold9FlyTrigger !== "undefined" && fold9FlyTrigger.currentRaw() > p7AxisIntroAt()) return true;
+  // MOBILE: the axis draws in when @fold8's title block is almost off the top of
+  // the screen — see p7AxisIntroCardAlmostOut. DESKTOP is untouched: it still
+  // appears the instant @fold8's fly begins.
+  if (isMobile()) {
+    if (p7AxisIntroCardAlmostOut()) return true;
+    // Nothing else may show it early on this path — p7HasEngaged below is true
+    // for the whole of @fold9 and would put the axis up regardless.
+    return false;
+  }
+  if (typeof fold9FlyTrigger !== "undefined" && fold9FlyTrigger.currentRaw() > 0) return true;
   return p7HasEngaged;
 }
 
@@ -3734,13 +3836,20 @@ const P7_AXIS_LABEL_COLOR       = "rgba(0, 0, 0, 0.65)";
 // clock, starting from p7.minDate's anchor (the "2023" end) since that's
 // where the scroll-driven reveal above starts from too. p7AxisIntroStart is
 // null when not yet triggered (or reset back to it, see p7AxisTriggerIfNeeded).
-let   P7_AXIS_INTRO_DURATION = 2800; // ms — full right-edge-to-left-edge wipe; `let` only so a manual/ harness can drive it live
-// WHERE the build-in starts, as a fraction of @fold8's fly (fold9FlyTrigger's
-// RAW progress). 0 = the instant the fly begins, which is what it has always
-// done; 1 = not until the squares have landed on the timeline. MOBILE ONLY —
-// desktop keeps 0 and is unaffected. `let` for the harness.
-let   P7_AXIS_INTRO_AT_MOBILE = 0;
-function p7AxisIntroAt() { return isMobile() ? P7_AXIS_INTRO_AT_MOBILE : 0; }
+const P7_AXIS_INTRO_DURATION = 2800; // ms — full right-edge-to-left-edge wipe
+// WHEN the build-in fires on MOBILE: @fold8's title block is almost off the top
+// of the screen — only this many px of it still showing. (page7TitleCardEl is
+// `#page-7 .text-card`, i.e. @fold8's card; the name carries the legacy
+// off-by-one numbering.) Read live off the element rather than off a scroll
+// trigger's progress, so it means exactly what it says at any viewport height.
+//
+// Desktop keeps its own rule — the instant @fold8's fly begins — untouched.
+const P7_AXIS_INTRO_CARD_REMAIN_PX_MOBILE = 40;
+function p7AxisIntroCardAlmostOut() {
+  if (typeof page7TitleCardEl === "undefined" || !page7TitleCardEl) return false;
+  return page7TitleCardEl.getBoundingClientRect().bottom
+       <= P7_AXIS_INTRO_CARD_REMAIN_PX_MOBILE;
+}
 // Reverse wipe on EVERY exit the axis has — @fold10's size grid (p7Grid.on
 // makes p7AxisShouldShow false, so p7AxisTriggerIfNeeded hands off to
 // p7AxisReverseOut), scrolling back up past the fly trigger, and @fold12's
@@ -3756,6 +3865,27 @@ let p7AxisIntroStart = null;
 let p7AxisOutroStart = null; // non-null while the reverse wipe is running
 let p7AxisOutroFromT = 0;    // introT captured at the moment the reverse began
 
+// How far the build-in wipe has got, as a y on the canvas. Same expression the
+// wipe's own clip uses, so anything tested against it is exactly in step with
+// the drawn edge of the line.
+function p7AxisIntroEdgeY(H) {
+  return p7VertTopY(H) + p7Ease(p7AxisIntroT()) * p7VertFieldLen();
+}
+// 0 -> 1 as that edge passes `y`. The axis EVENTS ride this so they arrive with
+// the line instead of all at once: the wipe's clip is restored before
+// p7DrawAxisEventsVertical runs, so without it every dot and card was simply
+// there the instant the build-in started, and only the line drew top to bottom.
+//
+// MOBILE ONLY — desktop keeps its existing arrival. Multiplied into the marker's
+// RADIUS, never its alpha: dots arrive and leave by size (see the hard rules).
+const P7_AXIS_INTRO_REVEAL_PX = 26;   // px of wipe travel a dot takes to grow in
+function p7AxisIntroReveal(y, H) {
+  if (!isMobile()) return 1;
+  const t = p7AxisIntroT();
+  if (t >= 1) return 1;
+  if (t <= 0) return 0;
+  return Math.min(1, Math.max(0, (p7AxisIntroEdgeY(H) - y) / P7_AXIS_INTRO_REVEAL_PX));
+}
 function p7AxisIntroT() {
   if (p7AxisOutroStart !== null) {
     const dur = P7_AXIS_OUTRO_DURATION * p7AxisOutroFromT;
@@ -4829,7 +4959,7 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   // goes through this one function; the axis line was the last hold-out.
   const len     = p7VertFieldLen();
   const botY    = topY + len;
-  const clipped = p7VertClipToBox(ctx, W, H); // line + years only; the headline slot draws unclipped
+  const clipped = p7VertClipToBox(ctx, W, H, p7VertLineClipExtra(H)); // line + years only; the headline slot draws unclipped
   ctx.save();
 
   const introT = p7AxisIntroT();
@@ -5028,7 +5158,6 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   // Dots pop on the DRAWN edge (fillY): the circle appears the instant the
   // fill reaches its top, never sitting on unfilled line.
   p7DrawAxisEventsVertical(ctx, W, H, axisX, fillY, hoverActive, hoverAxisY, yearSpans);
-  p7DrawAxisIntroMark(ctx, W, H);
 
   if (hoverActive) {
     // The hovered square's mirror dot: whole and on top of everything when it
@@ -5132,42 +5261,17 @@ function p7DrawAccentBar(ctx, cx, y, w, alpha = 1) {
   ctx.restore();
 }
 
-// SCAFFOLDING (_debug-axis-intro.js only — `window.__axisIntroMarks`). The
-// draw-in knob is a THRESHOLD on fold9FlyTrigger's raw progress, which is
-// otherwise invisible — you only see whether the wipe has started. This draws
-// the gauge: a short track in the left margin, a tick at the threshold, and a
-// live marker for the fly progress being tested against it.
-//   grey = armed · orange = crossing this frame · black = fired
-function p7DrawAxisIntroMark(ctx, W, H) {
-  if (!window.__axisIntroMarks || typeof fold9FlyTrigger === "undefined") return;
-  const raw = fold9FlyTrigger.currentRaw();
-  const at = p7AxisIntroAt();
-  const x = 6, top = 120, len = 90;
-  const yOf = (t) => Math.round(top + len * Math.min(1, Math.max(0, t))) + 0.5;
-  ctx.save();
-  ctx.lineWidth = 1;
-  ctx.font = '8px ui-monospace, monospace';
-  ctx.textBaseline = 'middle';
-  // the track
-  ctx.strokeStyle = 'rgba(0,0,0,0.18)';
-  ctx.beginPath(); ctx.moveTo(x + 4, top); ctx.lineTo(x + 4, top + len); ctx.stroke();
-  // the threshold
-  const fired = raw > at;
-  ctx.strokeStyle = ctx.fillStyle = fired ? '#000' : 'rgba(0,0,0,0.35)';
-  ctx.beginPath(); ctx.moveTo(x, yOf(at)); ctx.lineTo(x + 9, yOf(at)); ctx.stroke();
-  ctx.fillText('at ' + at.toFixed(2), x + 11, yOf(at));
-  // the live value
-  ctx.strokeStyle = ctx.fillStyle = (fired && raw < at + 0.06) ? '#e07b00' : '#0a7';
-  ctx.beginPath(); ctx.moveTo(x + 1, yOf(raw)); ctx.lineTo(x + 7, yOf(raw)); ctx.stroke();
-  ctx.fillText('fly ' + raw.toFixed(2), x + 11, yOf(raw) + (Math.abs(raw - at) < 0.08 ? 10 : 0));
-  ctx.restore();
-}
-
 function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlightY, yearSpans) {
   p7UpdateAxisEventTriggers(W);
   const now = performance.now();
   const v = p7.vert;
   ctx.save();
+  // This whole layer — the event markers AND their plaques — is drawn after
+  // p7DrawYearAxisVertical has restored its own clip, so nothing here was
+  // bounded by it: axis dots and headline cards printed straight over the hint
+  // band. Cut them at the hint's rule like everything else on the chart.
+  const hintTop = p7HintClipTopY();
+  if (hintTop) { ctx.beginPath(); ctx.rect(0, hintTop, W, H - hintTop); ctx.clip(); }
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
 
@@ -5234,7 +5338,11 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
       state.reachedT += (reachedTarget - state.reachedT) * P7_AXIS_HOVER_ANIM_SPEED;
       if (Math.abs(reachedTarget - state.reachedT) < 0.001) state.reachedT = reachedTarget;
     }
-    if (!reached) state.hoverT = 0;
+    // ...except the one being POINTED AT. By the end of the fill every event has
+    // left (leavingAt set), so `reached` is false for all of them — and this line
+    // then zeroed the hover the mobile axis-dot tap had just asked for, so the
+    // tapped card never opened on the squashed view.
+    if (!reached && !(isMobile() && hoveredAxisEvent === ev)) state.hoverT = 0;
     if (state.reachedT <= 0.001 && !p7AxisMarkerUnreached()) return;
     const isAxisHovered = hoveredAxisEvent === ev;
     const hoverTarget = isAxisHovered ? 1 : 0;
@@ -5281,7 +5389,11 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
       : P7_AXIS_MARKER_RADIUS * P7_AXIS_MARKER_GROW_FROM;
     const markerRadius = (p7AxisMarkerUnreached()
         ? unreachedR + (restR - unreachedR) * state.reachedT
-        : restR * state.reachedT) * outroShrink * (1 - p7ZoomOutT);
+        : restR * state.reachedT) * outroShrink * p9Ease(p7AxisIntroReveal(y, H));
+    // No (1 - p7ZoomOutT) here: the axis dots STAY on the squashed view, at full
+    // size. They are the only handle the whole-timeline view has — tapping one
+    // opens its card (p7AxisTapHit) — and shrinking them away left nothing to aim
+    // at. The plaques still go (`zoomFade`); the dots do not.
     const isHighlighted = highlightY !== null && Math.abs(y - highlightY) < 0.5;
     const markerColor = hoverActive
       ? (isHighlighted ? P7_AXIS_HOVER_COLOR : P7_AXIS_BG_COLOR)
@@ -5722,7 +5834,15 @@ function p7DrawVertDotCards(ctx, W, H, now) {
     // show the shape of the timeline. They leave through P7_AXIS_LEAVE_MODE like
     // any other departure (a card may collapse/fade — only DOTS are size-only),
     // and this multiplies every branch below, the pinned ones included.
-    const zoomFade = 1 - p7ZoomOutT;
+    // ...unless this one is TAPPED. The dots stay on the squashed view and stay
+    // hit-testable (p7AxisTapHit), and a tap is the only way to read an event
+    // there — so hoverT overrides the beat's fade for that one card and nothing
+    // else. Lifting the tap puts it straight back.
+    // ...and the build-in wipe gates them the same way the dots are gated, so a
+    // card opens as the line reaches it rather than being there from the first
+    // frame of the wipe (p7AxisIntroReveal). Mobile only.
+    const introIn = p9Ease(p7AxisIntroReveal(p7RowY(v.events[i].row, H), H));
+    const zoomFade = Math.max(1 - p7ZoomOutT, st.hoverT) * introIn;
     if (zoomFade <= 0) return 0;
     // A `mobileAbove` plaque is PINNED: it sits above its dot from the start and
     // it never leaves. No fly (sideDir is forced to 0 below, which gates the
@@ -5864,6 +5984,8 @@ let p7RecheckHover = () => {};
 // + Hebrew description, reusing the exact same DOM element/styling as page9.js's
 // hover (#page9Tooltip is generic markup, not page9-specific), and isolating the
 // hovered square the same way p9PlaceDot does (see p7DrawSideSquares above).
+// Set by p7HoverInit; null until it runs.
+let p7SetAxisHover = null;
 function p7HoverInit() {
   const canvasEl  = document.getElementById("canvas");
   const tooltipEl = document.getElementById("page9Tooltip");
@@ -5902,6 +6024,9 @@ function p7HoverInit() {
   // faded headline label (p7DrawAxisEvents forces its opacity to 1 while
   // hoveredAxisEvent points at it). Only a redraw is needed — no tooltip DOM,
   // since the label/date reappear on the canvas itself.
+  // Published for the tap handler in p7InspectInit (a different closure): the
+  // mobile axis-dot tap drives the same single hover slot the pointer does.
+  p7SetAxisHover = setAxisHover;
   function setAxisHover(ev) {
     if (p7.hoveredAxisEvent === ev) return;
     p7.hoveredAxisEvent = ev;
@@ -5969,7 +6094,12 @@ function p7HoverInit() {
     // picker/selected state in step with the page (p7InspectInit below) —
     // doHitTest is the one thing that already runs on every redraw, scroll and
     // pointer event, so it's where that sync is hung.
-    if (isMobile()) { hide(); p7InspectSync(); return; }
+    // hideSquare, NOT hide: doHitTest runs after every redraw, and hide() also
+    // clears the AXIS hover — which on mobile is now set by the axis-dot TAP
+    // (p7AxisTapHit), so the tapped card opened for one frame and shut again.
+    // There is no pointer here to have moved off anything; the tap's own hover
+    // stands until it is tapped off, or until p7HoverInit's page-change clear.
+    if (isMobile()) { hideSquare(); p7InspectSync(); return; }
     // Also fully off while @fold12's bridge glide (page8.js) is mid-flight in
     // either direction (p8PhaseStart non-null): scrolling back up from @fold12
     // lands currentPage on 7 while the dots are still flying back to their
@@ -6151,7 +6281,7 @@ p7HoverInit();
    button to press first. The gesture itself is the affordance, and the frame's
    resting content is the line of text that names it:
 
-     hint  — the empty frame reads P7_INSPECT_HINT.
+     empty — nothing is selected, so the frame paints nothing at all.
      event — the ordinary docked tooltip (date + description). There is no
              dismiss control: the selection stands until the next hold replaces
              it, or until leaving #page-8 releases the frame.
@@ -6171,22 +6301,6 @@ const P7_LOUPE_LIFT_PX   = 60; // how far above the fingertip the loupe centre s
 const P7_INSPECT_SNAP_PX = 44; // furthest a dot can be from the finger and still be picked
 const P7_LONGPRESS_MS      = 300; // hold this long, without moving, to open the loupe
 const P7_LONGPRESS_SLOP_PX = 10;  // move further than this first and it's a scroll, not a hold
-const P7_INSPECT_HINT      = "לחצו והחזיקו על נקודה להצגת פרטי האירוע";
-// The hint's own type-in/out tempo. Its own constant rather than
-// GROUP_TRANSITION_MS: that 1900ms is the legend system's beat, and a single
-// 39-character line reading itself out over nearly two seconds drags — this is
-// roughly the fold8 tooltip's per-line feel. Driven by p7InspectHintTrigger
-// (js/groups.js), which owns WHEN it plays.
-const P7_INSPECT_HINT_TYPE_MS = 900;
-// The typewriter's revealed/hidden span pair, built by p7InspectInit below.
-// Module-level so the trigger can drive it without reaching into the closure.
-let p7HintSpans = null;
-// 0 = fully untyped, 1 = fully typed. Safe to call before p7InspectInit has
-// run (and on desktop, where the hint is display:none) — it simply no-ops.
-function p7InspectHintApply(t) {
-  if (!p7HintSpans) return;
-  fold8UpdateTypewriter(p7HintSpans, Math.round(p7HintSpans.fullText.length * t));
-}
 // The clipped-description toggle's two labels (p7-tip-more).
 const P7_TIP_MORE          = "עוד";
 const P7_TIP_LESS          = "פחות";
@@ -6230,22 +6344,131 @@ function p7InspectSource() {
   return { positions: p7.lastPositions, half: p7Sq() / 2, cell: p7Cell(), maxY: Infinity };
 }
 
+// ── The picker's instruction band (MOBILE) ──────────────────────────────────
+// «לחצו והחזיקו על נקודה…» — the gesture label for the press-and-hold picker.
+//
+// It is its OWN full-bleed band, not the docked frame's resting content as it
+// once was. Two reasons: the band spans the whole screen width (the frame is a
+// 300px box centred on the axis), and it carries a backdrop blur, which has to
+// sit behind the text and in front of the canvas — the frame can be neither.
+// A direct `.layout` child, per the house rule: `.graphic-col`'s stacking
+// context traps z-index.
+const P7_INSPECT_HINT = "לחצו והחזיקו על נקודה להצגת פרטי האירוע";
+// WHICH EDGE it sits on — 'above' the timeline or 'below' it. `let` for the
+// compare/ harness. MOBILE ONLY; desktop has hover and no band at all.
+let P7_HINT_PLACE_MOBILE = 'above';
+// The band's backdrop blur, px. `let` for the manual/ harness.
+let P7_HINT_BLUR_PX = 8;
+// The blur's gradient (style.css .p7-hint-band::before): how far BELOW the
+// band it reaches before it has fully faded, and what share of that height
+// stays at full strength before the fade starts. `let` for a manual/ harness.
+let P7_HINT_FADE_PX = 24;
+let P7_HINT_SOLID_PCT = 40;
+// Nudge off whichever edge it is anchored to, px. `let` for the manual/ harness.
+let P7_HINT_Y_MOBILE = 4;
+// The line types itself in — but only once the axis's own build-in has finished
+// (p7AxisIntroT() >= 1). It names a gesture on a timeline that isn't drawn yet
+// while the wipe is running, so arriving with it read as part of the same
+// animation instead of as the instruction that follows it.
+// Not P7_HINT_TYPE_MS — that name belongs to @fold13's own hint trigger
+// (js/groups.js). Two different lines, two different clocks.
+const P7_BAND_TYPE_MS = 900;
+let p7HintBandEl = null, p7BandSpans = null, p7HintTypeStart = null;
+function p7HintBandInit() {
+  if (p7HintBandEl) return p7HintBandEl;
+  p7HintBandEl = document.createElement("div");
+  p7HintBandEl.className = "p7-hint-band";
+  const line = document.createElement("div");
+  line.className = "p7-inspect-hint";
+  p7BandSpans = fold8SetupTypewriter(line, P7_INSPECT_HINT);
+  p7HintBandEl.appendChild(line);
+  (document.querySelector(".layout") || document.body).appendChild(p7HintBandEl);
+  p7HintBandApply();
+  return p7HintBandEl;
+}
+// 0 -> 1 over P7_BAND_TYPE_MS, started the first frame the axis build-in is done
+// and reset whenever it is not, so scrolling back up un-types it and the next
+// arrival plays the line again.
+function p7HintTypeT() {
+  const done = p7AxisShouldShow() && p7AxisIntroT() >= 1;
+  if (!done) { p7HintTypeStart = null; return 0; }
+  if (p7HintTypeStart === null) p7HintTypeStart = performance.now();
+  return Math.min(1, (performance.now() - p7HintTypeStart) / P7_BAND_TYPE_MS);
+}
+// Place + blur, and whether it shows at all. Same WANT the old typed line used:
+// the picker is live on @fold9 and @fold13, and the folds between them have no
+// dots worth holding, so the band goes with the gesture it names.
+function p7HintBandWanted() {
+  // THE TIMELINE ONLY (@fold9 / @fold10, currentPage 8-9). @fold13 has its own
+  // resting line inside the docked frame (`.is-hint`, set in the picker's
+  // sync()); showing the band there too would print the same sentence twice.
+  return isMobile() && (currentPage === 8 || currentPage === 9);
+}
+function p7HintBandApply() {
+  const el = p7HintBandEl;
+  if (!el) return;
+  const above = P7_HINT_PLACE_MOBILE === 'above';
+  el.classList.toggle("is-above", above);
+  el.classList.toggle("is-below", !above);
+
+  // 'below' stands ON TOP OF the מקרא bar, which hugs the bottom of the screen
+  // at this fold — bottom: 0 printed the line straight through it. Measured off
+  // the live element rather than assumed: the bar is painted by
+  // fold6MLegendPaintCard and moves with the timeline's own box.
+  el.style.bottom = above ? "auto" : (p7MLegendBarH() - P7_HINT_Y_MOBILE) + "px";
+  el.style.top    = above ? P7_HINT_Y_MOBILE + "px" : "auto";
+  el.hidden = !p7HintBandWanted();
+  // The typewriter, driven per frame off the axis's own build-in clock.
+  if (p7BandSpans) {
+    const t = el.hidden ? 0 : p7HintTypeT();
+    fold8UpdateTypewriter(p7BandSpans, Math.round(p7BandSpans.fullText.length * t));
+    // The rule under the line rides the same clock, so it unrolls with the
+    // sentence instead of sitting there through the axis's whole build-in.
+    el.style.setProperty("--hint-rule", t.toFixed(3));
+    if (!el.hidden && t < 1) p7StartAnimLoop();
+  }
+  // The 8 @fold8 sample squares are DOM (.fold6-squares-overlay), so no canvas
+  // clip reaches them — they printed over the band. Same edge, as a clip-path.
+  const sq = document.querySelector(".fold6-squares-overlay");
+  if (sq) sq.style.setProperty("--sq-clip-top", p7HintClipTopY() + "px");
+}
+// The מקרא bar's height WHEN IT IS SITTING AT THE BOTTOM of the screen; 0 when
+// it is anywhere else (it moves between folds) or absent.
+function p7MLegendBarH() {
+  const c = document.querySelector(".fold6-mlegend-card");
+  if (!c) return 0;
+  const r = c.getBoundingClientRect();
+  if (!r.height || r.bottom < viewportH() - 24) return 0;
+  return Math.round(r.height);
+}
+// The height the band takes off the timeline's box, on whichever edge it is on.
+// 0 when it is not showing, so the timeline takes the space back.
+function p7HintBandH() {
+  if (!isMobile() || !p7HintBandEl || p7HintBandEl.hidden) return 0;
+  return p7HintBandEl.offsetHeight || 0;
+}
+function p7HintBandTopH() {
+  if (P7_HINT_PLACE_MOBILE !== 'above' || !p7HintBandH()) return 0;
+  return Math.max(0, p7HintBandH() + P7_HINT_Y_MOBILE);
+}
+// Below the timeline, the band's reserve is its own height PLUS whatever it is
+// standing on (the מקרא bar), so the box's bottom edge lands on the band's top.
+function p7HintBandBottomH() {
+  if (P7_HINT_PLACE_MOBILE === 'above' || !p7HintBandH()) return 0;
+  // − the nudge: moving the band DOWN hands that much back to the timeline, so
+  // the box's bottom edge stays on the band's top wherever it is put.
+  return Math.max(0, p7HintBandH() + p7MLegendBarH() - P7_HINT_Y_MOBILE);
+}
+
+// The @fold13 hint's typewriter spans (built in p7InspectInit, typed by
+// p7HintTrigger in js/groups.js).
+let p7HintSpans = null;
+
 function p7InspectInit() {
   const tipEl    = document.getElementById("page9Tooltip");
   const dateEl   = tipEl.querySelector(".page9-tooltip-date");
   const descEl   = tipEl.querySelector(".page9-tooltip-desc");
   const canvasEl = document.getElementById("canvas");
-
-  // --- the resting content: one line of text, no control -------------------
-  // Typed rather than printed: the line is a gesture instruction, and the
-  // gesture is only live on the two folds the picker serves, so it types itself
-  // in and out with them (p7InspectHintTrigger, js/groups.js — untyped on
-  // @fold11's crossing, typed back on @fold13's stick). Same two-span
-  // revealed/hidden rig every other typewriter on the page uses, so the line's
-  // box never reflows as the characters arrive.
-  const hintEl = document.createElement("div");
-  hintEl.className = "p7-inspect-hint";
-  p7HintSpans = fold8SetupTypewriter(hintEl, P7_INSPECT_HINT);
 
   // --- "read the rest" -----------------------------------------------------
   // Most descriptions fit the frame's three clamped lines; the long tail does
@@ -6259,6 +6482,15 @@ function p7InspectInit() {
   // second, misleading target.
   const moreEl = document.createElement("div");
   moreEl.className = "p7-tip-more";
+
+  // @fold13 (mobile) only: the empty docked frame reads this instruction line.
+  // Shown by `.is-hint` (sync() below); the columns start just under it
+  // (p9ExtremeTopY, page9.js) and a picked event's frame overlays them.
+  const hintEl = document.createElement("div");
+  hintEl.className = "p7-inspect-hint";
+  // Typed in by p7HintTrigger (js/groups.js) once the frame has stepped down.
+  p7HintSpans = fold8SetupTypewriter(hintEl, "לחצו והחזיקו על נקודה להצגת פרטי האירוע");
+  fold8UpdateTypewriter(p7HintSpans, 0);
 
   tipEl.append(hintEl, moreEl);
 
@@ -6424,7 +6656,7 @@ function p7InspectInit() {
     // opacity must agree during @fold14's scroll fade.
     tipEl.style.opacity =
       String(1 - (typeof p9 !== "undefined" ? (p9.fold13OutT ?? 0) : 0));
-    tipEl.style.transform = "translateX(-50%)";
+    tipEl.style.transform = tooltipDockTransform();
     tipEl.classList.remove("is-mirrored");
     tipEl.classList.remove("is-flipped");
     tipEl.classList.add("is-visible");
@@ -6570,11 +6802,14 @@ function p7InspectInit() {
       // of this range) — keep the hint's class on, gesture still off.
       tipEl.classList.toggle("is-picker", isMobile() && currentPage >= 9 && currentPage <= 11);
       tipEl.classList.remove("is-inspect");
+      tipEl.classList.remove("is-hint");
       return;
     }
     const hasEvent = !!p7Inspect.event;
     tipEl.classList.toggle("is-picker", !hasEvent);
     tipEl.classList.toggle("is-inspect", hasEvent);
+    tipEl.classList.toggle("is-hint", !hasEvent && currentPage === 12);
+    if (typeof p7SyncHint === "function") p7SyncHint();
     // The frame is normally held open (empty) by updateGroups' keepEmptyFrame
     // branch; assert it here too so the control can never be invisible inside
     // a frame that happens to be down.
@@ -6587,16 +6822,20 @@ function p7InspectInit() {
       // fade writes every frame, making the frame stutter instead of fading.
       tipEl.style.opacity =
         String(1 - (typeof p9 !== "undefined" ? (p9.fold13OutT ?? 0) : 0));
-      tipEl.style.transform = "translateX(-50%)";
+      tipEl.style.transform = tooltipDockTransform();
       tooltipDockMobile(tipEl);
       updateTooltipDash(tipEl);
     }
+    p7HintBandApply();
   }
   p7InspectSync = sync;
+  // The instruction band rides the same init and the same per-redraw sync as the
+  // picker it names (doHitTest -> p7InspectSync), so it appears and goes with the
+  // folds that actually offer the gesture.
+  p7HintBandInit();
   // Prime the hint from the page's starting scroll position — set(), not
   // trigger(), so a reload deep in the page doesn't play a type-in nobody asked
   // for (and a reload at the top doesn't start with an empty frame).
-  if (typeof p7SyncInspectHint === "function") p7SyncInspectHint(true);
 
   // --- the press-and-hold gesture -----------------------------------------
   // There is no armed mode to enter, so the hold itself has to distinguish
@@ -6667,11 +6906,63 @@ function p7InspectInit() {
     return t;
   }
 
+  // A short TAP on an axis dot opens that event's card. Mobile only, and it
+  // exists for the squashed whole-timeline view: there the plaques are gone
+  // (`zoomFade`) and the dots are all that is left, so the tap is the only way
+  // to read one. It drives the same p7.hoveredAxisEvent the desktop pointer
+  // does — hoverT then overrides the fade for that one card.
+  //
+  // Deliberately NOT the long-press path above: that one is the dot loupe, and
+  // it fires on the timeline squares. This is a tap (under P7_AXIS_TAP_MS, under
+  // P7_AXIS_TAP_SLOP_PX of travel), so the two never contend.
+  const P7_AXIS_TAP_MS = 400;
+  const P7_AXIS_TAP_PAD_PX = 20;   // finger-sized target around a 4px dot
+  const P7_AXIS_TAP_SLOP_PX = 12;
+  let tapAt = 0, tapX = 0, tapY = 0, tapWasOpen = null;
+  function p7AxisTapHit(cx, cy) {
+    const rect = canvasEl.getBoundingClientRect();
+    const mx = cx - rect.left, my = cy - rect.top;
+    for (const [ev, pos] of p7.axisEventPositions) {
+      const dx = mx - pos.x, dy = my - pos.y;
+      // A phone finger is far coarser than the 4px dot, so the hit target is
+      // padded well past the mark — it is the only tappable thing on the line.
+      const r = pos.radius + P7_AXIS_TAP_PAD_PX;
+      if (dx * dx + dy * dy <= r * r) return ev;
+    }
+    return null;
+  }
+
   window.addEventListener("touchstart", (e) => {
     cancelPending();
+    // Recorded BEFORE chartTouch's bail: that gate is about the loupe (it
+    // refuses holds over the docked tooltip and @fold13's tray), and an axis
+    // tap has to survive it.
+    const raw = e.touches[0];
+    if (raw) {
+      tapAt = performance.now(); tapX = raw.clientX; tapY = raw.clientY;
+      // What was open BEFORE the gesture. The toggle has to be judged against
+      // this, not against the state at touchend: a tap also emits compatibility
+      // mouse events, and the mousemove among them runs updateAxisHover and
+      // opens the card first — so a touchend comparing against the live value
+      // saw "already open" and closed it again, every time.
+      tapWasOpen = p7.hoveredAxisEvent;
+    }
     const t = chartTouch(e);
     if (!t) return;
     armTimer(t.clientX, t.clientY);
+  }, { passive: true });
+
+  window.addEventListener("touchend", (e) => {
+    if (!isMobile() || p7Inspect.dragging) return;
+    const t = e.changedTouches && e.changedTouches[0];
+    if (!t || !tapAt) return;
+    const moved = Math.hypot(t.clientX - tapX, t.clientY - tapY);
+    const held = performance.now() - tapAt;
+    tapAt = 0;
+    if (held > P7_AXIS_TAP_MS || moved > P7_AXIS_TAP_SLOP_PX) return;
+    const hit = p7AxisTapHit(t.clientX, t.clientY);
+    // Tapping the open one (or anywhere off the dots) closes it.
+    if (p7SetAxisHover) p7SetAxisHover(hit === tapWasOpen ? null : hit);
   }, { passive: true });
 
   // Re-run the pick + loupe blit every frame while the hold is live, at the

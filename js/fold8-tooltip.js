@@ -42,6 +42,12 @@ let fold8SeqLastFrameTime   = null;
 let fold8SequenceLoopRunning = false;
 const FOLD8_GROW_MS          = 400; // wall-clock time to reach full scale and hold
 const FOLD8_TOOLTIP_DELAY_MS = 250; // dead time after the crossing, before the grow
+// The dead time the CURRENT run of the sequence uses: the 250ms plus the
+// @fold7 fake cursor's glide for the scripted demo (set when the sequence
+// restarts, js/update-groups.js); a hover-driven restart keeps only the 250ms.
+let fold8SeqDelayMs = FOLD8_TOOLTIP_DELAY_MS;
+// Which side of its dot the callout hangs: "left" (mirrored) or "right".
+let fold8TooltipSide = "left";
 const FOLD8_TYPE_MS_PER_CHAR = 15;  // typewriter speed — tuned snappy, not sluggish
 
 // Repositions the tooltip against its anchor square each frame — pulled out
@@ -92,7 +98,7 @@ const FOLD8_TYPE_MS_PER_CHAR = 15;  // typewriter speed — tuned snappy, not sl
 // down with it on a scroll up. Position, per the house rule, lerps
 // continuously; it never snaps.
 const TOOLTIP_DOCK_H_PX = 100;          // the collapsed frame's height (.page9-tooltip.is-docked, style.css)
-const TOOLTIP_DOCK_BOTTOM_PX = -18;     // px the frame keeps off the viewport's bottom edge — NEGATIVE: it
+const TOOLTIP_DOCK_BOTTOM_PX = -18;     // px the frame keeps off the viewport's bottom edge — NEGATIVE: it     // px the frame keeps off the viewport's bottom edge — NEGATIVE: it
                                         // hangs 18px past the edge, so the frame's border reads as an open
                                         // bottom rather than a floating box (picked by eye 2026-09-05).
                                         // sbbTimelineMobileBottomPx() reads this live, so it also sets the
@@ -150,9 +156,36 @@ function tooltipDockTopPx(el) {
     tooltipFold6TopFrozen = Math.max(TOOLTIP_DOCK_TOP_MIN_PX,
       squaresTop - TOOLTIP_DOCK_SQUARES_GAP_PX - el.offsetHeight);
   }
-  const fold6Top = tooltipFold6TopFrozen;
-  const rest = tooltipDockRestPx();
-  return tooltipDockDropPx(fold6Top + (rest - fold6Top) * t);
+  // NO TRAVEL. The frame used to lerp from its @fold7 spot down to the dock over
+  // the fly — it flew. It now COLLAPSES in place at the @fold7 spot over the
+  // first half of the beat and the docked bar grows back in at the bottom over
+  // the second (tooltipDockHandoverScale), so the position simply SWITCHES at
+  // the handover, while the frame is scaled to nothing and nothing is visible
+  // to jump. Two strict phases, never blended.
+  return tooltipDockDropPx(t < TOOLTIP_DOCK_HANDOVER ? tooltipFold6TopFrozen
+                                                     : tooltipDockRestPx());
+}
+
+// The collapse/grow that replaces the glide: 1 at rest on @fold7, down to 0 at
+// the handover, back to 1 by the end of the fly. Multiplied into the docked
+// frame's scale, so the @fold7 example tooltip shuts and the bottom bar opens
+// as two separate beats on one element.
+const TOOLTIP_DOCK_HANDOVER = 0.5;
+// The docked frame's transform, for every writer of it. page7.js's picker sync()
+// re-asserts this element's transform on EVERY redraw, so without a shared
+// helper it stomped the handover collapse flat — harmless when the frame used to
+// arrive full-size off a glide, fatal now that the grow-back IS the arrival.
+// Desktop is never scaled here: the handover only exists for the docked layout.
+function tooltipDockTransform() {
+  const s = isMobile() ? p9Ease(tooltipDockHandoverScale()) : 1;
+  return s >= 1 ? "translateX(-50%)" : `translateX(-50%) scale(${s})`;
+}
+function tooltipDockHandoverScale() {
+  if (typeof fold9FlyTrigger === "undefined") return 1;
+  const t = fold9FlyTrigger.currentT();
+  if (t <= 0 || t >= 1) return 1;
+  const H = TOOLTIP_DOCK_HANDOVER;
+  return t < H ? 1 - t / H : (t - H) / (1 - H);
 }
 
 // Picker collision dodge — while the loupe would overlap the docked frame, the
@@ -231,13 +264,23 @@ let fold8FlyMoveT = 0;
 
 function fold8PositionTooltip(sq) {
   if (tooltipDockMobile(fold8TooltipEl)) return;
-  const sqRect = sq.getBoundingClientRect();
+  let sqRect = sq.getBoundingClientRect();
+  // A @fold7 hover: anchor to the square's FINAL swollen size around its
+  // centre, so the callout sits still while the swell animates.
+  if (fold7HoverIdx !== null && fold9FlyTrigger.currentRaw() <= 0) {
+    const cx = (sqRect.left + sqRect.right) / 2, cy = (sqRect.top + sqRect.bottom) / 2;
+    const h = FOLD7_SQUARE_SIZES[fold7HoverIdx] / 2;
+    sqRect = { left: cx - h, right: cx + h, top: cy - h, bottom: cy + h };
+  }
   // Measured off the square's EDGES, not its centre: the demo square swells on
   // @fold7 (FOLD8_DEMO_GROW_PX) and a centre-anchored offset would let the box
   // eat into it as it grows. Edge-anchored, the gap is the same 5px at every
   // size — which is also what the 8px resting dot always wanted.
   const TOOLTIP_GAP = 5;
-  const rawLeft = sqRect.left - TOOLTIP_GAP - fold8TooltipEl.offsetWidth;
+  // Hangs toward the dot's camp side (fold8TooltipSide, set by updateGroups).
+  const rawLeft = fold8TooltipSide === "right"
+    ? sqRect.right + TOOLTIP_GAP
+    : sqRect.left - TOOLTIP_GAP - fold8TooltipEl.offsetWidth;
   const left = Math.max(8, Math.min(rawLeft, window.innerWidth - fold8TooltipEl.offsetWidth - 8));
   // Position lerps continuously between the two hangs (house rule: position
   // never snaps); the pointer CORNER is a secondary attribute, so it may snap,
@@ -251,7 +294,8 @@ function fold8PositionTooltip(sq) {
   // The grow-in scales from the pointer corner, which moves with the flip.
   // Skipped while docked — that branch returned above — so this only ever
   // overrides the "bottom right" updateGroups wrote for the floating callout.
-  fold8TooltipEl.style.transformOrigin = flipped ? "top right" : "bottom right";
+  const corner = fold8TooltipSide === "right" ? "left" : "right";
+  fold8TooltipEl.style.transformOrigin = (flipped ? "top " : "bottom ") + corner;
   fold8TooltipEl.style.left = `${left}px`;
   fold8TooltipEl.style.top  = `${top}px`;
 }
@@ -333,7 +377,7 @@ function fold8AdvanceSequence() {
   // `|| ""` — two rows in full_v3.xlsx have an empty description_he_medium,
   // which server.py passes through as null.
   const totalChars = event.date.length + (event.descHeMedium || "").length;
-  const total = FOLD8_TOOLTIP_DELAY_MS + FOLD8_GROW_MS + totalChars * FOLD8_TYPE_MS_PER_CHAR;
+  const total = fold8SeqDelayMs + FOLD8_GROW_MS + totalChars * FOLD8_TYPE_MS_PER_CHAR;
   fold8SeqElapsed = Math.max(0, Math.min(total, fold8SeqElapsed + fold8SeqDirection * dt));
 
   const shrinkT = fold9TooltipShrinkTrigger.currentT();
@@ -341,7 +385,7 @@ function fold8AdvanceSequence() {
   // 0 through it, so the tooltip and the swell can start apart while sharing
   // one crossing. Subtracting it here (rather than shifting fold8SeqElapsed)
   // keeps the reverse direction symmetric for free.
-  const seqT = fold8SeqElapsed - FOLD8_TOOLTIP_DELAY_MS;
+  const seqT = fold8SeqElapsed - fold8SeqDelayMs;
   const growT = Math.max(0, Math.min(1, seqT / FOLD8_GROW_MS));
   // The docked frame can't grow from its pointer CORNER — it has no pointer,
   // and its spot is fixed — but it does play the same grow-in pop as desktop,
@@ -353,7 +397,9 @@ function fold8AdvanceSequence() {
   // grows. Fades on the same beat as well, so a partly-grown frame isn't a
   // hard-edged shrunken card.
   if (tooltipDockMobile(fold8TooltipEl)) {
-    const g = fold8TooltipGrowEase(growT);
+    // × the handover collapse: the frame shuts at its @fold7 spot and reopens at
+    // the dock rather than flying between the two (tooltipDockHandoverScale).
+    const g = fold8TooltipGrowEase(growT) * p9Ease(tooltipDockHandoverScale());
     fold8TooltipEl.style.transform = `translateX(-50%) scale(${g})`;
     // NOT multiplied by (1 - shrinkT), unlike the desktop scale below: when
     // the square lands on its real dot the docked frame does not leave. It

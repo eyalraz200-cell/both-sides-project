@@ -45,6 +45,7 @@
 // are one decision — raise this and the fade runs under the spread.
 const FOLD13_FADE_SPAN = 0.5;
 
+let fold13TooltipFaded = false;
 function updateFold13() {
   const tTrigger = fold13Trigger.currentT();
   const eTrigger = 1 - Math.pow(1 - tTrigger, 3); // ease-out cubic
@@ -113,7 +114,14 @@ function updateFold13() {
   // which sat fully visible through @fold14 while everything around it faded.
   // Inline opacity only (the base rule has no opacity transition), cleared at
   // eScroll=0 like the rest so its normal show/hide styling takes back over.
-  if (fold8TooltipEl) fold8TooltipEl.style.opacity = opacityVal;
+  // Cleared ONCE, on the way back from a fade — never re-cleared while eScroll
+  // sits at 0. This runs on every scroll tick from the very top of the page,
+  // and an unconditional '' wiped @fold7's grow-in opacity (fold8AdvanceSequence)
+  // between frames, so the docked frame strobed at full opacity as it opened.
+  if (fold8TooltipEl && (eScroll > 0 || fold13TooltipFaded)) {
+    fold8TooltipEl.style.opacity = opacityVal;
+    fold13TooltipFaded = eScroll > 0;
+  }
   // page12TitleCardEl (the fold13 card) stays visible throughout.
   // fold6SquareEls' own opacity (updateGroups) reads p9.fold13OutT just set
   // above to fade a still-legit square out with the rest of the legit grid —
