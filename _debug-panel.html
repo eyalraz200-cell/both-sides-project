@@ -1180,8 +1180,8 @@
      The panel is looked at for hours at a time, so its own palette is worth
      picking rather than inheriting. Every rule above reads from the tokens in
      :root, so a theme is only a table of values — nothing else has to change.
-     Keys 1-9 and then 0 pick a palette (0 = the default); q w e r t y pick a
-     type style. Both persist. */
+     Keys 1-9 pick a palette; q w e t y u pick a type style (r is the page
+     reload). Both persist. */
   var PALETTES = [
     { id: 'charcoal', label: 'charcoal', v: {
       '--bg':'#1e1f22','--bg-rail':'#26272b','--bg-el':'#32343a','--bg-el-hi':'#3c3f46',
@@ -1246,13 +1246,13 @@
     { id: 'Mono tight', label: 'Mono tight', key: 'e', v: {
       '--font': MONO, '--fs': '11px', '--lh': '1.3',
       '--label-tt': 'none', '--label-cap': 'uppercase', '--label-ls': '0', '--label-fw': '400' } },
-    { id: 'Sans', label: 'Sans', key: 'r', v: {
+    { id: 'Sans', label: 'Sans', key: 't', v: {
       '--font': SANS, '--fs': '13px', '--lh': '1.45',
       '--label-tt': 'none', '--label-cap': 'uppercase', '--label-ls': '0', '--label-fw': '500' } },
-    { id: 'Sans bold', label: 'Sans bold', key: 't', v: {
+    { id: 'Sans bold', label: 'Sans bold', key: 'y', v: {
       '--font': SANS, '--fs': '12.5px', '--lh': '1.5',
       '--label-tt': 'none', '--label-cap': 'uppercase', '--label-ls': '.01em', '--label-fw': '600' } },
-    { id: 'All lowercase', label: 'All lowercase', key: 'y', v: {
+    { id: 'All lowercase', label: 'All lowercase', key: 'u', v: {
       '--font': MONO, '--fs': '12px', '--lh': '1.5',
       '--label-tt': 'lowercase', '--label-cap': 'lowercase', '--label-ls': '0', '--label-fw': '400' } },
   ];
@@ -1370,16 +1370,19 @@
     document.querySelectorAll('.cp.open').forEach(function (o) { o.classList.remove('open'); });
   });
 
-  /* The LOOK picker's keys. Digits 1-9 pick a palette and q w e r t y a type
+  /* The LOOK picker's keys. Digits 1-9 pick a palette and q w e t y u a type
      style — but only when the open harness has not claimed that key for a mode
      or a toggle, because a harness's own keys always win. `0` is never taken:
-     it belongs to "clear the modes". Palettes past the ninth are click-only. */
+     it belongs to "clear the modes". Palettes past the ninth are click-only.
+     `r` RELOADS THE PAGE being driven (the site, not this tab) — the one-off
+     "show me the latest" without switching auto-reload on. */
   addEventListener('keydown', function (e) {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (/^(INPUT|TEXTAREA)$/.test(e.target.tagName || '')) return;
     var k = e.key, d = active && active.desc;
     if (d && (d.modes.some(function (m) { return m.key === k; })
            || d.toggles.some(function (t) { return t.key === k; }))) return;
+    if (k === 'r') { disc.postMessage({ t: 'reloadnow' }); flash('reloading the page'); behindEl.textContent = ''; return; }
     if (/^[1-9]$/.test(k) && PALETTES[Number(k) - 1]) {
       look.pal = PALETTES[Number(k) - 1].id; applyLook(); return;
     }
