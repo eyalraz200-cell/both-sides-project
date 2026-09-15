@@ -304,11 +304,10 @@ cap; `P9_LEGIT_RISE_PAD` under it. `"pitch"` (**picked**) — every legit dot ti
 keeps its height and the legit cell shrinks, in quarter-device-px steps, until the
 pack fits (dot floor `P9_LEGIT_PITCH_MIN_SQ` 1px). How the shrunk dots sit
 (`P9_LEGIT_PITCH_FILL`, **shipped `"fill"`**): `"shared"` — one cell for both camps,
-packed from the divider; `"fill"` — each camp its own cell (`plan.cells[side]`), and the
+packed from the divider; `"fill"` — **one cell for both camps** (always the same dot size and tiers on both sides: the smaller of the two camps' fill cells, so the busier camp fills its half and the other keeps space at its outer edge), and the
 pack is **rotated**: every visible row from the divider to the bottom edge is filled
-(a flat bottom) and the pack grows outward; the cell is the smallest at which it still
-reaches the screen edge, so the half fills end to end and any leftover runs past the
-edge, clipped; `"jumble"` — on the grid, never overlapping, gapped like the flat
+(a flat bottom) and the pack grows outward; each camp's fill cell is the smallest at which its pack still
+reaches the screen edge; any leftover runs past the edge, clipped; `"jumble"` — on the grid, never overlapping, gapped like the flat
 strip: a slightly finer cell (`JUMBLE_AIR` 0.8 of the area), each block takes a free
 n×n run at a shuffled spot (biggest first); anything with no free run goes below the
 edge, out of view. `"crowd"` — only dots with a crowd figure (tier ≥ 1) tier,

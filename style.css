@@ -3496,8 +3496,13 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      section sits ON TOP of the canvas — that's the element the finger actually
      lands on, so suppressing it on the canvas alone isn't enough. It's the only
      section listed; the rest of the article keeps normal selection. */
+  /* #page-6 / #page-7 (@fold7 / @fold8): the reader's own press-and-hold on
+     the 8 squares (fold7Hold*, js/groups.js) is live through both, and a hold
+     there landed on the title card's text and selected it. */
   .graphic-col,
   #canvas,
+  #page-6,
+  #page-7,
   #page-8 {
     -webkit-touch-callout: none;
     -webkit-user-select: none;

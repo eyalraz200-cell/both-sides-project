@@ -1030,6 +1030,11 @@ var P9_LEGIT_PITCH_FILL    = "fill";
 var P9_LEGIT_CROWD_GAP     = 4;        // crowd: px between the band and the shuffled dots
 
 function p9LegitTierPlan(W, H) {
+  // Always the canvas's own size: callers pass window.innerWidth (scrollbar
+  // included) or the canvas width depending on where they sit, and a key that
+  // flips between the two re-solved the plan every other call — which after a
+  // drop re-sized the strip (visible on the right camp).
+  if (typeof canvas !== "undefined" && canvas.clientWidth) { W = canvas.clientWidth; H = canvas.clientHeight; }
   if (!p9ScopeTiered() || typeof currentPage === "undefined" || currentPage !== 12) return null;
   if (!p7.ready || !p7.leftEvents) return null;
   const mobile = isMobile();
@@ -1044,14 +1049,40 @@ function p9LegitTierPlan(W, H) {
   p9SyncLegitRank();
   if (p9.legitTierPlan && p9.legitTierPlan.key === key) {
     const held = p9.legitTierPlan.plan;
-    let complete = true;
+    // A dot that is legit now but has no slot (its category was already extreme
+    // when the tiers went on, and came back) is ADDED into a free slot — a hole
+    // a dropped dot left, nearest the centre first, else past the outer edge —
+    // so nothing already placed moves or resizes.
     for (const side of ["left", "right"]) {
-      for (const e of p9.legitRank?.[side]?.keys() ?? []) {
-        if (!held.packs[side]?.pos.has(e)) { complete = false; break; }
+      const pack = held.packs[side];
+      if (!pack) continue;
+      const legitNow = [...(p9.legitRank?.[side]?.keys() ?? [])];
+      const missing = legitNow.filter(e => !pack.pos.has(e));
+      if (!missing.length) continue;
+      const rows = Math.max(1, pack.visRows || pack.rows || 1);
+      const occ = new Set();
+      for (const e of legitNow) {
+        const P = pack.pos.get(e);
+        if (!P) continue;
+        for (let dc = 0; dc < P.n; dc++) for (let dr = 0; dr < P.n; dr++) occ.add((P.c + dc) * 4096 + P.r + dr);
       }
-      if (!complete) break;
+      const cellsHeld = e => Math.min((P9_LEGIT_TIER_CELLS[p7BulgeTier(e)] || 1), P9_SCOPE_TIER_CAP, rows);
+      for (const e of missing) {
+        const n = cellsHeld(e);
+        let done = false;
+        for (let c = 0; !done && c < 4096 - n; c++) {
+          for (let r = 0; !done && r + n <= rows; r++) {
+            let ok = true;
+            for (let dc = 0; ok && dc < n; dc++) for (let dr = 0; ok && dr < n; dr++) if (occ.has((c + dc) * 4096 + r + dr)) ok = false;
+            if (!ok) continue;
+            for (let dc = 0; dc < n; dc++) for (let dr = 0; dr < n; dr++) occ.add((c + dc) * 4096 + r + dr);
+            pack.pos.set(e, { c, r, n });
+            done = true;
+          }
+        }
+      }
     }
-    if (complete) return held;
+    return held;
   }
 
   const M     = p9Metrics();
@@ -1194,7 +1225,7 @@ function p9LegitTierPlan(W, H) {
           if (packRotated(side, mid).extent >= halfCols(mid)) hi = mid; else lo = mid;
         }
         cell = q(hi);
-        packs[side] = packRotated(side, cell);
+        packs[side] = null;   // packed below, once both camps' cells are known
       } else if (P9_LEGIT_PITCH_FILL === "jumble" && lists[side].length) {
         cell = q(Math.sqrt(areaPx * JUMBLE_AIR / Math.max(1, need("left"), need("right"))));
         packs[side] = jumbleSide(side, cell);
@@ -1203,6 +1234,19 @@ function p9LegitTierPlan(W, H) {
       }
       cells[side] = cell;
       sqs[side] = sqFor(cell);
+      if (packs[side]) packs[side].visRows = availRows(cell);
+    }
+    // Both camps ALWAYS share one size: the smaller of the two fill cells, so
+    // the busier camp fills its half end to end and the other keeps the same
+    // dot size (with space left at its outer edge) — never two different sizes.
+    if (P9_LEGIT_PITCH_FILL === "fill") {
+      const one = Math.min(...["left", "right"].filter(sd => lists[sd].length).map(sd => cells[sd]), cell0);
+      for (const side of ["left", "right"]) {
+        cells[side] = one;
+        sqs[side] = sqFor(one);
+        packs[side] = packRotated(side, one);
+        packs[side].visRows = availRows(one);
+      }
     }
     plan = { mode: "pitch", rise: 0, cell: shared, sq: sqFor(shared), cells, sqs, packs };
   } else if (P9_LEGIT_ROOM === "crowd") {
