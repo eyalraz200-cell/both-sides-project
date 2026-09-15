@@ -21,7 +21,7 @@ to fixed — a 50vh sticky was still mid-viewport at that moment and everything 
 inside it (the header) jumped to the top. The gate must stay *after* the stick point, or it
 would hold scroll where the card never pins and the fold deadlocks.
 
-- `.page9-title-row` — the normal scrolling title card plus `.page9-header-subtitle`
+- `.page9-title-row` — the normal scrolling title card plus `.page9-header-subtitle` (desktop: weight 400, `rgba(0,0,0,0.35)`; mobile keeps 600 / 0.45; the empty zone hint is `rgba(0,0,0,0.25)` on desktop, 0.5 on mobile)
   — whose text is set from JS (`p9SyncSubtitle`, re-run on resize), because the gesture it
   names differs by breakpoint: `P9_SUBTITLE_DESKTOP` "גררו סוגי פעולות הנחשבות
   קיצוניות בעיניכם" / `P9_SUBTITLE_MOBILE` "סמנו פעולות הנחשבות לקיצוניות בעיניכם" — «סמנו»
@@ -763,7 +763,7 @@ was touched**.
   to its contents on the first drop and the outline collapses onto the pills; V2 keeps one
   stable frame that pills fill up inside. Safe because the reserve is sized for all ten
   regardless (see the bullet below) and `p9ExtremeTopY` budgets for it either way.
-  The state rules only deepen the stroke (0.08 always-on → 0.18 empty/pill-hover → 0.22 dragging), never
+  The state rules only deepen the stroke (0.08 always-on → 0.1 empty/pill-hover → 0.22 dragging), never
   clear it. **Fill escalates in three small steps** of opaque near-white walking toward the
   panel's lilac, each darker than the last, so a pill actually held over the zone reads as the
   darkest state: empty/pill-hover `rgb(245,245,251)` → dragging `rgb(239,238,248)` → dragover
