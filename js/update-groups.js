@@ -46,12 +46,19 @@ function updateGroups() {
   // removed @fold4 played (see _stash-fold3.md); with nothing left to merge,
   // the whole trigger is just the glide.
   const e6 = fold6Trigger.currentT();
-  // The mobile FLY hand-off's own progress: p7Ease (cubic OUT) over the same
-  // raw trigger, per explicit instruction that the flight should have less
-  // ease-in — it leaves at speed and brakes into the panel. Everything else on
-  // this trigger (the un-type windows, the note fade, desktop's glide) stays on
-  // the house sine in-out e6. Eased fresh from RAW, never a re-ease of e6.
-  const e6Fly = p7Ease(fold6Trigger.currentRaw());
+  // The mobile FLY hand-off's own progress: p7Ease (cubic OUT), per explicit
+  // instruction that the flight should have less ease-in — it leaves at speed
+  // and brakes into the panel. Everything else on this trigger (the un-type
+  // windows, the note fade, desktop's glide) stays on the house sine in-out e6.
+  //
+  // It starts LATE, at fold6MFlyStart(): the sheet opens first and the rows only
+  // then fly into it (explicit instruction). A {start, len} window on the RAW
+  // progress, re-eased fresh inside the window — the same slice model @fold2 and
+  // @fold3 use, and never a re-ease of e6.
+  const flyStart = isMobile() ? fold6MFlyStart() : 0;
+  const flyLen   = isMobile() ? fold6MFlyLen()   : 1;
+  const e6Fly = p7Ease(Math.max(0, Math.min(1,
+    (fold6Trigger.currentRaw() - flyStart) / flyLen)));
   // @fold3 (#page-2): 3 beats on fold3Trigger's one timeline — shrink the
   // fillers, fly the survivors into one vertical column per camp, type the
   // labels (see FOLD3_BEATS). Same {start,len} window model as @fold2's, and
@@ -402,7 +409,12 @@ function updateGroups() {
     // ...but NOT in the fly variant: there the label keeps every character all
     // the way in — it is the same row arriving somewhere else, not a row being
     // spelled backwards out of existence.
-    const labelUntypeT = (fold6MobileLegend && g.fold6 && !flying)
+    // Gated on the variant being ON, not on `flying` (which is `e6Fly > 0`).
+    // Since the flight was given a late start so the sheet can open first, the
+    // rows sat at e6Fly 0 for the opening beat — and on the old guard that read
+    // as "not flying", so they spent it spelling themselves backwards before
+    // setting off.
+    const labelUntypeT = (fold6MobileLegend && g.fold6 && !fold6MFlyEnabled())
       ? 1 - p9Ease(Math.max(0, Math.min(1,
           (e6 - (1 - untypeStart - typeSpan)) / typeSpan)))
       : 1;
@@ -802,7 +814,16 @@ function updateGroups() {
   // start at the same tempo it gained them. Reusing FOLD2_BEATS' own windows
   // (rather than a second pair of constants) means retiming the entrance
   // automatically retimes the exit to match.
+  // On MOBILE the two share one window instead, so the phase and the length of
+  // the un-type can be set directly rather than inherited from whenever each
+  // camp happened to type in (FOLD6_HEAD_UNTYPE_AT / _MS, js/groups.js). The
+  // headers are the one thing still leaving by un-typing at this fold, so when
+  // they go and how long they take is worth its own knob.
   const fold6BeatT = (b) => {
+    if (fold6MobileLegend) {
+      const start = fold6HeadUntypeStart(), len = fold6HeadUntypeLen();
+      return p9Ease(Math.max(0, Math.min(1, (fold6Trigger.currentRaw() - start) / len)));
+    }
     const w = FOLD2_BEATS[b];
     return p9Ease(Math.max(0, Math.min(1,
       (e6 - (1 - w.start - w.len)) / w.len)));
@@ -1258,7 +1279,12 @@ function updateGroups() {
       const sy = cH / 2 + FOLD6_SQUARES_OFFSET.reduce((a, o) => a + o.dy, 0) / n + 4 + FOLD7_CURSOR_START_DY;
       const ex = cW / 2 + FOLD6_SQUARES_OFFSET[0].dx + 4;
       const ey = cH / 2 + FOLD6_SQUARES_OFFSET[0].dy + 4;
-      const ct = fold7CursorTrigger.currentT();
+      // Mobile: the head of the trigger is the start rest; the glide eases
+      // fresh over the rest of it (house multi-beat rule).
+      const cMs = cRaw * fold7CursorTotalMs();
+      const ct = mobileDemo
+        ? p9Ease(Math.max(0, Math.min(1, (cMs - fold7TouchRestMs()) / Math.max(1, FOLD7_CURSOR_MS))))
+        : fold7CursorTrigger.currentT();
       const x = sx + (ex - sx) * ct - FOLD7_CURSOR_TIP[0] * FOLD7_CURSOR_SIZE_PX * 0.71;
       const y = sy + (ey - sy) * ct - FOLD7_CURSOR_TIP[1] * FOLD7_CURSOR_SIZE_PX;
       const now = performance.now();
@@ -1291,9 +1317,16 @@ function updateGroups() {
       }
       const vis = Math.min(1, cRaw / FOLD7_CURSOR_FADE_SPAN) * outK * (1 - fold9Trigger.currentRaw());
       if (mobileDemo) {
-        // No hold-then-fade on mobile: the disc stays until the reader's own
-        // press-and-hold dismisses it (or @fold8's fly takes the squares).
-        const mVis = String(Math.min(1, cRaw / FOLD7_CURSOR_FADE_SPAN) * (1 - fold9Trigger.currentRaw()));
+        // Fades in over the start of its rest, rests on the dot after landing
+        // (FOLD7_TOUCH_END_REST_MS), then fades (FOLD7_TOUCH_FADE_MS).
+        let endK = 1;
+        if (cRaw >= 1) {
+          const since = now - fold7CursorArrivedAt - FOLD7_TOUCH_END_REST_MS;
+          endK = 1 - Math.max(0, Math.min(1, since / Math.max(1, FOLD7_TOUCH_FADE_MS)));
+          if (endK > 0) requestAnimationFrame(() => updateGroups());
+        }
+        const inK = p9Ease(Math.min(1, cMs / Math.max(1, FOLD7_TOUCH_FADE_IN_MS)));
+        const mVis = String(inK * endK * (1 - fold9Trigger.currentRaw()));
         fold7TouchEl.style.opacity = mVis;
         fold7LoupeEl.style.opacity = mVis;
       } else {

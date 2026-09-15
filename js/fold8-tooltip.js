@@ -182,10 +182,19 @@ function tooltipDockTransform() {
 }
 function tooltipDockHandoverScale() {
   if (typeof fold9FlyTrigger === "undefined") return 1;
+  // An event IS in the frame — the picker has one open, or @fold7's demo is
+  // still running. Full size, whatever the fly is doing.
+  if (typeof p7Inspect !== "undefined" && p7Inspect.event) return 1;
   const t = fold9FlyTrigger.currentT();
-  if (t <= 0 || t >= 1) return 1;
+  if (t <= 0) return 1;
+  // ...and it does NOT grow back. The frame collapses at its @fold7 spot and
+  // STAYS collapsed for the whole of the timeline: there is nothing left for it
+  // to say at rest — the «לחצו והחזיקו» line moved out to its own band at the
+  // top of the screen (p7HintBandInit, page7.js) — so the old second phase grew
+  // an EMPTY frame back in at the bottom of the timeline and left it sitting
+  // there. It reappears only when a dot is actually picked, above.
   const H = TOOLTIP_DOCK_HANDOVER;
-  return t < H ? 1 - t / H : (t - H) / (1 - H);
+  return t < H ? 1 - t / H : 0;
 }
 
 // Picker collision dodge — while the loupe would overlap the docked frame, the
@@ -221,6 +230,17 @@ const P7_TIP_AVOID_DROP_PX = 32;
 
 function tooltipAvoidPx(el, top) {
   if (!p7TipAvoidActive) return top;
+  // @fold7 (the reader's own hold on the 8 squares, js/groups.js): the frame
+  // sits just above the squares, where the lifted glass would cover it, so it
+  // dodges to just BELOW them for the length of the hold.
+  if (typeof fold7Hold !== "undefined" && fold7Hold.active && typeof fold6SquareEls !== "undefined") {
+    let bottom = -Infinity;
+    for (const { sq } of fold6SquareEls) {
+      const r = sq.getBoundingClientRect();
+      if (r.height) bottom = Math.max(bottom, r.bottom);
+    }
+    if (bottom > -Infinity) return bottom + TOOLTIP_DOCK_SQUARES_GAP_PX;
+  }
   const H = window.innerHeight;
   const box = typeof sbbTimeline === "function" ? sbbTimeline(H) : null;
   if (typeof currentPage !== "undefined" && currentPage === 12) {

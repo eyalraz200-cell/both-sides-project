@@ -737,7 +737,13 @@ real timeline in and flies those squares out to their real dots — the example 
 **shuts in place** at the @fold7 spot over the first half of the beat, and the docked bar
 **grows back in** at the bottom over the second. `tooltipDockHandoverScale()` is that
 1 → 0 → 1 ramp, eased through `p9Ease` into the frame's scale;
-`TOOLTIP_DOCK_HANDOVER` (**0.5**) is where they meet. `tooltipDockTopPx` simply **switches**
+`TOOLTIP_DOCK_HANDOVER` (**0.5**) is where they meet.
+
+**It does NOT grow back.** Past the handover the scale stays **0** for the whole of the
+timeline: there is nothing left for the frame to say at rest — the «לחצו והחזיקו» line moved out
+to its own band at the top of the screen — so the old second phase grew an *empty* frame back in
+at the bottom of the timeline and left it sitting there. It reappears only when a dot is actually
+picked: `tooltipDockHandoverScale()` returns 1 outright while `p7Inspect.event` is set. `tooltipDockTopPx` simply **switches**
 between the two spots at that point — the frame is scaled to nothing there, so there is
 nothing visible to jump. Two strict phases, never blended. Fully reversible on a scroll up.
 
@@ -1943,8 +1949,12 @@ plaque takes it back when it arrives**, by which point the camera has the field'
 at the box edge anyway. The **squares** get `p7VertSquareClipExtra()` =
 `p7ZoomOutT × bonus` — nothing on the zoomed-in scrub, since dots printing under the axis's
 own end read as debris floating below the timeline, and the full band under the squash, where
-the whole field is solved against the wider box. The **plaque** layer passes
-`p7AxisLastPlaqueOverhangPx()` directly. The headline slot draws
+the whole field is solved against the wider box. The **plaque** layer passes the same
+`p7VertLineClipExtra(H)` the line does. It used to pass `p7AxisLastPlaqueOverhangPx()` — the box
+plus the reserved plaque band, 828 of 852 — which cut the bottom off any card the scrub carried
+into that last strip and left a paper-coloured edge across it. The reserve governs where the
+LAST plaque may come to rest, not where a passing one may be drawn, and there is nothing below
+the strip for a card to collide with. The headline slot draws
 unclipped (so the top-slot plaque sits over the passing dots), and the 8 @fold8 DOM
 squares follow the camera through `p7TargetForActorOccurrence` but are DOM, so they pass
 under the chip the same way. At `zoom: 1` nothing overflows and no clip is applied — the
@@ -1995,10 +2005,17 @@ progress, so it means exactly what it says at any viewport height.
 **The axis EVENTS ride the wipe too** (mobile only). The wipe's own clip is restored *before*
 `p7DrawAxisEventsVertical` runs, so every dot and card used to be there from the first frame of
 the build-in and only the line drew top to bottom. `p7AxisIntroEdgeY(H)` — the same expression
-the clip uses, so it is exactly in step with the drawn edge — feeds `p7AxisIntroReveal(y, H)`,
-a 0→1 ramp over `P7_AXIS_INTRO_REVEAL_PX` (**26px**) of wipe travel past that y. It multiplies
-the marker's **radius** (never its alpha — dots arrive by size) and the card's presence, so the
-dots grow in and the plaques open as the line reaches them. Desktop keeps its existing arrival.
+the clip uses, so it is exactly in step with the drawn edge — feeds
+`p7AxisIntroReveal(i, y, H)`, which multiplies the marker's **radius** (never its alpha — dots
+arrive by size) and the card's presence, so the dots grow in and the plaques open as the line
+reaches them. Desktop keeps its existing arrival.
+
+**It is a wall-clock beat PER EVENT** — `P7_AXIS_INTRO_DOT_MS` (**480**, matching
+`p7AxisCardMs`), latched the frame the edge passes that dot (`p7AxisIntroAt[i]`) — and not a ramp
+over a window of wipe travel. That window was 26px, which the wipe crosses in a couple of frames,
+so the dot and its card **snapped** into existence instead of arriving. Each now grows and
+expands the way it does when the FILL reaches it, which is what the arrival is meant to read as.
+The latch clears when the edge is above the dot again, so scrolling out and back in replays it.
 
 > **Removed — don't reintroduce:** `P7_AXIS_INTRO_AT_MOBILE` / `p7AxisIntroAt()`, a knob that
 > made this a tunable threshold on a scroll beat's raw progress (`_debug-axis-intro.js`, since
@@ -2141,9 +2158,14 @@ read an event there:
 **The squashed view spreads across the whole box, and past it.** `p7ZoomOutBottomReserve()` is
 `P7_ZOOMOUT_FIT_BOTTOM_GAP_PX` = **0** — nothing hangs below the axis end there, so any reserve
 is height the whole-timeline view cannot get back. It also *gains*
-`p7ZoomOutBottomBonus()` = `p7AxisLastPlaqueOverhangPx()` (**60px** at 393×852): the box holds
-that band back for the last `mobileBelow` plaque, which the squashed view never draws. The solve opens by it, or the axis end is shaved off exactly where it was gained. Measured at 393×852: field **63 → 752**
-against boxTop 54 / boxBottom 692 — the line runs right down to the tooltip's own gap. The first-event headroom is handed back too: `p7VertYearHeaderDrawH()` fades
+`p7ZoomOutBottomBonus()` — the last `mobileBelow` plaque's overhang, which the box holds back but
+the squashed view never draws — **clamped to the closed מקרא bar**. That bar hugs the bottom of
+the screen at this fold and the full 60px overhang ran the squashed field's end straight into it,
+so the bonus is `min(overhang, H − barH − SBB_TIMELINE_MOBILE_GAP_PX − boxBottom)`, measured off
+the live element (`p7MLegendBarH()`, 0 when the bar is anywhere else). At 393×852 that is **30px**,
+not 60: field end **798** against a bar top of 816 — the same 18px of air the box keeps against
+everything else. The solve opens by it, or the axis end is shaved off exactly where it was gained. Measured at 393×852: field **83 → 798**, between the hint's rule (42) and the מקרא bar (816),
+with `p7ZoomOutFitTop()` 60 and boxBottom 768. The first-event headroom is handed back too: `p7VertYearHeaderDrawH()` fades
 `P7_VERT_FIRST_EV_HEADROOM_PX` out with the beat, so «2023» ends up sitting directly above the
 axis instead of a plaque-sized gap above it. That is a **draw-path** header, deliberately
 separate from `p7VertYearHeaderH()` — the latter feeds `p7SolveVerticalSq`'s fit test and has
@@ -2312,14 +2334,18 @@ z-index — at `z-index: 999`, under the docked frame.
   line straight through it. The offset is `p7MLegendBarH()`, measured off the live element
   because the bar is painted by `fold6MLegendPaintCard` and moves with the timeline's own box —
   it returns 0 whenever the bar is anywhere but the bottom.
-- **It types, and only after the axis has finished drawing in.** `p7HintTypeT()` is a
-  wall-clock 0→1 over `P7_BAND_TYPE_MS` (**900**) that starts the first frame
-  `p7AxisIntroT() >= 1`, and resets to 0 whenever the axis isn't shown — so scrolling back up
-  un-types it and the next arrival plays the line again. It names a gesture on a timeline that
-  isn't drawn yet while the wipe is running, so arriving with it read as part of the same
-  animation rather than as the instruction that follows it. (`P7_BAND_TYPE_MS`, **not**
-  `P7_HINT_TYPE_MS` — that name is @fold13's own hint trigger in js/groups.js. Two lines, two
-  clocks; the spans are `p7BandSpans` against their `p7HintSpans`.)
+- **It types once the fill reaches 2024.** `p7HintTypeT()` is a wall-clock 0→1 over
+  `P7_BAND_TYPE_MS` (**900**) gated on `p7AxisShouldShow() && p7HintFillReachedYear()`, which
+  compares `p7CurRow()` against the layout's own **`v.yearRow.get(P7_HINT_TYPE_YEAR)`** — the row
+  the «2024» label is drawn at, not a date-string compare, so the two cannot drift apart. It
+  resets to 0 whenever the axis isn't shown, so scrolling back up un-types it and the next
+  arrival plays the line again. Measured at 393×852: row 2024 is **85**, and the line holds at 0
+  through curRow 12…83, then runs as the fill crosses it.
+  **Deliberately not tied to the axis's build-in.** Three earlier rules were — `introT >= 1`, then
+  the wipe's edge clearing the bottom of the screen, then the first scroll of the timeline — and
+  each landed the instruction before the reader had anything to hold. (`P7_BAND_TYPE_MS`, **not** `P7_HINT_TYPE_MS` — that name is
+  @fold13's own hint trigger in js/groups.js. Two lines, two clocks; the spans are `p7BandSpans`
+  against their `p7HintSpans`.)
 - **`P7_HINT_Y_MOBILE`** (**4**) and **`P7_FIELD_Y_MOBILE`** (**−40**) are the two vertical
   nudges, baked from `_debug-hint-band.js` on 2026-09-15, both **positive = down the screen** whichever edge the thing is anchored to, so they read the same
   way. The hint's nudge comes off the box reserve too (`p7HintBandTopH` / `p7HintBandBottomH`),

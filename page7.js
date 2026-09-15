@@ -914,7 +914,23 @@ function p7ZoomOutBottomReserve() { return P7_ZOOMOUT_FIT_BOTTOM_GAP_PX; }
 // The box holds back p7AxisLastPlaqueOverhangPx for the last plaque — but the
 // squashed view draws no plaques (`zoomFade`), so that band is dead height the
 // whole-timeline view can have back. Solved against here and unclipped to match.
-function p7ZoomOutBottomBonus() { return p7AxisLastPlaqueOverhangPx(); }
+//
+// ...as far as the CLOSED מקרא BAR, and no further. That bar hugs the bottom of
+// the screen at this fold, and the full overhang ran the squashed field's end
+// straight into it. It is the only thing down there the whole-timeline view has
+// to clear, so it is measured (p7MLegendBarH, 0 when the bar is anywhere else)
+// rather than assumed, and keeps the same SBB_TIMELINE_MOBILE_GAP_PX of air the
+// box keeps against everything else.
+function p7ZoomOutBottomBonus() {
+  const plaque = p7AxisLastPlaqueOverhangPx();
+  if (!plaque) return 0;
+  const bar = p7MLegendBarH();
+  if (!bar) return plaque;
+  const H   = viewportH();
+  const gap = typeof SBB_TIMELINE_MOBILE_GAP_PX === "undefined" ? 18 : SBB_TIMELINE_MOBILE_GAP_PX;
+  const room = H - bar - gap - Math.round(H * sbbTimeline(H).bottom);
+  return Math.max(0, Math.min(plaque, room));
+}
 // The squashed layout: the SAME row plan at a uniformly smaller cell.
 //
 // The squash used to compress y only, leaving the cell anisotropic — at 393×852
@@ -3871,20 +3887,33 @@ let p7AxisOutroFromT = 0;    // introT captured at the moment the reverse began
 function p7AxisIntroEdgeY(H) {
   return p7VertTopY(H) + p7Ease(p7AxisIntroT()) * p7VertFieldLen();
 }
-// 0 -> 1 as that edge passes `y`. The axis EVENTS ride this so they arrive with
-// the line instead of all at once: the wipe's clip is restored before
-// p7DrawAxisEventsVertical runs, so without it every dot and card was simply
-// there the instant the build-in started, and only the line drew top to bottom.
+// 0 -> 1 as the build-in wipe reaches event `i` — its ARRIVAL, on its own beat.
+//
+// The axis EVENTS ride this so they arrive with the line instead of all at once:
+// the wipe's clip is restored before p7DrawAxisEventsVertical runs, so without it
+// every dot and card was simply there the instant the build-in started, and only
+// the line drew top to bottom.
+//
+// It is a WALL-CLOCK beat per event, latched the frame the edge passes the dot —
+// not a ramp over a window of wipe travel. That window was 26px, which the wipe
+// crosses in a couple of frames, so the dot and its card snapped into existence
+// instead of arriving. Now each one grows and expands over P7_AXIS_INTRO_DOT_MS
+// the way it does when the FILL reaches it, which is what the arrival is
+// supposed to read as. The latch clears when the edge is above the dot again, so
+// scrolling back out and in replays it.
 //
 // MOBILE ONLY — desktop keeps its existing arrival. Multiplied into the marker's
 // RADIUS, never its alpha: dots arrive and leave by size (see the hard rules).
-const P7_AXIS_INTRO_REVEAL_PX = 26;   // px of wipe travel a dot takes to grow in
-function p7AxisIntroReveal(y, H) {
+const P7_AXIS_INTRO_DOT_MS = 480;   // one event's arrival, matching p7AxisCardMs
+const p7AxisIntroAt = [];
+function p7AxisIntroReveal(i, y, H) {
   if (!isMobile()) return 1;
-  const t = p7AxisIntroT();
-  if (t >= 1) return 1;
-  if (t <= 0) return 0;
-  return Math.min(1, Math.max(0, (p7AxisIntroEdgeY(H) - y) / P7_AXIS_INTRO_REVEAL_PX));
+  if (!p7AxisShouldShow()) { p7AxisIntroAt[i] = null; return 0; }
+  if (p7AxisIntroEdgeY(H) < y) { p7AxisIntroAt[i] = null; return 0; }
+  if (p7AxisIntroAt[i] == null) p7AxisIntroAt[i] = performance.now();
+  const t = Math.min(1, (performance.now() - p7AxisIntroAt[i]) / P7_AXIS_INTRO_DOT_MS);
+  if (t < 1) p7StartAnimLoop();
+  return t;
 }
 function p7AxisIntroT() {
   if (p7AxisOutroStart !== null) {
@@ -5389,7 +5418,7 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
       : P7_AXIS_MARKER_RADIUS * P7_AXIS_MARKER_GROW_FROM;
     const markerRadius = (p7AxisMarkerUnreached()
         ? unreachedR + (restR - unreachedR) * state.reachedT
-        : restR * state.reachedT) * outroShrink * p9Ease(p7AxisIntroReveal(y, H));
+        : restR * state.reachedT) * outroShrink * p9Ease(p7AxisIntroReveal(i, y, H));
     // No (1 - p7ZoomOutT) here: the axis dots STAY on the squashed view, at full
     // size. They are the only handle the whole-timeline view has — tapping one
     // opens its card (p7AxisTapHit) — and shrinking them away left nothing to aim
@@ -5841,7 +5870,7 @@ function p7DrawVertDotCards(ctx, W, H, now) {
     // ...and the build-in wipe gates them the same way the dots are gated, so a
     // card opens as the line reaches it rather than being there from the first
     // frame of the wipe (p7AxisIntroReveal). Mobile only.
-    const introIn = p9Ease(p7AxisIntroReveal(p7RowY(v.events[i].row, H), H));
+    const introIn = p9Ease(p7AxisIntroReveal(i, p7RowY(v.events[i].row, H), H));
     const zoomFade = Math.max(1 - p7ZoomOutT, st.hoverT) * introIn;
     if (zoomFade <= 0) return 0;
     // A `mobileAbove` plaque is PINNED: it sits above its dot from the start and
@@ -5885,10 +5914,13 @@ function p7DrawVertDotCards(ctx, W, H, now) {
   const axisX = Math.round(W / 2);
   const maxW = onSide ? Math.min(V.sideWrapPx, W / 2 - SC.gap - 2 * SC.padX - 8)
     : Math.min(V.type.maxWidth, W - 2 * p7.leftX0 - 2 * SC.padX);
-  // The plaque layer clips to the box PLUS the reserved plaque band — see
-  // p7VertClipToBox. Only this layer: dots and the axis line still stop at the
-  // box edge.
-  const clipped = p7VertClipToBox(ctx, W, H, p7AxisLastPlaqueOverhangPx());
+  // The plaque layer clips where the axis LINE does — the bottom of the screen.
+  // It used to stop at the box plus the reserved plaque band (boxBottom + 60,
+  // i.e. 828 of 852), which cut the bottom off any card the scrub carried into
+  // that last strip and left a paper-coloured edge across it. The reserve is
+  // about where the LAST plaque may rest, not about where a passing one may be
+  // drawn; there is nothing below here for a card to collide with.
+  const clipped = p7VertClipToBox(ctx, W, H, p7VertLineClipExtra(H));
   ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
@@ -6389,8 +6421,21 @@ function p7HintBandInit() {
 // 0 -> 1 over P7_BAND_TYPE_MS, started the first frame the axis build-in is done
 // and reset whenever it is not, so scrolling back up un-types it and the next
 // arrival plays the line again.
+// WHEN the hint types: once the fill has reached **2024**.
+//
+// Read off the layout's own year row (`v.yearRow`), not a date string compare, so
+// it is the same boundary the «2024» label is drawn at and cannot drift from it.
+// Not tied to the axis's build-in at all — three earlier rules were (the whole
+// wipe, then the visible part of it, then the first scroll of the timeline), and
+// each made the instruction land before the reader had anything to hold.
+const P7_HINT_TYPE_YEAR = 2024;
+function p7HintFillReachedYear() {
+  const v = p7.vert;
+  if (!v || !v.yearRow || !v.yearRow.has(P7_HINT_TYPE_YEAR)) return p7CurRow() > 0;
+  return p7CurRow() >= v.yearRow.get(P7_HINT_TYPE_YEAR);
+}
 function p7HintTypeT() {
-  const done = p7AxisShouldShow() && p7AxisIntroT() >= 1;
+  const done = p7AxisShouldShow() && p7HintFillReachedYear();
   if (!done) { p7HintTypeStart = null; return 0; }
   if (p7HintTypeStart === null) p7HintTypeStart = performance.now();
   return Math.min(1, (performance.now() - p7HintTypeStart) / P7_BAND_TYPE_MS);

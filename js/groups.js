@@ -1240,13 +1240,13 @@ const checkFold3      = watchCardThreshold(
 // @fold4 fires LATE on mobile — well below the house 0.5, so the card's top has
 // to climb to 0.18 of the viewport, i.e. almost all the way up, before the
 // hand-off starts. A bigger fraction is an EARLIER crossing. 0.18, picked by
-// eye with the `manual/` @fold4 trigger harness on 2026-09-14.
+// eye with the `manual/` @fold4 trigger harness on 2026-09-15.
 // The whole hand-off — the six rows flying into the מקרא sheet, then the sheet
 // closing itself FOLD6_MFLY_CLOSE_GAP_MS after they land — therefore plays out
 // as @fold5 comes up rather than while this fold is still centred.
 // Desktop keeps 0.5: it has no sheet to fly into, and its glide is settled.
 // `var`, not const: a manual/ harness drives it live.
-var FOLD6_CARD_FRAC = 0.18;
+var FOLD6_CARD_FRAC = 0.23;
 const checkFold6      = watchCardThreshold(
   page6TitleCardEl, () => (isMobile() ? FOLD6_CARD_FRAC : 0.5), fold6Trigger);
 const checkSquaresReveal = watchCardThreshold(squaresRevealCardEl, 0.5, squaresRevealTrigger);
@@ -1427,9 +1427,13 @@ const FOLD7_CURSOR_TIP = [0.04, 0.03];
 // Both breakpoints: on mobile the travelling touch ripple (fold7TouchEl) rides
 // the same glide, so the three beats wait for it exactly as for the arrow.
 function fold7CursorDelayMs() {
-  return FOLD7_CURSOR_MS * FOLD7_CURSOR_ARRIVE_FRAC;
+  return fold7TouchRestMs() + FOLD7_CURSOR_MS * FOLD7_CURSOR_ARRIVE_FRAC;
 }
-const fold7CursorTrigger = makeTrigger(() => FOLD7_CURSOR_MS, (...a) => updateGroups(...a));
+// Mobile's magnifying glass rests at its starting spot before it glides; that
+// rest is dead time at the head of the same trigger (0 on desktop).
+function fold7TouchRestMs() { return isMobile() ? FOLD7_TOUCH_START_REST_MS : 0; }
+function fold7CursorTotalMs() { return fold7TouchRestMs() + FOLD7_CURSOR_MS; }
+const fold7CursorTrigger = makeTrigger(() => fold7CursorTotalMs(), (...a) => updateGroups(...a));
 const checkFold7Cursor = watchCardThreshold(
   fold8HoverCardEl, fold8TooltipCardFrac, fold7CursorTrigger);
 // A direct .layout child: .graphic-col's stacking context would trap it under
@@ -1448,14 +1452,20 @@ function fold7CursorApplyStyle() {
 // The arrow's mobile twin is the picker's own press-and-hold, played for the
 // reader: a pointing-hand cursor glides the SAME path (fold7CursorTrigger) from
 // the squares' centre to square 0, carrying the MAGNIFYING GLASS the real
-// gesture shows — the .p7-loupe look (white disc, dark ring, shadow), held
-// P7_LOUPE_LIFT_PX above the fingertip, showing the 8 squares magnified
-// FOLD7_TOUCH_ZOOM times. It stays over the dot until the reader presses and
-// holds a square themselves (fold7SquareHover dismisses it) or @fold8's fly
-// fades it. The hand fades on its own clock, the glass does not. `var`s: a
-// manual/ harness drives them.
-var FOLD7_TOUCH_ZOOM            = 2.5;  // the glass's magnification
-var FOLD7_TOUCH_POINTER_HOLD_MS = 500;  // hand stays this long after the glide starts…
+// gesture shows — the .p7-loupe look (white disc, dark ring, shadow), smaller
+// (FOLD7_TOUCH_LOUPE_PX) and centred IN FRONT of the dot rather than lifted
+// above the finger, showing the 8 squares magnified FOLD7_TOUCH_ZOOM times.
+// It rests at its start for FOLD7_TOUCH_START_REST_MS, glides, rests on the dot
+// for FOLD7_TOUCH_END_REST_MS and fades over FOLD7_TOUCH_FADE_MS. The reader's
+// own press-and-hold dismisses it early. The hand fades on its own clock.
+// `var`s: a manual/ harness drives them.
+var FOLD7_TOUCH_ZOOM            = 1.2;  // the glass's magnification
+var FOLD7_TOUCH_LOUPE_PX        = 56;   // the glass's diameter
+var FOLD7_TOUCH_FADE_IN_MS      = 400;  // fades in over this, from the start of its rest
+var FOLD7_TOUCH_START_REST_MS   = 780;  // rests at the start before gliding
+var FOLD7_TOUCH_END_REST_MS     = 800;  // rests on the dot after landing…
+var FOLD7_TOUCH_FADE_MS         = 400;  // …then fades over this
+var FOLD7_TOUCH_POINTER_HOLD_MS = 1390;  // hand stays this long after the glide starts…
 var FOLD7_TOUCH_POINTER_OUT_MS  = 300;  // …then fades over this
 let fold7TouchStartedAt = null;         // performance.now() when the glide began
 const fold7TouchEl = document.createElement("div");
@@ -1468,18 +1478,28 @@ fold7TouchEl.appendChild(fold7TouchPointerEl);
 const fold7LoupeEl = document.createElement("canvas");
 fold7LoupeEl.className = "p7-loupe fold7-loupe";
 fold7LoupeEl.setAttribute("aria-hidden", "true");
-(document.querySelector(".layout") || document.body).append(fold7LoupeEl, fold7TouchEl);
+// The reader's own hold shows the timeline picker's glass: same element class,
+// P7_LOUPE_SIZE / P7_LOUPE_ZOOM / P7_LOUPE_LIFT_PX, following the finger.
+const fold7UserLoupeEl = document.createElement("canvas");
+fold7UserLoupeEl.className = "p7-loupe";
+fold7UserLoupeEl.setAttribute("aria-hidden", "true");
+(document.querySelector(".layout") || document.body).append(fold7LoupeEl, fold7TouchEl, fold7UserLoupeEl);
 // Paints the glass centred on (cx, cy): the squares as they are drawn right now
 // (their live rect, fill and opacity), magnified about that point. The picker's
 // real loupe blits the canvas; @fold7's squares are DOM, so they are redrawn.
-function fold7PaintLoupe(cx, cy) {
-  const size = P7_LOUPE_SIZE, dpr = window.devicePixelRatio || 1;
-  if (fold7LoupeEl.width !== size * dpr) { fold7LoupeEl.width = size * dpr; fold7LoupeEl.height = size * dpr; }
-  const g = fold7LoupeEl.getContext("2d");
+// `el` / `size` / `z` / `lift` default to the demo glass; the reader's own
+// hold paints the picker-sized one (fold7UserLoupeEl) through the same code.
+function fold7PaintLoupe(cx, cy, el = fold7LoupeEl, size = FOLD7_TOUCH_LOUPE_PX,
+                         z = FOLD7_TOUCH_ZOOM, lift = 0) {
+  const dpr = window.devicePixelRatio || 1;
+  if (el.width !== size * dpr) {
+    el.width = size * dpr; el.height = size * dpr;
+    el.style.width = el.style.height = `${size}px`;
+  }
+  const g = el.getContext("2d");
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
   g.fillStyle = "#fff";
   g.fillRect(0, 0, size, size);
-  const z = FOLD7_TOUCH_ZOOM;
   fold6SquareEls.forEach(({ sq }) => {
     const r = sq.getBoundingClientRect();
     if (!r.width) return;
@@ -1491,10 +1511,10 @@ function fold7PaintLoupe(cx, cy) {
     g.fillRect(size / 2 + (r.left - cx) * z, size / 2 + (r.top - cy) * z, r.width * z, r.height * z);
   });
   g.globalAlpha = 1;
-  // Held above the fingertip and clamped on screen, exactly like drawLoupe.
-  const half = size / 2;
-  fold7LoupeEl.style.left = `${Math.max(4, Math.min(cx - half, window.innerWidth - size - 4))}px`;
-  fold7LoupeEl.style.top  = `${Math.max(4, cy - P7_LOUPE_LIFT_PX - half)}px`;
+  // Demo: centred on the point, in front of the dot. Reader's hold: lifted
+  // above the fingertip and clamped on screen, exactly like drawLoupe.
+  el.style.left = `${Math.max(4, Math.min(cx - size / 2, window.innerWidth - size - 4))}px`;
+  el.style.top  = `${Math.max(4, cy - lift - size / 2)}px`;
 }
 fold7CursorApplyStyle();
 
@@ -1557,35 +1577,95 @@ window.addEventListener("mousemove", e => {
     }
   }
 }, { passive: true });
-// Mobile: press-and-hold a square (the copy's own gesture). Passive listeners
-// and no preventDefault, so the page still scrolls — a finger that moves more
-// than FOLD7_HOLD_SLOP_PX before the hold lands is a scroll, not a press.
-// Release keeps the last square, like desktop's no-mouseleave hover.
-const FOLD7_TOUCH_PAD_PX = 16;
-const FOLD7_HOLD_MS      = 250;
-const FOLD7_HOLD_SLOP_PX = 8;
-let fold7Hold = null;
-function fold7HoldCancel() {
-  if (!fold7Hold) return;
-  clearTimeout(fold7Hold.timer);
-  fold7Hold = null;
+// Mobile: press-and-hold a square — the SAME gesture as the timeline's picker
+// (p7InspectInit, page7.js), mirrored piece by piece so the two feel identical:
+// touch events (not pointer events), P7_LONGPRESS_MS of stillness within
+// P7_LONGPRESS_SLOP_PX (a moving finger re-anchors the clock instead of giving
+// up), then the picker's glass (fold7UserLoupeEl: P7_LOUPE_SIZE, P7_LOUPE_ZOOM,
+// lifted P7_LOUPE_LIFT_PX) repainted EVERY FRAME at the finger, picking the
+// nearest square within P7_INSPECT_SNAP_PX; touchmove is claimed (non-passive)
+// only while the hold is live. The docked frame dodges below the squares while
+// the glass is up (tooltipAvoidPx, js/fold8-tooltip.js). Release hides the
+// glass and keeps the last square (the @fold7 frame always shows one).
+let fold7Hold = { timer: null, x: 0, y: 0, active: false };
+// The one deliberate difference from the picker: a gentler zoom than
+// P7_LOUPE_ZOOM (4×), which is sized for 1–2px timeline dots and blows the 8px
+// @fold7 squares up past the glass. `var` for the manual/ harness.
+var FOLD7_HOLD_ZOOM = 1.5;
+function fold7HoldAllowed() { return isMobile() && fold7HoverEnabled(); }
+function fold7NearestSquare(x, y) {
+  let best = -1, bestD = P7_INSPECT_SNAP_PX;
+  fold6SquareEls.forEach(({ sq }, i) => {
+    const r = sq.getBoundingClientRect();
+    if (!r.width) return;
+    const d = Math.hypot(x - (r.left + r.right) / 2, y - (r.top + r.bottom) / 2);
+    if (d <= bestD) { bestD = d; best = i; }
+  });
+  return best;
 }
-window.addEventListener("pointerdown", e => {
-  if (!isMobile() || !fold7HoverEnabled() || e.pointerType === "mouse") return;
-  const i = fold7SquareAt(e.clientX, e.clientY, FOLD7_TOUCH_PAD_PX);
-  if (i < 0) return;
-  fold7HoldCancel();
-  fold7Hold = { x: e.clientX, y: e.clientY, timer: setTimeout(() => {
-    fold7Hold = null;
-    if (fold7HoverEnabled()) fold7SquareHover(i);
-  }, FOLD7_HOLD_MS) };
+function fold7HoldTick() {
+  if (!fold7Hold.active) return;
+  fold7PaintLoupe(fold7Hold.x, fold7Hold.y, fold7UserLoupeEl, P7_LOUPE_SIZE, FOLD7_HOLD_ZOOM, P7_LOUPE_LIFT_PX);
+  const i = fold7NearestSquare(fold7Hold.x, fold7Hold.y);
+  if (i >= 0 && fold7HoverEnabled()) fold7SquareHover(i);
+  requestAnimationFrame(fold7HoldTick);
+}
+function fold7HoldCancelPending() {
+  if (fold7Hold.timer !== null) { clearTimeout(fold7Hold.timer); fold7Hold.timer = null; }
+}
+function fold7HoldArm(x, y) {
+  fold7HoldCancelPending();
+  fold7Hold.x = x; fold7Hold.y = y;
+  fold7Hold.timer = setTimeout(() => {
+    fold7Hold.timer = null;
+    if (!fold7HoldAllowed()) return;
+    fold7Hold.active = true;
+    // Belt and braces with the user-select: none on #page-6/#page-7
+    // (style.css): drop any selection the long-press may have started.
+    const sel = window.getSelection && window.getSelection();
+    if (sel && sel.rangeCount) sel.removeAllRanges();
+    window.addEventListener("touchmove", fold7HoldMove, { passive: false });
+    fold7UserLoupeEl.classList.add("is-visible");
+    p7TipAvoidActive = true;
+    tooltipDockMobile(fold8TooltipEl);
+    requestAnimationFrame(fold7HoldTick);
+  }, P7_LONGPRESS_MS);
+}
+function fold7HoldMove(e) {
+  const t = e.touches[0];
+  if (!t || !fold7Hold.active) return;
+  e.preventDefault();
+  fold7Hold.x = t.clientX; fold7Hold.y = t.clientY;
+}
+window.addEventListener("touchstart", e => {
+  fold7HoldCancelPending();
+  const t = e.touches[0];
+  if (!t || !fold7HoldAllowed()) return;
+  // Only a hold that starts on (or right by) the squares — same snap distance.
+  if (fold7NearestSquare(t.clientX, t.clientY) < 0) return;
+  fold7HoldArm(t.clientX, t.clientY);
 }, { passive: true });
-window.addEventListener("pointermove", e => {
-  if (!fold7Hold) return;
-  if (Math.hypot(e.clientX - fold7Hold.x, e.clientY - fold7Hold.y) > FOLD7_HOLD_SLOP_PX) fold7HoldCancel();
+window.addEventListener("touchmove", e => {
+  const t = e.touches[0];
+  if (!t || fold7Hold.timer === null) return;
+  if (Math.abs(t.clientX - fold7Hold.x) > P7_LONGPRESS_SLOP_PX ||
+      Math.abs(t.clientY - fold7Hold.y) > P7_LONGPRESS_SLOP_PX) {
+    // Still near the squares: re-anchor; scrolled off them: give up.
+    if (fold7NearestSquare(t.clientX, t.clientY) >= 0) fold7HoldArm(t.clientX, t.clientY);
+    else fold7HoldCancelPending();
+  }
 }, { passive: true });
-window.addEventListener("pointerup", fold7HoldCancel, { passive: true });
-window.addEventListener("pointercancel", fold7HoldCancel, { passive: true });
+function fold7HoldEnd() {
+  fold7HoldCancelPending();
+  if (!fold7Hold.active) return;
+  fold7Hold.active = false;
+  window.removeEventListener("touchmove", fold7HoldMove, { passive: false });
+  fold7UserLoupeEl.classList.remove("is-visible");
+  p7TipAvoidActive = false;
+  tooltipDockMobile(fold8TooltipEl);
+}
+window.addEventListener("touchend", fold7HoldEnd);
+window.addEventListener("touchcancel", fold7HoldEnd);
 const checkFold9 = watchCardThreshold(page7TitleCardEl, 0.5, fold9Trigger);
 // «ניתן לסנן קבוצות באמצעות המקרא» — so on the same crossing the legend
 // demonstrates itself: it plays its own hover state (all labels type in, both
@@ -2482,14 +2562,85 @@ function fold6PlaceMobileLegend() {
 // panel was down. Skip the no-op writes.
 // The bar does NOT ride fold6Trigger's full ~1.9s ramp — fading a single small
 // button over that long makes it feel like it never arrives. It runs its own
-// front-loaded slice (FOLD6_MLEGEND_IN_SPAN of the trigger) and POPS in with
+// front-loaded slice (fold6MLegendInSpan() of the trigger) and POPS in with
 // @fold7's tooltip curve, so it lands early and with a gesture, while the
 // on-canvas rows are still leaving behind it. The intro below still waits for
 // the full trigger.
-const FOLD6_MLEGEND_IN_SPAN = 0.3;
+/* How long the מקרא BUTTON takes to arrive before the sheet opens out of it.
+   ZERO by default (explicit instruction — "no need for closed legend"): at
+   @fold4 the legend has no business showing itself as a closed pill first, so
+   the bar is simply there and the open is the first thing you see. Give it a
+   duration and the button fades + pops in over that long as a separate beat
+   ahead of the open. `var`: a manual/ harness drives it. */
+var FOLD6_MLEGEND_ARRIVE_MS = 0;
+// The same thing as a share of fold6Trigger, which is what the bar's fade is
+// actually cut from. A zero span means "no arrival beat" — see barT below,
+// which cannot divide by it.
+function fold6MLegendInSpan() {
+  return Math.min(1, FOLD6_MLEGEND_ARRIVE_MS / GROUP_TRANSITION_MS);
+}
+// How long the sheet HOLDS, fully open, before the rows set off into it.
+var FOLD6_MFLY_HOLD_MS = 400;
+
+/* THE CAMP HEADERS' EXIT. They are the one thing at @fold4 that still leaves by
+   un-typing — the six group rows fly instead, keeping every character — so when
+   that happens and how long it takes are their own two numbers rather than a
+   mirror of whenever each camp typed in back at @fold2.
+   `at` is which phase of the hand-off it starts on, as a share of the trigger:
+   0 is the very top, 1 the very end. `ms` is how long the un-type itself runs.
+   Both `var` — a manual/ harness drives them. */
+var FOLD6_HEAD_UNTYPE_AT = 0;     // phase, 0..1 of fold6Trigger's raw progress
+var FOLD6_HEAD_UNTYPE_MS = 500;
+function fold6HeadUntypeStart() { return Math.max(0, Math.min(0.99, FOLD6_HEAD_UNTYPE_AT)); }
+function fold6HeadUntypeLen() {
+  // Never zero — a zero-length window divides by 0 and the headers would vanish
+  // in a single frame rather than un-type at all.
+  return Math.max(0.01, Math.min(1 - fold6HeadUntypeStart(),
+    FOLD6_HEAD_UNTYPE_MS / GROUP_TRANSITION_MS));
+}
+/* THE TWO BEATS OF THE HAND-OFF ARE SEQUENTIAL (explicit instruction): the
+   מקרא sheet opens FIRST, and only once it is standing do the six group rows
+   fly into it. They used to run together — the sheet was still widening while
+   rows were already arriving at where its cards would be.
+
+   The flight is therefore a {start, len} window on fold6Trigger's RAW progress,
+   the same slice model every other multi-beat fold here uses, re-eased fresh
+   inside the window.
+
+   `start` is everything that has to happen BEFORE the rows may leave, derived
+   rather than guessed so it stays right if any of it is retuned: the button's
+   own arrival (fold6MLegendInSpan() of the trigger) plus the sheet's open,
+   which runs its two beats on a wall clock (FOLD6_MLEGEND_WIDTH_MS then
+   FOLD6_MLEGEND_OPEN_MS) against the trigger's GROUP_TRANSITION_MS. The two
+   are SEQUENTIAL — fold6SetMobileLegendVisible holds the open until the button
+   has fully arrived — so they add. */
+// How long the rows' own flight runs. It used to be "whatever is left of the
+// trigger", which meant every step above it silently retimed the flight too.
+// Clamped so the window still ends inside the trigger — the rows have to land
+// before fold6Trigger finishes or they never arrive.
+var FOLD6_MFLY_MS = 1900;
+function fold6MFlyLen() {
+  return Math.max(0.01, Math.min(1 - fold6MFlyStart(), FOLD6_MFLY_MS / GROUP_TRANSITION_MS));
+}
+function fold6MFlyStart() {
+  const openShare = (FOLD6_MLEGEND_WIDTH_MS + FOLD6_MLEGEND_OPEN_MS) / GROUP_TRANSITION_MS;
+  // The arrival span is a slice of the EASED progress (the bar rides `vis`,
+  // which is fold6Trigger.currentT()), while this window is cut from the RAW
+  // one — so the arrival has to be converted before the two can be added.
+  // p9Ease is sine in-out, e = ½(1 − cos πt), so t = acos(1 − 2e) / π. Adding
+  // the eased number directly released the rows ~0.06 early and they set off
+  // while the sheet was still growing.
+  const inSpan = fold6MLegendInSpan();
+  const arriveRaw = inSpan <= 0 ? 0 : Math.acos(1 - 2 * inSpan) / Math.PI;
+  const holdShare = FOLD6_MFLY_HOLD_MS / GROUP_TRANSITION_MS;
+  // Never past 0.8 — the rows still need most of the fold to make the trip.
+  return Math.min(0.8, arriveRaw + openShare + holdShare);
+}
 let fold6MobileLegendVis = null;
 function fold6SetMobileLegendVisible(vis) {
-  const barT = Math.max(0, Math.min(1, vis / FOLD6_MLEGEND_IN_SPAN));
+  const inSpan = fold6MLegendInSpan();
+  const barT = inSpan <= 0 ? (vis > 0 ? 1 : 0)
+                           : Math.max(0, Math.min(1, vis / inSpan));
   if (barT !== fold6MobileLegendVis) {
     fold6MobileLegendVis = barT;
     fold6MobileLegendEl.style.opacity = String(barT);
@@ -2505,12 +2656,17 @@ function fold6SetMobileLegendVisible(vis) {
     // bar arrives (and again on resize, below), never per scroll frame.
     fold6MLegendPaintCard(fold6MLegendOpenRaw);
   }
-  // Fired the INSTANT fold6Trigger starts, not when it finishes: the panel's
-  // rows type in while the on-canvas rows are un-typing, which is the whole
-  // point — one hand-off, seen at both ends at once. Waiting for the trigger to
-  // complete made it read as two separate events with a 1.9s gap. One-shot;
-  // going back above @fold4 re-arms it.
-  if (vis > 0) {
+  // THE HAND-OFF IS THREE BEATS, IN ORDER (explicit instruction):
+  //   1. the מקרא BUTTON arrives — the fade + pop above, over
+  //      fold6MLegendInSpan() of the trigger — zero by default, so in practice
+  //      the bar is simply there and beat 2 is the first thing seen;
+  //   2. then the sheet OPENS out of it (this call);
+  //   3. then the six rows FLY into it (fold6MFlyStart, js/update-groups.js).
+  // Gated on `barT >= 1`, not on `vis > 0`: firing it the instant the trigger
+  // started ran the open UNDERNEATH the arrival fade, so the sheet was still
+  // half-transparent at full height and the two read as one muddled gesture.
+  // Still one-shot — going back above @fold4 re-arms it.
+  if (vis > 0 && barT >= 1) {
     fold6PlayMLegendIntro();
     // Scrolling back UP through the fold after the demo closed: reopen the
     // frame so the reverse flight has a panel to fly out of. Only on a
@@ -2567,7 +2723,7 @@ function fold6MLegendAutoBeat(vis) {
    window, and a reversal mid-flight — a second tap, a scroll back over @fold4
    — simply turns the raw value around from wherever it is, covering only the
    remaining distance at the same rate. */
-var FOLD6_MLEGEND_OPEN_MS = 200;   // `var`: a manual/ harness drives it // the full closed -> open trip
+var FOLD6_MLEGEND_OPEN_MS = 410;   // `var`: a manual/ harness drives it // the full closed -> open trip
 /* THE TWO BEATS RUN ON DIFFERENT CLOCKS (explicit instruction). The card
    WIDENS on its own timer the moment the finger goes down — press and hold and
    it widens under you, whether or not you move — and only the HEIGHT follows
@@ -2579,7 +2735,7 @@ var FOLD6_MLEGEND_OPEN_MS = 200;   // `var`: a manual/ harness drives it // the 
    `fold6MLegendWidthT`, animated by fold6MLegendSetWidth over
    FOLD6_MLEGEND_WIDTH_MS. On a TAP the two are still sequential — width, then
    height — because nothing is driving the progress by hand. */
-var FOLD6_MLEGEND_WIDTH_MS = 80;
+var FOLD6_MLEGEND_WIDTH_MS = 170;
 let fold6MLegendWidthT = 0;      // where the width IS
 let fold6MLegendWidthWant = 0;   // where it is going
 let fold6MLegendWidthRaf = 0;
@@ -3279,16 +3435,14 @@ function fold6MFlySetRowsShown(t) {
 }
 
 // Called every frame from updateGroups with the flight's arrival progress.
-// Nothing follows the landing any more (explicit instruction): the panel is
-// left OPEN at @fold4 — @fold5 closes it and @fold6 opens it again
-// (fold6MLegendAutoBeat), but that is a later beat, not this one — so arriving
-// is just the last frame of the flight.
-// Once the rows have LANDED the panel stays open for FOLD6_MFLY_CLOSE_GAP_MS
-// (explicit instruction), then closes itself into the מקרא pill — the reader
-// has seen the legend arrive and the fold's copy is what is next. The wait is
-// wall-clock from the landing frame; a reversal before it fires (t back under
-// 1) cancels it, and the intro is over once the close lands.
-var FOLD6_MFLY_CLOSE_GAP_MS = 150;
+// HOW LONG THE SHEET IS LEFT OPEN once the rows have landed (explicit
+// instruction), before it closes itself back into the מקרא button — the reader
+// has seen the legend arrive and the fold's copy is what comes next. Wall-clock
+// from the landing frame; a reversal before it fires (t back under 1) cancels
+// it, and the hand-off is over once the close lands. @fold5 and @fold6 have
+// their own later open/close beats (fold6MLegendAutoBeat) — this is only the
+// tail of the hand-off. `var`: a manual/ harness drives it.
+var FOLD6_MFLY_CLOSE_GAP_MS = 500;
 function fold6MFlyArrive(t) {
   if (!fold6MLegendIntroActive) return;
   fold6MFlySetRowsShown(t);
