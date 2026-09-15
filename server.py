@@ -288,6 +288,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     except ValueError:
                         since = -1
             self._json(bus_read(since))
+        elif self.path == "/__harnesses__":
+            # The harness files project.html loads RIGHT NOW, from disk. The
+            # panel hides any row whose file is not in this list, so a page tab
+            # loaded before a deletion (auto-reload is off) cannot keep a
+            # deleted harness on screen by still announcing it.
+            self._json({"files": _harness_files()})
         elif self.path == "/__who__":
             # WHO IS THIS SERVER — the harness panel tab shows it next to the
             # buttons, so a panel driving one of several worktrees says which
@@ -350,6 +356,14 @@ def copy_queue(entry):
     q.append(rec)
     COPYQ.write_text(json.dumps(q, ensure_ascii=False, indent=1) + "\n")
     return len(q)
+
+
+def _harness_files():
+    try:
+        html = (WATCH_DIR / "project.html").read_text()
+    except OSError:
+        return []
+    return [f for f in re.findall(r'src="(_debug-[^"]+\.js)"', html) if (WATCH_DIR / f).exists()]
 
 
 def _git_branch():

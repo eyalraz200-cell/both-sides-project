@@ -259,6 +259,33 @@
      the row must not come back in the meantime. In-memory on purpose: a reload
      of this tab forgets it, by which time the file is gone. */
   var trashedTitles = {};
+  /* The harness files project.html loads, straight from disk (server.py
+     /__harnesses__). Announcements are only believed for files in this list:
+     a tab loaded before a deletion keeps announcing the deleted harness until
+     it reloads, and the rail must show what EXISTS, not what a stale tab
+     remembers. null until the first answer (then everything is believed). */
+  var onDisk = null;
+  function refreshOnDisk() {
+    fetch('/__harnesses__', { cache: 'no-store' }).then(function (r) { return r.json(); })
+      .then(function (d) {
+        var was = onDisk ? onDisk.join() : '';
+        onDisk = d.files || [];
+        if (onDisk.join() !== was) prune();
+      }).catch(function () {});
+  }
+  function fileOf(title, file) { return file || ('_debug-' + title + '.js'); }
+  function exists(title, file) { return !onDisk || onDisk.indexOf(fileOf(title, file)) >= 0; }
+  /* Drop rows whose file has gone since they were listed. */
+  function prune() {
+    Object.keys(seen).forEach(function (t) {
+      var H = seen[t];
+      if (!exists(t, H.desc && H.desc.file)) { H.dead = true; remove(H); }
+    });
+    Object.keys(dormantRows).forEach(function (t) {
+      if (!exists(t, dormantRows[t].m.file)) { delete dormantRows[t]; renderStrip(); }
+    });
+  }
+  refreshOnDisk(); setInterval(refreshOnDisk, 3000);
   window.__seen = seen;     // probe hook
   var active = null;        // the harness the strip shows and the keyboard drives
   var ACTKEY = 'hp:remote:active';
@@ -828,7 +855,7 @@
      of silence (the page closed). */
   var dormantRows = {};
   function addDormant(m) {
-    if (seen[m.title] || trashedTitles[m.title]) return;
+    if (seen[m.title] || trashedTitles[m.title] || !exists(m.title, m.file)) return;
     var d = dormantRows[m.title];
     if (!d) d = dormantRows[m.title] = { m: m, seen: 0 };
     d.seen = Date.now();
@@ -852,9 +879,9 @@
     document.getElementById('host').appendChild(n);
   }
 
-  function add(title) {
+  function add(title, file) {
     if (ONLY && title !== ONLY) return;
-    if (trashedTitles[title]) return;
+    if (trashedTitles[title] || !exists(title, file)) return;
     if (seen[title]) { if (!seen[title].dead) seen[title].send({ t: 'hello' }); return; }
     var note = document.getElementById('note'); if (note) note.remove();
     var H = new Harness(title);
@@ -1343,7 +1370,7 @@
     if (m.inspect) return;               // the element inspector is not a harness
     if (m.dormant) { addDormant(m); return; }
     lastIam[m.title] = Date.now();
-    add(m.title);
+    add(m.title, m.file);
     // Don't fight a click that hasn't been echoed back yet.
     var settled = Date.now() - switchTouched > 1200;
     if (typeof m.foldBadge === 'boolean' && settled) foldBox.checked = m.foldBadge;
