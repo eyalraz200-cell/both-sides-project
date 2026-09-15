@@ -592,8 +592,10 @@
           .then(function (r) { return r.json(); })
           .then(function () {
             flash('queued for deletion · ' + (d.label || d.title));
-            H.trashed = true; renderStrip();
-            H.send({ t: 'bye' }); H.dead = true;
+            // The page's copy goes silent and the row goes away now; Claude
+            // removes the file on its next turn.
+            H.send({ t: 'trashed' }); H.dead = true;
+            remove(H);
           }, function () { flash('could not reach the dev server'); });
       });
       db.className = 'danger'; db.title = 'remove this harness from the project (Claude does it)';
