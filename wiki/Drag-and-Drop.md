@@ -304,7 +304,7 @@ cap; `P9_LEGIT_RISE_PAD` under it. `"pitch"` (**picked**) — every legit dot ti
 keeps its height and the legit cell shrinks, in quarter-device-px steps, until the
 pack fits (dot floor `P9_LEGIT_PITCH_MIN_SQ` 1px). How the shrunk dots sit
 (`P9_LEGIT_PITCH_FILL`, **shipped `"fill"`**): `"shared"` — one cell for both camps,
-packed from the divider; `"fill"` — **one cell for both camps** (always the same dot size and tiers on both sides: the smaller of the two camps' fill cells, so the busier camp fills its half and the other keeps space at its outer edge), and the
+packed from the divider; `"fill"` — **one cell for both camps** (always the same dot size and tiers on both sides: the smaller of the two camps' fill cells, so the busier camp fills its half; a camp too small to reach its screen edge at that size **scatters** across its whole half on the same grid instead, no overlaps — the `"jumble"` placement), and the
 pack is **rotated**: every visible row from the divider to the bottom edge is filled
 (a flat bottom) and the pack grows outward; each camp's fill cell is the smallest at which its pack still
 reaches the screen edge; any leftover runs past the edge, clipped; `"jumble"` — on the grid, never overlapping, gapped like the flat
