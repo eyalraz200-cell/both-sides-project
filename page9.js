@@ -1245,6 +1245,10 @@ function p9LegitTierPlan(W, H) {
         cells[side] = one;
         sqs[side] = sqFor(one);
         packs[side] = packRotated(side, one);
+        // A camp with too few dots to reach the screen edge at the shared size
+        // doesn't pack against the centre — it scatters across its whole half
+        // on the same grid (no overlaps), the way a strip with holes reads anyway.
+        if (packs[side].extent < colsFor(one, side)) packs[side] = jumbleSide(side, one);
         packs[side].visRows = availRows(one);
       }
     }
