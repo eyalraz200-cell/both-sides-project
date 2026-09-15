@@ -33,7 +33,7 @@ function page8CheckScroll() {
   const rect = page8TitleEl.getBoundingClientRect();
   const nowPast = rect.top + rect.height / 2 <= window.innerHeight / 2;
   // (The mobile docked-tooltip drop that clears room for the tray band is NOT
-  // fired here: per explicit instruction the "לחצו והחזיקו" frame keeps the
+  // fired here: per explicit instruction the docked frame keeps the
   // resting spot it has on @fold11 for the whole of @fold12, so the drop to
   // p9DockTopM() rides @fold13's stick instead — see page9UpdateFromScroll
   // below. It used to ride this crossing, back when the band itself only
@@ -184,10 +184,6 @@ function page9UpdateFromScroll() {
   // straight into @fold13 fires no scroll event over that title).
   if (isStuck) page9StickyEl.classList.add("pills-in");
   p9SyncTooltipDrop();
-  // The frame's «לחצו והחזיקו» line types back in here (it untyped on @fold11's
-  // crossing) — the target is derived inside, so calling it every tick is free
-  // and it reverses on the way back up with the panel.
-  if (typeof p7SyncInspectHint === "function") p7SyncInspectHint(false);
 
   // Scrolling back up past the stick threshold: animate all extreme dots back
   // down to the legit zone and return pills to the tray — but remember which

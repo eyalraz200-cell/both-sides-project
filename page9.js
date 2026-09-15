@@ -152,11 +152,24 @@ const P9_EXTREME_GAP = 320;
 const P9_SQ_M          = 1.5;
 const P9_CELL_M        = 2;   // extreme-grid pitch
 const LEGIT_CELL_M     = 1;   // legit-bar pitch: real dots, packed until they read as a solid bar
-const P9_EXTREME_GAP_M = 64;  // no floating pill labels on mobile, so the gap is purely visual (widened from 40 — one-column sides sat too close to center)
+const P9_EXTREME_GAP_M = 64;
+// Mobile with the crowd tiers on: the columns are several times wider, so the
+// count labels clear each other on their own and the 64px floor was just a hole
+// between the blocks. The label-clearance rule below still applies.
+const P9_EXTREME_GAP_TIERED_M = 16;
+// Mobile tiers grow the extreme grid's PITCH, not just its width: at the native
+// 2px pitch the biggest tier was 28px and the columns left most of the phone's
+// height empty. p9ScopeMobileCell tries these multiples of P9_CELL_M, largest
+// first, and keeps the first at which both camps pack uncapped into the box.
+const P9_SCOPE_CELL_STEPS_M = [8, 7, 6, 5, 4, 3.5, 3, 2.5, 2, 1.5, 1];  // no floating pill labels on mobile, so the gap is purely visual (widened from 40 — one-column sides sat too close to center)
 // The tray band's top rule (Figma's Line 15) — must match `top` in .page9-tray's
 // ≤600px rule, which is the thing that actually positions it.
-const P9_TRAY_TOP_M          = 116; // rides with --card-top (60): the מקרא card's bottom (52) + the 8px legend→title gap
+const P9_TRAY_TOP_M          = 80;  // manual/-baked 2026-09-14; rides with the mobile --card-top (24) and .page9-tray top (80), style.css
 const P9_TRAY_TOOLTIP_GAP_M  = 20; // band's bottom rule -> docked frame's top (Figma had 28; tightened by eye)
+// The @fold13 hint line's height (`.is-hint .p7-inspect-hint`, style.css). The
+// extreme grid reserves only THIS under the band, not the whole collapsed frame
+// — a picked event's frame overlays the column tops (explicit instruction).
+const P9_HINT_H_M = 19;
 const P9_TOOLTIP_COLLAPSED_H = 100; // the docked frame's collapsed height (`.page9-tooltip.is-docked` in style.css); the "עוד" expansion overlays rather than pushing
 const P9_TOOLTIP_GRID_GAP_M  = 20; // collapsed frame's bottom -> the count-label block (matches P9_TRAY_TOOLTIP_GAP_M — change them together)
 // The mobile count label is a TWO-line block (the number with "אירועים" under
@@ -348,7 +361,20 @@ function p9DockTopM() {
 // the Figma-measured fraction of H; on mobile the legit bar sits flush with the
 // viewport's bottom edge (the tray is a top band now), so everything above it
 // is extreme-grid territory.
+// The divider with the crowd tiers applied to the legit strip: the base line
+// raised by however much taller the tiered strip is (p9LegitTierPlan). Every
+// consumer that places things against the divider reads this one.
 function p9MidY(H, W) {
+  const base = p9MidYBase(H, W);
+  const plan = p9LegitTierPlan(W || p9.lastW || window.innerWidth, H);
+  if (!plan || plan.rise <= 0) return base;
+  const floorY = p9ExtremeTopY(H) + p9Metrics().CELL * 8;
+  return Math.max(floorY, Math.round(base - plan.rise));
+}
+
+// The untiered divider — the legit strip's own shuffle geometry is built off
+// this, so switching the tiers on never reshuffles the flat dots.
+function p9MidYBase(H, W) {
   const w = W || p9.lastW || window.innerWidth;
   // V2: same free-dot grid as the old desktop layout, just given a shorter
   // strip — the divider sits P9_LEGIT_H_V2 above the bottom edge instead of at
@@ -383,7 +409,7 @@ function p9ExtremeTopY(H) {
   }
   if (!isMobile()) return Math.round(H * SBB.top);
   return Math.round(
-    p9DockTopM() + P9_TOOLTIP_COLLAPSED_H + P9_TOOLTIP_GRID_GAP_M + P9_COUNT_LABEL_ROOM_M,
+    p9DockTopM() + P9_HINT_H_M + P9_TOOLTIP_GRID_GAP_M + P9_COUNT_LABEL_ROOM_M,
   );
 }
 
@@ -760,12 +786,6 @@ function p9UpdateLayout(W, H) {
   p9.lastH = H;
   // The tier pack is sized to the box, and the box moved.
   p9.scopeLayout = null;
-  // The button is hidden under 600px and the columns there are a dot or two
-  // wide, so tiers never survive a trip to mobile.
-  if (isMobile() && typeof p7GridUniform !== "undefined" && !p7GridUniform) {
-    p7GridUniform = true;
-    p9.scopeMorph = null;
-  }
 }
 
 
@@ -857,7 +877,7 @@ function p9SyncLegitRank() {
 function p9LegitGeometry(W, H) {
   const CELL     = p9Metrics().legitCell;
   const mobile   = isMobile();
-  const midY     = p9MidY(H, W);
+  const midY     = p9MidYBase(H, W);
   // Desktop: the grid hangs off the divider and runs to the bottom edge.
   // Mobile: it detaches from the divider entirely and becomes a 4px bar sitting
   // flush with the viewport's bottom edge — Figma node 294-1272 (the tray is a
@@ -947,6 +967,13 @@ function p9LegitGeometry(W, H) {
   // `cell` travels with the geometry so every consumer (p9LegitCellXY here,
   // page8's glide) lays out at whichever pitch this breakpoint chose.
   const geom = { gridTopY, legitRows, legitLeftCols, legitRightCols, midX, cell: CELL };
+  // Crowd tiers on the legit strip (p9LegitTierPlan): packed dots hang off the
+  // RAISED divider; flat (crowd mode's tier-0) dots keep the shuffle above.
+  const plan = p9LegitTierPlan(W, H);
+  if (plan) {
+    geom.tier = plan;
+    geom.tierTopY = p9MidY(H, W) + (mobile ? 1 : LEGIT_LINE_PAD);
+  }
 
   // Two independent cell pools, one per side — left events only ever land in
   // left-half columns, right events only in right-half columns, so the two
@@ -970,6 +997,229 @@ function p9LegitGeometry(W, H) {
     p9.legitShuffleSizeRight = rightTotalCells;
   }
   return geom;
+}
+
+// ── Crowd tiers on the LEGIT strip ───────────────────────────────────────────
+// With the «הצגת גודל האירועים» tiers on, the legit dots take their crowd size
+// too. The strip can't hold that at its flat size (~29k cells of blocks for
+// ~17k visible cells at 1440×900), so it FINDS AREA in one of three ways,
+// under judgment on a compare/ harness (P9_LEGIT_ROOM):
+//   "rise"  — every legit dot tiers; the divider rises until the packed strip
+//             fits (up to P9_LEGIT_RISE_MAX_FRAC of H, then the big tiers cap).
+//   "pitch" — every legit dot tiers; the strip keeps its height and the legit
+//             cell shrinks by area until the pack fits (@fold10's unit idea).
+//   "crowd" — only dots WITH a crowd figure (tier ≥ 1) tier, packed in a band
+//             along the divider; the tier-0 dots keep their shuffled spots, and
+//             the divider rises by exactly the band's height so they don't move.
+// Packs are p9PackColumns skylines in legit-rank order (group, then category),
+// columns from the centre outward, rows from the divider DOWN. Tiers off, or
+// off @fold13, returns null and nothing about the flat strip changes.
+var P9_LEGIT_ROOM          = "pitch";
+// The legit strip's own tier ladder: P7_GRID_TIER_CELLS (1,2,3,6,9,14) with the
+// two biggest tiers reduced, so the few huge crowds don't dominate the short
+// strip. Legit dots only — the extreme columns keep the full ladder.
+var P9_LEGIT_TIER_CELLS    = [1, 2, 3, 6, 7, 9];   // "rise" | "pitch" | "crowd"
+var P9_LEGIT_RISE_MAX_FRAC = 0.4;      // rise/crowd: the strip may take at most this share of H
+var P9_LEGIT_RISE_PAD      = 4;        // rise: px left under the packed strip
+var P9_LEGIT_PITCH_MIN_SQ  = 1;        // pitch: the legit dot never draws smaller than this
+// pitch: how the shrunk dots sit. "shared" — one cell size for both camps, packed
+// tight from the divider; "fill" — each camp gets the LARGEST cell at which its own
+// pack still fits its half, so both halves fill their space; "jumble" — the shared
+// area-solved cell, dots left at shuffled spots (gapped, like the flat strip).
+var P9_LEGIT_PITCH_FILL    = "fill";
+var P9_LEGIT_CROWD_GAP     = 4;        // crowd: px between the band and the shuffled dots
+
+function p9LegitTierPlan(W, H) {
+  if (!p9ScopeTiered() || typeof currentPage === "undefined" || currentPage !== 12) return null;
+  if (!p7.ready || !p7.leftEvents) return null;
+  const mobile = isMobile();
+  if (mobile && !P9_LEGIT_SPREAD_M) return null;           // the packed bar has no room to give
+  const key = [W, H, mobile ? 1 : 0, p9IsRegularDesktop() ? 1 : 0, P9_LEGIT_ROOM,
+               P9_LEGIT_RISE_MAX_FRAC, P9_LEGIT_RISE_PAD, P9_LEGIT_PITCH_MIN_SQ, P9_LEGIT_CROWD_GAP,
+               P9_LEGIT_PITCH_FILL].join("|");
+  // HELD across drops: once solved, a drop doesn't resize or move the legit
+  // dots — the dropped ones just leave holes. Classification state is NOT in the
+  // key; the plan is only rebuilt when a dot that is legit now has no slot in it
+  // (e.g. a category that was already extreme when the tiers went on comes back).
+  p9SyncLegitRank();
+  if (p9.legitTierPlan && p9.legitTierPlan.key === key) {
+    const held = p9.legitTierPlan.plan;
+    let complete = true;
+    for (const side of ["left", "right"]) {
+      for (const e of p9.legitRank?.[side]?.keys() ?? []) {
+        if (!held.packs[side]?.pos.has(e)) { complete = false; break; }
+      }
+      if (!complete) break;
+    }
+    if (complete) return held;
+  }
+
+  const M     = p9Metrics();
+  const cell0 = M.legitCell, sq0 = M.legitSq;
+  const pad   = mobile ? 1 : LEGIT_LINE_PAD;
+  const baseH = H - p9MidYBase(H, W);
+  const tierOf  = e => (typeof p7BulgeTier === "function" ? p7BulgeTier(e) : 0);
+  const cellsOf = e => (P9_LEGIT_TIER_CELLS[tierOf(e)] || 1);
+  // Legend-filtered dots keep their slot too (they shrink away in place), so
+  // the filter never resizes the strip either.
+  const listFor = side => [...(p9.legitRank?.[side]?.keys() ?? [])];
+  const lists = { left: listFor("left"), right: listFor("right") };
+  // The packed pitch layouts must NOT band by group — legit-rank order kept each
+  // group as one contiguous region. A seeded shuffle mixes them, stable per frame.
+  // Shuffled over the WHOLE camp once, then filtered — so a drop only removes
+  // dots from the order and every remaining dot keeps its relative place,
+  // instead of a fresh shuffle scattering the whole strip.
+  if (P9_LEGIT_ROOM === "pitch") {
+    if (!p9.legitMixOrder || p9.legitMixOrder.n !== p7.leftEvents.length + p7.rightEvents.length) {
+      p9.legitMixOrder = {
+        n: p7.leftEvents.length + p7.rightEvents.length,
+        left:  p7Shuffle(p7.leftEvents,  31337),
+        right: p7Shuffle(p7.rightEvents, 42424),
+      };
+    }
+    for (const side of ["left", "right"]) {
+      const keep = new Set(lists[side]);
+      lists[side] = p9.legitMixOrder[side].filter(e => keep.has(e));
+    }
+  }
+  const packAt = (cell, capCells, onlyCrowd) => {
+    const colsTotal = Math.max(2, Math.floor(W / cell));
+    const cols = { left: Math.floor(colsTotal / 2), right: colsTotal - Math.floor(colsTotal / 2) };
+    const packs = {};
+    let rows = 0;
+    for (const side of ["left", "right"]) {
+      const list = onlyCrowd ? lists[side].filter(e => tierOf(e) > 0) : lists[side];
+      packs[side] = p9PackColumns(list, cols[side], e => Math.min(cellsOf(e), capCells));
+      rows = Math.max(rows, packs[side].rows);
+    }
+    return { packs, rows };
+  };
+  const maxH = Math.max(baseH, Math.floor(H * P9_LEGIT_RISE_MAX_FRAC));
+  let plan;
+  if (P9_LEGIT_ROOM === "pitch") {
+    const dpr = window.devicePixelRatio || 1;
+    // Quarter-device-px steps: whole device px were too coarse (3→2px loses 44%
+    // of the area) and left the strip visibly unfilled. p9PlaceDot snaps each
+    // dot to the device grid anyway.
+    const STEP = 1 / (4 * dpr);
+    const q = c => Math.max(1 / dpr, Math.floor(c / STEP) * STEP);
+    const availRows = cell => Math.max(1, Math.floor((baseH - pad) / cell));
+    const need = side => lists[side].reduce((a, e) => a + cellsOf(e) ** 2, 0);
+    const areaPx = (W / 2) * (baseH - pad);
+    const sqFor = cell => Math.min(cell, Math.max(P9_LEGIT_PITCH_MIN_SQ, cell * (sq0 / cell0)));
+    const colsFor = (cell, side) => {
+      const t = Math.max(2, Math.floor(W / cell));
+      return side === "left" ? Math.floor(t / 2) : t - Math.floor(t / 2);
+    };
+    const packSide = (side, cell) =>
+      p9PackColumns(lists[side], colsFor(cell, side), e => Math.min(cellsOf(e), P9_SCOPE_TIER_CAP));
+    const fitsSide = (side, cell) => packSide(side, cell).rows <= availRows(cell);
+    // Shared: area estimate, then step down until both real skylines fit.
+    let shared = q(Math.min(cell0, Math.sqrt(areaPx / Math.max(1, need("left"), need("right")))));
+    for (let k = 0; k < 40 && shared > 1 / dpr; k++) {
+      if (fitsSide("left", shared) && fitsSide("right", shared)) break;
+      shared = q(shared - STEP);
+    }
+    // "fill": the pack is ROTATED — p9PackColumns runs with the strip's visible
+    // rows as its fixed dimension, so blocks fill every row from the divider to
+    // the bottom edge (a flat bottom) and the pack grows OUTWARD toward the
+    // screen edge instead of down. The cell is the smallest at which that pack
+    // still reaches the edge — the half is filled end to end, and whatever
+    // doesn't fit runs past the edge, clipped out of view.
+    const packRotated = (side, cell) => {
+      const rows = availRows(cell);
+      const got = p9PackColumns(lists[side], rows, e => Math.min(cellsOf(e), P9_SCOPE_TIER_CAP, rows));
+      const pos = new Map();
+      for (const [e, P] of got.pos) pos.set(e, { c: P.r, r: P.c, n: P.n });
+      return { pos, rows, extent: got.rows };
+    };
+    // "jumble": on the grid, never overlapping, gapped like the flat strip — each
+    // block takes a free n×n run at a shuffled spot (biggest first), at a cell a
+    // little finer than the packed one so there's air between them. Anything
+    // that finds no free run lands in rows below the edge, out of view.
+    const JUMBLE_AIR = 0.8;   // share of the strip's area the blocks may cover
+    const jumbleSide = (side, cell) => {
+      const cols = colsFor(cell, side), vis = availRows(cell);
+      const rows = vis + Math.ceil(lists[side].length / cols) + P9_SCOPE_TIER_CAP;
+      const occ = new Uint8Array(cols * rows);
+      const order = lists[side].slice().sort((a, b) => cellsOf(b) - cellsOf(a));
+      const seed = side === "left" ? 25555 : 22222;
+      const visPool = p7Shuffle(Array.from({ length: cols * vis }, (_, k) => k), seed);
+      let ptr = 0;
+      const free = (c, r, n) => {
+        if (c + n > cols || r + n > rows) return false;
+        for (let y = r; y < r + n; y++) for (let x = c; x < c + n; x++) if (occ[y * cols + x]) return false;
+        return true;
+      };
+      const take = (c, r, n) => { for (let y = r; y < r + n; y++) for (let x = c; x < c + n; x++) occ[y * cols + x] = 1; };
+      const pos = new Map();
+      let spill = vis * cols;   // row-major scan of the out-of-view rows
+      for (const e of order) {
+        const n = Math.min(cellsOf(e), P9_SCOPE_TIER_CAP, cols, vis);
+        let placed = false;
+        if (n === 1) {
+          // Single cells walk the shuffled pool once, skipping cells the blocks took.
+          while (ptr < visPool.length && occ[visPool[ptr]]) ptr++;
+          if (ptr < visPool.length) {
+            const k = visPool[ptr++];
+            take(k % cols, Math.floor(k / cols), 1);
+            pos.set(e, { c: k % cols, r: Math.floor(k / cols), n: 1 });
+            placed = true;
+          }
+        } else {
+          for (let t = 0; t < visPool.length && !placed; t++) {
+            const k = visPool[t];
+            const c = k % cols, r = Math.floor(k / cols);
+            if (r + n <= vis && free(c, r, n)) { take(c, r, n); pos.set(e, { c, r, n }); placed = true; }
+          }
+        }
+        if (!placed) {
+          while (spill < occ.length && !free(spill % cols, Math.floor(spill / cols), n)) spill++;
+          const c = spill % cols, r = Math.floor(spill / cols);
+          take(c, r, n); pos.set(e, { c, r, n });
+        }
+      }
+      return { pos, rows };
+    };
+    const packs = {}, cells = {}, sqs = {};
+    for (const side of ["left", "right"]) {
+      let cell = shared;
+      if (P9_LEGIT_PITCH_FILL === "fill" && lists[side].length) {
+        const halfCols = c => colsFor(c, side);
+        let lo = 1 / dpr, hi = Math.max(cell0 * 6, shared * 3);
+        if (packRotated(side, hi).extent < halfCols(hi)) lo = hi;   // too few dots to ever reach the edge
+        for (let k = 0; k < 18 && hi - lo > STEP; k++) {
+          const mid = q((lo + hi) / 2);
+          if (mid <= lo || mid >= hi) break;
+          if (packRotated(side, mid).extent >= halfCols(mid)) hi = mid; else lo = mid;
+        }
+        cell = q(hi);
+        packs[side] = packRotated(side, cell);
+      } else if (P9_LEGIT_PITCH_FILL === "jumble" && lists[side].length) {
+        cell = q(Math.sqrt(areaPx * JUMBLE_AIR / Math.max(1, need("left"), need("right"))));
+        packs[side] = jumbleSide(side, cell);
+      } else {
+        packs[side] = packSide(side, cell);
+      }
+      cells[side] = cell;
+      sqs[side] = sqFor(cell);
+    }
+    plan = { mode: "pitch", rise: 0, cell: shared, sq: sqFor(shared), cells, sqs, packs };
+  } else if (P9_LEGIT_ROOM === "crowd") {
+    const bandRowsMax = Math.max(1, Math.floor((maxH - baseH - P9_LEGIT_CROWD_GAP) / cell0));
+    let cap = P9_SCOPE_TIER_CAP, got = packAt(cell0, cap, true);
+    while (cap > 1 && got.rows > bandRowsMax) got = packAt(cell0, --cap, true);
+    const rise = got.rows ? got.rows * cell0 + P9_LEGIT_CROWD_GAP : 0;
+    plan = { mode: "crowd", rise, cell: cell0, sq: sq0, packs: got.packs, cap };
+  } else {
+    const rowsMax = Math.max(1, Math.floor((maxH - pad - P9_LEGIT_RISE_PAD) / cell0));
+    let cap = P9_SCOPE_TIER_CAP, got = packAt(cell0, cap, false);
+    while (cap > 1 && got.rows > rowsMax) got = packAt(cell0, --cap, false);
+    const h = got.rows * cell0 + pad + P9_LEGIT_RISE_PAD;
+    plan = { mode: "rise", rise: Math.max(0, h - baseH), cell: cell0, sq: sq0, packs: got.packs, cap };
+  }
+  p9.legitTierPlan = { key, plan };
+  return plan;
 }
 
 // A cell index's exact grid position (no jitter) within one side's own
@@ -1019,6 +1269,18 @@ function p9LegitPosOf(e, indexOf, side, geom) {
       ? (geom.legitLeftCols - 1 - col) * rows + row
       : col * rows + row;
     return p9LegitCellXY(cellOut, geom, side);
+  }
+  if (geom.tier) {
+    const P = geom.tier.packs[side]?.pos.get(e);
+    if (P) {
+      const c  = geom.tier.cells?.[side] ?? geom.tier.cell;
+      const sq = geom.tier.sqs?.[side]   ?? geom.tier.sq;
+      return {
+        x: side === "left" ? geom.midX - (P.c + P.n) * c : geom.midX + P.c * c,
+        y: geom.tierTopY + P.r * c,
+        sq: P.n * c - (c - sq),
+      };
+    }
   }
   const shuffle = side === "left" ? p9.legitShuffleLeft : p9.legitShuffleRight;
   const cell = shuffle[indexOf.get(e)];
@@ -1106,11 +1368,9 @@ function p9BulgeSize(ev) {
 // 8..10, so on @fold13 the press flipped p7GridUniform and nothing on screen
 // read it. This module is @fold13's own answer to the same flag.
 //
-// ONLY the extreme dots — the ones dragged up into the columns — take their
-// crowd-tier size. The legit strip below the line is drawn by drawJumbledBot at
-// one flat legitSq and is deliberately left alone (except in the `legit` room
-// mode below, which exists only so the compare/ harness can show what the
-// columns could do with that space).
+// The extreme dots take their crowd-tier size in the columns (below), and the
+// legit strip's dots take theirs too — see p9LegitTierPlan for how the strip
+// finds the room.
 //
 // p7GridUniform stays the single source of truth for "tiers showing", shared
 // with @fold10/@fold11, so the button's is-on state needs no second flag.
@@ -1129,10 +1389,10 @@ var P9_SCOPE_TIER_CAP = 14;
 // viewport clipping its last rows.
 var P9_SCOPE_WIDEN_MARGIN = 8;
 
-// Tiers are showing when the shared flag says so. Desktop only — the button is
-// hidden under 600px and the columns there are one or two dots wide.
+// Tiers are showing when the shared flag says so — both breakpoints (mobile
+// presses it from the מקרא panel's row, fold6MobileScopeEl).
 function p9ScopeTiered() {
-  return typeof p7GridUniform !== "undefined" && !p7GridUniform && !isMobile();
+  return typeof p7GridUniform !== "undefined" && !p7GridUniform;
 }
 
 // This event's block width in CELLS, capped twice: by P9_SCOPE_TIER_CAP and by
@@ -1188,7 +1448,7 @@ function p9PackColumns(entries, cols, cellsOf) {
 // legend's close-ranks; the rest are the box and the knobs.
 function p9ScopeCacheKey(side, colsMax, rowsMax, visLen) {
   const filt = (typeof p7FilterOff !== "undefined" && p7FilterOff && p7FilterOff.size) || 0;
-  return [side, p9ScopeTiered() ? 1 : 0, colsMax, rowsMax, P9_SCOPE_TIER_CAP,
+  return [side, p9ScopeTiered() ? 1 : 0, colsMax, rowsMax, P9_SCOPE_TIER_CAP, p9ScopeMobileCell.cell || 0,
           p9.orderVersion || 0, filt, visLen].join("|");
 }
 
@@ -1213,6 +1473,14 @@ function p9ScopeSolveCols(visList, colsMin, colsMax, rowsMax) {
   // width would only shrink the blocks further than needed.
   if (cap < P9_SCOPE_TIER_CAP) return { cols: wide, layout: packAt(wide) };
   let lo = Math.max(1, colsMin), hi = Math.max(lo, colsMax), best = null;
+  // Mobile: a trial width narrower than the biggest block clamps that block
+  // down to the width (p9PackColumns), so "narrowest that fits" always won by
+  // shrinking the tiers away. Never try narrower than the widest block.
+  if (isMobile()) {
+    let widest = 1;
+    for (const e of visList) widest = Math.max(widest, p9ScopeCellsFor(e, Infinity, cap));
+    lo = Math.min(hi, Math.max(lo, widest));
+  }
   while (lo <= hi) {
     const mid = (lo + hi) >> 1;
     const layout = packAt(mid);
@@ -1281,6 +1549,19 @@ function p9ScopeBox(W, H, colsTotal, topY, midY, centerX, rightX0, CELL) {
   const box = { cols: colsTotal, colsMax: colsTotal, cellPx: CELL, topY, anchorY: midY };
   box.rowsMax = Math.max(1, Math.floor((midY - topY) / CELL));
   if (!p9ScopeTiered()) return box;
+  if (isMobile()) {
+    const ui = p9ScopeSideUi(W, centerX, rightX0);
+    const leftRoom  = centerX - ui.left - P9_SCOPE_WIDEN_MARGIN;
+    const rightRoom = ui.right - P9_SCOPE_WIDEN_MARGIN - rightX0;
+    const cell = p9ScopeMobileCell(CELL, leftRoom, rightRoom, midY - topY);
+    box.cellPx = cell;
+    box.cols = Math.max(1, Math.ceil(colsTotal * CELL / cell));
+    box.rowsMax = Math.max(1, Math.floor((midY - topY) / cell));
+    box.colsMax = Math.max(box.cols, Math.floor(Math.min(leftRoom, rightRoom) / cell));
+    box.colsMaxLeft  = Math.max(box.cols, Math.floor(leftRoom / cell));
+    box.colsMaxRight = Math.max(box.cols, Math.floor(rightRoom / cell));
+    return box;
+  }
   // Tiers need roughly twice the cells, so the columns may grow OUTWARD toward
   // the viewport edges — but only as far as the pack actually needs (see
   // p9ScopeSolveCols). This is just the ceiling on that: how wide a side could
@@ -1298,6 +1579,34 @@ function p9ScopeBox(W, H, colsTotal, topY, midY, centerX, rightX0, CELL) {
   box.colsMaxLeft  = Math.max(colsTotal, Math.floor(leftRoom / CELL));
   box.colsMaxRight = Math.max(colsTotal, Math.floor(rightRoom / CELL));
   return box;
+}
+
+// MOBILE ONLY. The largest pitch (a P9_SCOPE_CELL_STEPS_M multiple of the
+// native cell) at which BOTH camps' visible extreme dots pack at full tier size
+// (no cap) inside their side's room and the column height. Cached on what it
+// depends on — it runs a pack per step per side.
+function p9ScopeMobileCell(CELL, leftRoom, rightRoom, heightPx) {
+  const hidden = e => typeof p7FilterHiddenEv === "function" && p7FilterHiddenEv(e);
+  const L = p9.leftTopOrder.filter(e => !hidden(e));
+  const R = p9.rightTopOrder.filter(e => !hidden(e));
+  const key = [CELL, Math.round(leftRoom), Math.round(rightRoom), Math.round(heightPx),
+               L.length, R.length, p9.orderVersion || 0].join("|");
+  if (p9ScopeMobileCell.key === key) return p9ScopeMobileCell.cell;
+  let pick = CELL;
+  for (const k of P9_SCOPE_CELL_STEPS_M) {
+    const cell = CELL * k;
+    const rows = Math.floor(heightPx / cell);
+    const fits = (list, room) => {
+      if (!list.length) return true;
+      const cols = Math.floor(room / cell);
+      if (cols < 1) return false;
+      return p9PackColumns(list, cols, e => p9ScopeCellsFor(e, cols, P9_SCOPE_TIER_CAP)).rows <= rows;
+    };
+    if (fits(L, leftRoom) && fits(R, rightRoom)) { pick = cell; break; }
+  }
+  p9ScopeMobileCell.key = key;
+  p9ScopeMobileCell.cell = pick;
+  return pick;
 }
 
 // ---- The morph ------------------------------------------------------------
@@ -1354,7 +1663,6 @@ function p9ScopeBlend(ev, from, cx, cy, sq) {
 // Press the button on @fold13. `uniform` is the flag's NEW value: false = show
 // the crowd tiers, true = back to one flat size each.
 function p9ScopeSet(uniform, opts) {
-  if (isMobile()) return;
   uniform = !!uniform;
   if (uniform === p7GridUniform) return;
   const instant = opts && opts.instant;
@@ -1367,10 +1675,12 @@ function p9ScopeSet(uniform, opts) {
       from.set(ev, { cx: pos.x + sq / 2, cy: pos.y + sq / 2, sq });
     }
   }
+  const fromMidY = p9.midY;
   p7GridUniform  = uniform;
   p9.scopeLayout = null;
+  p9.legitTierPlan = null;
   p9.scopeMorph  = from.size
-    ? { from, start: performance.now(), dir: uniform ? "off" : "on" }
+    ? { from, fromMidY, start: performance.now(), dir: uniform ? "off" : "on" }
     : null;
   if (typeof p7BulgeT !== "undefined") p7BulgeT.clear();
   p9.hoveredEvent = null;
@@ -1421,6 +1731,15 @@ function drawPage9(ctx, W, H) {
   // ("legitimate") dots from the hover interaction entirely — only the
   // above-the-line ("extreme") block gets a tooltip/dim effect.
   p9.midY = midY;
+  // The drop zone's CSS ends above the legit strip (--p9-v2-legit-h); the tiers
+  // can raise the divider without a resize, so republish when it moves.
+  {
+    const legitH = Math.round(H - midY);
+    if (p9.publishedLegitH !== legitH && p9IsV2()) {
+      document.querySelector(".page9-sticky")?.style.setProperty("--p9-v2-legit-h", `${legitH}px`);
+      p9.publishedLegitH = legitH;
+    }
+  }
 
   // Every event gets one permanent slot the first time this runs — keyed by its
   // stable index within p7.leftEvents/rightEvents (object identity doesn't change,
@@ -1514,7 +1833,16 @@ function drawPage9(ctx, W, H) {
     const P9_COUNT_LABEL_CLEAR_M = 12; // min px between the two label blocks
     const needed = halfL + halfR + P9_COUNT_LABEL_CLEAR_M
                  - (leftRealCols + rightRealCols) * CELL / 2;
-    gapWidth = Math.max(P9_EXTREME_GAP_M, Math.ceil(needed));
+    if (p9ScopeTiered() && p9.scopeStats && p9.scopeStats.cellPx) {
+      // Tiered: clear the labels over the columns as they were last DRAWN
+      // (wider, at the scaled pitch) against the smaller floor.
+      const st = p9.scopeStats;
+      const tNeeded = halfL + halfR + P9_COUNT_LABEL_CLEAR_M
+                    - ((st.leftCols || 0) + (st.rightCols || 0)) * st.cellPx / 2;
+      gapWidth = Math.max(P9_EXTREME_GAP_TIERED_M, Math.ceil(tNeeded));
+    } else {
+      gapWidth = Math.max(P9_EXTREME_GAP_M, Math.ceil(needed));
+    }
   } else if (p9IsV2()) {
     // V2: the drop zone itself sits in this gap, so the blocks have to part
     // wide enough for its measured box plus slack on each side. Falls back to
@@ -1870,7 +2198,10 @@ function drawPage9(ctx, W, H) {
     const tiered = p9ScopeTiered();
     const cols   = scopeBox.cols;
     const cell   = scopeBox.cellPx;
-    const gapPx  = CELL - SQ;   // the pitch's own gap, kept at every block size
+    // The pitch's own gap, kept at every block size — and scaled with the pitch
+    // when mobile tiers grow it (p9ScopeMobileCell), so a 5px cell doesn't
+    // read as a solid mass. cell === CELL everywhere else, so this is CELL - SQ.
+    const gapPx  = (CELL - SQ) * cell / CELL;
     // Packed over the VISIBLE entries only, so the legend filter closes ranks
     // the same way it always did. A hidden dot keeps the plain row-major cell
     // its raw index gives it, so it shrinks away where it stands instead of
@@ -1995,17 +2326,14 @@ function drawPage9(ctx, W, H) {
     // the per-breakpoint legitSq (desktop P9_SQ; the mobile spread strip's
     // finer P9_LEGIT_SQ_SPREAD_M).
     let sq      = bar ? legitGeom.cell : p9Metrics().legitSq;
-    // The `legit` room mode (compare/ only) gives the columns this strip's
-    // floor. The dots leave BY SIZE, never by opacity — house rule.
-      if (sq <= 0) return 0;
     order.forEach(e => {
       if (!botSet.has(e)) return;
       let pos = p9LegitPosOf(e, indexOf, side, legitGeom);
       if (!pos) return; // guards a stale cache
-      let sqHere = sq;
-      // The legit grid never tiers — flat size, shuffled cell, both states.
-      // It rides the scope morph only so a legit dot the press does move
-      // blends instead of snapping.
+      // Tiered (p9LegitTierPlan) the position carries its own block size.
+      let sqHere = pos.sq ?? sq;
+      // Rides the scope morph, so the press flies + grows each legit dot on
+      // the same clock as the columns.
       if (p9.scopeMorph) {
         const f = p9.scopeMorph.from.get(e);
         if (f) {
@@ -2148,7 +2476,9 @@ function drawPage9(ctx, W, H) {
       // Mobile pulls the column 2 dot-rows (2 * P9_CELL_M = 4px) closer to the
       // label than desktop's 16px baseline gap, per explicit request.
       const countsGap  = mobile ? 16 - 2 * P9_CELL_M : 16;
-      const countsYRaw = midY - Math.max(leftTopRows, rightTopRows) * CELL - countsGap;
+      // Rows are counted at the drawn pitch — CELL, except mobile tiers.
+      const rowCell    = (p9ScopeTiered() && p9.scopeStats && p9.scopeStats.cellPx) || CELL;
+      const countsYRaw = midY - Math.max(leftTopRows, rightTopRows) * rowCell - countsGap;
       // Floor at the reserved band's top PLUS one line: countsY is the block's
       // bottom baseline, and the number line above it has to stay inside the
       // band too, clear of the docked frame.
@@ -2172,8 +2502,10 @@ function drawPage9(ctx, W, H) {
         ? Math.min(stats.leftCols  ?? extremeColsTotal, p9.leftTopOrder.length)  : 0;
       const rightDrawnCols = p9.rightTopOrder.length
         ? Math.min(stats.rightCols ?? extremeColsTotal, p9.rightTopOrder.length) : 0;
-      const leftPos  = p9AnimateLeftCountPos(centerX + ((p9.scopeStats && p9.scopeStats.leftInset) || 0) - leftDrawnCols * CELL / 2, countsY);
-      const rightPos = p9AnimateRightCountPos(rightX0 - ((p9.scopeStats && p9.scopeStats.rightInset) || 0) + rightDrawnCols * CELL / 2, countsY);
+      // The drawn pitch: CELL everywhere except mobile tiers (p9ScopeMobileCell).
+      const drawnCell = (p9ScopeTiered() && stats.cellPx) || CELL;
+      const leftPos  = p9AnimateLeftCountPos(centerX + ((p9.scopeStats && p9.scopeStats.leftInset) || 0) - leftDrawnCols * drawnCell / 2, countsY);
+      const rightPos = p9AnimateRightCountPos(rightX0 - ((p9.scopeStats && p9.scopeStats.rightInset) || 0) + rightDrawnCols * drawnCell / 2, countsY);
       drawEventsCount(leftCount,  leftPos.x,  leftPos.y);
       drawEventsCount(rightCount, rightPos.x, rightPos.y);
     }
@@ -2211,8 +2543,17 @@ function drawPage9(ctx, W, H) {
     ctx.strokeStyle = `rgba(90,90,90,${baseAlpha * lineAlpha})`;
     ctx.lineWidth   = 1;
     ctx.beginPath();
-    ctx.moveTo(dividerStartX, midY);
-    ctx.lineTo(W, midY);
+    // The tiers can move the divider (p9LegitTierPlan's rise): the line glides
+    // there on the dots' own flight window instead of snapping.
+    let lineY = midY;
+    if (p9.scopeMorph && p9.scopeMorph.fromMidY != null) {
+      const w = p9ScopeWindows(0);
+      if (p9.scopeMorph.dir === "off") w.pos = [p9ScopeTotalMs() - w.pos[0] - w.pos[1], w.pos[1]];
+      const t = p7MorphWin(p9ScopeMorphMs(), w.pos);
+      lineY = p9.scopeMorph.fromMidY + (midY - p9.scopeMorph.fromMidY) * t;
+    }
+    ctx.moveTo(dividerStartX, lineY);
+    ctx.lineTo(W, lineY);
     ctx.stroke();
   }
 
@@ -3228,7 +3569,8 @@ function p9BuildPanel() {
     panel.style.setProperty("--p9-v2-tray-top", `${p9TrayTopV2()}px`);
     // The legit band's height, so the drop-zone wrap's CSS can end above the
     // divider without a second hand-synced copy of P9_LEGIT_H_V2.
-    panel.style.setProperty("--p9-v2-legit-h", `${p9LegitHV2()}px`);
+    panel.style.setProperty("--p9-v2-legit-h", `${Math.round(window.innerHeight - p9MidY(window.innerHeight, window.innerWidth))}px`);
+    p9.publishedLegitH = null;
   }
 
   // The tray ships at opacity:0 (style.css) because its resting hidden

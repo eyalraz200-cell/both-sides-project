@@ -57,7 +57,6 @@ function page7UpdateFromScroll() {
   const gap = rect.top - titleTop;
   const scrubRange = rect.height + gap - window.innerHeight * P7_SCRUB_END_LEAD_VH;
   const t = scrubRange > 0 ? Math.max(0, Math.min(1, -titleTop / scrubRange)) : 0;
-
   if (!p7.ready) return;
 
   // Refresh engagement state before checking it — without this, the check below

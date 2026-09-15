@@ -292,9 +292,34 @@ nothing below changes shape; see [Mobile](#mobile).
 The scope pill works on @fold13 too (`p9ScopeSet`, page9.js — reached through the
 page-gated click in js/groups.js; see
 [Groups-and-Legend](Groups-and-Legend.md#the-הצגת-גודל-האירועים-button-above-the-right-column)).
-**Only the extreme columns tier.** The legit grid never changes size — a dot
-gains its crowd size when it *enters* the extreme zone and loses it on the way
-back, never while sitting below the divider.
+**Both grids tier, at both breakpoints.** The extreme columns tier as below; the
+**legit strip tiers too** (`p9LegitTierPlan`, page9.js). At its flat size the strip
+can't hold that (~29k cells of blocks for ~17k visible cells at 1440×900), so it
+**finds area** in one of three ways (`P9_LEGIT_ROOM`; **shipped: `"pitch"` with
+`"fill"`**, picked on a compare/ harness, since removed):
+`"rise"` — every legit dot tiers, packed from the divider down in
+legit-rank order (`p9PackColumns`, columns from the centre out); the divider rises
+until the pack fits, up to `P9_LEGIT_RISE_MAX_FRAC` (0.4) of H, then the big tiers
+cap; `P9_LEGIT_RISE_PAD` under it. `"pitch"` (**picked**) — every legit dot tiers, on its own ladder `P9_LEGIT_TIER_CELLS` (1, 2, 3, 6, **7, 9** — the two biggest tiers reduced from 9, 14; the extreme columns keep the full ladder), in a seeded **shuffled** order so the pack never bands by group (the whole camp is shuffled once, `p9.legitMixOrder`, then filtered to the current legit dots — a drop only removes dots from the order, it never reshuffles it). The plan is solved when the tiers go on and **held across drops**: a drop never resizes or moves the legit dots — the dropped ones just leave holes (the legend filter too: filtered dots keep their slot and shrink away in place). It is rebuilt only when a dot that is legit now has no slot in it (a category already extreme when the tiers went on is dropped back); the strip
+keeps its height and the legit cell shrinks, in quarter-device-px steps, until the
+pack fits (dot floor `P9_LEGIT_PITCH_MIN_SQ` 1px). How the shrunk dots sit
+(`P9_LEGIT_PITCH_FILL`, **shipped `"fill"`**): `"shared"` — one cell for both camps,
+packed from the divider; `"fill"` — each camp its own cell (`plan.cells[side]`), and the
+pack is **rotated**: every visible row from the divider to the bottom edge is filled
+(a flat bottom) and the pack grows outward; the cell is the smallest at which it still
+reaches the screen edge, so the half fills end to end and any leftover runs past the
+edge, clipped; `"jumble"` — on the grid, never overlapping, gapped like the flat
+strip: a slightly finer cell (`JUMBLE_AIR` 0.8 of the area), each block takes a free
+n×n run at a shuffled spot (biggest first); anything with no free run goes below the
+edge, out of view. `"crowd"` — only dots with a crowd figure (tier ≥ 1) tier,
+packed in a band under the divider; tier-0 dots keep their shuffled spots and the
+divider rises by exactly the band (+`P9_LEGIT_CROWD_GAP`), so they don't move.
+The raised divider is `p9MidY` (base line `p9MidYBase` − the plan's `rise`); the
+shuffle geometry is always built off the **base** line, so switching the tiers
+never reshuffles the flat dots. The extreme columns sit on the raised line and fly
+with it; the line itself glides on the dots' flight window; `--p9-v2-legit-h` is
+republished from `drawPage9` when the line moves. Only on @fold13
+(`currentPage === 12`) — the glide geometry on @fold11/@fold12 stays flat.
 
 - **Room — narrowest width that fits.** Tiers need roughly twice the cells, so
   the columns may grow **outward** toward the viewport edges at the native 4px
@@ -335,11 +360,9 @@ back, never while sitting below the divider.
   side, tiered, cols, tier cap, room mode, `p9.orderVersion` (bumped by
   `p9SyncTopOrder` on any splice/push), filter size, visible count. A frame is one
   `Map.get` per dot. `p9UpdateLayout` (resize) nulls it.
-- **The legit grid never tiers.** Its resting layout stays the *shuffled* free
-  grid — one flat-size cell per dot, deliberately gapped — in both states; a
-  press changes nothing below the divider. Legit dots are still seeded into the
-  morph's from-map, so a legit dot the repack does happen to move blends to its
-  new cell instead of snapping.
+- **The legit grid tiers too** (see above). Tiers off, its layout is the untouched
+  *shuffled* free grid. Legit dots are seeded into the morph's from-map, so every
+  legit dot flies to its packed spot and grows on the same clock as the columns.
 - **Morph.** Page 12 has no page7 anim loop, so the fold runs its own clock:
   `p9.scopeMorph = {from, start, dir}` seeded from **every** entry in
   `p9.lastPositions`, extreme and legit alike (only the extreme ones change
@@ -366,8 +389,16 @@ back, never while sitting below the divider.
 - **Reset on page flip.** `p7SizeGridOnPage` already forces `uniform: true` for
   pages 9–12 and now also calls `p9ScopeSync()`, which clears the morph and the
   cached layout. Tiers do not survive scrolling away.
-- **Mobile.** The pill is hidden under 600px, `p9ScopeSet` early-returns on
-  `isMobile()`, and `p9UpdateLayout` forces uniform if a resize lands there.
+- **Mobile.** The desktop pill is hidden under 600px; the same toggle is a row in the
+  מקרא panel (`fold6MobileScopeEl`, js/groups.js), and `p9ScopeSet` / `p9ScopeTiered`
+  run on both breakpoints.
+  Mobile tiers differ in three ways (all `isMobile()`-gated, desktop untouched):
+  **the pitch grows** — `p9ScopeMobileCell` picks the largest `P9_SCOPE_CELL_STEPS_M`
+  multiple of `P9_CELL_M` at which both camps pack uncapped into their room and the column
+  height, and the in-block gap scales with it; **the column search never goes narrower
+  than the widest block** (`p9ScopeSolveCols`), which used to clamp the tiers away; and
+  **the centre gap** drops to `P9_EXTREME_GAP_TIERED_M` (16px) plus the count-label
+  clearance, measured off the last drawn columns (`p9.scopeStats`).
 
 ## Dot migration — the two states
 
@@ -826,7 +857,7 @@ This is the same suppression the graphic column carries for @fold9's loupe.
   (bar mode: `legitCell`/`legitSq` both `LEGIT_CELL_M` 1; desktop `{3, 4, LEGIT_CELL, 3}`).
   `legitSq` is the legit grid's own dot size — `drawJumbledBot` passes it through
   `p9PlaceDot`'s `sizeOverride`, and page8's glide lands its dots on it.
-- `p9ExtremeTopY(H)` → `p9DockTopM() + P9_TOOLTIP_COLLAPSED_H (100) + P9_TOOLTIP_GRID_GAP_M (20) + P9_COUNT_LABEL_ROOM_M (35)`,
+- `p9ExtremeTopY(H)` → `p9DockTopM() + P9_HINT_H_M (19) + P9_TOOLTIP_GRID_GAP_M (20) + P9_COUNT_LABEL_ROOM_M (35)` — only the hint line is reserved; a picked event's frame overlays the column tops,
   trailing the docked tooltip frame in its dropped-for-@fold13 spot. The frame's expanded
   state overlays this grid rather than moving it (hence the *collapsed* height) — see
   [Timeline](Timeline.md).

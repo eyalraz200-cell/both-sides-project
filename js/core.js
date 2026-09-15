@@ -534,8 +534,10 @@ function tooltipFillScaled(r, g, b) {
 // p9HoverInit (page9.js) and @fold7's scripted demo (js/update-groups.js) —
 // and the first version of the fill missed two of them, so @fold9's timeline
 // hover silently kept the raw colour. Hence the helper.
-function setTooltipColor(el, color) {
+// `fill` (optional) overrides the derived fill — for a caller animating
+// between two colours, which must lerp the fills themselves.
+function setTooltipColor(el, color, fill) {
   if (!el) return;
   el.style.color = color;
-  el.style.setProperty("--tip-fill", tooltipFill(color));
+  el.style.setProperty("--tip-fill", fill || tooltipFill(color));
 }

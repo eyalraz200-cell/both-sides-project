@@ -118,8 +118,7 @@ function updateGroups() {
   // absolutely positioned by the block further down; the legend rows center on
   // the viewport middle without it (fold6RowIndexY). On MOBILE there is no
   // on-canvas mini-legend at all any more — the legend collapsed into the מקרא
-  // card (js/groups.js), and the ACLED credit is a corner link there rather
-  // than this note. So every measured value here is desktop-only.
+  // card (js/groups.js), and mobile carries no ACLED credit at all. So every measured value here is desktop-only.
   const fold6MobileLegend = isMobile();
   const fold6NoteWidthPx = FOLD6_NOTE_WIDTH;
   let fold6NoteHeightPx = 0;
@@ -939,6 +938,20 @@ function updateGroups() {
     const shown = !fold6MobileLegend
       && ((typeof fold11SizePast === "function" && fold11SizePast()) || revealRaw > 0);
     p7ScopeBtnEl.hidden = !shown;
+    // Mobile: the same control lives in the מקרא panel instead, from the same
+    // crossing to @fold14's fade (which fades the whole legend layer anyway).
+    if (typeof fold6MobileScopeEl !== "undefined") {
+      const mShown = fold6MobileLegend
+        && typeof fold11SizePast === "function" && fold11SizePast();
+      fold6MScopeSetShown(mShown);
+      if (mShown) {
+        const p9Live = typeof p9PageVisible === "function" && p9PageVisible();
+        const mOn = typeof p7GridUniform !== "undefined" && !p7GridUniform
+          && ((typeof p7Grid !== "undefined" && p7Grid.on) || p9Live);
+        fold6MobileScopeEl.classList.toggle("is-on", !!mOn);
+        fold6MobileScopeEl.setAttribute("aria-pressed", mOn ? "true" : "false");
+      }
+    }
     if (shown) {
       // Written before the width is read below — the label's typed length is
       // what btnW measures, and the button is placed off its RIGHT edge, so
@@ -1206,19 +1219,14 @@ function updateGroups() {
   // The panel's rows/note divider goes with them — it only means anything with
   // the note under it — but it is mobile-only, so it is hidden outright on
   // desktop rather than sharing the mobile gate.
-  // MOBILE HAS NO NOTE AT ALL now — the credit is the corner link below — so
+  // MOBILE HAS NO ACLED CREDIT AT ALL — no note, no link — so
   // every one of these is simply hidden under the breakpoint.
   fold6NoteCardEl.hidden =
   fold6NoteRuleEl.hidden = fold6NoteEl.hidden = fold6NoteTitleEl.hidden = fold6MobileLegend;
-  // The corner link rides the same crossing the note used to (acledNoteTrigger)
-  // and @fold14's shared fade-out, and is pointer-dead until it is properly
-  // there so it can never take a tap meant for the artwork behind it.
-  // The open/close fade is applied by the card's own paint, not here — see
-  // fold6MSetAcledReveal (js/groups.js).
-  {
-    const outT = (typeof p9 !== "undefined" && p9.fold13OutT) || 0;
-    fold6MSetAcledReveal(fold6MobileLegend ? noteRevealT * (1 - outT) : 0);
-  }
+  // The מקרא panel's «איסוף הנתונים» section belongs to @fold6: it exists only
+  // once that fold's crossing (acledNoteTrigger) has fired, and is gone again —
+  // collapsed back to its default — above it.
+  fold6MDataSetAvailable(noteRevealT > 0);
 
   // The מקרא bar appears with the same crossing that dissolves the six rows
   // into it (e6), and stays for the rest of the page — it is the mini-legend
@@ -1231,6 +1239,68 @@ function updateGroups() {
   // (groupsOverlayEl's own "is-active" is set once at init, not toggled here
   // — see the comment by its declaration above.)
   fold6SquaresOverlayEl.style.opacity = "1";
+
+  // @fold7 fake cursor: glides from the 8 squares' centre (+ start offset) to
+  // square 0's centre on fold7CursorTrigger, fading in over its first
+  // FOLD7_CURSOR_FADE_SPAN. Repainted every frame, so no CSS transition on it.
+  // Desktop only. Scrolling back above the crossing also clears the hover.
+  {
+    const cRaw = fold7CursorTrigger.currentRaw();
+    if (cRaw <= 0) { fold7HoverReset(); fold7CursorArrivedAt = null; fold7TouchStartedAt = null; }
+    const mobileDemo = isMobile();
+    fold7CursorEl.hidden = mobileDemo || cRaw <= 0;
+    fold7TouchEl.hidden = !mobileDemo || cRaw <= 0;
+    fold7LoupeEl.classList.toggle("is-visible", !fold7TouchEl.hidden);
+    if (!fold7CursorEl.hidden || !fold7TouchEl.hidden) {
+      const cW = canvas.clientWidth, cH = canvas.clientHeight;
+      const n = FOLD6_SQUARES_OFFSET.length;
+      const sx = cW / 2 + FOLD6_SQUARES_OFFSET.reduce((a, o) => a + o.dx, 0) / n + 4 + FOLD7_CURSOR_START_DX;
+      const sy = cH / 2 + FOLD6_SQUARES_OFFSET.reduce((a, o) => a + o.dy, 0) / n + 4 + FOLD7_CURSOR_START_DY;
+      const ex = cW / 2 + FOLD6_SQUARES_OFFSET[0].dx + 4;
+      const ey = cH / 2 + FOLD6_SQUARES_OFFSET[0].dy + 4;
+      const ct = fold7CursorTrigger.currentT();
+      const x = sx + (ex - sx) * ct - FOLD7_CURSOR_TIP[0] * FOLD7_CURSOR_SIZE_PX * 0.71;
+      const y = sy + (ey - sy) * ct - FOLD7_CURSOR_TIP[1] * FOLD7_CURSOR_SIZE_PX;
+      const now = performance.now();
+      if (mobileDemo) {
+        // The disc is centred on the point the arrow's TIP would be at.
+        const cx = sx + (ex - sx) * ct, cy = sy + (ey - sy) * ct;
+        fold7TouchEl.style.transform = `translate(${cx}px, ${cy}px)`;
+        fold7PaintLoupe(cx, cy);
+        // The pointer at the disc's centre fades on its own clock from the
+        // glide's start.
+        if (fold7TouchStartedAt === null) fold7TouchStartedAt = now;
+        const pEl = now - fold7TouchStartedAt - FOLD7_TOUCH_POINTER_HOLD_MS;
+        const pK = 1 - Math.max(0, Math.min(1, pEl / Math.max(1, FOLD7_TOUCH_POINTER_OUT_MS)));
+        fold7TouchPointerEl.style.opacity = String(pK);
+        if (pK > 0) requestAnimationFrame(() => updateGroups());
+      } else {
+        fold7CursorEl.style.transform = `translate(${x}px, ${y}px)`;
+      }
+      // Fade out after landing: hold FOLD7_CURSOR_HOLD_MS, then fade over
+      // FOLD7_CURSOR_OUT_MS. Wall-clock, so it drives its own frames until done.
+      let outK = 1;
+      if (cRaw >= 1) {
+        if (fold7CursorArrivedAt === null) fold7CursorArrivedAt = now;
+        const since = now - fold7CursorArrivedAt;
+        const el = since - FOLD7_CURSOR_HOLD_MS;
+        outK = 1 - Math.max(0, Math.min(1, el / Math.max(1, FOLD7_CURSOR_OUT_MS)));
+        if (!mobileDemo && outK > 0) requestAnimationFrame(() => updateGroups());
+      } else {
+        fold7CursorArrivedAt = null;
+      }
+      const vis = Math.min(1, cRaw / FOLD7_CURSOR_FADE_SPAN) * outK * (1 - fold9Trigger.currentRaw());
+      if (mobileDemo) {
+        // No hold-then-fade on mobile: the disc stays until the reader's own
+        // press-and-hold dismisses it (or @fold8's fly takes the squares).
+        const mVis = String(Math.min(1, cRaw / FOLD7_CURSOR_FADE_SPAN) * (1 - fold9Trigger.currentRaw()));
+        fold7TouchEl.style.opacity = mVis;
+        fold7LoupeEl.style.opacity = mVis;
+      } else {
+        fold7CursorEl.style.opacity = String(vis);
+      }
+    }
+  }
 
   const e7Label = fold7LabelTrigger.currentT();
   // @fold12 trigger #1 (its title card's ordinary midpoint crossing, see
@@ -1330,9 +1400,13 @@ function updateGroups() {
 
     // Square 0 carries the demo tooltip, whose "fly" hang angle swings with the
     // travel itself — publish beat 2 rather than let it re-derive the stagger.
-    if (i === 0) fold8FlyMoveT = moveT;
+    // The callout's swing-below-while-flying rides the ACTIVE square's own
+    // flight — square 0, or the @fold7 hover's pick.
+    if (i === (fold7HoverIdx ?? 0)) fold8FlyMoveT = moveT;
 
-    const colorT = i === 0 ? fold9Phase1T : colorPhaseT;
+    // All 8 take their group colour together on @fold8's trigger #1 (the
+    // demo square no longer leads alone).
+    const colorT = fold9Phase1T;
     sq.style.background = lerpFold6SquareColor(FOLD6_SQUARE_COLORS[i], colorT);
 
     // This square's own real event, resolved once and reused below (hover-dim,
@@ -1358,13 +1432,19 @@ function updateGroups() {
     // sine ramp reads oddly over a short, plain opacity fade) — same
     // "opacity fades don't need easing" convention as HOVER_DIM_MS elsewhere.
     const FOLD6_SQUARE_DIM_OPACITY = 0.3;
-    const dimT = fold8SquareDimTrigger.currentRaw();
+    const dimT = fold8SquareDimT();
     const dimFromFold8 = 1 - (1 - FOLD6_SQUARE_DIM_OPACITY) * dimT;
     // Restored to full opacity in step with @fold12 trigger #2 (fold9FlyT) —
     // once a square is colored in and flying to its real dot, the dimmed
     // ~30% opacity (which only ever fit its gray, pre-color state) no longer
     // applies; a real timeline dot is always full opacity.
-    let opacity = i === 0 ? 1 : dimFromFold8 + (1 - dimFromFold8) * fold9FlyT;
+    // The active square is never dimmed: square 0 by default, or the square a
+    // @fold7 hover picked (fold7SquareHoverTriggers); square 0 dims back in
+    // step as the hover takes its demo swell away (fold7DemoSuppressTrigger).
+    const fold7HoverT = fold7SquareHoverTriggers[i].currentT();
+    const fold7Bright = Math.max(fold9FlyT, fold7HoverT,
+      i === 0 ? 1 - fold7DemoSuppressTrigger.currentT() : 0);
+    let opacity = dimFromFold8 + (1 - dimFromFold8) * fold7Bright;
     // Once this square IS a real timeline dot (fold9FlyT ~ 1), it must dim
     // the same way every other canvas dot does while a different dot is
     // hovered (p7.hoveredEvent, p7DrawSideSquares' own snap-to-HOVER_DIM_OPACITY dim) —
@@ -1443,7 +1523,7 @@ function updateGroups() {
     // to show a tapped event (see its comment in js/fold8-tooltip.js). Skipped
     // entirely rather than force-hidden — a hide would reset the sequence and
     // make it replay its grow+type from zero the moment the picker lets go.
-    if (i === 0 && !p7InspectOwnsTooltip) {
+    if (i === (fold7HoverIdx ?? 0) && !p7InspectOwnsTooltip) {
       const event = targetEvent;
       // shrinkT >= 1 (fold 9's own, later, one-way "arrived at its real dot"
       // collapse) or a missing event forces an immediate hide below —
@@ -1478,12 +1558,17 @@ function updateGroups() {
         // already laid out at its true final size for the entire grow-in —
         // see that function's own comment for why.
         fold8SequenceEvent = event;
-        fold8SeqElapsed = 0;
+        // A hover-opened tooltip appears instantly (already grown and typed);
+        // only the scripted demo animates in. The clamp in fold8AdvanceSequence
+        // pulls this down to the sequence's own total.
+        fold8SeqElapsed = fold7HoverIdx === null ? 0 : Infinity;
         fold8SeqDirection = 1;
         fold8SeqLastFrameTime = null;
         fold8PrevTooltipRaw = fold8TooltipTrigger.currentRaw();
         fold8DateSpans = fold8SetupTypewriter(fold8TooltipDateEl, p7FormatDateDMY(event.date));
         fold8DescSpans = fold8SetupTypewriter(fold8TooltipDescEl, event.descHeMedium || "");
+        // The scripted demo waits for the fake cursor too; a hover restart doesn't.
+        fold8SeqDelayMs = FOLD8_TOOLTIP_DELAY_MS + (fold7HoverIdx === null ? fold7CursorDelayMs() : 0);
       }
 
       if (forceHide) {
@@ -1500,18 +1585,26 @@ function updateGroups() {
         // timeline spot (fold9FlyT), the stroke fades back to the neutral
         // resting gray — the demo event's actor color leaves with the demo,
         // and the empty frame arrives neutral, ready for the picker.
-        const tipColor = lerpFold6SquareColor(
-          FOLD6_SQUARE_COLORS[0], colorT * (keepEmptyFrame ? 1 - fold9FlyT : 1),
-          FOLD8_TOOLTIP_REST_COLOR);
-        // Fed the lerped value every frame, so the desktop fill's darkening
-        // rides the grey→group-colour transition instead of snapping at the end.
-        setTooltipColor(fold8TooltipEl, tipColor);
+        const tipT = colorT * (keepEmptyFrame ? 1 - fold9FlyT : 1);
+        const tipColor = lerpFold6SquareColor(FOLD6_SQUARE_COLORS[i], tipT, FOLD8_TOOLTIP_REST_COLOR);
+        // The desktop FILL is lerped end to end (grey's fill → the group's own
+        // contrast-floored fill), not recomputed from the lerped colour: run
+        // through tooltipFill mid-way, a grey→yellow blend darkened into olive
+        // before landing on the settlers' hand-picked orange-brown.
+        const r0 = FOLD8_TOOLTIP_REST_COLOR;
+        const fillA = tooltipFill(`rgb(${r0[0]}, ${r0[1]}, ${r0[2]})`).match(/\d+/g).map(Number);
+        const fillB = tooltipFill(FOLD6_SQUARE_COLORS[i]).match(/\d+/g).map(Number);
+        const tipFill = `rgb(${fillA.map((a, k) => Math.round(a + (fillB[k] - a) * tipT)).join(", ")})`;
+        setTooltipColor(fold8TooltipEl, tipColor, tipFill);
         fold8TooltipEl.classList.add("is-visible");
         // Opens toward the left of the square (mirrored corner, same convention
         // p9HoverInit/p7HoverInit use for left-side events), not the right —
         // its pointer corner (bottom-right when mirrored) is also the point
         // the grow-in below scales from.
-        fold8TooltipEl.classList.add("is-mirrored");
+        // Opens toward its own camp's side: a left-camp dot's box hangs to the
+        // LEFT of it (mirrored), a right-camp dot's to the RIGHT (desktop).
+        fold8TooltipSide = event.side === "right" && !isMobile() ? "right" : "left";
+        fold8TooltipEl.classList.toggle("is-mirrored", fold8TooltipSide === "left");
         // × (1 - fold13OutT): on mobile keepEmptyFrame keeps this sequence
         // alive through page 9, and updateFold13 calls updateGroups() right
         // after writing its own tooltip fade — an unconditional "1" here
@@ -1522,7 +1615,8 @@ function updateGroups() {
         // centered box, so it grows straight up from its bottom edge instead
         // of skewing out of the bottom-right corner.
         fold8TooltipEl.style.transformOrigin =
-          fold8TooltipEl.classList.contains("is-docked") ? "bottom center" : "bottom right";
+          fold8TooltipEl.classList.contains("is-docked") ? "bottom center"
+          : (fold8TooltipSide === "right" ? "bottom left" : "bottom right");
         fold8AnchorSquareEl = sq;
 
         fold8AdvanceSequence();
@@ -1606,9 +1700,13 @@ function updateGroups() {
     // 8px resting size to FOLD8_DEMO_GROW_PX on the tooltip's own crossing,
     // reversible with it. Every other square keeps 8. This is the size the fly
     // then resizes *from*, so a grown square never snaps back before departing.
-    const restSize = i === 0
-      ? 8 + (FOLD8_DEMO_GROW_PX - 8) * fold8DemoGrowT()
-      : 8;
+    // A @fold7 hover moves the swell to the hovered square (same size, same
+    // 350ms) and takes square 0's demo swell back.
+    // Every square rests at 8px. The active one — square 0 during the demo, or
+    // the hovered square — swells to its own FOLD7_SQUARE_SIZES entry.
+    const restSize = 8 + (FOLD7_SQUARE_SIZES[i] - 8) * Math.max(
+      fold7HoverT,
+      i === 0 ? fold8DemoGrowT() * (1 - fold7DemoSuppressTrigger.currentT()) : 0);
     // .fold6-square sits at left:0/top:0 of its zero-size wrap anchor, so the
     // box grows right/down — the square would drift off its own spot as it
     // swells. Shift it back by half the EXTRA size to keep the growth centred
@@ -1616,7 +1714,7 @@ function updateGroups() {
     // restSize -> target.size with weight resizeT, so the rest term (and this
     // offset with it) fades out exactly as the square departs, leaving the
     // established top-left-anchored fly geometry untouched.
-    const growOffset = -((restSize - 8) * (1 - resizeT)) / 2;
+    const growOffset = -((restSize - 8) * (1 - resizeT)) / 2;   // centred on the 8px anchor
     // The legend filter reaches these 8 too. They're the permanent real dot for
     // their event (p7GetClaimedEvents skips them in the canvas cascade), so a
     // filtered group left them sitting on the timeline as the only survivors of

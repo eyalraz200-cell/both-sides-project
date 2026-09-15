@@ -26,7 +26,7 @@
 
 **`.graphic-col` traps z-index.** Anything that must stack above `.text-col` has to be a
 direct `.layout` child, not nested inside `.graphic-col` — that's why the event
-tooltip, the category tooltip, the ACLED note layer and **`#groupsOverlay`** live where they
+tooltip, the category tooltip, the ACLED note layer, @fold7's fake cursor (`.fold7-cursor`, z-index 1006, appended by js/groups.js) and **`#groupsOverlay`** live where they
 do. The groups moved out so the mobile stack could be **bar → groups → title blocks**; the
 overlay is `position: fixed; inset: 0`, so nothing about where its rows land changed, and it
 sits before `.text-col` in source order so its desktop `z-index: 0` still paints under the

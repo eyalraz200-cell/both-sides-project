@@ -277,8 +277,8 @@ toggles: [Timeline](Timeline.md#the-size-grid--p7sizegridset-page7js).
 
 The click is **page-gated** (js/groups.js): `currentPage < 12` → page7's
 `p7SizeGridSet(true, {uniform: !p7GridUniform})`; `currentPage === 12` →
-page9's own `p9ScopeSet(!p7GridUniform)`, which tiers **the extreme columns
-only** on @fold13 (the legit grid never changes size); any later page → inert. `p7GridUniform` stays the single
+page9's own `p9ScopeSet(!p7GridUniform)`, which tiers **both the extreme columns
+and the legit strip** on @fold13 (see Drag-and-Drop); any later page → inert. `p7GridUniform` stays the single
 source of truth for "tiers showing" on both paths, so the pressed look
 (`!p7GridUniform && (p7Grid.on || p9PageVisible())`, js/update-groups.js) is
 one formula covering both folds.
@@ -833,19 +833,17 @@ still opening, and the flight aims at the rows' REST positions).
   same sides (coalition right, by `dir: rtl` + source order), each column in `campRowOrder`'s
   mobile order (see the roster section — it passes `mobile: true` outright, since the panel is
   built once at parse time and only ever shown under the breakpoint).
-- **There is NO ACLED note in the legend** (explicit instruction). Mobile's credit is a bare
-  **`acleddata.com` link in the viewport's top-LEFT corner** (`.fold6-macled-link`,
-  `fold6MobileAcledLinkEl`), opposite the legend's own top-right button, arriving on the same
-  crossing the note used to (`acledNoteTrigger`) and leaving on `@fold14`'s shared fade-out.
-  It shares the card's `top` and takes the title blocks' own gutter on the side, so the two
-  corners read as a pair. It lives in the legend's layer, so it clears the title blocks the
-  same way the card does, and opts back into pointer events the layer passes through.
-  **It fades out while the legend is OPEN** — the open card spans the full width and its `×`
-  sits in that same corner, so the two would overlap outright. That fade is applied by
-  `fold6MLegendPaintCard`, NOT by `updateGroups`: the two run on different clocks, and an
-  open animates on its own rAF, so a reveal written only on `updateGroups` ticks left the
-  link lit right through a tap-to-open. `updateGroups` sets the reveal amount
-  (`fold6MSetAcledReveal`) and the card's paint multiplies it by the open progress.
+- **«הצגת גודל האירועים» row** (`fold6MobileScopeEl`) directly under the group rows, shown from @fold11's crossing (`fold11SizePast()`, js/update-groups.js) — the desktop `p7ScopeBtnEl`'s mobile twin, same `p7ScopeToggle` (@fold11–@fold12 via `p7SizeGridSet`, @fold13 via `p9ScopeSet`). Tap resolved in `fold6MLegendDragEnd` (`d.onScope`).
+- **«איסוף הנתונים» — a collapsible section at the bottom of the מקרא panel**, under the
+  group rows behind `.fold6-mlegend-divider`. **Only from @fold6 on** — `fold6MDataSetAvailable(noteRevealT > 0)` (js/update-groups.js) hides it above that fold's `acledNoteTrigger` crossing and resets it collapsed. **Collapsed by default.** Header
+  `.fold6-mlegend-data-head` (the desktop note title's type + its chevron, turned by
+  `--note-open`); body `.fold6-mlegend-data-body` holds `FOLD6_NOTE_TEXT` with ACLED as a link.
+  `fold6MDataToggle` (js/groups.js) eases it open/closed over `FOLD6_MDATA_MS` (350ms, `p9Ease`),
+  writing the body's height/opacity per frame and repainting the card with it. The bar
+  captures every pointer, so the header tap and the link are resolved in `fold6MLegendDragEnd`
+  (`d.onData`, `d.link` → `window.open`), not by their own clicks.
+  **Removed — don't reintroduce:** the mobile corner link (`fold6MobileAcledLinkEl`,
+  `.fold6-macled-link`).
   The **desktop note is untouched** — every one of its nodes, its chevron and its typing
   still work exactly as before; only mobile's copy of the credit changed.
 
@@ -1105,11 +1103,12 @@ still opening, and the flight aims at the rows' REST positions).
 - **`@fold3` also fires earlier on mobile** — `FOLD3_CARD_FRAC` (**0.6**, vs the house 0.5;
   `js/groups.js`, same `watchCardThreshold` function-frac form) — so the filler shrink and the
   group labels typing in get more of the fold on screen. Desktop keeps 0.5.
-- **`@fold4` itself fires LATE on mobile** — `FOLD6_CARD_FRAC` (**0.24**, vs the house 0.5;
-  bigger is earlier, so this is well below it), picked by eye on 2026-09-12. It used to fire
-  *early* (0.8, then 0.7) so the whole hand-off, hold and shrink finished while the fold was
-  still on screen; the late crossing is the explicit call, and the tail now plays out as
-  @fold5 comes up. Desktop keeps 0.5.
+- **`@fold4` itself fires LATE on mobile** — `FOLD6_CARD_FRAC` (**0.18**, vs the house 0.5;
+  bigger is earlier, so this is well below it and the card's top has to climb almost all the
+  way up before the hand-off starts), picked by eye with the `manual/` trigger harness on
+  2026-09-14. The whole hand-off — the six rows flying into the מקרא sheet, then the sheet
+  closing itself `FOLD6_MFLY_CLOSE_GAP_MS` after they land — therefore plays out as @fold5
+  comes up rather than while this fold is still centred. Desktop keeps 0.5.
 - **Then, in the fly variant, it closes itself** (explicit instruction): the rows land,
   the panel holds `FOLD6_MFLY_CLOSE_GAP_MS`, then shrinks back into the מקרא pill
   (`fold6MFlyArrive`); `fold6MLegendRestRows` hands the rows back to CSS on that close. The
