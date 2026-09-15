@@ -338,7 +338,15 @@
      Simple Browser refuses it. When the write fails the text goes into a sheet
      the user can select and copy by hand, never into an alert (which cannot be
      selected from at all). */
-  function toClipboard(text, what) {
+  function toClipboard(text, what, meta) {
+    /* Mirror to the dev server: Claude reads _debug-copy.json at the start of
+       its next message, so a Copy reaches the chat without a paste. The
+       clipboard write still happens — pasting stays possible. */
+    try {
+      fetch('/__copy__', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify(Object.assign({ from: what, text: text }, meta || {})) })
+        .then(function () { flash('sent to Claude · ' + what); }, function () {});
+    } catch (e) {}
     var fail = function () { copySheet(text, what); };
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(function () { flash('copied · ' + what); }, fail);
@@ -537,7 +545,7 @@
         return;
       }
       if (m.t === 'state') { H.adopt(m); if (H.desc) H.patch(); return; }
-      if (m.t === 'payload') toClipboard(m.text, H.title);
+      if (m.t === 'payload') toClipboard(m.text, H.title, { label: H.desc && H.desc.label, fold: H.desc && H.desc.fold, file: H.desc && H.desc.file });
     };
 
     // ------------------------------------------------------------- hosts --
@@ -1128,7 +1136,7 @@
       INS.patch();
       return;
     }
-    if (m.t === 'payload') { toClipboard(m.text, 'element edits'); return; }
+    if (m.t === 'payload') { toClipboard(m.text, 'element edits', { label: 'element inspector' }); return; }
     if (m.t === 'none') { if (!m.inst || m.inst === INS.host) INS.none(); return; }
   };
   INS.ch.postMessage({ t: 'hello' });
