@@ -268,6 +268,18 @@ for — the **remote panel**:
   shows — plain words for the thing being tuned (`axis draw-in`, `legend sheet colour`).
   `CONFIG.title` stays the bus channel and the Copy header, and stands in when no label is
   set, but a rail full of file slugs is a rail you have to decode.
+- **Delete** (right end of a harness's toolbar) means "this harness is done, take it out of
+  the repo". The panel cannot touch files: it POSTs `/__trash__` and `server.py` appends the
+  request (file, title, label, fold, time) to **`_debug-trash.json`** (untracked). A
+  `UserPromptSubmit` hook in `.claude/settings.json` prints that queue to Claude at the
+  start of every message, so Claude removes the `_debug-*.js`, its `<script>` tag in
+  `project.html` and its wiki mentions together, then empties the queue to `[]`. The rail
+  strikes the row through meanwhile and the harness hands itself back. A harness knows its
+  own file from `document.currentScript` (captured below the config-end marker, so the
+  splice recipe carries it).
+- **Regenerating a harness from the template**: the file's head up to the config-end
+  marker + the template's tail. Match that marker with `grep … | head -1` — a comment that
+  merely mentions the marker's words once broke the splice.
 - **Open in browser** (foot of the rail) reopens the panel outside VS Code's Simple
   Browser. That webview refuses `window.open` outright and has no popup permission to
   grant, so when the window does not appear the button puts the URL on the clipboard
@@ -375,6 +387,14 @@ made the real device the one place the panel could not reach.
   pressing it just made the harness vanish. Close the tab (or press `H` on the page) to get
   the in-page panel back.
 - `_debug-panel.html` is scaffolding like the rest — delete it with the last `_debug-*.js`.
+
+**Live right now:** `_debug-hint-band.js` (@fold9, mobile) — the picker's instruction band.
+A `compare/` mode pair for the placement (`above` the timeline, shipped, vs `below`) driving
+`P7_HINT_PLACE_MOBILE`, and two `manual/` sliders: `P7_HINT_Y_MOBILE` (the hint up/down) and
+`P7_FIELD_Y_MOBILE` (the whole timeline up/down). Both nudges are positive = down.
+Both invalidate `p7.lastH` before redrawing: the band is reserved out of the timeline's box, and
+`p7UpdateLayout` early-returns on an unchanged W/H, so without it the grid would not re-pack and
+the timeline would not move with the band.
 
 ### The element inspector (`_debug-inspect.js` + the panel's Element tab)
 

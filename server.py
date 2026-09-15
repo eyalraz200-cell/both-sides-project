@@ -252,18 +252,25 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_POST(self):
-        if self.path.split("?")[0] != "/__bus__":
-            self.send_error(404)
-            return
+        route = self.path.split("?")[0]
         n = int(self.headers.get("Content-Length") or 0)
         try:
             entry = json.loads(self.rfile.read(n) or b"{}")
         except ValueError:
             self.send_error(400)
             return
-        bus_post({"ch": entry.get("ch", ""), "from": entry.get("from", ""),
-                  "msg": entry.get("msg")})
-        self._json({"ok": True})
+        if route == "/__bus__":
+            bus_post({"ch": entry.get("ch", ""), "from": entry.get("from", ""),
+                      "msg": entry.get("msg")})
+            self._json({"ok": True})
+        elif route == "/__trash__":
+            # The harness panel's Delete button. Nothing is deleted here: the
+            # request is queued in _debug-trash.json, which a Claude Code hook
+            # shows Claude at the start of every message, so the harness file,
+            # its <script> tag and its docs all go together, from the repo side.
+            self._json({"ok": True, "queued": trash_queue(entry)})
+        else:
+            self.send_error(404)
 
     def do_GET(self):
         if self.path.split("?")[0] == "/__bus__":
@@ -303,6 +310,24 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def log_message(self, fmt, *args):
         pass
+
+TRASH = WATCH_DIR / "_debug-trash.json"
+
+
+def trash_queue(entry):
+    """Append a harness-deletion request; one line per harness, keyed by file."""
+    try:
+        q = json.loads(TRASH.read_text()) if TRASH.exists() else []
+    except ValueError:
+        q = []
+    rec = {"file": entry.get("file"), "title": entry.get("title"),
+           "label": entry.get("label"), "fold": entry.get("fold"),
+           "when": time.strftime("%Y-%m-%d %H:%M")}
+    q = [r for r in q if r.get("file") != rec["file"] or r.get("title") != rec["title"]]
+    q.append(rec)
+    TRASH.write_text(json.dumps(q, ensure_ascii=False, indent=1) + "\n")
+    return q
+
 
 def _git_branch():
     try:

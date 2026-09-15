@@ -82,6 +82,10 @@
   #strip .vp { border: 1px solid currentColor; border-radius: 3px; padding: 0 3px;
                font-size: .9em; opacity: .8; }
   #strip button.dormant { opacity: .45; cursor: default; border-style: dashed; }
+  #strip button.trashed { opacity: .4; text-decoration: line-through; }
+  .bar button.danger { margin-inline-start: auto; color: var(--warn); border-color: transparent;
+                       background: none; opacity: .7; }
+  .bar button.danger:hover { opacity: 1; background: var(--bg-el); }
   #strip button[aria-selected="true"] .pf { opacity: .55; }
   /* The Element row: pinned above the harnesses, shown once something is picked.
      Not a harness — it is whatever the last Cmd+click / double-tap hit. */
@@ -569,6 +573,23 @@
       var rb = btn('Reset', function (e) { H.send({ t: 'btn', name: 'reset', ship: !!(e && e.shiftKey) }); });
       rb.title = 'back to the last Copy · Shift: shipped values';
       H.bar.appendChild(rb);
+      /* Delete = "this harness is done, take it out of the repo". The panel
+         cannot touch files; it queues the request on the dev server
+         (_debug-trash.json), which Claude is shown at the start of its next
+         message and acts on — file, <script> tag and docs together. */
+      var db = btn('Delete', function () {
+        if (!confirm('Delete the harness "' + (d.label || d.title) + '" (' + (d.file || '?') + ') from the project?\n\nClaude removes the file, its script tag and its docs on its next turn.')) return;
+        fetch('/__trash__', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({ file: d.file, title: d.title, label: d.label, fold: d.fold }) })
+          .then(function (r) { return r.json(); })
+          .then(function () {
+            flash('queued for deletion · ' + (d.label || d.title));
+            H.trashed = true; renderStrip();
+            H.send({ t: 'bye' }); H.dead = true;
+          }, function () { flash('could not reach the dev server'); });
+      });
+      db.className = 'danger'; db.title = 'remove this harness from the project (Claude does it)';
+      H.bar.appendChild(db);
       H.hostsEl = el('span', 'host'); H.bar.appendChild(H.hostsEl); H.renderHosts();
 
       var body = H.body; body.textContent = '';
@@ -749,6 +770,7 @@
     Object.keys(seen).forEach(function (t) {
       var H = seen[t];
       var b = btn('', function () { activate(t); }, active === H);
+      if (H.trashed) { b.classList.add('trashed'); b.title = 'queued for deletion — Claude removes it on its next turn'; }
       /* The fold reads first: a list of harnesses is a list of FOLDS, and the
          name alone ("axis-intro") does not say where on the page it lives. */
       var f = H.desc && H.desc.fold;
@@ -1303,6 +1325,7 @@
     if (m.t !== 'iam') return;
     if (m.inspect) return;               // the element inspector is not a harness
     if (m.dormant) { addDormant(m); return; }
+    lastIam[m.title] = Date.now();
     add(m.title);
     // Don't fight a click that hasn't been echoed back yet.
     var settled = Date.now() - switchTouched > 1200;
@@ -1313,6 +1336,18 @@
     behindEl.textContent = (!m.autoReload && m.behind) ? String(m.behind) : '';
   };
   function ask() { disc.postMessage({ t: 'who' }); }
+  // A harness whose page no longer loads it (its _debug-*.js was deleted) stops
+  // answering `who` — drop it from the rail after 6s of silence instead of
+  // keeping a dead row until this tab reloads.
+  var lastIam = {};
+  setInterval(function () {
+    var now = Date.now();
+    Object.keys(seen).forEach(function (t) {
+      if (t === ONLY) return;
+      if (lastIam[t] === undefined) lastIam[t] = now;
+      if (now - lastIam[t] > 6000) { remove(seen[t]); delete lastIam[t]; }
+    });
+  }, 1500);
   ask();
   setInterval(ask, 1500);       // the project tab reloads constantly; re-greet returning harnesses
   if (ONLY) add(ONLY);
