@@ -254,6 +254,11 @@
 (function () {
   var ONLY = new URLSearchParams(location.search).get('t');   // optional: one harness
   var seen = {};            // title -> Harness
+  /* Titles deleted from this tab. A page loaded before the deletion (auto-reload
+     is off) keeps announcing the harness — live or dormant — until it reloads;
+     the row must not come back in the meantime. In-memory on purpose: a reload
+     of this tab forgets it, by which time the file is gone. */
+  var trashedTitles = {};
   window.__seen = seen;     // probe hook
   var active = null;        // the harness the strip shows and the keyboard drives
   var ACTKEY = 'hp:remote:active';
@@ -595,6 +600,7 @@
             // The page's copy goes silent and the row goes away now; Claude
             // removes the file on its next turn.
             H.send({ t: 'trashed' }); H.dead = true;
+            trashedTitles[H.title] = true; delete dormantRows[H.title];
             remove(H);
           }, function () { flash('could not reach the dev server'); });
       });
@@ -822,7 +828,7 @@
      of silence (the page closed). */
   var dormantRows = {};
   function addDormant(m) {
-    if (seen[m.title]) return;
+    if (seen[m.title] || trashedTitles[m.title]) return;
     var d = dormantRows[m.title];
     if (!d) d = dormantRows[m.title] = { m: m, seen: 0 };
     d.seen = Date.now();
@@ -848,6 +854,7 @@
 
   function add(title) {
     if (ONLY && title !== ONLY) return;
+    if (trashedTitles[title]) return;
     if (seen[title]) { if (!seen[title].dead) seen[title].send({ t: 'hello' }); return; }
     var note = document.getElementById('note'); if (note) note.remove();
     var H = new Harness(title);
