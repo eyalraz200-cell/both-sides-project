@@ -580,30 +580,37 @@ the top-right corner (`js/groups.js`, `.fold6-mlegend`):
  ╰───────────────────────────────────╯
 ```
 
-**It is a floating ACLED-note card.** Chosen in a `compare/` pass against the flush white
-bottom sheet it replaced, the ACLED tint winning over a white sheet that still read as
-chrome. The skin is the desktop note's (`.fold6-note-card`): **a tint, no border, no
-shadow**, `--mlg-radius` **8px**. The tint is applied **opaque** (`--mlg-fill`, `#F4F3F6`)
-rather than as the note's own `rgba(0,0,0,.035)` — this card has to cover the title block
-and the canvas behind it, and a translucent one let the dashed frame show straight through,
-which reads as the title sitting on top. It is pinned to the **TOP** of the viewport with its closed pill in the **top-RIGHT**
-corner, both picked in a `compare/` pass against the bottom edge and the other two
-alignments (`FOLD6_MLEGEND_EDGE` / `FOLD6_MLEGEND_ALIGN`, js/groups.js — `let`, and both
-branches are still live; bake one and delete the other once the pose is final). It sits
-`FOLD6_MLEGEND_EDGE_GAP_PX` (**8px**) off that top edge.
-**Its right edge lines up with the title blocks** (explicit instruction), and that
-alignment is **derived, not hard-coded**: `--mlg-gutter` is
-`calc((100vw - min(480px, 100vw - 48px)) / 2)`, the same expression `#page9ZoneBelow`'s
-`padding-inline` uses to line the first @dragcard up under that same edge. A literal `24px`
-is right at 390px and **wrong between 528px and 600px**, where `--card-w` stops growing and
-the gutter widens — verified flush at both 390 and 560. `--mlg-gap-right` and
-`--mlg-gap-left` default to that gutter, and anything tuning them must offset *from* it
-rather than replace it, or the alignment silently breaks at the wide end.
-All four corners are rounded, since there is no screen edge for a flat side to sit on.
-It carries a **small drop shadow while it is the closed button**
-(`0 2px 8px rgba(0,0,0,.10)`, on `:not(.is-open)` only) so it reads as something to press
-rather than a patch of tint; the shadow goes the moment it starts opening, where at full
-size it would only smear the card's own edge across the veil.
+**It is a full-bleed BOTTOM SHEET.** The pose lives behind one switch,
+`FOLD6_MLEGEND_POSE` (js/groups.js) — `"sheet"` ships; `"card"` restores a floating card
+inset from the top-right. Both branches stay live because this has been moved between them
+more than once; the switch drives the edge, the alignment, the edge gap and the overhang
+together, with a matching `is-sheet` / `is-card` class for the side gaps and corners.
+As a sheet it is flush to the screen's bottom, spans the full width, rounds its top corners
+only, and centres מקרא on itself.
+
+The skin is the desktop ACLED note's (`.fold6-note-card`): **a tint, no border**. The tint is
+applied **opaque** (`--mlg-fill`, `#F4F3F6`) rather than the note's own `rgba(0,0,0,.035)` —
+this card covers the title block and the canvas behind it, and a translucent one let the
+dashed frame show straight through, which read as the title sitting on top. Corners are
+`--mlg-radius`, **lerped 8 → 20** across the height step by `fold6MLegendPaintCard`: swapping
+them on `.is-open` snapped, because that class lands on `pointerdown`, before anything has
+moved. The closed button carries a hairline along its top edge
+(`0 -1px 0 rgba(0,0,0,.2)`), the open sheet a soft lift (`0 -4px 6.2px rgba(0,0,0,.07)`),
+both from the Figma sheet (345:2295 / 342:1891).
+
+**Everything inside it lines up on the group cards' box** — `--mlg-content-inset` (16px, the
+bar's own side padding plus the rows panel's). The one exception is the hairline under the
+title, which is **full bleed** (the card's `::before`, 45px down): it closes off the title
+band, so it reads as the sheet's own rule rather than as content. Both rules share
+`--mlg-rule` and `--mlg-rule-w`.
+
+*Removed — don't reintroduce:* the **grab handle** on the title
+(`.fold6-mlegend-btn::before`, a 28×1.5px `#d4d3d8` pill) and the chevron judged against it;
+`.fold6-mlegend-tab` / `fold6MobileTabEl`, the pill as a separate element joined to the
+card's top edge like a tab; and the **camp headings** inside the panel
+(`.fold6-mlegend-camp`) — which is also what takes the two on-canvas camp headers out of the
+`@fold4` flight, since their targets are built from that map.
+
 **The page behind it is dimmed while it is open** (`.fold6-mlegend-veil`,
 `fold6MobileVeilEl` — first child of the layer, so it paints under the card and over
 everything the layer already out-stacks). Picked in a `compare/` pass: the veil is a
@@ -1121,6 +1128,57 @@ still opening, and the flight aims at the rows' REST positions).
 - **`@fold3` also fires earlier on mobile** — `FOLD3_CARD_FRAC` (**0.6**, vs the house 0.5;
   `js/groups.js`, same `watchCardThreshold` function-frac form) — so the filler shrink and the
   group labels typing in get more of the fold on screen. Desktop keeps 0.5.
+- **THE HAND-OFF IS SEQUENTIAL, AND EVERY STEP HAS ITS OWN DURATION** (explicit
+  instruction — "first legend opens, then groups fly"). In order: the מקרא button arrives
+  (`FOLD6_MLEGEND_ARRIVE_MS`, **0** — skipped, so the sheet's open is the first thing seen);
+  the sheet widens (`FOLD6_MLEGEND_WIDTH_MS`, **170**) then grows
+  (`FOLD6_MLEGEND_OPEN_MS`, **410**); it holds (`FOLD6_MFLY_HOLD_MS`, **400**); the rows fly
+  (`FOLD6_MFLY_MS`, **1900**); and it stays open `FOLD6_MFLY_CLOSE_GAP_MS` (**500**) before
+  closing itself. The flight is a `{start, len}` window on the trigger's **raw** progress
+  (`fold6MFlyStart()` / `fold6MFlyLen()`), derived from those durations against
+  `GROUP_TRANSITION_MS`, so retiming any step retimes the release. **The arrival is measured
+  in EASED progress while the window is cut from RAW** — `fold6MFlyStart` converts through
+  the inverse sine ease; adding them directly released the rows ~0.06 early, while the sheet
+  was still growing.
+  - **A TAP GETS ITS OWN, FASTER PAIR** — `FOLD6_MLEGEND_TAP_WIDTH_MS` (**90**) /
+    `FOLD6_MLEGEND_TAP_OPEN_MS` (**190**), picked by `fold6MLegendWidthMs()` /
+    `fold6MLegendOpenMs()` off `fold6MLegendIntroActive`. The numbers above are tuned for a
+    scripted entrance; a tap that borrowed them took 505ms to answer and read as the button
+    lagging the finger.
+  - **The rows never un-type in the fly variant.** That guard is `!fold6MFlyEnabled()`, not
+    `!flying` — since the flight starts late, the rows sit at zero progress through the
+    opening beat, and on the old test that read as "not flying", so they spent it spelling
+    themselves backwards before setting off.
+  - **The camp headers' exit is its own window** on mobile — `FOLD6_HEAD_UNTYPE_AT` (**0**)
+    and `FOLD6_HEAD_UNTYPE_MS` (**500**) — rather than mirroring whenever each camp typed in
+    at `@fold2`. They are the one thing at this fold that still leaves by un-typing.
+  - **The flight paints IN FRONT of the legend the whole way**, from one parking layer
+    inside `#fold6MobileLegendLayer` after the panel. *Removed — don't reintroduce:*
+    `.fold6-mfly-layer-under`, a second layer at z-index 1003 — above the legend's old 1002,
+    but silently behind it once the legend went to 1006.
+- **THE GROUP LABELS BREAK EXACTLY AS THEY DO AT `@fold3`** (explicit instruction). The card
+  gets no wrap of its own: each label inherits `@fold3`'s cap for that group
+  (`labelCapMobile`, else `GROUP_LABEL_MAX_WIDTH_MOBILE`) **scaled by the type**, since the
+  card sets the same text at 14px where the column sets it at 16. Text width is linear in
+  font size, so the same words land on the same lines — 2, 2, 1, 2, 2, 2 in both places.
+  The two sizes are **literals** in the row builder, not the constants holding them: that
+  builder runs at parse time, above where `FOLD6_MFLY_FONT_PX` is declared, and reading it
+  there threw on `const`'s temporal dead zone — which takes every global in the file down
+  with it. *Removed — don't reintroduce:* the per-group `labelCapLegend` this replaced.
+- **THE SIZE BUTTON AND THE ACLED NOTE ARE OUTLINE CARDS** in the group cards' shape —
+  1px `#c9c9c9`, 10px radius, 12/13 padding, on the same 16..377 box. Both chosen in
+  `compare/` passes against a filled card and against a rule above them; **no rule ships**
+  (`fold6MobileDataDividerEl` is still built but not appended, so restoring it is one
+  `append` away). `box-sizing: border-box` is load-bearing on both: they are `<button>`s,
+  and without it the outline pushes them past the cards they line up with. The ACLED card
+  (`.fold6-mlegend-data-card`, `fold6MobileDataCardEl`) is a real WRAPPER around the heading
+  AND the body — the two are siblings, and a border on each drew two boxes with a seam,
+  where the wrapper hugs the heading while collapsed and grows around the text as it opens,
+  because the body's own height animates to 0. Its chevron sits 12px in, being inside the
+  card's own padding now.
+- **The group rows dim in 140ms, not the legend system's 260** — they are buttons the reader
+  taps, and the slower tempo read as the card lagging the finger. Mobile only:
+  `.group-item` keeps 260 on desktop, where it fades rather than being pressed.
 - **`@fold4` itself fires LATE on mobile** — `FOLD6_CARD_FRAC` (**0.23**, vs the house 0.5;
   bigger is earlier, so this is well below it and the card's top has to climb almost all the
   way up before the hand-off starts), picked by eye with the `manual/` trigger harness on
