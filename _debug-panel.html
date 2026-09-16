@@ -1368,6 +1368,13 @@
     var m = ev.data || {};
     if (m.t !== 'iam') return;
     if (m.inspect) return;               // the element inspector is not a harness
+    if (m.page) {                        // the page-wide switches (_debug-bus.js)
+      var st = Date.now() - switchTouched > 1200;
+      if (typeof m.foldBadge === 'boolean' && st) foldBox.checked = m.foldBadge;
+      if (typeof m.autoReload === 'boolean' && st) autoBox.checked = m.autoReload;
+      behindEl.textContent = (!m.autoReload && m.behind) ? String(m.behind) : '';
+      return;
+    }
     if (m.dormant) { addDormant(m); return; }
     lastIam[m.title] = Date.now();
     add(m.title, m.file);

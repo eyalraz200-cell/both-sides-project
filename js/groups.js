@@ -798,7 +798,11 @@ function makeTrigger(duration, onTick, onSettle) {
     onTick();
   }
 
-  return { currentRaw, currentT: () => p9Ease(currentRaw()), trigger, set };
+  // `target` is where the trigger is heading (1 or 0) — the direction of the
+  // leg in flight, or the side it settled on. Read by the mobile @fold4 fly
+  // (js/update-groups.js), whose reverse runs a different window than its
+  // forward.
+  return { currentRaw, currentT: () => p9Ease(currentRaw()), trigger, set, target: () => toT };
 }
 
 // Fold triggers each fire once, at their card's center crossing.
@@ -882,7 +886,12 @@ const fold6Trigger      = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateGroup
   (target) => {
     if (isMobile()) return;   // mobile already un-types inside the glide itself
     if (target >= 1) fold6LabelUntypeTrigger.trigger(1);
-    else fold6LabelUntypeTrigger.set(0);
+    // ANIMATED back, not `set(0)`: an instant reset put every character back on
+    // screen in a single frame, so scrolling back up out of @fold4 snapped the
+    // six labels in at whatever length @fold3's own type-in was passing
+    // through. Reversing the un-type types them back in over its own 900ms,
+    // the mirror of the way they spelled themselves away.
+    else fold6LabelUntypeTrigger.trigger(0);
   });
 // The un-type after the glide, and its counterpart: hovering anywhere over the
 // mini-legend types every label back in, BOTH columns at once (explicit
@@ -1258,6 +1267,79 @@ const checkSquaresReveal = watchCardThreshold(squaresRevealCardEl, 0.5, squaresR
 // the trigger has to be on the note's own fold — fired on @fold5 it landed
 // inside a panel that was closing, i.e. nowhere.
 const checkAcledNote     = watchCardThreshold(acledNoteCardEl, 0.5, acledNoteTrigger);
+// MOBILE: on the same crossing the closed מקרא pill JUMPS once — it grows
+// FOLD6_MLEGEND_JUMP_PX taller and settles back, base pinned to the bottom edge
+// and width untouched, the way a waiting notification nudges itself. It is a
+// wall-clock beat, not a trigger: it plays once per forward crossing and has no
+// reverse state to hold. `var`s — a manual/ harness drives them.
+// The grab handle's ("eyebrow") gap from the closed card's TOP edge
+// (.fold6-mlegend-card::after, style.css). `var` — a manual/ harness drives it.
+var FOLD6_MLEGEND_HANDLE_TOP_PX = 5;
+var FOLD6_MLEGEND_JUMP_PX = 52;   // manual/-baked 2026-09-16
+var FOLD6_MLEGEND_JUMP_MS = 700;   // up and back down, total
+let fold6MLegendJumpAt = null;
+// THE FLASH — the pill darkens and comes back over the jump, so the nudge reads
+// as "something here" rather than a shape moving. Its own clock and its own
+// colour, both driven by a compare//manual/ harness; `FOLD6_MLEGEND_FLASH_ON`
+// is the candidate switch (off = the jump alone).
+var FOLD6_MLEGEND_FLASH_ON    = true;
+var FOLD6_MLEGEND_FLASH_COLOR = "#e6e4ec";
+var FOLD6_MLEGEND_FLASH_MS    = 640;
+let fold6MLegendFlashBase = null;   // the fill it was wearing when the jump began
+function fold6MLegendFlashK() {
+  if (!FOLD6_MLEGEND_FLASH_ON || fold6MLegendJumpAt === null) return 0;
+  const t = (performance.now() - fold6MLegendJumpAt) / Math.max(1, FOLD6_MLEGEND_FLASH_MS);
+  if (t >= 1) return 0;
+  return t < 0.5 ? p9Ease(t * 2) : 1 - p9Ease((t - 0.5) * 2);
+}
+// Both colours as [r,g,b], lerped in plain sRGB — the two are a few percent
+// apart, so nothing fancier earns its keep here.
+function fold6MLegendRgb(v) {
+  const m = String(v).match(/[\d.]+/g);
+  if (m && m.length >= 3 && /^rgb/i.test(v)) return m.slice(0, 3).map(Number);
+  const h = String(v).replace("#", "");
+  const n = h.length === 3 ? h.split("").map(c => c + c) : [h.slice(0, 2), h.slice(2, 4), h.slice(4, 6)];
+  return n.map(x => parseInt(x, 16) || 0);
+}
+function fold6MLegendPaintFlash(card) {
+  const k = fold6MLegendFlashK();
+  if (k <= 0) {
+    if (fold6MLegendFlashBase !== null) { card.style.removeProperty("--mlg-fill"); fold6MLegendFlashBase = null; }
+    return;
+  }
+  // Captured on the first flashing frame, so whatever tint the card is actually
+  // wearing (another harness's included) is what it returns to.
+  if (fold6MLegendFlashBase === null) fold6MLegendFlashBase = getComputedStyle(card).backgroundColor;
+  const a = fold6MLegendRgb(fold6MLegendFlashBase), b = fold6MLegendRgb(FOLD6_MLEGEND_FLASH_COLOR);
+  const mix = a.map((v, i) => Math.round(v + (b[i] - v) * k));
+  card.style.setProperty("--mlg-fill", `rgb(${mix[0]}, ${mix[1]}, ${mix[2]})`);
+}
+// How much taller the closed pill is right now, 0 when it isn't jumping.
+function fold6MLegendJumpPx() {
+  if (fold6MLegendJumpAt === null) return 0;
+  const t = (performance.now() - fold6MLegendJumpAt) / Math.max(1, FOLD6_MLEGEND_JUMP_MS);
+  if (t >= 1) { fold6MLegendJumpAt = null; return 0; }
+  // One up-and-down: p9Ease out to the top over the first half, back over the
+  // second — the house curve, re-eased per half rather than one sine.
+  const half = t < 0.5 ? p9Ease(t * 2) : 1 - p9Ease((t - 0.5) * 2);
+  return FOLD6_MLEGEND_JUMP_PX * half;
+}
+function fold6MLegendJumpTick() {
+  if (fold6MLegendJumpAt === null) return;
+  fold6MLegendPaintCard(fold6MLegendOpenRaw);
+  requestAnimationFrame(fold6MLegendJumpTick);
+}
+function fold6MLegendJump(past) {
+  // Forward crossings only, closed pill only — a jump under an open panel (or
+  // one played on the way back up) is noise.
+  if (!isMobile() || !past || fold6MLegendOpenWant || fold6MLegendOpenRaw > 0) return;
+  fold6MLegendJumpAt = performance.now();
+  requestAnimationFrame(fold6MLegendJumpTick);
+}
+const checkMLegendJump = watchCardThreshold(acledNoteCardEl, 0.5, {
+  set:     v => { if (v === 1) fold6MLegendJump(true); },
+  trigger: v => fold6MLegendJump(v === 1),
+});
 // The note un-types on @fold7's crossing (explicit instruction) — the same
 // card and fraction as fold7LabelTrigger below, so the
 // note clears exactly as the square labels fold takes over. Wrapped rather
@@ -1324,11 +1406,12 @@ function fold8MeasureTooltipHeight() {
 // moves while you scroll — keep that in mind if the fold ever reads as firing
 // twice.
 //
-// 0.8, picked by eye on 2026-09-14 with the @fold7 trigger harness. HIGH:
-// the threshold is compared against the card's TOP, so 0.8 fires as soon as
-// the card's top has risen past 80% of the screen height — early, so the demo
-// plays while the card is still coming up rather than after it has left.
-var FOLD8_MOBILE_CARD_FRAC = 0.8;
+// 0.15, picked by eye on 2026-09-16 with the @fold7 trigger harness. LOW, and
+// deliberately: the threshold is compared against the card's TOP, so a smaller
+// fraction means the card has to climb FURTHER before the fold fires — 0.15
+// holds the demo back until the card has nearly cleared the top of the screen,
+// where the docked frame and the magnifying-glass demo can own the view.
+var FOLD8_MOBILE_CARD_FRAC = 0.15;
 function fold8TooltipCardFrac() {
   if (isMobile()) return FOLD8_MOBILE_CARD_FRAC;
   const fallback = 0.5 - FOLD8_TOOLTIP_ABOVE_PX / window.innerHeight;
@@ -1696,13 +1779,25 @@ function fold9LegendPeek(target) {
 // A trigger-shaped stand-in: watchCardThreshold only ever calls .set()/.trigger().
 const checkFold9LegendPeek = watchCardThreshold(page7TitleCardEl, 0.5,
   { set: fold9LegendPeek, trigger: fold9LegendPeek });
-// Same crossing as p7AxisShouldShow (page7.js) — title card fully offscreen,
-// top <= 0. Used to instant-reverse (snap straight back to rest on scroll-up
-// rather than being catchable mid-flight) — per explicit instruction, this is
-// now a normal reversible trigger like every other fold's, so scrolling back
-// up from @fold9 into @fold8 plays the same fly-out/color-in animation in
-// reverse, covering only the remaining distance, instead of snapping.
-const checkFold9Fly = watchCardThreshold(page7TitleCardEl, 0, fold9FlyTrigger);
+// Same crossing as p7AxisShouldShow (page7.js), on BOTH breakpoints — so the 8
+// sample squares set off for their real dots exactly as the year axis starts
+// drawing itself in, rather than a moment earlier.
+//   desktop: the card fully offscreen, top <= 0 (p7AxisShouldShow's own rule).
+//   mobile:  the card ALMOST out — p7AxisIntroCardAlmostOut's rule, its BOTTOM
+//            within P7_AXIS_INTRO_CARD_REMAIN_PX_MOBILE of the top edge. The
+//            same line expressed against the card's TOP, which is what
+//            watchCardThreshold compares: top <= remain - cardH.
+// Used to instant-reverse (snap straight back to rest on scroll-up rather than
+// being catchable mid-flight) — per explicit instruction, this is now a normal
+// reversible trigger like every other fold's, so scrolling back up from @fold9
+// into @fold8 plays the same fly-out/color-in animation in reverse, covering
+// only the remaining distance, instead of snapping.
+function fold9FlyFrac() {
+  if (!isMobile() || typeof P7_AXIS_INTRO_CARD_REMAIN_PX_MOBILE === "undefined") return 0;
+  const h = page7TitleCardEl ? page7TitleCardEl.getBoundingClientRect().height : 0;
+  return (P7_AXIS_INTRO_CARD_REMAIN_PX_MOBILE - h) / window.innerHeight;
+}
+const checkFold9Fly = watchCardThreshold(page7TitleCardEl, fold9FlyFrac, fold9FlyTrigger);
 // Watches the *sticky wrapper* (.page12-sticky-center), not the title card —
 // the card is centred inside a 100vh wrapper flush with the section top, so
 // the wrapper's own top is the section's arrival.
@@ -1883,7 +1978,7 @@ function p7ScopeToggle() {
 // fold14PairTrigger) on its house 0.5 crossing, like every other fold.
 
 function checkGroupTriggers() {
-  checkFold2(); checkFold3(); checkFold6(); checkSquaresReveal(); checkAcledNote(); checkNoteUntype(); checkFold7Label(); checkFold7Cursor(); checkFold8SquareDim(); checkFold8Tooltip(); checkFold8DemoGrow(); checkFold9(); checkFold9LegendPeek(); checkFold9Fly(); checkFold10Grid(); checkFold11Size(); checkFold13(); checkFold14Pair();
+  checkFold2(); checkFold3(); checkFold6(); checkSquaresReveal(); checkAcledNote(); checkMLegendJump(); checkNoteUntype(); checkFold7Label(); checkFold7Cursor(); checkFold8SquareDim(); checkFold8Tooltip(); checkFold8DemoGrow(); checkFold9(); checkFold9LegendPeek(); checkFold9Fly(); checkFold10Grid(); checkFold11Size(); checkFold13(); checkFold14Pair();
 }
 
 // Default (camp-column) swatch size + the swatch-to-label gap
@@ -2809,8 +2904,12 @@ function fold6MLegendPaintCard(raw) {
   const measuredH = btn.offsetHeight + FOLD6_CARD_PAD + FOLD6_MLEGEND_PAD_BOTTOM_PX;
   const closedW = FOLD6_MLEGEND_COMPACT_CLOSED
     ? (FOLD6_MLEGEND_COMPACT_W || btn.offsetWidth + 2 * FOLD6_MLEGEND_COMPACT_PAD_X) : barW;
-  const closedH = FOLD6_MLEGEND_COMPACT_CLOSED && FOLD6_MLEGEND_COMPACT_H
+  // The jump (fold6MLegendJump above) makes the CLOSED pill taller and nothing
+  // else: the base is the bottom edge either way, so a taller box grows upward.
+  // It fades out as the panel opens, so a tap mid-jump isn't fighting it.
+  const closedRestH = FOLD6_MLEGEND_COMPACT_CLOSED && FOLD6_MLEGEND_COMPACT_H
     ? FOLD6_MLEGEND_COMPACT_H : measuredH;
+  const closedH = closedRestH + fold6MLegendJumpPx() * (1 - hT);
   const atTop = FOLD6_MLEGEND_EDGE === "top";
 
   // ONE FRAME IN EVERY STATE (explicit instruction — "it should just be part of
@@ -2834,6 +2933,8 @@ function fold6MLegendPaintCard(raw) {
   const radius = FOLD6_MLEGEND_CLOSED_RADIUS_PX
     + (FOLD6_MLEGEND_OPEN_RADIUS_PX - FOLD6_MLEGEND_CLOSED_RADIUS_PX) * hT;
   card.style.setProperty("--mlg-radius", `${radius}px`);
+  card.style.setProperty("--mlg-handle-top", `${FOLD6_MLEGEND_HANDLE_TOP_PX}px`);
+  fold6MLegendPaintFlash(card);
   if (atTop) {
     // Top edge: the card's top is fixed and its BOTTOM descends.
     card.style.top = "0";
@@ -2856,7 +2957,11 @@ function fold6MLegendPaintCard(raw) {
   // offsetTop of a position:relative element INCLUDES its own `top` — strip
   // the shift written last frame to get the flow position back.
   const btnFlowTop = btn.offsetTop - (parseFloat(btn.style.top) || 0);
-  const offClosed = (closedH - btn.offsetHeight) / 2;
+  // The RESTING height, not the jumped one: the handle (.fold6-mlegend-card::after)
+  // and the title stay their own distance from the card's TOP while it jumps, so
+  // the extra height opens up as a bigger gap UNDER the title (explicit
+  // instruction) instead of pushing the pair down the taller box.
+  const offClosed = (closedRestH - btn.offsetHeight) / 2;
   const off = offClosed + (btnFlowTop - offClosed) * hT;
   // At the top edge the card's own top IS the bar's top, so the title only has
   // to make up that lerped inset; at the bottom edge it rides the travelling
@@ -3140,7 +3245,29 @@ function fold6MFlyEnabled() {
 function fold6MFlyMeasure() {
   const key = `${window.innerWidth}x${window.innerHeight}`;
   if (fold6MFlyTargets && fold6MFlyTargetsViewport === key) return true;
-  if (fold6MobilePanelEl.hidden) return false;
+  if (fold6MobilePanelEl.hidden) {
+    // A closed panel can't be measured — but a stale map is still the truth
+    // about where the rows ARE (in it), and returning false here is what made
+    // them reappear on screen: fold6MFlyTargetOf went null, the row fell
+    // through to the no-fly branch, `flying` dropped and the real row was
+    // un-hidden at its @fold3 spot, mid-screen, on whatever fold the reader
+    // was on. Safari's URL bar does exactly this every time it collapses or
+    // expands (innerHeight changes → new key → miss), which is why the six
+    // labels kept popping in on the way back up. The pill is bottom-anchored,
+    // so a height change moves every target by exactly that delta; a width
+    // change (rotation) leaves x stale until the panel next opens and
+    // re-measures itself (fold6MFlyTargets is nulled on open).
+    if (!fold6MFlyTargets) return false;
+    const oldH = parseFloat(fold6MFlyTargetsViewport.split("x")[1]) || window.innerHeight;
+    const dh = window.innerHeight - oldH;
+    if (dh) {
+      fold6MFlyTargets.forEach((t) => { t.y += dh; });
+      if (fold6MFlyHeadTargets) fold6MFlyHeadTargets.forEach((t) => { t.y += dh; });
+      if (fold6MFlyPanelRect) { fold6MFlyPanelRect.top += dh; fold6MFlyPanelRect.bottom += dh; }
+    }
+    fold6MFlyTargetsViewport = key;
+    return true;
+  }
   // Row heights first: they change the panel's layout, so measuring targets
   // before them would aim the flight at rows that are about to move.
   fold6MEqualiseRows();

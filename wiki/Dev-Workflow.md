@@ -114,6 +114,8 @@ A small fixed chip in the **top-left** corner of `project.html` showing which fo
 on — `#foldNumberBadge` (`.fold-number-badge` in style.css, driven by
 `updateFoldNumberBadge()` in js/nav.js off `currentPage + 1`).
 
+Switched off it is **gone — no dot, no chip** (**removed — don't reintroduce**: the 7px dot that used to stand in for it, invisible on the near-white page); the way back is the harness panel tab's fold-badge switch, which `_debug-bus.js` answers so it survives the last harness being deleted.
+
 **DEV ONLY — it must NEVER appear on the deployed site** (explicit, binding instruction).
 The gate is `isLocalHost()` (js/core.js): js/nav.js only looks the element up when that is
 true, so on any public host `foldNumberBadge` is `null`, neither `.is-visible` nor
@@ -445,6 +447,13 @@ stylesheet value; edited rows carry an accent dot. `Esc` or **Clear** drops the 
   API; when the write fails the payload opens in a selectable sheet inside the panel,
   pre-selected and copied via `execCommand` where that still works. Same for a harness Copy.
 
+**The page-wide switches live in `_debug-bus.js`, not in a harness.** The rail's foot
+(dev fold badge, auto-reload) drives `js/nav.js`'s `setFoldBadgeVisible` and `reload.js`
+over the shared `harness:__all__` channel. That answer used to come from inside each
+`_debug-<thing>.js`, so deleting the last baked harness left the switches dead with
+nothing on the page listening; it is answered by the transport now (`page: true`, which
+the panel applies without listing a rail row). Same change in the templates.
+
 ## Currently in the repo
 
 Nothing but the transport and the inspector. `_debug-bus.js`, `_debug-inspect.js` (both
@@ -470,7 +479,7 @@ is the live one in code:
 | `SBB_TIMELINE_LEFT_PX` (@fold9 outer dot edge, desktop) | 190 | `squareboundingbox.js` |
 | `P7_INSPECT_SCRIM` / `P7_INSPECT_HOLE_DOTS` (loupe halo-by-subtraction, `p7DrawInspectScrim`) | 0.76 / 1 | `page7.js` |
 | `P7_SCOPE_BTN_GAP` (scope pill above the right-hand legend) | 22 | `js/groups.js` |
-| `PAGE0_CUE_SCALE` / `PAGE0_CUE_DOT_MS` / `PAGE0_CUE_ROW_STAGGER_MS` (@fold1 idle scroll cue) | 0.3 / 940 / 22.5 | `js/fold1-intro.js` |
+| `PAGE0_CUE_SCALE` / `PAGE0_CUE_DOT_MS` / `PAGE0_CUE_ROW_STAGGER_MS` / `PAGE0_CUE_EXIT_MS` (@fold1 idle scroll cue) | 0.3 / 940 / 22.5 / 260 | `js/fold1-intro.js` |
 | `P12_PAIR_GAP` / `P12_PAIR_SPREAD` / `P12_DOT_COUNT` (@fold15 couples) | 3 / 2.3 / 9250 | `page12.js` |
 | `FOLD3_BEAT_MS` (@fold3's beat windows, absolute ms) | see file | `js/groups.js` |
 | Hero title/subtitle `font-size`, explicit `line-height`, `top: calc(50% - Npx)` | see file | `style.css` |

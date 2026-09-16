@@ -71,30 +71,14 @@ body {
   display: block;
 }
 
-/* DISMISSED — a 7px dot, not gone. The badge must never be un-dismissable: with
-   no chip to tap there is no way back on a phone, which is the same rule the
-   harness panel's chip follows. Click it (or Ctrl+Shift+F) to bring the number
-   back. The digits stay in the element and are clipped away, so nothing has to
-   be re-rendered when it returns. */
-.fold-number-badge.is-dot {
-  display: block;
-  width: 7px;
-  height: 7px;
-  padding: 0;
-  border-radius: 50%;
-  overflow: hidden;
-  text-indent: -99px;
-  background: rgba(255, 255, 255, 0.35);
-  opacity: .9;
-}
-/* Both states get a generous invisible tap/click target without moving a pixel
-   of layout — 7px is far below the ~44px a finger needs. */
-.fold-number-badge::after {
-  content: "";
-  position: absolute;
-  inset: -12px;
-}
-.fold-number-badge.is-dot::after { inset: -16px; }
+/* DISMISSED — GONE, no dot. It used to leave a 7px chip to tap back, because a
+   phone has no Ctrl+Shift+F; the way back now is the harness panel tab's own
+   fold-badge switch (answered by _debug-bus.js, so it works with no harness
+   loaded). The `is-dot` class is still set by js/nav.js and still carries the
+   element's state — it just paints nothing.
+   Removed — don't reintroduce: the white 7px dot (it was invisible on the
+   near-white page anyway) and its padded tap target. */
+.fold-number-badge.is-dot { display: none; }
 
 /* ── The fold picker ────────────────────────────────────────────────────────
    Clicking/tapping the badge on EITHER breakpoint opens a list of all 16 folds
@@ -4431,7 +4415,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   .fold6-mlegend-card::after {
     content: "";
     position: absolute;
-    top: 8px;
+    /* Its gap from the card's top — a variable so a manual/ harness can drive
+       it; fold6MLegendPaintCard writes it from FOLD6_MLEGEND_HANDLE_TOP_PX. */
+    top: var(--mlg-handle-top, 8px);
     left: 50%;
     transform: translateX(-50%);
     width: 12px;
