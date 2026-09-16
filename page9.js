@@ -151,6 +151,16 @@ const P9_EXTREME_GAP = 320;
 // grid widens its monotonic columns straight across the center gap.
 const P9_SQ_M          = 1.5;
 const P9_CELL_M        = 2;   // extreme-grid pitch
+// The size the MOBILE PICKER's chosen dot grows to, px. This fold's dots are a
+// flat 1.5px and growth is the only cue marking the pick (the white scrim it
+// replaced is gone), so every pick grows to the same size — deliberately NOT the
+// timeline's crowd ladder (P7_BULGE_MULT): a tier-0 event would not grow at all,
+// and size on this fold means nothing (x is the category, y is the rank), so
+// importing the ladder would put a second, contradictory encoding on the dots.
+// 12px is 6 cells at the 2px pitch — through the glass's own zoom-out it reads
+// about a third of the 96px loupe, with rings of context still around it, and it
+// hides a ~6x6 neighbourhood out of thousands.
+const P9_PICK_SQ_M     = 12;
 const LEGIT_CELL_M     = 1;   // legit-bar pitch: real dots, packed until they read as a solid bar
 const P9_EXTREME_GAP_M = 64;
 // Mobile with the crowd tiers on: the columns are several times wider, so the
@@ -161,6 +171,11 @@ const P9_EXTREME_GAP_TIERED_M = 16;
 // 2px pitch the biggest tier was 28px and the columns left most of the phone's
 // height empty. p9ScopeMobileCell tries these multiples of P9_CELL_M, largest
 // first, and keeps the first at which both camps pack uncapped into the box.
+// Whether the phone's extreme columns grow their PITCH to use the screen (the
+// p9ScopeMobileCell solve below). Off: the tiers draw at the native pitch, so a
+// dot's unit size is the same with the button on or off and the tiers read as a
+// comparison rather than "everything got bigger".
+var P9_SCOPE_GROW_PITCH_M = false;
 const P9_SCOPE_CELL_STEPS_M = [8, 7, 6, 5, 4, 3.5, 3, 2.5, 2, 1.5, 1];  // no floating pill labels on mobile, so the gap is purely visual (widened from 40 — one-column sides sat too close to center)
 // The tray band's top rule (Figma's Line 15) — must match `top` in .page9-tray's
 // ≤600px rule, which is the thing that actually positions it.
@@ -520,6 +535,9 @@ const p9 = {
   // 0 = no dim, 1 = fully dimmed — animated by p9HoverDimAnimate in p9HoverInit
   // so the dimming fades in/out rather than snapping.
   hoverDimT: 0,
+  // The mobile picker's own dim ramp, advanced by p7BulgeTick (page7.js).
+  // Separate from hoverDimT, which the pill-hover rAF below owns and resets.
+  pickDimT: 0,
   // Keeps the last-highlighted category index alive during fade-out so dots
   // that were at full opacity don't jump dim the instant hoveredCategoryIdx clears.
   hoverDimCategoryIdx: null,
@@ -1056,10 +1074,13 @@ function p9LegitTierPlan(W, H) {
   // flips between the two re-solved the plan every other call — which after a
   // drop re-sized the strip (visible on the right camp).
   if (typeof canvas !== "undefined" && canvas.clientWidth) { W = canvas.clientWidth; H = canvas.clientHeight; }
-  // Page 11 too: @fold12's glide captures its landing positions BEFORE nav flips
-  // currentPage to 12, so gating on 12 alone landed every dot flat and then
-  // snapped it to its tiered slot at the page flip.
-  if (!p9ScopeTiered() || typeof currentPage === "undefined" || currentPage < 11 || currentPage > 12) return null;
+  // Pages 10 and 11 too: @fold12's glide captures its landing positions BEFORE
+  // nav flips currentPage to 12, so gating on 12 alone landed every dot flat and
+  // then snapped it to its tiered slot at the page flip — and the «הצגת גודל
+  // האירועים» button works from @fold11 (page 10), where a reader who stays put
+  // has the field landed on this strip too: without page 10 here, a press there
+  // ran the morph toward a flat endpoint and nothing on screen changed.
+  if (!p9ScopeTiered() || typeof currentPage === "undefined" || currentPage < 10 || currentPage > 12) return null;
   if (!p7.ready || !p7.leftEvents) return null;
   const mobile = isMobile();
   if (mobile && !P9_LEGIT_SPREAD_M) return null;           // the packed bar has no room to give
@@ -1680,7 +1701,14 @@ function p9ScopeBox(W, H, colsTotal, topY, midY, centerX, rightX0, CELL) {
     const ui = p9ScopeSideUi(W, centerX, rightX0);
     const leftRoom  = centerX - ui.left - P9_SCOPE_WIDEN_MARGIN;
     const rightRoom = ui.right - P9_SCOPE_WIDEN_MARGIN - rightX0;
-    const cell = p9ScopeMobileCell(CELL, leftRoom, rightRoom, midY - topY);
+    // The pitch STAYS the native one (P9_SCOPE_GROW_PITCH_M false): growing it
+    // blew the dots up to fill the screen, which is not what the button is for —
+    // the tiers are a size COMPARISON, so the unit size must not move. Room is
+    // found the way desktop finds it: outward, then the cap comes down
+    // (p9ScopeSolveCols).
+    const cell = P9_SCOPE_GROW_PITCH_M
+      ? p9ScopeMobileCell(CELL, leftRoom, rightRoom, midY - topY)
+      : CELL;
     box.cellPx = cell;
     box.cols = Math.max(1, Math.ceil(colsTotal * CELL / cell));
     box.rowsMax = Math.max(1, Math.floor((midY - topY) / cell));
@@ -2237,12 +2265,37 @@ function drawPage9(ctx, W, H) {
 
     if (recordOnly) return;
 
+    // The picker's chosen dot GROWS — after posMap.set on purpose, so the map
+    // the hit-test, the drag and every downstream consumer read stays REST
+    // geometry and only the paint changes. Centre-preserving, over the top of
+    // its neighbours: this fold's dots come out of a column packer that the drop
+    // and scope animations are concurrently interpolating, so there is no
+    // lattice to push aside the way the timeline's bulge does. The dim above is
+    // what says the covered ones are not the subject.
+    if (p7Inspect.event === e && typeof p7InspectPage === "function" && p7InspectPage() === 12) {
+      const bulge = typeof p7BulgeT !== "undefined" ? p7BulgeT.get(e) : null;
+      if (bulge && bulge.t > 0) {
+        const grown = sq + (P9_PICK_SQ_M - sq) * p9Ease(bulge.t);
+        drawX -= (grown - sq) / 2;
+        drawY -= (grown - sq) / 2;
+        sq = grown;
+      }
+    }
+
     // While one dot is hovered (p9.hoveredEvent), it's drawn fully opaque and
     // every other dot is dimmed. While a dropped pill is hovered instead
     // (p9.hoveredCategoryIdx, set by p9HoverInit's pill listener), ALL dots
     // of that category stay full opacity and the rest dim by the same factor.
     // Dot-hover takes priority so both states are never active simultaneously.
-    if (p9.hoveredEvent) {
+    // The mobile picker's own dim, first: while a dot is held, it keeps full
+    // colour and everything else drops to the same per-actor floor a hover would
+    // give it. p9.pickDimT, not p9.hoverDimT — page9's pill-hover rAF owns that
+    // one and zeroes it every frame, which would stomp this out. Exempts
+    // p7Inspect.event exactly as @fold9 exempts `p7.hoveredEvent || p7Inspect.event`.
+    if ((p9.pickDimT || 0) > 0 && p7Inspect.event) {
+      const dimFactor = 1 - (1 - hoverDim(e.actor)) * p9.pickDimT;
+      drawAlpha = (e === p7Inspect.event) ? 1 : drawAlpha * dimFactor;
+    } else if (p9.hoveredEvent) {
       drawAlpha = (e === p9.hoveredEvent) ? 1 : drawAlpha * hoverDim(e.actor);
     } else if (p9.hoveredCategoryIdx !== null) {
       // Same per-actor floor as dot-hover (hoverDim, js/core.js), only
@@ -2708,10 +2761,16 @@ function drawPage9(ctx, W, H) {
 
   p9.lastPositions = posMap;
 
-  // The picker's selection halo — dims every dot except the picked one. Drawn
-  // after the dots and after posMap is published, since it reads that map to
-  // find the hole. See p7DrawInspectScrim (page7.js).
-  p7DrawInspectScrim(ctx, W, H);
+  // The picker's cue on this fold is the picked dot's own GROWTH plus the dim
+  // around it (p9.pickDimT / P9_PICK_SQ_M above), the same shape @fold9 uses.
+  // **Removed — don't reintroduce:** p7DrawInspectScrim, the white
+  // rgba(255,255,255,0.76) wash with a punched hole and a saturated repaint.
+  // Under the glass — a 4x nearest-neighbour blit of this canvas — it read as
+  // pale washed-out dots with a hard circle drawn around the selection.
+  //
+  // p7BulgeTick is what advances that growth, and it is otherwise only driven
+  // from drawPage7's side loop, which never runs on this fold.
+  if (typeof p7BulgeTick === "function") p7BulgeTick();
 
   // The mobile event picker (p7InspectInit, page7.js) serves this fold too —
   // its state is kept in step from the owning fold's own draw, exactly as

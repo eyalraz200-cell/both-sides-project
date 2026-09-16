@@ -279,6 +279,12 @@ function setActivePage(page) {
   }
 
   currentPage = page;
+  // The picker's instruction band (page7.js) is painted from the timeline's own
+  // draw loop, which stops the moment the timeline does — so the fold it leaves
+  // on (@fold11's beat) has to tell it, or it stays frozen on screen fully
+  // typed. AFTER the assignment above, deliberately: the band reads
+  // currentPage, and running it first left it a whole fold behind.
+  if (typeof p7HintBandApply === "function") p7HintBandApply();
   updateFoldNumberBadge();
   updateGroups();
   draw();

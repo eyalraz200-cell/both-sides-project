@@ -4569,9 +4569,15 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     justify-content: flex-start;
     gap: 8px;
     width: 100%;
-    margin: 12px 0 0;
-    padding: 0 4px;
-    border: 0;
+    margin: 8px 0 0;
+    /* THE GROUP CARDS' SHAPE, OUTLINE ONLY (chosen in a compare/ pass against a
+       filled card and against adding a rule above it — the gap alone separates
+       it from the six cards). `box-sizing` is load-bearing: this is a <button>,
+       so without it the 1px outline pushes it past the cards it lines up with. */
+    box-sizing: border-box;
+    padding: 12px 13px;
+    border: 1px solid #c9c9c9;
+    border-radius: 10px;
     background: none;
     direction: ltr;
     font: 14px/17px 'Assistant', sans-serif;

@@ -114,23 +114,36 @@ function tooltipDockRestPx() {
   // same resize (js/core.js). This runs every frame; the live read was 4.1% of
   // the timeline profile on a throttled phone.
   //
-  // On the TIMELINE this is now one of two spots (p7TipSpotTopPx) — top by
-  // default, bottom when the glass comes near it. Everything else that rests the
-  // frame (the @fold7 -> @fold8 handover, @fold13's drop) still reads the old
-  // bottom-anchored line, so their geometry is untouched.
-  if (isMobile() && typeof currentPage !== "undefined" &&
-      (currentPage === 8 || currentPage === 9)) {
+  // On every PICKER fold this is one of two spots (p7TipSpotTopPx) — top by
+  // default, bottom when the glass comes near it. Only the @fold7 -> @fold8
+  // handover still reads the old bottom-anchored line, so its geometry is
+  // untouched.
+  if (p7TipTwoSpotFold()) {
     return p7TipSpotTopPx(typeof fold8TooltipEl === "undefined" ? null : fold8TooltipEl);
   }
   return viewportH() - TOOLTIP_DOCK_BOTTOM_PX - TOOLTIP_DOCK_H_PX;
 }
+// The folds the two-spot frame serves: the ones the picker is live on
+// (@fold9, @fold10, @fold13). Mobile only — desktop has hover and no docked frame.
+function p7TipTwoSpotFold() {
+  return isMobile() && typeof currentPage !== "undefined" &&
+         (currentPage === 8 || currentPage === 9 || currentPage === 12);
+}
 
 // Blends @fold13's drop onto whatever spot the earlier two produced, so the
 // three-way lerp stays continuous even if the user scrolls back up mid-drop.
+//
+// It only runs DURING the step-down now. At d >= 1 the spot function owns the
+// position outright — and because @fold13's top spot IS p9DockTopM(), `base` at
+// that point is the very number this lerp was heading for, so the hand-over is
+// continuous and invisible. Left as a lerp all the way to 1 it pinned the frame
+// to p9DockTopM() regardless of the spot, and the flip to the bottom spot simply
+// did nothing on that fold.
 function tooltipDockDropPx(base) {
   if (typeof p9TooltipDropTrigger === "undefined" || typeof p9DockTopM !== "function") return base;
   const d = p9TooltipDropTrigger.currentT();
-  return d <= 0 ? base : base + (p9DockTopM() - base) * d;
+  if (d <= 0 || d >= 1) return base;
+  return base + (p7TipTopSpotPx() - base) * d;
 }
 
 // The @fold7 resting spot, frozen the moment the @fold8→@fold9 fly starts.
@@ -211,37 +224,27 @@ function tooltipDockHandoverScale() {
   return t < H ? 1 - t / H : 0;
 }
 
-// Picker collision dodge — while the loupe would overlap the docked frame, the
-// frame SNAPS clear of it and snaps back when the finger moves away or lifts.
-// Which WAY it dodges follows where the frame rests on that fold: on @fold9 it
-// rests at the bottom of the screen, so a finger held LOW is the collision and
-// the frame dodges UP to the grid's top clearance line; on @fold13 it still
-// rests high, so a finger held HIGH is the collision and it dodges DOWN.
-// A deliberate exception to "position never snaps", per explicit instruction —
-// the dodge is a mode flip serving a live finger, and an animated frame would
-// pass through the very glass it's dodging.
+// Picker collision dodge — @fold7 ONLY now.
 //
-// The dodge spot sits on the clearance line the timeline grid's bottom uses —
-// sbbTimeline(H).bottom (squareboundingbox.js): with the vertical axis on
-// mobile that's the box's bottom inset; with the old horizontal axis it's the
-// axis line (P7_AXIS_Y_FRAC_MOBILE) minus SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX,
-// keeping the frame clear of both the axis and the headline above it.
+// While the reader holds a finger on the 8 sample squares the frame sits right
+// where the lifted glass would cover it, so it dodges to just BELOW them for the
+// length of the hold. A deliberate exception to "position never snaps": the dodge
+// serves a live finger, and an animated frame would pass through the very glass
+// it is dodging.
 //
-// The two folds anchor differently — explicit instruction, @fold13 ONLY:
-// - @fold9 (the real timeline): the frame's BOTTOM edge, off the LIVE
-//   offsetHeight, so a hold-expanded description grows UPWARD from the line
-//   and never touches the axis text.
-// - @fold13 (currentPage === 11): the COLLAPSED frame's bottom edge sits
-//   P7_TIP_AVOID_DROP_PX lower still (eating into the clearance, by
-//   instruction), and expansion grows DOWNWARD instead of upward.
+// Every LATER fold used to have its own dodge here — @fold9 up to the grid's top
+// clearance, @fold13 down onto its bottom one. Both are gone: those folds have
+// two spots of their own now and FLIP between them (p7TipSpotTopPx), which is the
+// same idea done once instead of per fold. `p7TipAvoidActive` is therefore
+// written by @fold7's hold and by nothing else.
 let p7TipAvoidActive = false;
 
-// ── @fold9's TWO tooltip spots (mobile) ─────────────────────────────────────
-// The docked frame has two resting places on the timeline, and flips between
-// them rather than moving: TOP by default, BOTTOM when the glass gets close to
-// the top one. A flip, not a glide — the frame would otherwise travel through
-// the very glass it is getting out of the way of (the same reasoning the older
-// dodge was built on).
+// ── The picker's TWO tooltip spots (mobile) ─────────────────────────────────
+// The docked frame has two resting places on every fold the picker serves, and
+// flips between them rather than moving: TOP by default, BOTTOM when the glass
+// gets close to the top one. A flip, not a glide — the frame would otherwise
+// travel through the very glass it is getting out of the way of (the same
+// reasoning the older dodge was built on).
 //
 // They anchor at OPPOSITE edges, which is the point of having two: the top spot
 // is pinned by its TOP, so a longer description grows DOWNWARD into the chart;
@@ -258,19 +261,39 @@ let P7_TIP_BOTTOM_PX = 66;    // the bottom spot's BOTTOM edge, px up from the s
 let P7_TIP_SWITCH_Y  = 248;
 let p7TipAtBottom = false;   // which spot is live right now (written by syncTipAvoid)
 
-// The @fold9 spot, resolved. `el` is needed for the bottom anchor's height.
+// The TOP spot, per fold. @fold13's frame is packed against the pill tray and
+// the whole grid below it is measured off that same line (p9ExtremeTopY), so its
+// top spot is p9DockTopM() — which is also exactly where the frame already rests
+// there today, so adopting the two-spot model changes nothing at rest on that
+// fold. @fold9/@fold10 use the tuned P7_TIP_TOP_PX.
+//
+// p9DockTopM() stays the GRID's anchor and must never learn about p7TipAtBottom:
+// the dots would jump every time the frame flipped.
+function p7TipTopSpotPx() {
+  if (typeof currentPage !== "undefined" && currentPage === 12 &&
+      typeof p9DockTopM === "function") return p9DockTopM();
+  return P7_TIP_TOP_PX;
+}
+// The switch LINE, per fold. A fixed y per fold, never a distance from the live
+// frame: the frame moves, so measuring against it makes the threshold chase its
+// own result and chatter at the boundary. @fold13's frame rests much higher than
+// the timeline's, so its line is derived from its own top spot plus the COLLAPSED
+// frame height (the same height p9ExtremeTopY reserves) and a margin.
+const P7_TIP_SWITCH_MARGIN_PX = 24;
+function p7TipSwitchY() {
+  if (typeof currentPage !== "undefined" && currentPage === 12) {
+    return p7TipTopSpotPx() + TOOLTIP_DOCK_H_PX + P7_TIP_SWITCH_MARGIN_PX;
+  }
+  return P7_TIP_SWITCH_Y;
+}
+
+// The spot, resolved. `el` is needed for the bottom anchor's height.
 function p7TipSpotTopPx(el) {
   const H = viewportH();
-  if (!p7TipAtBottom) return P7_TIP_TOP_PX;
+  if (!p7TipAtBottom) return p7TipTopSpotPx();
   const h = (el && el.offsetHeight) || TOOLTIP_DOCK_H_PX;
   return H - P7_TIP_BOTTOM_PX - h;
 }
-
-// @fold13-only extra drop below the clearance line, per explicit instruction
-// ("snap to a bit lower position", then "lower still"). Deliberately eats into
-// the axis/label clearance described above — raise back toward 0 if the frame
-// starts crowding the axis text.
-const P7_TIP_AVOID_DROP_PX = 32;
 
 function tooltipAvoidPx(el, top) {
   if (!p7TipAvoidActive) return top;
@@ -285,19 +308,10 @@ function tooltipAvoidPx(el, top) {
     }
     if (bottom > -Infinity) return bottom + TOOLTIP_DOCK_SQUARES_GAP_PX;
   }
-  const H = window.innerHeight;
-  const box = typeof sbbTimeline === "function" ? sbbTimeline(H) : null;
-  if (typeof currentPage !== "undefined" && currentPage === 12) {
-    // @fold13 — still docked high, so it dodges DOWN onto the grid's bottom
-    // clearance line, P7_TIP_AVOID_DROP_PX lower still (by instruction), and a
-    // hold-expanded description grows downward from there.
-    const line = box ? H * box.bottom : H * 0.94 - 64;
-    const collapsedH = typeof P9_TOOLTIP_COLLAPSED_H === "undefined" ? 100 : P9_TOOLTIP_COLLAPSED_H;
-    return line + P7_TIP_AVOID_DROP_PX - collapsedH;
-  }
-  // @fold9 — nothing to dodge. The frame has two spots of its own now
-  // (p7TipSpotTopPx) and FLIPS between them on the switch line, which is
-  // resolved in tooltipDockRestPx before this ever runs.
+  // Every later fold: nothing to dodge. They have two spots of their own and FLIP
+  // between them on the switch line, resolved in tooltipDockRestPx before this
+  // ever runs. **Removed — don't reintroduce:** @fold13's dodge-down onto the
+  // grid's bottom clearance (P7_TIP_AVOID_DROP_PX, 32), which fought the flip.
   return top;
 }
 
