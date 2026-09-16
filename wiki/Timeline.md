@@ -1052,8 +1052,10 @@ press runs @fold13's own morph, `p9ScopeSet`, seeded with the strip's landed
 positions from `p8CaptureBlendedPositions(W, H, 1)` (drawPage9 is the only thing
 that writes `p9.lastPositions`); `drawPage8` applies `p9.scopeMorph` per dot at
 `t = 1` and `p9ScopeRunLoop` repaints those pages while it runs
-(`p9ScopeDrawWanted`). Before this the press there flipped the flag and the strip
-**snapped** to the new endpoint. **Pressed while the glide is still in the air**
+(`p9ScopeDrawWanted`). The strip's tier plan itself (`p9LegitTierPlan`, page9.js)
+is built on **pages 10–12**, not 11–12: with page 10 left out, a press on a landed
+@fold11 morphed toward a flat endpoint and nothing on screen changed. Before all
+this the press there flipped the flag and the strip **snapped** to the new endpoint. **Pressed while the glide is still in the air**
 (page8's `p8Engaged && p8CurrentT() < 1` on pages 10–12, or @fold13's own
 continuation `p9.anim.plainGlide`), the dots **settle first, then resize** — two
 beats, never a blend (explicit instruction): the flag is left alone so the flight
@@ -2454,6 +2456,16 @@ the selection, so the axis eases back to normal along with everything else. `sho
 dragging pick in its roster-target check). Desktop is untouched: `p7Inspect.event` is only
 ever set ≤600px (`p7InspectPage`).
 
+**The picker serves @fold9, @fold10 and @fold13** (`p7InspectPage()`). @fold10 joined without a new
+driver — `PAGES[8]` and `PAGES[9]` are both `drawPage7` — needing only the gate and a hit box that
+respects the size grid's per-dot block.
+
+**`nearestEvent` is CONTAINMENT-first**, and measures each dot by its **own** drawn `pos.sq`, not by
+the fold's flat `half`. @fold10's grid draws a dot as a block of up to ~68px, so a finger well
+inside a big block is ~35px from its centre and loses the distance contest to a 1.35px neighbour
+5px away — the fold would feel broken on exactly its largest dots. A point inside a dot's box wins
+outright, and ties go to the **smaller** box so a big block can't swallow a little dot drawn on it.
+
 **On the TIMELINE the selection is the dot's own GROWTH — the same swell desktop plays on
 hover.** `p7BulgeTick` already treats `p7Inspect.event` as hovered while the picker is
 dragging, so the picked dot swells to its crowd tier (`P7_BULGE_MULT`, up to 19.57×), pushes
@@ -2471,24 +2483,44 @@ how much of the growth the glass gives back: 1 hands back all of it (a 19.6× do
 an unswollen one was — too much context), 0 keeps the fixed 4×. An **exponent**, so the response
 stays even across the tier ladder instead of scaling the top tier and barely touching the low ones.
 
-#### The docked frame's two spots on the timeline — `p7TipSpotTopPx` (mobile)
+#### The docked frame's two spots — `p7TipSpotTopPx` (mobile, every picker fold)
 
-The frame has two resting places on @fold9 and **flips** between them rather than moving: a flip,
-not a glide, because a travelling frame would pass through the very glass it is getting clear of.
+The frame has two resting places on **@fold9, @fold10 and @fold13** (`p7TipTwoSpotFold()`) and
+**flips** between them rather than moving: a flip, not a glide, because a travelling frame would
+pass through the very glass it is getting clear of.
 
-- **Top** (`P7_TIP_TOP_PX`, **72**) is the default, pinned by its **TOP edge**, so a longer
-  description grows **downward** into the chart.
+- **Top** is the default, pinned by its **TOP edge**, so a longer description grows **downward**
+  into the chart. `p7TipTopSpotPx()` gives it per fold: `P7_TIP_TOP_PX` (**72**) on
+  @fold9/@fold10, and **`p9DockTopM()`** on @fold13 — which is exactly where that fold's frame
+  already rested, so adopting the two-spot model changed nothing there at rest (measured: 155
+  before and after).
 - **Bottom** (`P7_TIP_BOTTOM_PX`, **66** up from the screen bottom) is pinned by its **BOTTOM
   edge** — solved from the live `offsetHeight` — so a longer one grows **upward**.
 
 Either way the frame expands away from the edge it sits on and never off-screen. That opposition
 is the whole point of having two.
 
-**The switch is a LINE on the screen**, `P7_TIP_SWITCH_Y` (**248**): while the glass's top edge is
-above it, the frame sits at the bottom. A fixed y and not a distance from the frame — the frame
+**The switch is a LINE on the screen**, `p7TipSwitchY()`: while the glass's top edge is above it,
+the frame sits at the bottom. `P7_TIP_SWITCH_Y` (**248**) on @fold9/@fold10; @fold13 rests far
+higher, so its line is *derived* — its own top spot plus the **collapsed** frame height plus
+`P7_TIP_SWITCH_MARGIN_PX` (24). A fixed y and not a distance from the frame — the frame
 moves, so measuring against it would make the threshold chase its own result and chatter at the
-boundary. `syncTipAvoid` writes `p7TipAtBottom`; lifting the finger returns it to the top spot.
-This replaced @fold9's older `tooltipAvoidPx` dodge, which is now @fold13's alone.
+boundary. `syncTipAvoid` writes `p7TipAtBottom` — **one line for every picker fold now**; lifting the finger
+returns it to the top spot.
+
+> **Removed — don't reintroduce:** the per-fold `tooltipAvoidPx` dodges. @fold9 dodged *up* to the
+> grid's top clearance and @fold13 *down* onto its bottom one (`P7_TIP_AVOID_DROP_PX`, 32). Both
+> are the same idea the flip does once, and @fold13's actively fought it. `tooltipAvoidPx` is now
+> @fold7's hold and nothing else.
+
+**`tooltipDockDropPx` only runs DURING @fold13's step-down.** It used to lerp `base → p9DockTopM()`
+all the way to `d === 1`, which pinned the frame there regardless of the spot function — so the flip
+did nothing on that fold. At `d >= 1` it returns `base` and the spot owns the position; because
+@fold13's top spot *is* `p9DockTopM()`, the hand-over is continuous.
+
+> **The invariant:** `p9DockTopM()` stays the **grid's** anchor (`p9ExtremeTopY` → `p9MidY`) and
+> must never learn about `p7TipAtBottom`, or every dot would jump when the frame flipped. Verified:
+> `midY` 790 and `extremeTop` 229 are identical at the top spot, at the bottom spot, and after.
 
 All four were baked from the `_debug-loupe-tip.js` harness (`glass and tooltip spots`, @fold9) on
 2026-09-16 and it is deleted. They stay `let` in case it is rebuilt.
@@ -2531,8 +2563,28 @@ frames to **0 swaps**.
 > that looked stroked rather than chosen. The 8 `fold6SquareEls`' matching DOM dim in
 > `updateGroups` went with it: there is no wash left to match.
 
-**@fold13 keeps the halo**, below — its dots are 1px, have no bulge system behind them, and
-this is their only selection cue. `p7DrawInspectScrim` is now called from `drawPage9` only.
+**@fold13 grows too, by its own rule.** Its dots are a flat 1.5px with no push system, so the cue
+is **`p9.pickDimT` + a fixed grown size**, `P9_PICK_SQ_M` (**12px**, 6 cells at the 2px pitch):
+
+- **Not the crowd ladder.** `P7_BULGE_MULT[0]` is 1, so a tier-0 event would not grow *at all* —
+  and growth is the only cue left there once the scrim is gone, which is the exact failure the
+  scrim existed to prevent. Size also means nothing on that fold (x is the category, y the rank),
+  so importing the ladder would put a second, contradictory encoding on the dots. Every pick grows
+  by the same amount. The top tier's 19.57× would be 29px — two-thirds of the glass, one colour.
+- **`p9.pickDimT`, not `p9.hoverDimT`.** Page9's pill-hover rAF owns that one and zeroes it every
+  frame, which would stomp the picker's dim out from under it. Same duration, separate field,
+  advanced by `p7BulgeTick` — which `drawPage9` now calls, since it is otherwise only driven from
+  `drawPage7`'s side loop.
+- **Overdrawn, not pushed.** The growth is applied *after* `posMap.set`, so the map the hit-test,
+  the drag and every downstream consumer read stays **rest** geometry and only the paint changes.
+  There is no lattice to shove: positions come out of a column packer that the drop and scope
+  animations are concurrently interpolating, so a displacement pass would be a second layout path.
+- `p7LoupeGrowth()` has a matching @fold13 branch, so the glass's zoom-out and `nearestEvent`'s
+  sticky half-extent both follow that fold's rule for free.
+
+> **Removed — don't reintroduce:** `p7DrawInspectScrim` on @fold13 (`drawPage9`'s call). Under the
+> glass its white wash read as pale washed-out dots with a hard circle around the selection — the
+> same reason it left @fold9. The function and its constants are still in the file, now unused.
 
 **The selection halo — drawn by subtraction, on the main canvas.** `p7DrawInspectScrim`
 fills one even-odd path — the whole canvas, minus a disc at the selected dot — with

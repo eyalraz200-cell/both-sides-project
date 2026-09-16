@@ -1005,8 +1005,20 @@ function p7ZoomOutKY(H) {
   return Math.min(1, avail / live);
 }
 // The live -> squashed y factor for this frame. 1 whenever the beat is idle.
+//
+// Solved at p7.lastH — the height the LAYOUT was solved at — and emphatically
+// not at the live window.innerHeight. The dots' squashed positions come from
+// p7Squash(p7.lastW, p7.lastH), and p7.lastH is frozen on purpose: p7UpdateLayout
+// early-returns on a mobile height-only change so the dots don't resize every
+// time the URL bar slides (the same reasoning as the project's "vh, never dvh"
+// rule). This line was the one reader that never got the memo, and since
+// p7ZoomOutKY's `avail` is linear in H with coefficient 1, the axis line and the
+// dots diverged by exactly the bar's height: at 390x844 with the bar collapsed
+// to 920, ky came out 0.7219 for the line against 0.6519 for the dots — the line
+// ended at 783 and the dots at 705, a 78px shortfall. Invisible in a headless
+// browser, where the two heights are always equal, and obvious on a phone.
 function p7ZoomOutYScale() {
-  return p7ZoomOutT ? p7ZoomLerp(1, p7ZoomOutKY(window.innerHeight)) : 1;
+  return p7ZoomOutT ? p7ZoomLerp(1, p7ZoomOutKY(p7.lastH || viewportH())) : 1;
 }
 
 // Built on first use, not at parse time: makeTrigger lives in js/groups.js,
@@ -1566,11 +1578,34 @@ function p7BulgeTick() {
   p7BulgeLastTick = now;
   const hovered = p7Grid.on ? null : (p7.hoveredEvent || (p7Inspect && p7Inspect.dragging ? p7Inspect.event : null));
   if (hovered && p7BulgeTier(hovered) && !p7BulgeT.has(hovered)) p7BulgeT.set(hovered, { t: 0 });
+  // @fold13's picked dot rides this same clock, on its own terms. Two
+  // differences from the timeline's swell, both deliberate:
+  //   - NO tier precondition. p7BulgeTier returns 0 for any event with no crowd
+  //     figure and P7_BULGE_MULT[0] is 1, so on the timeline those simply don't
+  //     swell — survivable there, because the dim and the axis still mark them.
+  //     On @fold13 growth is the ONLY cue left once the scrim is gone, so a
+  //     tier-0 pick showing nothing at all would be the exact failure the scrim
+  //     existed to prevent. Every pick grows, by the same amount.
+  //   - it runs while the SIZE GRID is off-limits above (`p7Grid.on ? null`),
+  //     because page 12 is page9's own grid, not p7's.
+  const p9Pick = (typeof p7InspectPage === "function" && p7InspectPage() === 12 &&
+                  p7Inspect.dragging) ? p7Inspect.event : null;
+  if (p9Pick && !p7BulgeT.has(p9Pick)) p7BulgeT.set(p9Pick, { t: 0 });
   for (const [ev, b] of p7BulgeT) {
-    const target = ev === hovered ? 1 : 0;
+    const target = (ev === hovered || ev === p9Pick) ? 1 : 0;
     const step = dt / P7_BULGE_MS;
     b.t = target > b.t ? Math.min(1, b.t + step) : Math.max(0, b.t - step);
     if (b.t === 0 && target === 0) p7BulgeT.delete(ev);
+  }
+  // @fold13's own dim ramp. NOT p9.hoverDimT: page9's pill-hover rAF owns that
+  // one and zeroes it every frame it isn't hovering a pill, so the picker's dim
+  // would be stomped out from under it. Same duration, separate field.
+  if (typeof p9 !== "undefined" && dt) {
+    const pickTarget = p9Pick ? 1 : 0;
+    const ds = dt / P7_HOVER_DIM_MS;
+    p9.pickDimT = pickTarget > (p9.pickDimT || 0)
+      ? Math.min(1, (p9.pickDimT || 0) + ds)
+      : Math.max(0, (p9.pickDimT || 0) - ds);
   }
   // The dim rides the same frame clock, but on its own (shorter) duration and
   // for EVERY hover — tier-0 squares never enter p7BulgeT, yet they dim too.
@@ -6010,13 +6045,25 @@ function p7DrawVertDotCards(ctx, W, H, now) {
     const below = dotY + P7_AXIS_MARKER_RADIUS + V.dotGapPx;
     const above = dotY - P7_AXIS_MARKER_RADIUS - V.dotGapPx - ch;
     const place = onSide ? V.sidePlace : '';
+    // ZOOMED OUT, the two pinned events swap sides. On the squashed view the
+    // only card on screen is one that has been TAPPED, and the first event's dot
+    // is hard against the top of the axis while the last event's is hard against
+    // the bottom — so their zoomed-IN placement (first above, last below) puts
+    // each card off its own end of the field. Inverted, each opens back into the
+    // timeline where there is room for it.
+    //
+    // `>= 1`, not `> 0`: the layout reserves that track the pinned positions
+    // (P7_VERT_FIRST_EV_HEADROOM_PX, p7AxisLastPlaqueOverhangPx) animate with the
+    // beat, and swapping mid-transition would fight them. By t = 1 they have
+    // settled and nothing but the tapped card is drawn.
+    const zoomedOut = p7ZoomOutT >= 1;
     // `mobileAbove` opts an event out of the side placement entirely: sideDir 0
     // centres it on the axis and puts it above the dot, and because the fly
     // below is gated on sideDir it never travels — it is simply there, at the
     // top of its dot, from the moment it appears.
-    const pinAbove = p7AxisEvMobileAbove(ev);
+    const pinAbove = zoomedOut ? p7AxisEvMobileBelow(ev) : p7AxisEvMobileAbove(ev);
     // ...and its mirror: hangs BELOW its dot. Same opt-out of the side/fly path.
-    const pinBelow = p7AxisEvMobileBelow(ev);
+    const pinBelow = zoomedOut ? p7AxisEvMobileAbove(ev) : p7AxisEvMobileBelow(ev);
     const sideDir = (pinAbove || pinBelow) ? 0
       : place === 'alternate' ? (i % 2 ? 1 : -1) : place === 'left' ? -1 : place === 'right' ? 1 : 0;
     let cy = pinBelow ? Math.round(below)
@@ -6429,13 +6476,18 @@ const p7Inspect = { dragging: false, event: null };
 let p7InspectSync = () => {};
 
 // Which fold the picker is currently serving, or null. @fold9's pinned timeline
-// (page 7) is where it started; @fold13's drag-and-drop grid (page 9) reuses the
-// exact same gesture, loupe and docked frame, since its dots are 1px there and
-// touch has no hover to fall back on. Everything below that differs between the
-// two folds reads this rather than testing currentPage inline.
+// (page 8) is where it started; @fold10's size grid (page 9) and @fold13's
+// drag-and-drop grid (page 12) reuse the exact same gesture, loupe and docked
+// frame, since their dots are 1-2px and touch has no hover to fall back on.
+// Everything below that differs between the folds reads this rather than testing
+// currentPage inline.
+//
+// @fold10 is the same render path as @fold9 (PAGES[8] and PAGES[9] are both
+// drawPage7), so it needed no new driver — only this gate and a hit box that
+// respects the size grid's per-dot block size (p7InspectSource).
 function p7InspectPage() {
   if (!isMobile()) return null;
-  return (currentPage === 8 || currentPage === 12) ? currentPage : null;
+  return (currentPage === 8 || currentPage === 9 || currentPage === 12) ? currentPage : null;
 }
 
 // The dot map the picker hit-tests against, per fold — same shape either way:
@@ -6483,6 +6535,10 @@ let P7_HINT_Y_MOBILE = 4;
 // Not P7_HINT_TYPE_MS — that name belongs to @fold13's own hint trigger
 // (js/groups.js). Two different lines, two different clocks.
 const P7_BAND_TYPE_MS = 900;
+// Out is faster than in — the line clears as @fold11's beat starts.
+const P7_BAND_UNTYPE_MS = 300;
+let p7BandLastT = 0;      // how much of it was written when the fold ended
+let p7BandOutStart = null;
 // Set for the length of ONE draw, by drawLoupe, so the glass's blit is taken
 // from a canvas with no headline cards on it. See the note at its only reader.
 let p7HideAxisCards = false;
@@ -6553,10 +6609,40 @@ function p7HintBandApply() {
   // fold6MLegendPaintCard and moves with the timeline's own box.
   el.style.bottom = above ? "auto" : (p7MLegendBarH() - P7_HINT_Y_MOBILE) + "px";
   el.style.top    = above ? P7_HINT_Y_MOBILE + "px" : "auto";
-  el.hidden = !p7HintBandWanted();
+  // LEAVING TYPES OUT, it doesn't vanish: scrolling on past the timeline is
+  // @fold11's own beat (the squares size down and fly home), and the line has
+  // to clear as that starts rather than blinking off with the fold. The out is
+  // FASTER than the in (P7_BAND_UNTYPE_MS) and scaled by how much was written,
+  // so a half-typed line doesn't take the full time. Only once it is empty does
+  // the band actually hide.
+  const bandWant = p7HintBandWanted();
+  let t = 0;
+  if (bandWant) {
+    p7BandOutStart = null;
+    // @fold10 (currentPage 9) UNDRAWS THE AXIS, and the type-in clock hangs off
+    // the axis (p7HintTypeT) — so on that fold the line's own source goes to 0
+    // and the sentence snapped away a whole fold early. The gesture it names is
+    // still live there, so the line HOLDS whatever it had written and only
+    // clears when the timeline folds end (@fold11's beat, below).
+    const tin = p7HintTypeT();
+    t = currentPage === 9 ? Math.max(tin, p7BandLastT) : tin;
+    p7BandLastT = t;
+    el.hidden = false;
+  } else if (p7BandLastT > 0) {
+    if (p7BandOutStart === null) p7BandOutStart = performance.now();
+    const k = (performance.now() - p7BandOutStart) / Math.max(1, P7_BAND_UNTYPE_MS * p7BandLastT);
+    t = p7BandLastT * (1 - Math.min(1, k));
+    if (t <= 0) { p7BandLastT = 0; p7BandOutStart = null; }
+    el.hidden = t <= 0;
+    // Its OWN frames: past the timeline nothing else repaints this — page7's
+    // draw loop has stopped and updateGroups doesn't touch the band — so the
+    // out-type has to drive itself or it freezes mid-sentence.
+    if (!el.hidden) requestAnimationFrame(p7HintBandApply);
+  } else {
+    el.hidden = true;
+  }
   // The typewriter, driven per frame off the axis's own build-in clock.
   if (p7BandSpans) {
-    const t = el.hidden ? 0 : p7HintTypeT();
     fold8UpdateTypewriter(p7BandSpans, Math.round(p7BandSpans.fullText.length * t));
     // The rule under the line rides the same clock, so it unrolls with the
     // sentence instead of sitting there through the axis's whole build-in.
@@ -6846,55 +6932,60 @@ function p7InspectInit() {
     // let the pointer fall through the gap it just opened.
     const held = p7Inspect.event && positions.get(p7Inspect.event);
     if (held && held.y < maxY) {
+      const heldHalf = (held.sq || half * 2) / 2;
       const grown = (held.sq || half * 2) * p7LoupeGrowth() / 2;
-      if (Math.abs(mx - (held.x + half)) <= grown &&
-          Math.abs(my - (held.y + half)) <= grown) {
-        return { event: p7Inspect.event, x: held.x + half, y: held.y + half };
+      if (Math.abs(mx - (held.x + heldHalf)) <= grown &&
+          Math.abs(my - (held.y + heldHalf)) <= grown) {
+        return { event: p7Inspect.event, x: held.x + heldHalf, y: held.y + heldHalf };
       }
     }
+    // CONTAINMENT first, nearest centre second — and each dot is measured by its
+    // OWN drawn size (`pos.sq`), not by the fold's flat `half`.
+    //
+    // @fold10's size grid draws a dot as a block of up to ~68px, so a finger well
+    // inside a big block is ~35px from its centre and loses the distance contest
+    // to a 1.35px neighbour 5px away: the fold would feel broken on exactly its
+    // largest, most interesting dots. A point inside a dot's own box picks that
+    // dot outright, and ties go to the SMALLER box so a big block can never
+    // swallow a little dot drawn on top of it.
     let best = null, bestDist = P7_INSPECT_SNAP_PX * P7_INSPECT_SNAP_PX, bestPos = null;
+    let inBest = null, inBestSq = Infinity, inBestPos = null;
     for (const [ev, pos] of positions) {
       if (pos.y >= maxY) continue;
-      const dx = mx - (pos.x + half), dy = my - (pos.y + half);
+      const own = (pos.sq || half * 2) / 2;
+      const dx = mx - (pos.x + own), dy = my - (pos.y + own);
+      if (Math.abs(dx) <= own && Math.abs(dy) <= own) {
+        if (own * 2 < inBestSq) { inBestSq = own * 2; inBest = ev; inBestPos = pos; }
+        continue;
+      }
       const dist = dx * dx + dy * dy;
       if (dist < bestDist) { bestDist = dist; best = ev; bestPos = pos; }
     }
-    return best ? { event: best, x: bestPos.x + half, y: bestPos.y + half } : null;
+    if (inBest) {
+      const own = (inBestPos.sq || half * 2) / 2;
+      return { event: inBest, x: inBestPos.x + own, y: inBestPos.y + own };
+    }
+    if (!best) return null;
+    const own = (bestPos.sq || half * 2) / 2;
+    return { event: best, x: bestPos.x + own, y: bestPos.y + own };
   }
 
-  // Flips p7TipAvoidActive (js/fold8-tooltip.js) from the finger's height: if
-  // the loupe's glass would reach into the docked frame's NORMAL spot, the
-  // frame snaps to its dodge spot above the year axis (tooltipAvoidPx). The
-  // threshold is computed against where the frame RESTS on this fold — a
-  // constant per fold, not the frame's live rect — so a frame already
-  // mid-dodge can't drag the threshold down with it and flip-flop. 100 is the
-  // collapsed frame height (style.css solves it against the 15px type); an
-  // expanded frame reaches lower, but the dodge only needs the common case.
-  // Re-docks every call, not just on the flip: the dodge spot is
-  // bottom-anchored on the frame's live height, which changes mid-hold as
-  // selections swap and descriptions expand.
+  // Picks which of the frame's two spots is live (p7TipAtBottom,
+  // js/fold8-tooltip.js), from the finger's height: while the glass's TOP edge is
+  // above the fold's switch line, the frame sits at the BOTTOM.
+  //
+  // Tested against a fixed screen LINE (p7TipSwitchY), never against the frame's
+  // own rect — the frame moves when this flips, so a frame-relative threshold
+  // would chase its own result and chatter at the boundary. One rule for every
+  // picker fold; the old per-fold dodge forks are gone.
+  //
+  // Re-docks every call, not just on the flip: the bottom spot is anchored on the
+  // frame's live height, which changes mid-hold as selections swap and
+  // descriptions expand.
   function syncTipAvoid(fingerY) {
-    const onFold12 = currentPage === 12 && typeof p9DockTopM === "function";
-    const frameTop = onFold12 ? p9DockTopM() : tooltipDockRestPx();
-    const frameBottom = frameTop + 100;
-    // The threshold sits a bit past the frame's edge (explicit instruction,
-    // first on @fold13 then @fold9 too) — the finger doesn't have to travel as
-    // far before the frame snaps clear.
-    const AVOID_MARGIN_PX = 24;
-    if (onFold12) {
-      // Frame high, loupe rising into it from below.
-      const loupeTop = fingerY - P7_LOUPE_LIFT_PX - P7_LOUPE_SIZE / 2;
-      p7TipAvoidActive = loupeTop < frameBottom + AVOID_MARGIN_PX;
-    } else {
-      // @fold9: the frame has TWO spots and flips between them (p7TipSpotTopPx,
-      // js/fold8-tooltip.js). The test is the glass's TOP edge against the
-      // switch LINE — a fixed y on the screen, not a distance from the frame:
-      // the frame moves, so measuring against it would make the threshold chase
-      // its own result and chatter at the boundary.
-      const loupeTop = fingerY - P7_LOUPE_LIFT_PX - P7_LOUPE_SIZE / 2;
-      p7TipAtBottom = loupeTop < P7_TIP_SWITCH_Y;
-      p7TipAvoidActive = false;
-    }
+    const loupeTop = fingerY - P7_LOUPE_LIFT_PX - P7_LOUPE_SIZE / 2;
+    p7TipAtBottom = loupeTop < p7TipSwitchY();
+    p7TipAvoidActive = false;   // @fold7's hold is the only writer of it now
     tooltipDockMobile(tipEl);
   }
 
@@ -6912,6 +7003,12 @@ function p7InspectInit() {
     if (!ev) return 1;
     const b = p7BulgeT.get(ev);
     if (!b) return 1;
+    // @fold13 grows every pick to one fixed size rather than by crowd tier
+    // (P9_PICK_SQ_M, page9.js) — so the glass's zoom-out and nearestEvent's
+    // sticky half-extent, which both divide by this, follow that fold's own rule.
+    if (p7InspectPage() === 12 && typeof P9_PICK_SQ_M !== "undefined") {
+      return 1 + (P9_PICK_SQ_M / p9Metrics().SQ - 1) * p9Ease(b.t);
+    }
     const mult = P7_BULGE_MULT[p7BulgeTier(ev)];
     return 1 + (mult - 1) * p9Ease(b.t);
   }
