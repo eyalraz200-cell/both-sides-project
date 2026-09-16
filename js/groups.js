@@ -1935,9 +1935,12 @@ function fold11BeatGapMs() {
 }
 function fold11SizeApply(past, instant) {
   clearTimeout(fold11SizeBeatTO); fold11SizeBeatTO = null;
-  // @fold13's «לחצו והחזיקו» line lives from this crossing up — scrolling back
-  // past it un-types the line (p7SyncHint, above).
+  // Both instruction lines hang off THIS crossing: @fold13's own (p7SyncHint)
+  // lives from here up, and the timeline's band (p7HintBandApply, page7.js)
+  // types out here — the band's paint stops with the timeline's draw loop, so
+  // the trigger has to tell it.
   if (typeof p7SyncHint === "function") p7SyncHint();
+  if (typeof p7HintBandApply === "function") p7HintBandApply();
   // The «הצגת גודל האירועים» toggle's own ring-pop + type-in reveal rides this
   // same crossing (see p7ScopeRevealTrigger below).
   if (typeof p7ScopeRevealTrigger !== "undefined") {
@@ -2710,8 +2713,22 @@ fold6MobileDataBodyEl.className = "fold6-mlegend-data-body";
   inner.append(before, link, after);
   fold6MobileDataBodyEl.appendChild(inner);
 }
-fold6MobilePanelEl.append(fold6MobileDataDividerEl, fold6MobileDataHeadEl, fold6MobileDataBodyEl);
-fold6MobileDataDividerEl.hidden = fold6MobileDataHeadEl.hidden = fold6MobileDataBodyEl.hidden = true;
+/* ONE CARD ROUND BOTH (explicit instruction — "when the card is expanded, the
+   body text should be inside it"). The heading and the body are siblings, and a
+   border drawn on each drew two boxes with a seam; a real wrapper is what lets
+   the outline hug the heading while collapsed and grow around the text as it
+   opens, because the body's own height is animated to 0. The card look lives on
+   this element (.fold6-mlegend-data-card) — the heading keeps only its type. */
+const fold6MobileDataCardEl = document.createElement("div");
+fold6MobileDataCardEl.className = "fold6-mlegend-data-card";
+fold6MobileDataCardEl.append(fold6MobileDataHeadEl, fold6MobileDataBodyEl);
+// The divider is NOT appended (explicit instruction — "rule off"): now that the
+// note is a card of its own, a rule above it is one line too many. The element
+// is kept so the hidden-toggles below still have something to write to, and so
+// restoring the rule is one `append` away.
+fold6MobilePanelEl.append(fold6MobileDataCardEl);
+fold6MobileDataDividerEl.hidden = fold6MobileDataCardEl.hidden =
+  fold6MobileDataHeadEl.hidden = fold6MobileDataBodyEl.hidden = true;
 
 // Open/close runs on its own wall clock (p9Ease over FOLD6_MDATA_MS). The
 // body's height is written per frame and the card repainted with it, since the
@@ -2745,7 +2762,8 @@ let fold6MDataAvailable = null;
 function fold6MDataSetAvailable(on) {
   if (on === fold6MDataAvailable) return;
   fold6MDataAvailable = on;
-  fold6MobileDataDividerEl.hidden = fold6MobileDataHeadEl.hidden = fold6MobileDataBodyEl.hidden = !on;
+  fold6MobileDataDividerEl.hidden = fold6MobileDataCardEl.hidden =
+    fold6MobileDataHeadEl.hidden = fold6MobileDataBodyEl.hidden = !on;
   if (!on) {
     if (fold6MDataRaf) cancelAnimationFrame(fold6MDataRaf);
     fold6MDataRaf = 0; fold6MDataOpen = false; fold6MDataT = 0;

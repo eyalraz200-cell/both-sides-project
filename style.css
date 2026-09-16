@@ -3487,12 +3487,19 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      section listed; the rest of the article keeps normal selection. */
   /* #page-6 / #page-7 (@fold7 / @fold8): the reader's own press-and-hold on
      the 8 squares (fold7Hold*, js/groups.js) is live through both, and a hold
-     there landed on the title card's text and selected it. */
+     there landed on the title card's text and selected it.
+     #page-9 / #page-12 (@fold10 / @fold13): the event picker is live on those
+     folds too now (p7InspectPage), so the same hold lands on those sections'
+     own title text. Every section the picker serves has to be in this list —
+     the scroll column's transparent section is what the finger actually
+     touches, so suppressing it on the canvas alone is never enough. */
   .graphic-col,
   #canvas,
   #page-6,
   #page-7,
-  #page-8 {
+  #page-8,
+  #page-9,
+  #page-12 {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
@@ -4600,12 +4607,32 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     border-color: rgba(0, 0, 0, 0.81);
   }
 
+  /* THE ACLED CARD — the group cards' shape, OUTLINE only (chosen in a compare/
+     pass against a filled card and against keeping the rule above it). It wraps
+     the heading AND the body, so the outline hugs the heading while collapsed
+     and grows around the text as it opens: the body's height animates to 0, and
+     a border drawn on each of the two siblings instead drew two boxes with a
+     seam between them. Same 1px/#c9c9c9/10px as «הצגת גודל האירועים» above it.
+     `box-sizing` matters here for the same reason it does there. */
+  .fold6-mlegend-data-card {
+    box-sizing: border-box;
+    width: 100%;
+    margin: 8px 0 0;
+    padding: 12px 13px;
+    border: 1px solid #c9c9c9;
+    border-radius: 10px;
+    background: none;
+  }
+  .fold6-mlegend-data-card[hidden] { display: none; }
+
   .fold6-mlegend-data-head {
     position: relative;
     display: block;
     width: 100%;
-    margin: 12px 0 0;
-    padding: 0 0 0 16px;
+    /* No box of its own any more — the wrapper above is the card. The left
+       padding is only the room the chevron sits in. */
+    margin: 0;
+    padding: 0 0 0 26px;
     border: 0;
     background: none;
     direction: rtl;
@@ -4618,7 +4645,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   .fold6-mlegend-data-head::after {
     content: "";
     position: absolute;
-    left: 6px;
+    /* 12, not 6: it sits inside the card's own padding now, so the old inset
+       put it almost on the outline. */
+    left: 12px;
     top: 50%;
     width: 6px;
     height: 6px;
@@ -4629,6 +4658,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   }
   .fold6-mlegend-data-head[hidden], .fold6-mlegend-data-body[hidden] { display: none; }
   .fold6-mlegend-data-body {
+    /* Inside the card, so it only needs the gap under the heading — the card's
+       own padding supplies the sides and the bottom. */
+    padding-top: 0;
     height: 0;
     opacity: 0;
     overflow: hidden;
