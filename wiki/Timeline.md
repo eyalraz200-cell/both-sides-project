@@ -983,6 +983,14 @@ re-entry lands on the right side of **both** crossings — note the grid stays
 crossing, never while the reader sits still inside one — that is what lets the
 button below hold its state. State: `p7Grid = { on, layout }`.
 
+**@fold13 (page 12) is re-synced WITHOUT `uniform`.** Both crossings that own the
+flag sit far above that fold, so `fold11SizePast()` is permanently true there and
+re-syncing from it would hand the flag back to "flat" on every page flip — a press
+of the «הצגת גודל האירועים» button was wiped the moment the reader scrolled on into
+@fold14 and back. On page 12 the button (`p9ScopeSet`, page9.js) is the only
+authority, so the re-sync passes `on` alone and leaves `p7GridUniform` where the
+press left it.
+
 **It stands down while @fold11's beats are in flight** (`fold11SizeBeatPending()`,
 js/groups.js — true between the two beats; each timeout nulls its own handle so
 it can't latch). @fold11's sequence straddles a page flip: on a fast scroll back
@@ -1399,6 +1407,16 @@ camps' packs meet on the centre line instead of straddling the corridor.
   back to @fold9) is the exact mirror of that clock** (`dir === "off"` flips
   every window to `T − start − len`): the smallest tier shrinks first, the
   biggest last, and the flight home comes at the end.
+  **A square whose size change needs no room skips the stagger** and takes the
+  first grower's window `[start, size]` (`p7MorphBlend`) — read on the running
+  direction's own clock: a shrink going out, a grow coming back. The stagger only
+  buys room for squares that grow into it, and tier 0 never does: the timeline
+  square (3.2px at 1440×900) is slightly bigger than the solved grid unit (3.0),
+  so that pair is a 0.2px nudge either way. As the last tier in the wave it used
+  to finish ~950ms after the flight had landed going out (the field came to rest,
+  then every small dot ticked down), and — mirrored — to run in the first ~360ms
+  coming back, alone, while every big square still sat at full tier size. Now it
+  rides with the rest of the motion in both directions.
 - **@fold10 and @fold11 tune separately.** Those four `P7_MORPH_*` values are
   @fold10's **grow** only. @fold11's flatten runs the same machinery off its
   own set — `P7_FLAT_FLY_MS` / `P7_FLAT_SIZE_MS` / `P7_FLAT_SIZE_START_MS` /
@@ -2419,6 +2437,55 @@ the selection, so the axis eases back to normal along with everything else. `sho
 dragging pick in its roster-target check). Desktop is untouched: `p7Inspect.event` is only
 ever set ≤600px (`p7InspectPage`).
 
+**On the TIMELINE the selection is the dot's own GROWTH — the same swell desktop plays on
+hover.** `p7BulgeTick` already treats `p7Inspect.event` as hovered while the picker is
+dragging, so the picked dot swells to its crowd tier (`P7_BULGE_MULT`, up to 19.57×), pushes
+its neighbours aside, and every other dot dims — at full opacity, with nothing painted over
+anything. **The hover dim's exempt dot is `p7.hoveredEvent || p7Inspect.event`**: it was
+`p7.hoveredEvent` alone, which is null on a phone, so the picked dot dimmed along with
+everything else and nothing in the glass read as chosen.
+
+**The glass zooms back OUT as the dot grows** — `p7LoupeZoom()` is
+`max(1, P7_LOUPE_ZOOM / p7LoupeGrowth() ** P7_LOUPE_ZOOM_OUT)`, where the growth is the **live
+eased** bulge factor, not the tier's target, so the zoom-out travels with the swell instead of
+stepping the instant a dot is picked. At a fixed 4× a top-tier dot filled the glass with itself
+and nothing else, which is the opposite of what a loupe is for. `P7_LOUPE_ZOOM_OUT` (**0.5**) is
+how much of the growth the glass gives back: 1 hands back all of it (a 19.6× dot ends up the size
+an unswollen one was — too much context), 0 keeps the fixed 4×. An **exponent**, so the response
+stays even across the tier ladder instead of scaling the top tier and barely touching the low ones.
+
+#### The docked frame's two spots on the timeline — `p7TipSpotTopPx` (mobile)
+
+The frame has two resting places on @fold9 and **flips** between them rather than moving: a flip,
+not a glide, because a travelling frame would pass through the very glass it is getting clear of.
+
+- **Top** (`P7_TIP_TOP_PX`, **96**) is the default, pinned by its **TOP edge**, so a longer
+  description grows **downward** into the chart.
+- **Bottom** (`P7_TIP_BOTTOM_PX`, **8** up from the screen bottom) is pinned by its **BOTTOM
+  edge** — solved from the live `offsetHeight` — so a longer one grows **upward**.
+
+Either way the frame expands away from the edge it sits on and never off-screen. That opposition
+is the whole point of having two.
+
+**The switch is a LINE on the screen**, `P7_TIP_SWITCH_Y` (**300**): while the glass's top edge is
+above it, the frame sits at the bottom. A fixed y and not a distance from the frame — the frame
+moves, so measuring against it would make the threshold chase its own result and chatter at the
+boundary. `syncTipAvoid` writes `p7TipAtBottom`; lifting the finger returns it to the top spot.
+This replaced @fold9's older `tooltipAvoidPx` dodge, which is now @fold13's alone.
+
+> All four are `let` — the `_debug-loupe-tip.js` harness (`glass and tooltip spots`, @fold9)
+> drives them live, and draws the switch line as a margin tick with a live marker for the glass's
+> own top edge, coloured by whether it has crossed.
+
+> **Removed from the timeline — don't reintroduce:** the white scrim over @fold9. Under the
+> loupe (a 4× nearest-neighbour blit of the canvas) it read as exactly the three things it was
+> never meant to be — pale washed-out dots, a hard circle around the selection, and a picked dot
+> that looked stroked rather than chosen. The 8 `fold6SquareEls`' matching DOM dim in
+> `updateGroups` went with it: there is no wash left to match.
+
+**@fold13 keeps the halo**, below — its dots are 1px, have no bulge system behind them, and
+this is their only selection cue. `p7DrawInspectScrim` is now called from `drawPage9` only.
+
 **The selection halo — drawn by subtraction, on the main canvas.** `p7DrawInspectScrim`
 fills one even-odd path — the whole canvas, minus a disc at the selected dot — with
 `rgba(255,255,255,0.76)` (`P7_INSPECT_SCRIM`). The exempt disc's radius is
@@ -2449,19 +2516,18 @@ pointed at. `p7InspectSource` returns `cell` alongside `half` for this — `p7Ce
 It runs on the **main** canvas, not inside the loupe, so the dimming reaches every dot on
 screen rather than only the handful under the glass — and since the loupe is a plain blit of
 that canvas, it inherits the halo already magnified, with no marker of its own and no second
-render path to keep in sync. It is called from both `drawPage7` and `drawPage9` (the picker
-serves both folds), after the dots and after `lastPositions` is published — it reads that map
+render path to keep in sync. It is called from `drawPage9` only (see above — @fold9 dropped
+it), after the dots and after `lastPositions` is published — it reads that map
 to find the hole. On `@fold9` it sits *before* the axis, which stays at full contrast as the
 reading context for the selected date. A selected event that has fallen out of the draw range
 scrims everything with nothing exempted.
 
-**The 8 `fold6SquareEls` dim with it, separately.** They are DOM squares sitting *on top of*
-the canvas, so a canvas scrim cannot reach them — left alone they stayed at full colour while
-everything under them went pale, reading as 8 dots the halo had singled out. `updateGroups`
-multiplies their opacity by `1 - P7_INSPECT_SCRIM` while the drag is live, exempting the
-picked event exactly as the scrim's hole does. Because `draw()` doesn't touch DOM, the picker
-calls `updateGroups()` beside each of its three scrim repaints (drag start in `armTimer`, a
-changed pick in `drawLoupe`, and `hideLoupe`) — the same pairing its hover path already uses.
+**Removed with the timeline's scrim: the 8 `fold6SquareEls`' matching DOM dim.** They are DOM
+squares sitting *on top of* the canvas, so a canvas scrim could not reach them and
+`updateGroups` had to multiply their opacity by `1 - P7_INSPECT_SCRIM` by hand. Those squares
+live on the timeline, which no longer has a scrim, so there is nothing to match. The picker
+still calls `updateGroups()` beside its repaints (drag start in `armTimer`, a changed pick in
+`drawLoupe`, and `hideLoupe`), since `draw()` doesn't touch DOM.
 
 The halo is a **drag-time** aid, gated on `p7Inspect.dragging` — it shows which dot the
 finger is on. Lifting the finger clears the selection outright (`onEnd` → `release`), so the

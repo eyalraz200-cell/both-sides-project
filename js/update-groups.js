@@ -29,6 +29,40 @@ let ugRerunQueued  = false;
 var FOLD3_ROW_LABEL_GAP_PX = 13;
 var FOLD3_MIN_ROW_PITCH_MOBILE_PX = 32;
 
+// MOBILE @fold4 fly progress, per LEG of fold6Trigger. Forward keeps the late
+// window above (sheet opens, then the rows fly). The REVERSE does not mirror it:
+// played backwards, a late window is an EARLY one — the rows had flown out of the
+// still-closed pill during the first half of the unwind and then sat parked at
+// their @fold3 spot, mid-screen, for the rest of it (and the sheet only reopened
+// at the very end). On a fast scroll "mid-screen" is whatever fold the reader
+// has reached — the six labels popped in over @fold6, and over the hero. So on
+// the way back the flight is given the WHOLE unwind, as it had before the late
+// start existed: the rows keep travelling until the trigger lands.
+//
+// Each leg starts from wherever the previous one left the rows (raw0, fly0),
+// captured the frame the trigger's target flips, so a reversal mid-flight stays
+// continuous — position never snaps. From rest that is (1, 1) going back and
+// (0, 0) going forward, which reduces to p7Ease(raw) and the late window exactly.
+let fold6MFlyLeg = { dir: null, raw0: 0, fly0: 0 };
+let fold6MFlyLast = 0;
+function fold6MFlyT(flyStart, flyLen) {
+  const raw = fold6Trigger.currentRaw();
+  const dir = fold6Trigger.target();
+  if (dir !== fold6MFlyLeg.dir) fold6MFlyLeg = { dir, raw0: raw, fly0: fold6MFlyLast };
+  const { raw0, fly0 } = fold6MFlyLeg;
+  const c01 = v => Math.max(0, Math.min(1, v));
+  let t;
+  if (dir === 0) {
+    t = raw0 <= 0 ? 0 : fly0 * p7Ease(c01(raw / raw0));
+  } else {
+    // The late window, re-based onto this leg's start when it began mid-flight.
+    const base = Math.max(raw0, flyStart), end = flyStart + flyLen;
+    t = end <= base ? 1 : fly0 + (1 - fly0) * p7Ease(c01((raw - base) / (end - base)));
+  }
+  fold6MFlyLast = t;
+  return t;
+}
+
 function updateGroups() {
   if (ugRanThisFrame) {
     if (!ugRerunQueued) {
@@ -57,8 +91,8 @@ function updateGroups() {
   // @fold3 use, and never a re-ease of e6.
   const flyStart = isMobile() ? fold6MFlyStart() : 0;
   const flyLen   = isMobile() ? fold6MFlyLen()   : 1;
-  const e6Fly = p7Ease(Math.max(0, Math.min(1,
-    (fold6Trigger.currentRaw() - flyStart) / flyLen)));
+  const e6Fly = isMobile() ? fold6MFlyT(flyStart, flyLen)
+    : p7Ease(Math.max(0, Math.min(1, (fold6Trigger.currentRaw() - flyStart) / flyLen)));
   // @fold3 (#page-2): 3 beats on fold3Trigger's one timeline — shrink the
   // fillers, fly the survivors into one vertical column per camp, type the
   // labels (see FOLD3_BEATS). Same {start,len} window model as @fold2's, and
@@ -113,8 +147,13 @@ function updateGroups() {
   // above), which fly into the camp grids instead; they're driven separately
   // after the main GROUPS loop below.
   const decorScale = 1 - shrinkT;
+  // The @fold1 idle cue owns these transforms while its pulse — or the exit
+  // ramp the first scroll starts (page0CueCancel, js/fold1-intro.js) — is
+  // still playing. Writing decorScale over it mid-ramp is what made the dots
+  // snap back to full size on that first scroll.
+  const cueOwns = typeof page0CueOwnsDots === "function" && page0CueOwnsDots();
   PAGE0_DECORATIVE_DOT_ELS.forEach(({ el, popped, isFold2Filler }) => {
-    if (popped && !isFold2Filler) el.style.transform = `scale(${decorScale})`;
+    if (popped && !isFold2Filler && !cueOwns) el.style.transform = `scale(${decorScale})`;
   });
 
   // Measured live off the real (fixed-width) note element rather than a
@@ -1530,19 +1569,10 @@ function updateGroups() {
       // flight has landed there.
       if (currentPage >= 12 && (isExtreme || p9.anim)) opacity = 0;
     }
-    // The mobile picker's selection halo (p7DrawInspectScrim, page7.js) is a
-    // white scrim painted over the whole CANVAS — so it dims every canvas dot
-    // but cannot touch these 8, which are DOM squares sitting on top of it.
-    // Without this they stayed at full colour while the chart under them went
-    // pale, reading as 8 dots the halo had singled out. Multiplying by
-    // 1 - P7_INSPECT_SCRIM matches what the scrim does to a dot on the white
-    // page. The picked dot is exempt, exactly as the scrim's own hole exempts
-    // it. Drag-time only, like the scrim itself.
-    if (typeof p7Inspect !== "undefined" && p7Inspect.dragging && targetEvent &&
-        typeof p7InspectPage === "function" && p7InspectPage() !== null &&
-        targetEvent !== p7Inspect.event) {
-      opacity *= 1 - P7_INSPECT_SCRIM;
-    }
+    // (Removed. These 8 DOM squares had to be dimmed by hand to match the
+    // picker's white scrim painted on the canvas under them — but that scrim no
+    // longer runs on the timeline, where these squares live. See the note above
+    // p7DrawInspectScrim in page7.js.)
     sq.style.opacity = String(opacity);
 
     // Real-event tooltip (shared #page9Tooltip, see fold8TooltipEl above),

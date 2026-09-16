@@ -280,10 +280,26 @@ const PAGE0_CUE_DOT_MS = 940;         // one dot's shrink-and-settle
 // `1 + (SCALE - 1) * bump`, which runs in either direction unchanged, so this
 // is the only number to turn and >1 restores the grow.
 const PAGE0_CUE_SCALE = 0.3;          // trough scale of a 7px dot (≈2.1px)
+// How long the pulse takes to ease back out of the way once the reader
+// scrolls. The cancel used to write every dot's rest transform in ONE frame
+// with the CSS transition suppressed, so a dot caught at the trough (scale
+// 0.3) snapped to 1 — a visible pop on the very first scroll, and a size jump,
+// which the house rule forbids. Now the cue eases each dot from wherever it
+// stands back to rest on p9Ease, and updateGroups' own decorative-dot write
+// stands down (page0CueOwnsDots) until that lands, so the two can't fight over
+// the same transform mid-exit. Short on purpose: the reader is already moving,
+// and the @fold2 shrink/fly is only a fold away.
+const PAGE0_CUE_EXIT_MS = 260;
 let page0CueTimer = null;
 let page0CueCancelled = false;
 let page0CueRunning = false;
+let page0CueExit = null;   // {targets, start} while the exit ramp is playing
 
+// True while the cue (pulse or exit ramp) still owns the decorative dots'
+// transform. Read by updateGroups (js/update-groups.js).
+function page0CueOwnsDots() { return page0CueRunning || page0CueExit !== null; }
+
+let page0CueLast = [];
 function page0CueTargets() {
   const targets = [];
   PAGE0_DECORATIVE_DOT_ELS.forEach((d) => { if (d.popped) targets.push({ el: d.el, row: d.syncedRow, rest: "scale(1)" }); });
@@ -316,6 +332,7 @@ function page0CueRun() {
   if (page0CueCancelled || window.scrollY > 0 || page0CueRunning) return;
   const targets = page0CueTargets();
   if (!targets.length) return;
+  page0CueLast = targets;
   page0CueSetTransition(targets, "none");
   const minRow = Math.min(...targets.map((t) => t.row));
   const maxRow = Math.max(...targets.map((t) => t.row));
@@ -330,7 +347,10 @@ function page0CueRun() {
       // Top row (smallest syncedRow) leads; each row starts PAGE0_CUE_ROW_STAGGER_MS after the one above it.
       const local = Math.max(0, Math.min(1, (elapsed - (t.row - minRow) * PAGE0_CUE_ROW_STAGGER_MS) / PAGE0_CUE_DOT_MS));
       const bump = local < 0.5 ? p9Ease(local * 2) : 1 - p9Ease((local - 0.5) * 2);
-      t.el.style.transform = local <= 0 || local >= 1 ? t.rest : `scale(${1 + (PAGE0_CUE_SCALE - 1) * bump})`;
+      // Kept so page0CueCancel can ease out FROM the dot's live scale rather
+      // than reading it back off the style string.
+      t.scale = local <= 0 || local >= 1 ? 1 : 1 + (PAGE0_CUE_SCALE - 1) * bump;
+      t.el.style.transform = local <= 0 || local >= 1 ? t.rest : `scale(${t.scale})`;
     });
     if (elapsed < totalMs) { requestAnimationFrame(frame); return; }
     page0CueSetTransition(targets, "");
@@ -345,15 +365,36 @@ function page0CueCancel() {
   page0CueCancelled = true;
   clearTimeout(page0CueTimer);
   if (page0CueRunning) {
-    const targets = page0CueTargets();
-    targets.forEach((t) => { t.el.style.transform = t.rest; });
-    // transition stays suppressed for this frame so the snap back to rest is
-    // instant, then handed back on the next one (clearing it in the same tick
-    // would let the swatches ease back into place instead).
-    requestAnimationFrame(() => page0CueSetTransition(targets, ""));
+    // The pulse's own frame loop bails on page0CueCancelled; this ramp takes
+    // over from the scale each dot is actually drawn at, so nothing jumps.
+    // The CSS transition stays suppressed for the whole ramp (the ramp writes
+    // every frame itself) and is handed back when it lands.
+    const targets = page0CueExitTargets();
     page0CueRunning = false;
-    updateGroups();
+    page0CueExit = { targets, start: performance.now() };
+    requestAnimationFrame(page0CueExitFrame);
   }
+}
+
+// The live targets, each carrying the scale its last pulse frame drew. A dot
+// the pulse never reached this cycle sits at rest and is left out entirely.
+function page0CueExitTargets() {
+  return page0CueLast.filter((t) => t.scale !== undefined && t.scale !== 1);
+}
+
+function page0CueExitFrame() {
+  if (!page0CueExit) return;
+  const { targets, start } = page0CueExit;
+  const raw = Math.min(1, (performance.now() - start) / PAGE0_CUE_EXIT_MS);
+  const e = p9Ease(raw);
+  targets.forEach((t) => {
+    const s = t.scale + (1 - t.scale) * e;
+    t.el.style.transform = raw >= 1 ? t.rest : `scale(${s})`;
+  });
+  if (raw < 1) { requestAnimationFrame(page0CueExitFrame); return; }
+  page0CueSetTransition(targets, "");
+  page0CueExit = null;
+  updateGroups();
 }
 window.addEventListener("scroll", page0CueCancel, { passive: true });
 window.addEventListener("wheel", page0CueCancel, { passive: true });

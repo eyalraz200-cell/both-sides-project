@@ -58,3 +58,41 @@
     return port;
   };
 })();
+
+/* ── PAGE-WIDE SWITCHES ──────────────────────────────────────────────────────
+   The dev fold badge (js/nav.js) and the dev auto-reload (reload.js) belong to
+   the PAGE, not to any one harness, and the remote tab shows them once. They
+   used to be answered from inside each _debug-<thing>.js — which meant that the
+   moment the last harness was baked and deleted, the tab's switches went dead
+   with it. They live here instead: this file is loaded for as long as the
+   panel exists at all. Harnesses still answer too; the panel takes whichever
+   arrives (`page: true` marks this one, so the rail doesn't list it). */
+(function () {
+  var disc = null;
+  try { disc = window.HBus && HBus('harness:__all__'); } catch (e) {}
+  if (!disc) return;
+  function badgeOn() {
+    var b = document.getElementById('foldNumberBadge');
+    return b ? b.classList.contains('is-visible') : null;
+  }
+  function auto() {
+    try { return window.autoReloadState ? window.autoReloadState() : null; } catch (e) { return null; }
+  }
+  function announce() {
+    var a = auto();
+    try {
+      disc.postMessage({ t: 'iam', page: true, title: '__page__',
+                         foldBadge: badgeOn(),
+                         autoReload: a ? a.on : null, behind: a ? a.behind : 0 });
+    } catch (e) {}
+  }
+  disc.onmessage = function (ev) {
+    var m = ev.data || {};
+    if (m.t === 'who') { announce(); return; }
+    if (m.t === 'foldbadge' && typeof window.setFoldBadgeVisible === 'function') {
+      window.setFoldBadgeVisible(!!m.on); announce(); return;
+    }
+    if (m.t === 'reloadnow' && window.reloadNow) { window.reloadNow(); return; }
+    if (m.t === 'autoreload' && window.setAutoReload) { window.setAutoReload(!!m.on); announce(); }
+  };
+})();

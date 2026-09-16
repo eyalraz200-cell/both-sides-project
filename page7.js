@@ -2445,6 +2445,29 @@ function p7MorphWin(ms, w) {
 function p7MorphBlend(ev, from, cx, cy, sq, isLeft) {
   const ms = p7GridMorphMs();
   const w = p7MorphWindows(p7BulgeTier(ev));
+  // The tier stagger exists so the BIG dots grow into room the flight has just
+  // opened (see P7_MORPH_PUSH below) — it has nothing to offer a dot that ends
+  // up SMALLER than it started. @fold10's smallest squares are exactly that:
+  // the timeline's own square (3.2px at 1440x900) is a touch bigger than the
+  // solved grid unit (3.0), and as tier 0 they sat at the very END of the
+  // stagger — window [1200 + 5*140, 450], finishing ~950ms after the flight had
+  // already landed. The whole field came to rest and then, visibly late, every
+  // small dot ticked down a fifth of a pixel. A shrink needs no room, so it
+  // leads with the first grower instead of trailing the last one.
+  // Reversing (@fold10 -> @fold9) has the mirror of the same artifact: tier 0's
+  // window maps to [0, size], so those dots grew BACK from 3.0 to 3.2 in the
+  // first ~360ms, alone, while every big square still sat at its full tier size
+  // and nothing had started flying home. Same rule, read on this direction's own
+  // clock — the tier-0 nudge is a shrink going out and a grow coming back, and
+  // neither needs room — so it takes the first grower's window (which the mirror
+  // below then carries to [T - start - size, size], landing with the flight home
+  // instead of ahead of everything).
+  const noRoomNeeded = (p7GridMorph && p7GridMorph.dir === "off")
+    ? sq > from.sq : sq < from.sq;
+  if (!(p7GridMorph && p7GridMorph.flat) && noRoomNeeded) {
+    const k = p7MorphKnobs(false);
+    w.size = [k.start, k.size];
+  }
   // Turning OFF plays the same clock backwards: a window [s, len] on the ON
   // clock is [T − s − len, len] on the OFF clock, so what grew last shrinks
   // first and the flight home comes at the end.
@@ -2572,7 +2595,16 @@ function p7SizeGridOnPage(page) {
   if (page >= 9 && page <= 12) {
     const past10  = typeof fold10GridPast === "function" && fold10GridPast();
     const past11 = typeof fold11SizePast === "function" && fold11SizePast();
-    p7SizeGridSet(past10, { instant: true, uniform: past11 });
+    // @fold13 (page 12) is the one page where the tier flag is NOT a scroll
+    // fact: both crossings that own it are far above, so past11 is
+    // permanently true there and re-syncing from it would hand the flag back
+    // to "flat" on every page flip — wiping out a press of the
+    // «הצגת גודל האירועים» button the moment the reader scrolled into @fold14
+    // and back. Omit `uniform` there: the button (p9ScopeSet) is the only
+    // authority on this fold, exactly as p7ScopeToggle's comment says.
+    const opts = { instant: true };
+    if (page < 12) opts.uniform = past11;
+    p7SizeGridSet(past10, opts);
   } else p7SizeGridSet(false, { instant: true });
   // @fold13's own tier morph (page9.js) is per-fold: a page flip resets the
   // flag above, so page9's cached pack and in-flight morph go with it.
@@ -3001,7 +3033,14 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     let drawAlpha = alpha;
     if (p7.hoverDimT > 0) {
       const t = p7.hoverDimT;
-      drawAlpha = events[i] === p7.hoveredEvent
+      // The EXEMPT one is whichever dot is being pointed at — the desktop hover
+      // or the mobile picker's pick. It was p7.hoveredEvent alone, which is null
+      // on a phone, so under the loupe the picked dot dimmed with everything
+      // else and nothing in the glass read as chosen. p7BulgeTick already treats
+      // the two the same way; this is the same rule, for the dim.
+      const pointed = p7.hoveredEvent ||
+        (typeof p7Inspect !== "undefined" && p7Inspect.dragging ? p7Inspect.event : null);
+      drawAlpha = events[i] === pointed
         ? alpha + (1 - alpha) * t
         : alpha * (1 - (1 - hoverDim(events[i].actor)) * t);
     }
@@ -3626,7 +3665,6 @@ function drawPage7(ctx, W, H) {
   p7RealTimelineReached = true;
   const clipped = p7VertClipToBox(ctx, W, H, p7VertSquareClipExtra());
   p7DrawTimelineSquares(ctx, W, H);
-  p7DrawInspectScrim(ctx, W, H);
   if (clipped) ctx.restore();
 
   if (p7AxisTriggerIfNeeded()) p7DrawYearAxis(ctx, W, H);
@@ -3649,6 +3687,19 @@ function drawPage7(ctx, W, H) {
 // outright (onEnd -> release), so the chart, the axis and the docked frame all
 // return to neutral together — a halo left standing would read as a persistent
 // highlight rather than as aim.
+// The picker's selection halo — a white scrim over the field with a hole around
+// the picked dot. **@fold13 ONLY.** It is no longer drawn on the TIMELINE
+// (@fold9): under the loupe — a 4x nearest-neighbour blit of this canvas — the
+// wash read as pale, washed-out dots with a hard circle drawn around the
+// selection, which is the opposite of what the glass is for. There the
+// selection is the dot's own GROWTH instead, the same swell desktop plays on
+// hover (p7BulgeTick already treats p7Inspect.event as hovered while the picker
+// drags), at full opacity with nothing painted over anything, and the glass
+// zooms back out as it grows (p7LoupeZoom).
+//
+// It stays here for @fold13, which is page9's own grid: those dots are 1px, have
+// no bulge system behind them, and this is their only selection cue. Called from
+// drawPage9 (page9.js), never from drawPage7.
 function p7DrawInspectScrim(ctx, W, H) {
   if (!p7InspectPage() || !p7Inspect.dragging || !p7Inspect.event) return;
   // Same source the hit-test uses, so the hole lands on the dot that was picked
@@ -6322,13 +6373,19 @@ p7HoverInit();
    inside P7_LONGPRESS_SLOP_PX) opens a 96px circular loupe riding 60px above
    the finger, blitting the main canvas at 4x (drawImage — there is
    deliberately no second render path to keep in sync with draw()). The nearest
-   event is marked by p7DrawInspectScrim's halo, which is painted onto the main
-   canvas and so arrives in the blit already magnified. Only that gesture blocks page
+   event is marked by GROWING — p7BulgeTick treats the picked event as hovered,
+   so it swells to its crowd tier exactly as it does on a desktop hover, on the
+   main canvas, and so arrives in the blit already magnified. The glass zooms
+   back out as it grows (see the zoom below). Only that gesture blocks page
    scroll (preventDefault on a non-passive touchmove); a touch that moves
    before the hold completes is a scroll and is left entirely alone. */
 
 const P7_LOUPE_SIZE      = 96; // px, matches .p7-loupe
-const P7_LOUPE_ZOOM      = 4;  // magnification
+const P7_LOUPE_ZOOM      = 4;  // magnification at rest
+// How much of the picked dot's growth the glass gives back by zooming out.
+// 0 = none (a fixed 4x), 1 = all of it. An EXPONENT on the growth factor, so the
+// response stays even across the tier ladder. `let` for the manual/ harness.
+let   P7_LOUPE_ZOOM_OUT  = 0.5;
 const P7_LOUPE_LIFT_PX   = 60; // how far above the fingertip the loupe centre sits
 const P7_INSPECT_SNAP_PX = 44; // furthest a dot can be from the finger and still be picked
 const P7_LONGPRESS_MS      = 300; // hold this long, without moving, to open the loupe
@@ -6340,14 +6397,13 @@ const P7_TIP_LESS          = "פחות";
 // .page9-tooltip-desc` (style.css) — syncMore measures the text against this
 // budget instead of against the clamped box, which misreports its own height.
 const P7_TIP_CLAMP_LINES   = 3;
-// The selection halo (p7DrawInspectScrim): how far back everything but the
-// picked dot is scrimmed, and the exempt disc's radius in dot widths. Both
-// tuned by eye on device.
+// The @fold13 selection halo (p7DrawInspectScrim): how far back everything but
+// the picked dot is scrimmed, the exempt disc's radius in dot widths, and how
+// much the picked dot's own colour is saturated. Tuned by eye on device.
+// NOT used on the timeline — see the note above that function.
 const P7_INSPECT_SCRIM     = 0.76;
 const P7_INSPECT_HOLE_DOTS = 1;
-// How much the picked dot's own colour is saturated, 0 = unchanged. Deliberately
-// small: it should read as the same group colour, just more insistent.
-const P7_INSPECT_PICK_SAT = 0.35;
+const P7_INSPECT_PICK_SAT  = 0.35;
 
 const p7Inspect = { dragging: false, event: null };
 
@@ -6371,7 +6427,12 @@ function p7InspectPage() {
 // legit band below the divider, matching desktop p9HoverInit's own exclusion).
 function p7InspectSource() {
   if (currentPage === 12) {
-    return { positions: p9.lastPositions, half: p9Metrics().SQ / 2, cell: p9Metrics().CELL, maxY: p9.midY ?? Infinity };
+    // With the crowd tiers on, dots draw at their block size (up to the mobile
+    // pitch × the tier's cells), so the flat SQ would mis-hit every big dot.
+    const tierCell = (p9.scopeStats && p9.scopeStats.cellPx) || 0;
+    const big = Math.max(p9Metrics().SQ, tierCell);
+    return { positions: p9.lastPositions, half: big / 2,
+             cell: Math.max(p9Metrics().CELL, tierCell), maxY: p9.midY ?? Infinity };
   }
   return { positions: p7.lastPositions, half: p7Sq() / 2, cell: p7Cell(), maxY: Infinity };
 }
@@ -6632,10 +6693,11 @@ function p7InspectInit() {
   function hideLoupe() {
     p7Inspect.dragging = false;
     window.removeEventListener("touchmove", loupeMove, { passive: false });
-    // The dodge belongs to the live finger — lifting it snaps the frame
-    // straight back to its resting spot.
-    if (p7TipAvoidActive) {
+    // Both the dodge and @fold9's spot flip belong to the live finger — lifting
+    // it snaps the frame straight back to its default (top) spot.
+    if (p7TipAvoidActive || p7TipAtBottom) {
       p7TipAvoidActive = false;
+      p7TipAtBottom = false;
       tooltipDockMobile(tipEl);
     }
     // Dragging is what holds the axis in its hover/state-3 treatment (see
@@ -6773,15 +6835,44 @@ function p7InspectInit() {
       const loupeTop = fingerY - P7_LOUPE_LIFT_PX - P7_LOUPE_SIZE / 2;
       p7TipAvoidActive = loupeTop < frameBottom + AVOID_MARGIN_PX;
     } else {
-      // @fold9: the frame rests at the BOTTOM of the screen, so the collision
-      // is a finger held LOW — the loupe's bottom edge reaching down into the
-      // frame's top edge. Testing the top edge here (as the @fold13 branch
-      // does) would be true for almost any finger and leave the frame
-      // permanently dodged.
-      const loupeBottom = fingerY - P7_LOUPE_LIFT_PX + P7_LOUPE_SIZE / 2;
-      p7TipAvoidActive = loupeBottom > frameTop - AVOID_MARGIN_PX;
+      // @fold9: the frame has TWO spots and flips between them (p7TipSpotTopPx,
+      // js/fold8-tooltip.js). The test is the glass's TOP edge against the
+      // switch LINE — a fixed y on the screen, not a distance from the frame:
+      // the frame moves, so measuring against it would make the threshold chase
+      // its own result and chatter at the boundary.
+      const loupeTop = fingerY - P7_LOUPE_LIFT_PX - P7_LOUPE_SIZE / 2;
+      window.__loupeTop = loupeTop;   // read by the manual/ harness's marker
+      p7TipAtBottom = loupeTop < P7_TIP_SWITCH_Y;
+      p7TipAvoidActive = false;
     }
     tooltipDockMobile(tipEl);
+  }
+
+  // The live magnification. The picked dot SWELLS to its crowd tier while it is
+  // held (p7BulgeTick), and at the top tier that is ~19.6x the square — at a
+  // fixed 4x the glass filled with that one dot and nothing else, which is the
+  // opposite of what a loupe is for. So the glass zooms back OUT by however much
+  // the dot has grown, keeping the swollen dot roughly the size an unswollen one
+  // would have been and leaving the neighbours in view. Divided by the LIVE
+  // eased factor, not the tier's target, so the zoom-out travels with the swell
+  // instead of stepping the instant a dot is picked. Never below 1: past that
+  // the glass would be showing less than the naked eye.
+  function p7LoupeGrowth() {
+    const ev = p7Inspect.event;
+    if (!ev) return 1;
+    const b = p7BulgeT.get(ev);
+    if (!b) return 1;
+    const mult = P7_BULGE_MULT[p7BulgeTier(ev)];
+    return 1 + (mult - 1) * p9Ease(b.t);
+  }
+  function p7LoupeZoom() {
+    // ^ P7_LOUPE_ZOOM_OUT, not the raw factor: at 1 the glass gives back the
+    // whole of the growth (a 19.6x dot ends up the size an unswollen one was),
+    // which is more context than the reader wants; at 0 it does not zoom out at
+    // all. The exponent keeps the response smooth across the tier ladder rather
+    // than scaling the top tier and barely touching the low ones.
+    const g = Math.pow(p7LoupeGrowth(), P7_LOUPE_ZOOM_OUT);
+    return Math.max(1, P7_LOUPE_ZOOM / g);
   }
 
   function drawLoupe(cx, cy) {
@@ -6789,22 +6880,21 @@ function p7InspectInit() {
     const rect = canvasEl.getBoundingClientRect();
     const mx = cx - rect.left, my = cy - rect.top;
     const dpr = window.devicePixelRatio || 1;
-    const src = P7_LOUPE_SIZE / P7_LOUPE_ZOOM; // CSS px of canvas sampled, per side
+    const src = P7_LOUPE_SIZE / p7LoupeZoom(); // CSS px of canvas sampled, per side
 
     if (loupeEl.width !== P7_LOUPE_SIZE * dpr) {
       loupeEl.width  = P7_LOUPE_SIZE * dpr;
       loupeEl.height = P7_LOUPE_SIZE * dpr;
     }
     // Pick the dot BEFORE blitting, and repaint the main canvas if the pick
-    // changed: the selection halo (p7DrawInspectScrim) lives on that canvas, and
-    // the loupe is a plain blit of it. Painting the halo first is what puts it in
+    // changed: the selection is the dot's own SWELL, which lives on that canvas,
+    // and the loupe is a plain blit of it. Painting it first is what puts it in
     // the glass — magnified along with everything else, with no second render
     // path to keep in sync. Without the repaint the loupe would show the previous
-    // frame's halo, since nothing else is animating a settled timeline.
+    // frame, since nothing else is animating a settled timeline.
     const hit = nearestEvent(mx, my);
-    // updateGroups() alongside it: the 8 fold6 DOM squares carry the same
-    // scrim dim as the canvas dots under them (see updateGroups' own
-    // P7_INSPECT_SCRIM clause), and draw() alone doesn't touch DOM.
+    // updateGroups() alongside it: the 8 fold6 DOM squares carry the same hover
+    // dim as the canvas dots under them, and draw() alone doesn't touch DOM.
     if (hit && hit.event !== p7Inspect.event) {
       showEvent(hit.event);
       draw();

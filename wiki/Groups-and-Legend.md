@@ -119,7 +119,7 @@ opacity every frame, so nothing has to switch it back on.
    from the count already on screen. The **un-type** runs from opposite ends per column — the
    right column drops its head, the left column its tail — so each dissolves away from the
    screen edge it is anchored to. The **hover re-type** is head-first on both columns; the
-   flip is gated on the un-type term winning the `max()`. `FOLD6_LABEL_UNTYPE_MS` 900, `FOLD6_LABEL_HOVER_MS` 420.
+   flip is gated on the un-type term winning the `max()`. `FOLD6_LABEL_UNTYPE_MS` 900, `FOLD6_LABEL_HOVER_MS` 420. Scrolling back up **reverses** the un-type on its own 900ms (`fold6LabelUntypeTrigger.trigger(0)` from the same `onSettle`) — it used to `set(0)`, which put every character back on screen in a single frame and snapped the labels in on the way out of @fold4.
    **@fold8 auto-peeks it**: on @fold8's crossing the legend plays its own hover state
    unprompted — labels type in (the ACLED note stays closed), hold `FOLD9_LEGEND_PEEK_HOLD_MS`
    (2000ms, timed from when the type-in lands), then un-type — so the fold's title line
@@ -1103,12 +1103,32 @@ still opening, and the flight aims at the rows' REST positions).
 - **`@fold3` also fires earlier on mobile** — `FOLD3_CARD_FRAC` (**0.6**, vs the house 0.5;
   `js/groups.js`, same `watchCardThreshold` function-frac form) — so the filler shrink and the
   group labels typing in get more of the fold on screen. Desktop keeps 0.5.
-- **`@fold4` itself fires LATE on mobile** — `FOLD6_CARD_FRAC` (**0.18**, vs the house 0.5;
+- **`@fold4` itself fires LATE on mobile** — `FOLD6_CARD_FRAC` (**0.23**, vs the house 0.5;
   bigger is earlier, so this is well below it and the card's top has to climb almost all the
   way up before the hand-off starts), picked by eye with the `manual/` trigger harness on
   2026-09-14. The whole hand-off — the six rows flying into the מקרא sheet, then the sheet
   closing itself `FOLD6_MFLY_CLOSE_GAP_MS` after they land — therefore plays out as @fold5
   comes up rather than while this fold is still centred. Desktop keeps 0.5.
+- **The rows' flight starts late going DOWN, but takes the whole unwind coming BACK**
+  (`fold6MFlyT`, js/update-groups.js). Forward, the flight is the `{fold6MFlyStart(),
+  fold6MFlyLen()}` window on the trigger's raw progress — the sheet opens first, then the
+  rows fly. That window is deliberately **not** mirrored on the reverse: played backwards a
+  late window is an early one, and the rows flew out of the still-closed pill in the first
+  half of the unwind and then sat parked at their `@fold3` spot, mid-screen, for the rest —
+  on a fast scroll that spot is whatever fold the reader has reached (they popped in over
+  `@fold6` and over the hero). Going back the flight is `p7Ease(raw)` over the full unwind,
+  so the rows keep travelling until the trigger lands. Each leg re-bases on wherever the
+  previous one left the rows (`fold6Trigger.target()` flips → capture `raw0, fly0`), so a
+  reversal mid-flight is continuous — position never snaps.
+- **The fly targets survive a viewport height change while the panel is closed**
+  (`fold6MFlyMeasure`, js/groups.js). The targets are cached per `WxH`; a closed panel cannot
+  be re-measured, and returning "no target" there dropped the rows into the no-fly branch,
+  which un-hid them at their `@fold3` spot mid-screen — on whatever fold the reader was on.
+  Safari's URL bar does exactly that every time it collapses or expands. On a hidden-panel
+  miss the stale map is kept and every `y` shifted by the height delta (the pill is
+  bottom-anchored); a width change leaves `x` stale until the panel next opens and
+  re-measures (`fold6MFlyTargets = null` on open). Reproduce headless with
+  `page.setViewportSize` mid-scroll — a wheel-only probe never sees it.
 - **Then, in the fly variant, it closes itself** (explicit instruction): the rows land,
   the panel holds `FOLD6_MFLY_CLOSE_GAP_MS`, then shrinks back into the מקרא pill
   (`fold6MFlyArrive`); `fold6MLegendRestRows` hands the rows back to CSS on that close. The

@@ -113,6 +113,15 @@ function tooltipDockRestPx() {
   // viewportH(), not window.innerHeight — same cached value, refreshed on the
   // same resize (js/core.js). This runs every frame; the live read was 4.1% of
   // the timeline profile on a throttled phone.
+  //
+  // On the TIMELINE this is now one of two spots (p7TipSpotTopPx) — top by
+  // default, bottom when the glass comes near it. Everything else that rests the
+  // frame (the @fold7 -> @fold8 handover, @fold13's drop) still reads the old
+  // bottom-anchored line, so their geometry is untouched.
+  if (isMobile() && typeof currentPage !== "undefined" &&
+      (currentPage === 8 || currentPage === 9)) {
+    return p7TipSpotTopPx(typeof fold8TooltipEl === "undefined" ? null : fold8TooltipEl);
+  }
   return viewportH() - TOOLTIP_DOCK_BOTTOM_PX - TOOLTIP_DOCK_H_PX;
 }
 
@@ -222,6 +231,36 @@ function tooltipDockHandoverScale() {
 //   instruction), and expansion grows DOWNWARD instead of upward.
 let p7TipAvoidActive = false;
 
+// ── @fold9's TWO tooltip spots (mobile) ─────────────────────────────────────
+// The docked frame has two resting places on the timeline, and flips between
+// them rather than moving: TOP by default, BOTTOM when the glass gets close to
+// the top one. A flip, not a glide — the frame would otherwise travel through
+// the very glass it is getting out of the way of (the same reasoning the older
+// dodge was built on).
+//
+// They anchor at OPPOSITE edges, which is the point of having two: the top spot
+// is pinned by its TOP, so a longer description grows DOWNWARD into the chart;
+// the bottom spot is pinned by its BOTTOM, so a longer one grows UPWARD. Either
+// way the frame expands away from the edge it is sitting on and never off-screen.
+// The bottom spot therefore has to be solved from the LIVE offsetHeight.
+//
+// All three are `let` for the manual/ harness.
+let P7_TIP_TOP_PX    = 96;   // the top spot's TOP edge, px from the top of the screen
+let P7_TIP_BOTTOM_PX = 8;    // the bottom spot's BOTTOM edge, px up from the screen bottom
+// The switch line: while the glass's top edge is ABOVE this y, the frame sits at
+// the BOTTOM. A line on the screen, not a distance from the frame — it is the
+// reader's own "am I working up here" boundary, and it is what the harness draws.
+let P7_TIP_SWITCH_Y  = 300;
+let p7TipAtBottom = false;   // which spot is live right now (written by syncTipAvoid)
+
+// The @fold9 spot, resolved. `el` is needed for the bottom anchor's height.
+function p7TipSpotTopPx(el) {
+  const H = viewportH();
+  if (!p7TipAtBottom) return P7_TIP_TOP_PX;
+  const h = (el && el.offsetHeight) || TOOLTIP_DOCK_H_PX;
+  return H - P7_TIP_BOTTOM_PX - h;
+}
+
 // @fold13-only extra drop below the clearance line, per explicit instruction
 // ("snap to a bit lower position", then "lower still"). Deliberately eats into
 // the axis/label clearance described above — raise back toward 0 if the frame
@@ -251,11 +290,10 @@ function tooltipAvoidPx(el, top) {
     const collapsedH = typeof P9_TOOLTIP_COLLAPSED_H === "undefined" ? 100 : P9_TOOLTIP_COLLAPSED_H;
     return line + P7_TIP_AVOID_DROP_PX - collapsedH;
   }
-  // @fold9 — docked at the bottom, so it dodges UP to the grid's TOP clearance
-  // line: the first spot clear of the finger that is still under the axis
-  // headline. Top-anchored, so an expanded description grows downward over the
-  // grid rather than up through the headline it would otherwise cover.
-  return box ? H * box.top : TOOLTIP_DOCK_TOP_MIN_PX;
+  // @fold9 — nothing to dodge. The frame has two spots of its own now
+  // (p7TipSpotTopPx) and FLIPS between them on the switch line, which is
+  // resolved in tooltipDockRestPx before this ever runs.
+  return top;
 }
 
 function tooltipDockMobile(el) {

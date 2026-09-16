@@ -1028,6 +1028,18 @@ var P9_LEGIT_PITCH_MIN_SQ  = 1;        // pitch: the legit dot never draws small
 // area-solved cell, dots left at shuffled spots (gapped, like the flat strip).
 var P9_LEGIT_PITCH_FILL    = "fill";
 var P9_LEGIT_CROWD_GAP     = 4;        // crowd: px between the band and the shuffled dots
+// ── MOBILE's own room modes ──────────────────────────────────────────────────
+// The phone's legit strip is 54px at a 1.5px pitch, so there is no cell left to
+// shrink: the tiers fit by GROWING the strip instead. The cell is pinned at
+// "a dot plus its gap", which is also what stops the dots tiling solid.
+//   "grow"   — the strip takes whatever height the pack needs.
+//   "band"   — the 54px strip stands; whatever doesn't fit runs past the edge.
+//   "capped" — "grow", clamped to P9_LEGIT_MAX_FRAC_M of the screen; past that
+//              the biggest tiers come down until the pack fits.
+var P9_LEGIT_ROOM_M     = "band";
+var P9_LEGIT_GAP_MIN_M  = 0.5;   // px of real gap every legit dot keeps
+var P9_LEGIT_SQ_MIN_M   = 0.5;   // smallest legit dot
+var P9_LEGIT_MAX_FRAC_M = 0.33;  // "capped" only
 
 function p9LegitTierPlan(W, H) {
   // Always the canvas's own size: callers pass window.innerWidth (scrollbar
@@ -1035,13 +1047,17 @@ function p9LegitTierPlan(W, H) {
   // flips between the two re-solved the plan every other call — which after a
   // drop re-sized the strip (visible on the right camp).
   if (typeof canvas !== "undefined" && canvas.clientWidth) { W = canvas.clientWidth; H = canvas.clientHeight; }
-  if (!p9ScopeTiered() || typeof currentPage === "undefined" || currentPage !== 12) return null;
+  // Page 11 too: @fold12's glide captures its landing positions BEFORE nav flips
+  // currentPage to 12, so gating on 12 alone landed every dot flat and then
+  // snapped it to its tiered slot at the page flip.
+  if (!p9ScopeTiered() || typeof currentPage === "undefined" || currentPage < 11 || currentPage > 12) return null;
   if (!p7.ready || !p7.leftEvents) return null;
   const mobile = isMobile();
   if (mobile && !P9_LEGIT_SPREAD_M) return null;           // the packed bar has no room to give
   const key = [W, H, mobile ? 1 : 0, p9IsRegularDesktop() ? 1 : 0, P9_LEGIT_ROOM,
                P9_LEGIT_RISE_MAX_FRAC, P9_LEGIT_RISE_PAD, P9_LEGIT_PITCH_MIN_SQ, P9_LEGIT_CROWD_GAP,
-               P9_LEGIT_PITCH_FILL].join("|");
+               P9_LEGIT_PITCH_FILL, P9_LEGIT_ROOM_M, P9_LEGIT_GAP_MIN_M,
+               P9_LEGIT_SQ_MIN_M, P9_LEGIT_MAX_FRAC_M].join("|");
   // HELD across drops: once solved, a drop doesn't resize or move the legit
   // dots — the dropped ones just leave holes. Classification state is NOT in the
   // key; the plan is only rebuilt when a dot that is legit now has no slot in it
@@ -1137,7 +1153,14 @@ function p9LegitTierPlan(W, H) {
     const availRows = cell => Math.max(1, Math.floor((baseH - pad) / cell));
     const need = side => lists[side].reduce((a, e) => a + cellsOf(e) ** 2, 0);
     const areaPx = (W / 2) * (baseH - pad);
-    const sqFor = cell => Math.min(cell, Math.max(P9_LEGIT_PITCH_MIN_SQ, cell * (sq0 / cell0)));
+    // MOBILE keeps a real gap: at the 54px strip's own pitch the ratio gap works
+    // out under a device pixel, and after p9PlaceDot's device-px snap every dot
+    // tiled solid — the strip read as one block. Desktop keeps the ratio.
+    const sqFor = cell => mobile
+      ? Math.max(P9_LEGIT_SQ_MIN_M, Math.min(cell - P9_LEGIT_GAP_MIN_M, cell * (sq0 / cell0)))
+      : Math.min(cell, Math.max(P9_LEGIT_PITCH_MIN_SQ, cell * (sq0 / cell0)));
+    // The finest cell that can still hold a dot and its gap (mobile only).
+    const cellMinM = P9_LEGIT_SQ_MIN_M + P9_LEGIT_GAP_MIN_M;
     const colsFor = (cell, side) => {
       const t = Math.max(2, Math.floor(W / cell));
       return side === "left" ? Math.floor(t / 2) : t - Math.floor(t / 2);
@@ -1169,8 +1192,8 @@ function p9LegitTierPlan(W, H) {
     // little finer than the packed one so there's air between them. Anything
     // that finds no free run lands in rows below the edge, out of view.
     const JUMBLE_AIR = 0.8;   // share of the strip's area the blocks may cover
-    const jumbleSide = (side, cell) => {
-      const cols = colsFor(cell, side), vis = availRows(cell);
+    const jumbleSide = (side, cell, visOverride) => {
+      const cols = colsFor(cell, side), vis = visOverride || availRows(cell);
       const rows = vis + Math.ceil(lists[side].length / cols) + P9_SCOPE_TIER_CAP;
       const occ = new Uint8Array(cols * rows);
       const order = lists[side].slice().sort((a, b) => cellsOf(b) - cellsOf(a));
@@ -1213,6 +1236,53 @@ function p9LegitTierPlan(W, H) {
       return { pos, rows };
     };
     const packs = {}, cells = {}, sqs = {};
+    // ── MOBILE: its own room modes (P9_LEGIT_ROOM_M) ───────────────────────────
+    // The phone's strip is 54px at a 1.5px pitch, so "shrink the cell until the
+    // tiers fit" has nowhere to go — the cell is pinned at cellMinM (a dot plus
+    // its gap) and the ROOM is found by growing the strip instead.
+    if (mobile) {
+      const cellM = q(Math.max(cellMinM, 1 / dpr));
+      const rowsFor = () => Math.max(
+        packSide("left", cellM).rows, packSide("right", cellM).rows);
+      let riseM = 0, capM = P9_SCOPE_TIER_CAP;
+      if (P9_LEGIT_ROOM_M !== "band") {
+        // "grow": the strip takes whatever height the pack needs. "capped": the
+        // same, clamped to a share of the screen, the big tiers coming down
+        // until the pack fits under it.
+        const ceilH = P9_LEGIT_ROOM_M === "capped"
+          ? Math.max(baseH, Math.floor(H * P9_LEGIT_MAX_FRAC_M))
+          : Infinity;
+        const rowsMaxM = Math.max(1, Math.floor((ceilH - pad) / cellM));
+        let rows = rowsFor();
+        while (capM > 1 && rows > rowsMaxM) {
+          capM--;
+          rows = Math.max(
+            p9PackColumns(lists.left,  colsFor(cellM, "left"),  e => Math.min(cellsOf(e), capM)).rows,
+            p9PackColumns(lists.right, colsFor(cellM, "right"), e => Math.min(cellsOf(e), capM)).rows);
+        }
+        // Clamped as well as capped: at cap 1 a very short phone can still need
+        // more rows than the ceiling allows, and the rest runs off the edge.
+        riseM = Math.max(0, Math.min(rows * cellM + pad, ceilH) - baseH);
+      }
+      // The pack itself runs against the FINAL strip height, so the rows fill it.
+      const visRowsM = Math.max(1, Math.floor((baseH + riseM - pad) / cellM));
+      for (const side of ["left", "right"]) {
+        const got = p9PackColumns(lists[side], visRowsM,
+          e => Math.min(cellsOf(e), capM, visRowsM));
+        const pos = new Map();
+        for (const [e, P] of got.pos) pos.set(e, { c: P.r, r: P.c, n: P.n });
+        packs[side] = { pos, rows: visRowsM, extent: got.rows, visRows: visRowsM };
+        if (packs[side].extent < colsFor(cellM, side)) {
+          packs[side] = jumbleSide(side, cellM, visRowsM);
+          packs[side].visRows = visRowsM;
+        }
+        cells[side] = cellM;
+        sqs[side] = sqFor(cellM);
+      }
+      plan = { mode: "pitch", rise: riseM, cell: cellM, sq: sqFor(cellM), cells, sqs, packs, cap: capM };
+      p9.legitTierPlan = { key, plan };
+      return plan;
+    }
     for (const side of ["left", "right"]) {
       let cell = shared;
       if (P9_LEGIT_PITCH_FILL === "fill" && lists[side].length) {
@@ -1755,6 +1825,7 @@ function p9ScopeRunLoop() {
 function p9ScopeSync() {
   p9.scopeMorph  = null;
   p9.scopeLayout = null;
+  p9.legitTierPlan = null;
 }
 
 function drawPage9(ctx, W, H) {
@@ -2249,7 +2320,11 @@ function drawPage9(ctx, W, H) {
     // The pitch's own gap, kept at every block size — and scaled with the pitch
     // when mobile tiers grow it (p9ScopeMobileCell), so a 5px cell doesn't
     // read as a solid mass. cell === CELL everywhere else, so this is CELL - SQ.
-    const gapPx  = (CELL - SQ) * cell / CELL;
+    // On a phone with the tiers on that ratio gap is under a device pixel at the
+    // native pitch, and after the device-px snap the columns tile solid — the
+    // same thing that made the legit strip read as one block. Floor it.
+    let gapPx  = (CELL - SQ) * cell / CELL;
+    if (mobile && tiered) gapPx = Math.max(gapPx, P9_LEGIT_GAP_MIN_M);
     // Packed over the VISIBLE entries only, so the legend filter closes ranks
     // the same way it always did. A hidden dot keeps the plain row-major cell
     // its raw index gives it, so it shrinks away where it stands instead of
@@ -3617,8 +3692,12 @@ function p9BuildPanel() {
     panel.style.setProperty("--p9-v2-tray-top", `${p9TrayTopV2()}px`);
     // The legit band's height, so the drop-zone wrap's CSS can end above the
     // divider without a second hand-synced copy of P9_LEGIT_H_V2.
-    panel.style.setProperty("--p9-v2-legit-h", `${Math.round(window.innerHeight - p9MidY(window.innerHeight, window.innerWidth))}px`);
-    p9.publishedLegitH = null;
+    // V2 only — the var's one CSS consumer is inside the V2 block, and reading
+    // p9MidY here on mobile would solve the tier plan during a measure pass.
+    if (p9IsV2()) {
+      panel.style.setProperty("--p9-v2-legit-h", `${Math.round(window.innerHeight - p9MidY(window.innerHeight, window.innerWidth))}px`);
+      p9.publishedLegitH = null;
+    }
   }
 
   // The tray ships at opacity:0 (style.css) because its resting hidden

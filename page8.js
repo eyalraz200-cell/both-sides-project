@@ -185,7 +185,10 @@ function drawPage8(ctx, W, H) {
       // In a bar layout (mobile) the legit grid draws its dots
       // at the bar's own cell size, not P9_SQ — land on that instead, or the
       // dots pop a pixel at the handoff.
-      const endSQ  = legitGeom.mode === "bar" ? legitGeom.cell : p9Metrics().legitSq;
+      // With the crowd tiers on, p9LegitPosOf hands back the dot's own block
+      // size — land on that, or a tiered dot arrives at the flat size and pops.
+      const endSQ  = legitGeom.mode === "bar" ? legitGeom.cell
+                   : (target.sq ?? p9Metrics().legitSq);
       const drawSQ = fromSQ + (endSQ - fromSQ) * sizeE;
       // No opacity fade — drawPage9 draws the legit grid at full opacity (see the
       // comment above its own drawBandedCols/drawJumbledBot calls; it used to be a
@@ -257,6 +260,8 @@ function p8CaptureBlendedPositions(W, H, tOverride) {
   const rightX0 = p7GridGeometry(W, H).rightX0;
 
   const legitSQ = legitGeom.mode === "bar" ? legitGeom.cell : p9Metrics().legitSq;
+  // Per-dot when the tiers are on (see the glide's own endSQ above).
+  const legitSqOf = target => (legitGeom.mode === "bar" ? legitGeom.cell : (target.sq ?? legitSQ));
   const out = new Map();
   function capture(events, indexOf, side, positions, x0) {
     events.forEach((e, i) => {
@@ -278,7 +283,7 @@ function p8CaptureBlendedPositions(W, H, tOverride) {
         // Per-dot, because out of the size grid every dot starts at its own
         // tier size — drawPage9's continuation lerps from this (`from.sq`)
         // when setActivePage leaves the scalar `fromSQ` off (js/nav.js).
-        sq: fromSQ + (legitSQ - fromSQ) * ease,
+        sq: fromSQ + (legitSqOf(target) - fromSQ) * ease,
       });
     });
   }

@@ -19,10 +19,10 @@ const sections = Array.from(document.querySelectorAll(".text-section"));
 // is added here. Nothing else can switch it on: the Ctrl+Shift+F listener and
 // the mobile picker are both inside this branch.
 const foldNumberBadge = isLocalHost() ? document.getElementById("foldNumberBadge") : null;
-// Dismissing the badge leaves a 7px DOT in its place rather than nothing: with
-// the number gone there was no way back on a phone (Ctrl+Shift+F needs keys a
-// phone doesn't have), so the aid could be switched off for good by one tap.
-// Same rule the harness panel's chip follows — never un-dismissable.
+// Dismissed = GONE (no chip on the page). The way back on a phone is the
+// harness panel tab's fold-badge switch, answered by _debug-bus.js so it works
+// with no harness loaded. `is-dot` is still the off state's class; it just
+// paints nothing now (style.css).
 function setFoldBadgeVisible(visible) {
   if (!foldNumberBadge) return;
   foldNumberBadge.classList.toggle("is-visible", visible);
@@ -52,8 +52,8 @@ if (foldNumberBadge) {
 // desktop had no way to jump to a fold at all. The badge is therefore clickable
 // on both breakpoints now (see the `pointer-events` note in style.css).
 //
-// The panel's last row dismisses the badge to its dot, which is how the toggle
-// is reachable without a keyboard.
+// The panel's last row switches the badge off; the harness panel tab's own
+// fold-badge switch is what brings it back.
 //
 // It is built from the sections themselves — number plus that fold's own title,
 // with the `.copy-desktop` half of any breakpoint-split headline stripped out —
@@ -171,8 +171,8 @@ function foldPickerInit() {
 
   foldNumberBadge.addEventListener("click", (e) => {
     e.stopPropagation();
-    // Dismissed to its dot: the click brings the number back rather than
-    // opening a picker the user cannot see the handle for.
+    // Off (nothing painted): a stray click can still reach this element's box,
+    // and bringing the number back is the friendlier reading of it.
     if (!foldNumberBadge.classList.contains("is-visible")) {
       setFoldBadgeVisible(true);
       return;
