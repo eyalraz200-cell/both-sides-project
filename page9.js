@@ -554,8 +554,17 @@ function p9RunAnimLoop() {
   if (t < 1) {
     requestAnimationFrame(p9RunAnimLoop);
   } else {
+    const wasGlide = !!p9.anim.plainGlide;
     p9.anim = null;
+    // @fold13's «לחצו והחזיקו» line waits for the first column to finish
+    // building (p7SyncHint, js/groups.js) — this is that moment.
+    if (typeof p7SyncHint === "function") p7SyncHint();
     if (p9PageVisible()) draw();
+    // The bridge glide, continued onto this fold, has just LANDED: a «הצגת
+    // גודל האירועים» press parked in the air runs now — settle, then resize
+    // (p7ScopeFlushPending, js/groups.js; page8.js does the same when the
+    // glide lands on its own folds).
+    if (wasGlide && typeof p7ScopeFlushPending === "function") p7ScopeFlushPending();
   }
 }
 
@@ -1707,8 +1716,13 @@ function p9ScopeMobileCell(CELL, leftRoom, rightRoom, heightPx) {
   const hidden = e => typeof p7FilterHiddenEv === "function" && p7FilterHiddenEv(e);
   const L = p9.leftTopOrder.filter(e => !hidden(e));
   const R = p9.rightTopOrder.filter(e => !hidden(e));
-  const key = [CELL, Math.round(leftRoom), Math.round(rightRoom), Math.round(heightPx),
-               L.length, R.length, p9.orderVersion || 0].join("|");
+  // HELD across drops, like the legit strip's own plan: the pitch is solved once
+  // per geometry and kept, so dropping a category never resizes the dots already
+  // standing in the columns. Classification/filter state is deliberately NOT in
+  // the key — a drop that no longer fits is answered by the cap-lowering in
+  // p9ScopeSolveCols, not by re-pitching the whole grid. Cleared on a tier
+  // toggle and on a page flip (p9ScopeSet / p9ScopeSync).
+  const key = [CELL, Math.round(leftRoom), Math.round(rightRoom), Math.round(heightPx)].join("|");
   if (p9ScopeMobileCell.key === key) return p9ScopeMobileCell.cell;
   let pick = CELL;
   for (const k of P9_SCOPE_CELL_STEPS_M) {
@@ -1797,6 +1811,7 @@ function p9ScopeSet(uniform, opts) {
   p7GridUniform  = uniform;
   p9.scopeLayout = null;
   p9.legitTierPlan = null;
+  p9ScopeMobileCell.key = null;      // re-solve the phone's pitch for this state
   p9.scopeMorph  = from.size
     ? { from, fromMidY, start: performance.now(), dir: uniform ? "off" : "on" }
     : null;
@@ -1808,13 +1823,23 @@ function p9ScopeSet(uniform, opts) {
 
 // The morph's own rAF loop. Yields its draw to p9RunAnimLoop whenever a drop is
 // animating, so the two never paint the same frame twice.
+// …and it also paints the BRIDGE once the glide has landed (@fold11/@fold12,
+// pages 10–11, p8CurrentT() = 1): the «הצגת גודל האירועים» button works from
+// the fold it appears on, and there page8.js draws the same legit strip this
+// morph is about (it applies p9.scopeMorph per dot at t = 1). Before this the
+// press on those folds flipped the flag and the strip SNAPPED to the tiers.
+function p9ScopeDrawWanted() {
+  if (p9PageVisible()) return true;
+  return (currentPage === 10 || currentPage === 11)
+    && typeof p8CurrentT === "function" && p8CurrentT() >= 1;
+}
 function p9ScopeRunLoop() {
   if (!p9.scopeMorph) return;
   const done = performance.now() - p9.scopeMorph.start >= p9ScopeTotalMs();
-  if (!p9.anim && p9PageVisible()) draw();
+  if (!p9.anim && p9ScopeDrawWanted()) draw();
   if (done) {
     p9.scopeMorph = null;
-    if (p9PageVisible()) draw();
+    if (p9ScopeDrawWanted()) draw();
     return;
   }
   requestAnimationFrame(p9ScopeRunLoop);
@@ -1826,6 +1851,7 @@ function p9ScopeSync() {
   p9.scopeMorph  = null;
   p9.scopeLayout = null;
   p9.legitTierPlan = null;
+  p9ScopeMobileCell.key = null;
 }
 
 function drawPage9(ctx, W, H) {

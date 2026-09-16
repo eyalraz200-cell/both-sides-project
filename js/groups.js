@@ -927,7 +927,11 @@ function fold6DotHover(actor) {
   // dots of different groups crossfades the two labels.
   if (fold6DotHoverActor) fold6DotHoverTrigger(fold6DotHoverActor).trigger(0);
   fold6DotHoverActor = actor;
-  if (actor) fold6DotHoverTrigger(actor).trigger(1);
+  // Inside a legend hover box the dot wins outright: neither the whole legend
+  // nor the dot's own row opens (fold6LegendHoverSync, declared later in this
+  // file — script-scope `let`, resolved at call time).
+  if (actor && !fold6LegendPointerOver) fold6DotHoverTrigger(actor).trigger(1);
+  if (typeof fold6LegendHoverSync === "function" && fold6LegendPointerOver) fold6LegendHoverSync();
 }
 // Two invisible hit boxes, one per legend column, positioned per frame by
 // updateGroups (they can't be CSS-only: the rows are laid out in JS against
@@ -937,19 +941,29 @@ function fold6DotHover(actor) {
 // reads it so its scheduled collapse never yanks the labels out from under a
 // real hover that arrived mid-demo.
 let fold6LegendPointerOver = false;
+// The legend opens for the pointer ONLY while no dot is hovered. The hover
+// boxes sit over the canvas but the dot hit-test runs on window mousemove, so
+// a dot right next to the legend used to open BOTH — its tooltip and the
+// whole legend typing in. One place decides, called from the box's enter/leave
+// and from fold6DotHover, so a dot picked up inside the box drops the legend
+// and letting go of it (still inside the box) brings the legend back.
+function fold6LegendHoverSync() {
+  const want = fold6LegendPointerOver && !fold6DotHoverActor ? 1 : 0;
+  fold6LabelHoverTrigger.trigger(want);
+  fold6NoteHoverTrigger.trigger(want);
+  // The same rule for the dot's OWN row (fold6DotHoverTriggers): near the
+  // legend the tooltip is the thing being read, so the single-row open is
+  // held back too while the pointer is inside a hover box, and released —
+  // the row types in — the moment it leaves with the dot still hovered.
+  if (fold6DotHoverActor) {
+    fold6DotHoverTrigger(fold6DotHoverActor).trigger(fold6LegendPointerOver ? 0 : 1);
+  }
+}
 const fold6LegendHoverEls = [0, 1].map(() => {
   const el = document.createElement("div");
   el.className = "fold6-legend-hover";
-  el.addEventListener("mouseenter", () => {
-    fold6LegendPointerOver = true;
-    fold6LabelHoverTrigger.trigger(1);
-    fold6NoteHoverTrigger.trigger(1);
-  });
-  el.addEventListener("mouseleave", () => {
-    fold6LegendPointerOver = false;
-    fold6LabelHoverTrigger.trigger(0);
-    fold6NoteHoverTrigger.trigger(0);
-  });
+  el.addEventListener("mouseenter", () => { fold6LegendPointerOver = true;  fold6LegendHoverSync(); });
+  el.addEventListener("mouseleave", () => { fold6LegendPointerOver = false; fold6LegendHoverSync(); });
   document.querySelector(".layout").appendChild(el);
   return el;
 });
@@ -1167,16 +1181,57 @@ const p9TooltipDropTrigger = makeTrigger(P9_TOOLTIP_DROP_MS, () => {
 // in the frame's old spot at the bottom. Un-types on the way back. Linear on
 // raw progress, like every typewriter here.
 const P7_HINT_TYPE_MS = 900;
-const p7HintTrigger = makeTrigger(P7_HINT_TYPE_MS, () => {
+// Out is FASTER than in (explicit instruction): scrolling back up past @fold11
+// has to clear the line before the frame leaves, not carry it along.
+const P7_HINT_UNTYPE_MS = 300;
+let p7HintWant = 0;
+const p7HintTrigger = makeTrigger(() => (p7HintWant ? P7_HINT_TYPE_MS : P7_HINT_UNTYPE_MS), () => {
   if (!p7HintSpans) return;
   fold8UpdateTypewriter(p7HintSpans,
     Math.round(p7HintSpans.fullText.length * p7HintTrigger.currentRaw()));
 });
+// The line's own gate. It types in once the reader's FIRST pill has been
+// tapped AND that category's extreme column has finished building (p9.anim is
+// cleared by p9RunAnimLoop when the last dot lands) — the point at which the
+// press-and-hold it describes has something to read.
+//
+// It then STAYS typed while the fold stack it belongs to is in view: @fold13
+// and the bridge above it, down to **@fold11's own crossing** (fold11SizePast)
+// — the beat that sizes the squares down and flies them home. Scrolling back up
+// past that line UN-TYPES it, and quickly (P7_HINT_UNTYPE_MS, a third of the
+// type-in), so the sentence is gone before the frame travels rather than riding
+// it down still written. A hold that puts an event in the frame also types it
+// out (`is-hint` goes) and types it back on release, and each fresh arrival
+// starts from the first character.
+let p7HintOnFold = false;
+function p7HintColumnBuilt() {
+  if (typeof p9 === "undefined" || p9.anim) return false;                 // still flying
+  if (typeof p9DroppedIdxs !== "function") return false;
+  return p9DroppedIdxs().length > 0;                                      // something was tapped
+}
+// True while the line's folds are the ones on screen: @fold11's crossing is the
+// bottom of that range, @fold13 the top.
+function p7HintFoldsLive() {
+  if (!isMobile() || currentPage < 10) return false;
+  // The frame starts its trip the moment @fold13 DISENGAGES (p9SyncTooltipDrop
+  // reverses with the `engaged` class), well before the page flips — so that is
+  // where the line has to start clearing, or it rides the frame down still
+  // written. `.training` keeps `engaged` on, so a convoy replay can't flicker it.
+  if (currentPage === 12) {
+    const st = typeof page9StickyEl !== "undefined" ? page9StickyEl : null;
+    if (st && !st.classList.contains("engaged")) return false;
+  }
+  return typeof fold11SizePast === "function" ? fold11SizePast() : true;
+}
 function p7SyncHint() {
-  const want = isMobile() && currentPage === 12
-    && fold8TooltipEl.classList.contains("is-hint")
-    && p9TooltipDropTrigger.currentRaw() >= 1;
-  p7HintTrigger.trigger(want ? 1 : 0);
+  if (!p7HintFoldsLive()) p7HintOnFold = false;
+  else if (currentPage === 12 && p7HintColumnBuilt()) {
+    if (!p7HintOnFold) p7HintTrigger.set(0);   // fresh arrival: type it from zero
+    p7HintOnFold = true;
+  }
+  const want = p7HintOnFold && fold8TooltipEl.classList.contains("is-hint");
+  p7HintWant = want ? 1 : 0;
+  p7HintTrigger.trigger(p7HintWant);
 }
 
 const fold13Trigger           = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateFold13(...a));
@@ -1880,6 +1935,9 @@ function fold11BeatGapMs() {
 }
 function fold11SizeApply(past, instant) {
   clearTimeout(fold11SizeBeatTO); fold11SizeBeatTO = null;
+  // @fold13's «לחצו והחזיקו» line lives from this crossing up — scrolling back
+  // past it un-types the line (p7SyncHint, above).
+  if (typeof p7SyncHint === "function") p7SyncHint();
   // The «הצגת גודל האירועים» toggle's own ring-pop + type-in reveal rides this
   // same crossing (see p7ScopeRevealTrigger below).
   if (typeof p7ScopeRevealTrigger !== "undefined") {
@@ -1953,6 +2011,25 @@ p7ScopeBtnEl.setAttribute("aria-pressed", "false");
 // comes from a static aria-label instead of the truncated text content.
 p7ScopeBtnEl.setAttribute("aria-label", P7_SCOPE_BTN_LABEL);
 p7ScopeBtnEl.addEventListener("click", () => p7ScopeToggle());
+// Hover / pressed look: the ring swells by P7_SCOPE_HOVER_GROW px and the label
+// darkens to P7_SCOPE_HOVER_TEXT_ALPHA, on a short trigger (no CSS transition
+// on the ring's transform — its pop is written per frame). Pressed holds the
+// same look on its own trigger, so a click under the pointer changes nothing
+// and un-pressing from a scroll crossing eases back rather than snapping.
+// `var`s — a manual/ harness drives them; P7_SCOPE_HOVER_FORCE holds the look
+// without the pointer so the two states can be compared side by side.
+var P7_SCOPE_HOVER_GROW = 3.5;        // px added to the ring's 10px diameter — manual/-baked 2026-09-16
+var P7_SCOPE_HOVER_TEXT_ALPHA = 1;    // label alpha under the pointer / pressed (base 0.81) — manual/-baked 2026-09-16
+var P7_SCOPE_HOVER_FORCE = false;
+// Vertical nudge of the ring against the label, in px, positive = DOWN. Sits on
+// top of the ink correction (groupLabelInkShift) that centres it on the letters'
+// ink rather than the line box. `var` — a manual/ harness drives it.
+var P7_SCOPE_RING_DY = -1.5;   // manual/-baked 2026-09-16
+const P7_SCOPE_HOVER_MS = 180;
+const p7ScopeHoverTrigger = makeTrigger(P7_SCOPE_HOVER_MS, (...a) => updateGroups(...a));
+const p7ScopeOnTrigger    = makeTrigger(P7_SCOPE_HOVER_MS, (...a) => updateGroups(...a));
+p7ScopeBtnEl.addEventListener("mouseenter", () => p7ScopeHoverTrigger.trigger(1));
+p7ScopeBtnEl.addEventListener("mouseleave", () => p7ScopeHoverTrigger.trigger(0));
 // Shared by the desktop button and the mobile legend's row (fold6MobileScopeEl).
 function p7ScopeToggle() {
   // Toggles the TIERS, not the grid: the squares stay packed either way — the
@@ -1966,7 +2043,39 @@ function p7ScopeToggle() {
   // page8's bridge glide, so the drag-and-drop fold morphs its EXTREME
   // columns itself (p9ScopeSet, page9.js). p7GridUniform stays the one flag
   // both read, so the pressed state below needs no second source.
-  if (currentPage === 12 && typeof p9ScopeSet === "function") {
+  const glideInAir = typeof p8CurrentT === "function" && p8Engaged && p8CurrentT() < 1;
+  // @fold13 reached mid-glide continues the flight itself (p9.anim.plainGlide,
+  // js/nav.js) — in the air there too.
+  const p9GlideInAir = currentPage === 12 && p9.anim && p9.anim.plainGlide;
+  // Reached on a fast scroll, @fold13 can also still have page8's glide in the
+  // air with NO continuation of its own (the flip happened before the glide
+  // left, so js/nav.js had nothing to hand over) — in the air all the same.
+  const inAir = (currentPage >= 10 && currentPage <= 12 && glideInAir) || p9GlideInAir;
+  if (currentPage === 12 && !inAir && typeof p9ScopeSet === "function") {
+    p9ScopeSet(!p7GridUniform);
+  } else if (inAir) {
+    // MID-FLIGHT on @fold11/@fold12 (page8's glide in progress): the dots
+    // SETTLE first, then resize (explicit instruction — two beats, never a
+    // blend). The flag is left alone so the flight keeps aiming at the
+    // endpoint it left for; the press is parked and page8 flushes it the
+    // frame the glide lands (p7ScopeFlushPending, from p8RunAnimLoop). The
+    // button reads pressed from the parked value meanwhile. A second press
+    // in the air cancels the first; a reverse crossing drops it (page8's
+    // reverse — the scroll crossing wins, as everywhere on these folds).
+    const want = !p7GridUniform;
+    p7ScopePendingUniform = (p7ScopePendingUniform === null) ? want
+      : (p7ScopePendingUniform === want ? null : want);
+  } else if ((currentPage === 10 || currentPage === 11)
+             && typeof p8CurrentT === "function" && p8CurrentT() >= 1
+             && typeof p9ScopeSet === "function") {
+    // The bridge, LANDED (@fold11 after its fly beat, and all of @fold12): the
+    // field already sits on page9's legit strip, so this is @fold13's morph
+    // too — seeded from page8's own landed positions, since p9.lastPositions
+    // is only written by drawPage9. page8.js applies p9.scopeMorph per dot at
+    // t = 1 and p9ScopeRunLoop repaints these pages while it runs. Without
+    // this the flag flipped and the strip snapped to the new endpoint.
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    p9.lastPositions = p8CaptureBlendedPositions(W, H, 1);
     p9ScopeSet(!p7GridUniform);
   } else if (currentPage < 12) {
     p7SizeGridSet(true, { uniform: !p7GridUniform });
@@ -1974,6 +2083,30 @@ function p7ScopeToggle() {
   if (typeof updateGroups === "function") updateGroups();
 }
 (document.querySelector(".layout") || document.body).appendChild(p7ScopeBtnEl);
+// A press made while page8's glide is in the air — the `uniform` value it asked
+// for, or null. Flushed by page8.js the frame the glide lands; dropped by its
+// reverse. Read by updateGroups so the button shows pressed right away.
+let p7ScopePendingUniform = null;
+function p7ScopeFlushPending() {
+  if (p7ScopePendingUniform === null) return;
+  const uniform = p7ScopePendingUniform;
+  p7ScopePendingUniform = null;
+  if (uniform === p7GridUniform) return;
+  // Same path as a press on the landed bridge (p7ScopeToggle above). On
+  // @fold13 itself drawPage9 has just drawn the landing, so p9.lastPositions
+  // is already the truth and page8's capture would be the wrong layer.
+  if (currentPage !== 12) {
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    p9.lastPositions = p8CaptureBlendedPositions(W, H, 1);
+  }
+  p9ScopeSet(uniform);
+  if (typeof updateGroups === "function") updateGroups();
+}
+function p7ScopeCancelPending() {
+  if (p7ScopePendingUniform === null) return;
+  p7ScopePendingUniform = null;
+  if (typeof updateGroups === "function") updateGroups();
+}
 // @fold15's own share card fires the couple pairing (checkFold14Pair ->
 // fold14PairTrigger) on its house 0.5 crossing, like every other fold.
 
@@ -2831,6 +2964,22 @@ var FOLD6_MLEGEND_OPEN_MS = 410;   // `var`: a manual/ harness drives it // the 
    FOLD6_MLEGEND_WIDTH_MS. On a TAP the two are still sequential — width, then
    height — because nothing is driving the progress by hand. */
 var FOLD6_MLEGEND_WIDTH_MS = 170;
+/* …and the same two beats when the READER opens or closes it by hand. They are
+   a SEPARATE pair on purpose: the numbers above are tuned for @fold4's scripted
+   hand-off, where the sheet arriving unhurried is the point, and a tap that
+   borrowed them took 505ms to answer — which reads as the button lagging the
+   finger rather than as a considered entrance. A press wants to land at once.
+   fold6MLegendWidthMs() / fold6MLegendOpenMs() pick between the two pairs off
+   fold6MLegendIntroActive, so the hand-off keeps its pace and every tap, drag
+   release, × and Escape gets the quick one. */
+var FOLD6_MLEGEND_TAP_WIDTH_MS = 90;
+var FOLD6_MLEGEND_TAP_OPEN_MS  = 190;
+function fold6MLegendWidthMs() {
+  return fold6MLegendIntroActive ? FOLD6_MLEGEND_WIDTH_MS : FOLD6_MLEGEND_TAP_WIDTH_MS;
+}
+function fold6MLegendOpenMs() {
+  return fold6MLegendIntroActive ? FOLD6_MLEGEND_OPEN_MS : FOLD6_MLEGEND_TAP_OPEN_MS;
+}
 let fold6MLegendWidthT = 0;      // where the width IS
 let fold6MLegendWidthWant = 0;   // where it is going
 let fold6MLegendWidthRaf = 0;
@@ -2842,7 +2991,7 @@ function fold6MLegendSetWidth(target, onDone) {
   const from = fold6MLegendWidthT;
   // Only ever covers the distance LEFT, so a reversal mid-flight is as quick
   // as the ground it has to give back — the house rule for these.
-  const ms = Math.max(1, Math.abs(target - from) * FOLD6_MLEGEND_WIDTH_MS);
+  const ms = Math.max(1, Math.abs(target - from) * fold6MLegendWidthMs());
   const t0 = performance.now();
   const tick = () => {
     fold6MLegendWidthRaf = 0;
@@ -3099,7 +3248,7 @@ function fold6SetMobileLegendOpen(open, opts) {
     finish(); return;
   }
   const from = fold6MLegendOpenRaw;
-  const ms = Math.abs(target - from) * FOLD6_MLEGEND_OPEN_MS;
+  const ms = Math.abs(target - from) * fold6MLegendOpenMs();
   const t0 = performance.now();
   const tick = () => {
     fold6MLegendOpenRaf = 0;

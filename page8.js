@@ -84,6 +84,12 @@ function p8RunAnimLoop() {
     p8PhaseStart = null;
     if (p8PhaseToT === 0) p8Engaged = false; // back at rest — forward can fire again later
     if (currentPage === 10 || currentPage === 11) draw(); // final frame, locked at rest
+    // LANDED: a «הצגת גודל האירועים» press made in the air runs now — the dots
+    // settle first, then resize (p7ScopeFlushPending, js/groups.js).
+    // …unless @fold13 has taken the glide over (page 12, js/nav.js): its own
+    // continuation flushes when IT lands, on the layer that is actually drawing.
+    const p9HasIt = typeof p9 !== "undefined" && p9.anim && p9.anim.plainGlide;
+    if (p8PhaseToT === 1 && !p9HasIt && typeof p7ScopeFlushPending === "function") p7ScopeFlushPending();
   }
 }
 
@@ -110,6 +116,8 @@ function p8Trigger() {
 // back below the threshold — plays the glide back toward page7's layout.
 function p8TriggerReverse() {
   if (!p8Engaged) return;
+  // The crossing wins: a press parked for the landing has nowhere to land.
+  if (typeof p7ScopeCancelPending === "function") p7ScopeCancelPending();
   p8StartPhase(0);
 }
 
@@ -174,8 +182,8 @@ function drawPage8(ctx, W, H) {
       const target = p9LegitPosOf(e, indexOf, side, legitGeom);
       if (!target) return;
 
-      const x = fromX + (target.x - fromX) * ease;
-      const y = fromY + (target.y - fromY) * ease;
+      let x = fromX + (target.x - fromX) * ease;
+      let y = fromY + (target.y - fromY) * ease;
       // Shrink each dot from the (now enlarged) real-timeline square size (p7.SQ)
       // down to page9's legit-grid size (P9_SQ) across the glide, so the dots
       // visibly get smaller on the way into @fold14 and land at exactly the size
@@ -189,7 +197,19 @@ function drawPage8(ctx, W, H) {
       // size — land on that, or a tiered dot arrives at the flat size and pops.
       const endSQ  = legitGeom.mode === "bar" ? legitGeom.cell
                    : (target.sq ?? p9Metrics().legitSq);
-      const drawSQ = fromSQ + (endSQ - fromSQ) * sizeE;
+      let drawSQ = fromSQ + (endSQ - fromSQ) * sizeE;
+      // Landed (t = 1): the «הצגת גודל האירועים» press on @fold11/@fold12 runs
+      // @fold13's own tier morph (p9ScopeSet, seeded from this fold's landed
+      // positions in p7ScopeToggle) — same windows, same push throttle — so
+      // the strip morphs between flat and tiered here exactly as it does one
+      // fold later, instead of snapping to the new endpoint.
+      if (t >= 1 && p9.scopeMorph) {
+        const f = p9.scopeMorph.from.get(e);
+        if (f) {
+          const b = p9ScopeBlend(e, f, x + drawSQ / 2, y + drawSQ / 2, drawSQ);
+          x = b.cx - b.sq / 2; y = b.cy - b.sq / 2; drawSQ = b.sq;
+        }
+      }
       // No opacity fade — drawPage9 draws the legit grid at full opacity (see the
       // comment above its own drawBandedCols/drawJumbledBot calls; it used to be a
       // deliberate 0.12 de-emphasis, which this glide matched, but Figma's actual

@@ -194,6 +194,11 @@ function tooltipDockHandoverScale() {
   // An event IS in the frame — the picker has one open, or @fold7's demo is
   // still running. Full size, whatever the fly is doing.
   if (typeof p7Inspect !== "undefined" && p7Inspect.event) return 1;
+  // @fold13 (page 12) is the frame's other home: the picker serves that fold
+  // too, and the frame carries its own «לחצו והחזיקו» line there (`.is-hint`,
+  // page7.js) — so it is open at rest here, whatever the timeline's fly left
+  // behind. The timeline's own collapse below is untouched.
+  if (typeof currentPage !== "undefined" && currentPage === 12) return 1;
   const t = fold9FlyTrigger.currentT();
   if (t <= 0) return 1;
   // ...and it does NOT grow back. The frame collapses at its @fold7 spot and
@@ -245,12 +250,12 @@ let p7TipAvoidActive = false;
 // The bottom spot therefore has to be solved from the LIVE offsetHeight.
 //
 // All three are `let` for the manual/ harness.
-let P7_TIP_TOP_PX    = 96;   // the top spot's TOP edge, px from the top of the screen
-let P7_TIP_BOTTOM_PX = 8;    // the bottom spot's BOTTOM edge, px up from the screen bottom
+let P7_TIP_TOP_PX    = 72;   // the top spot's TOP edge, px from the top of the screen
+let P7_TIP_BOTTOM_PX = 66;    // the bottom spot's BOTTOM edge, px up from the screen bottom
 // The switch line: while the glass's top edge is ABOVE this y, the frame sits at
 // the BOTTOM. A line on the screen, not a distance from the frame — it is the
 // reader's own "am I working up here" boundary, and it is what the harness draws.
-let P7_TIP_SWITCH_Y  = 300;
+let P7_TIP_SWITCH_Y  = 248;
 let p7TipAtBottom = false;   // which spot is live right now (written by syncTipAvoid)
 
 // The @fold9 spot, resolved. `el` is needed for the bottom anchor's height.

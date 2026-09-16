@@ -5237,7 +5237,21 @@ function p7DrawYearAxisVertical(ctx, W, H) {
 
   // Dots pop on the DRAWN edge (fillY): the circle appears the instant the
   // fill reaches its top, never sitting on unfilled line.
-  p7DrawAxisEventsVertical(ctx, W, H, axisX, fillY, hoverActive, hoverAxisY, yearSpans);
+  // X-RAY: the picker's glass is a plain blit of this canvas, so anything drawn
+  // here lands in it — and the headline cards are opaque plaques that covered
+  // the very dots the reader lifted the glass to look at. While the blit is
+  // being taken (p7HideAxisCards, set for that one call in drawLoupe) the whole
+  // layer is skipped, so the glass sees the chart through them. The frame the
+  // READER sees is the redraw immediately after, with the cards back.
+  if (p7HideAxisCards) {
+    // Stash what the layer would have been called with, so it can be painted
+    // back on its own afterwards — see p7DrawAxisCardsOnly. Cheaper by half
+    // than a second full draw: the dot loop is 14k+ squares, the card layer is
+    // six plaques.
+    p7CardLayerArgs = { W, H, axisX, fillY, hoverActive, hoverAxisY, yearSpans };
+  } else {
+    p7DrawAxisEventsVertical(ctx, W, H, axisX, fillY, hoverActive, hoverAxisY, yearSpans);
+  }
 
   if (hoverActive) {
     // The hovered square's mirror dot: whole and on top of everything when it
@@ -6385,7 +6399,10 @@ const P7_LOUPE_ZOOM      = 4;  // magnification at rest
 // How much of the picked dot's growth the glass gives back by zooming out.
 // 0 = none (a fixed 4x), 1 = all of it. An EXPONENT on the growth factor, so the
 // response stays even across the tier ladder. `let` for the manual/ harness.
-let   P7_LOUPE_ZOOM_OUT  = 0.5;
+let   P7_LOUPE_ZOOM_OUT  = 0.2;
+// How far above/below the sampled square a headline card still counts as being
+// in the way. The card is centred on its dot and is one line tall plus padding.
+const P7_LOUPE_CARD_BAND_PX = 34;
 const P7_LOUPE_LIFT_PX   = 60; // how far above the fingertip the loupe centre sits
 const P7_INSPECT_SNAP_PX = 44; // furthest a dot can be from the finger and still be picked
 const P7_LONGPRESS_MS      = 300; // hold this long, without moving, to open the loupe
@@ -6466,6 +6483,19 @@ let P7_HINT_Y_MOBILE = 4;
 // Not P7_HINT_TYPE_MS — that name belongs to @fold13's own hint trigger
 // (js/groups.js). Two different lines, two different clocks.
 const P7_BAND_TYPE_MS = 900;
+// Set for the length of ONE draw, by drawLoupe, so the glass's blit is taken
+// from a canvas with no headline cards on it. See the note at its only reader.
+let p7HideAxisCards = false;
+// The arguments the card layer was skipped with, kept by the draw above.
+let p7CardLayerArgs = null;
+// Paint the headline cards alone, onto the main canvas, exactly as the draw that
+// skipped them would have. The glass takes its blit between the two.
+function p7DrawAxisCardsOnly(c) {
+  const a = p7CardLayerArgs;
+  if (!a) return;
+  p7CardLayerArgs = null;
+  p7DrawAxisEventsVertical(c, a.W, a.H, a.axisX, a.fillY, a.hoverActive, a.hoverAxisY, a.yearSpans);
+}
 let p7HintBandEl = null, p7BandSpans = null, p7HintTypeStart = null;
 function p7HintBandInit() {
   if (p7HintBandEl) return p7HintBandEl;
@@ -6801,6 +6831,27 @@ function p7InspectInit() {
   function nearestEvent(mx, my) {
     const { positions, half, maxY } = p7InspectSource();
     if (!positions) return null;
+    // STICKY while the finger is still inside the dot it already picked.
+    //
+    // `positions` holds every dot at its REST size, but the picked one is drawn
+    // SWOLLEN (p7BulgeTick, up to 19.57x). Moving a few px inside a big dot left
+    // its rest-size hit box, so the scan below handed the pick to a neighbour —
+    // which collapsed the bulge, which moved everything back, which re-picked
+    // the original. That oscillation is the flash: every swap repaints the
+    // canvas and re-fills the docked frame.
+    //
+    // So the current pick keeps the pointer for as long as the pointer is over
+    // what is actually ON SCREEN for it. Same reasoning as the desktop hover dim
+    // ramp (P7_HOVER_DIM_MS): a bulge that pushes its neighbours aside must not
+    // let the pointer fall through the gap it just opened.
+    const held = p7Inspect.event && positions.get(p7Inspect.event);
+    if (held && held.y < maxY) {
+      const grown = (held.sq || half * 2) * p7LoupeGrowth() / 2;
+      if (Math.abs(mx - (held.x + half)) <= grown &&
+          Math.abs(my - (held.y + half)) <= grown) {
+        return { event: p7Inspect.event, x: held.x + half, y: held.y + half };
+      }
+    }
     let best = null, bestDist = P7_INSPECT_SNAP_PX * P7_INSPECT_SNAP_PX, bestPos = null;
     for (const [ev, pos] of positions) {
       if (pos.y >= maxY) continue;
@@ -6841,7 +6892,6 @@ function p7InspectInit() {
       // the frame moves, so measuring against it would make the threshold chase
       // its own result and chatter at the boundary.
       const loupeTop = fingerY - P7_LOUPE_LIFT_PX - P7_LOUPE_SIZE / 2;
-      window.__loupeTop = loupeTop;   // read by the manual/ harness's marker
       p7TipAtBottom = loupeTop < P7_TIP_SWITCH_Y;
       p7TipAvoidActive = false;
     }
@@ -6901,6 +6951,28 @@ function p7InspectInit() {
       if (typeof updateGroups === "function") updateGroups();
     }
 
+    // X-RAY the headline cards. They are opaque plaques on the same canvas the
+    // glass blits, so one sitting over the finger covered exactly the dots the
+    // reader lifted the glass to read. Only worth the redraw when the sampled
+    // square actually meets one, which is rare — the test is against the event
+    // dots' own y's, with the card's height allowed for on either side.
+    const srcHalf = src / 2;
+    let overCard = false;
+    for (const [, q] of p7.axisEventPositions) {
+      if (Math.abs(q.y - my) < srcHalf + P7_LOUPE_CARD_BAND_PX) { overCard = true; break; }
+    }
+    // ONE extra draw, in ONE frame: the canvas is repainted without the cards,
+    // that is what gets blitted, and then the card layer alone is painted back
+    // on top (p7DrawAxisCardsOnly) rather than redrawing everything a second
+    // time — the dot loop is 14k+ squares, the cards are six plaques. The
+    // browser only ever paints the finished state, so the page never flickers,
+    // and there is still no second render PATH to keep in sync: the same
+    // function paints the cards either way.
+    //
+    // drawNow, not draw: draw() coalesces into a rAF, so the flag would already
+    // be back to false by the time the paint ran and the x-ray did nothing.
+    if (overCard) { p7HideAxisCards = true; drawNow(); p7HideAxisCards = false; }
+
     lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     lctx.clearRect(0, 0, P7_LOUPE_SIZE, P7_LOUPE_SIZE);
     lctx.fillStyle = "#fff";
@@ -6910,6 +6982,7 @@ function p7InspectInit() {
     const sx = (mx - src / 2) * dpr, sy = (my - src / 2) * dpr;
     lctx.imageSmoothingEnabled = false; // dots are 1–2px; smoothing turns them to mush
     lctx.drawImage(canvasEl, sx, sy, src * dpr, src * dpr, 0, 0, P7_LOUPE_SIZE, P7_LOUPE_SIZE);
+    if (overCard) p7DrawAxisCardsOnly(canvasEl.getContext("2d"));  // cards back, same frame
 
     // Held above the fingertip so the finger isn't covering what's being read,
     // and clamped so it stays fully on screen near the edges.

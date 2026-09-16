@@ -2961,8 +2961,13 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      --p7-scope-ring-ink is groupLabelInkShift(12) — the same measurement the
      legend uses to center its swatches on their labels — so the ring reads
      centered on the ink instead. */
+  /* …times the hover/pressed grow (--p7-scope-ring-hover, also per frame from
+     updateGroups off p7ScopeHoverTrigger / p7ScopeOnTrigger): the ring swells a
+     little under the pointer and STAYS swollen while pressed. A multiplier on
+     the same transform, not a width change — the button is placed off the
+     ring's 10px box, so growing the box would walk the whole control. */
   transform: translateY(calc(-1 * var(--p7-scope-ring-ink, 0px)))
-             scale(var(--p7-scope-ring-t, 1));
+             scale(calc(var(--p7-scope-ring-t, 1) * var(--p7-scope-ring-hover, 1)));
   transition: background-color 180ms ease, border-color 180ms ease;
 }
 .p7-scope-btn:hover::before { border-color: rgba(0, 0, 0, 0.75); }
@@ -4754,7 +4759,13 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      breakpoints read identically, and transitions for the same reason that one
      does — it is a pure state flip, not a per-frame JS repaint. */
   .fold6-mlegend-row.is-filtered-off { opacity: 0.28; }
-  .fold6-mlegend-row { transition: opacity 260ms ease; }
+  /* 140ms, NOT the 260 the canvas rows use. These are buttons the reader taps,
+     and a press wants to answer at once; 260 is the legend system's fade tempo
+     and read as the button lagging behind the finger. The dots' own re-pack is
+     a separate, much longer animation — this is only the button's own dim.
+     Mobile-only: .group-item keeps 260 on desktop, where it fades rather than
+     being pressed. */
+  .fold6-mlegend-row { transition: opacity 140ms ease; }
 
   .fold6-mlegend-label { text-align: right; }
 
@@ -4829,6 +4840,15 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 .group-item { transition: opacity 260ms ease; }
 .group-swatch { transition: transform 260ms ease; }
 .group-item.is-filter-hover .group-label { color: #000; }
+/* The hovered row's label is STRUCK THROUGH — a preview of what the click does
+   (filter the group out) — and a filtered-out row keeps the line for as long as
+   it stays out, so the legend shows which groups are hidden, not just what a
+   click would do. The hover strips and .is-filtered-off are the desktop
+   mini-legend's; mobile's מקרא rows have their own rules in the 600px block. */
+@media (min-width: 601px) {
+  .group-item.is-filter-hover .group-label,
+  .group-item.is-filtered-off .group-label { text-decoration: line-through; }
+}
 .group-item.is-filter-hover .group-swatch { transform: scale(1.5); }
 .groups-overlay.is-filter-hover-any .group-item:not(.is-filter-hover):not(.is-filtered-off) {
   opacity: 0.45;
