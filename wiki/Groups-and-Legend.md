@@ -119,7 +119,18 @@ opacity every frame, so nothing has to switch it back on.
    from the count already on screen. The **un-type** runs from opposite ends per column — the
    right column drops its head, the left column its tail — so each dissolves away from the
    screen edge it is anchored to. The **hover re-type** is head-first on both columns; the
-   flip is gated on the un-type term winning the `max()`. `FOLD6_LABEL_UNTYPE_MS` 900, `FOLD6_LABEL_HOVER_MS` 420. Scrolling back up **reverses** the un-type on its own 900ms (`fold6LabelUntypeTrigger.trigger(0)` from the same `onSettle`) — it used to `set(0)`, which put every character back on screen in a single frame and snapped the labels in on the way out of @fold4.
+   flip is gated on the un-type term winning the `max()`. `FOLD6_LABEL_UNTYPE_MS` 900, `FOLD6_LABEL_HOVER_MS` 420.
+  **A hovered dot wins over the legend's hover box** (`fold6LegendHoverSync`, js/groups.js):
+  the hover boxes sit over the canvas but the dot hit-test runs on window `mousemove`, so a
+  dot right next to the legend used to open both its tooltip and the whole legend. One
+  function decides `want = pointerOver && !fold6DotHoverActor`, called from the box's
+  enter/leave and from `fold6DotHover` — a dot picked up inside the box drops the legend,
+  letting go of it (still inside the box) brings it back. The dot wins **outright** there: its
+  own single-row open (`fold6DotHoverTriggers`) is held back too while the pointer is inside a
+  hover box, and types in the moment the pointer leaves with the dot still hovered. **Hovering a row's click strip
+  strikes its label through** (`.is-filter-hover .group-label { text-decoration:
+  line-through }`, desktop-only media block) — a preview of the click — and a filtered-out row
+  (`.is-filtered-off`) keeps the line for as long as it stays out. Scrolling back up **reverses** the un-type on its own 900ms (`fold6LabelUntypeTrigger.trigger(0)` from the same `onSettle`) — it used to `set(0)`, which put every character back on screen in a single frame and snapped the labels in on the way out of @fold4.
    **@fold8 auto-peeks it**: on @fold8's crossing the legend plays its own hover state
    unprompted — labels type in (the ACLED note stays closed), hold `FOLD9_LEGEND_PEEK_HOLD_MS`
    (2000ms, timed from when the type-in lands), then un-type — so the fold's title line
@@ -266,7 +277,14 @@ the ring **pops** in on `p7Ease` over `P7_SCOPE_RING_POP_MS` (260) and the label
 behind it at `P7_SCOPE_TYPE_MS_PER_CHAR` (22) per character on `p9Ease` (`typedText`), the same
 grow-then-type order the @fold7 tooltip uses. One `p7ScopeRevealTrigger` (js/groups.js) fired
 from `fold11SizeApply`, its raw progress sliced into the two windows and re-eased fresh, so a
-reverse crossing un-types the label and pops the ring back out. The ring's scale rides a
+reverse crossing un-types the label and pops the ring back out. **Hover / pressed look:** the ring swells by `P7_SCOPE_HOVER_GROW` px (on top of
+its 10px, as a second multiplier `--p7-scope-ring-hover` on the same transform — never a width
+change, the button is placed off the ring's box) and the label darkens from 0.81 to
+`P7_SCOPE_HOVER_TEXT_ALPHA`, both written per frame by `updateGroups` off
+`p7ScopeHoverTrigger` (enter/leave) and `p7ScopeOnTrigger` (flipped where `is-on` is decided),
+`P7_SCOPE_HOVER_MS` 180 — the look is `max(hover, pressed)`, so a pressed button keeps it after
+the pointer leaves and hovering a pressed one changes nothing. `P7_SCOPE_HOVER_FORCE` holds it
+for a harness. Values (manual/-baked 2026-09-16): grow **3.5**px, text alpha **1**; `P7_SCOPE_RING_DY` **-1.5**px lifts the ring against the label (px, + = down), on top of the ink correction. The ring's scale rides a
 `--p7-scope-ring-t` custom property written per frame (hence no CSS transition on the
 transform), and the typed label is measured *before* the button's right-edge placement each
 frame, so the ring holds still while the characters grow leftward. The accessible name comes

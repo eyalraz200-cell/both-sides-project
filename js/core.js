@@ -223,6 +223,14 @@ function draw() {
   }
   drawRanThisFrame = true;
   requestAnimationFrame(() => { drawRanThisFrame = false; });
+  drawNow();
+}
+// The paint itself, with the coalescing skipped. For the one caller that needs
+// the canvas to be in a KNOWN state the instant it returns rather than at some
+// point this frame or the next: the picker's glass, which takes its blit off
+// this canvas between two paints of its own (p7HideAxisCards, page7.js). Every
+// other caller wants draw().
+function drawNow() {
   const W = canvas.clientWidth, H = canvas.clientHeight;
   // Keep the backing store in lockstep with the CSS box on every paint, not
   // just on `resize`: iOS fires resize mid browser-bar slide, so init() can

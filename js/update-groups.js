@@ -1021,8 +1021,10 @@ function updateGroups() {
       // The ring is centered on the label's INK, not on its line box — same
       // correction (and same measurement) the legend rows use for their
       // swatches. 14 is .p7-scope-btn's own font-size.
+      // …minus P7_SCOPE_RING_DY (js/groups.js): the var is applied as
+      // translateY(-ink), so a positive DY (down) comes OFF the ink lift.
       p7ScopeBtnEl.style.setProperty(
-        "--p7-scope-ring-ink", `${groupLabelInkShift(14)}px`);
+        "--p7-scope-ring-ink", `${groupLabelInkShift(14) - (P7_SCOPE_RING_DY || 0)}px`);
       const right = W - fold6LegendInsetRight();
       const btnW = p7ScopeBtnEl.offsetWidth;
       const btnH = p7ScopeBtnEl.offsetHeight;
@@ -1045,10 +1047,26 @@ function updateGroups() {
       // extreme columns — but the same flag still says whether the crowd
       // tiers are showing, so the button reads pressed there too.
       const p9Live = typeof p9PageVisible === "function" && p9PageVisible();
-      const on = typeof p7GridUniform !== "undefined" && !p7GridUniform
+      // A press parked for page8's landing (p7ScopePendingUniform) reads as
+      // pressed right away — the dots catch up when they land.
+      const uniformNow = (typeof p7ScopePendingUniform !== "undefined" && p7ScopePendingUniform !== null)
+        ? p7ScopePendingUniform : p7GridUniform;
+      const on = typeof p7GridUniform !== "undefined" && !uniformNow
         && ((typeof p7Grid !== "undefined" && p7Grid.on) || p9Live);
       p7ScopeBtnEl.classList.toggle("is-on", !!on);
       p7ScopeBtnEl.setAttribute("aria-pressed", on ? "true" : "false");
+      // Hover / pressed look (js/groups.js): pressed rides its own trigger,
+      // flipped here where `on` is decided, so it eases either way. The look
+      // is max(hover, pressed) — hovering a pressed button changes nothing.
+      if (typeof p7ScopeOnTrigger !== "undefined") {
+        if (p7ScopeOnTrigger.target() !== (on ? 1 : 0)) p7ScopeOnTrigger.trigger(on ? 1 : 0);
+        const lookT = P7_SCOPE_HOVER_FORCE ? 1
+          : Math.max(p7ScopeHoverTrigger.currentT(), p7ScopeOnTrigger.currentT());
+        p7ScopeBtnEl.style.setProperty("--p7-scope-ring-hover",
+          String((P7_SCOPE_RING_PX + P7_SCOPE_HOVER_GROW * lookT) / P7_SCOPE_RING_PX));
+        p7ScopeBtnEl.style.color =
+          `rgba(0, 0, 0, ${0.81 + (P7_SCOPE_HOVER_TEXT_ALPHA - 0.81) * lookT})`;
+      }
     } else {
       p7ScopeBtnEl.style.opacity = "0";
     }

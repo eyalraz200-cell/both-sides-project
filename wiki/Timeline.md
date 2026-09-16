@@ -1045,7 +1045,24 @@ leaving only on @fold14's scroll-linked fade-out (`p9.fold13OutT`, js/fold11.js)
 crossing it is `hidden`, so it can never eat a click over the timeline. It therefore outlives the tiers, and the
 click is **page-gated**: on `currentPage < 12` it calls
 `p7SizeGridSet(true, {uniform: !p7GridUniform})` — toggling the **tiers**, never
-the grid itself, which would fly the dots back to the timeline. On
+the grid itself, which would fly the dots back to the timeline — **except on the
+landed bridge** (pages 10–11, `p8CurrentT() >= 1`: @fold11 after its fly beat and
+all of @fold12), where the field already sits on page9's legit strip: there the
+press runs @fold13's own morph, `p9ScopeSet`, seeded with the strip's landed
+positions from `p8CaptureBlendedPositions(W, H, 1)` (drawPage9 is the only thing
+that writes `p9.lastPositions`); `drawPage8` applies `p9.scopeMorph` per dot at
+`t = 1` and `p9ScopeRunLoop` repaints those pages while it runs
+(`p9ScopeDrawWanted`). Before this the press there flipped the flag and the strip
+**snapped** to the new endpoint. **Pressed while the glide is still in the air**
+(page8's `p8Engaged && p8CurrentT() < 1` on pages 10–12, or @fold13's own
+continuation `p9.anim.plainGlide`), the dots **settle first, then resize** — two
+beats, never a blend (explicit instruction): the flag is left alone so the flight
+keeps its endpoint, the press is parked in `p7ScopePendingUniform` (the button
+reads pressed from it at once, `updateGroups`), and whichever loop lands the
+glide flushes it — `p8RunAnimLoop` on its own folds, `p9RunAnimLoop` when @fold13
+has taken the glide over (`p7ScopeFlushPending`). A second press in the air
+cancels the first; `p8TriggerReverse` drops it (`p7ScopeCancelPending`) — the
+scroll crossing wins. On
 `currentPage === 12` (@fold13) it calls `p9ScopeSet(!p7GridUniform)` instead,
 which tiers **only the dots already dragged into the extreme columns** and never
 touches page7's grid state; see
@@ -2449,7 +2466,7 @@ everything else and nothing in the glass read as chosen.
 `max(1, P7_LOUPE_ZOOM / p7LoupeGrowth() ** P7_LOUPE_ZOOM_OUT)`, where the growth is the **live
 eased** bulge factor, not the tier's target, so the zoom-out travels with the swell instead of
 stepping the instant a dot is picked. At a fixed 4× a top-tier dot filled the glass with itself
-and nothing else, which is the opposite of what a loupe is for. `P7_LOUPE_ZOOM_OUT` (**0.5**) is
+and nothing else, which is the opposite of what a loupe is for. `P7_LOUPE_ZOOM_OUT` (**0.2**) is
 how much of the growth the glass gives back: 1 hands back all of it (a 19.6× dot ends up the size
 an unswollen one was — too much context), 0 keeps the fixed 4×. An **exponent**, so the response
 stays even across the tier ladder instead of scaling the top tier and barely touching the low ones.
@@ -2459,23 +2476,54 @@ stays even across the tier ladder instead of scaling the top tier and barely tou
 The frame has two resting places on @fold9 and **flips** between them rather than moving: a flip,
 not a glide, because a travelling frame would pass through the very glass it is getting clear of.
 
-- **Top** (`P7_TIP_TOP_PX`, **96**) is the default, pinned by its **TOP edge**, so a longer
+- **Top** (`P7_TIP_TOP_PX`, **72**) is the default, pinned by its **TOP edge**, so a longer
   description grows **downward** into the chart.
-- **Bottom** (`P7_TIP_BOTTOM_PX`, **8** up from the screen bottom) is pinned by its **BOTTOM
+- **Bottom** (`P7_TIP_BOTTOM_PX`, **66** up from the screen bottom) is pinned by its **BOTTOM
   edge** — solved from the live `offsetHeight` — so a longer one grows **upward**.
 
 Either way the frame expands away from the edge it sits on and never off-screen. That opposition
 is the whole point of having two.
 
-**The switch is a LINE on the screen**, `P7_TIP_SWITCH_Y` (**300**): while the glass's top edge is
+**The switch is a LINE on the screen**, `P7_TIP_SWITCH_Y` (**248**): while the glass's top edge is
 above it, the frame sits at the bottom. A fixed y and not a distance from the frame — the frame
 moves, so measuring against it would make the threshold chase its own result and chatter at the
 boundary. `syncTipAvoid` writes `p7TipAtBottom`; lifting the finger returns it to the top spot.
 This replaced @fold9's older `tooltipAvoidPx` dodge, which is now @fold13's alone.
 
-> All four are `let` — the `_debug-loupe-tip.js` harness (`glass and tooltip spots`, @fold9)
-> drives them live, and draws the switch line as a margin tick with a live marker for the glass's
-> own top edge, coloured by whether it has crossed.
+All four were baked from the `_debug-loupe-tip.js` harness (`glass and tooltip spots`, @fold9) on
+2026-09-16 and it is deleted. They stay `let` in case it is rebuilt.
+
+**The glass X-RAYS the headline cards.** They are opaque plaques on the same canvas the loupe
+blits, so one sitting over the finger covered exactly the dots the reader lifted the glass to
+read. `drawLoupe` repaints the canvas with `p7HideAxisCards` set (the axis draw then stashes what
+the card layer *would* have been called with, in `p7CardLayerArgs`, instead of drawing it), takes
+the blit off that, and paints the cards back on their own with `p7DrawAxisCardsOnly`.
+
+- **One extra draw, not two.** Restoring with a second full `draw()` cost 57ms/frame at 6× CPU
+  throttle against 9ms clear of a card; painting only the card layer back is **36ms**. The dot
+  loop is 14k+ squares, the cards are six plaques. There is still no second render *path* — the
+  same function paints them either way.
+- **`drawNow()`, not `draw()`.** `draw()` (js/core.js) coalesces into a rAF — the first call in a
+  frame paints and later same-frame calls queue a rerun — so the flag was already back to `false`
+  by the time the paint ran and the x-ray did nothing at all. `drawNow()` is the paint with the
+  coalescing skipped, for the one caller that needs the canvas in a known state the instant it
+  returns. Every other caller still wants `draw()`.
+- Only when the sampled square actually meets a card (`P7_LOUPE_CARD_BAND_PX`, 34, against the
+  event dots' own y's), which is rare — so the common case pays nothing.
+
+**The pick is STICKY inside a swollen dot.** `p7.lastPositions` holds every dot at its REST size,
+but the picked one is drawn up to 19.57× bigger — so moving a few px inside a big dot left its
+rest-size hit box, handed the pick to a neighbour, collapsed the bulge, moved everything back and
+re-picked the original. That oscillation **is** the flash: every swap repaints the canvas and
+re-fills the docked frame. `nearestEvent` now returns the held event outright while the pointer is
+within its *drawn* half-extent (`pos.sq × p7LoupeGrowth() / 2`). Measured on a crowd-120,000 dot:
+rest half ~1.1px against a swollen half of ~13.7px, and a ±3px wiggle goes from swapping every few
+frames to **0 swaps**.
+
+> Desktop had the same defect and was fixed on 2026-09-08 — `doHitTest` grows the hovered square's
+> hit box by its own bulge and lets it win outright (`dist = -1`) so a pushed-aside neighbour can
+> never steal the pointer from inside the big square. The picker was simply missing that
+> treatment; the reasoning and the failure mode are identical.
 
 > **Removed from the timeline — don't reintroduce:** the white scrim over @fold9. Under the
 > loupe (a 4× nearest-neighbour blit of the canvas) it read as exactly the three things it was
