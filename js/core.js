@@ -131,7 +131,7 @@ function drawBackground(ctx, W, H) {
   // partially survive underneath and visibly compound on every subsequent
   // redraw (the "opacity builds up while hovering" bug).
   ctx.globalAlpha = 1;
-  ctx.fillStyle = "#FDFCFF";
+  ctx.fillStyle = P7_PAPER;   // the page paper, defined once in page7.js
   ctx.fillRect(0, 0, W, H);
   // The vignette is a single CSS layer (.vignette in style.css) spanning the whole
   // viewport — canvas + text column together — so there's no seam at the column edge.

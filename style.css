@@ -1535,7 +1535,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    bump as the fill/border rules above to beat the base
    #page9ZoneAbove:empty::after color rule. */
 .page9-sticky.dragging #page9ZoneAbove:empty::after {
-  color: rgba(0, 0, 0, 1);
+  color: #000;
 }
 
 .page9-pill {
@@ -1898,25 +1898,31 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 }
 
 /* Figma specs every title card at 20px (verified across nodes 119:997,
-   117:788, 117:818, 120:1279). Weight 300 was chosen by eye over the 300-700
-   sweep: with only Regular (400) and Thin (100) OTFs in fonts/, 500-700 are
-   all browser-synthesized thickening of Regular and read as the same muddy
-   face, while 300 resolves DOWN to the real Thin file and stays a genuine
-   drawn weight. line-height 1.5 (up from the face's default `normal`) opens
-   up the multi-line Hebrew cards. This is the shared base for ALL title
-   cards; no page should override font-size/weight here individually. */
+   117:788, 117:818, 120:1279). The light weight was chosen by eye over the
+   300-700 sweep: with only Regular (400) and Thin (100) OTFs in fonts/,
+   500-700 are all browser-synthesized thickening of Regular and read as the
+   same muddy face, while the light end stays a genuine drawn weight.
+   Written as 100, not 300: only 100 and 400 exist, so CSS font-matching
+   already resolved a 300 request down to the Thin file — the two render
+   identically and 100 is the weight actually being drawn. (If a real Light
+   300 face is ever licensed, add its @font-face rule and this may go back to
+   300, which would then pick that file instead.) line-height 1.5 (up from
+   the face's default `normal`) opens up the multi-line Hebrew cards. This is
+   the shared base for ALL title cards; no page should override
+   font-size/weight here individually. */
 .section-title {
-  font: 300 20px/1.5 'HadassahFriedlaender', serif;
+  font: 100 20px/1.5 'HadassahFriedlaender', serif;
   color: #111;
   margin: 0 0 8px;
 }
 
 /* Left at the base weight deliberately. This rule used to force 400 to dodge
    the synthetic-bold artifact (a capital "A"'s apex filling into a solid
-   wedge) back when .section-title asked for a faked 600. At 300 the title
-   renders the real Thin face with no synthesis at all, so there is no
-   artifact to dodge — and a 400 acronym would now sit HEAVIER than the Hebrew
-   around it. Only ever applied to the ACLED acronym on the @fold6 card. */
+   wedge) back when .section-title asked for a faked 600. At the light weight
+   the title renders the real Thin face with no synthesis at all, so there is
+   no artifact to dodge — and a 400 acronym would now sit HEAVIER than the
+   Hebrew around it. Only ever applied to the ACLED acronym on the @fold6
+   card. */
 .latin-acronym {
   font-weight: inherit;
 }

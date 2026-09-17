@@ -11,6 +11,15 @@
 const P7_SQ  = 3.5;  // square size in px (was 3)
 const P7_GAP = 1.5;  // gap between squares in px (was 1)
 const P7_CELL = P7_SQ + P7_GAP; // grid cell size
+// THE PAGE PAPER, as one value. Same colour as --bg (style.css) and as the
+// canvas clear in drawBackground (js/core.js) — the warm off-white everything
+// on this page is painted onto. It was typed out as a P7_PAPER literal at 13
+// separate draw sites here, so a change to the page's ground could only be made
+// by find-and-replace; P7_PAPER_RGB existed for the same colour and was used by
+// nothing. Declared this early because the P7_VERT/P7_VERT_MOBILE objects below
+// are built at load time and reference it — a const declared further down would
+// be in its temporal dead zone when they evaluate.
+const P7_PAPER = "#FDFCFF";
 // On mobile the square size is SOLVED per viewport, not fixed. A fixed pitch
 // has to be small enough for the smallest phone, which left every larger one
 // with capacity far above its event count — and since p7OrderFromCenter sizes
@@ -274,7 +283,7 @@ const P7_VERT = {
   // object rather than null because p7VertMerge only recurses into keys the BASE
   // already holds as objects — a null here would silently swallow the mobile
   // override.
-  slotCard: { fill: null, color: '#000000', dateColor: 'rgba(0, 0, 0, 0.3)', padX: 12, padY: 8, radius: 4 },
+  slotCard: { fill: null, color: '#000', dateColor: 'rgba(0, 0, 0, 0.3)', padX: 12, padY: 8, radius: 4 },
   slotAnchor: 'grid',  // 'slot' mode: where the line prints — 'grid' (centred in the reserved band under the grid) | 'bottom' (pinned to the viewport's bottom edge) | 'top' (pinned to the viewport's top edge) | 'fill' (centred on the axis, slotFillGapPx under the fill edge; flips above it when the box has no room below) | 'dot' (EVERY reached event keeps a card on its own dot, riding the camera — p7DrawVertDotCards) | 'dotAbove' (only the NEWEST reached event has a card, fading in above its dot; the previous one fades away) | 'side' (desktop-style: every reached event's plaque fades in BESIDE its dot, alternating sides, wrapped to sideWrapPx; the dots in the rows it covers are pushed outward so they stay uncovered)
   dotGapPx: 6,         // 'dot' anchor: px between the dot's edge and its card; 'side': px between the plaque's far edge and the pushed dots
   sideWrapPx: 150,     // 'side' anchor: the plaque's wrap width (mobile has no corridor to wrap to)
@@ -346,7 +355,7 @@ const P7_VERT = {
   //   the card sits `gap` past the dot's edge; 'center' = the card's
   //   dot-facing edge runs through the dot's centre and the dot is redrawn
   //   on top of it).
-  card: { style: 'plain', fill: '#FDFCFF', stroke: 'rgba(0, 0, 0, 0.3)', strokeWidth: 1, padX: 16, padTop: 6, padBottom: 6, radius: 4, radiusBottom: 0,
+  card: { style: 'plain', fill: P7_PAPER, stroke: 'rgba(0, 0, 0, 0.3)', strokeWidth: 1, padX: 16, padTop: 6, padBottom: 6, radius: 4, radiusBottom: 0,
           gap: 0, stem: false, bar: true, barTop: true, sides: false, sidesAlpha: 1, halfDots: true, anchor: 'center' }, // sides = a full rounded border (bar line style, at sidesAlpha) instead of the two bars
   // Side-placed cards (eventSide 'left'/'right'/'alternate') do NOT reuse
   // `card`: they are a plain grey plaque after the Figma draft 327:1654 —
@@ -354,7 +363,7 @@ const P7_VERT = {
   // `gap` px off the line (the dot stays whole and uncovered), centred
   // vertically on its dot, the copy centred inside it. Its own smaller type.
   sideCard: { fill: '#ECEBEB', radius: 4, gap: 8, padX: 8, padTop: 4, padBottom: 4,
-              type: { size: 12, weight: 400, lh: 19, color: 'rgba(0, 0, 0, 1)' } },
+              type: { size: 12, weight: 400, lh: 19, color: '#000' } },
   // The accent bar under a headline: h px tall, `gap` px below the text's
   // last line, `padX` px wider than the text on each side, `alpha` opacity of
   // `color`, `round` = rounded ends.
@@ -363,13 +372,13 @@ const P7_VERT = {
   // whole block under the date.
   // Same style as the year axis line: 1px (= P7_AXIS_LINE_THICKNESS, declared
   // further down so it can't be referenced here), solid black, square ends.
-  bar: { h: 1, gap: 1, padX: 6, color: '#000000', alpha: 1, alphaTop: 0.3, alphaBottom: 0.3, round: false, dateBelow: false, dateGap: 3,
+  bar: { h: 1, gap: 1, padX: 6, color: '#000', alpha: 1, alphaTop: 0.3, alphaBottom: 0.3, round: false, dateBelow: false, dateGap: 3,
          inset: 0, dash: 0, dashGap: 0 }, // inset = px shorter than the card, each side; dash > 0 = dash length (dashGap px between)
   // Type of the centred headline block (desktop only — the mobile axis keeps
   // the P7_AXIS_*_FONT constants). `lh` = line height of each face's lines;
   // `color` may carry alpha. `gap` = extra px between the title and the date.
   type: {
-    title: { size: 14, weight: 500, lh: 19, color: 'rgba(0, 0, 0, 1)' },
+    title: { size: 14, weight: 500, lh: 19, color: '#000' },
     date:  { size: 14, weight: 400, lh: 19, color: 'rgba(0, 0, 0, 0.3)' },
     gap: 0,
     showDate: false,  // false = the headline block is the title alone (no date line; the axis's own years give the time)
@@ -434,7 +443,7 @@ const P7_VERT_MOBILE = {
   // the page: it reads as a label of the axis rather than as body text, and it
   // stays legible when a dense run of dots crowds up under it. Inverted type,
   // and the date line (unused here — type.showDate is false) would invert with it.
-  slotCard: { fill: '#000000', color: '#FDFCFF', dateColor: 'rgba(253, 252, 255, 0.6)', padX: 12, padY: 8, radius: 4 },
+  slotCard: { fill: '#000', color: P7_PAPER, dateColor: 'rgba(253, 252, 255, 0.6)', padX: 12, padY: 8, radius: 4 },
   // maxWidth is mobile-only: 'widen' solves the corridor FROM the wrapped copy
   // (p7SolveMobileCorridor), so the wrap width is the input, not the result.
   // Desktop has no such key — it wraps to its fixed corridor instead.
@@ -4061,7 +4070,7 @@ const P7_AXIS_UNFILLED_HOVER_ALPHA = 0.14;
 // own, slightly higher alpha than the axis chrome — at BG_ALPHA the roster read
 // too faint to actually serve as a reference key.
 const P7_AXIS_ROSTER_LABEL_ALPHA = 0.34;
-const P7_AXIS_FILLED_COLOR    = "rgba(0, 0, 0, 1)";    // the portion scroll has already reached
+const P7_AXIS_FILLED_COLOR    = "#000";    // the portion scroll has already reached
 const P7_AXIS_HOVER_COLOR     = P7_AXIS_FILLED_COLOR;  // the single dash highlighted while a matching dot elsewhere is hovered — same solid black as the "filled" state now that it's already fully opaque, no room to go darker
 const P7_AXIS_LABEL_FAINT_COLOR = "rgba(0, 0, 0, 0.12)"; // unreached year label — same faint/filled ratio as the dots
 // Reached year label + axis event date text — close to state2's solid black
@@ -4320,7 +4329,10 @@ const P7_AXIS_MARKER_GROW_FROM = 1;    // 'grow' mode's starting fraction — un
 
 // The page ground the axis is painted on (--bg in style.css). Needed because
 // the marker colour below is composited by hand rather than by the canvas.
-const P7_PAPER_RGB = [253, 252, 255];
+// Derived from P7_PAPER (top of file) so the paper colour has exactly one
+// definition — this array is the same colour in the form the alpha-mixing
+// helper below needs.
+const P7_PAPER_RGB = [1, 3, 5].map(i => parseInt(P7_PAPER.slice(i, i + 2), 16));
 
 // An axis marker's colour for a given reach progress: matching the unfilled
 // axis line at 0, solid black at 1.
@@ -4807,7 +4819,7 @@ function p7DrawAxisEvents(ctx, W, axisY, curX, hoverActive, highlightX) {
     // dot vanished. Scaling it means the line closes back up continuously as the
     // dot shrinks. Safe because the canvas is fully repainted every frame, so
     // there are no leftover pixels from the previous, larger dot to cover.
-    ctx.fillStyle = "#FDFCFF";
+    ctx.fillStyle = P7_PAPER;
     ctx.beginPath();
     // The +1 breathing room is scaled by reachedT too — left at a flat +1 it was
     // still a 2px hole in the line at radius 0, which then closed in one frame.
@@ -5080,7 +5092,7 @@ function p7DrawYearAxis(ctx, W, H) {
     const ringColor = hoverActive
       ? P7_AXIS_BG_COLOR
       : (reachedTicks.has(tick) ? P7_AXIS_FILLED_COLOR : P7_AXIS_BG_COLOR);
-    ctx.fillStyle = "#FDFCFF";
+    ctx.fillStyle = P7_PAPER;
     ctx.beginPath();
     ctx.arc(x, axisY, P7_AXIS_MARKER_RADIUS, 0, Math.PI * 2);
     ctx.fill();
@@ -5117,7 +5129,7 @@ function p7DrawYearAxis(ctx, W, H) {
   // axis marker.
   if (hoverActive) {
     ctx.save();
-    ctx.fillStyle = "#FDFCFF";
+    ctx.fillStyle = P7_PAPER;
     ctx.beginPath();
     ctx.arc(axisQ(hoverAxisX), axisY, P7_AXIS_MARKER_RADIUS + 1, 0, Math.PI * 2);
     ctx.fill();
@@ -5362,7 +5374,7 @@ function p7DrawYearAxisVertical(ctx, W, H) {
         : (reached ? P7_AXIS_FILLED_COLOR : `rgba(0, 0, 0, ${P7_AXIS_YEAR_LINE_ALPHA})`);
       ctx.beginPath(); ctx.moveTo(axisX - half, y); ctx.lineTo(axisX + half, y); ctx.stroke();
     } else if (ring) {
-      ctx.fillStyle = "#FDFCFF";
+      ctx.fillStyle = P7_PAPER;
       ctx.beginPath(); ctx.arc(axisX, y, yearR, 0, Math.PI * 2); ctx.fill();
       ctx.lineWidth = P7_AXIS_MARKER_STROKE;
       ctx.strokeStyle = ringColor;
@@ -5388,7 +5400,7 @@ function p7DrawYearAxisVertical(ctx, W, H) {
       yearSpans.push({ top: ring ? y - R : ly - 2, bottom: ly + inkH + 2, side: 'center' });
       // The punch starts at the ring's edge so no sliver of line shows between
       // the ring and its digits.
-      ctx.fillStyle = "#FDFCFF";
+      ctx.fillStyle = P7_PAPER;
       ctx.fillRect(axisX - tw / 2 - 3, ring ? y + R : ly - 2, tw + 6, ly + inkH + 2 - (ring ? y + R : ly - 2));
       // Hover dot landing in this year's block: over the punch, under the
       // digits, at half opacity — same treatment as inside a headline card.
@@ -5455,7 +5467,7 @@ function p7DrawYearAxisVertical(ctx, W, H) {
 function p7DrawHoverMarker(ctx, x, y, color, alpha) {
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = "#FDFCFF";
+  ctx.fillStyle = P7_PAPER;
   ctx.beginPath(); ctx.arc(x, y, P7_AXIS_MARKER_RADIUS + 1, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = color;
   ctx.beginPath(); ctx.arc(x, y, P7_AXIS_MARKER_RADIUS, 0, Math.PI * 2); ctx.fill();
@@ -5480,11 +5492,11 @@ function p7DrawHeadlineCard(ctx, card, x, y, w, h, radii) {
   ctx.save();
   if (card.style === 'bar') {
     // No card: bare punched text with the accent bar under it.
-    ctx.fillStyle = '#FDFCFF'; ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = P7_PAPER; ctx.fillRect(x, y, w, h);
   } else {
     // Every card style paints card.fill; 'shadow' adds the drop shadow.
     if (card.style === 'shadow') { ctx.shadowColor = 'rgba(0, 0, 0, 0.14)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 3; }
-    ctx.fillStyle = card.fill || '#FDFCFF'; path(); ctx.fill();
+    ctx.fillStyle = card.fill || P7_PAPER; path(); ctx.fill();
     ctx.shadowColor = 'transparent';
   }
   if (card.style === 'outline' || card.style === 'dashed' || card.style === 'accent') {
@@ -5807,7 +5819,7 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
       else spans.forEach(s => { if (hits(y0)) y0 = s.bottom + textGap; });
     }
     ctx.globalAlpha = opacity;
-    ctx.fillStyle = "#FDFCFF";
+    ctx.fillStyle = P7_PAPER;
     // Side plaque: the copy is centred in the card, so tx is the card's centre.
     const tx = sideCard ? axisX + evDirI * (SC.gap + cpx + tw / 2)
       : onSide ? axisX + evDirI * (P7_AXIS_MARKER_RADIUS + p7V().sideGap) : axisX;
@@ -5916,7 +5928,7 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
         p7DrawHoverMarker(ctx, axisX, highlightY, p7ActorColor((p7.hoveredEvent || p7Inspect.event).actor), P7_AXIS_HOVER_MARKER_ALPHA);
       }
       if (dateBelowBar) {
-        ctx.fillStyle = "#FDFCFF";
+        ctx.fillStyle = P7_PAPER;
         ctx.fillRect(axisX - tw / 2 - 4, y0 + cardH + cpb, tw + 8, blockH - cardH + 2);
       }
       if (centred) {
@@ -5981,7 +5993,7 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
       });
       const dx = dOn ? axisX + dDir * (P7_AXIS_MARKER_RADIUS + p7V().sideGap) : axisX;
       const fill = ctx.fillStyle;
-      ctx.fillStyle = "#FDFCFF";
+      ctx.fillStyle = P7_PAPER;
       if (dOn) ctx.fillRect(dDir > 0 ? dx - 3 : dx - dw - 3, dy - 2, dw + 6, lh + 4);
       else ctx.fillRect(axisX - dw / 2 - 4, dy - P7_VERT_EVENT_TEXT_GAP, dw + 8, lh + P7_VERT_EVENT_TEXT_GAP + 2);
       ctx.fillStyle = fill;
