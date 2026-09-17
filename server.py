@@ -363,7 +363,17 @@ def _harness_files():
         html = (WATCH_DIR / "project.html").read_text()
     except OSError:
         return []
-    return [f for f in re.findall(r'src="(_debug-[^"]+\.js)"', html) if (WATCH_DIR / f).exists()]
+    # Either form project.html has used: a plain <script src="_debug-x.js"> tag,
+    # or a name in the dev-host-only loader's array ("_debug-x.js" strings the
+    # inline script document.write()s) — the latter is what it uses now, so a
+    # tag-only scan came back empty and the panel hid every harness.
+    names = re.findall(r'["\'](_debug-[A-Za-z0-9_.-]+\.js)["\']', html)
+    seen, out = set(), []
+    for f in names:
+        if f in seen or not (WATCH_DIR / f).exists():
+            continue
+        seen.add(f); out.append(f)
+    return out
 
 
 def _git_branch():
