@@ -207,10 +207,13 @@ function tooltipDockRestPx() {
   return viewportH() - TOOLTIP_DOCK_BOTTOM_PX - TOOLTIP_DOCK_H_PX;
 }
 // The folds the two-spot frame serves: the ones the picker is live on
-// (@fold9, @fold10, @fold13). Mobile only — desktop has hover and no docked frame.
+// (@fold9, @fold10, @fold11 up to its crossing, @fold13) — and @fold12's bridge
+// between them, so the frame holds its spot through the glide instead of
+// dropping to the old bottom line for one fold and climbing back. Mobile only
+// — desktop has hover and no docked frame.
 function p7TipTwoSpotFold() {
   return isMobile() && typeof currentPage !== "undefined" &&
-         (currentPage === 8 || currentPage === 9 || currentPage === 12);
+         (currentPage >= 8 && currentPage <= 12);
 }
 
 // Blends @fold13's drop onto whatever spot the earlier two produced, so the

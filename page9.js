@@ -1484,7 +1484,7 @@ function p9BulgeTick() {
   if (isMobile()) for (const [ev, b] of p9BulgeT) { if (ev !== hovered && b.t > 0) { relaxing = true; break; } }
   for (const [ev, b] of p9BulgeT) {
     const target = ev === hovered ? 1 : 0;
-    const step = dt / p7BulgeMs();
+    const step = dt / p7BulgeMsFor(ev);
     if (target === 1 && relaxing) { active = true; continue; }
     // Holds at its target — `target > t` alone stepped a settled 1 back down
     // (see p7BulgeTick, page7.js).
