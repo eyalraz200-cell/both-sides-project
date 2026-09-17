@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<title>og card — share mockups</title>
+<!-- SCAFFOLDING. The og card inside the three previews it actually has to
+     survive: WhatsApp, X and Facebook/LinkedIn. Title and description are the
+     REAL tags from project.html — an og card is never seen alone, and a card
+     that reads fine at 1200x630 can still collide with the text beside it. -->
+<style>
+  :root {
+    --bg: #14161b; --panel: #1e2128; --line: #343945;
+    --txt: #e8eaf0; --dim: #9aa1b0;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--txt);
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 28px 20px 60px; }
+  h2.sec { font-size: 13px; font-weight: 600; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--dim); margin: 0 0 12px; }
+  .row { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start;
+    margin-bottom: 34px; }
+
+  /* Each preview holds an <iframe> of the live card, scaled to that platform's
+     real width — an <img> would need re-shooting on every knob turn. */
+  .shot { position: relative; overflow: hidden; background: #fff; flex: none; }
+  .shot iframe { width: 1200px; height: 630px; border: 0;
+    transform-origin: top left; position: absolute; top: 0; left: 0; }
+
+  /* ---- WhatsApp: the card sits in a chat bubble, cropped to ~1.91:1 ---- */
+  .wa { width: 330px; background: #075E54; padding: 18px 14px; border-radius: 10px; }
+  .wa-bub { background: #DCF8C6; border-radius: 8px; padding: 5px 5px 7px;
+    color: #111; direction: rtl; }
+  .wa .shot { width: 300px; height: 157px; border-radius: 5px; }
+  .wa .shot iframe { transform: scale(.25); }
+  .wa-t { font-size: 13px; font-weight: 600; margin: 6px 4px 1px; line-height: 1.25; }
+  .wa-d { font-size: 12px; color: #4a5a4a; margin: 0 4px; line-height: 1.3;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; }
+  .wa-u { font-size: 11px; color: #6b7a6b; margin: 4px 4px 0; }
+
+  /* ---- X: rounded card, title + description under a 2:1 image ---- */
+  .x { width: 440px; background: #000; padding: 14px; border-radius: 12px; }
+  .x-card { border: 1px solid #2f3336; border-radius: 14px; overflow: hidden; }
+  .x .shot { width: 410px; height: 215px; }
+  .x .shot iframe { transform: scale(.3417); }
+  .x-meta { padding: 9px 12px 11px; direction: rtl; }
+  .x-u { font-size: 12px; color: #71767b; margin-bottom: 2px; }
+  .x-t { font-size: 14px; color: #e7e9ea; line-height: 1.3; }
+  .x-d { font-size: 13px; color: #71767b; line-height: 1.35; margin-top: 2px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; }
+
+  /* ---- Facebook / LinkedIn: full-bleed image, grey meta strip under ---- */
+  .fb { width: 500px; background: #fff; border-radius: 8px; overflow: hidden;
+    border: 1px solid #ced0d4; }
+  .fb .shot { width: 498px; height: 261px; }
+  .fb .shot iframe { transform: scale(.415); }
+  .fb-meta { background: #f0f2f5; padding: 10px 12px; direction: rtl;
+    border-top: 1px solid #ced0d4; }
+  .fb-u { font-size: 12px; color: #65676b; text-transform: uppercase; letter-spacing: .02em; }
+  .fb-t { font-size: 16px; font-weight: 600; color: #050505; line-height: 1.25; margin-top: 2px; }
+  .fb-d { font-size: 14px; color: #65676b; line-height: 1.3; margin-top: 2px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; }
+
+  /* ---- the raw card, full size, for judging the artwork itself ---- */
+  .full { width: 1200px; height: 630px; max-width: 100%; }
+  .full .shot { width: 1200px; height: 630px; }
+  .full .shot iframe { transform: none; }
+
+  .note { color: var(--dim); font-size: 12px; line-height: 1.5;
+    max-width: 640px; margin: 0 0 26px; }
+  .note b { color: var(--txt); font-weight: 600; }
+
+  /* The description budget: where each platform cuts, measured against the
+     real tag rather than guessed. */
+  .budget { margin-bottom: 34px; max-width: 900px; }
+  .budget table { border-collapse: collapse; font-size: 13px; width: 100%; }
+  .budget th, .budget td { text-align: left; padding: 6px 10px;
+    border-bottom: 1px solid var(--line); }
+  .budget th { color: var(--dim); font-weight: 600; font-size: 11px;
+    text-transform: uppercase; letter-spacing: .04em; }
+  .budget .ok { color: #7ddc8a; }
+  .budget .cut { color: #ff9b73; }
+  .budget .frag { direction: rtl; unicode-bidi: isolate; color: var(--dim);
+    font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h2 class="sec">in the previews it has to survive</h2>
+  <p class="note">Every frame below is the <b>live card</b> in an iframe, so turning a
+  knob in the harness updates all of them at once. Title and description are the real
+  tags from project.html. Note how much of the card each platform actually crops.</p>
+
+  <div class="row">
+    <div class="wa">
+      <div class="wa-bub">
+        <div class="shot"><iframe src="_og-card.html?bare=1" scrolling="no"></iframe></div>
+        <div class="wa-t"></div>
+        <div class="wa-d"></div>
+        <div class="wa-u">eyalraz200-cell.github.io</div>
+      </div>
+    </div>
+
+    <div class="x">
+      <div class="x-card">
+        <div class="shot"><iframe src="_og-card.html?bare=1" scrolling="no"></iframe></div>
+        <!-- X shows only the domain and title on a summary_large_image card;
+             the description is dropped entirely, so none is drawn here. -->
+        <div class="x-meta">
+          <div class="x-u">eyalraz200-cell.github.io</div>
+          <div class="x-t"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fb">
+      <div class="shot"><iframe src="_og-card.html?bare=1" scrolling="no"></iframe></div>
+      <div class="fb-meta">
+        <div class="fb-u">eyalraz200-cell.github.io</div>
+        <div class="fb-t"></div>
+        <div class="fb-d"></div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="sec">how much of the description survives</h2>
+  <div id="budget" class="budget"></div>
+
+  <h2 class="sec">the card itself — 1200 × 630</h2>
+  <div class="row full">
+    <div class="shot"><iframe src="_og-card.html?bare=1" scrolling="no"></iframe></div>
+  </div>
+</div>
+
+<script>
+/* The real tags, read straight out of project.html so this mockup can never
+   drift from what the platforms will actually show. */
+fetch('project.html').then(function (r) { return r.text(); }).then(function (html) {
+  var doc = new DOMParser().parseFromString(html, 'text/html');
+  var get = function (sel) {
+    var m = doc.querySelector(sel);
+    return m ? m.getAttribute('content') : '';
+  };
+  var t = get('meta[property="og:title"]');
+  var d = get('meta[property="og:description"]');
+  document.querySelectorAll('.wa-t, .x-t, .fb-t').forEach(function (e) { e.textContent = t; });
+  document.querySelectorAll('.wa-d, .fb-d').forEach(function (e) { e.textContent = d; });
+
+  /* Limits are approximate and platform-dependent — WhatsApp clamps by LINES in
+     a bubble whose width varies by device, so treat ~100 as the cautious floor
+     and ~160 as the usual case. Facebook is the roomy one; X shows no
+     description at all on a large-image card. */
+  var LIMITS = [
+    ['WhatsApp, cautious', 100],
+    ['WhatsApp, typical',  160],
+    ['Facebook / LinkedIn', 200],
+    ['X', 0]
+  ];
+  var rows = LIMITS.map(function (L) {
+    var name = L[0], lim = L[1];
+    if (lim === 0) {
+      return '<tr><td>' + name + '</td><td class="cut">no description shown</td>'
+           + '<td class="frag">the title and domain carry it alone</td></tr>';
+    }
+    if (d.length <= lim) {
+      return '<tr><td>' + name + '</td><td class="ok">fits — all ' + d.length + ' chars</td>'
+           + '<td class="frag">nothing lost</td></tr>';
+    }
+    return '<tr><td>' + name + '</td><td class="cut">cuts at ' + lim + ' of ' + d.length + '</td>'
+         + '<td class="frag">…' + d.slice(lim - 26, lim) + '<b>|</b> ' + (d.length - lim)
+         + ' chars dropped</td></tr>';
+  }).join('');
+  document.getElementById('budget').innerHTML =
+    '<table><tr><th>where</th><th>verdict</th><th>what gets cut</th></tr>' + rows + '</table>';
+}).catch(function () {});
+</script>
+  <!-- SCAFFOLDING — one harness, driving all four embedded cards. -->
+  <script src="_debug-bus.js"></script>
+  <script src="_debug-ogcard.js"></script>
+</body>
+</html>

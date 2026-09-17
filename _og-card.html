@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<title>og card — קיצוניים משני הצדדים</title>
+<!-- SCAFFOLDING. The og:image artboard, rebuilt from Figma nodes 360:4558 /
+     360:4146 / 360:3093 / 360:3939 as ONE parameterised card. Shot headless at
+     1200x630 (2x for the committed png). Delete once the card is chosen and
+     og-image.png is baked — unless it earns its keep as the thing that can
+     re-shoot the card when the palette changes. -->
+<style>
+  @font-face {
+    font-family: 'Hadassah Friedlaender';
+    src: url('fonts/HadassahFriedlaender-Thin-TRIAL.otf') format('opentype');
+    font-weight: 300;
+  }
+  @font-face {
+    font-family: 'Hadassah Friedlaender';
+    src: url('fonts/HadassahFriedlaender-Regular-TRIAL.otf') format('opentype');
+    font-weight: 400;
+  }
+
+  html, body { margin: 0; background: #22242a; }
+  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  /* ?bare=1 — the card and nothing else, for embedding in the mockup's iframes:
+     no grey surround, no centring, and (below) no harness panel of its own. */
+  body.bare { display: block; background: #fff; min-height: 0; }
+
+  /* THE ARTBOARD — exactly the og card, 1200x630. Everything inside is driven
+     by these six custom properties, which are what the harness turns. */
+  #card {
+    --dot: 13px;        /* side of each square */
+    --pitch: 31px;      /* centre-to-centre down a column */
+    --colgap: 52px;     /* centre-to-centre between the two columns */
+    --cardw: 728px;     /* title card width */
+    --cardr: 8px;       /* title card corner radius */
+    --fs: 59px;         /* title size */
+    --fw: 400;          /* 300 = the real Thin OTF, 400 = Regular */
+    /* DASH SCALE. The project's title block draws a 2px stroke on a 4px period,
+       which is right for a screen at 1:1 — but this card is NEVER seen at 1:1.
+       WhatsApp renders it at 25%, X at 34%, Facebook at 41%, so an unscaled
+       dash arrives as a half-pixel stroke on a 1px period and vanishes. This
+       multiplies stroke AND period together, so the 2-on-2-off ratio and the
+       even perimeter fit are preserved exactly — it is the same dash, drawn
+       for the size it is actually looked at. 1 = literal parity with the site. */
+    --dashscale: 2;
+    --ink: #000;        /* border + type */
+    --paper: #fff;
+
+    position: relative;
+    width: 1200px; height: 630px;
+    background: var(--paper);
+    overflow: hidden;
+    flex: none;
+  }
+
+  /* The two columns sit either side of the centre line, each offset by half
+     the column gap. They run the full height and are occluded by the card. */
+  .col {
+    position: absolute; top: 50%; left: 50%;
+    display: flex; flex-direction: column; align-items: center;
+    gap: calc(var(--pitch) - var(--dot));
+    transform: translate(-50%, -50%);
+  }
+  .col.a { margin-left: calc(var(--colgap) / -2); }
+  .col.b { margin-left: calc(var(--colgap) / 2); }
+  .dot { width: var(--dot); height: var(--dot); flex: none; }
+
+  /* The title card. Its solid paper background is what hides the dots behind
+     it — the Figma file used a separate white knockout rect for the same job.
+     The border is TRANSPARENT and the visible dash is the SVG below, exactly
+     as .text-card-frame does it in style.css: a native `dashed` border draws
+     long dashes that stretch and mismatch at the corners, where the project's
+     dash is a fine 2-on-2-off stroke whose period is fitted to divide the
+     perimeter evenly. Same 2px stroke, same rx 7, same 4px period. */
+  #plate {
+    --frame-border-w: calc(2px * var(--dashscale));
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: var(--cardw);
+    box-sizing: border-box;
+    display: flex; align-items: center; justify-content: center;
+    padding: 47px 66px;
+    background: var(--paper);
+    border: var(--frame-border-w) solid transparent;
+    border-radius: var(--cardr);
+  }
+  /* An abs-pos child's containing block is the PADDING box, so plain inset:0
+     would sit 2px inside the frame's real border box on every side. */
+  #plate > svg.plate-dash {
+    position: absolute;
+    top: calc(-1 * var(--frame-border-w));
+    left: calc(-1 * var(--frame-border-w));
+    width: calc(100% + 2 * var(--frame-border-w));
+    height: calc(100% + 2 * var(--frame-border-w));
+    pointer-events: none;
+  }
+  #plate h1 {
+    margin: 0;
+    font-family: 'Hadassah Friedlaender', system-ui, sans-serif;
+    font-weight: var(--fw);
+    font-size: var(--fs);
+    line-height: 1;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+  <script>if (/[?&]bare=1/.test(location.search)) document.body.className = 'bare';</script>
+  <div id="card">
+    <div class="col a" id="colA"></div>
+    <div class="col b" id="colB"></div>
+    <div id="plate">
+      <svg class="plate-dash" aria-hidden="true"><rect/></svg>
+      <h1>קיצוניים משני הצדדים</h1>
+    </div>
+  </div>
+
+<script>
+/* ---------------------------------------------------------------- palettes --
+   The Figma colours are stand-ins, so every palette here is a real candidate.
+   `split` palettes give each COLUMN its own set — which is the one idea the
+   composition is already asking for: two columns, two camps, the title between
+   them. The project's own group colours come from js/groups.js. */
+window.OG_PALETTES = {
+  figma:   { label: 'Figma stand-ins',
+             a: ['#050a16', '#ea580c', '#a302b5', '#52c0ca', '#3bc925'],
+             b: ['#050a16', '#ea580c', '#a302b5', '#52c0ca', '#3bc925'] },
+  project: { label: 'project groups (all six, mixed)',
+             a: ['#F9B624', '#454545', '#F024FF', '#6B89FF', '#FF1A94', '#31CE1C'],
+             b: ['#F9B624', '#454545', '#F024FF', '#6B89FF', '#FF1A94', '#31CE1C'] },
+  split:   { label: 'split — right camp | change camp',
+             a: ['#F9B624', '#454545', '#F024FF'],
+             b: ['#6B89FF', '#FF1A94', '#31CE1C'] },
+  mono:    { label: 'ink only',
+             a: ['#050a16', '#454545', '#8a8f98'],
+             b: ['#050a16', '#454545', '#8a8f98'] }
+};
+
+/* A fixed seed keeps the card IDENTICAL between a preview and the final shot —
+   a card that reshuffles every reload cannot be judged, let alone reproduced. */
+function rng(seed) {
+  var s = seed >>> 0;
+  return function () {
+    s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0;
+    return s / 4294967296;
+  };
+}
+
+/* Spare colours that are NOT group colours, for when six reads too systematic
+   and the field wants a bit more life. Kept clear of every group hue so an
+   extra never reads as "some group". */
+window.OG_EXTRAS = ['#0B3D91', '#7A4EFF', '#00A6A6', '#E4572E', '#8A8F98'];
+
+/* The project's own dash, ported from updateTextCardFrameDashes + fitDashArray
+   in js/core.js: 2px stroke, rx 7, inset 1px, and a period as close to 4px as
+   divides the perimeter EVENLY — that even division is the whole trick, and
+   it is why the corners never land mid-dash. */
+var DASH_PERIOD = 4;      /* the project's period, before --dashscale */
+var DASH_STROKE = 2;      /* the project's stroke, before --dashscale */
+function paintPlateDash() {
+  var plate = document.getElementById('plate');
+  var svg = plate.querySelector('svg.plate-dash');
+  var rect = svg.firstElementChild;
+  var w = plate.offsetWidth, h = plate.offsetHeight;
+  if (!w || !h) return;
+  svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+  rect.setAttribute('fill', 'none');
+  rect.setAttribute('stroke', getComputedStyle(plate).getPropertyValue('--ink').trim() || '#000');
+  var k = parseFloat(getComputedStyle(plate).getPropertyValue('--dashscale')) || 1;
+  var sw = DASH_STROKE * k;
+  rect.setAttribute('stroke-width', sw);
+  /* Inset by HALF the stroke: SVG centres a stroke on its path, so a fat one
+     drawn at x=1 would hang half its width outside the plate's box. */
+  var ins = sw / 2;
+  rect.setAttribute('x', ins); rect.setAttribute('y', ins);
+  rect.setAttribute('width', Math.max(0, w - sw));
+  rect.setAttribute('height', Math.max(0, h - sw));
+  var r = Math.max(0, parseFloat(getComputedStyle(plate).getPropertyValue('--cardr')) - ins);
+  rect.setAttribute('rx', r); rect.setAttribute('ry', r);
+  var len = rect.getTotalLength ? rect.getTotalLength() : 0;
+  var want = DASH_PERIOD * k;
+  var period = len ? len / Math.max(1, Math.round(len / want)) : want;
+  rect.setAttribute('stroke-dasharray', (period / 2) + ' ' + (period / 2));
+}
+
+window.OG_RENDER = function (opts) {
+  opts = opts || {};
+  var card = document.getElementById('card');
+  var pal = window.OG_PALETTES[opts.palette || 'figma'];
+  var seed = opts.seed || 20260917;
+
+  ['dot', 'pitch', 'colgap', 'cardw', 'cardr', 'fs'].forEach(function (k) {
+    if (opts[k] != null) card.style.setProperty('--' + k, opts[k] + 'px');
+  });
+  if (opts.fw != null) card.style.setProperty('--fw', opts.fw);
+  if (opts.dashscale != null) card.style.setProperty('--dashscale', opts.dashscale);
+
+  /* Enough squares to overflow 630px at the loosest pitch, then clipped. */
+  var pitch = parseFloat(getComputedStyle(card).getPropertyValue('--pitch'));
+  var n = Math.ceil(630 / Math.max(pitch, 6)) + 4;
+
+  var extras = opts.extras ? Math.max(0, Math.min(OG_EXTRAS.length, Math.round(opts.extras))) : 0;
+  var add = OG_EXTRAS.slice(0, extras);
+
+  /* No two neighbours share a colour. "Neighbour" is both directions: the dot
+     ABOVE in the same column, and the dot BESIDE it in the other column at the
+     same row — a horizontal pair of twins reads as a deliberate rung and pulls
+     the eye straight to it. Rejection sampling with a bounded retry, so a
+     one-colour palette still terminates instead of spinning. */
+  var picked = [[], []];
+  [['colA', pal.a], ['colB', pal.b]].forEach(function (pair, ci) {
+    var set = pair[1].concat(add);
+    var rand = rng(seed + ci * 7919);
+    for (var i = 0; i < n; i++) {
+      var c, tries = 0;
+      do {
+        c = set[Math.floor(rand() * set.length)];
+        tries++;
+      } while (tries < 24 && (c === picked[ci][i - 1] || (ci === 1 && c === picked[0][i])));
+      picked[ci][i] = c;
+    }
+    var el = document.getElementById(pair[0]), html = '';
+    for (var j = 0; j < n; j++) {
+      html += '<i class="dot" style="background:' + picked[ci][j] + '"></i>';
+    }
+    el.innerHTML = html;
+  });
+
+  paintPlateDash();
+};
+
+/* The four Figma frames, measured off their exported PNGs. */
+window.OG_PRESETS = {
+  A: { label: 'A · 360-4558', dot: 11, pitch: 28, colgap: 43.5, cardw: 621, cardr: 24, fs: 56 },
+  /* B as TUNED on 2026-09-17 (pitch 25->24, card 621->702); A, C and D are
+     still the raw measurements off the Figma exports. */
+  B: { label: 'B · 360-4146', dot: 9,  pitch: 24, colgap: 34,   cardw: 702, cardr: 24, fs: 56 },
+  C: { label: 'C · 360-3093', dot: 7,  pitch: 21, colgap: 29,   cardw: 621, cardr: 24, fs: 56 },
+  D: { label: 'D · 360-3939', dot: 13, pitch: 31, colgap: 52,   cardw: 728, cardr: 8,  fs: 59 }
+};
+
+/* The plate's box changes with card width, title size and weight, so the dash
+   has to be re-fitted on every one of those — same reason .text-card-frame is
+   under a ResizeObserver in js/core.js. */
+if (typeof ResizeObserver !== 'undefined') {
+  new ResizeObserver(function () { paintPlateDash(); })
+    .observe(document.getElementById('plate'), { box: 'border-box' });
+}
+document.fonts && document.fonts.ready.then(function () { paintPlateDash(); });
+
+/* The chosen card: B, project palette, Regular, 4 extra colours, seed 25. */
+OG_RENDER(Object.assign({ palette: 'project', fw: 400, extras: 4,
+                          seed: 20260917 + 25 * 104729, dashscale: 2 },
+                        window.OG_PRESETS.B));
+</script>
+  <!-- SCAFFOLDING — the harness transport, then the compare/manual panel.
+       Skipped under ?bare=1: the mockup embeds four copies of this page, and
+       four panels stacked in the same corner is not a control surface. The
+       mockup hosts ONE harness and drives every iframe through it. -->
+  <script>
+  if (!/[?&]bare=1/.test(location.search)) {
+    document.write('<script src="_debug-bus.js"><\/script>');
+    document.write('<script src="_debug-ogcard.js"><\/script>');
+  }
+  </script>
+</body>
+</html>

@@ -1550,6 +1550,19 @@ function p7StartAnimLoop() {
 const P7_BULGE_MS    = 120;
 const P7_BULGE_HOLD  = 12;   // cells with the gap kept exact
 const P7_BULGE_REACH = 30;   // cells where the push has faded to zero
+// MOBILE reads the same shove far tighter. Desktop's 12/30 cells are ~10/25px
+// of taper there (the pitch is ~2px), and every dot inside it takes a
+// SUB-PIXEL shift — which the draw's device-pixel snap (`q`) then rounds a
+// whole pixel one way or the other as the bulge eases, so a field of 14,000
+// dots shimmered around the picked one. The push instead stops at the cells the
+// grown block actually covers: full strength under the block, gone one cell
+// past it. The neighbours are moved out of the way, nothing further twitches.
+function p7BulgeHold(b) {
+  return isMobile() ? Math.max(1, Math.round(b.size / p7Cell())) : P7_BULGE_HOLD;
+}
+function p7BulgeReach(b) {
+  return isMobile() ? p7BulgeHold(b) + 1 : P7_BULGE_REACH;
+}
 // The hover dim (every other square drops to hoverDim(actor)) ramps instead of
 // flipping. A binary dim flickered when leaving a BIG square: the bulge pushes
 // its neighbours away, so the pointer crosses a ring of bare canvas with no dot
@@ -1660,9 +1673,10 @@ function p7BulgeShift(bulges, col, row) {
     const dc = col - b.col, dr = row - b.row;
     if (!dc && !dr) continue;
     const d = Math.max(Math.abs(dc), Math.abs(dr));
-    const w = d <= P7_BULGE_HOLD ? 1
-            : d >= P7_BULGE_REACH ? 0
-            : 1 - p9Ease((d - P7_BULGE_HOLD) / (P7_BULGE_REACH - P7_BULGE_HOLD));
+    const hold = p7BulgeHold(b), reach = p7BulgeReach(b);
+    const w = d <= hold ? 1
+            : d >= reach ? 0
+            : 1 - p9Ease((d - hold) / (reach - hold));
     if (!w) continue;
     dx += Math.sign(dc) * b.push * w;
     dy += Math.sign(dr) * b.push * w;
@@ -2964,14 +2978,11 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     }
     // Hover bulge: shoved aside by any swelling neighbour (p7BulgeShift), or —
     // for the swelling square itself — kept centred on its cell and grown.
-    // MOBILE: the picker's pick grows (the glass zooms on that growth) but
-    // never shoves — the push tapers over 30 cells, and on a 2px pitch that
-    // read as the whole field twitching under the glass.
     let bulgeSize = 0;
     if (bulges.length) {
       const own = bulges.find(b => b.ev === events[i]);
       if (own) bulgeSize = own.size;
-      else if (!isMob) { const sh = p7BulgeShift(bulges, col, drow); destX += sh.dx; destY += sh.dy; }
+      else { const sh = p7BulgeShift(bulges, col, drow); destX += sh.dx; destY += sh.dy; }
     }
 
     // Continuing page8's reverse glide into its resting timeline cell (see
