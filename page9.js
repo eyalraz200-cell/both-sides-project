@@ -4333,6 +4333,12 @@ function p9HoverInit() {
     const next = p9KeyStep(dir);
     if (!next) return;
     e.preventDefault();   // stop the page scrolling out from under the selection
+    // Drop the current selection FIRST. The hit-test deliberately gives the
+    // hovered dot an enlarged box and lets it win outright (dist = -1) so a
+    // shaky hand can't slip off it — which, aiming a synthetic point at the
+    // neighbour's centre, would hand the hover straight back to the dot we are
+    // trying to leave and pin the arrows on one dot forever.
+    p9.hoveredEvent = null;
     const rect = canvasEl.getBoundingClientRect();
     onMove({ clientX: rect.left + next.c.x, clientY: rect.top + next.c.y });
   });

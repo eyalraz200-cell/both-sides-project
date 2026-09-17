@@ -536,6 +536,25 @@ dots the moment `fold13ExtremeMorphT > 0`, so the dots scatter from wherever the
 
 ## Hover
 
+**Arrow keys move the hover** (`p9KeyStep` + the `keydown` handler in `p9HoverInit`). ← → ↑ ↓
+step between dots wherever dot hover is live, giving the tooltip, the dimming and the
+mini-legend label a keyboard path. It does **not** re-implement the hit-test: it picks the dot
+to land on, then hands `onMove` a synthetic `{clientX, clientY}` at that dot's centre, so the
+pointer and the keyboard can never drift apart.
+
+- **Traversal is spatial, not by index.** The columns re-pack as pills are classified, so "next"
+  can only mean "nearest that way on screen". A candidate must move further along the pressed
+  axis than it drifts across it (`across > along` rejects), and the closest of those wins, scored
+  `along + across * 2` to favour straight ahead. So ← → walk a row and ↑ ↓ a column, and neither
+  hops the centre gap by surprise.
+- **The current selection is cleared before the synthetic move.** The hit-test gives the hovered
+  dot an enlarged box and an outright win (`dist = -1`) so a shaky hand cannot slip off it —
+  which would otherwise hand the hover straight back and pin the arrows on one dot forever.
+- Gated like the pointer path (`p9HoverPageOk()`, not `p9.anim`, not mobile, not mid-drag) and
+  additionally ignores arrows aimed at a field, a `contenteditable`, or a `.page9-pill` (which has
+  its own keyboard handler). Calls `preventDefault()` only once it has a dot to move to, so the
+  arrows still scroll the page when there is nothing to step to.
+
 **Dot hover** (`p9HoverInit`): live on every fold the grids are drawn on — `p9HoverPageOk()`:
 @fold13 always, **@fold11 and @fold12 once the bridge glide has landed** (`p8CurrentT() >= 1` —
 never mid-flight; before the glide @fold11 is the timeline's own hover, `p7TimelineLive`), @fold14
