@@ -2695,7 +2695,12 @@ function p7SizeGridOnPage(page) {
   // themselves). Only scrolling back ABOVE the timeline clears it, since the
   // legend rows stop being clickable there and a filter with no way to undo it
   // is a trap.
-  if (page < 9) p7FilterReset();
+  //
+  // `page < 8`, NOT `page < 9`: @fold9 IS the timeline and is data-page 8, so
+  // `< 9` put the fold that OWNS the filter inside the clearing range. Setting a
+  // filter, scrolling down and coming back wiped it on arrival at @fold9 — the
+  // one fold where it must survive. Above it (page 7 and under) still clears.
+  if (page < 8) p7FilterReset();
   // Above the band the crossings own the tier flag again (js/groups.js).
   if (page < 9 && typeof p7ScopeUserUniform !== "undefined") p7ScopeUserUniform = null;
   // Snapshot for the p9 sync below: only a flip that actually MOVES the flag
@@ -2919,8 +2924,21 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
   let groupCursor = animMs; // months with no phase at all read as settled
   // Desktop: per-event rank within its row + per-row counts (p7BuildVerticalLayout).
   const vertSide = p7.vert ? (positions === p7.rightPos ? p7.vert.right : p7.vert.left) : null;
-  const rowRank  = vertSide ? vertSide.rowRank  : null;
-  const rowCount = vertSide ? vertSide.rowCount : null;
+  // With a filter on, rank and count MUST come from the same pack that decides
+  // where the dot lands (filtSide, below). The rank is "how far from the
+  // corridor is this square", which is a fact about the FILTERED grid — unlike
+  // `row`, which gates when the scroll reaches a row and is deliberately left
+  // unfiltered. Reading rank off the unfiltered pack staggered each row in an
+  // order unrelated to where its survivors now sit (a corridor dot ranked 58
+  // while its neighbour ranked 18, so the row played outside-in), and divided
+  // by the unfiltered row's count, so a row of 5 survivors spread its delays
+  // across a range built for 60.
+  const filtVert = p7FilterLayout
+    ? (positions === p7.rightPos ? p7FilterLayout.right : p7FilterLayout.left)
+    : null;
+  const rankSide = filtVert || vertSide;
+  const rowRank  = rankSide ? rankSide.rowRank  : null;
+  const rowCount = rankSide ? rankSide.rowCount : null;
   const claimedEvents = p7GetClaimedEvents();
   const gridOn = p7Grid.on;
   const isLeft = positions !== p7.rightPos;
@@ -3090,7 +3108,10 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
       // from the corridor, so each row plays centre → side.
       const rowCursor = rowCursorOf(row);
       if (rowCursor === undefined) continue;          // row never reached
-      const n = rowCount[row];
+      // Index the count by the row of the SAME pack the rank came from: the
+      // re-pack can lift a dot into an earlier row, so `row` and `drow` part
+      // company exactly when a filter is on.
+      const n = rowCount[filtVert ? drow : row];
       const delay = n > 1 ? (rowRank[i] / (n - 1)) * stagger : 0;
       const presence = p7Ease(Math.min(1, Math.max(0, (rowCursor - delay) / popMs)));
       if (presence <= 0) continue;

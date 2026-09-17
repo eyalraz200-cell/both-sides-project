@@ -1520,6 +1520,12 @@ its dots shrink to nothing where they stand, and every surviving dot flies to th
 cell it would have had if that group had never been in the data. Click the row
 again to bring it back. Multiple groups can be off at once.
 
+- **Lives from @fold9 down, and survives coming back.** `p7SizeGridOnPage` clears it
+  with `if (page < 8) p7FilterReset()` — **8, not 9**: @fold9 IS the timeline and is
+  `data-page="8"`, so `< 9` put the fold that OWNS the filter inside the clearing
+  range and wiped it on the way back up from @fold10. Only scrolling ABOVE the
+  timeline (page 7 and under) clears it, where the legend rows stop being clickable
+  and a filter with no way to undo it would be a trap.
 - **State** — `p7FilterOff` (a Set of `actor` keys), `p7FilterLayout`
   (`{leftPos, rightPos}`, or `null` when nothing is filtered), `p7FilterMorph`
   (`{from: Map(event → {cx, cy, sq}), start}`).
@@ -1529,6 +1535,16 @@ again to bring it back. Multiple groups can be off at once.
   spill-down packing as the unfiltered layout. `p7FilterRebuild()` runs it on
   every toggle and at the end of `p7UpdateLayout` (a resize changes rows/cols, so
   a stale filtered layout would point at other cells).
+- **The within-row cascade follows the FILTERED pack.** `rowRank`/`rowCount` in
+  `p7DrawSideSquares` come from `p7FilterLayout` whenever a filter is on, and the
+  count is indexed by `drow` (that pack's row), not `row`. The rank means "how far
+  from the corridor is this square", which is a fact about the grid the reader is
+  looking at — unlike `row` below. Reading it off the unfiltered pack staggered
+  each row in an order unrelated to where its survivors sat (a corridor dot ranked
+  58 beside one ranked 18, so the row played outside-in) and divided by the
+  unfiltered count, so five survivors spread their delays across a range built for
+  sixty. **Removed — don't reintroduce:** rank or count read from `p7.vert` while
+  the destination comes from `p7FilterLayout`; the two must come from one pack.
 - **Unfiltered stays authoritative for visibility.** In `p7DrawSideSquares`,
   `row` still comes from the *unfiltered* cell and still drives `p7RowCursor` and
   the row cascade — which rows have been reached is a fact about the scroll, not
