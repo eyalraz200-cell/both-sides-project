@@ -904,7 +904,7 @@ flip-flops every frame (the @fold10 hover stutter, worst on the big squares
 simply because there is more room to move inside one).
 
 **Page7's hover dim ramps** on `p7.hoverDimT`, a 0..1 eased on the same frame clock as
-the bulge but its own duration, `P7_HOVER_DIM_MS` 90 (it is advanced inside `p7BulgeTick`,
+the bulge but its own duration, `p7HoverDimMs()` — `P7_HOVER_DIM_MS_DESKTOP` 90, `P7_HOVER_DIM_MS_MOBILE` (`var`) — (it is advanced inside `p7BulgeTick`,
 and `p7BulgeActive()` reports it so the anim loop keeps running until it settles — a
 tier-0 hover has no bulge at all, yet still dims). A snap (`if (p7.hoveredEvent)`) would
 flicker when leaving a *big* square: the bulge pushes that square's neighbours away, so the
@@ -942,7 +942,7 @@ every gap around it stays exactly `P7_GAP`:
   band the gaps compress by fractions of a px rather than the whole side sliding.
   **Same profile on mobile**, with the shift **quantised to whole device pixels** there (`q(sh.dx)` in `p7DrawSideSquares`, page7.js): a 2–3px dot moved by a fraction of a device pixel lands on different device pixels with different anti-aliased edges, so its brightness changed every frame of the bulge's ease and a field of them read as colour flashing under the glass. Snapped, a pushed dot keeps its exact rasterised footprint and only translates. (A tighter mobile-only reach was tried first and rejected — the push has to look like desktop's.)
 - Per-event 0..1 in `p7BulgeT` (a Map), advanced on wall-clock every draw at
-  `P7_BULGE_MS` 120 toward 1 for the hovered event (or the drag-inspected one) and 0 for
+  `p7BulgeMs()` — `P7_BULGE_MS_DESKTOP` 120, `P7_BULGE_MS_MOBILE` **200** (`var`, `manual/`-baked — the same 120 read as instant under the 4× glass) — toward 1 for the hovered event (or the drag-inspected one) and 0 for
   every other; entries are dropped at 0. Skating across dots: the outgoing bulge keeps
   collapsing while the next opens. `p7BulgeActive()` keeps `p7AnyAnimActive` (and so the
   rAF loop `p7HoverInit` already starts on every hover change) alive until all settle.
@@ -2488,6 +2488,11 @@ dragging pick in its roster-target check). Desktop is untouched: `p7Inspect.even
 ever set ≤600px (`p7InspectPage`).
 
 **The docked frame paints in front of the title blocks on @fold10 and @fold11** — `.is-over-card` (`z-index: 1006`, style.css), added by `tooltipDockMobile` on `currentPage` 9 and 10, beats those cards' 1004; without it a card scrolling over the pinned timeline slid in front of the frame. The `.fold6-mlegend-layer` shares the 1006 and comes later in `.layout`, so the מקרא bar still wins the tie and stays above the frame.
+
+**The hold costs nothing while nothing moves.** Three things used to repaint all 14k dots every frame of a hold (the stutter under the glass on a big dot), all fixed:
+- the bulge and dim ramps stepped *back* off their target — `target > t ? up : down` sent a value that had just reached 1 down a step and up again the next frame, 1 → 0.993 → 1 → …, so `p7BulgeActive()` never saw them settle and `p7StartAnimLoop`'s `step` drew every frame (this hit every desktop hover too); a ramp now holds at its target (`p7BulgeTick`, page7.js).
+- `p7BulgeActive()` answered against `p7.hoveredEvent` alone, but the picker's pick lives in `p7Inspect.event` — the two now share `p7BulgeHovered()`.
+- the headline-card x-ray (`p7HideAxisCards` + `drawNow()`) ran on every `loupeTick` near a card, and the notable events are exactly the big dots. It now only runs when a card's **real box** (`p7.axisCardRects`) overlaps the sampled square, the card-less paint is kept in an offscreen copy keyed by core.js's `drawSerial` (bumped on every `drawNow`) and blitted from while the serial stands, and `drawLoupe` skips the whole blit when the sampled device pixels and the serial are unchanged (`loupeLastKey`). `loupeMove` also coalesces the 120Hz touch stream to one paint per frame. Measured headless at 3×: a steady hold on a tier-5 dot beside a card went from ~150 full repaints per 800ms to **0**; gliding 12px across it from ~196 to ~34 (the swell's own ramp on the pick changes).
 
 **The glass blits from whole device pixels** (`drawLoupe`, page7.js): the source rect's origin and size are rounded to the device grid before `drawImage`. The blit is nearest-neighbour (smoothing would turn 1–2px dots to mush), so a fractional origin re-phased every magnified dot against the source grid on each sub-pixel finger move — a 2px dot came out as a different 8px pattern every frame, colour flashing under the glass on a big dot. Snapped, a sub-pixel move changes nothing until it crosses a device pixel, and then the whole view translates by one magnified pixel; the centre is off by under a device pixel.
 
