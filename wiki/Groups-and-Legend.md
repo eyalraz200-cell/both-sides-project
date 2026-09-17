@@ -47,7 +47,14 @@ verbatim. All six are present in the data, so every group appears on the real ti
 The camp membership they imply is duplicated as `ACTOR_SIDE` in `server.py`, which
 derives each event's `side` from `main_actor` (the xlsx has no `side` column).
 `FOLD4_COALITION_ROWS` / `FOLD4_CHANGE_ROWS` define the camp membership and row order in
-JS, resolved by color.
+JS, **resolved by `actor` through `groupByActor()`** — as is `MOBILE_ROW_SWAPS`. Both
+rosters used to name their groups by COLOUR and match with `g.color === c`, a
+case-sensitive compare against a hand-retyped hex: re-casing or nudging any value in
+`GROUPS` silently returned `undefined` and the camps came back full of holes with no
+error. `actor` is already the join key into the data and is never restyled.
+`groupByActor` logs an error for an unknown actor but does **not** throw — this is a
+classic `<script>`, so an exception at parse time would take every global in the file
+down with it.
 
 **There is no `P7_COLORS` object.** The name survives only in stale comments. Colors come
 from `p7ActorColor(actor)` = `GROUPS.find(g => g.actor === actor)?.color || "#888"`, so

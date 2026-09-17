@@ -72,11 +72,26 @@ const GROUPS = [
 // doesn't exist yet at that point.
 buildPage0AllDots();
 
+// Look a group up by its `actor` key — full_v3.xlsx's own `main_actor` string,
+// the same key server.py's ACTOR_SIDE is written against. Rosters below used to
+// name their groups by COLOUR and match with `g.color === c`, a case-sensitive
+// string compare against a hand-retyped hex: re-casing or nudging any value in
+// GROUPS above silently yielded `undefined` here and the camp rosters came back
+// full of holes, with no error anywhere. `actor` is the identity that is
+// already the join key into the data, and it is never restyled.
+function groupByActor(actor) {
+  const g = GROUPS.find(g => g.actor === actor);
+  // Loud, but NOT a throw: this file is a classic <script>, so an exception at
+  // parse time would take every global declared in it down with the roster.
+  if (!g) console.error(`groupByActor: no group with actor "${actor}" — check GROUPS`);
+  return g;
+}
+
 // Which camp each group belongs to, top-to-bottom in that camp's own column
 // order. Declared here (rather than down by the camp headers, where they used
 // to live) because @fold2's grid roster below already needs them.
-const FOLD4_COALITION_ROWS = ["#454545", "#F9B624", "#F024FF"].map(c => GROUPS.find(g => g.color === c));
-const FOLD4_CHANGE_ROWS    = ["#FF1A94", "#6B89FF", "#31CE1C"].map(c => GROUPS.find(g => g.color === c));
+const FOLD4_COALITION_ROWS = ["haredi jews", "settlers", "right wing protesters"].map(groupByActor);
+const FOLD4_CHANGE_ROWS    = ["peace movements", "protesters against government", "arab israelis"].map(groupByActor);
 
 // MOBILE ONLY: two pairs of rows trade places within their camp (per explicit
 // instruction, 2026-09-12) —
@@ -90,9 +105,10 @@ const FOLD4_CHANGE_ROWS    = ["#FF1A94", "#6B89FF", "#31CE1C"].map(c => GROUPS.f
 // still lands each row on its own panel row without any of them crossing.
 // Desktop is untouched — it keeps GROUPS' own fold6.y order, which is also the
 // real geometry of its on-canvas mini-legend (fold6RowY).
+// By `actor`, not colour, for the same reason as the camp rosters above.
 const MOBILE_ROW_SWAPS = [
-  ["#6B89FF", "#FF1A94"],
-  ["#454545", "#F024FF"],
+  ["protesters against government", "peace movements"],
+  ["haredi jews", "right wing protesters"],
 ];
 // A camp's rows top→bottom. `mobile` defaults to the live viewport; the מקרא
 // panel passes `true` outright, since it is built once at parse time and only
@@ -100,9 +116,9 @@ const MOBILE_ROW_SWAPS = [
 function campRowOrder(camp, mobile) {
   const rows = camp.slice().sort((a, b) => a.fold6.y - b.fold6.y);
   if (!(mobile == null ? isMobile() : mobile)) return rows;
-  MOBILE_ROW_SWAPS.forEach(([c1, c2]) => {
-    const i = rows.findIndex(g => g.color === c1);
-    const j = rows.findIndex(g => g.color === c2);
+  MOBILE_ROW_SWAPS.forEach(([a1, a2]) => {
+    const i = rows.findIndex(g => g.actor === a1);
+    const j = rows.findIndex(g => g.actor === a2);
     if (i >= 0 && j >= 0) { const t = rows[i]; rows[i] = rows[j]; rows[j] = t; }
   });
   return rows;

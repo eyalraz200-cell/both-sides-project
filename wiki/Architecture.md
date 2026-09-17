@@ -8,6 +8,35 @@
 - **`project.html`** — the scrollytelling experience. Everything else in this wiki is
   about this page.
 
+Fonts are split to match, and neither page loads the other's: `index.html` pulls Rubik
+(700/900) + Noto Sans Hebrew + Assistant from Google Fonts; `project.html` pulls Assistant
+alone and declares the two local Hadassah faces (`@font-face` in `style.css`).
+`trigger.css` carries **no** `@font-face` — it once declared Hadassah, which that page
+never renders, costing readers a 184KB OTF for nothing.
+
+## Search / discoverability
+
+The site is served by GitHub Pages at `https://eyalraz200-cell.github.io/both-sides-project/`
+(no `CNAME`). Both pages carry a `<title>`, a `<meta name="description">`, a
+self-referencing absolute `<link rel="canonical">`, the OG/Twitter card set, a favicon and
+`lang="he"`. `robots.txt` (allow-all + the `Sitemap:` line) and `sitemap.xml` (both URLs)
+sit at the repo root; `index.html` also carries a JSON-LD `NewsArticle` block whose
+headline, author and date **mirror the visible `<h1>` and `.shk-byline`** — change one and
+change the other, or the markup contradicts the page.
+
+Two things that are easy to get wrong here:
+
+- **`og:description` is not a search description.** Google ignores it and writes its own
+  snippet unless a real `<meta name="description">` exists. Both are present on purpose.
+- **Do not add `.nojekyll`.** Its absence is load-bearing: Jekyll refuses to serve any
+  path beginning with `_`, which is exactly what keeps every `_debug-*.js` out of
+  production. See the comment in `project.html`.
+
+`index.html` is the SEO-carrying page — it is the only one whose text is real HTML.
+`project.html` is a canvas app: a crawler sees its ~16 `.section-title` scroll cards and
+nothing else, since all 14,451 events are painted. Anything that must be findable has to
+exist as markup on the article page.
+
 ## `project.html`'s layout
 
 ```

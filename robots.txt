@@ -1,0 +1,12 @@
+# Everything here is meant to be found. The only paths worth keeping crawlers
+# out of are the dev-only harness files — GitHub Pages already 404s them,
+# because Jekyll refuses to serve any path starting with "_" and this repo
+# deliberately has no .nojekyll (see the comment in project.html). These rules
+# are belt-and-braces for anywhere else the site is served from, e.g. a local
+# `python3 server.py` that someone exposes.
+User-agent: *
+Allow: /
+Disallow: /_debug-
+Disallow: /_og-
+
+Sitemap: https://eyalraz200-cell.github.io/both-sides-project/sitemap.xml
