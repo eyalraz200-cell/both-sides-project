@@ -3690,10 +3690,15 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      on black the square could only be white — inverted from every other mark on
      the fold, so a *selected* pill looked like the odd one out. Grey lets the
      square go solid black, i.e. the same colour as the label beside it, and
-     keeps the pill's own text dark throughout. */
+     keeps the pill's own text dark throughout.
+     THE SAME GREY as the מקרא sheet's rows (.fold6-mlegend-row) — this was its
+     own #E3E3E3, two points off that row's #E1E1E1, which is under the
+     threshold of seeing and had no reason recorded. Unified onto the row's
+     value, the one that carries a tuning note. Both are mobile-only, so
+     desktop is untouched either way. */
   .page9-pill.is-extreme {
-    background: #E3E3E3;
-    border-color: #E3E3E3;
+    background: #E1E1E1;
+    border-color: #E1E1E1;
     color: #111;
   }
   /* The 6 grip dots advertise a drag that doesn't exist here. Must repeat the
@@ -3784,8 +3789,11 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     border-radius: var(--p9-check-radius, 0px);
     border: 1px solid currentColor;
     opacity: 0.75;
-    font: 600 11px 'Assistant', sans-serif;
-    line-height: 1;
+    /* No type here on purpose: this span renders NO text — see the "no ✓ glyph"
+       note below. It carried `font: 600 11px 'Assistant'` + `line-height: 1`
+       from the days it held a tick; with the glyph gone both styled nothing and
+       only suggested a character that isn't there. The box is sized by the
+       explicit width/height above, so neither affected layout. */
     pointer-events: none;
   }
   /* No ✓ glyph, per explicit instruction — the FILL is the whole signal. An

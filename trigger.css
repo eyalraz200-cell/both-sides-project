@@ -1,8 +1,8 @@
-@font-face {
-  font-family: 'HadassahFriedlaender';
-  font-weight: 400;
-  src: url('fonts/HadassahFriedlaender-Regular-TRIAL.otf') format('opentype');
-}
+/* No @font-face here. This page runs entirely on Rubik + Noto Sans Hebrew
+   (loaded from Google Fonts in index.html) — it never sets
+   'HadassahFriedlaender' on anything. It used to declare that face anyway,
+   which cost the reader a 184KB OTF download for a font nothing rendered.
+   Hadassah belongs to project.html; its @font-face rules live in style.css. */
 
 :root {
   --shk-primary: #004194;
