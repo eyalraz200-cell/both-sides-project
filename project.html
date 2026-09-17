@@ -318,7 +318,7 @@
       h.endsWith(".local") || /^10\./.test(h) || /^192\.168\./.test(h) ||
       /^172\.(1[6-9]|2\d|3[01])\./.test(h);
     if (!local) return;
-    ["_debug-bus.js", "_debug-inspect.js", "_debug-pick-swell.js"].forEach(function (src) {
+    ["_debug-bus.js", "_debug-inspect.js"].forEach(function (src) {
       document.write('<script src="' + src + '"><\/script>');
     });
   })();

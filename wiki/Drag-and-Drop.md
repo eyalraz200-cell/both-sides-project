@@ -389,12 +389,15 @@ republished from `drawPage9` when the line moves. Only on @fold13
   dropped the hover as the cursor moved across it.
 - **Handoff to @fold14.** `drawPage12` lerps each dot from its
   `p9.fold13StartPos` size down to the flat spread size over `morphT`, shrinking
-  about the block centre — size only, never alpha. **Back from @fold14** the spread
-  reverses onto that same snapshot — the dots as they stood when the reader LEFT,
-  which is a mid-animation layout if the tier morph or a drop was still playing —
-  so when `morphT` reaches 0 `updateFold13` (js/fold11.js) seeds a plain glide
-  (`FOLD13_SETTLE_MS` 900) from the snapshot to the live layout instead of letting
-  `drawPage9` paint the finished pack in one frame.
+  about the block centre — size only, never alpha. **The spread's near end is each
+  dot's LIVE column position**, not the snapshot: under the spread `drawBandedCols`
+  keeps running `p9PlaceDot` in `recordOnly` mode (bookkeeping, no paint — the
+  overdraw would ghost), so `p9.lastPositions` is this frame's, animations included,
+  and `drawPage12` reads `fromOf(e)` = `p9.lastPositions` → `p9.fold13StartPos`
+  (fallback only) → target. Reason: a big drop's state-1 trickle is still running
+  many seconds after it looks settled, so the snapshot taken when the reader left
+  was a mid-animation layout and the reverse's hand-off re-packed the columns in one
+  frame.
 - **Reset on page flip.** `p7SizeGridOnPage` forces `uniform: true` for pages 9–11
   only when no reader override is set, and calls `p9ScopeSync()` only when the flag
   actually moves (or on a flip above page 10). Tiers survive the @fold13 ↔ @fold14 trip.

@@ -293,9 +293,16 @@ function drawPage12(ctx, W, H) {
   // and the filler has to pop in beside it wherever it happens to be.
   // Where a dot stands in @fold14's spread alone, with @fold15 not applied —
   // the fillers pop in against THIS, so they don't inherit the pair flight.
+  // The near end is the dot's LIVE column position — drawPage9 just ran
+  // (recordOnly under the spread, see drawBandedCols) and p9.lastPositions is
+  // this frame's, animations included. A drop's state-1 trickle runs for many
+  // seconds after it looks settled, so the snapshot taken when the reader
+  // left (p9.fold13StartPos) is only the fallback; landing on it made the
+  // columns re-pack in one frame the moment the reverse handed back.
+  const fromOf = (e, to) => p9.lastPositions.get(e) ?? startPos?.get(e) ?? to;
   const spreadPosOf = (e) => {
     const to = targets.get(e); if (!to) return null;
-    const from = startPos?.get(e) ?? to;
+    const from = fromOf(e, to);
     return { x: from.x + (to.x - from.x) * morphT,
              y: from.y + (to.y - from.y) * morphT };
   };
@@ -313,7 +320,7 @@ function drawPage12(ctx, W, H) {
   // popping to 3px on the first frame. Size only, never opacity. A no-op
   // whenever the tiers are off, since startPos.sq is SQ there.
   const sizeOf = (e) => {
-    const s0 = startPos?.get(e)?.sq;
+    const s0 = fromOf(e, null)?.sq;
     if (!(s0 > 0) || Math.abs(s0 - SQ) < 0.01) return SQ;
     return s0 + (SQ - s0) * morphT;
   };

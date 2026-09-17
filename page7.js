@@ -1551,19 +1551,8 @@ function p7StartAnimLoop() {
 // swell happens under a 4x glass and the pushed dots are a screen-width of
 // 2px pitch away from each other. var on mobile — a manual/ harness drives it.
 const P7_BULGE_MS_DESKTOP = 120;
-var   P7_BULGE_MS_MOBILE  = 200;   // manual/-baked 2026-09-17 — the smallest swelling tier
-// …and on mobile the bigger the dot, the longer: a top-tier swell is 20x the
-// dot and shoves neighbours ~23px, and at the same 200ms as a 2.4x one it read
-// as instant. Each tier above the first adds this much. var: harness-driven.
-var   P7_BULGE_MS_PER_TIER_MOBILE = 0;
+var   P7_BULGE_MS_MOBILE  = 200;   // manual/-baked 2026-09-17
 function p7BulgeMs() { return isMobile() ? P7_BULGE_MS_MOBILE : P7_BULGE_MS_DESKTOP; }
-// The ramp length for one event's swell (both directions, so a big dot also
-// collapses over its own longer clock and the field slides home at one pace).
-function p7BulgeMsFor(ev) {
-  if (!isMobile() || !ev) return p7BulgeMs();
-  const tier = Math.max(1, p7BulgeTier(ev));
-  return P7_BULGE_MS_MOBILE + P7_BULGE_MS_PER_TIER_MOBILE * (tier - 1);
-}
 const P7_BULGE_HOLD  = 12;   // cells with the gap kept exact
 const P7_BULGE_REACH = 30;   // cells where the push has faded to zero
 // Both breakpoints push on the same 12/30-cell profile. What made a phone
@@ -1655,7 +1644,7 @@ function p7BulgeTick() {
   }
   for (const [ev, b] of p7BulgeT) {
     const target = (ev === hovered || ev === p9Pick) ? 1 : 0;
-    const step = dt / p7BulgeMsFor(ev);
+    const step = dt / p7BulgeMs();
     if (target === 1 && relaxing) continue;   // wait for the field to settle
     if (b.t !== target) b.t = target > b.t ? Math.min(1, b.t + step) : Math.max(0, b.t - step);
     if (b.t === 0 && target === 0) p7BulgeT.delete(ev);
@@ -7154,9 +7143,20 @@ function p7InspectInit() {
     const held = p7Inspect.event && positions.get(p7Inspect.event);
     if (held && held.y < maxY) {
       const heldHalf = (held.sq || half * 2) / 2;
-      const grown = (held.sq || half * 2) * p7LoupeGrowth() / 2;
-      if (Math.abs(mx - (held.x + heldHalf)) <= grown &&
-          Math.abs(my - (held.y + heldHalf)) <= grown) {
+      // ON THE TIMELINE the scan below picks in REST space (`pdx`/`pdy`), which
+      // never moves — so the oscillation this stickiness was built against
+      // cannot happen there, and holding the pick across the whole SWOLLEN box
+      // (up to ±24px for a top-tier dot, with the neighbours shoved 23px out)
+      // only made the adjacent dot unreachable: the finger had to leave a 49px
+      // square before anything else could be picked. There the pick sticks for
+      // half a pitch past the dot's own rest box, i.e. one cell of travel
+      // reaches the neighbour. @fold13's columns (no `pdx`) keep the swollen
+      // box: their positions are display-space and the guard still earns its keep.
+      const restSpace = held.pdx !== undefined;
+      const stick = restSpace ? heldHalf + p7Cell() / 2
+                              : (held.sq || half * 2) * p7LoupeGrowth() / 2;
+      if (Math.abs(mx - (held.x + heldHalf)) <= stick &&
+          Math.abs(my - (held.y + heldHalf)) <= stick) {
         return { event: p7Inspect.event, x: held.x + heldHalf, y: held.y + heldHalf };
       }
     }

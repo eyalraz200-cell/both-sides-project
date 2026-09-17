@@ -1484,7 +1484,7 @@ function p9BulgeTick() {
   if (isMobile()) for (const [ev, b] of p9BulgeT) { if (ev !== hovered && b.t > 0) { relaxing = true; break; } }
   for (const [ev, b] of p9BulgeT) {
     const target = ev === hovered ? 1 : 0;
-    const step = dt / p7BulgeMsFor(ev);
+    const step = dt / p7BulgeMs();
     if (target === 1 && relaxing) { active = true; continue; }
     // Holds at its target — `target > t` alone stepped a settled 1 back down
     // (see p7BulgeTick, page7.js).
@@ -2457,10 +2457,14 @@ function drawPage9(ctx, W, H) {
     // of it, dimming each successive batch (right side, then both legit
     // sides) more than the last instead of every batch dimming by the same
     // flat amount.
-    // During @fold16 morph, drawPage12 overdraws at freeform positions.
-    if ((p9.fold13ExtremeMorphT ?? 0) > 0) {
-      return Math.ceil(orderArr.length / colsTotal) || 1;
-    }
+    // During @fold14's spread, drawPage12 overdraws at freeform positions — but
+    // the bookkeeping still runs (recordOnly): a drop's state-1 trickle keeps
+    // playing for many seconds after it LOOKS settled, so the spread's near end
+    // has to be each dot's LIVE position (p9.lastPositions, this frame), not a
+    // snapshot taken when the reader left. Painting nothing here keeps the
+    // columns from ghosting under the overdraw; recording keeps the reverse
+    // landing exactly where drawPage9 paints the next frame.
+    const morphing = (p9.fold13ExtremeMorphT ?? 0) > 0;
     const targetAlpha = 1;
     // orderArr is already sorted rank-ascending (p9SyncTopOrder), so every
     // settlers-or-below entry sits before every Right-wing/Haredi one — one
@@ -2557,7 +2561,7 @@ function drawPage9(ctx, W, H) {
           x = b.cx - b.sq / 2; y = b.cy - b.sq / 2; size = b.sq;
         }
       }
-      p9PlaceDot(e, x, y, targetAlpha, i, visN, lowRankCount, size);
+      p9PlaceDot(e, x, y, targetAlpha, i, visN, lowRankCount, size, morphing);
     });
     // Merged across the two calls; drawPage9 clears it before the left one.
     p9.scopeStats = Object.assign(p9.scopeStats || {}, {
