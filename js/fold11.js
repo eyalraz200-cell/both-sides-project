@@ -44,32 +44,21 @@
 // the freeform spread fires (checkFold13's frac, js/groups.js). The two numbers
 // are one decision — raise this and the fade runs under the spread.
 const FOLD13_FADE_SPAN = 0.5;
-// The reverse spread lands on p9.fold13StartPos — the dots as they stood when
-// the reader LEFT @fold13, which is a mid-animation layout whenever the tier
-// morph (p9ScopeSet, 2550ms) or a drop was still playing at that moment. The
-// columns then settled to the finished layout in one frame. Instead, the
-// hand-off glides from that snapshot to the live layout (p9PlaceDot's plain
-// glide; size follows on landing, as every @fold13 move does).
-const FOLD13_SETTLE_MS = 900;
-
 let fold13TooltipFaded = false;
 function updateFold13() {
   const tTrigger = fold13Trigger.currentT();
   const eTrigger = 1 - Math.pow(1 - tTrigger, 3); // ease-out cubic
 
   // Capture starting dot positions on the first morph frame — p9.lastPositions
-  // holds the clustered positions from the previous (non-morphed) frame.
+  // holds the clustered positions from the previous (non-morphed) frame. Only a
+  // FALLBACK for drawPage12: its near end is the live p9.lastPositions, which
+  // drawBandedCols keeps recording (paint-free) under the spread.
   if (eTrigger > 0 && !fold13MorphStarted) {
     fold13MorphStarted = true;
     p9.fold13StartPos  = new Map(p9.lastPositions);
     p12FreeformTargets = null; // force recompute with current W/H
   }
   if (eTrigger <= 0) {
-    if (fold13MorphStarted && p9.fold13StartPos && p9.fold13StartPos.size && !p9.anim) {
-      p9.anim = { from: new Map(p9.fold13StartPos), start: performance.now(),
-                  duration: FOLD13_SETTLE_MS, plainGlide: true };
-      if (typeof p9RunAnimLoop === "function") p9RunAnimLoop();
-    }
     fold13MorphStarted = false;
     p9.fold13StartPos  = null;
   }

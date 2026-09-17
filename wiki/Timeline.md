@@ -942,7 +942,7 @@ every gap around it stays exactly `P7_GAP`:
   band the gaps compress by fractions of a px rather than the whole side sliding.
   **Same profile on mobile**, with the shift **quantised to whole device pixels** there (`q(sh.dx)` in `p7DrawSideSquares`, page7.js): a 2–3px dot moved by a fraction of a device pixel lands on different device pixels with different anti-aliased edges, so its brightness changed every frame of the bulge's ease and a field of them read as colour flashing under the glass. Snapped, a pushed dot keeps its exact rasterised footprint and only translates. (A tighter mobile-only reach was tried first and rejected — the push has to look like desktop's.)
 - Per-event 0..1 in `p7BulgeT` (a Map), advanced on wall-clock every draw at
-  `p7BulgeMs()` — `P7_BULGE_MS_DESKTOP` 120, `P7_BULGE_MS_MOBILE` **200** (`var`, `manual/`-baked — the same 120 read as instant under the 4× glass) — toward 1 for the hovered event (or the drag-inspected one) and 0 for
+  `p7BulgeMsFor(ev)` — desktop `P7_BULGE_MS_DESKTOP` 120 flat; mobile `P7_BULGE_MS_MOBILE` **200** for the smallest swelling tier **plus `P7_BULGE_MS_PER_TIER_MOBILE` per tier above it** (both `var`, harness-driven — a 20× swell shoving neighbours 23px at the same 200ms as a 2.4× one read as instant; the collapse runs on the same per-dot clock, so the field slides home at one pace) — toward 1 for the hovered event (or the drag-inspected one) and 0 for
   every other; entries are dropped at 0. Skating across dots: the outgoing bulge keeps
   collapsing while the next opens. `p7BulgeActive()` keeps `p7AnyAnimActive` (and so the
   rAF loop `p7HoverInit` already starts on every hover change) alive until all settle.
@@ -2529,7 +2529,7 @@ stays even across the tier ladder instead of scaling the top tier and barely tou
 
 #### The docked frame's two spots — `p7TipSpotTopPx` (mobile, every picker fold)
 
-The frame has two resting places on **@fold9, @fold10 and @fold13** (`p7TipTwoSpotFold()`) and
+The frame has two resting places on **@fold9 through @fold13** — pages 8–12: the picker's folds, @fold11 (live up to its crossing) and @fold12's bridge between them, so it holds its spot through the glide rather than dropping to the old bottom line for one fold (`p7TipTwoSpotFold()`) — and
 **flips** between them rather than moving: a flip, not a glide, because a travelling frame would
 pass through the very glass it is getting clear of.
 

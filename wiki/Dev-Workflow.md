@@ -297,7 +297,7 @@ for — the **remote panel**:
   entries for harnesses it built itself (matched by file/label), removes just those from the
   file, and leaves the rest, saying so in a line. Delete entries may be acted on by any chat.
 - **The rail shows what exists on disk, not what a tab remembers.** The panel polls
-  `/__harnesses__` (the `_debug-*.js` files `project.html` loads right now) every 3s and
+  `/__harnesses__` (the `_debug-*.js` files `project.html` loads right now — `_harness_files()` in server.py scans the HTML for any quoted `_debug-*.js` name, so it reads both a plain `<script src>` tag and the name in the dev-host-only loader's array; a tag-only scan came back empty once the loader arrived and the rail hid every harness) every 3s and
   hides — or drops — any row, live or dormant, whose file is not in that list. Auto-reload
   is off, so a page tab loaded before a deletion keeps announcing the deleted harness until
   it reloads; without this the ghost row came straight back.
