@@ -114,6 +114,34 @@ one-to-one.
 `P9_TRAY_GRID` gives each index a fixed `{row, col}` slot, applied as inline grid
 placement — so a pill always returns to its own cell.
 
+**The vacancy.** Because those slots are permanent, a pill moving up to
+`#page9ZoneAbove` leaves its cell standing empty rather than the row closing up.
+`p9SyncVacancy` (page9.js, called from `placePillInZone` — the one choke point every
+desktop path goes through) drops a `.page9-pill-vacancy` into that cell: the pill's
+footprint pressed faintly into the paper, `rgba(0, 0, 0, 0.0275)` at the pill's own 4px
+radius, no border and no text. Picked in a `compare/` pass against a dashed frame, a
+frame still carrying the category name, a single dashed underline, and the faded pill
+itself. The flat alpha is deliberate — it composites identically to the harness's
+0.05 fill behind 0.55 opacity (measured `rgb(246,245,248)` on the paper) while staying
+one number instead of two knobs.
+
+Two things it must keep doing:
+
+- **Read the cell off the PILL** (`pill.style.gridColumn` + its `.page9-tray-row`),
+  never off `P9_TRAY_GRID`. `p9ApplyTrayGrid` re-slots pills live on resize and across
+  the V2 / two-row cutoff, so a column taken from the table can disagree with the one
+  the pill actually holds — and a marker landing on an occupied column gets pushed to an
+  implicit second row, rendering under the tray. `grid-row: 1` is pinned for the same
+  reason.
+- **`justify-self: stretch`** in the CSS rule. The tray row sets its own
+  `justify-items`, so the default `auto` collapses the marker to its own width (32px in
+  a 123px track) and the hole stops matching the pill that left.
+
+**Desktop only, and it cannot be otherwise:** under 600px a pill never leaves the tray —
+it takes `.is-extreme` in place (`p9SyncExtremeOrder`) — so no cell is ever vacated.
+Not to be confused with `.page9-pill-ghost`, which is the clone that follows the cursor
+*during* a drag; the vacancy is what stays behind *after* the drop lands.
+
 `CATEGORY_TO_IDX` maps `events.json`'s `category` to those indices. It is **derived**
 from `P9_CATEGORIES` (`Object.fromEntries(P9_CATEGORIES.map((c, i) => [c, i]))`), not
 hand-written, so the pill list and the lookup can't drift.

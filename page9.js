@@ -3170,7 +3170,57 @@ function p9BuildPanel() {
   // whether a previous drop's dot animation is still playing — a drop should
   // always visibly dock the instant it happens. Only the dot/count state
   // change below (commitDropState) waits its turn; see commitDrop.
+  /* THE VACANCY — the marker left in the tray cell a pill has moved out of.
+     P9_TRAY_GRID gives every pill a PERMANENT row/column, so a pill leaving
+     empties its cell instead of the row reflowing; without a marker that cell
+     reads as a stray gap in the row rather than as "something used to be here".
+     A recess: no outline, just the pill's footprint pressed faintly into the
+     paper (picked in a compare/ pass against a dashed frame, a frame keeping
+     the name, a single underline, and the faded pill itself).
+
+     NOT called a "ghost": .page9-pill-ghost is already the clone that follows
+     the cursor DURING a drag. This is the opposite — what stays behind after
+     the drop lands.
+
+     DESKTOP ONLY, and it cannot be otherwise: under 600px a pill never leaves
+     the tray (it takes .is-extreme in place, see p9SyncExtremeOrder), so no
+     cell is ever vacated. The isMobile() guard is belt-and-braces for a resize
+     across the breakpoint while pills are up. */
+  function p9VacancyFor(pill) {
+    const idx = Number(pill.dataset.idx);
+    let el = zoneBelow?.querySelector(`.page9-pill-vacancy[data-idx="${idx}"]`);
+    if (el) return el;
+    el = document.createElement("div");
+    el.className = "page9-pill-vacancy";
+    el.dataset.idx = String(idx);
+    el.setAttribute("aria-hidden", "true");
+    return el;
+  }
+
+  function p9SyncVacancy(pill, targetZone) {
+    const idx = Number(pill.dataset.idx);
+    const existing = zoneBelow?.querySelector(`.page9-pill-vacancy[data-idx="${idx}"]`);
+    if (targetZone !== zoneAbove || isMobile()) { existing?.remove(); return; }
+    // Take the cell off the PILL, not off P9_TRAY_GRID: p9ApplyTrayGrid
+    // re-slots every pill live on resize and across the V2 / two-row cutoff, so
+    // a column read from the table can disagree with the one the pill actually
+    // held — and a marker landing on an occupied column gets pushed onto an
+    // implicit second row, under the tray. grid-row is pinned for the same
+    // reason. Width comes from the track (justify-self in the CSS rule), so the
+    // hole is exactly the shape of what left.
+    const row = pill.closest(".page9-tray-row");
+    const col = pill.style.gridColumn || getComputedStyle(pill).gridColumnStart;
+    if (!row || !col) return;
+    const el = p9VacancyFor(pill);
+    el.style.gridColumn = col;
+    el.style.height = `${pill.getBoundingClientRect().height}px`;
+    row.appendChild(el);
+  }
+
   function placePillInZone(pill, targetZone) {
+    // BEFORE the move: the pill has to still be in its tray cell for the
+    // vacancy to read that cell off it.
+    p9SyncVacancy(pill, targetZone);
     if (targetZone === zoneAbove) {
       // prepend so the newest card becomes the top of the stacked column.
       targetZone.prepend(pill);
