@@ -51,7 +51,7 @@ own timing.
 **Camp headers** — מחנה הימין / גוש השינוי (`.fold4-column-title`). They type in at
 `@fold2` and un-type in place at `@fold4`; they never travel into the legend.
 
-**The 8 squares** — `#fold6SquaresOverlay`'s sample squares, which grow in at `@fold6`,
+**The 8 squares** — `#fold6SquaresOverlay`'s sample squares, which grow in at `@fold5`,
 gain labels at `@fold7`, and gain colors + fly to their real per-event dots at `@fold8`.
 
 **Legit grid / extreme grid** — page9's two dot fields, below and above the `P9_MID`

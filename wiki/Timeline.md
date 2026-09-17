@@ -290,7 +290,7 @@ axis so the first event's label can center over its own circle).
 
 - **The line** is a single solid rule at `p7AxisYFrac()` of H — `P7_AXIS_Y_FRAC` 0.90
   desktop, `P7_AXIS_Y_FRAC_MOBILE` **0.94** (lower on a phone, where the grid above stops
-  at `SBB_TIMELINE_MOBILE.bottom` 0.78 and the year label under it is only 14px): a faint full-span
+  at the bottom `sbbTimelineMobileBottomPx()` solves from `SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX` (64) and the year label under it is only 14px): a faint full-span
   bar (`P7_AXIS_BG_ALPHA` 0.22; during hover-elsewhere it drops to
   `P7_AXIS_UNFILLED_HOVER_ALPHA` 0.14) with a black "reached" bar drawn from `curX` rightward.
   `curX` follows a damped lag (`P7_AXIS_FILL_LAG_DAMPING` 0.12) that self-restarts the
@@ -2145,7 +2145,7 @@ side-plaque fly now all run off the one trigger. Don't reintroduce a `curY` comp
 | `P7_AXIS_TRIGGER_ROW_OFFSET` | `25` | Where an event fires, in **rows relative to its own dot** (`p7BuildVerticalLayout`'s `reachRow`). Positive = the fill edge must travel that many rows *past* the dot first; negative fires early, above it. |
 | `P7_AXIS_CARD_MS` | `480` | Beat length, shared by both triggers. |
 | `P7_AXIS_LEAVE_MODE` | `'collapse'` | How a headline card leaves — a trigger-driven beat in every mode; they differ in what the beat does. `'collapse'` scales the card into its own axis dot with **no fade**, so it visibly goes back where it came from. Also `'collapseY'` / `'collapseX'` (one axis only), `'collapseFade'`, and `'fade'` (the old opacity-in-place). Applied by `p7AxisLeaveApply`, which installs a canvas transform — the caller must `save()`/`restore()`. It clamps the scale at 0.0001: a zero-determinant transform is non-invertible and Chrome drops the draw outright, which flashes the card back at full size on a reversal. |
-| `P7_AXIS_MARKER_UNREACHED` | `true` | Draw an event's marker **before** the fill reaches it, matching the unfilled axis line, turning black as the fill arrives (`p7AxisMarkerColorAt`). The colour is **opaque, never rgba**: the marker sits *on* the line, and translucent-over-translucent composites — the alphas stack and the unreached dot shows as a dark blob instead of matching. So the flat equivalent is computed by hand against the paper (`P7_PAPER_RGB`, `--bg` #FDFCFF): `rgb(197,197,199)` unreached → `rgb(0,0,0)` reached. Turning this on also suppresses the old **lead marker** in the card loop, which painted a second dot at a hardcoded radius in solid `#000` on top of the tuned one — that overpaint is why the marker knobs appeared to do nothing. |
+| `P7_AXIS_MARKER_UNREACHED_MOBILE` (read through `p7AxisMarkerUnreached()`, which is `isMobile() && …` — so this is **mobile-only**; desktop never draws an unreached marker) | `true` | Draw an event's marker **before** the fill reaches it, matching the unfilled axis line, turning black as the fill arrives (`p7AxisMarkerColorAt`). The colour is **opaque, never rgba**: the marker sits *on* the line, and translucent-over-translucent composites — the alphas stack and the unreached dot shows as a dark blob instead of matching. So the flat equivalent is computed by hand against the paper (`P7_PAPER_RGB`, `--bg` #FDFCFF): `rgb(197,197,199)` unreached → `rgb(0,0,0)` reached. Turning this on also suppresses the old **lead marker** in the card loop, which painted a second dot at a hardcoded radius in solid `#000` on top of the tuned one — that overpaint is why the marker knobs appeared to do nothing. |
 | `P7_AXIS_MARKER_ENTER` | `'full'` | `'grow'` starts at `P7_AXIS_MARKER_GROW_FROM × P7_AXIS_MARKER_RADIUS` (1.4px) and grows to full while recolouring; `'full'` sits at the full 4px before the fill arrives so **only** the colour moves and nothing on the axis shifts when an event fires. The unreached size is measured off `P7_AXIS_MARKER_RADIUS`, **never** off the prominence-derived resting radius — prominence is 0 before an event fires, so that had already collapsed to `_FADED`, giving 0.7px vs 2px and making the two modes indistinguishable. |
 | `P7_AXIS_MARKER_GROW_FROM` | `1` | `'grow'`'s starting fraction — **unused** while `ENTER` is `'full'`. |
 
@@ -2163,7 +2163,7 @@ individually, because the old swell read as sluggish once the field was that den
 **All of this is about the ZOOMED-IN scrub**, where the events fire one after another — not
 the squashed end-of-fill view.
 
-With `P7_AXIS_MARKER_UNREACHED` off, the marker's old behaviour (radius straight off
+With `p7AxisMarkerUnreached()` false — which is every desktop frame — the marker's old behaviour (radius straight off
 `reachedT`, always `P7_AXIS_FILLED_COLOR`) is preserved exactly.
 
 > The markers still shrink away with the end-of-fill zoom-out (`× (1 − p7ZoomOutT)`, below) —

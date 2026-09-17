@@ -55,11 +55,11 @@ Legend: 🔴 must · 🟡 should · 🟢 nice-to-have / "not critical" · 📱 m
   editorial approval ("you're selling me too well") — the other five are neutral/identity
   labels. Went through «ארגוני שמאל» and «פעילי שמאל» before settling on the label that names
   what the group's rows actually are: the hostage-deal protesters (whose `main_actor` in the
-  sheet is `peace movements`) plus the anti-war left. Live label: `js/groups.js:49`. The
+  sheet is `peace movements`) plus the anti-war left. Live label: `js/groups.js:59`. The
   `actor` key stays `peace movements` (it is the xlsx's own `main_actor` string and is not
   display text).
 - [x] **C2. Sharpened "ארגוני מחאה נגד הממשלה" → «מתנגדי הרפורמה המשפטית»** (live label,
-  `js/groups.js:42`; it passed through «מתנגדי הרפורמה ותומכי עסקת החטופים» before the
+  `js/groups.js:52`; it passed through «מתנגדי הרפורמה ותומכי עסקת החטופים» before the
   hostage-deal strand moved to C1's group). Too vague — every group here is "against the
   government". The name now spells out the one strand it spans, the judicial-overhaul
   protests, and reads as distinct from C1. The `actor` key stays `protesters against government` (xlsx `main_actor`
@@ -73,6 +73,9 @@ Legend: 🔴 must · 🟡 should · 🟢 nice-to-have / "not critical" · 📱 m
 - [x] **D1. Lighter weight + more leading.** Hadassah at faked 600 is "too heavy"; Galia skipped
   the ACLED card entirely because the box was big and uninviting. Agreed values:
   **`font-weight: 300`, `line-height: 1.5`** — for *all* title cards, not just the long one.
+  *(Shipped as `font: 100 20px/1.5`: only Thin 100 and Regular 400 exist, so a 300 request
+  already resolved to the same Thin file — the agreed look, written as the weight actually
+  drawn. See [Architecture](Architecture.md).)*
   Check whether a true Light face exists in `fonts/`; if not, decide between Regular (400) and a
   synthetic light. This edits the one shared base rule — keep the "no per-page overrides" rule.
   Wiki: [Architecture](Architecture.md).

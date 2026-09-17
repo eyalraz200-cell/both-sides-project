@@ -484,7 +484,7 @@ is the live one in code:
 | `FOLD2_CAMP_CENTER_GAP_PX` (@fold2/@fold3 half-gap: each camp's centre sits this many px either side of screen centre; mobile computes its own from `FOLD2_CAMP_EDGE_GAP_MOBILE_PX`, and @fold3 from `FOLD3_CAMP_EDGE_GAP_MOBILE_PX` 82) | 162 | `js/groups.js` |
 | `HOVER_DIM_OPACITY` (the shared hover-dim; `HOVER_DIM_BY_ACTOR` overrides per actor) | 0.27 | `js/core.js` |
 | `FOLD8_TOOLTIP_CLEARANCE_PX` (@fold7's measured trigger crossing) | −20 | `js/groups.js` |
-| `P7_VERT_SQ_BOOST` (desktop axis length) | 1.12 | `page7.js` |
+| `P7_VERT_SQ_BOOST` (desktop axis length) | 0.88 | `page7.js` |
 | `TOOLTIP_DOCK_BOTTOM_PX` (mobile docked frame's bottom inset) | −18 | `js/fold8-tooltip.js` |
 | `P7_VERT_MOBILE.slotTopPx` (mobile headline slot top) | 78 | `page7.js` |
 | `SBB_TIMELINE_LEFT_PX` (@fold9 outer dot edge, desktop) | 190 | `squareboundingbox.js` |
@@ -494,7 +494,7 @@ is the live one in code:
 | `P12_PAIR_GAP` / `P12_PAIR_SPREAD` / `P12_DOT_COUNT` (@fold15 couples) | 3 / 2.3 / 9250 | `page12.js` |
 | `FOLD3_BEAT_MS` (@fold3's beat windows, absolute ms) | see file | `js/groups.js` |
 | Hero title/subtitle `font-size`, explicit `line-height`, `top: calc(50% - Npx)` | see file | `style.css` |
-| `GROUPS[].color` + `FOLD4_COALITION_ROWS` / `FOLD4_CHANGE_ROWS` (resolve groups by hex — a missed hex goes `undefined`), `FOLD2_GROUP_CELL` (positions), `FOLD2_FILLER_COLORS` (fillers; a group moved onto a filler-override cell evicts it) | see file | `js/groups.js` |
+| `GROUPS[].color` + `FOLD4_COALITION_ROWS` / `FOLD4_CHANGE_ROWS` (resolve groups by `actor` through `groupByActor()`, which logs an unknown actor; they keyed off a retyped hex until 2026-09-17, where a re-cased colour silently went `undefined`), `FOLD2_GROUP_CELL` (positions), `FOLD2_FILLER_COLORS` (fillers; a group moved onto a filler-override cell evicts it) | see file | `js/groups.js` |
 | `PAGE0_GROUP_SLOTS` / `PAGE0_DOT_COLORS` (hero dot arrangement, `{col, row}` with column-local `row`; `buildPage0DotColorSet` walks group slots upward on a short viewport and dedups with one shared `claimed` set across columns) | see file | `page1.js` |
 
 Tricks worth keeping for a rebuild: force a layout re-solve with `p7.lastH = -1;

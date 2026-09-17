@@ -21,7 +21,7 @@ not a bug to flatten.
 
 ```js
 const t = makeTrigger(duration, onTick, onSettle);
-// → { currentRaw(), currentT(), trigger(target), set(value) }
+// → { currentRaw(), currentT(), target(), trigger(target), set(value) }
 const check = watchCardThreshold(cardEl, frac, t, instantReverse = false);
 ```
 

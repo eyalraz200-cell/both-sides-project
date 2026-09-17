@@ -433,8 +433,10 @@ The note sits inside a **card** (`fold6NoteCardEl`, `.fold6-note-card`) that **e
 the body text**: closed it is just the title row, and it grows as the body types in. The card
 is a **sibling painted behind** the title and the body, not a wrapper around them — those two
 are absolutely positioned with left/top/width written per frame, and on mobile
-`fold6SyncNoteHome()` re-parents them one by one into the מקרא panel, so wrapping them would
-have meant redoing both. It is appended **first** into `#fold6NoteLayer`, and since everything
+the מקרא panel builds its own «איסוף הנתונים» section instead (`fold6MobileDataHeadEl` /
+`fold6MobileDataBodyEl`), so wrapping them would have meant redoing both. (Until 2026-09 a
+`fold6SyncNoteHome()` re-parented them one by one into the panel — **removed, don't
+reintroduce**; see the callout at the foot of this page.) It is appended **first** into `#fold6NoteLayer`, and since everything
 in that layer is `position: absolute`, DOM order is paint order — no z-index. Its rect comes
 from the same numbers the rule uses: `fold6X - FOLD6_CARD_PAD` / `noteTitleY - FOLD6_CARD_PAD`,
 with **no ink trim** (unlike the rule: the card frames the text *box*, so it wants the whole
@@ -564,8 +566,9 @@ threshold and types it back on its own.
 **A title sits over the note** (explicit instruction): `FOLD6_NOTE_TITLE_TEXT` = «איסוף הנתונים»,
 `fold6NoteTitleEl` / `.fold6-note-title`. It is deliberately the **same 14px/1.4 box** as
 `.fold6-note` — only `font-weight: 660` and a full-black colour separate them — because the
-rule's ink trim is measured against that line-height. It reparents into the מקרא panel
-with the note and the rule (`fold6SyncNoteHome`) and takes the same `hidden` gate on mobile.
+rule's ink trim is measured against that line-height. On mobile it takes the same `hidden`
+gate as the note and the rule — the panel carries its own «איסוף הנתונים» section rather
+than re-parenting these nodes into it.
 
 The stack reads downward from the bottom row: the **title** sits `FOLD6_NOTE_TOP_GAP`
 (**17px**) below the
@@ -577,22 +580,22 @@ mobile panel it has no width at all and fills the panel. It is RTL and right-ali
 note and changes its height; the legend rows do not move with it — the note just extends
 further down. **Removed — don't reintroduce:** a `fold6NoteShiftPx` row pre-shift.
 
-## The mobile מקרא bar — a floating card, top-right
+## The mobile מקרא bar — a full-bleed bottom sheet
 
 **Under 600px there is no on-canvas mini-legend.** From `@fold4` on, the legend is a
-persistent **floating card** pinned to the top edge of the viewport, closing into a pill in
-the top-right corner (`js/groups.js`, `.fold6-mlegend`):
+persistent **full-bleed bottom sheet** flush to the bottom edge of the viewport, closing
+into the מקרא button that spans the screen's foot (`js/groups.js`, `.fold6-mlegend`;
+`FOLD6_MLEGEND_POSE = "sheet"`). The constant also carries a floating top-right `"card"`
+branch — **that is not the shipped pose**; every description below is the sheet.
 
 ```
-                                ╭─────────╮  ← closed: the card shrunk to a pill in
-                                │  מקרא   │    the TOP-RIGHT corner. Its right edge
-                                ╰─────────╯    is flush with the title blocks below
-
- ╭───────────────────────────────────╮  ← open: the SAME card, its top edge fixed
- │ ×             מקרא                │     and its BOTTOM grown downward
+ ╭───────────────────────────────────╮  ← open: bottom edge FIXED to the screen's
+ │ ×             מקרא                │     foot, TOP edge rising out of the button
  │ 3 coalition rows │ 3 change rows  │
- │ איסוף הנתונים / ACLED note …      │
+ │ איסוף הנתונים ⌄                   │  ← the ACLED credit, collapsible, INSIDE
  ╰───────────────────────────────────╯
+ ╰───────────────────────────────────╯  ← closed: the same full-width bar, which
+              מקרא                        IS the button it grew out of
 ```
 
 **It is a full-bleed BOTTOM SHEET.** The pose lives behind one switch,
