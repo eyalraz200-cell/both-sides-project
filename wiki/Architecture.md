@@ -159,15 +159,19 @@ silent, a mid-stuck re-bake (iOS address-bar `resize`) froze the stuck-size view
 and on scroll-back-up the dash faded back in stretched across the wider un-stuck frame
 while the white fill tracked the real box — fill leaking outside a distorted stroke.
 
-`.section-title`'s base rule (`font: 300 20px/1.5 'HadassahFriedlaender'`) is shared by
+`.section-title`'s base rule (`font: 100 20px/1.5 'HadassahFriedlaender'`) is shared by
 **every** card. No page overrides its font-size or weight — with **one named exception:
 @fold16's credits card, `#page-15 .section-title`, is 40px on desktop and 28px under the
 600px breakpoint** (`style.css`), because it is the piece's closing headline over a
 near-viewport-tall card, not a caption. Any other title that looks differently sized at
 the same viewport width is a regression. Only two faces exist in `fonts/` — Regular (400)
-and Thin (100) — so **300 resolves down to the real Thin file** while anything from 500
-up is browser-synthesized thickening of Regular. That is why 300 was picked over the
-300-700 sweep: the synthesized weights read as one muddy face, 300 is genuinely drawn.
+and Thin (100) — so **the light end is the real Thin file** while anything from 500
+up is browser-synthesized thickening of Regular. That is why the light weight was picked
+over the 300-700 sweep: the synthesized weights read as one muddy face, Thin is genuinely
+drawn. It is written as `100` rather than `300`: with only 100 and 400 present, CSS
+font-matching already resolved a 300 request down to this same Thin file, so the two
+render identically and 100 names the weight actually drawn. If a real Light 300 face is
+ever licensed, add its `@font-face` first — only then does 300 mean something different.
 It also retires the `.latin-acronym` workaround, which now inherits the base weight
 instead of forcing 400 — with no synthesis there is no filled-apex artifact to dodge,
 and a 400 acronym would sit heavier than the Hebrew around it.
