@@ -230,7 +230,11 @@ function draw() {
 // point this frame or the next: the picker's glass, which takes its blit off
 // this canvas between two paints of its own (p7HideAxisCards, page7.js). Every
 // other caller wants draw().
+// Bumped on every paint. Readers that copy the canvas (the picker's glass,
+// page7.js) compare it to skip a re-blit when nothing has been repainted.
+let drawSerial = 0;
 function drawNow() {
+  drawSerial++;
   const W = canvas.clientWidth, H = canvas.clientHeight;
   // Keep the backing store in lockstep with the CSS box on every paint, not
   // just on `resize`: iOS fires resize mid browser-bar slide, so init() can

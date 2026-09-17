@@ -1550,19 +1550,15 @@ function p7StartAnimLoop() {
 const P7_BULGE_MS    = 120;
 const P7_BULGE_HOLD  = 12;   // cells with the gap kept exact
 const P7_BULGE_REACH = 30;   // cells where the push has faded to zero
-// MOBILE reads the same shove far tighter. Desktop's 12/30 cells are ~10/25px
-// of taper there (the pitch is ~2px), and every dot inside it takes a
-// SUB-PIXEL shift — which the draw's device-pixel snap (`q`) then rounds a
-// whole pixel one way or the other as the bulge eases, so a field of 14,000
-// dots shimmered around the picked one. The push instead stops at the cells the
-// grown block actually covers: full strength under the block, gone one cell
-// past it. The neighbours are moved out of the way, nothing further twitches.
-function p7BulgeHold(b) {
-  return isMobile() ? Math.max(1, Math.round(b.size / p7Cell())) : P7_BULGE_HOLD;
-}
-function p7BulgeReach(b) {
-  return isMobile() ? p7BulgeHold(b) + 1 : P7_BULGE_REACH;
-}
+// Both breakpoints push on the same 12/30-cell profile. What made a phone
+// SHIMMER under the picker was not the reach but the shift's precision: a
+// 2-3px dot moved by a fraction of a device pixel lands on different device
+// pixels with different anti-aliased edges, so its brightness — not just its
+// place — changed every frame of the bulge's ease, and a field of them read as
+// colour flashing. p7DrawSideSquares quantises the shift to whole device
+// pixels on mobile, so a pushed dot only ever translates, never re-rasterises.
+function p7BulgeHold(b)  { return P7_BULGE_HOLD; }
+function p7BulgeReach(b) { return P7_BULGE_REACH; }
 // The hover dim (every other square drops to hoverDim(actor)) ramps instead of
 // flipping. A binary dim flickered when leaving a BIG square: the bulge pushes
 // its neighbours away, so the pointer crosses a ring of bare canvas with no dot
@@ -1600,7 +1596,7 @@ function p7BulgeTick() {
   const now = performance.now();
   const dt  = p7BulgeLastTick ? Math.min(100, now - p7BulgeLastTick) : 0;
   p7BulgeLastTick = now;
-  const hovered = p7Grid.on ? null : (p7.hoveredEvent || (p7Inspect && p7Inspect.dragging ? p7Inspect.event : null));
+  const hovered = p7BulgeHovered();
   if (hovered && p7BulgeTier(hovered) && !p7BulgeT.has(hovered)) p7BulgeT.set(hovered, { t: 0 });
   // @fold13's picked dot rides this same clock, on its own terms. Two
   // differences from the timeline's swell, both deliberate:
@@ -1615,10 +1611,16 @@ function p7BulgeTick() {
   const p9Pick = (typeof p7InspectPage === "function" && p7InspectPage() === 12 &&
                   p7Inspect.dragging) ? p7Inspect.event : null;
   if (p9Pick && !p7BulgeT.has(p9Pick)) p7BulgeT.set(p9Pick, { t: 0 });
+  // Every ramp here: AT its target it stays put. `target > t ? up : down` sent
+  // a value that had just reached 1 back down a step and up again the next
+  // frame — 1 → 0.993 → 1 → … — so p7BulgeActive never saw it settle and the
+  // anim loop repainted 14k dots every frame for as long as a dot was hovered or
+  // held. That was the stutter under the picker's glass (and a busy loop on
+  // every desktop hover).
   for (const [ev, b] of p7BulgeT) {
     const target = (ev === hovered || ev === p9Pick) ? 1 : 0;
     const step = dt / P7_BULGE_MS;
-    b.t = target > b.t ? Math.min(1, b.t + step) : Math.max(0, b.t - step);
+    if (b.t !== target) b.t = target > b.t ? Math.min(1, b.t + step) : Math.max(0, b.t - step);
     if (b.t === 0 && target === 0) p7BulgeT.delete(ev);
   }
   // @fold13's own dim ramp. NOT p9.hoverDimT: page9's pill-hover rAF owns that
@@ -1627,27 +1629,40 @@ function p7BulgeTick() {
   if (typeof p9 !== "undefined" && dt) {
     const pickTarget = p9Pick ? 1 : 0;
     const ds = dt / P7_HOVER_DIM_MS;
-    p9.pickDimT = pickTarget > (p9.pickDimT || 0)
-      ? Math.min(1, (p9.pickDimT || 0) + ds)
-      : Math.max(0, (p9.pickDimT || 0) - ds);
+    const cur = p9.pickDimT || 0;
+    if (cur !== pickTarget) p9.pickDimT = pickTarget > cur ? Math.min(1, cur + ds) : Math.max(0, cur - ds);
   }
   // The dim rides the same frame clock, but on its own (shorter) duration and
   // for EVERY hover — tier-0 squares never enter p7BulgeT, yet they dim too.
   const dimTarget = (p7.hoveredEvent || (p7Inspect && p7Inspect.dragging ? p7Inspect.event : null)) ? 1 : 0;
-  if (dt) {
+  if (dt && p7.hoverDimT !== dimTarget) {
     const ds = dt / P7_HOVER_DIM_MS;
     p7.hoverDimT = dimTarget > p7.hoverDimT ? Math.min(1, p7.hoverDimT + ds)
                                             : Math.max(0, p7.hoverDimT - ds);
   }
   if (p7BulgeT.size === 0 && p7.hoverDimT === dimTarget) p7BulgeLastTick = 0;
 }
+// "Still animating" has to answer against the SAME targets p7BulgeTick drives,
+// or the loop never settles. It used to read p7.hoveredEvent alone — but the
+// mobile picker's pick lives in p7Inspect.event (hoveredEvent stays null on a
+// phone), so through a whole hold the bulge sat at 1 against a target of 0
+// and the dim at 1 against 0: "active" every frame, a full 14k-dot repaint
+// every frame for as long as the finger was down. The stutter under the glass.
+function p7BulgeHovered() {
+  if (p7Grid.on) return null;
+  return p7.hoveredEvent || (typeof p7Inspect !== "undefined" && p7Inspect.dragging ? p7Inspect.event : null);
+}
 function p7BulgeActive() {
+  const hovered = p7BulgeHovered();
+  const p9Pick = (typeof p7InspectPage === "function" && p7InspectPage() === 12 &&
+                  typeof p7Inspect !== "undefined" && p7Inspect.dragging) ? p7Inspect.event : null;
   for (const [ev, b] of p7BulgeT) {
-    const target = ev === (p7.hoveredEvent || null) ? 1 : 0;
+    const target = (ev === hovered || ev === p9Pick) ? 1 : 0;
     if (b.t !== target) return true;
   }
   // The dim ramp needs frames of its own — a tier-0 hover has no bulge at all.
-  if (p7.hoverDimT !== (p7.hoveredEvent ? 1 : 0)) return true;
+  const dimTarget = (p7.hoveredEvent || (typeof p7Inspect !== "undefined" && p7Inspect.dragging ? p7Inspect.event : null)) ? 1 : 0;
+  if (p7.hoverDimT !== dimTarget) return true;
   return false;
 }
 // The bulges that touch this side, resolved to centre + half-extra push + grown
@@ -2982,7 +2997,13 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     if (bulges.length) {
       const own = bulges.find(b => b.ev === events[i]);
       if (own) bulgeSize = own.size;
-      else { const sh = p7BulgeShift(bulges, col, drow); destX += sh.dx; destY += sh.dy; }
+      else {
+        const sh = p7BulgeShift(bulges, col, drow);
+        // MOBILE: whole device pixels only (see p7BulgeHold's note) — the dot
+        // keeps its exact rasterised footprint and just moves.
+        destX += isMob ? q(sh.dx) : sh.dx;
+        destY += isMob ? q(sh.dy) : sh.dy;
+      }
     }
 
     // Continuing page8's reverse glide into its resting timeline cell (see
@@ -6952,6 +6973,7 @@ function p7InspectInit() {
 
   function hideLoupe() {
     p7Inspect.dragging = false;
+    loupeLastKey = null;   // the next hold blits afresh, whatever the paint serial says
     window.removeEventListener("touchmove", loupeMove, { passive: false });
     // @fold13's growth and dim have to ramp back DOWN, and that needs frames
     // this fold does not otherwise produce — without it the grid stays dimmed
@@ -7199,6 +7221,22 @@ function p7InspectInit() {
       if (typeof updateGroups === "function") updateGroups();
     }
 
+    // The source rect, in whole device pixels (see the blit below for why).
+    const srcDev = Math.round(src * dpr);
+    const sx = Math.round((mx - src / 2) * dpr), sy = Math.round((my - src / 2) * dpr);
+    // NOTHING TO DO if the canvas hasn't been repainted since the last blit and
+    // the sampled square is the same device pixels: loupeTick runs this every
+    // frame of a hold, and near a headline card each run was an x-ray — a full
+    // 14k-dot repaint — to end up blitting the identical picture. The serial is
+    // core.js's paint counter; the key is taken again AFTER the x-ray below, so
+    // the x-ray's own paint doesn't read as "changed" next frame. Checked
+    // BEFORE the x-ray, which is the expensive part.
+    const keyNow = sx + "|" + sy + "|" + srcDev + "|" + drawSerial;
+    if (keyNow === loupeLastKey) {
+      placeLoupe(cx, cy);
+      return;
+    }
+
     // X-RAY the headline cards. They are opaque plaques on the same canvas the
     // glass blits, so one sitting over the finger covered exactly the dots the
     // reader lifted the glass to read. Only worth the redraw when the sampled
@@ -7213,8 +7251,21 @@ function p7InspectInit() {
     // finger. That bought a full extra canvas repaint EVERY FRAME on the fold
     // with 14k+ dots: the stutter. A stale map, not a stale idea.
     if (p7AxisCardsOnThisFold()) {
-      for (const [, q] of p7.axisEventPositions) {
-        if (Math.abs(q.y - my) < srcHalf + P7_LOUPE_CARD_BAND_PX) { overCard = true; break; }
+      // The cards' REAL boxes when the draw has published them (p7.axisCardRects,
+      // both axes) — the y-band alone was true for the whole width of the screen
+      // at a card's height, and the notable events are exactly the big dots, so
+      // the glass sat over one of those and paid the full 14k-dot repaint on
+      // EVERY move: the stutter on a phone. The band is only the fallback.
+      const rects = p7.axisCardRects;
+      if (rects && rects.size) {
+        const x0 = mx - srcHalf, x1 = mx + srcHalf, y0 = my - srcHalf, y1 = my + srcHalf;
+        for (const [, r] of rects) {
+          if (r.x < x1 && r.x + r.w > x0 && r.y < y1 && r.y + r.h > y0) { overCard = true; break; }
+        }
+      } else {
+        for (const [, q] of p7.axisEventPositions) {
+          if (Math.abs(q.y - my) < srcHalf + P7_LOUPE_CARD_BAND_PX) { overCard = true; break; }
+        }
       }
     }
     // ONE extra draw, in ONE frame: the canvas is repainted without the cards,
@@ -7235,16 +7286,32 @@ function p7InspectInit() {
     lctx.fillRect(0, 0, P7_LOUPE_SIZE, P7_LOUPE_SIZE);
     // The main canvas's backing store is DPR-scaled (see draw() in js/core.js),
     // so the source rect is in device pixels while the destination is CSS px.
-    const sx = (mx - src / 2) * dpr, sy = (my - src / 2) * dpr;
+    // WHOLE device pixels, both origin and size. The blit is nearest-neighbour
+    // (below), so a fractional origin re-phases every magnified dot against the
+    // source grid each time the finger moves a fraction of a pixel: a 2px dot
+    // came out as a different 8px pattern every frame, and a field of them under
+    // the glass read as colour flashing. Snapped, a sub-pixel move changes
+    // nothing until it crosses a device pixel, and then everything translates
+    // by one whole magnified pixel together. The centre is off by under a
+    // device pixel, which nothing can see.
     lctx.imageSmoothingEnabled = false; // dots are 1–2px; smoothing turns them to mush
-    lctx.drawImage(canvasEl, sx, sy, src * dpr, src * dpr, 0, 0, P7_LOUPE_SIZE, P7_LOUPE_SIZE);
+    lctx.drawImage(canvasEl, sx, sy, srcDev, srcDev, 0, 0, P7_LOUPE_SIZE, P7_LOUPE_SIZE);
     if (overCard) p7DrawAxisCardsOnly(canvasEl.getContext("2d"));  // cards back, same frame
-
-    // Held above the fingertip so the finger isn't covering what's being read,
-    // and clamped so it stays fully on screen near the edges.
+    loupeLastKey = sx + "|" + sy + "|" + srcDev + "|" + drawSerial;
+    placeLoupe(cx, cy);
+  }
+  let loupeLastKey = null;
+  // Held above the fingertip so the finger isn't covering what's being read,
+  // and clamped so it stays fully on screen near the edges.
+  // Whole device pixels for the element too: composited at a fractional
+  // offset the glass's own 8px-per-dot content is resampled every frame it
+  // moves, which shimmers on a 3x screen.
+  function placeLoupe(cx, cy) {
+    const dpr = window.devicePixelRatio || 1;
     const half = P7_LOUPE_SIZE / 2;
-    const left = Math.max(4, Math.min(cx - half, window.innerWidth - P7_LOUPE_SIZE - 4));
-    const top  = Math.max(4, cy - P7_LOUPE_LIFT_PX - half);
+    const snap = v => Math.round(v * dpr) / dpr;
+    const left = snap(Math.max(4, Math.min(cx - half, window.innerWidth - P7_LOUPE_SIZE - 4)));
+    const top  = snap(Math.max(4, cy - P7_LOUPE_LIFT_PX - half));
     loupeEl.style.left = `${left}px`;
     loupeEl.style.top  = `${top}px`;
     loupeEl.classList.add("is-visible");
@@ -7477,6 +7544,10 @@ function p7InspectInit() {
   }, { passive: true });
 
   // The hold-time half: only bound while p7Inspect.dragging.
+  // One glass paint per frame: a phone's touch stream runs at 120Hz, twice the
+  // display, and each paint may carry a full canvas repaint (a pick change, a
+  // card x-ray) — painting on every event ran two of those per frame.
+  let loupeMoveRaf = 0;
   function loupeMove(e) {
     const t = e.touches[0];
     if (!t) return;
@@ -7484,7 +7555,11 @@ function p7InspectInit() {
     e.preventDefault();
     loupeX = t.clientX;
     loupeY = t.clientY;
-    drawLoupe(loupeX, loupeY);
+    if (loupeMoveRaf) return;
+    loupeMoveRaf = requestAnimationFrame(() => {
+      loupeMoveRaf = 0;
+      if (p7Inspect.dragging) drawLoupe(loupeX, loupeY);
+    });
   }
 
   // Release drops the selection entirely — the frame goes back to its resting

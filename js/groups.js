@@ -1355,7 +1355,7 @@ const checkAcledNote     = watchCardThreshold(acledNoteCardEl, 0.5, acledNoteTri
 // (.fold6-mlegend-card::after, style.css). `var` — a manual/ harness drives it.
 var FOLD6_MLEGEND_HANDLE_TOP_PX = 5;
 var FOLD6_MLEGEND_JUMP_PX = 52;   // manual/-baked 2026-09-16
-var FOLD6_MLEGEND_JUMP_MS = 700;   // up and back down, total
+var FOLD6_MLEGEND_JUMP_MS = 1180;  // up and back down, total (manual/-baked 2026-09-17)
 let fold6MLegendJumpAt = null;
 // THE FLASH — the pill darkens and comes back over the jump, so the nudge reads
 // as "something here" rather than a shape moving. Its own clock and its own
@@ -1363,7 +1363,7 @@ let fold6MLegendJumpAt = null;
 // is the candidate switch (off = the jump alone).
 var FOLD6_MLEGEND_FLASH_ON    = true;
 var FOLD6_MLEGEND_FLASH_COLOR = "#e6e4ec";
-var FOLD6_MLEGEND_FLASH_MS    = 640;
+var FOLD6_MLEGEND_FLASH_MS    = 1180;   // manual/-baked 2026-09-17
 let fold6MLegendFlashBase = null;   // the fill it was wearing when the jump began
 function fold6MLegendFlashK() {
   if (!FOLD6_MLEGEND_FLASH_ON || fold6MLegendJumpAt === null) return 0;
@@ -1490,7 +1490,7 @@ function fold8MeasureTooltipHeight() {
 // fraction means the card has to climb FURTHER before the fold fires — 0.15
 // holds the demo back until the card has nearly cleared the top of the screen,
 // where the docked frame and the magnifying-glass demo can own the view.
-var FOLD8_MOBILE_CARD_FRAC = 0.15;
+var FOLD8_MOBILE_CARD_FRAC = 0.28;   // manual/-baked 2026-09-17
 function fold8TooltipCardFrac() {
   if (isMobile()) return FOLD8_MOBILE_CARD_FRAC;
   const fallback = 0.5 - FOLD8_TOOLTIP_ABOVE_PX / window.innerHeight;

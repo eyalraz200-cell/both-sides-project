@@ -153,6 +153,15 @@ function rng(seed) {
    extra never reads as "some group". */
 window.OG_EXTRAS = ['#0B3D91', '#7A4EFF', '#00A6A6', '#E4572E', '#8A8F98'];
 
+/* Named colour exclusions. `warm` drops the two that read yellow/orange: the
+   group colour #F9B624 (תנועות התנחלות באיו״ש) and the extra #E4572E. Dropping
+   the first means that GROUP is no longer represented on the card — a real
+   editorial choice, not just a tint change. */
+window.OG_DROPS = {
+  yellow: ['#f9b624'],              /* the bright one only — orange stays */
+  warm:   ['#f9b624', '#e4572e']    /* both, if the orange ever needs to go too */
+};
+
 /* The project's own dash, ported from updateTextCardFrameDashes + fitDashArray
    in js/core.js: 2px stroke, rx 7, inset 1px, and a period as close to 4px as
    divides the perimeter EVENLY — that even division is the whole trick, and
@@ -204,6 +213,16 @@ window.OG_RENDER = function (opts) {
   var extras = opts.extras ? Math.max(0, Math.min(OG_EXTRAS.length, Math.round(opts.extras))) : 0;
   var add = OG_EXTRAS.slice(0, extras);
 
+  /* Applied to the group set AND the extras, so "no yellow/orange" means none
+     from either source. */
+  var drop = opts.drop
+    ? (typeof opts.drop === 'string' ? (OG_DROPS[opts.drop] || []) : opts.drop)
+    : [];
+  var keep = function (list) {
+    return list.filter(function (c) { return drop.indexOf(String(c).toLowerCase()) < 0; });
+  };
+  add = keep(add);
+
   /* No two neighbours share a colour. "Neighbour" is both directions: the dot
      ABOVE in the same column, and the dot BESIDE it in the other column at the
      same row — a horizontal pair of twins reads as a deliberate rung and pulls
@@ -211,7 +230,8 @@ window.OG_RENDER = function (opts) {
      one-colour palette still terminates instead of spinning. */
   var picked = [[], []];
   [['colA', pal.a], ['colB', pal.b]].forEach(function (pair, ci) {
-    var set = pair[1].concat(add);
+    var set = keep(pair[1]).concat(add);
+    if (!set.length) set = pair[1].slice();   /* never render an empty column */
     var rand = rng(seed + ci * 7919);
     for (var i = 0; i < n; i++) {
       var c, tries = 0;
@@ -250,10 +270,29 @@ if (typeof ResizeObserver !== 'undefined') {
 }
 document.fonts && document.fonts.ready.then(function () { paintPlateDash(); });
 
-/* The chosen card: B, project palette, Regular, 4 extra colours, seed 25. */
-OG_RENDER(Object.assign({ palette: 'project', fw: 400, extras: 4,
-                          seed: 20260917 + 25 * 104729, dashscale: 2 },
-                        window.OG_PRESETS.B));
+/* THE CHOSEN CARD, picked 2026-09-17: preset B (tuned), project group palette
+   with 4 extras, Regular 400, dash scale 2, shuffle 3, and the bright yellow
+   #F9B624 dropped — which also drops תנועות התנחלות באיו״ש from the field. */
+window.OG_CHOSEN = Object.assign({ palette: 'project', fw: 400, extras: 4,
+                                   shuffle: 3, dashscale: 2, drop: 'yellow' },
+                                 window.OG_PRESETS.B);
+
+/* Any of it can be overridden from the query string, which is how the seed
+   sheet shows two dozen shuffles of the SAME card side by side: each iframe is
+   this page at ?bare=1&shuffle=N. `shuffle` is the harness's 1..60 knob; the
+   real seed is derived from it so a number in the sheet means the same thing
+   as the same number in the panel. */
+(function () {
+  var q = new URLSearchParams(location.search);
+  var o = Object.assign({}, window.OG_CHOSEN);
+  ['dot','pitch','colgap','cardw','cardr','fs','fw','extras','dashscale','shuffle']
+    .forEach(function (k) { if (q.has(k)) o[k] = parseFloat(q.get(k)); });
+  if (q.has('palette')) o.palette = q.get('palette');
+  if (q.has('drop')) o.drop = q.get('drop');
+  o.seed = 20260917 + (o.shuffle || 1) * 104729;
+  window.OG_CURRENT = o;
+  OG_RENDER(o);
+})();
 </script>
   <!-- SCAFFOLDING — the harness transport, then the compare/manual panel.
        Skipped under ?bare=1: the mockup embeds four copies of this page, and
