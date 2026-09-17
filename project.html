@@ -17,7 +17,7 @@
   <meta property="og:locale" content="he_IL" />
   <meta property="og:site_name" content="שקוף" />
   <meta property="og:title" content="קיצוניים משני הצדדים" />
-  <meta property="og:description" content="אספנו 14,451 פעולות פוליטיות במרחב הציבורי לאורך ארבע השנים האחרונות. קבעו בעצמכם - מי הם הקיצוניים משני הצדדים.&#10;פרויקט אינטראקטיבי מאת איל רז." />
+  <meta property="og:description" content="אספנו 14,451 פעולות פוליטיות במרחב הציבורי לאורך ארבע השנים האחרונות. קבעו בעצמכם - מי הם הקיצוניים משני הצדדים?&#10;פרויקט אינטראקטיבי מאת איל רז." />
   <meta property="og:url" content="https://eyalraz200-cell.github.io/both-sides-project/project.html" />
   <meta property="og:image" content="https://eyalraz200-cell.github.io/both-sides-project/og-image.png" />
   <meta property="og:image:width" content="2400" />
@@ -25,7 +25,7 @@
   <meta property="og:image:alt" content="קיצוניים משני הצדדים — ניתוח הפעילות של המחנות הפוליטיים בישראל" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="קיצוניים משני הצדדים" />
-  <meta name="twitter:description" content="אספנו 14,451 פעולות פוליטיות במרחב הציבורי לאורך ארבע השנים האחרונות. קבעו בעצמכם - מי הם הקיצוניים משני הצדדים.&#10;פרויקט אינטראקטיבי מאת איל רז." />
+  <meta name="twitter:description" content="אספנו 14,451 פעולות פוליטיות במרחב הציבורי לאורך ארבע השנים האחרונות. קבעו בעצמכם - מי הם הקיצוניים משני הצדדים?&#10;פרויקט אינטראקטיבי מאת איל רז." />
   <meta name="twitter:image" content="https://eyalraz200-cell.github.io/both-sides-project/og-image.png" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -302,8 +302,26 @@
   <script src="js/fold11.js"></script>
   <script src="js/bootstrap.js"></script>
   <script src="reload.js"></script>
-  <!-- SCAFFOLDING — the harness transport (must load BEFORE any _debug-*.js). -->
-  <script src="_debug-bus.js"></script>
-  <script src="_debug-inspect.js"></script>
+  <!-- SCAFFOLDING — the harness transport (must load BEFORE any _debug-*.js),
+       requested ONLY on a dev host. GitHub Pages builds with Jekyll, which
+       refuses to serve any path beginning with an underscore, so every
+       _debug-* tag that reaches production is a guaranteed 404 in a real
+       visitor's console. The alternative fix — a .nojekyll file — would make
+       Pages serve them instead, i.e. ship the whole harness rig to visitors,
+       which the project's own rule forbids. Same host test as isLocalHost()
+       in js/core.js and reload.js's private copy; keep the three in sync.
+       Add further _debug-* tags INSIDE this block, never outside it. -->
+  <script>
+  (function () {
+    var h = location.hostname;
+    var local = h === "localhost" || h === "127.0.0.1" || h === "[::1]" || h === "" ||
+      h.endsWith(".local") || /^10\./.test(h) || /^192\.168\./.test(h) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(h);
+    if (!local) return;
+    ["_debug-bus.js", "_debug-inspect.js"].forEach(function (src) {
+      document.write('<script src="' + src + '"><\/script>');
+    });
+  })();
+  </script>
 </body>
 </html>

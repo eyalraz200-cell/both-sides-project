@@ -1478,9 +1478,14 @@ function p9BulgeTick() {
   // strip's own bulge (p9LegitBulges) takes it, the columns' loop never sees it.
   if (hovered && p7BulgeTier(hovered) && !p9BulgeT.has(hovered)) p9BulgeT.set(hovered, { t: 0, legit: !!p9.hoveredLegit });
   let active = false;
+  // Mobile: one at a time — the old push relaxes before the new pick swells
+  // (same reasoning as p7BulgeTick, page7.js).
+  let relaxing = false;
+  if (isMobile()) for (const [ev, b] of p9BulgeT) { if (ev !== hovered && b.t > 0) { relaxing = true; break; } }
   for (const [ev, b] of p9BulgeT) {
     const target = ev === hovered ? 1 : 0;
     const step = dt / p7BulgeMs();
+    if (target === 1 && relaxing) { active = true; continue; }
     // Holds at its target — `target > t` alone stepped a settled 1 back down
     // (see p7BulgeTick, page7.js).
     if (b.t !== target) b.t = target > b.t ? Math.min(1, b.t + step) : Math.max(0, b.t - step);
