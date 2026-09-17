@@ -1565,6 +1565,16 @@ function updateGroups() {
         if (!stillHighlighted) opacity *= dimFactor;
       }
     }
+    // Fourth, lowest: a hovered legend ROW (fold6LegendHoverActor, js/groups.js)
+    // dims every square that isn't that group's — the same clause the canvas
+    // dots take in page7.js / page9.js, so the 8 claimed squares follow.
+    if (targetEvent && typeof fold6LegendHoverDimT === "function"
+        && !(typeof p7 !== "undefined" && p7.hoveredEvent)
+        && !(typeof p9 !== "undefined" && (p9.hoveredEvent || p9.hoveredCategoryIdx !== null || p9.hoverDimT > 0))) {
+      const lt = fold6LegendHoverDimT();
+      if (lt > 0 && targetEvent.actor !== fold6LegendHoverActor)
+        opacity *= 1 - (1 - hoverDim(targetEvent.actor)) * lt;
+    }
     // @fold14's own legit-dot fade-out (p9.fold13OutT, drawPage9) only ever
     // fades events whose category is still classified "below" (legitimate) —
     // extreme ("above") events morph away separately instead (p9.fold13ExtremeMorphT,

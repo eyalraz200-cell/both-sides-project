@@ -76,20 +76,24 @@ function p8CurrentT() {
 
 function p8RunAnimLoop() {
   if (p8PhaseStart === null) return;
-  if (currentPage === 10 || currentPage === 11) draw();
+  // Page 9 too: the reverse can still be in the air after the flip to @fold10
+  // (js/core.js drawNow routes that frame here).
+  if (currentPage >= 9 && currentPage <= 11) draw();
   if (p8CurrentT() !== p8PhaseToT) {
     requestAnimationFrame(p8RunAnimLoop);
   } else {
     p8PhaseFromT = p8PhaseToT; // settle here — p8CurrentT() reads this once phaseStart is null
     p8PhaseStart = null;
     if (p8PhaseToT === 0) p8Engaged = false; // back at rest — forward can fire again later
-    if (currentPage === 10 || currentPage === 11) draw(); // final frame, locked at rest
+    if (currentPage >= 9 && currentPage <= 11) draw(); // final frame, locked at rest
     // LANDED: a «הצגת גודל האירועים» press made in the air runs now — the dots
     // settle first, then resize (p7ScopeFlushPending, js/groups.js).
     // …unless @fold13 has taken the glide over (page 12, js/nav.js): its own
     // continuation flushes when IT lands, on the layer that is actually drawing.
     const p9HasIt = typeof p9 !== "undefined" && p9.anim && p9.anim.plainGlide;
     if (p8PhaseToT === 1 && !p9HasIt && typeof p7ScopeFlushPending === "function") p7ScopeFlushPending();
+    // Mobile: the closed legend's nudge rides the landing (fold11GlideLanded, js/groups.js).
+    if (p8PhaseToT === 1 && typeof fold11GlideLanded === "function") fold11GlideLanded();
   }
 }
 

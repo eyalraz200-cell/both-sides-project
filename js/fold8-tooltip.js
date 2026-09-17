@@ -40,15 +40,15 @@ let fold8SeqDirection       = 1;
 let fold8PrevTooltipRaw     = 0;
 let fold8SeqLastFrameTime   = null;
 let fold8SequenceLoopRunning = false;
-const FOLD8_GROW_MS          = 400; // wall-clock time to reach full scale and hold
-const FOLD8_TOOLTIP_DELAY_MS = 250; // dead time after the crossing, before the grow
+var   FOLD8_GROW_MS          = 400; // wall-clock time to reach full scale and hold
+var   FOLD8_TOOLTIP_DELAY_MS = 250; // dead time after the crossing, before the grow
 // The dead time the CURRENT run of the sequence uses: the 250ms plus the
 // @fold7 fake cursor's glide for the scripted demo (set when the sequence
 // restarts, js/update-groups.js); a hover-driven restart keeps only the 250ms.
 let fold8SeqDelayMs = FOLD8_TOOLTIP_DELAY_MS;
 // Which side of its dot the callout hangs: "left" (mirrored) or "right".
 let fold8TooltipSide = "left";
-const FOLD8_TYPE_MS_PER_CHAR = 15;  // typewriter speed — tuned snappy, not sluggish
+var   FOLD8_TYPE_MS_PER_CHAR = 15;  // typewriter speed — tuned snappy, not sluggish
 
 // Repositions the tooltip against its anchor square each frame — pulled out
 // so both updateGroups' own per-frame call (below) and the standalone
@@ -103,8 +103,10 @@ const TOOLTIP_DOCK_BOTTOM_PX = -18;     // px the frame keeps off the viewport's
                                         // bottom rather than a floating box (picked by eye 2026-09-05).
                                         // sbbTimelineMobileBottomPx() reads this live, so it also sets the
                                         // timeline grid's bottom clearance (now 100).
-const TOOLTIP_DOCK_TOP_MIN_PX = 16;     // the @fold7 spot can never climb above this
-const TOOLTIP_DOCK_SQUARES_GAP_PX = 16; // gap between the frame's bottom edge and the topmost sample square
+// @fold7's two spots — var, driven live by a manual/ harness.
+var TOOLTIP_DOCK_TOP_MIN_PX = 16;       // the demo spot can never climb above this
+var TOOLTIP_DOCK_SQUARES_GAP_PX = 16;   // demo spot: gap between the frame's bottom edge and the topmost sample square
+var TOOLTIP_DOCK_HOLD_GAP_PX = 16;      // hold spot: gap between the lowest sample square and the frame's top edge
 
 // The resting spot, bottom-anchored: measured off the LIVE innerHeight rather
 // than baked as one number, because the frame is the last thing in the stack
@@ -154,10 +156,24 @@ function tooltipDockDropPx(base) {
 // straight to its dock spot. Re-measured whenever the fly is fully reversed
 // (t <= 0), so a resize while resting on @fold7 still tracks the layout.
 let tooltipFold6TopFrozen = null;
+let tooltipFold6FrozenH   = 0;      // the frame height that spot was solved for
+
+// The @fold7 frame is content-sized (.is-fit — height:auto, no clamp, like the
+// desktop tooltip) for as long as it sits at the @fold7 spot: up to the
+// handover, where it collapses and the fixed 100px bar takes over at the rest
+// spot (whose geometry, TOOLTIP_DOCK_H_PX, assumes that height).
+function tooltipFitFold7() {
+  if (!isMobile() || typeof fold9FlyTrigger === "undefined") return false;
+  return fold9FlyTrigger.currentT() < TOOLTIP_DOCK_HANDOVER;
+}
 
 function tooltipDockTopPx(el) {
   const t = typeof fold9FlyTrigger === "undefined" ? 1 : fold9FlyTrigger.currentT();
   if (t >= 1 || typeof fold6SquareEls === "undefined") return tooltipDockDropPx(tooltipDockRestPx());
+  // The fit frame's height follows its text (empty before the demo, then the
+  // demo's, then whatever square the reader holds): re-solve the spot whenever
+  // it changes, or the frame's bottom would run into the squares.
+  if (tooltipFold6TopFrozen !== null && el.offsetHeight !== tooltipFold6FrozenH) tooltipFold6TopFrozen = null;
   if (t <= 0 || tooltipFold6TopFrozen === null) {
     // Measured off `sq`, NOT `wrap`: the wrap is a deliberately zero-size anchor
     // (its left/top IS the square's position — same convention as .group-item),
@@ -175,6 +191,7 @@ function tooltipDockTopPx(el) {
     // them. The floor is its own small constant, NOT the resting spot — the
     // rest is at the bottom of the screen now, and clamping to it would drag
     // every @fold7 frame down there too.
+    tooltipFold6FrozenH   = el.offsetHeight;
     tooltipFold6TopFrozen = Math.max(TOOLTIP_DOCK_TOP_MIN_PX,
       squaresTop - TOOLTIP_DOCK_SQUARES_GAP_PX - el.offsetHeight);
   }
@@ -306,7 +323,7 @@ function tooltipAvoidPx(el, top) {
       const r = sq.getBoundingClientRect();
       if (r.height) bottom = Math.max(bottom, r.bottom);
     }
-    if (bottom > -Infinity) return bottom + TOOLTIP_DOCK_SQUARES_GAP_PX;
+    if (bottom > -Infinity) return bottom + TOOLTIP_DOCK_HOLD_GAP_PX;
   }
   // Every later fold: nothing to dodge. They have two spots of their own and FLIP
   // between them on the switch line, resolved in tooltipDockRestPx before this
@@ -318,6 +335,8 @@ function tooltipAvoidPx(el, top) {
 function tooltipDockMobile(el) {
   const docked = isMobile();
   el.classList.toggle("is-docked", docked);
+  // Before the spot is solved: the fit frame's height is what it subtracts.
+  el.classList.toggle("is-fit", docked && tooltipFitFold7());
   if (docked) {
     // Horizontal centering is the transform's job, so whatever the floating
     // layout wrote into `left` has to be cleared or it would shove the frame
