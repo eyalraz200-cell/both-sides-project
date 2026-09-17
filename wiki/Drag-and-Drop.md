@@ -387,9 +387,13 @@ republished from `drawPage9` when the line moves. Only on @fold13
   `max(p9BulgeSize(ev), drawn sq)`, so it follows the block; the bulge formula's
   `P9_SQ`-based number would have shrunk a 55px block's box to a few px and
   dropped the hover as the cursor moved across it.
-- **Handoff to @fold14.** `drawPage12` lerps each dot from its
-  `p9.fold13StartPos` size down to the flat spread size over `morphT`, shrinking
-  about the block centre — size only, never alpha. **The spread's near end is each
+- **Handoff to @fold14.** `drawPage12` lerps each dot from its recorded column size
+  down to the flat spread size over `morphT`, shrinking about the block centre — size
+  only, never alpha. **All of its geometry is in centres** (`spreadCentreOf` /
+  `centreOf`): the column record is a block's top-left corner at its own size, the
+  spread and couple slots are flat-`SQ` boxes, and anchoring a 23px block to the flat
+  box's corner drew it 10px up-left the frame the spread started and 10px back the
+  frame it ended — the "snap" with the tiers on, in both directions. **The spread's near end is each
   dot's LIVE column position**, not the snapshot: under the spread `drawBandedCols`
   keeps running `p9PlaceDot` in `recordOnly` mode (bookkeeping, no paint — the
   overdraw would ghost), so `p9.lastPositions` is this frame's, animations included,
@@ -515,6 +519,11 @@ left the numbers on screen ~4 s past the drop.
 
 Scroll-driven reset/restore (`p9ResetDrops` / `p9RestoreDrops`, driven from
 `page9UpdateFromScroll` with `page9SavedAboveIdxs`) both seed a plain 3000 ms glide.
+**The reset's flight survives the flip to @fold12**: the un-stick fires above the title's
+mid-screen flip, so the flight is in the air when `currentPage` becomes 11 — `drawNow`
+(js/core.js) keeps routing page 11 to `drawPage9` while `p9.anim` runs (and the bridge
+glide is landed), and `p9RunAnimLoop` paints there too; `drawPage8`'s landed pass would
+otherwise paint every dot at its rest cell in one frame.
 
 **Scrolling into @fold14 does not freeze a running migration.** Every page9 animation
 loop (`p9RunAnimLoop`, `p9LineRunLoop`, both count loops, the count-position animator)

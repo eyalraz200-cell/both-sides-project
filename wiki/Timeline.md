@@ -446,7 +446,9 @@ axis so the first event's label can center over its own circle).
   snapping closed the frame the dot disappears.
 - **Intro wipe** — `P7_AXIS_INTRO_DURATION` 2800 ms, a right-to-left `ctx.clip()` reveal
   covering line, rings, labels and events alike. Gated by `p7AxisShouldShow()` =
-  `fold9FlyTrigger.currentRaw() > 0`, falling back to `p7HasEngaged`. Scrolling back above
+  `fold9FlyTrigger.target() > 0` (the fly's TARGET, not its progress — on the reverse
+  crossing the axis and its cards collapse at once, even while the squares are still
+  flying back), falling back to `p7HasEngaged`. Scrolling back above
   the trigger plays the same wipe in reverse, **faster than the build-in** —
   `P7_AXIS_OUTRO_DURATION` 1250 ms, its own constant (tuned by eye). Don't
   re-tie it to the intro: 500 ms snapped the axis away the moment @fold12's title block hit
@@ -743,7 +745,7 @@ real timeline in and flies those squares out to their real dots — the example 
 **shuts in place** at the @fold7 spot over the first half of the beat, and the docked bar
 **grows back in** at the bottom over the second. `tooltipDockHandoverScale()` is that
 1 → 0 → 1 ramp, eased through `p9Ease` into the frame's scale;
-`TOOLTIP_DOCK_HANDOVER` (**0.5**) is where they meet.
+`TOOLTIP_DOCK_HANDOVER` (**0.5**) is where they meet. **It shuts with its text still in it**: the page flips to 8 the moment the fly starts, and the picker's `sync()` (page7.js) used to put the frame into its empty `.is-picker` state at once — date and description `display:none`, the fit frame falling from its text height to an 11px sliver in one frame, the scale-down then running on nothing (the snap). `sync()` now withholds `.is-picker` while `tooltipFitFold7()` still holds (the first half of the fly), so the frame scales away whole and takes the empty state only past the handover.
 
 **It does NOT grow back.** Past the handover the scale stays **0** for the whole of the
 timeline: there is nothing left for the frame to say at rest — the «לחצו והחזיקו» line moved out
@@ -942,7 +944,7 @@ every gap around it stays exactly `P7_GAP`:
   band the gaps compress by fractions of a px rather than the whole side sliding.
   **Same profile on mobile**, with the shift **quantised to whole device pixels** there (`q(sh.dx)` in `p7DrawSideSquares`, page7.js): a 2–3px dot moved by a fraction of a device pixel lands on different device pixels with different anti-aliased edges, so its brightness changed every frame of the bulge's ease and a field of them read as colour flashing under the glass. Snapped, a pushed dot keeps its exact rasterised footprint and only translates. (A tighter mobile-only reach was tried first and rejected — the push has to look like desktop's.)
 - Per-event 0..1 in `p7BulgeT` (a Map), advanced on wall-clock every draw at
-  `p7BulgeMsFor(ev)` — desktop `P7_BULGE_MS_DESKTOP` 120 flat; mobile `P7_BULGE_MS_MOBILE` **200** for the smallest swelling tier **plus `P7_BULGE_MS_PER_TIER_MOBILE` per tier above it** (both `var`, harness-driven — a 20× swell shoving neighbours 23px at the same 200ms as a 2.4× one read as instant; the collapse runs on the same per-dot clock, so the field slides home at one pace) — toward 1 for the hovered event (or the drag-inspected one) and 0 for
+  `p7BulgeMs()` — `P7_BULGE_MS_DESKTOP` 120, `P7_BULGE_MS_MOBILE` **200** (`var`, `manual/`-baked — the same 120 read as instant under the 4× glass) — toward 1 for the hovered event (or the drag-inspected one) and 0 for
   every other; entries are dropped at 0. Skating across dots: the outgoing bulge keeps
   collapsing while the next opens. `p7BulgeActive()` keeps `p7AnyAnimActive` (and so the
   rAF loop `p7HoverInit` already starts on every hover change) alive until all settle.
@@ -2056,8 +2058,8 @@ below 1. Verified byte-for-byte — rendering the same settled frame batched and
 The wipe latches the first frame `p7AxisShouldShow()` goes true, and the two breakpoints
 answer that differently:
 
-- **Desktop:** the instant @fold8's fly begins (`fold9FlyTrigger.currentRaw() > 0`), falling
-  back to `p7HasEngaged`. Unchanged.
+- **Desktop:** the instant @fold8's fly begins (`fold9FlyTrigger.target() > 0` — the fly's
+  target, so the reverse crossing collapses it at once), falling back to `p7HasEngaged`.
 - **Mobile:** when **@fold8's title block is almost off the top of the screen** —
   `p7AxisIntroCardAlmostOut()`, true once no more than `P7_AXIS_INTRO_CARD_REMAIN_PX_MOBILE`
   (**40px**) of `page7TitleCardEl` is still showing. (That element is `#page-7 .text-card`,
@@ -2494,7 +2496,7 @@ ever set ≤600px (`p7InspectPage`).
 - `p7BulgeActive()` answered against `p7.hoveredEvent` alone, but the picker's pick lives in `p7Inspect.event` — the two now share `p7BulgeHovered()`.
 - the headline-card x-ray (`p7HideAxisCards` + `drawNow()`) ran on every `loupeTick` near a card, and the notable events are exactly the big dots. It now only runs when a card's **real box** (`p7.axisCardRects`) overlaps the sampled square, the card-less paint is kept in an offscreen copy keyed by core.js's `drawSerial` (bumped on every `drawNow`) and blitted from while the serial stands, and `drawLoupe` skips the whole blit when the sampled device pixels and the serial are unchanged (`loupeLastKey`). `loupeMove` also coalesces the 120Hz touch stream to one paint per frame. Measured headless at 3×: a steady hold on a tier-5 dot beside a card went from ~150 full repaints per 800ms to **0**; gliding 12px across it from ~196 to ~34 (the swell's own ramp on the pick changes).
 
-**The pick is made where dots REST, not where the current pick's push has shoved them.** `p7DrawSideSquares` records each dot's push (`pdx`/`pdy`) into `p7.lastPositions`, and `nearestEvent` subtracts it before measuring. Moving off a big dot onto a displaced neighbour used to pick that neighbour on its displaced spot — then the big dot's push relaxed as the swell moved over, the neighbour slid home (up to ~23px on a top-tier dot) and the reader was left holding a dot nowhere near the finger. Measured: a neighbour pushed 23px into the field now ends 1.2px from the finger after the relax. The held dot itself is still tested at its on-screen, swollen size (it is the pusher, not the pushed). Desktop's hover scan is untouched.
+**The pick is made where dots REST, not where the current pick's push has shoved them.** `p7DrawSideSquares` records each dot's push (`pdx`/`pdy`) into `p7.lastPositions`, and `nearestEvent` subtracts it before measuring. Moving off a big dot onto a displaced neighbour used to pick that neighbour on its displaced spot — then the big dot's push relaxed as the swell moved over, the neighbour slid home (up to ~23px on a top-tier dot) and the reader was left holding a dot nowhere near the finger. Measured: a neighbour pushed 23px into the field now ends 1.2px from the finger after the relax. On the timeline the held dot **sticks only for half a pitch past its own rest box** (`stick = heldHalf + p7Cell()/2` in `nearestEvent`), not across its whole swollen box: rest-space picking can't oscillate, so the swollen-box guard only made the adjacent dot unreachable — a top-tier pick held the finger captive across a 49px square with the neighbours shoved 23px out. Measured: half a cell of travel keeps the big dot, one cell picks the adjacent one, two cells the next. @fold13's columns (display-space positions, no `pdx`) keep the swollen-box guard. Desktop's hover scan is untouched.
 
 **And the handover is sequenced, mobile only** (`p7BulgeTick`, page7.js; page9's `p9BulgeTick` likewise): the old bulge collapses first, and only once nothing is relaxing does the new pick swell — in place, under the finger — instead of the two blending. Two things made the old handover jump under the glass: (1) `p7DrawSideSquares` exempted *every* dot with a bulge entry from being pushed, so the moment a dot was picked it snapped from its pushed spot to its rest spot (up to ~23px) while the field slid home over 200ms — on mobile a picked dot now stays pushed by the relaxing bulge until that push is gone, arriving with its neighbours; (2) `p7BulgeTick`'s `dt` was clamped at 100ms, so the first tick after an idle hold (the loop idles once settled now) took half a ramp in one step — clamped to 34ms, both breakpoints. Traced: the picked dot glides 20 → 18 → 13 → 9 → 5 → 1px as the old push relaxes, then swells at 1px.
 

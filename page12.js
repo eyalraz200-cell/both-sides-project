@@ -300,16 +300,24 @@ function drawPage12(ctx, W, H) {
   // left (p9.fold13StartPos) is only the fallback; landing on it made the
   // columns re-pack in one frame the moment the reverse handed back.
   const fromOf = (e, to) => p9.lastPositions.get(e) ?? startPos?.get(e) ?? to;
-  const spreadPosOf = (e) => {
+  // Everything below is in CENTRES. The column record is a block's top-left
+  // corner at ITS OWN size (a tier-3 block is 23px wide at x), while the spread
+  // and couple slots are flat-SQ boxes. Anchoring the block to the flat box's
+  // corner (x + (SQ − 23)/2) drew every tiered block 10px up-left the instant
+  // the spread started, and 10px back the instant it ended — the "snap" seen
+  // both ways whenever the tiers were on. Small dots (sq = SQ) never showed it.
+  const spreadCentreOf = (e) => {
     const to = targets.get(e); if (!to) return null;
     const from = fromOf(e, to);
-    return { x: from.x + (to.x - from.x) * morphT,
-             y: from.y + (to.y - from.y) * morphT };
+    const s0 = from.sq > 0 ? from.sq : SQ;
+    const fx = from.x + s0 / 2, fy = from.y + s0 / 2;
+    const tx = to.x + SQ / 2,   ty = to.y + SQ / 2;
+    return { x: fx + (tx - fx) * morphT, y: fy + (ty - fy) * morphT };
   };
-  const posOf = (e) => {
-    const p = spreadPosOf(e); if (!p) return null;
+  const centreOf = (e) => {
+    const p = spreadCentreOf(e); if (!p) return null;
     const pair = pairs?.byEvent.get(e);
-    if (pair) { p.x += (pair.x - p.x) * pairT; p.y += (pair.y - p.y) * pairT; }
+    if (pair) { p.x += (pair.x + SQ / 2 - p.x) * pairT; p.y += (pair.y + SQ / 2 - p.y) * pairT; }
     return p;
   };
 
@@ -318,7 +326,7 @@ function drawPage12(ctx, W, H) {
   // where the spread wants a flat SQ. Lerp it down on the spread's own clock,
   // shrinking about the block's centre, so it eases into the field instead of
   // popping to 3px on the first frame. Size only, never opacity. A no-op
-  // whenever the tiers are off, since startPos.sq is SQ there.
+  // whenever the tiers are off, since the recorded sq is SQ there.
   const sizeOf = (e) => {
     const s0 = fromOf(e, null)?.sq;
     if (!(s0 > 0) || Math.abs(s0 - SQ) < 0.01) return SQ;
@@ -327,10 +335,9 @@ function drawPage12(ctx, W, H) {
 
   ctx.globalAlpha = 1;
   for (const e of [...p9.leftTopOrder, ...p9.rightTopOrder]) {
-    const p = posOf(e);
-    if (!p) continue;
+    const c = centreOf(e);
+    if (!c) continue;
     const sq  = sizeOf(e);
-    const ctr = (SQ - sq) / 2;   // keep the shrink centred on the flat box
     const pair = pairs?.byEvent.get(e);
     // RECOLOUR ON THE FLY BEAT: a dot leaves @fold14's spread in its own group
     // colour and arrives at its couple slot in a colour drawn from the whole
@@ -343,11 +350,11 @@ function drawPage12(ctx, W, H) {
     // the pop beat — in place, in @fold14's spread, on the same clock the
     // newcomers grow in on. By size, never by opacity.
     if (pairs && !pair) {
-      const s = sq * (1 - popT), off = (SQ - s) / 2;
-      if (s > 0) ctx.fillRect(p.x + off, p.y + off, s, s);
+      const s = sq * (1 - popT);
+      if (s > 0) ctx.fillRect(c.x - s / 2, c.y - s / 2, s, s);
       continue;
     }
-    ctx.fillRect(p.x + ctr, p.y + ctr, sq, sq);
+    ctx.fillRect(c.x - sq / 2, c.y - sq / 2, sq, sq);
   }
 
   // Partnerless slots: a decorative dot from the short camp. It GROWS in
@@ -375,8 +382,19 @@ function drawPage12(ctx, W, H) {
 function p12ShareInit() {
   const wrap = document.getElementById("page12Share");
   if (!wrap) return;
-  const url   = location.href.split("#")[0];
-  const title = document.title || "קיצוניים משני הצדדים";
+  // THE PUBLIC URL, not the one in the address bar. The preview card a chat
+  // app shows (og:image and friends, project.html's <head>) is fetched by that
+  // app from the link it is handed — so a link to this machine's dev server
+  // (192.168.x.x:8080, or localhost) gets no card at all, and a link that
+  // carries a hash or a query fragment can miss the cached one. og:url IS the
+  // canonical address; it is what every share sends. Falls back to the live
+  // address only if the tag is ever missing.
+  const canon = document.querySelector('meta[property="og:url"]');
+  const url   = (canon && canon.content) || location.href.split("#")[0];
+  // The card's own title (og:title, Hebrew) for the share text, not the tab's
+  // English <title> — the text and the card the app fetches should agree.
+  const ogT   = document.querySelector('meta[property="og:title"]');
+  const title = (ogT && ogT.content) || document.title || "קיצוניים משני הצדדים";
   const enc   = encodeURIComponent;
   const hrefs = {
     whatsapp: `https://wa.me/?text=${enc(title + " " + url)}`,

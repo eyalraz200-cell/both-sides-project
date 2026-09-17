@@ -47,7 +47,12 @@ const FOLD13_FADE_SPAN = 0.5;
 let fold13TooltipFaded = false;
 function updateFold13() {
   const tTrigger = fold13Trigger.currentT();
-  const eTrigger = 1 - Math.pow(1 - tTrigger, 3); // ease-out cubic
+  // p9Ease (sine in-out), NOT the ease-out cubic this used to be: a curve that
+  // is fast at 0 is an ease-IN when the trigger plays it backward, so the
+  // reverse spread accelerated into the columns and stopped dead at full
+  // speed — ~10px in the last frame, which read as the columns snapping. The
+  // symmetric curve lands gently in both directions.
+  const eTrigger = p9Ease(tTrigger);
 
   // Capture starting dot positions on the first morph frame — p9.lastPositions
   // holds the clustered positions from the previous (non-morphed) frame. Only a
