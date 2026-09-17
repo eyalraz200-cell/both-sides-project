@@ -149,10 +149,12 @@ function updateFold13() {
 // exceptions to GROUP_TRANSITION_MS because the beats are deliberately uneven —
 // a quick pop, then a long flight.
 // var, not const: tuned live through a manual/ harness (since removed).
-var FOLD14_POP_MS = 775;   // beat 1 — newcomers grow in
+var FOLD14_POP_MS_DESKTOP = 480;   // manual/-baked 2026-09-17 — beat 1, newcomers grow in
+var FOLD14_POP_MS_MOBILE  = 775;   // the phone keeps the pre-tuning value (breakpoint isolation)
+function fold14PopMs() { return isMobile() ? FOLD14_POP_MS_MOBILE : FOLD14_POP_MS_DESKTOP; }
 var FOLD14_FLY_MS = 2240;  // beat 2 — the field flies to the couple slots
-function fold14TotalMs() { return FOLD14_POP_MS + FOLD14_FLY_MS; }
-function fold14PopSpan() { return FOLD14_POP_MS / Math.max(1, fold14TotalMs()); }
+function fold14TotalMs() { return fold14PopMs() + FOLD14_FLY_MS; }
+function fold14PopSpan() { return fold14PopMs() / Math.max(1, fold14TotalMs()); }
 
 function updateFold14() {
   // currentRaw, not currentT — currentT is already p9Ease'd, and each beat

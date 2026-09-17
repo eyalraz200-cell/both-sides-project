@@ -519,9 +519,14 @@ dots the moment `fold13ExtremeMorphT > 0`, so the dots scatter from wherever the
 
 ## Hover
 
-**Dot hover** (`p9HoverInit`): bails when `currentPage !== 11` or an animation is running;
-brute-force scans `p9.lastPositions` with `HIT_PAD` 3 and **skips any dot at or below
-`p9.midY`** — legit dots are not hoverable. A hit highlights the matching dropped pill
+**Dot hover** (`p9HoverInit`): live on every fold the grids are drawn on — `p9HoverPageOk()`:
+@fold13 always, **@fold12 once the bridge glide has landed** (`p8CurrentT() >= 1`), @fold14
+while the strip is still on screen (`p9.fold13OutT < 1`); bails while an animation runs.
+Brute-force scans `p9.lastPositions` with `HIT_PAD` 3 over **both grids — the extreme columns
+and the legit strip** (on @fold12 `drawPage8`'s landed pass fills `p9.lastPositions`, since no
+`drawPage9` frame runs there). A dot below the divider (`p9MidY`, read fresh) sets
+`p9.hoveredLegit`; that flag rides the bulge entry (`{t, legit}` in `p9BulgeT`) so the strip's
+bulge and the columns' never both claim it. A hit highlights the matching dropped pill
 (`.is-hover-highlighted`) and shows `#page9Tooltip` with the date, `descHeMedium`, and
 the actor color driving the box — on desktop as the **fill** behind white text (no stroke;
 the dash `<svg>` is built as always but hidden), on mobile as the dashed SVG border. That
@@ -533,21 +538,33 @@ box-model space open), and derives the path inset/radius from it.
 The tooltip normally opens **upward** from the dot (square anchor corner bottom-left,
 bottom-right for left-side events via `.is-mirrored`) — but the data-side rule is
 overridden at the screen edges by **this fold's own two vertical flip lines**
-(`P9_TIP_FLIP_L` / `P9_TIP_FLIP_R_INSET`, page9.js, both starting at 327 — the rule is the
-one @fold9/@fold10's hover uses, the *values* are per fold, explicit instruction; being
-tuned on `_debug-tip-flip.js`): a dot left of the L line always opens rightward, a dot
+(`P9_TIP_FLIP_FRAC`, page9.js, 0.27 of the screen width in from each edge via
+`p7TipFlipPair(12)` — the rule is the one @fold9/@fold10's hover uses, the *value* is per
+fold and relative to the screen, explicit instructions; manual/-baked 2026-09-17): a dot left of the L line always opens rightward, a dot
 within the R inset of the right edge always opens leftward. Each line is a px distance
 from the edge its mini-legend hangs off, so both follow a window resize. On desktop, when the upward box
 would poke above the column area's fixed ceiling (`p9ExtremeTopY(H)` — the same boundary
 the grid grows up to, under the drop zone / pill row), it **flips downward** instead:
 `.is-flipped` hangs the box below the dot and moves the square anchor corner to the top
 edge (top-left, or top-right when also mirrored), both in the CSS `border-radius` and in
-`updateTooltipDash`'s SVG path. The tooltip element is shared with `p7HoverInit` and the
+`updateTooltipDash`'s SVG path. **A legit-strip dot's box always opens upward** — never
+`.is-flipped` (explicit request; the strip hugs the bottom edge anyway). The tooltip element is shared with `p7HoverInit` and the
 mobile docked frame, which always clear `.is-flipped` when they take it over.
+
+**The legit strip's bulge** (`p9LegitBulges` / `p9LegitBulgeApply` / `p9LegitBulgeSize`,
+page9.js — applied in `drawJumbledBot` and in `drawPage8`'s landed pass): the same
+`p7BulgeShift` lattice push as the columns, on the strip's own cell lattice (one column index
+across both camps, `p9LegitCol`/`p9LegitRow`), but the grown size is **the strip's own tier
+ladder** — `P9_LEGIT_TIER_CELLS[tier] × legitCell − (legitCell − legitSq)`, the block the dot
+gets when the tiers are on — not the columns' `P7_BULGE_MULT` off `P9_SQ`. Pushed dots may run
+off the screen's bottom and sides, **never above the divider**: a neighbour shoved up is held
+at `gridTopY` (overlapping there, by design), and the hovered dot paints last, over them. Flat
+strip only — tiered, the dots already are their crowd size and `p9BulgeTick` registers nothing.
+`p9HoverGrownSize(ev)` picks the right ladder for the hit box and the tooltip anchor.
 
 **The box hangs off the dot's DRAWN box, not its top-left corner.** All four anchors
 (`rawLeft` both ways, `rawTop`, and the flipped `top`) are computed from the dot's centre
-±`halfX`, where `halfX = Math.max(p9BulgeSize(ev), pos.sq) / 2` — the same half-extent the
+±`halfX`, where `halfX = Math.max(p9HoverGrownSize(ev), pos.sq) / 2` — the same half-extent the
 hit box uses. With the flat square corner and edge are the same thing to the eye, but under
 «הצגת גודל האירועים» a block is tens of px wide and anchoring rightward to `pos.x` laid the box
 *on* the block (the mirrored side only looked right because `pos.x` **is** that side's edge).

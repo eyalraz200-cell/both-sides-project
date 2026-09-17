@@ -130,9 +130,11 @@ opacity every frame, so nothing has to switch it back on.
   hover box, and types in the moment the pointer leaves with the dot still hovered. **Hovering a row's click strip also lights up that group's dots**
   (`fold6LegendHoverActor` + `fold6LegendHoverDimTrigger`, 90ms, js/groups.js): every other
   dot on the canvas dims to `hoverDim(actor)`, the same floor a hovered dot uses, on all
-  three dim sites — page7's `p7DrawSideSquares`, page9's `p9PlaceDot`, and the 8 claimed
-  DOM squares in `updateGroups` — as the lowest-priority rule (a hovered dot or pill wins).
+  four dim sites — page7's `p7DrawSideSquares`, page8's bridge (`blendAndDraw`, @fold12),
+  page9's `p9PlaceDot`, and the 8 claimed DOM squares in `updateGroups` — as the lowest-priority rule (a hovered dot or pill wins).
   The actor is kept through the fade-out so its dots stay bright while the rest come back.
+  A row whose group is **filtered out** (`p7FilterOff`) gets no highlight, and filtering a
+  group out under the pointer drops the highlight it had.
   **Hovering a row's click strip
   strikes its label through** (`.is-filter-hover .group-label { text-decoration:
   line-through }`, desktop-only media block) — a preview of the click — and a filtered-out row

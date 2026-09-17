@@ -11,3 +11,6 @@ raw-*.csv
 *.mp4
 _debug-trash.json
 _debug-copy.json
+
+# Scratch screenshots from headless probes — local only.
+shots/

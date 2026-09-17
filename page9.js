@@ -123,7 +123,7 @@ const P9_CELL = P9_SQ + P9_GAP;
 // @fold13's own tooltip flip lines (screen px from each edge) — this fold's
 // pair of the per-fold set declared in page7.js (P7_TIP_FLIP_*_F9 / _F10).
 // `var`s — a manual/ harness drives them.
-var P9_TIP_FLIP_L = 327, P9_TIP_FLIP_R_INSET = 327;
+var P9_TIP_FLIP_FRAC = 0.27;   // share of the screen width in from each edge (see p7TipFlipPair, page7.js)
 const P9_MID  = 719 / 982; // divider position as fraction of H (~73.22vh) — Figma's own measured position; previously raised to 0.65 per an earlier explicit request to move it higher, now lowered back per a later one. Every grid (extreme above, legit below) derives its own geometry from H * P9_MID fresh each frame, so moving this one constant reflows both sides automatically — no other layout code needs to change.
 
 // Fallback gap (before the real, text-derived gap below is measured) reserved
@@ -1084,7 +1084,11 @@ function p9LegitTierPlan(W, H) {
   // האירועים» button works from @fold11 (page 10), where a reader who stays put
   // has the field landed on this strip too: without page 10 here, a press there
   // ran the morph toward a flat endpoint and nothing on screen changed.
-  if (!p9ScopeTiered() || typeof currentPage === "undefined" || currentPage < 10 || currentPage > 12) return null;
+  // …and page 9: @fold11's reverse glide can still be in the air after the
+  // flip to @fold10 (js/core.js keeps drawPage8 painting there), and the
+  // strip is that glide's far end — without the plan the target went flat
+  // mid-flight and the field jumped.
+  if (!p9ScopeTiered() || typeof currentPage === "undefined" || currentPage < 9 || currentPage > 12) return null;
   if (!p7.ready || !p7.leftEvents) return null;
   const mobile = isMobile();
   if (mobile && !P9_LEGIT_SPREAD_M) return null;           // the packed bar has no room to give
@@ -1466,7 +1470,9 @@ function p9BulgeTick() {
   // true and rescheduled a full-canvas redraw every frame the cursor sat on a
   // block, for no visible change. That was the hover stutter.
   const hovered = isMobile() || p9ScopeTiered() ? null : (p9.hoveredEvent || null);
-  if (hovered && p7BulgeTier(hovered) && !p9BulgeT.has(hovered)) p9BulgeT.set(hovered, { t: 0 });
+  // `legit`: born on a strip dot (p9.hoveredLegit, set by the hit-test) — the
+  // strip's own bulge (p9LegitBulges) takes it, the columns' loop never sees it.
+  if (hovered && p7BulgeTier(hovered) && !p9BulgeT.has(hovered)) p9BulgeT.set(hovered, { t: 0, legit: !!p9.hoveredLegit });
   let active = false;
   for (const [ev, b] of p9BulgeT) {
     const target = ev === hovered ? 1 : 0;
@@ -1479,13 +1485,88 @@ function p9BulgeTick() {
   // Keep redrawing while any bulge is still tweening — p9RunAnimLoop only
   // runs during p9.anim, and hover is off while that runs anyway.
   if (active && !p9BulgeRaf) {
-    p9BulgeRaf = requestAnimationFrame(() => { p9BulgeRaf = 0; if (p9PageVisible() && !p9.anim) draw(); });
+    // @fold12 too: landed, nothing else repaints it (drawPage8's t>=1 path).
+    p9BulgeRaf = requestAnimationFrame(() => { p9BulgeRaf = 0; if ((p9PageVisible() || currentPage === 11) && !p9.anim) draw(); });
   }
 }
 // Current grown side of an event's bulge (P9_SQ when it has none).
 function p9BulgeSize(ev) {
   const b = p9BulgeT.get(ev);
   return b ? P9_SQ * (1 + (P7_BULGE_MULT[p7BulgeTier(ev)] - 1) * p9Ease(b.t)) : P9_SQ;
+}
+
+// ── The LEGIT strip's own bulge ──────────────────────────────────────────────
+// The same hover on the dots below the divider, on every fold the strip is on
+// screen (@fold12 landed, @fold13, @fold14 while it is still visible). Two
+// differences from the columns' bulge above, both deliberate:
+//   - the grown size is the strip's OWN tier ladder — the block the dot gets
+//     when the tiers are on (P9_LEGIT_TIER_CELLS at the legit pitch, see
+//     p9LegitTierPlan) — not the columns' P7_BULGE_MULT off P9_SQ.
+//   - the push may run off the screen's bottom and sides, but never above the
+//     divider: the strip is the dot's whole world, so a neighbour shoved up is
+//     held at the strip's top edge instead (overlapping there, by design).
+// Flat strip only — tiered, the dots already ARE their crowd size (p9BulgeTick
+// registers nothing then); the mobile bar has no hover at all. A bulge knows
+// whether it was born on a legit dot (`legit`, from p9.hoveredLegit) so the
+// columns' loop and this one never both claim it.
+function p9LegitBulgeSize(ev, geom) {
+  const sq = p9Metrics().legitSq;
+  const b  = p9BulgeT.get(ev);
+  if (!b) return sq;
+  const n    = P9_LEGIT_TIER_CELLS[Math.min(p7BulgeTier(ev), P9_LEGIT_TIER_CELLS.length - 1)];
+  const full = n * geom.cell - (geom.cell - sq);
+  return sq + (full - sq) * p9Ease(b.t);
+}
+// The strip's lattice, one column index across both camps (0 = the left camp's
+// outer edge), so p7BulgeShift's signs are plain screen space.
+function p9LegitCol(x, geom) { return Math.round((x - (geom.midX - geom.legitLeftCols * geom.cell)) / geom.cell); }
+function p9LegitRow(y, geom) { return Math.round((y - geom.gridTopY) / geom.cell); }
+// The legit bulges alive this frame — one small array per draw, built once and
+// handed to every p9LegitBulgeApply.
+function p9LegitBulges(geom) {
+  const out = [];
+  if (!p9BulgeT.size || geom.mode === "bar" || geom.tier || isMobile()) return out;
+  const sq = p9Metrics().legitSq;
+  for (const [ev, b] of p9BulgeT) {
+    if (!b.legit) continue;
+    const side    = p9.leftIndexOf.has(ev) ? "left" : "right";
+    const indexOf = side === "left" ? p9.leftIndexOf : p9.rightIndexOf;
+    const pos = p9LegitPosOf(ev, indexOf, side, geom);
+    if (!pos) continue;
+    const size = p9LegitBulgeSize(ev, geom);
+    out.push({ ev, col: p9LegitCol(pos.x, geom), row: p9LegitRow(pos.y, geom), size, push: (size - sq) / 2 });
+  }
+  return out;
+}
+// A legit dot's resting {x, y, sq} with the frame's bulges applied — its own
+// growth about the cell centre, or the push away from someone else's. Null
+// when nothing is bulging, so callers keep their plain placement.
+function p9LegitBulgeApply(ev, x, y, sq, geom, bulges) {
+  if (!bulges.length) return null;
+  const own = bulges.find(b => b.ev === ev);
+  if (own) { sq = own.size; x -= own.push; y -= own.push; }
+  else {
+    const sh = p7BulgeShift(bulges, p9LegitCol(x, geom), p9LegitRow(y, geom));
+    x += sh.dx; y += sh.dy;
+  }
+  if (y < geom.gridTopY) y = geom.gridTopY;   // never above the divider
+  return { x, y, sq };
+}
+// The hovered dot's grown side on whichever grid it lives in — the hit-test and
+// the tooltip anchor read this so both track the bulge as it eases.
+function p9HoverGrownSize(ev, W, H) {
+  const b = p9BulgeT.get(ev);
+  if (b && b.legit) return p9LegitBulgeSize(ev, p9LegitGeometry(W, H));
+  return p9BulgeSize(ev);
+}
+// Is a dot hover allowed on the current fold? @fold13 always; @fold12 once the
+// bridge glide has landed (the strip stands still); @fold14 while the strip is
+// still on screen (its fade, p9.fold13OutT, not yet complete).
+function p9HoverPageOk() {
+  if (currentPage === 12) return true;
+  if (currentPage === 11) return typeof p8CurrentT === "function" && p8CurrentT() >= 1;
+  if (currentPage === 13) return (p9.fold13OutT ?? 0) < 1;
+  return false;
 }
 
 // ── «הצגת גודל האירועים» on @fold13 — crowd tiers in the EXTREME columns ─────────
@@ -2527,7 +2608,10 @@ function drawPage9(ctx, W, H) {
     // the per-breakpoint legitSq (desktop P9_SQ; the mobile spread strip's
     // finer P9_LEGIT_SQ_SPREAD_M).
     let sq      = bar ? legitGeom.cell : p9Metrics().legitSq;
-    order.forEach(e => {
+    // The hovered strip dot paints LAST, over the neighbours held at the
+    // divider by the push's clamp (p9LegitBulgeApply).
+    let deferred = null;
+    const place = e => {
       if (!botSet.has(e)) return;
       let pos = p9LegitPosOf(e, indexOf, side, legitGeom);
       if (!pos) return; // guards a stale cache
@@ -2543,6 +2627,9 @@ function drawPage9(ctx, W, H) {
           sqHere = b.sq;
         }
       }
+      // The strip's hover bulge (p9LegitBulges, built once per frame below).
+      const lb = p9LegitBulgeApply(e, pos.x, pos.y, sqHere, legitGeom, legitBulges);
+      if (lb) { pos = { x: lb.x, y: lb.y }; sqHere = lb.sq; }
       // Offscreen dots are still PUT ON RECORD, only not painted. The legit
       // grid packs however many rows its events need (legitRows), which on the
       // V2 desktop strip is more rows than the 150px band can show — skipping
@@ -2551,9 +2638,12 @@ function drawPage9(ctx, W, H) {
       // straight into their extreme column instead of flying. Same reasoning
       // as the mobile bar's recordOnly use.
       const offscreen = pos.y < topY || pos.y >= H;
+      if (e === p9.hoveredEvent && !offscreen) { deferred = [e, pos.x, pos.y, sqHere]; return; }
       p9PlaceDot(e, pos.x, pos.y, targetAlpha, undefined, undefined, undefined, sqHere,
                  barAtRest || offscreen);
-    });
+    };
+    order.forEach(place);
+    if (deferred) p9PlaceDot(deferred[0], deferred[1], deferred[2], targetAlpha, undefined, undefined, undefined, deferred[3], barAtRest);
   }
 
   const leftBotSet = new Set(leftBot), rightBotSet = new Set(rightBot);
@@ -2567,6 +2657,7 @@ function drawPage9(ctx, W, H) {
   // that Figma's actual reference doesn't show.
   ctx.globalAlpha = 1;
   p9BulgeTick();
+  const legitBulges = p9LegitBulges(legitGeom);
   // MOBILE, tiers on: the two blocks' CENTRES sit the same distance from the
   // screen's centre, set by the wider block — the narrower one moves out by
   // half the width difference. Packed flush against the gap's edges, a
@@ -4008,20 +4099,23 @@ function p9HoverInit() {
     // Also fully off mid-drag (.dragging on .page9-sticky): the pointer
     // carrying a pill across the canvas shouldn't light up dot tooltips
     // under the ghost on its way to a zone.
-    if (currentPage !== 12 || p9.anim || isMobile() ||
+    if (!p9HoverPageOk() || p9.anim || isMobile() ||
         document.querySelector(".page9-sticky")?.classList.contains("dragging")) { hide(); return; }
 
     const rect = canvasEl.getBoundingClientRect();
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
     const half = P9_SQ / 2;
+    // The divider, fresh (p9.midY is only written by drawPage9 — on @fold12
+    // page8.js paints the strip): a dot below it is a LEGIT dot.
+    const midY = p9MidY(canvasEl.clientHeight, canvasEl.clientWidth);
 
     // Brute-force nearest-dot scan — p9.lastPositions only holds the dots
     // actually drawn this frame (already in CSS-pixel space, same as
-    // getBoundingClientRect, so no DPR conversion needed). Below-the-line
-    // ("legitimate") dots are skipped entirely, per explicit request — only
-    // the above-the-line ("extreme") block gets the tooltip/dim interaction.
-    // The hovered dot's hit box is its GROWN box (p9BulgeSize) and it wins
+    // getBoundingClientRect, so no DPR conversion needed). Both grids: the
+    // extreme columns and the legit strip below the divider (per explicit
+    // request — the strip's dots hover on every fold they're drawn on).
+    // The hovered dot's hit box is its GROWN box (p9HoverGrownSize) and it wins
     // outright — otherwise the cursor sitting in the white space its bulge
     // opened would drop the hover and the whole grid would flicker back to
     // full opacity between dots.
@@ -4032,11 +4126,10 @@ function p9HoverInit() {
     // the hover, and the grid flickered back to full opacity between frames.
     const hovDrawn = hov && p9.lastPositions.get(hov);
     const hovHalf = hov
-      ? Math.max(p9BulgeSize(hov), (hovDrawn && hovDrawn.sq) || 0) / 2
+      ? Math.max(p9HoverGrownSize(hov, canvasEl.clientWidth, canvasEl.clientHeight), (hovDrawn && hovDrawn.sq) || 0) / 2
       : half;
     let bestEvent = null, bestPos = null, bestDist = Infinity;
     for (const [ev, pos] of p9.lastPositions) {
-      if (pos.y >= p9.midY) continue;
       // A tiered block (@fold13's «הצגת גודל האירועים») is far bigger than the flat
       // square, so the hit box is the size the dot was actually drawn at.
       // Neutral when the tiers are off — pos.sq is SQ there.
@@ -4055,6 +4148,9 @@ function p9HoverInit() {
     // over the same dot, which would redraw the whole canvas needlessly.
     if (p9.hoveredEvent !== bestEvent) {
       p9.hoveredEvent = bestEvent;
+      // Read by p9BulgeTick as it registers the bulge: a strip dot swells on
+      // the strip's own ladder (p9LegitBulgeSize), not the columns'.
+      p9.hoveredLegit = bestPos.y >= midY;
       // Open this dot's own group label in the mini-legend (js/groups.js).
       if (typeof fold6DotHover === "function") fold6DotHover(bestEvent.actor);
       // Cancel any running pill-hover dim animation so hoverDimT is reset clean.
@@ -4092,8 +4188,9 @@ function p9HoverInit() {
     // its own dot instead of beside it.
     const dotClientX = rect.left + bestPos.x;
     let mirrored = bestEvent.side === "left";
-    if (dotClientX < P9_TIP_FLIP_L) mirrored = false;
-    if (dotClientX > window.innerWidth - P9_TIP_FLIP_R_INSET) mirrored = true;
+    const [flipL9, flipR9] = p7TipFlipPair(12);
+    if (dotClientX < flipL9) mirrored = false;
+    if (dotClientX > window.innerWidth - flipR9) mirrored = true;
     tooltipEl.classList.toggle("is-mirrored", mirrored);
 
     // Anchor the box's square corner (bottom-left normally, bottom-right
@@ -4113,7 +4210,7 @@ function p9HoverInit() {
     // is live-eased, so the box tracks the bulge as it grows instead of jumping
     // to its end size.
     const ownSq  = bestPos.sq ?? P9_SQ;
-    const halfX  = Math.max(p9BulgeSize(bestEvent), ownSq) / 2;
+    const halfX  = Math.max(p9HoverGrownSize(bestEvent, canvasEl.clientWidth, canvasEl.clientHeight), ownSq) / 2;
     const centerX = dotClientX + ownSq / 2;
     const centerY = rect.top + bestPos.y + ownSq / 2;
     const dotClientY = centerY - halfX;   // the drawn box's TOP edge
@@ -4127,8 +4224,10 @@ function p9HoverInit() {
     // top of a tall column the box hangs below the dot instead, its square
     // anchor corner moving to the TOP (see .is-flipped in style.css and the
     // matching corner logic in updateTooltipDash, js/core.js).
+    // A legit dot's box always opens UPWARD (per explicit request) — the strip
+    // hugs the screen's bottom, so there is never room below anyway.
     const rawTop  = dotClientY - TOOLTIP_GAP - tooltipEl.offsetHeight;
-    const flipped = rawTop < rect.top + p9ExtremeTopY(canvasEl.clientHeight);
+    const flipped = !p9.hoveredLegit && rawTop < rect.top + p9ExtremeTopY(canvasEl.clientHeight);
     tooltipEl.classList.toggle("is-flipped", flipped);
     const top = flipped
       ? centerY + halfX + TOOLTIP_GAP
@@ -4149,7 +4248,7 @@ function p9HoverInit() {
   // already hides the tooltip whenever nothing's under the cursor — so a
   // separate pointerleave handler isn't needed either.
   window.addEventListener("pointermove", onMove);
-  window.addEventListener("scroll", () => { if (currentPage !== 12) hide(); }, { passive: true });
+  window.addEventListener("scroll", () => { if (!p9HoverPageOk()) hide(); }, { passive: true });
 }
 
 p9HoverInit();
