@@ -1601,7 +1601,11 @@ let p7BulgeLastTick = 0;
 // draw before the squares are laid out.
 function p7BulgeTick() {
   const now = performance.now();
-  const dt  = p7BulgeLastTick ? Math.min(100, now - p7BulgeLastTick) : 0;
+  // Clamped to about two frames, not 100ms: the loop now idles once a hover
+  // or hold has settled, so the first tick after a pause used to see a stale
+  // stamp and take half a ramp in one step — a visible jump at the start of
+  // every handover.
+  const dt  = p7BulgeLastTick ? Math.min(34, now - p7BulgeLastTick) : 0;
   p7BulgeLastTick = now;
   const hovered = p7BulgeHovered();
   if (hovered && p7BulgeTier(hovered) && !p7BulgeT.has(hovered)) p7BulgeT.set(hovered, { t: 0 });
@@ -1624,9 +1628,24 @@ function p7BulgeTick() {
   // anim loop repainted 14k dots every frame for as long as a dot was hovered or
   // held. That was the stutter under the picker's glass (and a busy loop on
   // every desktop hover).
+  // MOBILE: STRICTLY ONE AFTER THE OTHER, never blended. Under the glass a
+  // handover from a big dot to a neighbour has the old push relaxing (the whole
+  // field sliding up to ~23px home) while the new pick swells — so the dot that
+  // swelled was the one 23px out, sliding in, and the one under the crosshair
+  // was not it. Now the old bulge collapses first and only once nothing is
+  // relaxing does the new pick grow, in place, under the finger. Desktop keeps
+  // the concurrent handover (a mouse sees no glass).
+  const oneAtATime = isMobile();
+  let relaxing = false;
+  if (oneAtATime) {
+    for (const [ev, b] of p7BulgeT) {
+      if ((ev === hovered || ev === p9Pick) ? false : b.t > 0) { relaxing = true; break; }
+    }
+  }
   for (const [ev, b] of p7BulgeT) {
     const target = (ev === hovered || ev === p9Pick) ? 1 : 0;
     const step = dt / p7BulgeMs();
+    if (target === 1 && relaxing) continue;   // wait for the field to settle
     if (b.t !== target) b.t = target > b.t ? Math.min(1, b.t + step) : Math.max(0, b.t - step);
     if (b.t === 0 && target === 0) p7BulgeT.delete(ev);
   }
@@ -3001,15 +3020,29 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     // Hover bulge: shoved aside by any swelling neighbour (p7BulgeShift), or —
     // for the swelling square itself — kept centred on its cell and grown.
     let bulgeSize = 0;
+    // The push this dot is carrying right now — recorded into posMap below so
+    // the picker can hit-test against where the dot RESTS: a pick made on a
+    // displaced neighbour relaxed the push as it took the swell over, and the
+    // dot slid out from under the finger.
+    let pushDx = 0, pushDy = 0;
     if (bulges.length) {
       const own = bulges.find(b => b.ev === events[i]);
       if (own) bulgeSize = own.size;
-      else {
+      // MOBILE: a dot that has just been picked is STILL pushed by the bulge
+      // that is relaxing around it (p7BulgeShift skips only a dot's own push).
+      // Exempting every entry in `bulges` — desktop's rule, kept there — made
+      // the new pick jump from its pushed spot to its rest spot the instant it
+      // was picked, up to ~23px under the glass, while the field around it
+      // slid home over the next 200ms: "the pick moved to a dot far away".
+      // Pushed like its neighbours until that push is gone, it arrives with them.
+      if (!own || isMob) {
         const sh = p7BulgeShift(bulges, col, drow);
         // MOBILE: whole device pixels only (see p7BulgeHold's note) — the dot
         // keeps its exact rasterised footprint and just moves.
-        destX += isMob ? q(sh.dx) : sh.dx;
-        destY += isMob ? q(sh.dy) : sh.dy;
+        pushDx = isMob ? q(sh.dx) : sh.dx;
+        pushDy = isMob ? q(sh.dy) : sh.dy;
+        destX += pushDx;
+        destY += pushDy;
       }
     }
 
@@ -3144,7 +3177,7 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     // from a zero-size square.
     if (restSize < 0.15) { p7FilterGhosts.set(events[i], { cx, cy, sq: restSize }); continue; }
     p7FilterGhosts.delete(events[i]);
-    posMap.set(events[i], { x: cx - restSize / 2, y: cy - restSize / 2, alpha, sq: restSize });
+    posMap.set(events[i], { x: cx - restSize / 2, y: cy - restSize / 2, alpha, sq: restSize, pdx: pushDx, pdy: pushDy });
 
     // While one square is hovered (p7.hoveredEvent, set by p7HoverInit — see
     // below), it's drawn fully opaque and every other square is dimmed, so it
@@ -7130,7 +7163,11 @@ function p7InspectInit() {
     for (const [ev, pos] of positions) {
       if (pos.y >= maxY) continue;
       const own = (pos.sq || half * 2) / 2;
-      const dx = mx - (pos.x + own), dy = my - (pos.y + own);
+      // Where the dot RESTS, not where the current pick's push has shoved it
+      // (`pdx`/`pdy`, p7DrawSideSquares): the moment this dot is picked that push
+      // relaxes and it slides home, so a pick made on its displaced spot ended
+      // up on a dot that then moved away from the finger.
+      const dx = mx - (pos.x - (pos.pdx || 0) + own), dy = my - (pos.y - (pos.pdy || 0) + own);
       if (Math.abs(dx) <= own && Math.abs(dy) <= own) {
         if (own * 2 < inBestSq) { inBestSq = own * 2; inBest = ev; inBestPos = pos; }
         continue;
