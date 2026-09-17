@@ -1599,6 +1599,33 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   cursor: grabbing;
 }
 
+/* THE VACANCY — the tray cell a pill has been moved out of (p9SyncVacancy,
+   page9.js). The pill's footprint pressed faintly into the paper, so the gap
+   in the row reads as "something used to be here" instead of as a stray space.
+   No border, no text: picked in a compare/ pass over a dashed frame, a frame
+   keeping the category name, a single dashed underline, and the faded pill.
+
+   0.0275 is one flat alpha, not a 0.05 fill behind a 0.55 opacity as the
+   harness drove it — the two composite identically over the page (measured:
+   rgb(246,245,248) on the #FDFCFF paper), and a single value can't be read as
+   two independent knobs later.
+
+   `justify-self: stretch` is load-bearing: the tray row sets its own
+   `justify-items`, so the default `auto` collapses this to its own width
+   (32px in a 123px track) and the hole stops matching the pill that left.
+
+   Desktop only, and it can't be otherwise — under 600px pills never leave the
+   tray, so no cell is ever vacated (p9SyncExtremeOrder). */
+.page9-pill-vacancy {
+  grid-row: 1;
+  justify-self: stretch;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 4px;             /* the pill's own radius */
+  background: rgba(0, 0, 0, 0.0275);
+  pointer-events: none;
+}
+
 /* The actual visual dragged around under the cursor (see the pointerdown handler
    in page9.js) — a free-floating clone, since the real pill stays put in the DOM
    (just hidden) until a drop actually lands. Appended to <body>, which isn't RTL,
