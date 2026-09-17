@@ -103,6 +103,32 @@
                                border-radius: 50%; background: var(--accent); margin-inline-end: 6px;
                                vertical-align: middle; }
   .hint4 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  /* Timeline — lanes of ms segments (descriptor.timeline). One shared scale
+     across the lanes so the eye can read one beat against another; a segment
+     is dragged at its right edge, its ms typed in the small field. */
+  .tl { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 10px; }
+  .tl .lane { display: grid; grid-template-columns: 64px 1fr; gap: 8px; align-items: center; }
+  .tl .lname { font-size: .85em; color: var(--text-dim); text-align: right; }
+  .tl .track { position: relative; height: 26px; background: var(--bg-el); border-radius: 4px;
+               overflow: hidden; }
+  .tl .seg { position: absolute; top: 0; height: 100%; box-sizing: border-box;
+             border-right: 2px solid var(--bg); background: var(--bg-el-hi);
+             display: flex; align-items: center; padding: 0 6px; gap: 4px;
+             font-size: .8em; white-space: nowrap; overflow: hidden; }
+  .tl .seg.derived { opacity: .55; }
+  .tl .seg .ms { color: var(--accent); }
+  .tl .seg .grip { position: absolute; right: 0; top: 0; width: 8px; height: 100%;
+                   cursor: ew-resize; }
+  .tl .seg:hover { background: var(--line-el); }
+  .tl .seg.dragging { outline: 1px solid var(--accent); outline-offset: -1px; }
+  .tl .mark { position: absolute; top: 0; height: 100%; width: 0; border-left: 1px dashed var(--accent);
+              opacity: .8; }
+  .tl .mark span { position: absolute; top: 0; left: 3px; font-size: .7em; color: var(--accent); }
+  .tl .scale { font-size: .75em; color: var(--text-dim); text-align: right; }
+  .tl .fields { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: .85em; }
+  .tl .fields label { display: inline-flex; align-items: center; gap: 4px; }
+  .tl .fields input { width: 5em; font: inherit; background: var(--bg-el); color: var(--text);
+                      border: 1px solid var(--line-el); border-radius: 4px; padding: 2px 4px; }
   .itext { width: 100%; margin-top: 6px; font: inherit; background: var(--bg-el); color: var(--text);
            border: 1px solid var(--line-el); border-radius: 4px; padding: 6px 8px; resize: vertical;
            direction: rtl; unicode-bidi: plaintext; }
@@ -680,6 +706,10 @@
         body.appendChild(tg);
       }
 
+      // timeline — a drawn view over the ms knobs (descriptor.timeline)
+      H.tl = null;
+      if (d.timeline && d.timeline.lanes && d.timeline.lanes.length) body.appendChild(H.buildTimeline(d.timeline));
+
       // knobs, bucketed by group
       var groups = []; var byG = {};
       d.knobs.forEach(function (s) {
@@ -703,6 +733,136 @@
         body.appendChild(container);
       });
       H.patch();
+    };
+
+    /* The timeline. Lanes of segments on ONE shared ms scale; a segment's width
+       is its knob × mul, its start the previous segment's end (or the lane's
+       `offset`, summed from other knobs, or the end of the segment named by
+       `after`). Drag a segment's right edge to set its knob; the fields under
+       the lanes take a typed ms. Marks are dashed lines at a summed position.
+       It reads and writes the same H.V the sliders do, so the two never drift. */
+    H.buildTimeline = function (tl) {
+      var wrap = el('div', 'tl span');
+      wrap.appendChild(el('div', 'gname', tl.label || 'Timeline'));
+      var knobOf = {}; H.desc.knobs.forEach(function (s) { knobOf[s.key] = s; });
+      var val = function (k) { var v = H.bag(k)[k]; return typeof v === 'number' ? v : parseFloat(v) || 0; };
+      var sum = function (terms) {
+        return (terms || []).reduce(function (a, t) {
+          var m = t.mulKey ? val(t.mulKey) : (t.mul == null ? 1 : t.mul);
+          return a + val(t.key) * m;
+        }, 0);
+      };
+      var segMul = function (s) { return s.mulKey ? val(s.mulKey) : (s.mul == null ? 1 : s.mul); };
+      var lanes = [], ends = {};
+      tl.lanes.forEach(function (lane) {
+        var row = el('div', 'lane');
+        row.appendChild(el('div', 'lname', lane.label || ''));
+        var track = el('div', 'track'); row.appendChild(track);
+        var segs = (lane.segs || []).map(function (s) {
+          var e = el('div', 'seg' + (s.derived ? ' derived' : ''));
+          e.appendChild(el('span', 'nm', s.label || s.key));
+          var ms = el('span', 'ms'); e.appendChild(ms);
+          var grip = null;
+          if (!s.derived) { grip = el('div', 'grip'); e.appendChild(grip); }
+          track.appendChild(e);
+          return { s: s, el: e, ms: ms, grip: grip };
+        });
+        var marks = (lane.marks || []).map(function (m) {
+          var e = el('div', 'mark'); e.appendChild(el('span', null, m.label || ''));
+          track.appendChild(e); return { m: m, el: e };
+        });
+        lanes.push({ lane: lane, track: track, segs: segs, marks: marks });
+        wrap.appendChild(row);
+      });
+      var scale = el('div', 'scale'); wrap.appendChild(scale);
+      // typed ms per draggable knob
+      var fields = el('div', 'fields'), inputs = {};
+      lanes.forEach(function (L) {
+        L.segs.forEach(function (S) {
+          if (S.s.derived || inputs[S.s.key]) return;
+          var lab = el('label'); lab.appendChild(el('span', null, S.s.label || S.s.key));
+          var inp = el('input'); inp.type = 'number';
+          var k = knobOf[S.s.key] || {};
+          if (k.min != null) inp.min = k.min; if (k.max != null) inp.max = k.max; if (k.step != null) inp.step = k.step;
+          inp.onchange = function () { var v = parseFloat(inp.value); if (!isNaN(v)) H.edit(S.s.key, v); };
+          inp.onfocus = function () { H.touched[S.s.key] = Date.now(); };
+          inp.onkeydown = function (e) { e.stopPropagation(); };
+          lab.appendChild(inp); fields.appendChild(lab); inputs[S.s.key] = inp;
+        });
+      });
+      wrap.appendChild(fields);
+
+      var layout = function () {
+        // pass 1: starts and ends in ms
+        var total = 1;
+        var place = function () {
+          ends = {};
+          lanes.forEach(function (L) {
+            var at = sum(L.lane.offset);
+            L.segs.forEach(function (S) {
+              var st = S.s.after && ends[S.s.after] != null ? ends[S.s.after] : at;
+              var w = Math.max(0, val(S.s.key) * segMul(S.s));
+              S.start = st; S.w = w; at = st + w; ends[S.s.key] = at;
+              total = Math.max(total, at);
+            });
+            L.marks.forEach(function (M) { M.at = sum(M.m.at); total = Math.max(total, M.at); });
+          });
+        };
+        place(); place();   // `after` may point forward across lanes — settle twice
+        return total;
+      };
+      var redraw = function () {
+        var total = layout();
+        lanes.forEach(function (L) {
+          var W = L.track.clientWidth || 300, px = W / total;
+          L.segs.forEach(function (S) {
+            S.el.style.left = (S.start * px) + 'px';
+            S.el.style.width = Math.max(2, S.w * px) + 'px';
+            S.ms.textContent = Math.round(S.w) + 'ms';
+            S.el.title = (S.s.label || S.s.key) + ' · ' + Math.round(S.w) + 'ms' + (S.s.derived ? '' : ' — drag the right edge');
+          });
+          L.marks.forEach(function (M) { M.el.style.left = (M.at * px) + 'px'; });
+        });
+        scale.textContent = 'whole strip: ' + Math.round(total) + 'ms';
+        Object.keys(inputs).forEach(function (k) {
+          if (document.activeElement !== inputs[k]) inputs[k].value = val(k);
+        });
+      };
+      // drag the right edge
+      lanes.forEach(function (L) {
+        L.segs.forEach(function (S) {
+          if (!S.grip) return;
+          S.grip.onpointerdown = function (e) {
+            e.preventDefault(); e.stopPropagation();
+            var key = S.s.key, k = knobOf[key] || {}, mul = segMul(S.s) || 1;
+            var total = layout(), px = (L.track.clientWidth || 300) / total;
+            var x0 = e.clientX, v0 = val(key), prev = v0;
+            H.dragging = key; H.touched[key] = Date.now(); S.el.classList.add('dragging');
+            S.grip.setPointerCapture(e.pointerId);
+            var step = k.step || 1;
+            var move = function (ev) {
+              var v = v0 + (ev.clientX - x0) / px / mul;
+              v = Math.round(v / step) * step;
+              if (k.min != null) v = Math.max(k.min, v);
+              if (k.max != null) v = Math.min(k.max, v);
+              if (v === val(key)) return;
+              H.edit(key, v, true); redraw();
+            };
+            var up = function () {
+              S.grip.onpointermove = null; S.grip.onpointerup = S.grip.onpointercancel = null;
+              H.dragging = null; H.touched[key] = Date.now(); S.el.classList.remove('dragging');
+              var now = val(key);
+              if (now !== prev) HIST.push({ key: H.title + ':' + key, label: H.title + ' · ' + key,
+                undo: function () { H.edit(key, prev, true); redraw(); },
+                redo: function () { H.edit(key, now, true); redraw(); } });
+            };
+            S.grip.onpointermove = move; S.grip.onpointerup = S.grip.onpointercancel = up;
+          };
+        });
+      });
+      H.tl = { redraw: redraw };
+      setTimeout(redraw, 0);
+      return wrap;
     };
 
     H.buildRow = function (s) {
@@ -775,6 +935,7 @@
         ui.groups[g].n.textContent = n ? '(' + n + ')' : '';
         ui.groups[g].det.hidden = !n;
       });
+      if (H.tl) H.tl.redraw();
     };
     H.refreshRow = function (key) {
       var r = H.ui.rows[key]; if (!r || !H.V) return;
@@ -785,6 +946,7 @@
         r.val.textContent = v;
         if (H.dragging !== key && document.activeElement !== r.inp) r.inp.value = v;
       }
+      if (H.tl) H.tl.redraw();
     };
 
     H.send({ t: 'hello' });

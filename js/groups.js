@@ -941,6 +941,18 @@ function fold6DotHover(actor) {
 // reads it so its scheduled collapse never yanks the labels out from under a
 // real hover that arrived mid-demo.
 let fold6LegendPointerOver = false;
+// Hovering a legend ROW highlights that group's dots on the canvas — the rest
+// dim to hoverDim(actor), the same floor a hovered dot uses — on a short ramp.
+// Lowest priority of the dim rules: a hovered dot (page7 / page9) or a hovered
+// pill (page9) wins over it. Desktop only by construction: only the desktop
+// click strips (fold6LegendFilterEl) drive it.
+let fold6LegendHoverActor = null;
+const FOLD6_LEGEND_HOVER_DIM_MS = 90;
+const fold6LegendHoverDimTrigger = makeTrigger(FOLD6_LEGEND_HOVER_DIM_MS, () => {
+  if (typeof draw === "function") draw();
+  if (typeof updateGroups === "function") updateGroups();
+});
+function fold6LegendHoverDimT() { return fold6LegendHoverDimTrigger.currentT(); }
 // The legend opens for the pointer ONLY while no dot is hovered. The hover
 // boxes sit over the canvas but the dot hit-test runs on window mousemove, so
 // a dot right next to the legend used to open BOTH — its tooltip and the
@@ -986,11 +998,18 @@ function fold6LegendFilterEl(g) {
     const item = groupItems[GROUPS.indexOf(g)];
     if (item) item.el.classList.add("is-filter-hover");
     groupsOverlayEl.classList.add("is-filter-hover-any");
+    // …and the group's DOTS light up: every other dot on the canvas dims to
+    // the hover floor, exactly as it does around a hovered dot.
+    fold6LegendHoverActor = g.actor;
+    fold6LegendHoverDimTrigger.trigger(1);
   });
   el.addEventListener("mouseleave", () => {
     const item = groupItems[GROUPS.indexOf(g)];
     if (item) item.el.classList.remove("is-filter-hover");
     groupsOverlayEl.classList.remove("is-filter-hover-any");
+    // The actor is kept through the fade-out so its dots stay bright while
+    // the rest come back up (same idea as page9's hoverDimCategoryIdx).
+    fold6LegendHoverDimTrigger.trigger(0);
   });
   el.addEventListener("click", () => {
     // Clickable on @fold9 and @fold10 (page7.js draws them itself, so the
@@ -1037,7 +1056,7 @@ const fold7LabelTrigger = makeTrigger(GROUP_TRANSITION_MS, (...a) => updateGroup
 // aliased to FOLD8_GROW_MS so it landed with the tooltip's max scale; the dim
 // now fires a whole fold earlier, on @fold7, so that no longer means anything
 // — hence the literal.)
-const FOLD8_SQUARE_DIM_MS = 350;
+var FOLD8_SQUARE_DIM_MS = 350;   // var: the fold7 timeline harness drives it
 // Its duration carries the fake cursor's glide (fold7CursorDelayMs, 0 on
 // mobile) as dead time at the front, so the dim starts as the cursor reaches
 // square 0 — read it through fold8SquareDimT(), never currentRaw().
@@ -1501,12 +1520,12 @@ const checkFold8SquareDim = watchCardThreshold(
 const FOLD8_DEMO_GROW_PX = 14;
 // The swell's own tempo, independent of the tooltip's (FOLD8_GROW_MS): they
 // share a crossing, not a duration.
-const FOLD8_DEMO_GROW_MS = 350;
+var FOLD8_DEMO_GROW_MS = 350;   // var: the fold7 timeline harness drives it
 // Both beats hang off the SAME crossing; what's tunable is how long each waits
 // after it. The trigger therefore runs for delay+grow and the swell reads a
 // {start, len} window of its RAW progress, re-eased — the standard multi-beat
 // idiom. Tuned to 0: the swell leads, the tooltip follows it by 250ms.
-const FOLD8_DEMO_GROW_DELAY_MS = 0;
+var FOLD8_DEMO_GROW_DELAY_MS = 0;   // var: the fold7 timeline harness drives it
 // Plus the fake cursor's glide (desktop): the swell waits for the cursor to
 // reach the square.
 function fold8DemoGrowDelayMs() { return FOLD8_DEMO_GROW_DELAY_MS + fold7CursorDelayMs(); }
@@ -1893,9 +1912,12 @@ const checkFold14Pair   = watchCardThreshold(fold14PairCardEl, 0.5, fold14PairTr
 const fold10GridCardEl = document.querySelector("#page-9 .text-card");
 // uniform:false — crossing into @fold10 always means the TIERED grid, even if
 // the reader had flattened it with the @fold11 button and scrolled back up.
+// Both directions also hand the flag back to the crossings: a press of the
+// button (p7ScopeUserUniform, below) holds across page flips, but not across
+// a real crossing of this line.
 const fold10GridTrigger = {
-  set:     v => p7SizeGridSet(v === 1, { uniform: false, instant: true }),
-  trigger: v => p7SizeGridSet(v === 1, { uniform: false }),
+  set:     v => { p7ScopeUserUniform = null; p7SizeGridSet(v === 1, { uniform: false, instant: true }); },
+  trigger: v => { p7ScopeUserUniform = null; p7SizeGridSet(v === 1, { uniform: false }); },
 };
 const checkFold10Grid = watchCardThreshold(fold10GridCardEl, 0.5, fold10GridTrigger);
 // Where p7SizeGridOnPage (page7.js) re-syncs from when @fold10 is re-entered
@@ -1933,8 +1955,35 @@ function fold11BeatGapMs() {
   return FOLD11_BEAT_GAP_MS === null ? p7MorphTotalMs(true)
                                      : Math.max(0, FOLD11_BEAT_GAP_MS);
 }
+// MOBILE @fold11: FOLD11_LEGEND_JUMP_DELAY_MS after the glide lands, the
+// closed legend plays the same jump + flash as @fold6's ACLED crossing
+// (fold6MLegendJump) — a nudge toward the «הצגת גודל האירועים» row that just
+// arrived in it. Armed by a real crossing only (a load-time `set` lands the
+// dots without one), fired from page8.js's landing, cancelled by the reverse.
+var FOLD11_LEGEND_JUMP_DELAY_MS = 1000;
+let fold11LegendJumpTO = null;
+let fold11LegendJumpArmed = false;
+function fold11GlideLanded() {
+  clearTimeout(fold11LegendJumpTO); fold11LegendJumpTO = null;
+  if (!isMobile() || !fold11LegendJumpArmed) return;
+  fold11LegendJumpArmed = false;
+  fold11LegendJumpTO = setTimeout(() => {
+    fold11LegendJumpTO = null;
+    fold6MLegendJump(true);
+  }, FOLD11_LEGEND_JUMP_DELAY_MS);
+}
 function fold11SizeApply(past, instant) {
   clearTimeout(fold11SizeBeatTO); fold11SizeBeatTO = null;
+  clearTimeout(fold11LegendJumpTO); fold11LegendJumpTO = null;
+  fold11LegendJumpArmed = past && !instant;
+  // A real crossing of @fold11's line owns the flag again, either way.
+  p7ScopeUserUniform = null;
+  // The timeline's hover tooltip / mobile picker are live up to this line and
+  // no further (p7TimelineLive, page7.js): drop whatever is open.
+  if (past) {
+    if (typeof p7InspectSync === "function") p7InspectSync();
+    if (typeof p7RecheckHover === "function") p7RecheckHover();
+  }
   // Both instruction lines hang off THIS crossing: @fold13's own (p7SyncHint)
   // lives from here up, and the timeline's band (p7HintBandApply, page7.js)
   // types out here — the band's paint stops with the timeline's draw loop, so
@@ -1954,8 +2003,16 @@ function fold11SizeApply(past, instant) {
       fold11SizeBeatTO = null; p8Trigger();
     }, fold11BeatGapMs());
   } else {
+    const flying = typeof p8Engaged !== "undefined" && p8Engaged
+      && typeof p8CurrentT === "function" && p8CurrentT() > 0;
     p8TriggerReverse();
-    if (instant) p7SizeGridSet(true, { uniform: false, instant: true });
+    // A jump (`set`) still lands the tiers instantly when nothing is in the
+    // air — but under a live glide an instant flag flip moves every dot's
+    // `from` (p7GridLiveRect reads the flattened cell) and swallows the regrow
+    // beat: wait for the landing and animate it, like a real crossing. The
+    // pending window then also stands p7SizeGridOnPage down for the flips
+    // that arrive inside the reverse.
+    if (instant && !flying) p7SizeGridSet(true, { uniform: false, instant: true });
     else fold11SizeBeatTO = setTimeout(() => {
       fold11SizeBeatTO = null; p7SizeGridSet(true, { uniform: false });
     }, P8_REVERSE_DURATION);
@@ -2055,6 +2112,7 @@ function p7ScopeToggle() {
   // left, so js/nav.js had nothing to hand over) — in the air all the same.
   const inAir = (currentPage >= 10 && currentPage <= 12 && glideInAir) || p9GlideInAir;
   if (currentPage === 12 && !inAir && typeof p9ScopeSet === "function") {
+    p7ScopeUserUniform = !p7GridUniform;
     p9ScopeSet(!p7GridUniform);
   } else if (inAir) {
     // MID-FLIGHT on @fold11/@fold12 (page8's glide in progress): the dots
@@ -2079,8 +2137,10 @@ function p7ScopeToggle() {
     // this the flag flipped and the strip snapped to the new endpoint.
     const W = canvas.clientWidth, H = canvas.clientHeight;
     p9.lastPositions = p8CaptureBlendedPositions(W, H, 1);
+    p7ScopeUserUniform = !p7GridUniform;
     p9ScopeSet(!p7GridUniform);
   } else if (currentPage < 12) {
+    p7ScopeUserUniform = !p7GridUniform;
     p7SizeGridSet(true, { uniform: !p7GridUniform });
   }
   if (typeof updateGroups === "function") updateGroups();
@@ -2090,10 +2150,20 @@ function p7ScopeToggle() {
 // for, or null. Flushed by page8.js the frame the glide lands; dropped by its
 // reverse. Read by updateGroups so the button shows pressed right away.
 let p7ScopePendingUniform = null;
+// The reader's OWN choice for the tier flag — the p7GridUniform they asked for
+// — or null while the scroll crossings own it. Set by every press that changes
+// the flag; cleared by the two real crossings (fold10GridTrigger,
+// fold11SizeApply) and by leaving the band upward (p7SizeGridOnPage, page < 9).
+// p7SizeGridOnPage (page7.js) reads it instead of fold11SizePast() on pages
+// 10–11, so a page flip between @fold11 and @fold14 never hands a pressed
+// button back to "flat" — which it did, both scrolling on into @fold12 after a
+// press on @fold11 and scrolling back from @fold13.
+let p7ScopeUserUniform = null;
 function p7ScopeFlushPending() {
   if (p7ScopePendingUniform === null) return;
   const uniform = p7ScopePendingUniform;
   p7ScopePendingUniform = null;
+  p7ScopeUserUniform = uniform;
   if (uniform === p7GridUniform) return;
   // Same path as a press on the landed bridge (p7ScopeToggle above). On
   // @fold13 itself drawPage9 has just drawn the landing, so p9.lastPositions

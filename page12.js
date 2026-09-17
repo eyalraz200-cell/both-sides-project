@@ -462,12 +462,20 @@ function p12SpacingFit() {
   const sec15 = document.getElementById("page-15");
   const outro = sec15 && sec15.querySelector(".text-card-frame");
   if (!share || !outro) return;
-  if (window.innerWidth <= 600) {           // mobile: the card flows, no solve
+  const padTop = Math.round(H / 2 - share.offsetHeight / 2);
+  if (window.innerWidth <= 600) {           // mobile: the card flows (no min-height solve)
     sec15.style.removeProperty("padding-top");
     sec15.style.removeProperty("min-height");
+    // …but its TOP edge still starts where a centred card's top would, so the
+    // air between the share card and the outro is the house gap (100vh minus
+    // the share card), not the wrapper's own 32px. Written on the flowing
+    // wrapper, whose bottom padding stays the CSS 32px.
+    const wrap15 = sec15.querySelector(".page12-sticky-center");
+    if (wrap15) wrap15.style.paddingTop = padTop + "px";
     return;
   }
-  const padTop = Math.round(H / 2 - share.offsetHeight / 2);
+  const wrap15 = sec15.querySelector(".page12-sticky-center");
+  if (wrap15) wrap15.style.removeProperty("padding-top");   // mobile-only inline, above
   sec15.style.paddingTop = padTop + "px";
   sec15.style.minHeight = (padTop + outro.offsetHeight + P12_OUTRO_END) + "px";
 }

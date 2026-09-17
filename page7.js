@@ -239,11 +239,13 @@ function p7OrderFromCenter(total, cols, seed, side, maxEvents) {
 // Tooltip horizontal flip lines (screen px): a hovered dot left of P7_TIP_FLIP_L
 // never mirrors; one within P7_TIP_FLIP_R_INSET of the right edge always does.
 // One mirrored inset, picked by eye with a manual/ harness on 2026-09-05 —
-// exact px, never vw. Used in the hover closure (search "P7_TIP_FLIP_L") and,
-// deliberately shared rather than re-tuned, by @fold13's dot hover in page9.js
-// — the two tooltips must never disagree about which way they open.
-const P7_TIP_FLIP_L = 327;
-const P7_TIP_FLIP_R_INSET = 327;
+// exact px, never vw. One pair PER FOLD (explicit instruction — each fold's
+// field sits differently on the screen): @fold9's timeline, @fold10's size grid
+// (both in the hover closure below, picked by currentPage), and @fold13's
+// columns (P9_TIP_FLIP_*, page9.js). `var`s — a manual/ harness drives them;
+// all three start from the one 327 that used to serve every fold.
+var P7_TIP_FLIP_L_F9  = 327, P7_TIP_FLIP_R_INSET_F9  = 327;
+var P7_TIP_FLIP_L_F10 = 327, P7_TIP_FLIP_R_INSET_F10 = 327;
 
 const P7_VERT = {
   corridorPx: P7_AXIS_CORRIDOR_PX,
@@ -2575,7 +2577,15 @@ function p7SizeGridSet(on, opts) {
 // re-pack keeps playing underneath the flight instead of snapping to the
 // flattened rest cell the instant drawPage8 takes over the canvas.
 function p7GridLiveRect(ev, isLeft) {
-  if (!p7Grid.on || !p7Grid.layout) return null;
+  if (!p7Grid.on) return null;
+  // The pack is normally built by drawPage7 alone. A viewport change
+  // (p7UpdateLayout) or an instant re-sync can drop it while page8's glide is
+  // in the air and drawPage7 is not the one painting — rebuild rather than
+  // fall back to the timeline cell, which is a snap. Last resort, not the
+  // normal path: it only differs from drawPage7's pack while p7.lastPositions
+  // is partial.
+  if (!p7Grid.layout && typeof canvas !== "undefined") p7SizeGridLayout(canvas.clientWidth, canvas.clientHeight);
+  if (!p7Grid.layout) return null;
   const g = p7GridCell(ev, isLeft);
   if (!g) return null;
   if (p7GridMorph && p7GridMorph.from) {
@@ -2613,6 +2623,11 @@ function p7SizeGridOnPage(page) {
   // legend rows stop being clickable there and a filter with no way to undo it
   // is a trap.
   if (page < 9) p7FilterReset();
+  // Above the band the crossings own the tier flag again (js/groups.js).
+  if (page < 9 && typeof p7ScopeUserUniform !== "undefined") p7ScopeUserUniform = null;
+  // Snapshot for the p9 sync below: only a flip that actually MOVES the flag
+  // (or leaves the band upward) may throw the morph and the held plan away.
+  const uniformWas = p7GridUniform;
   // NOT skipped on mobile. This used to force the grid OFF here on every page
   // flip, back when the size grid was desktop-only. It isn't any more —
   // checkFold10Grid/checkFold11Size fire on a phone too — so that blanket off
@@ -2638,12 +2653,31 @@ function p7SizeGridOnPage(page) {
     // and back. Omit `uniform` there: the button (p9ScopeSet) is the only
     // authority on this fold, exactly as p7ScopeToggle's comment says.
     const opts = { instant: true };
-    if (page < 12) opts.uniform = past11;
-    p7SizeGridSet(past10, opts);
+    // Pages 10–11: a press of the «הצגת גודל האירועים» button
+    // (p7ScopeUserUniform, js/groups.js) outranks the scroll fact — the flips
+    // between @fold11 and @fold14 must not hand the flag back to "flat". Page 9
+    // stays a pure scroll fact: @fold10's crossing owns it and clears the
+    // override on the way.
+    const userU = typeof p7ScopeUserUniform !== "undefined" ? p7ScopeUserUniform : null;
+    if (page < 12) opts.uniform = (page >= 10 && userU !== null) ? userU : past11;
+    // Never OFF under page8's glide: the flight starts from p7GridLiveRect,
+    // so the packed cells have to stay under it until it lands — switched off
+    // mid-air (a fast reverse where this flip beats @fold11's crossing and
+    // @fold10's card is already back below the line) every dot's `from` fell
+    // back to its TIMELINE cell and the field snapped there. @fold10's own
+    // crossing still switches the grid off when actually crossed.
+    const glideInAir = typeof p8CurrentT === "function" && typeof p8Engaged !== "undefined"
+      && p8Engaged && p8CurrentT() > 0;
+    p7SizeGridSet(past10 || glideInAir, opts);
   } else p7SizeGridSet(false, { instant: true });
   // @fold13's own tier morph (page9.js) is per-fold: a page flip resets the
   // flag above, so page9's cached pack and in-flight morph go with it.
-  if (typeof p9ScopeSync === "function") p9ScopeSync();
+  // Everything p9ScopeSync clears is keyed (the pack, the plan), so holding it
+  // across 10↔11↔12↔13 flips is safe — and necessary: a flip that keeps the
+  // reader's choice used to kill a running tier morph mid-flight and re-solve
+  // the legit strip's plan, which is what packed returning dots against the
+  // centre on @fold13's reverse.
+  if (typeof p9ScopeSync === "function" && (page < 10 || p7GridUniform !== uniformWas)) p9ScopeSync();
 }
 
 // ---------------------------------------------------------------------------
@@ -2921,11 +2955,14 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     }
     // Hover bulge: shoved aside by any swelling neighbour (p7BulgeShift), or —
     // for the swelling square itself — kept centred on its cell and grown.
+    // MOBILE: the picker's pick grows (the glass zooms on that growth) but
+    // never shoves — the push tapers over 30 cells, and on a 2px pitch that
+    // read as the whole field twitching under the glass.
     let bulgeSize = 0;
     if (bulges.length) {
       const own = bulges.find(b => b.ev === events[i]);
       if (own) bulgeSize = own.size;
-      else { const sh = p7BulgeShift(bulges, col, drow); destX += sh.dx; destY += sh.dy; }
+      else if (!isMob) { const sh = p7BulgeShift(bulges, col, drow); destX += sh.dx; destY += sh.dy; }
     }
 
     // Continuing page8's reverse glide into its resting timeline cell (see
@@ -3078,6 +3115,13 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
       drawAlpha = events[i] === pointed
         ? alpha + (1 - alpha) * t
         : alpha * (1 - (1 - hoverDim(events[i].actor)) * t);
+    } else if (typeof fold6LegendHoverDimT === "function") {
+      // A hovered legend ROW (js/groups.js): its group stays at full alpha,
+      // everything else dims to the same floor. Lowest priority — a hovered
+      // dot (the branch above) wins.
+      const lt = fold6LegendHoverDimT();
+      if (lt > 0 && events[i].actor !== fold6LegendHoverActor)
+        drawAlpha = alpha * (1 - (1 - hoverDim(events[i].actor)) * lt);
     }
 
     const size = (bulgeSize || restSize) * scale;
@@ -3909,6 +3953,14 @@ const P7_AXIS_MARKER_RADIUS_FADED = 2;
 // Hovered square's mirror dot when it falls inside an open headline card (over the fill, under the text).
 const P7_AXIS_HOVER_MARKER_ALPHA = 0.5; // px — shrunk radius a headline-event dot settles to once its label has crossfaded away (grows back to _RADIUS on hover)
 const P7_AXIS_MARKER_STROKE   = 1;     // px — ring line width for the hollow year markers
+// The year marker's SHAPE on the vertical axis: 'ring' (the hollow dot) or 'line'
+// (a short horizontal rule across the axis, centred where the ring sits).
+// Length and darkness of the line are its own knobs. `var`s — a compare/ +
+// manual/ harness drives them. Desktop-only in effect: mobile draws no year
+// marker at all (P7_VERT_M.yearRing false).
+var P7_AXIS_YEAR_MARK       = 'ring';
+var P7_AXIS_YEAR_LINE_LEN   = 8;      // px, the whole line
+var P7_AXIS_YEAR_LINE_ALPHA = 0.22;   // unreached; a reached year's line is P7_AXIS_FILLED_COLOR
 const P7_AXIS_YEAR_LABEL_OFFSET = 12;  // px gap from the marker's bottom edge down to the year label's top
 const P7_AXIS_YEAR_LABEL_OFFSET_MOBILE = 5; // px — the same gap tightened on a phone, so the year reads as attached to its own tick rather than floating below the axis
 function p7AxisYearLabelOffset() { return isMobile() ? P7_AXIS_YEAR_LABEL_OFFSET_MOBILE : P7_AXIS_YEAR_LABEL_OFFSET; }
@@ -5213,7 +5265,17 @@ function p7DrawYearAxisVertical(ctx, W, H) {
     const y   = ring && p7V().yearSide === 'center' ? axisQ(m.yc - blockH / 2 + R) : m.yc;
     const reached = row <= curRow;
     const ringColor = hoverActive ? P7_AXIS_BG_COLOR : (reached ? P7_AXIS_FILLED_COLOR : P7_AXIS_BG_COLOR);
-    if (ring) {
+    if (ring && P7_AXIS_YEAR_MARK === 'line') {
+      // A short horizontal rule instead of the ring: same spot, same
+      // reached/unreached colouring (the unreached alpha is its own knob), no
+      // punch-out — it lies across the axis line rather than on it. Leaves by
+      // LENGTH (spanShrink), like the ring leaves by radius.
+      const half = (P7_AXIS_YEAR_LINE_LEN / 2) * spanShrink;
+      ctx.lineWidth = P7_AXIS_MARKER_STROKE;
+      ctx.strokeStyle = hoverActive ? P7_AXIS_BG_COLOR
+        : (reached ? P7_AXIS_FILLED_COLOR : `rgba(0, 0, 0, ${P7_AXIS_YEAR_LINE_ALPHA})`);
+      ctx.beginPath(); ctx.moveTo(axisX - half, y); ctx.lineTo(axisX + half, y); ctx.stroke();
+    } else if (ring) {
       ctx.fillStyle = "#FDFCFF";
       ctx.beginPath(); ctx.arc(axisX, y, yearR, 0, Math.PI * 2); ctx.fill();
       ctx.lineWidth = P7_AXIS_MARKER_STROKE;
@@ -6252,7 +6314,7 @@ function p7HoverInit() {
     // Same reason for @fold10's size-grid morph (p7GridMorph): while the dots
     // are flying to (or back from) their packed cells, every square is a moving
     // target and the tooltip latched onto whatever passed under the pointer.
-    if (lastCX === null || (currentPage !== 8 && currentPage !== 9) ||
+    if (lastCX === null || !p7TimelineLive() ||
         (typeof p8PhaseStart !== "undefined" && p8PhaseStart !== null) ||
         p7GridMorph !== null) { hide(); return; }
 
@@ -6350,8 +6412,10 @@ function p7HoverInit() {
     // last, so it wins there — moot in practice, mobile docks the tooltip.
     const dotCX = rect.left + bestPos.x;
     let mirrored = !docked && bestEvent.side === "left";
-    if (!docked && dotCX < P7_TIP_FLIP_L) mirrored = false;
-    if (!docked && dotCX > window.innerWidth - P7_TIP_FLIP_R_INSET) mirrored = true;
+    const flipL = currentPage === 8 ? P7_TIP_FLIP_L_F9 : P7_TIP_FLIP_L_F10;
+    const flipR = currentPage === 8 ? P7_TIP_FLIP_R_INSET_F9 : P7_TIP_FLIP_R_INSET_F10;
+    if (!docked && dotCX < flipL) mirrored = false;
+    if (!docked && dotCX > window.innerWidth - flipR) mirrored = true;
     tooltipEl.classList.toggle("is-mirrored", mirrored);
     if (docked) {
       tooltipEl.classList.remove("is-flipped");
@@ -6406,7 +6470,7 @@ function p7HoverInit() {
   // DOM overlays can sit on top of the canvas depending on scroll position.
   window.addEventListener("pointermove", onMove);
   window.addEventListener("scroll", () => {
-    if (currentPage !== 8 && currentPage !== 9) hide();
+    if (!p7TimelineLive()) hide();
     p7InspectSync();
   }, { passive: true });
 }
@@ -6450,6 +6514,58 @@ let   P7_LOUPE_ZOOM_OUT  = 0.2;
 // How far above/below the sampled square a headline card still counts as being
 // in the way. The card is centred on its dot and is one line tall plus padding.
 const P7_LOUPE_CARD_BAND_PX = 34;
+// Do axis headline cards exist on the fold being drawn right now? The timeline
+// folds draw them; @fold13 is page9's own grid and never has. Anything reading
+// p7.axisEventPositions has to ask, because that map is only ever REBUILT by the
+// axis draw — it is never cleared, so off those folds it holds stale geometry.
+function p7AxisCardsOnThisFold() {
+  return typeof currentPage !== "undefined" && (currentPage === 8 || currentPage === 9);
+}
+// Where the timeline's dots can be hovered (desktop) or picked (mobile): @fold9,
+// @fold10, and @fold11 right up to its own crossing (fold11SizeApply, js/groups.js)
+// — past it the dots size down and fly, and a tooltip would ride a moving target.
+function p7TimelineLive() {
+  if (typeof currentPage === "undefined") return false;
+  if (currentPage === 8 || currentPage === 9) return true;
+  return currentPage === 10 && typeof fold11SizePast === "function" && !fold11SizePast();
+}
+
+// @fold13's pick ramps need FRAMES, and that fold has no anim loop of its own to
+// borrow. The timeline's ramps ride p7StartAnimLoop (p7AnyAnimActive keeps it
+// alive until they settle); page9 only redraws when something asks it to, so the
+// growth (p7BulgeT) and the dim (p9.pickDimT) would advance one step per pick
+// change and then freeze — and on RELEASE the dim would be stranded at 1, the
+// whole grid left dimmed with nothing picked.
+//
+// This is that loop: it runs only while a ramp is actually mid-flight, in either
+// direction, and stops the frame it settles.
+let p7PickRampRaf = 0;
+function p7PickRampActive() {
+  if (typeof p9 === "undefined") return false;
+  const dragging = p7Inspect.dragging;
+  const b = p7Inspect.event ? p7BulgeT.get(p7Inspect.event) : null;
+  const dim = p9.pickDimT || 0;
+  if (dragging) return (b ? b.t < 1 : true) || dim < 1;
+  // On the way DOWN the event is already null (release clears it), so the ramp
+  // has to watch the MAP rather than the current pick — otherwise the loop stops
+  // the moment the dim lands and leaves the collapsing entry stranded in
+  // p7BulgeT at t > 0, where p7BulgeActive would keep reporting it forever.
+  return p7BulgeT.size > 0 || dim > 0;
+}
+function p7PickRampTick() {
+  p7PickRampRaf = 0;
+  draw();
+  if (p7PickRampActive()) p7PickRampRaf = requestAnimationFrame(p7PickRampTick);
+}
+function p7StartPickRamp() {
+  if (typeof p7InspectPage === "function" && p7InspectPage() !== 12 &&
+      !(typeof p9 !== "undefined" && (p9.pickDimT || 0) > 0)) return;
+  // Only while something is actually moving. drawLoupe calls this every frame of
+  // a hold, so without the check a SETTLED pick still bought a full repaint of
+  // 14k+ dots per frame — which is the stutter this loop exists to avoid.
+  if (!p7PickRampActive()) return;
+  if (!p7PickRampRaf) p7PickRampRaf = requestAnimationFrame(p7PickRampTick);
+}
 const P7_LOUPE_LIFT_PX   = 60; // how far above the fingertip the loupe centre sits
 const P7_INSPECT_SNAP_PX = 44; // furthest a dot can be from the finger and still be picked
 const P7_LONGPRESS_MS      = 300; // hold this long, without moving, to open the loupe
@@ -6487,7 +6603,7 @@ let p7InspectSync = () => {};
 // respects the size grid's per-dot block size (p7InspectSource).
 function p7InspectPage() {
   if (!isMobile()) return null;
-  return (currentPage === 8 || currentPage === 9 || currentPage === 12) ? currentPage : null;
+  return (p7TimelineLive() || currentPage === 12) ? currentPage : null;
 }
 
 // The dot map the picker hit-tests against, per fold — same shape either way:
@@ -6537,8 +6653,9 @@ let P7_HINT_Y_MOBILE = 4;
 const P7_BAND_TYPE_MS = 900;
 // Out is faster than in — the line clears as @fold11's beat starts.
 const P7_BAND_UNTYPE_MS = 300;
-let p7BandLastT = 0;      // how much of it was written when the fold ended
-let p7BandOutStart = null;
+let p7BandT = 0;             // the displayed share of the sentence, 0..1
+let p7BandLastFrame = null;  // wall clock of the last step
+let p7BandEverTyped = false; // the axis has finished its build-in at least once
 // Set for the length of ONE draw, by drawLoupe, so the glass's blit is taken
 // from a canvas with no headline cards on it. See the note at its only reader.
 let p7HideAxisCards = false;
@@ -6591,10 +6708,15 @@ function p7HintTypeT() {
 // the picker is live on @fold9 and @fold13, and the folds between them have no
 // dots worth holding, so the band goes with the gesture it names.
 function p7HintBandWanted() {
-  // THE TIMELINE ONLY (@fold9 / @fold10, currentPage 8-9). @fold13 has its own
-  // resting line inside the docked frame (`.is-hint`, set in the picker's
-  // sync()); showing the band there too would print the same sentence twice.
-  return isMobile() && (currentPage === 8 || currentPage === 9);
+  // THE TIMELINE FOLDS, and it ends on **@fold11's OWN TRIGGER** — the 0.5
+  // crossing that sizes the squares down and flies them home (fold11SizePast,
+  // js/groups.js), not on the section observer's page flip, which lands at a
+  // different moment. Up to that line the gesture it names is still live, so
+  // the sentence stays; past it, it types out (p7HintBandApply). @fold13 has
+  // its own resting line inside the docked frame (`.is-hint`, set in the
+  // picker's sync()), so the band must not reach that far.
+  if (!isMobile() || currentPage < 8 || currentPage > 10) return false;
+  return typeof fold11SizePast === "function" ? !fold11SizePast() : true;
 }
 function p7HintBandApply() {
   const el = p7HintBandEl;
@@ -6609,38 +6731,41 @@ function p7HintBandApply() {
   // fold6MLegendPaintCard and moves with the timeline's own box.
   el.style.bottom = above ? "auto" : (p7MLegendBarH() - P7_HINT_Y_MOBILE) + "px";
   el.style.top    = above ? P7_HINT_Y_MOBILE + "px" : "auto";
-  // LEAVING TYPES OUT, it doesn't vanish: scrolling on past the timeline is
-  // @fold11's own beat (the squares size down and fly home), and the line has
-  // to clear as that starts rather than blinking off with the fold. The out is
-  // FASTER than the in (P7_BAND_UNTYPE_MS) and scaled by how much was written,
-  // so a half-typed line doesn't take the full time. Only once it is empty does
-  // the band actually hide.
+  // THE LINE IS ITS OWN LITTLE ANIMATION, in both directions — it never blinks
+  // on or off. One displayed value (p7BandT) walks toward a target each frame:
+  // IN over P7_BAND_TYPE_MS, OUT over the faster P7_BAND_UNTYPE_MS.
+  //
+  //   target 1  — the band's folds are on screen (p7HintBandWanted: the
+  //               timeline up to @fold11's OWN crossing) and the sentence has
+  //               been earned once: the axis finished its build-in and the fill
+  //               reached the year (p7HintTypeT). @fold10 undraws the axis and
+  //               @fold11 is past it, so after that first time the target is
+  //               held from `p7BandEverTyped` rather than re-read off a clock
+  //               that is no longer running.
+  //   target 0  — past @fold11's crossing. Scrolling back up over the same line
+  //               puts the target back to 1 and it types in again, from
+  //               wherever the out-type had got to.
   const bandWant = p7HintBandWanted();
-  let t = 0;
-  if (bandWant) {
-    p7BandOutStart = null;
-    // @fold10 (currentPage 9) UNDRAWS THE AXIS, and the type-in clock hangs off
-    // the axis (p7HintTypeT) — so on that fold the line's own source goes to 0
-    // and the sentence snapped away a whole fold early. The gesture it names is
-    // still live there, so the line HOLDS whatever it had written and only
-    // clears when the timeline folds end (@fold11's beat, below).
-    const tin = p7HintTypeT();
-    t = currentPage === 9 ? Math.max(tin, p7BandLastT) : tin;
-    p7BandLastT = t;
-    el.hidden = false;
-  } else if (p7BandLastT > 0) {
-    if (p7BandOutStart === null) p7BandOutStart = performance.now();
-    const k = (performance.now() - p7BandOutStart) / Math.max(1, P7_BAND_UNTYPE_MS * p7BandLastT);
-    t = p7BandLastT * (1 - Math.min(1, k));
-    if (t <= 0) { p7BandLastT = 0; p7BandOutStart = null; }
-    el.hidden = t <= 0;
+  const tin = bandWant ? p7HintTypeT() : 0;
+  if (tin >= 1) p7BandEverTyped = true;
+  const target = bandWant ? (p7BandEverTyped ? 1 : tin) : 0;
+  const now = performance.now();
+  const dt = p7BandLastFrame === null ? 0 : now - p7BandLastFrame;
+  p7BandLastFrame = now;
+  if (p7BandT !== target) {
+    const ms = target > p7BandT ? P7_BAND_TYPE_MS : P7_BAND_UNTYPE_MS;
+    const step = dt / Math.max(1, ms);
+    p7BandT = target > p7BandT ? Math.min(target, p7BandT + step)
+                               : Math.max(target, p7BandT - step);
     // Its OWN frames: past the timeline nothing else repaints this — page7's
-    // draw loop has stopped and updateGroups doesn't touch the band — so the
-    // out-type has to drive itself or it freezes mid-sentence.
-    if (!el.hidden) requestAnimationFrame(p7HintBandApply);
+    // draw loop has stopped — so the walk has to drive itself or it freezes
+    // mid-sentence.
+    requestAnimationFrame(p7HintBandApply);
   } else {
-    el.hidden = true;
+    p7BandLastFrame = p7BandT === target && target === 0 ? null : p7BandLastFrame;
   }
+  const t = p7BandT;
+  el.hidden = t <= 0;
   // The typewriter, driven per frame off the axis's own build-in clock.
   if (p7BandSpans) {
     fold8UpdateTypewriter(p7BandSpans, Math.round(p7BandSpans.fullText.length * t));
@@ -6809,6 +6934,10 @@ function p7InspectInit() {
   function hideLoupe() {
     p7Inspect.dragging = false;
     window.removeEventListener("touchmove", loupeMove, { passive: false });
+    // @fold13's growth and dim have to ramp back DOWN, and that needs frames
+    // this fold does not otherwise produce — without it the grid stays dimmed
+    // around a dot nothing is pointing at.
+    p7StartPickRamp();
     // Both the dodge and @fold9's spot flip belong to the live finger — lifting
     // it snaps the frame straight back to its default (top) spot.
     if (p7TipAvoidActive || p7TipAtBottom) {
@@ -7024,6 +7153,9 @@ function p7InspectInit() {
 
   function drawLoupe(cx, cy) {
     syncTipAvoid(cy);
+    // Keep @fold13's growth/dim ramps fed (no-op on the timeline folds, which
+    // have p7StartAnimLoop for this).
+    p7StartPickRamp();
     const rect = canvasEl.getBoundingClientRect();
     const mx = cx - rect.left, my = cy - rect.top;
     const dpr = window.devicePixelRatio || 1;
@@ -7055,8 +7187,16 @@ function p7InspectInit() {
     // dots' own y's, with the card's height allowed for on either side.
     const srcHalf = src / 2;
     let overCard = false;
-    for (const [, q] of p7.axisEventPositions) {
-      if (Math.abs(q.y - my) < srcHalf + P7_LOUPE_CARD_BAND_PX) { overCard = true; break; }
+    // ONLY on the folds that actually draw axis cards. p7.axisEventPositions is
+    // rebuilt by the axis draw and simply keeps its last values when that draw
+    // doesn't run — so on @fold13 it still held @fold9's six entries, spread
+    // across the whole screen, and `overCard` came out true for almost any
+    // finger. That bought a full extra canvas repaint EVERY FRAME on the fold
+    // with 14k+ dots: the stutter. A stale map, not a stale idea.
+    if (p7AxisCardsOnThisFold()) {
+      for (const [, q] of p7.axisEventPositions) {
+        if (Math.abs(q.y - my) < srcHalf + P7_LOUPE_CARD_BAND_PX) { overCard = true; break; }
+      }
     }
     // ONE extra draw, in ONE frame: the canvas is repainted without the cards,
     // that is what gets blitted, and then the card layer alone is painted back
@@ -7208,6 +7348,9 @@ function p7InspectInit() {
     // opening the loupe over it would swallow the tap's own click.
     if (inside(tipEl)) return null;
     if (currentPage === 12 && inside(document.querySelector(".page9-tray"))) return null;
+    // @fold11's title card scrolls over the chart while the picker is still
+    // live there — a hold on its text is reading, not picking.
+    if (currentPage === 10 && inside(document.querySelector("#page-10 .text-card-frame"))) return null;
     return t;
   }
 
@@ -7225,6 +7368,9 @@ function p7InspectInit() {
   const P7_AXIS_TAP_SLOP_PX = 12;
   let tapAt = 0, tapX = 0, tapY = 0, tapWasOpen = null;
   function p7AxisTapHit(cx, cy) {
+    // Same stale-map trap as the x-ray above: off the timeline folds these
+    // positions are last frame's, from a fold that isn't on screen.
+    if (!p7AxisCardsOnThisFold()) return null;
     const rect = canvasEl.getBoundingClientRect();
     const mx = cx - rect.left, my = cy - rect.top;
     for (const [ev, pos] of p7.axisEventPositions) {

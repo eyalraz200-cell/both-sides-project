@@ -296,7 +296,10 @@ axis so the first event's label can center over its own circle).
   `curX` follows a damped lag (`P7_AXIS_FILL_LAG_DAMPING` 0.12) that self-restarts the
   anim loop and snaps within 0.0005.
 - **Year ticks** are hollow ring markers (background disc punched out at
-  `P7_AXIS_MARKER_RADIUS` 4, then a stroked circle) — first tick is `minDate` itself,
+  `P7_AXIS_MARKER_RADIUS` 4, then a stroked circle) — or, with `P7_AXIS_YEAR_MARK`
+  `'line'`, a short horizontal rule centred on the same spot (`P7_AXIS_YEAR_LINE_LEN` px,
+  unreached alpha `P7_AXIS_YEAR_LINE_ALPHA`, reached = `P7_AXIS_FILLED_COLOR`, leaves by
+  length on `spanShrink`); ships `'ring'`, *being compared* on `_debug-axis-year-marks.js` — first tick is `minDate` itself,
   then each `YYYY-01-01`. On the horizontal axis labels sit **below** the line
   (`p7AxisYearLabelOffset()` — `P7_AXIS_YEAR_LABEL_OFFSET` 12 desktop,
   `P7_AXIS_YEAR_LABEL_OFFSET_MOBILE` **5**, so the year reads as attached to its own tick);
@@ -704,10 +707,14 @@ box's bottom (100px up, `sbbTimelineMobileBottomPx`) and the 43px legend bar (ba
 @fold7's demo feeds the lerped grey→colour value through it every frame, so the
 darkening is continuous rather than a snap at the end; `.is-mirrored` flips the
 box for `side === "left"` — except outside the two horizontal flip lines, which keep the
-box off the mini-legends: a dot left of `P7_TIP_FLIP_L` (**327 px from the left edge**)
-always opens rightward (`mirrored = false`), a dot within `P7_TIP_FLIP_R_INSET`
-(**327 px from the right edge**, the same inset mirrored — tuned by eye) always opens leftward (`mirrored = true`); only between
-them does the data-side rule decide. Both hand-tuned by eye at a 1900px-wide viewport,
+box off the mini-legends: a dot left of the fold's L line always opens rightward
+(`mirrored = false`), a dot within the fold's R inset of the right edge always opens
+leftward (`mirrored = true`); only between them does the data-side rule decide. **One pair
+per fold** (explicit instruction): `P7_TIP_FLIP_L_F9` / `P7_TIP_FLIP_R_INSET_F9` for
+@fold9's timeline, `_F10` for @fold10's size grid (the hover closure picks by
+`currentPage`), and `P9_TIP_FLIP_L` / `P9_TIP_FLIP_R_INSET` (page9.js) for @fold13 — all
+three start at the **327 px** that used to serve every fold; `var`s, *being tuned* on the
+`manual/` harness `_debug-tip-flip.js` (one tab per fold, flip-line ticks in the top margin). Both hand-tuned by eye at a 1900px-wide viewport,
 exact px, not vw — but each is anchored to the edge its legend hangs off, so both lines
 track a window resize (the right line reads `window.innerWidth - P7_TIP_FLIP_R_INSET`
 live per hit-test). Below 950px window width the two bands overlap and the right rule
@@ -764,7 +771,7 @@ it (no transit-hide: nothing disappears). The frame is filled — in the event's
 colour — only while an event is actually in it; the empty hint state carries no fill and no
 border at all (see the neutral-frame note above). @fold9
 itself has no card to stack: `#page-8` is an empty scrub spacer. The final spot is above the timeline grid (`top: 62px`, centered, `width: min(300px, 100vw - 48px)`
-— 300px was chosen by eye after measurement: ~76% of descriptions fit the 3 clamped lines (measured at 14px; type since bumped to 15px) (320px bought 82%, the 342px title-block width 87.5%, but both read too wide) — **fixed** `height: 100px`, with the overflow clipped on `.page9-tooltip-desc` — **never on
+— 300px was chosen by eye after measurement: ~76% of descriptions fit the 3 clamped lines (measured at 14px; type since bumped to 15px) (320px bought 82%, the 342px title-block width 87.5%, but both read too wide) — **fixed** `height: 100px` from @fold8's handover on (on @fold7 itself the frame is `.is-fit`: content-sized, unclamped — see the @fold7 row in [Folds](Folds.md)), with the overflow clipped on `.page9-tooltip-desc` — **never on
 the frame**, whose dashed `<svg>` is inset `-2px` on every side and would be clipped clean
 away, leaving the tooltip with no stroke; see "Long descriptions" below): Its SIZE never changes and its horizontal
 placement never changes — only the text inside, plus the one scripted glide above. Consequences:
@@ -983,6 +990,15 @@ re-entry lands on the right side of **both** crossings — note the grid stays
 crossing, never while the reader sits still inside one — that is what lets the
 button below hold its state. State: `p7Grid = { on, layout }`.
 
+**A press of the button holds across page flips** (`p7ScopeUserUniform`, js/groups.js):
+every press that changes the flag records the reader's choice, and on pages 10–11 the
+re-sync uses it instead of `fold11SizePast()` — so scrolling on into @fold12 after a press
+on @fold11, or back from @fold13, no longer hands the flag back to "flat". Only the two
+real crossings (`fold10GridTrigger`, `fold11SizeApply`, either direction) and leaving the
+band upward (page < 9) clear it. In the same spirit `p9ScopeSync` now runs only when a
+flip actually moves the flag or leaves the band (page < 10): a flip that keeps the choice
+keeps a running tier morph and the held legit plan.
+
 **@fold13 (page 12) is re-synced WITHOUT `uniform`.** Both crossings that own the
 flag sit far above that fold, so `fold11SizePast()` is permanently true there and
 re-syncing from it would hand the flag back to "flat" on every page flip — a press
@@ -990,6 +1006,21 @@ of the «הצגת גודל האירועים» button was wiped the moment the re
 @fold14 and back. On page 12 the button (`p9ScopeSet`, page9.js) is the only
 authority, so the re-sync passes `on` alone and leaves `p7GridUniform` where the
 press left it.
+
+**The grid never goes OFF under page8's glide** (`p7SizeGridOnPage`: `p7SizeGridSet(past10 ||
+glideInAir, …)` with `glideInAir = p8Engaged && p8CurrentT() > 0`): the flight starts from
+`p7GridLiveRect`, so the packed cells must stay under it until it lands — switched off mid-air
+(a fast reverse where the flip beat @fold11's crossing and @fold10's card was already back
+below the line) every dot's `from` fell back to its timeline cell and the field snapped there.
+Three more guards on the same reverse: `p7GridLiveRect` rebuilds the pack
+(`p7SizeGridLayout`) if something dropped it while drawPage7 is not painting (last resort);
+`fold11SizeApply`'s reverse keeps the regrow **animated** even on a jump (`set`) while a
+glide is flying, so its pending window stands this re-sync down for every flip inside the
+reverse; and `drawNow` (js/core.js) keeps routing page 9 to `drawPage8` while
+`p8Engaged && p8CurrentT() > 0` (`p8RunAnimLoop` paints pages 9–11), because on desktop the
+un-crossing sits ~44vh above the flip to @fold10 and a fling flipped mid-glide, letting
+drawPage7 draw every dot at its rest cell in one frame. @fold10's own crossing still turns
+the grid off when actually crossed (that is the fold's flight home).
 
 **It stands down while @fold11's beats are in flight** (`fold11SizeBeatPending()`,
 js/groups.js — true between the two beats; each timeout nulls its own handle so
@@ -2456,7 +2487,7 @@ the selection, so the axis eases back to normal along with everything else. `sho
 dragging pick in its roster-target check). Desktop is untouched: `p7Inspect.event` is only
 ever set ≤600px (`p7InspectPage`).
 
-**The picker serves @fold9, @fold10 and @fold13** (`p7InspectPage()`). @fold10 joined without a new
+**The picker serves @fold9, @fold10, @fold11 up to its crossing, and @fold13** (`p7InspectPage()`, which reads `p7TimelineLive()` — pages 8, 9, and 10 while `!fold11SizePast()` — plus page 12; the desktop hover's `doHitTest` and its scroll `hide()` read the same helper, so both breakpoints lose the timeline's hover/pick on @fold11's own crossing, where `fold11SizeApply` also drops whatever is open). @fold10 joined without a new
 driver — `PAGES[8]` and `PAGES[9]` are both `drawPage7` — needing only the gate and a hit box that
 respects the size grid's per-dot block.
 
@@ -2581,6 +2612,22 @@ is **`p9.pickDimT` + a fixed grown size**, `P9_PICK_SQ_M` (**12px**, 6 cells at 
   animations are concurrently interpolating, so a displacement pass would be a second layout path.
 - `p7LoupeGrowth()` has a matching @fold13 branch, so the glass's zoom-out and `nearestEvent`'s
   sticky half-extent both follow that fold's rule for free.
+- **The ramps need their own frames** — `p7StartPickRamp` / `p7PickRampTick`. The timeline's ramps
+  ride `p7StartAnimLoop`; page9 only redraws when asked, so growth and dim would advance one step
+  per pick change and freeze, and on RELEASE the dim would strand at 1 with the whole grid dimmed
+  around nothing. The loop runs **only while a ramp is mid-flight**, in either direction:
+  `drawLoupe` calls it every frame of a hold, so without that check a *settled* pick still bought a
+  full repaint of 14k+ dots per frame. On the way down it watches **`p7BulgeT.size`**, not the
+  current pick — release has already nulled the event, and a loop that stopped when the dim landed
+  left the collapsing entry stranded in the map at `t > 0` forever.
+
+> **The stale-map trap, twice.** `p7.axisEventPositions` is only ever *rebuilt* by the axis draw,
+> never cleared — so on @fold13 it still held @fold9's six entries spread across the whole screen.
+> The glass's `overCard` test therefore came out true for almost any finger and bought a **full
+> extra canvas repaint every frame** on the fold with 14k+ dots: the stutter. `p7AxisTapHit` read
+> the same stale map and could "open" an axis card on a fold that has none. Both now ask
+> `p7AxisCardsOnThisFold()` first. Measured after: 5 paints per 180 frames on a settled hold
+> (was 179), **8ms median frame at 6× CPU throttle**.
 
 > **Removed — don't reintroduce:** `p7DrawInspectScrim` on @fold13 (`drawPage9`'s call). Under the
 > glass its white wash read as pale washed-out dots with a hard circle around the selection — the

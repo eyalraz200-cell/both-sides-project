@@ -120,6 +120,10 @@ const P9_DROP_SIZE_MS = 450;
 const P9_SQ      = 3;
 const P9_GAP  = 1;
 const P9_CELL = P9_SQ + P9_GAP;
+// @fold13's own tooltip flip lines (screen px from each edge) — this fold's
+// pair of the per-fold set declared in page7.js (P7_TIP_FLIP_*_F9 / _F10).
+// `var`s — a manual/ harness drives them.
+var P9_TIP_FLIP_L = 327, P9_TIP_FLIP_R_INSET = 327;
 const P9_MID  = 719 / 982; // divider position as fraction of H (~73.22vh) — Figma's own measured position; previously raised to 0.65 per an earlier explicit request to move it higher, now lowered back per a later one. Every grid (extreme above, legit below) derives its own geometry from H * P9_MID fresh each frame, so moving this one constant reflows both sides automatically — no other layout code needs to change.
 
 // Fallback gap (before the real, text-derived gap below is measured) reserved
@@ -1090,46 +1094,17 @@ function p9LegitTierPlan(W, H) {
                P9_LEGIT_SQ_MIN_M, P9_LEGIT_MAX_FRAC_M].join("|");
   // HELD across drops: once solved, a drop doesn't resize or move the legit
   // dots — the dropped ones just leave holes. Classification state is NOT in the
-  // key; the plan is only rebuilt when a dot that is legit now has no slot in it
-  // (e.g. a category that was already extreme when the tiers went on comes back).
+  // key, and it is not in the SOLVE either: the plan is packed over the WHOLE
+  // camp (see listFor below), so every event holds a slot from the moment the
+  // plan exists and a returning dot lands exactly where it stood. It used to be
+  // packed over the dots legit at solve time, and a dot with no slot (its
+  // category already extreme when the tiers went on, or the plan re-solved
+  // after a page flip) was appended by a scan from the centre column outward —
+  // which is what packed the right camp against the divider on @fold13's
+  // reverse instead of sending each dot back to its place. Rebuilt only on a
+  // key change (viewport / knobs) or a tier toggle.
   p9SyncLegitRank();
-  if (p9.legitTierPlan && p9.legitTierPlan.key === key) {
-    const held = p9.legitTierPlan.plan;
-    // A dot that is legit now but has no slot (its category was already extreme
-    // when the tiers went on, and came back) is ADDED into a free slot — a hole
-    // a dropped dot left, nearest the centre first, else past the outer edge —
-    // so nothing already placed moves or resizes.
-    for (const side of ["left", "right"]) {
-      const pack = held.packs[side];
-      if (!pack) continue;
-      const legitNow = [...(p9.legitRank?.[side]?.keys() ?? [])];
-      const missing = legitNow.filter(e => !pack.pos.has(e));
-      if (!missing.length) continue;
-      const rows = Math.max(1, pack.visRows || pack.rows || 1);
-      const occ = new Set();
-      for (const e of legitNow) {
-        const P = pack.pos.get(e);
-        if (!P) continue;
-        for (let dc = 0; dc < P.n; dc++) for (let dr = 0; dr < P.n; dr++) occ.add((P.c + dc) * 4096 + P.r + dr);
-      }
-      const cellsHeld = e => Math.min((P9_LEGIT_TIER_CELLS[p7BulgeTier(e)] || 1), P9_SCOPE_TIER_CAP, rows);
-      for (const e of missing) {
-        const n = cellsHeld(e);
-        let done = false;
-        for (let c = 0; !done && c < 4096 - n; c++) {
-          for (let r = 0; !done && r + n <= rows; r++) {
-            let ok = true;
-            for (let dc = 0; ok && dc < n; dc++) for (let dr = 0; ok && dr < n; dr++) if (occ.has((c + dc) * 4096 + r + dr)) ok = false;
-            if (!ok) continue;
-            for (let dc = 0; dc < n; dc++) for (let dr = 0; dr < n; dr++) occ.add((c + dc) * 4096 + r + dr);
-            pack.pos.set(e, { c, r, n });
-            done = true;
-          }
-        }
-      }
-    }
-    return held;
-  }
+  if (p9.legitTierPlan && p9.legitTierPlan.key === key) return p9.legitTierPlan.plan;
 
   const M     = p9Metrics();
   const cell0 = M.legitCell, sq0 = M.legitSq;
@@ -1139,7 +1114,13 @@ function p9LegitTierPlan(W, H) {
   const cellsOf = e => (P9_LEGIT_TIER_CELLS[tierOf(e)] || 1);
   // Legend-filtered dots keep their slot too (they shrink away in place), so
   // the filter never resizes the strip either.
-  const listFor = side => [...(p9.legitRank?.[side]?.keys() ?? [])];
+  // The WHOLE camp, not just what is legit right now — extreme dots are holes.
+  // With nothing dropped this is exactly the old list, so the first toggle's
+  // pack is unchanged; toggling the tiers on AFTER drops packs the strip as if
+  // every dot were present (holes where the dropped ones were) rather than a
+  // tighter pack of the survivors — the price of "a returning dot goes back
+  // where it was".
+  const listFor = side => (side === "left" ? p7.leftEvents : p7.rightEvents).slice();
   const lists = { left: listFor("left"), right: listFor("right") };
   // The packed pitch layouts must NOT band by group — legit-rank order kept each
   // group as one contiguous region. A seeded shuffle mixes them, stable per frame.
@@ -1154,10 +1135,7 @@ function p9LegitTierPlan(W, H) {
         right: p7Shuffle(p7.rightEvents, 42424),
       };
     }
-    for (const side of ["left", "right"]) {
-      const keep = new Set(lists[side]);
-      lists[side] = p9.legitMixOrder[side].filter(e => keep.has(e));
-    }
+    for (const side of ["left", "right"]) lists[side] = p9.legitMixOrder[side].slice();
   }
   const packAt = (cell, capCells, onlyCrowd) => {
     const colsTotal = Math.max(2, Math.floor(W / cell));
@@ -1804,7 +1782,18 @@ function p9ScopeTotalMs() {
 function p9ScopeBlend(ev, from, cx, cy, sq) {
   const ms = p9ScopeMorphMs();
   const w  = p9ScopeWindows(p7BulgeTier(ev));
-  if (p9.scopeMorph && p9.scopeMorph.dir === "off") {
+  // A dot that ends up SMALLER needs no room, so it does not wait for the
+  // stagger — it resizes DURING the flight, on the fly window itself, and is
+  // already at size when it lands (explicit instruction: shrinkers resize in
+  // flight, growers land first and then grow). Read on the running direction's
+  // clock: a shrink going on, a grow coming back off. Same idea as
+  // p7MorphBlend's rule for @fold10 (page7.js), with the window chosen for the
+  // strip: tier-0 legit dots are the crowd, and the strip's solved unit is
+  // often a touch under the flat size, so without this the whole field landed
+  // and then every small dot ticked down ~700ms later.
+  const dirOff = !!(p9.scopeMorph && p9.scopeMorph.dir === "off");
+  if (dirOff ? sq > from.sq : sq < from.sq) w.size = [0, P9_SCOPE_FLY_MS];
+  if (dirOff) {
     const T = p9ScopeTotalMs();
     w.pos  = [T - w.pos[0]  - w.pos[1],  w.pos[1]];
     w.size = [T - w.size[0] - w.size[1], w.size[1]];
@@ -1873,8 +1862,9 @@ function p9ScopeRunLoop() {
   requestAnimationFrame(p9ScopeRunLoop);
 }
 
-// Called on every page flip (p7SizeGridOnPage) — the tiers do not survive
-// leaving the fold, so neither should the morph or the pack.
+// Called from p7SizeGridOnPage when a page flip actually MOVES the tier flag,
+// or leaves the band upward (page < 10) — a flip that keeps the reader's choice
+// keeps the morph and the held plan with it.
 function p9ScopeSync() {
   p9.scopeMorph  = null;
   p9.scopeLayout = null;
@@ -2308,6 +2298,11 @@ function drawPage9(ctx, W, H) {
       drawAlpha = (p9.hoverDimCategoryIdx !== null && CATEGORY_TO_IDX[e.category] === p9.hoverDimCategoryIdx)
         ? 1
         : drawAlpha * dimFactor;
+    } else if (typeof fold6LegendHoverDimT === "function" && fold6LegendHoverDimT() > 0) {
+      // Fourth, lowest: a hovered legend ROW (js/groups.js) — its group stays
+      // bright, the rest dim to the same floor. Desktop only by construction.
+      const lt = fold6LegendHoverDimT();
+      if (e.actor !== fold6LegendHoverActor) drawAlpha *= 1 - (1 - hoverDim(e.actor)) * lt;
     }
 
     ctx.globalAlpha = drawAlpha;
@@ -2436,7 +2431,9 @@ function drawPage9(ctx, W, H) {
       const r = P ? P.r : Math.floor(rawI / cols);
       // A block of n cells spans n columns out from the gap and n rows up from
       // the anchor; at n === 1 this is the old single-cell arithmetic exactly.
-      const inset = layout.inset || 0;
+      // `inset` pulls a block INTO the gap (V2 desktop, capped); `out` pushes it
+      // away from it (mobile tiers, centre-matching — see scopeCentreOut).
+      const inset = (layout.inset || 0) - (rightAlign ? scopeCentreOut.left : scopeCentreOut.right);
       let x = rightAlign ? centerX + inset - (c + n) * cell : rightX0 - inset + c * cell;
       let y = scopeBox.anchorY - (r + n) * cell;
       let size = tiered ? n * cell - gapPx : undefined;
@@ -2472,7 +2469,9 @@ function drawPage9(ctx, W, H) {
       [rightAlign ? "leftRows" : "rightRows"]: layout.rows,
       [rightAlign ? "leftClipped" : "rightClipped"]: clipped,
       [rightAlign ? "leftCols" : "rightCols"]: layout.cols,
-      [rightAlign ? "leftInset" : "rightInset"]: layout.inset || 0,
+      // Net of the mobile centre-matching push, so the count labels (below)
+      // stay centred on the block as drawn.
+      [rightAlign ? "leftInset" : "rightInset"]: (layout.inset || 0) - (rightAlign ? scopeCentreOut.left : scopeCentreOut.right),
       colsMax: scopeBox.colsMax, cellPx: Math.round(cell * 100) / 100,
       rowsMax: scopeBox.rowsMax,
     });
@@ -2568,6 +2567,22 @@ function drawPage9(ctx, W, H) {
   // that Figma's actual reference doesn't show.
   ctx.globalAlpha = 1;
   p9BulgeTick();
+  // MOBILE, tiers on: the two blocks' CENTRES sit the same distance from the
+  // screen's centre, set by the wider block — the narrower one moves out by
+  // half the width difference. Packed flush against the gap's edges, a
+  // 3-column block's centre sat far closer in than a 9-column one's and the
+  // pair read lopsided. Both layouts are solved here, before either draws
+  // (p9ScopeLayoutFor is cached, so the draws' own calls are free); desktop
+  // keeps its edge-flush packing.
+  const scopeCentreOut = { left: 0, right: 0 };
+  if (mobile && p9ScopeTiered()) {
+    const visOf = arr => arr.filter(e => !(typeof p7FilterHiddenEv === "function" && p7FilterHiddenEv(e)));
+    const L = p9ScopeLayoutFor("left",  scopeBox.cols, scopeBox.colsMax, scopeBox.rowsMax, visOf(p9.leftTopOrder),  scopeBox.colsMaxLeft);
+    const R = p9ScopeLayoutFor("right", scopeBox.cols, scopeBox.colsMax, scopeBox.rowsMax, visOf(p9.rightTopOrder), scopeBox.colsMaxRight);
+    const wide = Math.max(L.cols || 0, R.cols || 0);
+    scopeCentreOut.left  = (wide - (L.cols || 0)) * scopeBox.cellPx / 2;
+    scopeCentreOut.right = (wide - (R.cols || 0)) * scopeBox.cellPx / 2;
+  }
   p9.scopeStats = {};
   const leftTopRows  = drawBandedCols(p9.leftTopOrder,  true,  extremeColsTotal);
   const rightTopRows = drawBandedCols(p9.rightTopOrder, false, extremeColsTotal);
@@ -4077,8 +4092,8 @@ function p9HoverInit() {
     // its own dot instead of beside it.
     const dotClientX = rect.left + bestPos.x;
     let mirrored = bestEvent.side === "left";
-    if (dotClientX < P7_TIP_FLIP_L) mirrored = false;
-    if (dotClientX > window.innerWidth - P7_TIP_FLIP_R_INSET) mirrored = true;
+    if (dotClientX < P9_TIP_FLIP_L) mirrored = false;
+    if (dotClientX > window.innerWidth - P9_TIP_FLIP_R_INSET) mirrored = true;
     tooltipEl.classList.toggle("is-mirrored", mirrored);
 
     // Anchor the box's square corner (bottom-left normally, bottom-right

@@ -256,6 +256,13 @@ function drawNow() {
   // morphT hits 0 and snap back instead of animating.
   if ((p9?.fold13ExtremeMorphT ?? 0) > 0) {
     drawPage12(ctx, W, H);
+  } else if (currentPage === 9 && typeof p8Engaged !== "undefined" && p8Engaged
+             && typeof p8CurrentT === "function" && p8CurrentT() > 0) {
+    // @fold11's reverse glide flew past the flip to @fold10 (on desktop the
+    // un-crossing sits ~44vh above the flip, inside a 700ms glide): keep page8
+    // painting until it lands, or drawPage7 draws every dot at its rest cell in
+    // one frame. drawPage8 hands back to drawPage7 itself at t <= 0.
+    drawPage8(ctx, W, H);
   } else {
     PAGES[currentPage](ctx, W, H);
   }

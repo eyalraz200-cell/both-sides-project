@@ -3309,6 +3309,23 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     line-height: 18px;
   }
 
+  /* @fold7's frame (up to the handover into the bar — tooltipFitFold7,
+     js/fold8-tooltip.js) is content-sized like the desktop tooltip: no fixed
+     height, no clamp, no «עוד». The spot above the squares re-solves off the
+     frame's live height, so a longer description lifts it, never overlaps. */
+  .page9-tooltip.is-docked.is-fit {
+    height: auto;
+  }
+  .page9-tooltip.is-docked.is-fit .page9-tooltip-desc {
+    flex: none;
+    display: block;
+    overflow: visible;
+    -webkit-line-clamp: unset;
+  }
+  .page9-tooltip.is-docked.is-fit .p7-tip-more {
+    display: none;
+  }
+
   /* Opened by the reader (the p7-tip-more toggle, p7InspectInit in page7.js) on
      the ~third of events whose description is longer than four lines. This is
      the only state where the frame is allowed to grow, and it grows DOWNWARD
@@ -3499,6 +3516,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   #page-7,
   #page-8,
   #page-9,
+  #page-10,
   #page-12 {
     -webkit-touch-callout: none;
     -webkit-user-select: none;

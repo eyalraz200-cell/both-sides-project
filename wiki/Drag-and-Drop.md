@@ -248,6 +248,7 @@ nothing below changes shape; see [Mobile](#mobile).
   (`P9_EVENTS_GAP` 4) to dodge bidi reordering. Positions glide over `P9_COUNT_POS_MS`
   500; visibility crossfades over `P9_COUNT_LABEL_FADE_MS` 400 at the 0↔nonzero boundary.
   While a pill is hovered the labels show only that category's counts, unanimated.
+  **Mobile, tiers on: the two blocks' CENTRES sit the same distance from the screen's centre**, set by the wider block — `scopeCentreOut` (drawPage9, page9.js) solves both sides' layouts before either draws and pushes the narrower block outward by half the width difference; packed flush against the gap's edges a 3-column block's centre sat far closer in than a 9-column one's. The push is folded into `scopeStats.leftInset/rightInset` (net of V2's inward inset, which stays desktop-only), so the count labels follow. Desktop keeps edge-flush packing.
   Each label centres over the span its side **actually drew** — `p9.scopeStats.leftCols`
   / `.rightCols` (published by `drawBandedCols`, cleared right before the two calls),
   floored by that side's event count. That keeps it centered in crowd-tier/resize mode
@@ -300,7 +301,7 @@ can't hold that (~29k cells of blocks for ~17k visible cells at 1440×900), so i
 `"rise"` — every legit dot tiers, packed from the divider down in
 legit-rank order (`p9PackColumns`, columns from the centre out); the divider rises
 until the pack fits, up to `P9_LEGIT_RISE_MAX_FRAC` (0.4) of H, then the big tiers
-cap; `P9_LEGIT_RISE_PAD` under it. `"pitch"` (**picked**) — every legit dot tiers, on its own ladder `P9_LEGIT_TIER_CELLS` (1, 2, 3, 6, **7, 9** — the two biggest tiers reduced from 9, 14; the extreme columns keep the full ladder), in a seeded **shuffled** order so the pack never bands by group (the whole camp is shuffled once, `p9.legitMixOrder`, then filtered to the current legit dots — a drop only removes dots from the order, it never reshuffles it). **Mobile** has its own room modes (`P9_LEGIT_ROOM_M`, **shipped `"band"`**, picked on a compare/ harness since removed): the phone's strip is 54px at a 1.5px pitch, so there is no cell left to shrink — the cell is pinned at "a dot plus its gap" (`P9_LEGIT_SQ_MIN_M` 0.5 + `P9_LEGIT_GAP_MIN_M` 0.5) and the room is found by `"grow"` (the strip takes the height the pack needs), `"band"` (the 54px strip stands; the rest runs past the screen edge, clipped) or `"capped"` (grow, clamped to `P9_LEGIT_MAX_FRAC_M` of H, then the big tiers come down). **The gap floor is why:** at the ratio gap the phone's dots came out under a device pixel and tiled solid after `p9PlaceDot`'s snap — the strip read as one block. The same floor applies to the **extreme columns' `gapPx`** on mobile with the tiers on, for the same reason. The phone's extreme columns keep the **native pitch** with the tiers on (`P9_SCOPE_GROW_PITCH_M` false): growing it (the `p9ScopeMobileCell` solve, kept for reference) blew every dot up to fill the screen, and the button is a size *comparison* — the unit dot must read the same with it on or off. Room comes the way desktop finds it: outward, then `p9ScopeSolveCols`'s cap. That solve, when on, is held the same way the legit plan is — keyed on the geometry only, so a drop never re-pitches the columns and resizes the dots already standing in them; a drop that no longer fits is answered by `p9ScopeSolveCols`'s cap-lowering. Both are cleared on a tier toggle and on a page flip. The plan is solved when the tiers go on and **held across drops**: a drop never resizes or moves the legit dots — the dropped ones just leave holes (the legend filter too: filtered dots keep their slot and shrink away in place). It is rebuilt only when a dot that is legit now has no slot in it (a category already extreme when the tiers went on is dropped back); the strip
+cap; `P9_LEGIT_RISE_PAD` under it. `"pitch"` (**picked**) — every legit dot tiers, on its own ladder `P9_LEGIT_TIER_CELLS` (1, 2, 3, 6, **7, 9** — the two biggest tiers reduced from 9, 14; the extreme columns keep the full ladder), in a seeded **shuffled** order so the pack never bands by group (the whole camp is shuffled once, `p9.legitMixOrder`, then filtered to the current legit dots — a drop only removes dots from the order, it never reshuffles it). **Mobile** has its own room modes (`P9_LEGIT_ROOM_M`, **shipped `"band"`**, picked on a compare/ harness since removed): the phone's strip is 54px at a 1.5px pitch, so there is no cell left to shrink — the cell is pinned at "a dot plus its gap" (`P9_LEGIT_SQ_MIN_M` 0.5 + `P9_LEGIT_GAP_MIN_M` 0.5) and the room is found by `"grow"` (the strip takes the height the pack needs), `"band"` (the 54px strip stands; the rest runs past the screen edge, clipped) or `"capped"` (grow, clamped to `P9_LEGIT_MAX_FRAC_M` of H, then the big tiers come down). **The gap floor is why:** at the ratio gap the phone's dots came out under a device pixel and tiled solid after `p9PlaceDot`'s snap — the strip read as one block. The same floor applies to the **extreme columns' `gapPx`** on mobile with the tiers on, for the same reason. The phone's extreme columns keep the **native pitch** with the tiers on (`P9_SCOPE_GROW_PITCH_M` false): growing it (the `p9ScopeMobileCell` solve, kept for reference) blew every dot up to fill the screen, and the button is a size *comparison* — the unit dot must read the same with it on or off. Room comes the way desktop finds it: outward, then `p9ScopeSolveCols`'s cap. That solve, when on, is held the same way the legit plan is — keyed on the geometry only, so a drop never re-pitches the columns and resizes the dots already standing in them; a drop that no longer fits is answered by `p9ScopeSolveCols`'s cap-lowering. Both are cleared on a tier toggle and on a page flip. The plan is solved when the tiers go on and **held across drops**: a drop never resizes or moves the legit dots — the dropped ones just leave holes (the legend filter too: filtered dots keep their slot and shrink away in place). It is packed over the **whole camp**, not the dots legit at solve time, so every event holds a slot from the start and a returning dot (`p9ResetDrops` on @fold13's reverse) lands exactly where it stood — it used to append slot-less dots by a scan from the centre column, which packed the right camp against the divider instead of sending it home. Trade-off: tiers turned on *after* drops pack as if every dot were present (holes where the dropped ones are). Rebuilt only on a key change (viewport / knobs) or a tier toggle — page flips no longer clear it (see `p9ScopeSync`); the strip
 keeps its height and the legit cell shrinks, in quarter-device-px steps, until the
 pack fits (dot floor `P9_LEGIT_PITCH_MIN_SQ` 1px). How the shrunk dots sit
 (`P9_LEGIT_PITCH_FILL`, **shipped `"fill"`**): `"shared"` — one cell for both camps,
@@ -372,7 +373,11 @@ republished from `drawPage9` when the line moves. Only on @fold13
   order **strict-fly**: the flight fully lands (`P9_SCOPE_FLY_MS` 1400ms), then
   every tier grows (`P9_SCOPE_SIZE_MS` 450ms) staggered biggest-first by
   `P9_SCOPE_STAGGER_MS` (140ms), 2550ms total. Mirrored on the clock for
-  `dir: "off"`. The order was chosen with a `compare/` harness and **baked** —
+  `dir: "off"`. **Shrinkers are the exception** (`p9ScopeBlend`): a dot that ends up
+  smaller than it started needs no room, so it resizes on the fly window itself
+  (`[0, P9_SCOPE_FLY_MS]`) and is at size when it lands; only growers land first and then
+  grow. Read on the running direction — a shrink going on, a grow coming back off. Tier-0
+  legit dots are the usual case (the strip's solved unit is a touch under the flat size). The order was chosen with a `compare/` harness and **baked** —
   the alternatives (`size-then-fly`, `together`, `fly-then-size` with a
   `P9_SCOPE_GAP_MS` overlap) and the `P9_SCOPE_ORDER` switch are gone.
 - **Bulge off while tiered** — and off in the *bookkeeping* too: `p9BulgeTick`
@@ -527,13 +532,12 @@ box-model space open), and derives the path inset/radius from it.
 
 The tooltip normally opens **upward** from the dot (square anchor corner bottom-left,
 bottom-right for left-side events via `.is-mirrored`) — but the data-side rule is
-overridden at the screen edges by **the same two vertical flip lines @fold9's timeline
-hover uses, sharing its constants** (`P7_TIP_FLIP_L` / `P7_TIP_FLIP_R_INSET`, both 327,
-`page7.js`): a dot left of `P7_TIP_FLIP_L` always opens rightward, a dot within
-`P7_TIP_FLIP_R_INSET` of the right edge always opens leftward. Deliberately one shared
-pair of constants, not two tuned sets — the two tooltips must never disagree about which
-way they open, and each line is a px distance from the edge its mini-legend hangs off, so
-both follow a window resize. On desktop, when the upward box
+overridden at the screen edges by **this fold's own two vertical flip lines**
+(`P9_TIP_FLIP_L` / `P9_TIP_FLIP_R_INSET`, page9.js, both starting at 327 — the rule is the
+one @fold9/@fold10's hover uses, the *values* are per fold, explicit instruction; being
+tuned on `_debug-tip-flip.js`): a dot left of the L line always opens rightward, a dot
+within the R inset of the right edge always opens leftward. Each line is a px distance
+from the edge its mini-legend hangs off, so both follow a window resize. On desktop, when the upward box
 would poke above the column area's fixed ceiling (`p9ExtremeTopY(H)` — the same boundary
 the grid grows up to, under the drop zone / pill row), it **flips downward** instead:
 `.is-flipped` hangs the box below the dot and moves the square anchor corner to the top

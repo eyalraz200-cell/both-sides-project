@@ -175,6 +175,12 @@ numbers in the source.
    Fields: `title`, `sliders[{key, label, min, max, step, value, source}]`,
    `apply(v, mode, tab, on)`, `init(api)`, `custom(box, api, doc)`, `summary(v, mode)`,
    plus `goTo` / `goLabel` / `onGo` for the Go button (always fill these in).
+   **`timeline`** (optional) draws the ms knobs as lanes of segments in the panel tab —
+   `{ lanes: [{ label, offset: [{key, mul|mulKey}], segs: [{ key, label, mul|mulKey, after, derived }], marks: [{ label, at: [...] }] }] }`.
+   Every key is also a slider (the timeline is a second view over the same values, so
+   Copy / Reset / ↺ / undo need nothing extra); a segment's right edge drags its knob,
+   the fields under the lanes take a typed ms. It is plain data, so it crosses the bus —
+   unlike `custom`, which only the on-page panel can run.
 3. Insert `if (window.innerWidth < 900) return;   // desktop-only layout` immediately
    after `(function () {`.
 4. Add `<script src="_debug-<thing>.js"></script>` at the end of `project.html`'s script

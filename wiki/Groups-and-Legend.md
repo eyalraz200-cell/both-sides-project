@@ -127,7 +127,13 @@ opacity every frame, so nothing has to switch it back on.
   enter/leave and from `fold6DotHover` — a dot picked up inside the box drops the legend,
   letting go of it (still inside the box) brings it back. The dot wins **outright** there: its
   own single-row open (`fold6DotHoverTriggers`) is held back too while the pointer is inside a
-  hover box, and types in the moment the pointer leaves with the dot still hovered. **Hovering a row's click strip
+  hover box, and types in the moment the pointer leaves with the dot still hovered. **Hovering a row's click strip also lights up that group's dots**
+  (`fold6LegendHoverActor` + `fold6LegendHoverDimTrigger`, 90ms, js/groups.js): every other
+  dot on the canvas dims to `hoverDim(actor)`, the same floor a hovered dot uses, on all
+  three dim sites — page7's `p7DrawSideSquares`, page9's `p9PlaceDot`, and the 8 claimed
+  DOM squares in `updateGroups` — as the lowest-priority rule (a hovered dot or pill wins).
+  The actor is kept through the fade-out so its dots stay bright while the rest come back.
+  **Hovering a row's click strip
   strikes its label through** (`.is-filter-hover .group-label { text-decoration:
   line-through }`, desktop-only media block) — a preview of the click — and a filtered-out row
   (`.is-filtered-off`) keeps the line for as long as it stays out. Scrolling back up **reverses** the un-type on its own 900ms (`fold6LabelUntypeTrigger.trigger(0)` from the same `onSettle`) — it used to `set(0)`, which put every character back on screen in a single frame and snapped the labels in on the way out of @fold4.
