@@ -4828,6 +4828,12 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      Mobile-only: .group-item keeps 260 on desktop, where it fades rather than
      being pressed. */
   .fold6-mlegend-row { transition: opacity 140ms ease; }
+  /* The PRESS, written on pointerdown (js/groups.js) and gone by the release.
+     The real state (the dim above) cannot be decided until the finger lifts —
+     the same gesture may be a drag of the sheet — so without this the button
+     answers only after the release plus a 140ms fade. No transition here on
+     purpose: a press has to be there the instant the finger is. */
+  .fold6-mlegend-row.is-pressed { transition: none; background: #d2d2d2; }
 
   .fold6-mlegend-label { text-align: right; }
 

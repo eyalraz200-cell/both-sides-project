@@ -1088,7 +1088,11 @@ function p9LegitTierPlan(W, H) {
   // flip to @fold10 (js/core.js keeps drawPage8 painting there), and the
   // strip is that glide's far end — without the plan the target went flat
   // mid-flight and the field jumped.
-  if (!p9ScopeTiered() || typeof currentPage === "undefined" || currentPage < 9 || currentPage > 12) return null;
+  // …and page 13: @fold14 still draws the strip (drawPage12 → drawPage9) as it
+  // fades out and back in. Without the plan there the strip fell to its FLAT
+  // shuffle the moment @fold14 became the page, and the flip back to @fold13
+  // snapped every legit dot into its tiered pack at the end of the reverse.
+  if (!p9ScopeTiered() || typeof currentPage === "undefined" || currentPage < 9 || currentPage > 13) return null;
   if (!p7.ready || !p7.leftEvents) return null;
   const mobile = isMobile();
   if (mobile && !P9_LEGIT_SPREAD_M) return null;           // the packed bar has no room to give
@@ -1485,8 +1489,8 @@ function p9BulgeTick() {
   // Keep redrawing while any bulge is still tweening — p9RunAnimLoop only
   // runs during p9.anim, and hover is off while that runs anyway.
   if (active && !p9BulgeRaf) {
-    // @fold12 too: landed, nothing else repaints it (drawPage8's t>=1 path).
-    p9BulgeRaf = requestAnimationFrame(() => { p9BulgeRaf = 0; if ((p9PageVisible() || currentPage === 11) && !p9.anim) draw(); });
+    // @fold11/@fold12 too: landed, nothing else repaints them (drawPage8's t>=1 path).
+    p9BulgeRaf = requestAnimationFrame(() => { p9BulgeRaf = 0; if ((p9PageVisible() || currentPage === 10 || currentPage === 11) && !p9.anim) draw(); });
   }
 }
 // Current grown side of an event's bulge (P9_SQ when it has none).
@@ -1544,7 +1548,9 @@ function p9LegitBulges(geom) {
 function p9LegitBulgeApply(ev, x, y, sq, geom, bulges) {
   if (!bulges.length) return null;
   const own = bulges.find(b => b.ev === ev);
-  if (own) { sq = own.size; x -= own.push; y -= own.push; }
+  // As a DELTA on whatever size the caller has (2·push is the extra), so a dot
+  // whose bulge is collapsing mid-glide keeps the glide's own size underneath.
+  if (own) { sq += 2 * own.push; x -= own.push; y -= own.push; }
   else {
     const sh = p7BulgeShift(bulges, p9LegitCol(x, geom), p9LegitRow(y, geom));
     x += sh.dx; y += sh.dy;
@@ -1559,12 +1565,13 @@ function p9HoverGrownSize(ev, W, H) {
   if (b && b.legit) return p9LegitBulgeSize(ev, p9LegitGeometry(W, H));
   return p9BulgeSize(ev);
 }
-// Is a dot hover allowed on the current fold? @fold13 always; @fold12 once the
-// bridge glide has landed (the strip stands still); @fold14 while the strip is
-// still on screen (its fade, p9.fold13OutT, not yet complete).
+// Is a dot hover allowed on the current fold? @fold13 always; @fold11 and
+// @fold12 once the bridge glide has LANDED (never mid-flight — the strip stands
+// still; before the glide the timeline's own hover owns @fold11); @fold14 while
+// the strip is still on screen (its fade, p9.fold13OutT, not yet complete).
 function p9HoverPageOk() {
   if (currentPage === 12) return true;
-  if (currentPage === 11) return typeof p8CurrentT === "function" && p8CurrentT() >= 1;
+  if (currentPage === 10 || currentPage === 11) return typeof p8CurrentT === "function" && p8CurrentT() >= 1;
   if (currentPage === 13) return (p9.fold13OutT ?? 0) < 1;
   return false;
 }

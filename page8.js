@@ -172,9 +172,13 @@ function drawPage8(ctx, W, H) {
   // and pushes its neighbours (p9LegitBulges), the rest dim. The positions go
   // on record (p9.lastPositions) for that hit-test — this fold has no
   // drawPage9 frame to fill it.
+  // The bulge is applied on EVERY glide frame, not only landed: a reverse that
+  // starts under a hover must carry the pushed neighbours out of their shoved
+  // spots — the bulge collapses on its own 120ms clock (the hover is already
+  // gone) while the flight begins, so nothing snaps back to rest first.
   const landed = t >= 1;
-  if (landed) p9BulgeTick();
-  const legitBulges = landed ? p9LegitBulges(legitGeom) : [];
+  p9BulgeTick();
+  const legitBulges = p9LegitBulges(legitGeom);
   const hov = landed ? p9.hoveredEvent : null;
   const posMap = landed ? new Map() : null;
   let deferred = null;   // the hovered dot paints last, over its held neighbours
@@ -249,11 +253,9 @@ function drawPage8(ctx, W, H) {
       // deliberate 0.12 de-emphasis, which this glide matched, but Figma's actual
       // reference doesn't show that dimming, so it was dropped). Glide only moves
       // position now, so there's no fade-to-faint here for fold11's draw to "pop" out of.
-      if (landed) {
-        const lb = p9LegitBulgeApply(e, x, y, drawSQ, legitGeom, legitBulges);
-        if (lb) { x = lb.x; y = lb.y; drawSQ = lb.sq; }
-        posMap.set(e, { x, y, sq: drawSQ });
-      }
+      const lb = p9LegitBulgeApply(e, x, y, drawSQ, legitGeom, legitBulges);
+      if (lb) { x = lb.x; y = lb.y; drawSQ = lb.sq; }
+      if (landed) posMap.set(e, { x, y, sq: drawSQ });
       // A hovered dot (this fold or @fold13's — same p9.hoveredEvent) wins
       // over the legend row, same order as p9PlaceDot.
       const alpha = hov ? (e === hov ? 1 : hoverDim(e.actor))

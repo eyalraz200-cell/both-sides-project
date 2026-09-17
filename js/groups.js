@@ -1716,11 +1716,7 @@ function fold7SquareHover(i) {
 function fold7HoverReset() {
   // The demo is rewound: the example frame owns the spot again (see
   // p7TipAvoidActive / fold7UserHeld below).
-  if (typeof p7TipAvoidActive !== "undefined" && p7TipAvoidActive) {
-    p7TipAvoidActive = false;
-    fold7Hold.idx = -1;
-    if (typeof fold8TooltipEl !== "undefined" && fold8TooltipEl) tooltipDockMobile(fold8TooltipEl);
-  }
+  if (fold7Hold.idx !== -1) fold7Hold.idx = -1;
   if (fold7HoverIdx === null) return;
   fold7HoverIdx = null;
   fold7SquareHoverTriggers.forEach(t => t.set(0));
@@ -1759,12 +1755,13 @@ window.addEventListener("mousemove", e => {
 // the glass is up (tooltipAvoidPx, js/fold8-tooltip.js). Release hides the
 // glass and keeps the last square (the @fold7 frame always shows one).
 //
-// THE SPOT IS STICKY, not a dodge. The scripted example's frame has its own
-// place (TOOLTIP_DOCK_DEMO_SIDE, above the squares) and keeps it for as long as
-// the example is what is on screen. The FIRST user hold moves the frame to the
-// reader's spot (TOOLTIP_DOCK_HOLD_SIDE) and it STAYS there on release and for
-// every later hold — the example's frame becomes an ordinary held one. Only
-// rewinding the demo (fold7HoverReset, above) hands the example spot back.
+// TWO SPOTS, AND THE HOLD OWNS ONE OF THEM. The frame lives at the example's
+// place (TOOLTIP_DOCK_DEMO_SIDE + TOOLTIP_DOCK_SQUARES_GAP_PX, just over the
+// squares) whenever no finger is down — including after a hold, still showing
+// the event that hold picked. WHILE a finger is down it sits further up
+// (tooltipFold7ReaderPx), clear of the glass lifted over the square, and on
+// release it SNAPS back down to the example's place. Both grow upward, so a
+// long description extends away from the squares either way.
 // `idx` is the square the reader last picked — kept AFTER the release, because
 // the frame's spot is that square's (tooltipFold7ReaderPx, js/fold8-tooltip.js)
 // and the frame stays put once let go. fold7HoverIdx can't stand in for it:
@@ -1821,7 +1818,9 @@ function fold7HoldArm(x, y) {
     if (sel && sel.rangeCount) sel.removeAllRanges();
     window.addEventListener("touchmove", fold7HoldMove, { passive: false });
     fold7UserLoupeEl.classList.add("is-visible");
-    p7TipAvoidActive = true;   // sticky from here on — see the note above
+    // A new hold beats a flight still in the air — the frame is wanted up here.
+    tooltipFold7FlyCancel();
+    p7TipAvoidActive = true;
     tooltipDockMobile(fold8TooltipEl);
     requestAnimationFrame(fold7HoldTick);
   }, P7_LONGPRESS_MS);
@@ -1856,7 +1855,14 @@ function fold7HoldEnd() {
   fold7Hold.active = false;
   window.removeEventListener("touchmove", fold7HoldMove, { passive: false });
   fold7UserLoupeEl.classList.remove("is-visible");
-  // p7TipAvoidActive is NOT cleared here: the frame stays where the hold put it.
+  // Let go and the frame FLIES back to the example's spot (tooltipDockTopPx)
+  // over FOLD7_TIP_FLY_MS, keeping the held event's text: the reader's own place
+  // exists only for the length of the hold, where the glass would otherwise
+  // cover the frame. Read the top it is leaving BEFORE the flag flips, since
+  // that flag is what decides the spot.
+  const fromTop = parseFloat(fold8TooltipEl.style.top);
+  p7TipAvoidActive = false;
+  tooltipFold7FlyStart(isNaN(fromTop) ? fold8TooltipEl.getBoundingClientRect().top : fromTop);
   tooltipDockMobile(fold8TooltipEl);
 }
 window.addEventListener("touchend", fold7HoldEnd);
@@ -4036,6 +4042,14 @@ fold6MobileLegendEl.addEventListener("pointerdown", (e) => {
     // A press that starts on the close button is that button's, not a drag.
     onClose: !!(e.target.closest && e.target.closest(".fold6-mlegend-close")),
   };
+  // THE PRESS ANSWERS THE FINGER, NOT THE RELEASE. A row's real state can only
+  // be decided when the finger lifts — the same gesture may turn out to be a
+  // drag of the whole sheet — so the filter dim necessarily waits for pointerup
+  // and then fades over 140ms, which read as a button that responds late. This
+  // is the press itself: written on pointerdown, with no transition, and
+  // dropped the moment the gesture turns into a drag (or on release, where the
+  // real state takes over).
+  if (fold6MLegendDrag.row && fold6MLegendOpenWant) fold6MLegendDrag.row.classList.add("is-pressed");
   fold6MobileLegendEl.setPointerCapture(e.pointerId);
 });
 
@@ -4044,7 +4058,11 @@ fold6MobileLegendEl.addEventListener("pointermove", (e) => {
   // Positive dy = "more open". A bottom card opens as the finger goes UP; a top
   // card opens as it comes DOWN.
   const dy = (FOLD6_MLEGEND_EDGE === "top" ? -1 : 1) * (fold6MLegendDrag.y0 - e.clientY);
-  if (Math.abs(dy) > FOLD6_MLEGEND_DRAG_SLOP_PX) fold6MLegendDrag.moved = true;
+  if (Math.abs(dy) > FOLD6_MLEGEND_DRAG_SLOP_PX) {
+    fold6MLegendDrag.moved = true;
+    // It is a drag of the sheet, not a press on a row.
+    if (fold6MLegendDrag.row) fold6MLegendDrag.row.classList.remove("is-pressed");
+  }
   fold6MLegendOpenRaw = Math.max(0, Math.min(1, fold6MLegendDrag.raw0 + dy / fold6MLegendDrag.span));
   if (!fold6MLegendDragRaf) fold6MLegendDragRaf = requestAnimationFrame(fold6MLegendDragPaint);
 });
@@ -4057,7 +4075,13 @@ function fold6MLegendRowTap(row) {
   if (currentPage < 8 || currentPage > 12) return false;
   const entry = fold6MobileRowEls.find((r) => r.row === row);
   if (!entry) return false;
-  p7FilterToggle(entry.g.actor);
+  const actor = entry.g.actor;
+  // The row's own state is written HERE rather than waited for: updateGroups()
+  // runs at most once a frame (ugRanThisFrame), so the call below can be
+  // re-queued to the next one and the dim would land a frame after the press.
+  row.classList.remove("is-pressed");
+  row.classList.toggle("is-filtered-off", !p7FilterOff.has(actor));
+  p7FilterToggle(actor);
   // Frames for @fold13's canvas and the 8 claimed DOM squares — same follow-up
   // the desktop click does; without it the change only lands on the next tick.
   if (typeof p9FilterKick === "function") p9FilterKick();
@@ -4068,6 +4092,7 @@ function fold6MLegendRowTap(row) {
 function fold6MLegendDragEnd() {
   if (!fold6MLegendDrag) return;
   const d = fold6MLegendDrag;
+  if (d.row) d.row.classList.remove("is-pressed");
   fold6MLegendDrag = null;
   if (fold6MLegendDragRaf) cancelAnimationFrame(fold6MLegendDragRaf);
   fold6MLegendDragRaf = 0;
