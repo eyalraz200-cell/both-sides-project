@@ -94,6 +94,11 @@ If the site ever moves, those four URLs (two per file) are the only things to up
 @fold15 share buttons build their URLs from `location.href` (`p12ShareInit`, page12.js) and
 follow the deploy automatically.
 
+`og:description` / `twitter:description` are the **same sentence on both pages**, and it
+quotes the event count as a **hardcoded number** (currently 14,451 — `len(events.json)`).
+Nothing recomputes it, so re-check it whenever either xlsx is regenerated or the preview
+card starts advertising a count the timeline no longer holds.
+
 ## Verifying a change
 
 There's no test suite, so the habit is:

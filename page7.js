@@ -244,8 +244,17 @@ function p7OrderFromCenter(total, cols, seed, side, maxEvents) {
 // (both in the hover closure below, picked by currentPage), and @fold13's
 // columns (P9_TIP_FLIP_*, page9.js). `var`s — a manual/ harness drives them;
 // all three start from the one 327 that used to serve every fold.
-var P7_TIP_FLIP_L_F9  = 327, P7_TIP_FLIP_R_INSET_F9  = 327;
-var P7_TIP_FLIP_L_F10 = 327, P7_TIP_FLIP_R_INSET_F10 = 327;
+// …as a FRACTION of the screen width (explicit instruction: relative to screen
+// size), one per fold, mirrored — the same share in from each edge. 0.27 is
+// the 515px pick made on a ~1900px-wide screen (2026-09-17). `var`s — a
+// manual/ harness drives them.
+var P7_TIP_FLIP_FRAC_F9  = 0.27;
+var P7_TIP_FLIP_FRAC_F10 = 0.27;
+function p7TipFlipPair(page) {
+  const f = page === 8 ? P7_TIP_FLIP_FRAC_F9 : page === 12 ? P9_TIP_FLIP_FRAC : P7_TIP_FLIP_FRAC_F10;
+  const px = Math.round(window.innerWidth * f);
+  return [px, px];
+}
 
 const P7_VERT = {
   corridorPx: P7_AXIS_CORRIDOR_PX,
@@ -6412,8 +6421,7 @@ function p7HoverInit() {
     // last, so it wins there — moot in practice, mobile docks the tooltip.
     const dotCX = rect.left + bestPos.x;
     let mirrored = !docked && bestEvent.side === "left";
-    const flipL = currentPage === 8 ? P7_TIP_FLIP_L_F9 : P7_TIP_FLIP_L_F10;
-    const flipR = currentPage === 8 ? P7_TIP_FLIP_R_INSET_F9 : P7_TIP_FLIP_R_INSET_F10;
+    const [flipL, flipR] = p7TipFlipPair(currentPage);
     if (!docked && dotCX < flipL) mirrored = false;
     if (!docked && dotCX > window.innerWidth - flipR) mirrored = true;
     tooltipEl.classList.toggle("is-mirrored", mirrored);

@@ -10,38 +10,68 @@
     viewport: 'mobile',
     remoteOnly: true,
     tabs: [], tab: null, onTab: null,
-    modes: [], mode: null, toggles: [],
 
-    /* The docked frame has two spots on @fold7: the DEMO spot above the eight
-       squares (also where a reader's own hold lands once released), and the
-       HOLD spot below them while a finger is down. Both are solved off the
-       squares' live rects; these are the gaps. */
+    /* WHICH SIDE OF THE EIGHT SQUARES EVERY @fold7 TOOLTIP OPENS ON.
+       `0` is what ships — each frame picks its own side: the scripted example
+       above the block, and the reader's frame on the far side from the square
+       under the finger (a TOP dot opens it below, a BOTTOM dot above). `1`/`2`
+       put ALL of them on one side instead. The gaps below stay per frame either
+       way, so each one can still be placed. */
+    modes: [
+      { key: '1', id: 'allAbove', label: 'all of them ABOVE the squares' },
+      { key: '2', id: 'allBelow', label: 'all of them BELOW the squares' },
+    ],
+    offLabels: { main: 'as designed — mixed (current)' },
+    mode: null, toggles: [],
+
+    /* Each frame's distance from the block. The block is measured AT REST
+       (centres ± half the 8px side), so a swelling square never moves a frame.
+       Whichever side a frame ends up on, it grows AWAY from the squares. */
     sliders: [
-      { key: 'demoGap', label: 'demo frame: gap above the squares', min: 0, max: 160, step: 1, value: 16,
+      { key: 'demoGap', label: 'the example frame: gap from the squares', min: 0, max: 200, step: 1, value: 16,
         source: 'js/fold8-tooltip.js — TOOLTIP_DOCK_SQUARES_GAP_PX' },
-      { key: 'topMin',  label: 'demo frame: never higher than this from the top', min: 0, max: 240, step: 1, value: 16,
+      { key: 'holdTop', label: 'holding a TOP dot: gap from the squares', min: 0, max: 240, step: 1, value: 108,
+        source: 'js/fold8-tooltip.js — TOOLTIP_DOCK_HOLD_TOP_GAP_PX' },
+      { key: 'holdBot', label: 'holding a BOTTOM dot: gap from the squares', min: 0, max: 240, step: 1, value: 94,
+        source: 'js/fold8-tooltip.js — TOOLTIP_DOCK_HOLD_BOTTOM_GAP_PX' },
+      { key: 'topMin',  label: 'any frame: never higher than this from the top', min: 0, max: 240, step: 1, value: 16,
         source: 'js/fold8-tooltip.js — TOOLTIP_DOCK_TOP_MIN_PX' },
-      { key: 'holdGap', label: 'held frame: gap below the squares', min: 0, max: 160, step: 1, value: 16,
-        source: 'js/fold8-tooltip.js — TOOLTIP_DOCK_HOLD_GAP_PX' },
+      { key: 'glass',   label: "the reader's magnifying glass: how big", min: 32, max: 140, step: 2, value: 72,
+        source: 'js/groups.js — FOLD7_HOLD_LOUPE_PX' },
     ],
     colors: [],
 
-    apply: function (v) {
-      TOOLTIP_DOCK_SQUARES_GAP_PX = v.demoGap;
-      TOOLTIP_DOCK_TOP_MIN_PX     = v.topMin;
-      TOOLTIP_DOCK_HOLD_GAP_PX    = v.holdGap;
-      // The demo spot is frozen once solved — drop it so the new gap applies now.
+    apply: function (v, mode) {
+      TOOLTIP_DOCK_FOLD7_SIDE_ALL = mode === 'allAbove' ? 'above' : (mode === 'allBelow' ? 'below' : '');
+      TOOLTIP_DOCK_SQUARES_GAP_PX     = v.demoGap;
+      TOOLTIP_DOCK_HOLD_TOP_GAP_PX    = v.holdTop;
+      TOOLTIP_DOCK_HOLD_BOTTOM_GAP_PX = v.holdBot;
+      TOOLTIP_DOCK_TOP_MIN_PX         = v.topMin;
+      FOLD7_HOLD_LOUPE_PX             = v.glass;
+      // The example's spot is frozen once solved — drop it so a change lands now.
       tooltipFold6TopFrozen = null;
       if (typeof fold8TooltipEl !== 'undefined' && fold8TooltipEl) tooltipDockMobile(fold8TooltipEl);
     },
 
     init: null, custom: null, timeline: null,
-    goTo: '#page-6', goLabel: '@fold7', onGo: null,
+    goTo: '#page-6', goLabel: '@fold7',
+    /* Land just ABOVE the crossing so a short scroll down replays the example,
+       then press and hold a square to see the reader's frame. */
+    onGo: function () {
+      if (typeof fold8HoverCardEl === 'undefined' || typeof FOLD8_MOBILE_CARD_FRAC === 'undefined') return;
+      var cross = fold8HoverCardEl.getBoundingClientRect().top + window.scrollY - window.innerHeight * FOLD8_MOBILE_CARD_FRAC;
+      window.scrollTo({ top: Math.max(0, cross - 160), behavior: 'smooth' });
+    },
     width: 0, collapseSliders: false, knobCols: 1,
-    summary: function (v) {
-      return 'var TOOLTIP_DOCK_SQUARES_GAP_PX = ' + v.demoGap + ';\n'
+    summary: function (v, mode) {
+      var side = mode === 'allAbove' ? 'above' : (mode === 'allBelow' ? 'below' : '');
+      return 'every @fold7 tooltip: ' + (side ? 'all ' + side + ' the squares' : 'as designed (mixed)') + '\n'
+        + 'var TOOLTIP_DOCK_FOLD7_SIDE_ALL = "' + side + '";\n'
+        + 'var TOOLTIP_DOCK_SQUARES_GAP_PX = ' + v.demoGap + ';\n'
+        + 'var TOOLTIP_DOCK_HOLD_TOP_GAP_PX = ' + v.holdTop + ';\n'
+        + 'var TOOLTIP_DOCK_HOLD_BOTTOM_GAP_PX = ' + v.holdBot + ';\n'
         + 'var TOOLTIP_DOCK_TOP_MIN_PX = ' + v.topMin + ';\n'
-        + 'var TOOLTIP_DOCK_HOLD_GAP_PX = ' + v.holdGap + ';';
+        + 'var FOLD7_HOLD_LOUPE_PX = ' + v.glass + ';';
     }
   };
   // ------------------------------------------------------------ END CONFIG --

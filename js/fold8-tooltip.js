@@ -106,7 +106,66 @@ const TOOLTIP_DOCK_BOTTOM_PX = -18;     // px the frame keeps off the viewport's
 // @fold7's two spots — var, driven live by a manual/ harness.
 var TOOLTIP_DOCK_TOP_MIN_PX = 16;       // the demo spot can never climb above this
 var TOOLTIP_DOCK_SQUARES_GAP_PX = 16;   // demo spot: gap between the frame's bottom edge and the topmost sample square
-var TOOLTIP_DOCK_HOLD_GAP_PX = 16;      // hold spot: gap between the lowest sample square and the frame's top edge
+// Which side of the squares the EXAMPLE's spot sits on ("above" | "below") —
+// compare/-driven. The reader's own frame is not solved off the squares at all
+// (see tooltipFold7ReaderPx below).
+var TOOLTIP_DOCK_DEMO_SIDE = "above";
+// THE READER'S FRAME HAS TWO PLACES, ONE PER HALF OF THE BLOCK: hold one of the
+// four TOP squares and it opens BELOW the block, one of the four BOTTOM squares
+// and it opens ABOVE it — always clear of the square under the finger and of the
+// glass lifted over it. Both are measured off the block as a whole (never off
+// the held square), so each is ONE fixed place: every top dot gives the same
+// frame position, every bottom dot the same other one.
+// compare/ OVERRIDE, and the only thing here that isn't a designed value: ""
+// leaves every @fold7 frame on the side its own rule picks, "above"/"below"
+// forces ALL of them onto that one side. Ships as "" — a harness drives it.
+var TOOLTIP_DOCK_FOLD7_SIDE_ALL = "";
+function tooltipFold7Side(side) { return TOOLTIP_DOCK_FOLD7_SIDE_ALL || side; }
+var TOOLTIP_DOCK_HOLD_TOP_GAP_PX    = 108;  // a top dot → gap under the block   (manual/-baked 2026-09-17)
+var TOOLTIP_DOCK_HOLD_BOTTOM_GAP_PX = 94;   // a bottom dot → gap over the block  (manual/-baked 2026-09-17)
+// The 8 sample squares' extent AT REST — centres ± half the resting side, not the
+// live boxes: the active square SWELLS (FOLD7_SQUARE_SIZES, up to 20px), so a
+// live read made the block breathe and the frame hanging off it move from dot to
+// dot. null before layout.
+const TOOLTIP_DOCK_SQUARE_REST_PX = 8;   // .fold6-square's resting side (style.css)
+function tooltipFold7SquaresRect() {
+  if (typeof fold6SquareEls === "undefined") return null;
+  const half = TOOLTIP_DOCK_SQUARE_REST_PX / 2;
+  let top = Infinity, bottom = -Infinity;
+  for (const { sq } of fold6SquareEls) {
+    const r = sq.getBoundingClientRect();
+    if (!r.height) continue;
+    const cy = r.top + r.height / 2;
+    top = Math.min(top, cy - half); bottom = Math.max(bottom, cy + half);
+  }
+  return top === Infinity ? null : { top, bottom };
+}
+// Is square `i` in the top half of the block? Derived from the offsets, so it
+// follows FOLD6_SQUARES_OFFSET rather than hard-coding 0-3.
+function tooltipFold7IsTopSquare(i) {
+  if (typeof FOLD6_SQUARES_OFFSET === "undefined" || !FOLD6_SQUARES_OFFSET[i]) return true;
+  const dys = FOLD6_SQUARES_OFFSET.map(o => o.dy).sort((a, b) => a - b);
+  return FOLD6_SQUARES_OFFSET[i].dy <= dys[Math.floor((dys.length - 1) / 2)];
+}
+// A frame `h` tall on `side` of the squares, `gap` px off them, never above the floor.
+function tooltipFold7SpotPx(side, gap, h) {
+  const sq = tooltipFold7SquaresRect();
+  if (!sq) return null;
+  return Math.max(TOOLTIP_DOCK_TOP_MIN_PX, side === "below" ? sq.bottom + gap : sq.top - gap - h);
+}
+// The reader's spot: the far side of the block from the square being held. The
+// frame GROWS AWAY from the block either way — `below` pins its top edge, so a
+// longer description extends downward; `above` pins its bottom edge, so it
+// extends upward (tooltipFold7SpotPx).
+function tooltipFold7ReaderPx(h) {
+  const i = (typeof fold7Hold !== "undefined" && fold7Hold) ? fold7Hold.idx : -1;
+  if (i === undefined || i < 0) return null;
+  // The GAP follows the dot (a top dot always reads its own knob); only the
+  // SIDE can be overridden, so the two knobs stay meaningful either way.
+  return tooltipFold7IsTopSquare(i)
+    ? tooltipFold7SpotPx(tooltipFold7Side("below"), TOOLTIP_DOCK_HOLD_TOP_GAP_PX, h)
+    : tooltipFold7SpotPx(tooltipFold7Side("above"), TOOLTIP_DOCK_HOLD_BOTTOM_GAP_PX, h);
+}
 
 // The resting spot, bottom-anchored: measured off the LIVE innerHeight rather
 // than baked as one number, because the frame is the last thing in the stack
@@ -179,21 +238,16 @@ function tooltipDockTopPx(el) {
     // (its left/top IS the square's position — same convention as .group-item),
     // so it reports height 0 and any "is this laid out yet" guard against its
     // height rejects all 8. `sq` is the real 8px box.
-    let squaresTop = Infinity;
-    for (const { sq } of fold6SquareEls) {
-      const r = sq.getBoundingClientRect();
-      if (r.height) squaresTop = Math.min(squaresTop, r.top);
-    }
-    // Nothing laid out yet — no squares to sit above.
-    if (squaresTop === Infinity) return tooltipDockDropPx(tooltipDockRestPx());
     // @fold7's spot can never push the frame off the top of the screen: on a
     // short phone the squares may sit high enough that there's no room above
     // them. The floor is its own small constant, NOT the resting spot — the
     // rest is at the bottom of the screen now, and clamping to it would drag
     // every @fold7 frame down there too.
+    const spot = tooltipFold7SpotPx(tooltipFold7Side(TOOLTIP_DOCK_DEMO_SIDE), TOOLTIP_DOCK_SQUARES_GAP_PX, el.offsetHeight);
+    // Nothing laid out yet — no squares to sit against.
+    if (spot === null) return tooltipDockDropPx(tooltipDockRestPx());
     tooltipFold6FrozenH   = el.offsetHeight;
-    tooltipFold6TopFrozen = Math.max(TOOLTIP_DOCK_TOP_MIN_PX,
-      squaresTop - TOOLTIP_DOCK_SQUARES_GAP_PX - el.offsetHeight);
+    tooltipFold6TopFrozen = spot;
   }
   // NO TRAVEL. The frame used to lerp from its @fold7 spot down to the dock over
   // the fly — it flew. It now COLLAPSES in place at the @fold7 spot over the
@@ -253,7 +307,10 @@ function tooltipDockHandoverScale() {
 // clearance, @fold13 down onto its bottom one. Both are gone: those folds have
 // two spots of their own now and FLIP between them (p7TipSpotTopPx), which is the
 // same idea done once instead of per fold. `p7TipAvoidActive` is therefore
-// written by @fold7's hold and by nothing else.
+// written by @fold7's hold and by nothing else — and it is STICKY: the first
+// hold turns it on, release leaves it on (the frame stays where the reader's
+// hold put it), and only rewinding the demo (fold7HoverReset, js/groups.js)
+// turns it off and gives the scripted example its own spot back.
 let p7TipAvoidActive = false;
 
 // ── The picker's TWO tooltip spots (mobile) ─────────────────────────────────
@@ -317,13 +374,11 @@ function tooltipAvoidPx(el, top) {
   // @fold7 (the reader's own hold on the 8 squares, js/groups.js): the frame
   // sits just above the squares, where the lifted glass would cover it, so it
   // dodges to just BELOW them for the length of the hold.
-  if (typeof fold7Hold !== "undefined" && fold7Hold.active && typeof fold6SquareEls !== "undefined") {
-    let bottom = -Infinity;
-    for (const { sq } of fold6SquareEls) {
-      const r = sq.getBoundingClientRect();
-      if (r.height) bottom = Math.max(bottom, r.bottom);
-    }
-    if (bottom > -Infinity) return bottom + TOOLTIP_DOCK_HOLD_GAP_PX;
+  // Only while the frame is still at its @fold7 spot — past the handover the
+  // squares are flying and the frame belongs to the bottom bar.
+  if (tooltipFitFold7()) {
+    const spot = tooltipFold7ReaderPx(el.offsetHeight);
+    if (spot !== null) return spot;
   }
   // Every later fold: nothing to dodge. They have two spots of their own and FLIP
   // between them on the switch line, resolved in tooltipDockRestPx before this
@@ -336,7 +391,15 @@ function tooltipDockMobile(el) {
   const docked = isMobile();
   el.classList.toggle("is-docked", docked);
   // Before the spot is solved: the fit frame's height is what it subtracts.
-  el.classList.toggle("is-fit", docked && tooltipFitFold7());
+  const fit = docked && tooltipFitFold7();
+  el.classList.toggle("is-fit", fit);
+  // IN FRONT OF THE TITLE BLOCK, not under it: @fold7's reader frame (which can
+  // grow up into that card), and the docked frame on @fold10/@fold11, whose
+  // cards scroll over the pinned timeline. style.css gives those cards 1004/1005,
+  // deliberately above the frame's usual 1000, so the class out-stacks them.
+  const overCard = docked && (fit ? p7TipAvoidActive
+    : (typeof currentPage !== "undefined" && (currentPage === 9 || currentPage === 10)));
+  el.classList.toggle("is-over-card", overCard);
   if (docked) {
     // Horizontal centering is the transform's job, so whatever the floating
     // layout wrote into `left` has to be cleared or it would shove the frame

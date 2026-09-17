@@ -999,7 +999,10 @@ function fold6LegendFilterEl(g) {
     if (item) item.el.classList.add("is-filter-hover");
     groupsOverlayEl.classList.add("is-filter-hover-any");
     // …and the group's DOTS light up: every other dot on the canvas dims to
-    // the hover floor, exactly as it does around a hovered dot.
+    // the hover floor, exactly as it does around a hovered dot — unless the
+    // group is filtered OUT (its dots are gone; dimming everyone else for a
+    // group that isn't there reads as a glitch, explicit instruction).
+    if (typeof p7FilterOff !== "undefined" && p7FilterOff.has(g.actor)) return;
     fold6LegendHoverActor = g.actor;
     fold6LegendHoverDimTrigger.trigger(1);
   });
@@ -1020,6 +1023,8 @@ function fold6LegendFilterEl(g) {
     if (typeof p7FilterToggle !== "function") return;
     if (currentPage !== 8 && currentPage !== 9 && currentPage !== 10 && currentPage !== 11 && currentPage !== 12) return;
     p7FilterToggle(g.actor);
+    // Just filtered OUT under the pointer: the row highlight goes with it.
+    if (p7FilterOff.has(g.actor) && fold6LegendHoverActor === g.actor) fold6LegendHoverDimTrigger.trigger(0);
     // Frames for @fold13's canvas and, on every fold, the 8 claimed DOM
     // squares — see p9FilterKick.
     if (typeof p9FilterKick === "function") p9FilterKick();
@@ -1618,8 +1623,8 @@ function fold7CursorApplyStyle() {
 // `var`s: a manual/ harness drives them.
 var FOLD7_TOUCH_ZOOM            = 1.2;  // the glass's magnification
 var FOLD7_TOUCH_LOUPE_PX        = 56;   // the glass's diameter
-var FOLD7_TOUCH_FADE_IN_MS      = 400;  // fades in over this, from the start of its rest
-var FOLD7_TOUCH_START_REST_MS   = 780;  // rests at the start before gliding
+var FOLD7_TOUCH_FADE_IN_MS      = 170;  // fades in over this, from the start of its rest
+var FOLD7_TOUCH_START_REST_MS   = 630;  // rests at the start before gliding
 var FOLD7_TOUCH_END_REST_MS     = 800;  // rests on the dot after landing…
 var FOLD7_TOUCH_FADE_MS         = 400;  // …then fades over this
 var FOLD7_TOUCH_POINTER_HOLD_MS = 1390;  // hand stays this long after the glide starts…
@@ -1635,8 +1640,10 @@ fold7TouchEl.appendChild(fold7TouchPointerEl);
 const fold7LoupeEl = document.createElement("canvas");
 fold7LoupeEl.className = "p7-loupe fold7-loupe";
 fold7LoupeEl.setAttribute("aria-hidden", "true");
-// The reader's own hold shows the timeline picker's glass: same element class,
-// P7_LOUPE_SIZE / P7_LOUPE_ZOOM / P7_LOUPE_LIFT_PX, following the finger.
+// The reader's own hold shows the timeline picker's glass: same element class
+// and the same P7_LOUPE_LIFT_PX above the finger, on its own size and zoom
+// (FOLD7_HOLD_LOUPE_PX / FOLD7_HOLD_ZOOM — eight 8px squares, not a field of
+// 1-2px dots).
 const fold7UserLoupeEl = document.createElement("canvas");
 fold7UserLoupeEl.className = "p7-loupe";
 fold7UserLoupeEl.setAttribute("aria-hidden", "true");
@@ -1707,6 +1714,13 @@ function fold7SquareHover(i) {
   updateGroups();
 }
 function fold7HoverReset() {
+  // The demo is rewound: the example frame owns the spot again (see
+  // p7TipAvoidActive / fold7UserHeld below).
+  if (typeof p7TipAvoidActive !== "undefined" && p7TipAvoidActive) {
+    p7TipAvoidActive = false;
+    fold7Hold.idx = -1;
+    if (typeof fold8TooltipEl !== "undefined" && fold8TooltipEl) tooltipDockMobile(fold8TooltipEl);
+  }
   if (fold7HoverIdx === null) return;
   fold7HoverIdx = null;
   fold7SquareHoverTriggers.forEach(t => t.set(0));
@@ -1738,17 +1752,33 @@ window.addEventListener("mousemove", e => {
 // (p7InspectInit, page7.js), mirrored piece by piece so the two feel identical:
 // touch events (not pointer events), P7_LONGPRESS_MS of stillness within
 // P7_LONGPRESS_SLOP_PX (a moving finger re-anchors the clock instead of giving
-// up), then the picker's glass (fold7UserLoupeEl: P7_LOUPE_SIZE, P7_LOUPE_ZOOM,
+// up), then the picker's glass (fold7UserLoupeEl: FOLD7_HOLD_LOUPE_PX, FOLD7_HOLD_ZOOM,
 // lifted P7_LOUPE_LIFT_PX) repainted EVERY FRAME at the finger, picking the
 // nearest square within P7_INSPECT_SNAP_PX; touchmove is claimed (non-passive)
 // only while the hold is live. The docked frame dodges below the squares while
 // the glass is up (tooltipAvoidPx, js/fold8-tooltip.js). Release hides the
 // glass and keeps the last square (the @fold7 frame always shows one).
-let fold7Hold = { timer: null, x: 0, y: 0, active: false };
+//
+// THE SPOT IS STICKY, not a dodge. The scripted example's frame has its own
+// place (TOOLTIP_DOCK_DEMO_SIDE, above the squares) and keeps it for as long as
+// the example is what is on screen. The FIRST user hold moves the frame to the
+// reader's spot (TOOLTIP_DOCK_HOLD_SIDE) and it STAYS there on release and for
+// every later hold — the example's frame becomes an ordinary held one. Only
+// rewinding the demo (fold7HoverReset, above) hands the example spot back.
+// `idx` is the square the reader last picked — kept AFTER the release, because
+// the frame's spot is that square's (tooltipFold7ReaderPx, js/fold8-tooltip.js)
+// and the frame stays put once let go. fold7HoverIdx can't stand in for it:
+// holding square 0 leaves that null (fold7SquareHover's own early return).
+let fold7Hold = { timer: null, x: 0, y: 0, active: false, idx: -1 };
 // The one deliberate difference from the picker: a gentler zoom than
 // P7_LOUPE_ZOOM (4×), which is sized for 1–2px timeline dots and blows the 8px
 // @fold7 squares up past the glass. `var` for the manual/ harness.
 var FOLD7_HOLD_ZOOM = 1.5;
+// …and its own SIZE, smaller than the timeline picker's P7_LOUPE_SIZE (96):
+// there are eight squares in a 33×70px block here, not a field of thousands, so
+// the glass only has to hold the one under the finger. Its own constant, not a
+// change to P7_LOUPE_SIZE — the timeline's glass is unchanged.
+var FOLD7_HOLD_LOUPE_PX = 72;
 function fold7HoldAllowed() { return isMobile() && fold7HoverEnabled(); }
 function fold7NearestSquare(x, y) {
   let best = -1, bestD = P7_INSPECT_SNAP_PX;
@@ -1762,9 +1792,17 @@ function fold7NearestSquare(x, y) {
 }
 function fold7HoldTick() {
   if (!fold7Hold.active) return;
-  fold7PaintLoupe(fold7Hold.x, fold7Hold.y, fold7UserLoupeEl, P7_LOUPE_SIZE, FOLD7_HOLD_ZOOM, P7_LOUPE_LIFT_PX);
+  fold7PaintLoupe(fold7Hold.x, fold7Hold.y, fold7UserLoupeEl, FOLD7_HOLD_LOUPE_PX, FOLD7_HOLD_ZOOM, P7_LOUPE_LIFT_PX);
   const i = fold7NearestSquare(fold7Hold.x, fold7Hold.y);
-  if (i >= 0 && fold7HoverEnabled()) fold7SquareHover(i);
+  if (i >= 0 && fold7HoverEnabled()) {
+    // The picked square owns the frame's spot, so a move to the other half of
+    // the block has to re-solve it even when fold7SquareHover is a no-op.
+    if (i !== fold7Hold.idx) {
+      fold7Hold.idx = i;
+      tooltipDockMobile(fold8TooltipEl);
+    }
+    fold7SquareHover(i);
+  }
   requestAnimationFrame(fold7HoldTick);
 }
 function fold7HoldCancelPending() {
@@ -1783,7 +1821,7 @@ function fold7HoldArm(x, y) {
     if (sel && sel.rangeCount) sel.removeAllRanges();
     window.addEventListener("touchmove", fold7HoldMove, { passive: false });
     fold7UserLoupeEl.classList.add("is-visible");
-    p7TipAvoidActive = true;
+    p7TipAvoidActive = true;   // sticky from here on — see the note above
     tooltipDockMobile(fold8TooltipEl);
     requestAnimationFrame(fold7HoldTick);
   }, P7_LONGPRESS_MS);
@@ -1818,7 +1856,7 @@ function fold7HoldEnd() {
   fold7Hold.active = false;
   window.removeEventListener("touchmove", fold7HoldMove, { passive: false });
   fold7UserLoupeEl.classList.remove("is-visible");
-  p7TipAvoidActive = false;
+  // p7TipAvoidActive is NOT cleared here: the frame stays where the hold put it.
   tooltipDockMobile(fold8TooltipEl);
 }
 window.addEventListener("touchend", fold7HoldEnd);
@@ -2014,7 +2052,12 @@ function fold11SizeApply(past, instant) {
     // that arrive inside the reverse.
     if (instant && !flying) p7SizeGridSet(true, { uniform: false, instant: true });
     else fold11SizeBeatTO = setTimeout(() => {
-      fold11SizeBeatTO = null; p7SizeGridSet(true, { uniform: false });
+      fold11SizeBeatTO = null;
+      // Only if the grid is still up: on a fast scroll @fold10's own crossing
+      // has already switched it OFF (the field is flying home to the timeline)
+      // by the time this lands, and turning it back on here yanked every dot
+      // back into the grid mid-flight.
+      if (p7Grid.on) p7SizeGridSet(true, { uniform: false });
     }, P8_REVERSE_DURATION);
   }
 }

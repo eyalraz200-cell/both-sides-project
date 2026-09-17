@@ -299,7 +299,7 @@ axis so the first event's label can center over its own circle).
   `P7_AXIS_MARKER_RADIUS` 4, then a stroked circle) — or, with `P7_AXIS_YEAR_MARK`
   `'line'`, a short horizontal rule centred on the same spot (`P7_AXIS_YEAR_LINE_LEN` px,
   unreached alpha `P7_AXIS_YEAR_LINE_ALPHA`, reached = `P7_AXIS_FILLED_COLOR`, leaves by
-  length on `spanShrink`); ships `'ring'`, *being compared* on `_debug-axis-year-marks.js` — first tick is `minDate` itself,
+  length on `spanShrink`); ships `'ring'` (the line variant was compared on a harness and not taken; the code path stays as plumbing) — first tick is `minDate` itself,
   then each `YYYY-01-01`. On the horizontal axis labels sit **below** the line
   (`p7AxisYearLabelOffset()` — `P7_AXIS_YEAR_LABEL_OFFSET` 12 desktop,
   `P7_AXIS_YEAR_LABEL_OFFSET_MOBILE` **5**, so the year reads as attached to its own tick);
@@ -709,12 +709,11 @@ darkening is continuous rather than a snap at the end; `.is-mirrored` flips the
 box for `side === "left"` — except outside the two horizontal flip lines, which keep the
 box off the mini-legends: a dot left of the fold's L line always opens rightward
 (`mirrored = false`), a dot within the fold's R inset of the right edge always opens
-leftward (`mirrored = true`); only between them does the data-side rule decide. **One pair
-per fold** (explicit instruction): `P7_TIP_FLIP_L_F9` / `P7_TIP_FLIP_R_INSET_F9` for
-@fold9's timeline, `_F10` for @fold10's size grid (the hover closure picks by
-`currentPage`), and `P9_TIP_FLIP_L` / `P9_TIP_FLIP_R_INSET` (page9.js) for @fold13 — all
-three start at the **327 px** that used to serve every fold; `var`s, *being tuned* on the
-`manual/` harness `_debug-tip-flip.js` (one tab per fold, flip-line ticks in the top margin). Both hand-tuned by eye at a 1900px-wide viewport,
+leftward (`mirrored = true`); only between them does the data-side rule decide. **One value per
+fold, as a share of the screen width, mirrored** (explicit instructions): `p7TipFlipPair(page)`
+returns `round(innerWidth × frac)` for both lines — `P7_TIP_FLIP_FRAC_F9` (@fold9),
+`P7_TIP_FLIP_FRAC_F10` (@fold10), `P9_TIP_FLIP_FRAC` (page9.js, @fold13), all **0.27** (the
+515px pick on a ~1900px screen); `var`s, manual/-baked 2026-09-17. Both hand-tuned by eye at a 1900px-wide viewport,
 exact px, not vw — but each is anchored to the edge its legend hangs off, so both lines
 track a window resize (the right line reads `window.innerWidth - P7_TIP_FLIP_R_INSET`
 live per hit-test). Below 950px window width the two bands overlap and the right rule
@@ -2486,6 +2485,8 @@ the selection, so the axis eases back to normal along with everything else. `sho
 `p7HoverInit` does — the roster fade eases per frame (`p7AxisEventsAnimActive` includes the
 dragging pick in its roster-target check). Desktop is untouched: `p7Inspect.event` is only
 ever set ≤600px (`p7InspectPage`).
+
+**The docked frame paints in front of the title blocks on @fold10 and @fold11** — `.is-over-card` (`z-index: 1006`, style.css), added by `tooltipDockMobile` on `currentPage` 9 and 10, beats those cards' 1004; without it a card scrolling over the pinned timeline slid in front of the frame. The `.fold6-mlegend-layer` shares the 1006 and comes later in `.layout`, so the מקרא bar still wins the tie and stays above the frame.
 
 **The picker serves @fold9, @fold10, @fold11 up to its crossing, and @fold13** (`p7InspectPage()`, which reads `p7TimelineLive()` — pages 8, 9, and 10 while `!fold11SizePast()` — plus page 12; the desktop hover's `doHitTest` and its scroll `hide()` read the same helper, so both breakpoints lose the timeline's hover/pick on @fold11's own crossing, where `fold11SizeApply` also drops whatever is open). @fold10 joined without a new
 driver — `PAGES[8]` and `PAGES[9]` are both `drawPage7` — needing only the gate and a hit box that

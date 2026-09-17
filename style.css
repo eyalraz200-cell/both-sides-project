@@ -4325,6 +4325,12 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   #page-7 > .section-text.text-card,
   #page-11 > .section-text.text-card,
   .page9-title-row .text-card { z-index: 1005; }
+  /* …except @fold7's reader frame, which is placed ON that card by design
+     (tooltipFold7ReaderPx, js/fold8-tooltip.js — the copy has done its job once
+     a finger is down) and so has to out-stack it. 1006, not higher: the מקרא
+     layer below is 1006 too and comes LATER in .layout, so it still wins the
+     tie and stays above the frame, exactly as it is everywhere else. */
+  .page9-tooltip.is-docked.is-over-card { z-index: 1006; }
   /* The מקרא legend sits UNDER both (see the stack comment above): above the
      docked tooltip's 1000, below the cards' 1004/1005 and the groups' 1003. */
   .fold6-mlegend-layer { z-index: 1006; }

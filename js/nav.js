@@ -261,7 +261,11 @@ function setActivePage(page) {
   // otherwise teleport straight to its resting timeline cell the instant
   // this section starts drawing instead of page8. See p7EntryAnim's own
   // comment (page7.js) for the full rationale.
-  if ((currentPage === 10 || currentPage === 11) && page === 8 && typeof p8CurrentT === "function" && p8CurrentT() > 0) {
+  // Page 9 too: drawNow (js/core.js) keeps page8 painting the reverse glide on
+  // @fold10, so the flip that reaches @fold9 can come from there with the
+  // glide still in the air — without this hand-off drawPage7's first frame put
+  // every dot at its row cursor and the field jumped.
+  if ((currentPage === 9 || currentPage === 10 || currentPage === 11) && page === 8 && typeof p8CurrentT === "function" && p8CurrentT() > 0) {
     const W = canvas.clientWidth, H = canvas.clientHeight;
     // Same back-dating as the forward handoff above, mirrored: this direction
     // runs t: p8CurrentT() -> 0 and its target IS the timeline layout, so the
