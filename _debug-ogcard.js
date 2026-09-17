@@ -65,7 +65,7 @@
         source: '_og-card.html — #card --dashscale; 1 = literal parity with .text-card-frame (2px stroke / 4px period), 3 = legible once a platform scales the card down' },
       { key: 'extras', label: 'extra colours mixed in (beyond the group six)', min: 0, max: 5, step: 1, value: 4,
         source: '_og-card.html — OG_EXTRAS, how many of the five are added to the palette' },
-      { key: 'seed',   label: 'reshuffle which colour lands where', min: 1, max: 60, step: 1, value: 25,
+      { key: 'seed',   label: 'reshuffle which colour lands where', min: 1, max: 60, step: 1, value: 3,
         source: '_og-card.html — OG_RENDER seed (cosmetic: the colour order only)' }
     ],
     colors: [],

@@ -940,6 +940,7 @@ every gap around it stays exactly `P7_GAP`:
   overlaps. Full strength out to `P7_BULGE_HOLD` 12 cells (Chebyshev), eased with `p9Ease`
   to zero by `P7_BULGE_REACH` 30 cells — the shove is absorbed locally; beyond the hold
   band the gaps compress by fractions of a px rather than the whole side sliding.
+  **Same profile on mobile**, with the shift **quantised to whole device pixels** there (`q(sh.dx)` in `p7DrawSideSquares`, page7.js): a 2–3px dot moved by a fraction of a device pixel lands on different device pixels with different anti-aliased edges, so its brightness changed every frame of the bulge's ease and a field of them read as colour flashing under the glass. Snapped, a pushed dot keeps its exact rasterised footprint and only translates. (A tighter mobile-only reach was tried first and rejected — the push has to look like desktop's.)
 - Per-event 0..1 in `p7BulgeT` (a Map), advanced on wall-clock every draw at
   `P7_BULGE_MS` 120 toward 1 for the hovered event (or the drag-inspected one) and 0 for
   every other; entries are dropped at 0. Skating across dots: the outgoing bulge keeps
@@ -2487,6 +2488,8 @@ dragging pick in its roster-target check). Desktop is untouched: `p7Inspect.even
 ever set ≤600px (`p7InspectPage`).
 
 **The docked frame paints in front of the title blocks on @fold10 and @fold11** — `.is-over-card` (`z-index: 1006`, style.css), added by `tooltipDockMobile` on `currentPage` 9 and 10, beats those cards' 1004; without it a card scrolling over the pinned timeline slid in front of the frame. The `.fold6-mlegend-layer` shares the 1006 and comes later in `.layout`, so the מקרא bar still wins the tie and stays above the frame.
+
+**The glass blits from whole device pixels** (`drawLoupe`, page7.js): the source rect's origin and size are rounded to the device grid before `drawImage`. The blit is nearest-neighbour (smoothing would turn 1–2px dots to mush), so a fractional origin re-phased every magnified dot against the source grid on each sub-pixel finger move — a 2px dot came out as a different 8px pattern every frame, colour flashing under the glass on a big dot. Snapped, a sub-pixel move changes nothing until it crosses a device pixel, and then the whole view translates by one magnified pixel; the centre is off by under a device pixel.
 
 **The picker serves @fold9, @fold10, @fold11 up to its crossing, and @fold13** (`p7InspectPage()`, which reads `p7TimelineLive()` — pages 8, 9, and 10 while `!fold11SizePast()` — plus page 12; the desktop hover's `doHitTest` and its scroll `hide()` read the same helper, so both breakpoints lose the timeline's hover/pick on @fold11's own crossing, where `fold11SizeApply` also drops whatever is open). @fold10 joined without a new
 driver — `PAGES[8]` and `PAGES[9]` are both `drawPage7` — needing only the gate and a hit box that
