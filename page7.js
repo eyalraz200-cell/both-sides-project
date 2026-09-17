@@ -3966,7 +3966,12 @@ function p7AxisShouldShow() {
     // for the whole of @fold9 and would put the axis up regardless.
     return false;
   }
-  if (typeof fold9FlyTrigger !== "undefined" && fold9FlyTrigger.currentRaw() > 0) return true;
+  // The fly's TARGET, not its progress: the axis appears the instant @fold8's
+  // fly begins, and on the reverse crossing it collapses at once (per explicit
+  // instruction) — it used to wait for the fly's reverse to finish unwinding,
+  // so the axis and its cards hung around while the squares were still
+  // travelling back.
+  if (typeof fold9FlyTrigger !== "undefined" && fold9FlyTrigger.target() > 0) return true;
   return p7HasEngaged;
 }
 
@@ -7414,7 +7419,15 @@ function p7InspectInit() {
       return;
     }
     const hasEvent = !!p7Inspect.event;
-    tipEl.classList.toggle("is-picker", !hasEvent);
+    // NOT while @fold8's frame is still collapsing at its @fold7 spot
+    // (tooltipFitFold7: the first half of the fly, js/fold8-tooltip.js). The
+    // page flips to 8 the moment the fly trigger starts, and is-picker hides the
+    // date and description at once — the fit frame fell from its text height to
+    // an 11px sliver in one frame and the scale-down then ran on nothing. It
+    // keeps its text and scales away whole, and takes the picker's empty state
+    // only when it reopens at the dock, on the second half.
+    const handingOver = typeof tooltipFitFold7 === "function" && tooltipFitFold7();
+    tipEl.classList.toggle("is-picker", !hasEvent && !handingOver);
     tipEl.classList.toggle("is-inspect", hasEvent);
     tipEl.classList.toggle("is-hint", !hasEvent && currentPage === 12);
     if (typeof p7SyncHint === "function") p7SyncHint();

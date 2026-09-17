@@ -160,6 +160,10 @@
                         border: 1px solid var(--line-el); border-radius: 6px; padding: 8px;
                         resize: none; white-space: pre; }
   .note { color: var(--text-dim); padding: 24px 14px; }
+  pre.readout { margin: 4px 0 0; padding: 8px 10px; max-height: 320px; overflow: auto;
+    background: var(--ground-2, rgba(255,255,255,.04)); border-radius: 6px;
+    font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    white-space: pre-wrap; word-break: break-word; color: var(--text, #e8eaf0); }
   @media (max-width: 640px) {
     #shell { display: block; }
     #rail { flex: none; width: auto; height: auto; position: static; border-right: none;
@@ -603,6 +607,11 @@
         return;
       }
       if (m.t === 'state') { H.adopt(m); if (H.desc) H.patch(); return; }
+      if (m.t === 'readout') {
+        if (H.desc && H.desc.readout) H.desc.readout.text = m.text;
+        if (H.ro) H.ro.textContent = m.text;
+        return;
+      }
       if (m.t === 'payload') toClipboard(m.text, H.title, { label: H.desc && H.desc.label, fold: H.desc && H.desc.fold, file: H.desc && H.desc.file });
     };
 
@@ -704,6 +713,19 @@
           H.ui.togs[t.id] = cb; tg.appendChild(l);
         });
         body.appendChild(tg);
+      }
+
+      /* readout — a live text block the harness pushes up (descriptor.readout).
+         Knobs answer "what value?"; a readout answers "what has it collected?",
+         which is the whole point of a harness that gathers rather than tunes.
+         Kept as plain text so the harness owns the formatting. */
+      H.ro = null;
+      if (d.readout) {
+        var rw = el('div', 'span');
+        if (d.readout.label) rw.appendChild(el('div', 'ml', d.readout.label));
+        H.ro = el('pre', 'readout');
+        H.ro.textContent = d.readout.text || '';
+        rw.appendChild(H.ro); body.appendChild(rw);
       }
 
       // timeline — a drawn view over the ms knobs (descriptor.timeline)

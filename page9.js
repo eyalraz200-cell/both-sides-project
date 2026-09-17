@@ -164,7 +164,7 @@ const P9_CELL_M        = 2;   // extreme-grid pitch
 // 12px is 6 cells at the 2px pitch — through the glass's own zoom-out it reads
 // about a third of the 96px loupe, with rings of context still around it, and it
 // hides a ~6x6 neighbourhood out of thousands.
-const P9_PICK_SQ_M     = 12;
+var   P9_PICK_SQ_M     = 12;   // var: a manual/ harness drives it
 const LEGIT_CELL_M     = 1;   // legit-bar pitch: real dots, packed until they read as a solid bar
 const P9_EXTREME_GAP_M = 64;
 // Mobile with the crowd tiers on: the columns are several times wider, so the
@@ -572,7 +572,8 @@ function p9Ease(t) {
 function p9RunAnimLoop() {
   if (!p9.anim) return;
   const t = (performance.now() - p9.anim.start) / p9.anim.duration;
-  if (p9PageVisible()) draw();
+  // @fold12 too: drawNow (js/core.js) routes it here while this flight runs.
+  if (p9PageVisible() || currentPage === 11) draw();
   if (t < 1) {
     requestAnimationFrame(p9RunAnimLoop);
   } else {
@@ -581,7 +582,7 @@ function p9RunAnimLoop() {
     // @fold13's «לחצו והחזיקו» line waits for the first column to finish
     // building (p7SyncHint, js/groups.js) — this is that moment.
     if (typeof p7SyncHint === "function") p7SyncHint();
-    if (p9PageVisible()) draw();
+    if (p9PageVisible() || currentPage === 11) draw();
     // The bridge glide, continued onto this fold, has just LANDED: a «הצגת
     // גודל האירועים» press parked in the air runs now — settle, then resize
     // (p7ScopeFlushPending, js/groups.js; page8.js does the same when the
@@ -4265,6 +4266,77 @@ function p9HoverInit() {
   // clientX/Y against canvas.getBoundingClientRect(), not the event target)
   // already hides the tooltip whenever nothing's under the cursor — so a
   // separate pointerleave handler isn't needed either.
+  // ── Arrow-key navigation between dots ──
+  // A keyboard way through the same hover the pointer drives: the tooltip, the
+  // dimming and the mini-legend all behave exactly as they do under the mouse,
+  // because this does NOT re-implement any of it — it works out which dot to
+  // land on, then hands onMove a synthetic point at that dot's centre and lets
+  // the existing hit-test find it. One code path, so the two can never drift.
+  //
+  // Traversal is SPATIAL, not by index: the dots sit in columns that re-pack as
+  // pills are classified, so "the next one" can only sensibly mean "the nearest
+  // one that way on screen". A candidate must lie genuinely in the pressed
+  // direction (its movement along that axis has to beat its drift across it),
+  // and among those the closest wins — which makes ← → walk a row and ↑ ↓ walk
+  // a column without either ever jumping the canvas's centre gap by surprise.
+  const P9_KEY_DIRS = {
+    ArrowLeft:  [-1, 0], ArrowRight: [1, 0],
+    ArrowUp:    [0, -1], ArrowDown:  [0, 1],
+  };
+
+  function p9KeyStep(dir) {
+    if (!p9.lastPositions || !p9.lastPositions.size) return null;
+    const [dx, dy] = dir;
+    const centreOf = (pos) => ({
+      x: pos.x + (pos.sq || 0) / 2,
+      y: pos.y + (pos.sq || 0) / 2,
+    });
+
+    // With nothing hovered yet, start from the dot nearest the middle of the
+    // canvas rather than an arbitrary end of the data.
+    const from = p9.hoveredEvent && p9.lastPositions.get(p9.hoveredEvent);
+    let origin;
+    if (from) origin = centreOf(from);
+    else {
+      const r = canvasEl.getBoundingClientRect();
+      origin = { x: r.width / 2, y: r.height / 2 };
+    }
+
+    let best = null, bestD = Infinity;
+    p9.lastPositions.forEach((pos, ev) => {
+      if (ev === p9.hoveredEvent) return;
+      const c = centreOf(pos);
+      const ax = c.x - origin.x, ay = c.y - origin.y;
+      const along  = ax * dx + ay * dy;          // distance in the pressed direction
+      const across = Math.abs(ax * dy + ay * dx); // drift perpendicular to it
+      if (along <= 0) return;                     // behind us, or level
+      if (!from && along === 0) return;
+      if (across > along) return;                 // more sideways than forward
+      const d = along + across * 2;               // prefer straight ahead
+      if (d < bestD) { bestD = d; best = { ev, c }; }
+    });
+    return best;
+  }
+
+  window.addEventListener("keydown", (e) => {
+    const dir = P9_KEY_DIRS[e.key];
+    if (!dir) return;
+    // Same gates the pointer path uses, plus: never steal the arrows from a
+    // field, or from the pill keyboard handler (page9.js's pill keydown).
+    if (!p9HoverPageOk() || p9.anim || isMobile()) return;
+    if (document.querySelector(".page9-sticky")?.classList.contains("dragging")) return;
+    const t = e.target;
+    if (t && (t.isContentEditable ||
+        /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || "") ||
+        (t.closest && t.closest(".page9-pill")))) return;
+
+    const next = p9KeyStep(dir);
+    if (!next) return;
+    e.preventDefault();   // stop the page scrolling out from under the selection
+    const rect = canvasEl.getBoundingClientRect();
+    onMove({ clientX: rect.left + next.c.x, clientY: rect.top + next.c.y });
+  });
+
   window.addEventListener("pointermove", onMove);
   window.addEventListener("scroll", () => { if (!p9HoverPageOk()) hide(); }, { passive: true });
 }

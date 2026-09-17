@@ -267,6 +267,15 @@ function drawNow() {
     // painting until it lands, or drawPage7 draws every dot at its rest cell in
     // one frame. drawPage8 hands back to drawPage7 itself at t <= 0.
     drawPage8(ctx, W, H);
+  } else if (currentPage === 11 && typeof p9 !== "undefined" && p9.anim
+             && typeof p8CurrentT === "function" && p8CurrentT() >= 1) {
+    // @fold13's reverse un-stick sends the dropped dots home over 3s
+    // (p9ResetDrops, js/page8-9-scroll.js); the flip to @fold12 lands inside
+    // that flight when the title reaches mid-screen, and drawPage8's landed
+    // pass paints every dot at its rest cell in one frame. Keep drawPage9
+    // painting until the flight lands (the divider and counts are already
+    // gone by then — page9LineT and the count fade lead this un-stick).
+    drawPage9(ctx, W, H);
   } else {
     PAGES[currentPage](ctx, W, H);
   }

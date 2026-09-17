@@ -268,6 +268,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             # _debug-copy.json so Claude sees it on its next message without
             # the user pasting. Newest last; the hook empties it after reading.
             self._json({"ok": True, "queued": copy_queue(entry)})
+        elif route == "/__flags__":
+            # The misclassified-dot list, written straight to disk so a refresh,
+            # a cleared cache or another browser cannot lose it.
+            self._json({"ok": True, "n": flags_write(entry)})
         elif route == "/__trash__":
             # The harness panel's Delete button. Nothing is deleted here: the
             # request is queued in _debug-trash.json, which a Claude Code hook
@@ -288,6 +292,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     except ValueError:
                         since = -1
             self._json(bus_read(since))
+        elif self.path == "/__flags__":
+            self._json(flags_read())
         elif self.path == "/__harnesses__":
             # The harness files project.html loads RIGHT NOW, from disk. The
             # panel hides any row whose file is not in this list, so a page tab
@@ -338,6 +344,33 @@ def trash_queue(entry):
     q.append(rec)
     TRASH.write_text(json.dumps(q, ensure_ascii=False, indent=1) + "\n")
     return q
+
+
+FLAGS = WATCH_DIR / "_debug-misclassified.json"
+
+
+def flags_write(entry):
+    """The whole flagged-dot list, replaced wholesale.
+
+    localStorage would be lost to a cleared cache, a different browser, or a
+    phone — and this list is research, gathered over sessions, not a knob that
+    can be re-tuned in a minute. On disk it also means Claude can just read it
+    instead of the user pasting a hundred row ids.
+    """
+    rows = entry.get("rows")
+    if not isinstance(rows, list):
+        return 0
+    FLAGS.write_text(json.dumps(
+        {"when": time.strftime("%Y-%m-%d %H:%M"), "rows": rows},
+        ensure_ascii=False, indent=1) + "\n")
+    return len(rows)
+
+
+def flags_read():
+    try:
+        return json.loads(FLAGS.read_text()) if FLAGS.exists() else {"rows": []}
+    except ValueError:
+        return {"rows": []}
 
 
 COPYQ = WATCH_DIR / "_debug-copy.json"
