@@ -1547,7 +1547,12 @@ function p7StartAnimLoop() {
 // the whole side sliding. Each bulge is a per-event 0..1 (p7BulgeT) eased
 // toward its target on wall-clock — an outgoing bulge keeps collapsing while
 // the next one opens, so skating across dots never snaps.
-const P7_BULGE_MS    = 120;
+// Split per breakpoint: the same 120ms reads as instant on a phone, where the
+// swell happens under a 4x glass and the pushed dots are a screen-width of
+// 2px pitch away from each other. var on mobile — a manual/ harness drives it.
+const P7_BULGE_MS_DESKTOP = 120;
+var   P7_BULGE_MS_MOBILE  = 200;   // manual/-baked 2026-09-17
+function p7BulgeMs() { return isMobile() ? P7_BULGE_MS_MOBILE : P7_BULGE_MS_DESKTOP; }
 const P7_BULGE_HOLD  = 12;   // cells with the gap kept exact
 const P7_BULGE_REACH = 30;   // cells where the push has faded to zero
 // Both breakpoints push on the same 12/30-cell profile. What made a phone
@@ -1564,7 +1569,9 @@ function p7BulgeReach(b) { return P7_BULGE_REACH; }
 // its neighbours away, so the pointer crosses a ring of bare canvas with no dot
 // under it, hover drops, the dim snaps off, and the next pixel snaps it back
 // on. Same device as page9.js's p9.hoverDimT.
-const P7_HOVER_DIM_MS = 90;
+const P7_HOVER_DIM_MS_DESKTOP = 90;
+var   P7_HOVER_DIM_MS_MOBILE  = 90;   // var: the same harness
+function p7HoverDimMs() { return isMobile() ? P7_HOVER_DIM_MS_MOBILE : P7_HOVER_DIM_MS_DESKTOP; }
 // Grown side in units of SQ, by crowd tier. P7_BULGE_CUTS are the ascending
 // crowd thresholds; tier = how many of them ev.crowd reaches, so
 // P7_BULGE_MULT has one more entry than CUTS. Tier 0 (no figure, or below the
@@ -1619,7 +1626,7 @@ function p7BulgeTick() {
   // every desktop hover).
   for (const [ev, b] of p7BulgeT) {
     const target = (ev === hovered || ev === p9Pick) ? 1 : 0;
-    const step = dt / P7_BULGE_MS;
+    const step = dt / p7BulgeMs();
     if (b.t !== target) b.t = target > b.t ? Math.min(1, b.t + step) : Math.max(0, b.t - step);
     if (b.t === 0 && target === 0) p7BulgeT.delete(ev);
   }
@@ -1628,7 +1635,7 @@ function p7BulgeTick() {
   // would be stomped out from under it. Same duration, separate field.
   if (typeof p9 !== "undefined" && dt) {
     const pickTarget = p9Pick ? 1 : 0;
-    const ds = dt / P7_HOVER_DIM_MS;
+    const ds = dt / p7HoverDimMs();
     const cur = p9.pickDimT || 0;
     if (cur !== pickTarget) p9.pickDimT = pickTarget > cur ? Math.min(1, cur + ds) : Math.max(0, cur - ds);
   }
@@ -1636,7 +1643,7 @@ function p7BulgeTick() {
   // for EVERY hover — tier-0 squares never enter p7BulgeT, yet they dim too.
   const dimTarget = (p7.hoveredEvent || (p7Inspect && p7Inspect.dragging ? p7Inspect.event : null)) ? 1 : 0;
   if (dt && p7.hoverDimT !== dimTarget) {
-    const ds = dt / P7_HOVER_DIM_MS;
+    const ds = dt / p7HoverDimMs();
     p7.hoverDimT = dimTarget > p7.hoverDimT ? Math.min(1, p7.hoverDimT + ds)
                                             : Math.max(0, p7.hoverDimT - ds);
   }
@@ -7278,7 +7285,29 @@ function p7InspectInit() {
     //
     // drawNow, not draw: draw() coalesces into a rAF, so the flag would already
     // be back to false by the time the paint ran and the x-ray did nothing.
-    if (overCard) { p7HideAxisCards = true; drawNow(); p7HideAxisCards = false; }
+    //
+    // AND ONLY WHEN THE CANVAS HAS CHANGED. The finger moving does not change
+    // what is under the cards — only a repaint does — so the card-less paint is
+    // kept in an offscreen copy keyed by the paint serial, and the glass blits
+    // from that copy while the serial stands. The repaint used to run for every
+    // new finger position near a card, and the notable events (the ones with
+    // cards) are exactly the big dots the glass is lifted over.
+    let blitFrom = canvasEl;
+    if (overCard) {
+      if (xrayCache.serial !== drawSerial) {
+        p7HideAxisCards = true; drawNow(); p7HideAxisCards = false;
+        if (xrayCache.canvas.width !== canvasEl.width || xrayCache.canvas.height !== canvasEl.height) {
+          xrayCache.canvas.width = canvasEl.width; xrayCache.canvas.height = canvasEl.height;
+        }
+        const xg = xrayCache.canvas.getContext("2d");
+        xg.setTransform(1, 0, 0, 1, 0, 0);
+        xg.clearRect(0, 0, xrayCache.canvas.width, xrayCache.canvas.height);
+        xg.drawImage(canvasEl, 0, 0);
+        p7DrawAxisCardsOnly(canvasEl.getContext("2d"));   // cards back, same frame
+        xrayCache.serial = drawSerial;                     // the paint we just copied
+      }
+      blitFrom = xrayCache.canvas;
+    }
 
     lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     lctx.clearRect(0, 0, P7_LOUPE_SIZE, P7_LOUPE_SIZE);
@@ -7295,12 +7324,12 @@ function p7InspectInit() {
     // by one whole magnified pixel together. The centre is off by under a
     // device pixel, which nothing can see.
     lctx.imageSmoothingEnabled = false; // dots are 1–2px; smoothing turns them to mush
-    lctx.drawImage(canvasEl, sx, sy, srcDev, srcDev, 0, 0, P7_LOUPE_SIZE, P7_LOUPE_SIZE);
-    if (overCard) p7DrawAxisCardsOnly(canvasEl.getContext("2d"));  // cards back, same frame
+    lctx.drawImage(blitFrom, sx, sy, srcDev, srcDev, 0, 0, P7_LOUPE_SIZE, P7_LOUPE_SIZE);
     loupeLastKey = sx + "|" + sy + "|" + srcDev + "|" + drawSerial;
     placeLoupe(cx, cy);
   }
   let loupeLastKey = null;
+  const xrayCache = { canvas: document.createElement("canvas"), serial: -1 };
   // Held above the fingertip so the finger isn't covering what's being read,
   // and clamped so it stays fully on screen near the edges.
   // Whole device pixels for the element too: composited at a fractional

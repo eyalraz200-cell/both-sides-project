@@ -1480,8 +1480,10 @@ function p9BulgeTick() {
   let active = false;
   for (const [ev, b] of p9BulgeT) {
     const target = ev === hovered ? 1 : 0;
-    const step = dt / P7_BULGE_MS;
-    b.t = target > b.t ? Math.min(1, b.t + step) : Math.max(0, b.t - step);
+    const step = dt / p7BulgeMs();
+    // Holds at its target — `target > t` alone stepped a settled 1 back down
+    // (see p7BulgeTick, page7.js).
+    if (b.t !== target) b.t = target > b.t ? Math.min(1, b.t + step) : Math.max(0, b.t - step);
     if (b.t === 0 && target === 0) p9BulgeT.delete(ev);
     else if (b.t !== target) active = true;
   }
