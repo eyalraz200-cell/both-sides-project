@@ -76,6 +76,14 @@ Promise.all([
     const widthChanged = w !== lastResizeW;
     lastResizeW = w;
     if (isMobile() && !widthChanged) {
+      // @fold1's dot columns are built to fill the viewport they were built
+      // FOR, and this cheap path deliberately never rebuilds them. A bar slide
+      // would otherwise leave them hanging above the new bottom edge and
+      // off-centre from the title. One transform re-centres every decorative
+      // dot (the six group swatches add the same term in js/update-groups.js),
+      // and the columns are built with enough overfill that they still reach
+      // the bottom — page1.js. O(1), so it is safe on these slide ticks.
+      page0ApplyBarShift();
       draw();
       clearTimeout(mobileHeightSettleT);
       mobileHeightSettleT = setTimeout(() => { layoutGroups(); draw(); }, 180);
