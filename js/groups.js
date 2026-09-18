@@ -1834,9 +1834,19 @@ function fold7HoldArm(x, y) {
     if (sel && sel.rangeCount) sel.removeAllRanges();
     window.addEventListener("touchmove", fold7HoldMove, { passive: false });
     fold7UserLoupeEl.classList.add("is-visible");
-    // A new hold beats a flight still in the air — the frame is wanted up here.
-    tooltipFold7FlyCancel();
+    // The frame FLIES UP to the reader's spot, the same way it flies back down
+    // on release — position animates continuously in BOTH directions (the house
+    // rule). It used to snap up here and only animate on the way back, so the
+    // frame appeared to jump on press and glide on release.
+    // Read the top it is leaving BEFORE the flag flips, since that flag is what
+    // picks the spot — and read it off style.top, which mid-flight holds the
+    // INTERPOLATED position, so a hold that interrupts a flight still in the air
+    // departs from where the frame actually is rather than from either endpoint.
+    // tooltipFold7FlyStart supersedes any flight already running (and nulls the
+    // state itself if it declines), so no separate cancel is needed.
+    const fromTop = parseFloat(fold8TooltipEl.style.top);
     p7TipAvoidActive = true;
+    tooltipFold7FlyStart(isNaN(fromTop) ? fold8TooltipEl.getBoundingClientRect().top : fromTop);
     tooltipDockMobile(fold8TooltipEl);
     requestAnimationFrame(fold7HoldTick);
   }, P7_LONGPRESS_MS);

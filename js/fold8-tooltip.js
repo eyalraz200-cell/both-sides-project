@@ -145,7 +145,6 @@ function tooltipFold7FlyStart(fromTop) {
   fold7TipFlyAt   = performance.now();
   requestAnimationFrame(tooltipFold7FlyTick);
 }
-function tooltipFold7FlyCancel() { fold7TipFlyFrom = null; }
 var TOOLTIP_DOCK_HOLD_TOP_GAP_PX    = 108;  // holding a TOP dot → gap over the block     (manual/-baked 2026-09-17)
 var TOOLTIP_DOCK_HOLD_BOTTOM_GAP_PX = 94;   // holding a BOTTOM dot → gap over the block  (manual/-baked 2026-09-17)
 // The 8 sample squares' extent AT REST — centres ± half the resting side, not the
