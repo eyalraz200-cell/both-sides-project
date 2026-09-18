@@ -178,9 +178,49 @@ function buildPage0DotColorSet(counts) {
 // Rebuilds the dot columns (in #page0DotsOverlay, a fixed one-viewport-tall
 // layer — see the comment above) from the current window.innerHeight —
 // re-run on resize (see js/bootstrap.js) since how many dots fit depends on vh.
+/* A PHONE'S BOTTOM/URL BAR COLLAPSES AND THE VIEWPORT GROWS UNDER THE COLUMNS.
+   The columns are built to fill exactly to `window.innerHeight` as it was at
+   build time, and a height-only resize on mobile deliberately does NOT rebuild
+   them (js/bootstrap.js: the full relayout stalls the main thread hard enough
+   that the browser gives up and snaps the bar back). So on a collapse the
+   column stayed sized for the shorter viewport and left dead space at the
+   bottom — measured 128px on a 390x750 -> 390x844 collapse.
+
+   Two cheap pieces fix it without putting any work back into the slide:
+     - OVERFILL: build past the bottom by this much, so a growing viewport can
+       never run the column short. A collapse of Δ needs Δ/2 of overfill (the
+       shift below covers the other half), so 160 covers bars up to ~320px.
+       Costs ~5 hidden dots per column.
+     - page0BarShiftPx(): the columns are CENTRE-derived (vh/2), and so is
+       `.page0-title` (`top: calc(50% - …)`), so both want to move by half the
+       delta. One transform on the overlay does that for every decorative dot at
+       once; the six group swatches add the same term in js/update-groups.js,
+       since they are placed from these anchors but live in a different layer. */
+const PAGE0_DOT_OVERFILL_PX = 160;
+let   PAGE0_BUILD_VH = 0;   // the innerHeight the columns were last built for
+
+// Half the viewport's growth since the build — what the column must move down
+// to stay centred on the title. 0 until the first build.
+function page0BarShiftPx() {
+  if (!PAGE0_BUILD_VH) return 0;
+  return (window.innerHeight - PAGE0_BUILD_VH) / 2;
+}
+
+// O(1): one style write, safe to call on every resize tick during a bar slide.
+function page0ApplyBarShift() {
+  const overlay = document.getElementById("page0DotsOverlay");
+  if (!overlay) return;
+  const dy = page0BarShiftPx();
+  overlay.style.transform = dy ? `translateY(${dy}px)` : "";
+}
+
 function buildPage0AllDots() {
   const vh = window.innerHeight;
+  PAGE0_BUILD_VH = vh;
   const overlay = document.getElementById("page0DotsOverlay");
+  // A fresh build is already sized for the live viewport — drop any shift left
+  // over from the previous one.
+  overlay.style.transform = "";
 
   overlay.querySelectorAll(".page0-dot").forEach((el) => el.remove());
   PAGE0_GROUP_DOT_ANCHORS = {};
@@ -188,7 +228,12 @@ function buildPage0AllDots() {
 
   const counts = PAGE0_DOT_COLS.map(({ startOffsetY }) => {
     const firstCenterY = vh / 2 - page0DotBaseOffsetY() + startOffsetY;
-    return Math.max(0, Math.ceil((vh - firstCenterY) / PAGE0_DOT_STEP));
+    // Fill PAST the bottom edge (see PAGE0_DOT_OVERFILL_PX) so a bar collapse
+    // can't leave the column short. The surplus sits off-screen. MOBILE ONLY —
+    // desktop has no collapsing bar, and its resizes take the full rebuild
+    // path, so the extra dots there would be nodes that can never be seen.
+    const overfill = isMobile() ? PAGE0_DOT_OVERFILL_PX : 0;
+    return Math.max(0, Math.ceil((vh + overfill - firstCenterY) / PAGE0_DOT_STEP));
   });
   const colorsByCol = buildPage0DotColorSet(counts);
 
