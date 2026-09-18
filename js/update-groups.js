@@ -317,15 +317,7 @@ function updateGroups() {
     // dot this load (very short viewports can run out of dots before all
     // groups get one).
     const anchor = PAGE0_GROUP_DOT_ANCHORS[g.color] || { left: fold4Pos.x - W / 2, top: fold4Pos.y };
-    // + page0BarShiftPx(): the anchors are in the coordinate space of the
-    // viewport the columns were BUILT for, and a phone's bar collapsing grows
-    // the viewport without a rebuild. The decorative dots take that shift as one
-    // transform on their overlay (page0ApplyBarShift, page1.js); these six live
-    // in #groupsOverlay instead — a different layer, which must not be
-    // transformed because it also carries the legend at every later fold — so
-    // they add the same term here. 0 on desktop and whenever the build is
-    // current, so this costs one addition and changes nothing else.
-    const fold1X = W / 2 + anchor.left, fold1Y = anchor.top + page0BarShiftPx();
+    const fold1X = W / 2 + anchor.left, fold1Y = anchor.top;
 
     let x = fold1X + (fold4Pos.x - fold1X) * moveT;
     let y = fold1Y + (fold4Pos.y - fold1Y) * moveT;
