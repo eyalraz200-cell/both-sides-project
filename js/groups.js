@@ -3071,7 +3071,11 @@ function fold6SetMobileLegendVisible(vis) {
       // shrink — mirror of fold6PlayMLegendFlyIntro).
       fold6FadeOutMLegendFlyIntro();
     } else if (fold6MLegendIntroPlayed) fold6StopMLegendIntro();
-    fold6MLegendIntroPlayed = false;
+    // Re-arm only when the reader is genuinely back ABOVE the hand-off fold.
+    // `vis` also reads 0 on a DESKTOP viewport, so a phone rotated to landscape
+    // and back re-armed this at @fold11 and replayed the whole intro there —
+    // the sheet opening itself for 1.2s on a fold where it has no business.
+    if (typeof currentPage === "undefined" || currentPage <= 3) fold6MLegendIntroPlayed = false;
   }
   fold6MFlyPrevVis = vis;
   // The bar is invisible here, so a panel still open is shut without the

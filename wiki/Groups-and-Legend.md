@@ -1254,6 +1254,15 @@ still opening, and the flight aims at the rows' REST positions).
   flat top inset for the on-canvas rows. With no on-canvas legend under 600px nothing visible
   reads it; the hover boxes and the note anchors that call `fold6RowIndexY` are desktop-only.
 
+**The מקרא hand-off intro re-arms only above @fold4.** `fold6SetMobileLegendVisible`
+plays `fold6PlayMLegendIntro` once (`fold6MLegendIntroPlayed`) and re-arms it when the
+bar's `vis` drops to 0 — but `vis` also reads 0 on a DESKTOP viewport, so a phone
+rotated to landscape and back re-armed it at @fold11 and replayed the whole intro there:
+the sheet opening itself for 1.2s on a fold where it has no business. The re-arm is now
+gated on `currentPage <= 3` (@fold4 and above). A rotation at any later fold leaves the
+memo set.
+
+
 **Desktop is unchanged** by any of this.
 
 **@fold3's labels type inside their final wrapped shape.** On mobile the group labels

@@ -580,8 +580,11 @@ pointer and the keyboard can never drift apart.
   which would otherwise hand the hover straight back and pin the arrows on one dot forever.
 - Gated like the pointer path (`p9HoverPageOk()`, not `p9.anim`, not mobile, not mid-drag) and
   additionally ignores arrows aimed at a field, a `contenteditable`, or a `.page9-pill` (which has
-  its own keyboard handler). Calls `preventDefault()` only once it has a dot to move to, so the
-  arrows still scroll the page when there is nothing to step to.
+  its own keyboard handler). **While a migration runs (`p9.anim`) the arrows are swallowed**
+  — `preventDefault()` and return, no step: the hover is off then (`p9BulgeTick` gates on
+  `!p9.anim`), and returning BEFORE `preventDefault()` let the browser scroll ~20px a press
+  and carried the reader out of the fold into @fold14's fade mid-flight. Idle, it calls
+  `preventDefault()` only once it has a dot to move to.
 
 **Dot hover** (`p9HoverInit`): live on every fold the grids are drawn on — `p9HoverPageOk()`:
 @fold13 always, **@fold11 and @fold12 once the bridge glide has landed** (`p8CurrentT() >= 1` —

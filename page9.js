@@ -1167,7 +1167,8 @@ function p9LegitTierPlan(W, H) {
     // dot to the device grid anyway.
     const STEP = 1 / (4 * dpr);
     const q = c => Math.max(1 / dpr, Math.floor(c / STEP) * STEP);
-    const availRows = cell => Math.max(1, Math.floor((baseH - pad) / cell));
+    // Guarded against cell <= 0: see p9PackColumns for the RangeError this fed.
+    const availRows = cell => cell > 0 ? Math.max(1, Math.floor((baseH - pad) / cell)) : 1;
     const need = side => lists[side].reduce((a, e) => a + cellsOf(e) ** 2, 0);
     const areaPx = (W / 2) * (baseH - pad);
     // MOBILE keeps a real gap: at the 54px strip's own pitch the ratio gap works
@@ -1179,7 +1180,7 @@ function p9LegitTierPlan(W, H) {
     // The finest cell that can still hold a dot and its gap (mobile only).
     const cellMinM = P9_LEGIT_SQ_MIN_M + P9_LEGIT_GAP_MIN_M;
     const colsFor = (cell, side) => {
-      const t = Math.max(2, Math.floor(W / cell));
+      const t = cell > 0 ? Math.max(2, Math.floor(W / cell)) : 2;
       return side === "left" ? Math.floor(t / 2) : t - Math.floor(t / 2);
     };
     const packSide = (side, cell) =>
@@ -1637,7 +1638,13 @@ function p9ScopeCellsFor(ev, colsMax, cap) {
 // so the un-tiered state is pixel-identical to before and toggling the tiers
 // off puts every dot back where it was.
 function p9PackColumns(entries, cols, cellsOf) {
-  const h = new Array(Math.max(1, cols)).fill(0);
+  // `cols` comes from a cell size that can pass through 0 mid-resize (320px
+  // wide, entering from @fold10): W / 0 is Infinity and (baseH - pad) / 0 too,
+  // and `new Array(Infinity)` throws RangeError. Nothing sensible packs into an
+  // infinite strip; one column is the honest degenerate answer for that frame,
+  // and the next frame's finite cell re-packs properly.
+  const width = Number.isFinite(cols) ? Math.max(1, Math.floor(cols)) : 1;
+  const h = new Array(width).fill(0);
   const pos = new Map();
   let rows = 0;
   for (const e of entries) {
@@ -4373,12 +4380,18 @@ function p9HoverInit() {
     if (!dir) return;
     // Same gates the pointer path uses, plus: never steal the arrows from a
     // field, or from the pill keyboard handler (page9.js's pill keydown).
-    if (!p9HoverPageOk() || p9.anim || isMobile()) return;
+    if (!p9HoverPageOk() || isMobile()) return;
     if (document.querySelector(".page9-sticky")?.classList.contains("dragging")) return;
     const t = e.target;
     if (t && (t.isContentEditable ||
         /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || "") ||
         (t.closest && t.closest(".page9-pill")))) return;
+    // While a migration runs the hover is off (p9BulgeTick gates on !p9.anim),
+    // so there is nothing to step to — but the arrows must still not fall
+    // through to the browser: returning before preventDefault let the page
+    // scroll ~20px a press and carried the reader out of the fold, into
+    // @fold14's fade, in the middle of the flight. Swallow, don't scroll.
+    if (p9.anim) { e.preventDefault(); return; }
 
     const next = p9KeyStep(dir);
     if (!next) return;

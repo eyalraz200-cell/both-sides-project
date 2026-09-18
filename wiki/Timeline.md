@@ -1521,11 +1521,33 @@ cell it would have had if that group had never been in the data. Click the row
 again to bring it back. Multiple groups can be off at once.
 
 - **Lives from @fold9 down, and survives coming back.** `p7SizeGridOnPage` clears it
-  with `if (page < 8) p7FilterReset()` — **8, not 9**: @fold9 IS the timeline and is
-  `data-page="8"`, so `< 9` put the fold that OWNS the filter inside the clearing
-  range and wiped it on the way back up from @fold10. Only scrolling ABOVE the
-  timeline (page 7 and under) clears it, where the legend rows stop being clickable
-  and a filter with no way to undo it would be a trap.
+  with `if (page < 7) p7FilterReset()` — **7**. Two off-by-ones lived on that line:
+  `< 9` put @fold9 (`data-page="8"`, the timeline that OWNS the filter) inside the
+  clearing range, so scrolling down and back wiped it; `< 8` fired on @fold8
+  (`data-page="7"`), where on the way back up **7,135 timeline dots are still on
+  screen** in the reverse flight, so the restore was in full view. @fold7
+  (`data-page="6"`) holds 10 dots — the demo squares — and is the first fold where the
+  timeline is genuinely gone. That is the boundary. The legend rows stop being
+  clickable above it, and a filter with no way to undo it would be a trap.
+- **The reset ANIMATES.** `p7FilterReset` is the restore that clicking every hidden
+  row would be, done at once: it snapshots where everything stands (the ghosts hold
+  the hidden dots at size 0), clears the set, re-packs, and sets a morph with
+  `restoring: true` and **`actors` (a Set) instead of `actor`** — every hidden group
+  is "the toggled one", so all of them arrive by size in place while the rest of
+  each camp flies to its unfiltered cell. `p7FilterMorphToggled(ev)` is the one
+  predicate both shapes of morph answer through (size factor, canvas blend, DOM
+  squares). **Removed — don't reintroduce:** the hard clear-and-`draw()` reset; it
+  popped 10,605 dots back at full size in a single frame, zero of them mid-growth.
+  Only the never-drawn case (`!p7.ready || !p7.vert`) still clears cold, invisibly.
+- **Every toggle drives page9's frames, and the morph cannot outlive its clock.**
+  `p7FilterCommit` calls `p9FilterKick()` itself (it used to be the legend click's
+  job alone — a toggle from the keyboard, a harness or another fold's code got ONE
+  `draw()`, at the instant a restoring group's ramp was 0, and with
+  `p9.lastPositions` empty after all six groups were hidden nothing ever redrew: the
+  field stayed empty for good). It also arms a `setTimeout` that nulls
+  `p7FilterMorph` at `p7FilterMorphDur + 40ms`; the expiry inside `drawPage7` only
+  runs on the folds page7 draws, and on @fold13 the object outlived 1280ms by a
+  minute.
 - **State** — `p7FilterOff` (a Set of `actor` keys), `p7FilterLayout`
   (`{leftPos, rightPos}`, or `null` when nothing is filtered), `p7FilterMorph`
   (`{from: Map(event → {cx, cy, sq}), start}`).
