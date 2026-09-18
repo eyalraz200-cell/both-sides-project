@@ -2696,11 +2696,14 @@ function p7SizeGridOnPage(page) {
   // legend rows stop being clickable there and a filter with no way to undo it
   // is a trap.
   //
-  // `page < 8`, NOT `page < 9`: @fold9 IS the timeline and is data-page 8, so
-  // `< 9` put the fold that OWNS the filter inside the clearing range. Setting a
-  // filter, scrolling down and coming back wiped it on arrival at @fold9 — the
-  // one fold where it must survive. Above it (page 7 and under) still clears.
-  if (page < 8) p7FilterReset();
+  // `page < 7`. Two off-by-ones lived here. `< 9` put @fold9 (data-page 8, the
+  // timeline that OWNS the filter) inside the clearing range, so scrolling down
+  // and back wiped it. `< 8` fired on @fold8 (data-page 7) — measured on the
+  // way back up, 7,135 timeline dots are still on screen there, the reverse
+  // flight in full view, and the restore was fully visible. One fold further,
+  // @fold7 (data-page 6), holds 10 dots: the demo squares. That is the first
+  // fold where the timeline is genuinely gone, and the boundary.
+  if (page < 7) p7FilterReset();
   // Above the band the crossings own the tier flag again (js/groups.js).
   if (page < 9 && typeof p7ScopeUserUniform !== "undefined") p7ScopeUserUniform = null;
   // Snapshot for the p9 sync below: only a flip that actually MOVES the flag
@@ -2819,9 +2822,18 @@ function p7FilterHiddenEv(ev)  { return p7FilterOff.has(ev.actor); }
 // snapshot); this is for the folds after it, which only need the scalar.
 // Only the group that was just toggled is ever in flight: every other hidden
 // group is already at rest at 0.
+// Is `ev`'s group the one (or, for the reset, one of the ones) the running morph
+// is toggling? Those dots leave/arrive by SIZE in place; the rest of the camp
+// flies. A single click sets `actor`; the reset above the timeline restores every
+// hidden group at once and sets `actors` — one predicate for both.
+function p7FilterMorphToggled(ev) {
+  const m = p7FilterMorph;
+  if (!m) return false;
+  return m.actors ? m.actors.has(ev.actor) : m.actor === ev.actor;
+}
 function p7FilterSizeFactor(ev) {
   const hidden = p7FilterActive() && p7FilterHiddenEv(ev);
-  if (!p7FilterMorphActive() || p7FilterMorph.actor !== ev.actor) return hidden ? 0 : 1;
+  if (!p7FilterMorphActive() || !p7FilterMorphToggled(ev)) return hidden ? 0 : 1;
   const t = p7FilterChannels().size;
   return p7FilterMorph.restoring ? t : 1 - t;
 }
@@ -2887,6 +2899,22 @@ function p7FilterCommit(restoring, actor) {
   p7.hoveredEvent = null;
   if (typeof draw === "function") draw();
   if (typeof p7StartAnimLoop === "function") p7StartAnimLoop();
+  // FRAMES FOR THE FOLDS PAGE7 DOES NOT DRAW. On @fold13 the one draw() above
+  // lands at the instant a restoring group's ramp is still 0, so every returning
+  // dot is skipped as too small — and with p9.lastPositions empty (all six
+  // groups off) p9FilterSnapshot has nothing to animate from and sets no loop.
+  // Nothing ever redrew: filter the last group, bring one back, and the field
+  // stayed empty for good. The legend click was the only caller of the kick; a
+  // toggle from anywhere else (keyboard, a harness, another fold's code) wedged.
+  // So the kick lives with the commit, for every caller. Idempotent.
+  if (typeof p9FilterKick === "function") p9FilterKick();
+  // The morph is expired inside page7's draw loop (drawPage7 below) — which
+  // does not run on @fold11+. Left set there, p7FilterMorph outlived its 1280ms
+  // by a minute until the reader scrolled back up. A timer clears it wherever
+  // the reader is; page7's own check stays for the folds it draws.
+  const morph = p7FilterMorph;
+  if (morph) setTimeout(() => { if (p7FilterMorph === morph) p7FilterMorph = null; },
+                        p7FilterMorphDur(morph) + 40);
 }
 function p7FilterToggle(actor) {
   // No longer desktop-only. The מקרא panel's group rows are the mobile filter
@@ -2905,12 +2933,45 @@ function p7FilterToggle(actor) {
 // Leaving @fold9 drops the filter instantly — no morph, nothing to watch.
 function p7FilterReset() {
   if (!p7FilterOff.size) return;
+  // Not a hard clear any more. This used to wipe the set and draw() once, so
+  // every hidden dot reappeared at full size in a single frame — 10,605 of them
+  // popping in with zero mid-growth, on @fold8 where the whole timeline is on
+  // screen. A dot ARRIVES BY GROWING (hard rule), and clicking a legend row to
+  // bring a group back already does exactly that through p7FilterCommit. So the
+  // reset is that restore, for every hidden group at once: snapshot where
+  // everything stands (the ghosts hold the hidden dots at size 0, so they grow
+  // from nothing), clear the set, re-pack, and morph — space opens, dots grow.
+  // Nothing drawn yet (no positions, no layout) is the one case a morph has
+  // nothing to blend from; that one still clears cold, invisibly.
+  if (!p7.ready || !p7.vert || !p7.lastPositions) {
+    p7FilterOff.clear();
+    p7FilterLayout = null; p7FilterMorph = null;
+    p7FilterGhosts.clear(); p7Grid.packVis = null;
+    if (typeof draw === "function") draw();
+    return;
+  }
+  if (typeof p9FilterSnapshot === "function") p9FilterSnapshot();
+  const actors = new Set(p7FilterOff);
+  const from = new Map();
+  for (const [ev, g] of p7FilterGhosts) from.set(ev, { cx: g.cx, cy: g.cy, sq: g.sq });
+  for (const [ev, pos] of p7.lastPositions) {
+    const sq = pos.sq ?? p7.SQ;
+    from.set(ev, { cx: pos.x + sq / 2, cy: pos.y + sq / 2, sq });
+  }
   p7FilterOff.clear();
-  p7FilterLayout = null;
-  p7FilterMorph  = null;
-  p7FilterGhosts.clear();
+  p7FilterRebuild();          // no filter left: p7FilterLayout goes null
   p7Grid.packVis = null;
+  p7FilterMorph = from.size
+    ? { from, start: performance.now(), restoring: true, actor: null, actors, skipFly: false }
+    : null;
+  p7BulgeT.clear();
+  p7.hoveredEvent = null;
   if (typeof draw === "function") draw();
+  if (typeof p7StartAnimLoop === "function") p7StartAnimLoop();
+  if (typeof p9FilterKick === "function") p9FilterKick();
+  const morph = p7FilterMorph;
+  if (morph) setTimeout(() => { if (p7FilterMorph === morph) p7FilterMorph = null; },
+                        p7FilterMorphDur(morph) + 40);
 }
 
 function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, monthEnd, settledCount, posMap) {
@@ -3185,7 +3246,7 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     // in from the spot it was hidden at — visible in the solo case, where the
     // position beat runs alongside the grow instead of behind it. The rest of
     // the camp still flies, closing ranks or opening the space.
-    const evToggled = p7FilterMorph && events[i].actor === p7FilterMorph.actor;
+    const evToggled = p7FilterMorphToggled(events[i]);
 
     // The filter's own flight: one shared window for centre and size, blended
     // from the snapshot taken at the click. Applied last so it wins over a
@@ -3544,7 +3605,7 @@ function p7TargetForActorOccurrence(actor, n, W, H) {
     // …but never for the toggled group's own square: like the canvas dots, it
     // arrives by size at the cell it belongs in, rather than flying in from
     // wherever it was parked while hidden.
-    if (p7FilterMorph && p7FilterMorph.actor !== ev.actor) {
+    if (p7FilterMorph && !p7FilterMorphToggled(ev)) {
       const from = p7FilterMorph.from.get(ev);
       if (from) {
         const t = p7FilterChannels().pos;
@@ -7084,6 +7145,12 @@ function p7InspectInit() {
   // (which would read as the empty frame flickering back in).
   function release() {
     p7Inspect.event = null;
+    // `is-holding` is the hold's own look (the עוד/פחות label hidden under the
+    // finger). touchend strips it before calling here, but a viewport change
+    // or a fold change tears the hold down through release() alone — and the
+    // class then outlived the hold through the release, later scrolls and the
+    // next fold. Every teardown ends the holding look, not just the finger's.
+    tipEl.classList.remove("is-holding");
     hideLoupe();
     p7InspectOwnsTooltip = false;
     collapseMore();

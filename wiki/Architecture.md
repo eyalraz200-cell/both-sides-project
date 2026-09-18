@@ -465,3 +465,14 @@ The pinned timeline (@fold9) stays the heaviest fold — ~22ms/frame at 6× thro
 now dominated by **browser rasterisation of the full-screen canvas**, not by JS: 14,451
 squares on a 1179×2556 backing store. Further gains there need a rendering change, not
 another micro-optimisation. See [Timeline](Timeline.md) for the draw-loop specifics.
+
+
+**Resize keeps the reader's place on every breakpoint.** `js/bootstrap.js`'s resize
+handler restores `scrollAnchorFrac * scrollMax()` after the relayout. It used to do so
+only `if (!isMobile())`. Reaching that line already means the WIDTH changed — height-only
+mobile resizes (the URL bar) return early above it — i.e. a rotation or a breakpoint
+crossing, and those rebuild a document of a different height (portrait ~20,000px,
+landscape ~9,700px). The browser scales `scrollY` down on the way to landscape but never
+back up, so with the restore guarded to desktop a phone rotated out and back landed four
+folds earlier and stayed there. The fraction is what survives the change of height.
+**Removed — don't reintroduce:** the `!isMobile()` guard on that restore.

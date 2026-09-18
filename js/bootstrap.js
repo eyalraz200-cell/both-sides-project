@@ -130,8 +130,13 @@ Promise.all([
     // scrollTo fires a scroll event, which re-runs every crossing check at the
     // equivalent point and also refreshes scrollAnchorFrac against the new
     // document height.
-    if (!isMobile()) {
-      window.scrollTo(0, scrollAnchorFrac * scrollMax());
-    }
+    // On every breakpoint, not just desktop. Reaching here means the WIDTH
+    // changed (height-only mobile resizes — the URL bar — returned early above),
+    // i.e. a rotation or a breakpoint crossing, and those rebuild a document of
+    // a different height: portrait is ~20000px, landscape ~9700px. The browser
+    // scales scrollY down on the way to landscape but not back up, so with this
+    // guarded to desktop a phone rotated twice landed four folds earlier and
+    // stayed there. The fraction is what survives the change of height.
+    window.scrollTo(0, scrollAnchorFrac * scrollMax());
   });
 });
