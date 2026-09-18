@@ -14,7 +14,12 @@ Promise.all([
   // rows in the top-left corner during @fold1 on a refresh.
   groupsOverlayEl.classList.add("is-active");
   updateTextCardFrameDashes();
-  playPage0Entrance();
+  // HELD, not called: on a first visit the work-in-progress gate is covering
+  // the page, and @fold1's entrance is the piece's first impression — it plays
+  // once the visitor has pressed through, not behind a modal. With no gate
+  // (already dismissed once in this browser) shkGateWait runs it synchronously,
+  // exactly as a bare call did. See js/intro-gate.js.
+  shkGateWait(playPage0Entrance);
   // document.fonts.load() above resolves once the font is fetched, but the
   // browser can still apply it to already-laid-out text a tick later — a
   // font swap changes label widths (and can reflow a title onto a different
@@ -78,7 +83,16 @@ Promise.all([
     if (isMobile() && !widthChanged) {
       draw();
       clearTimeout(mobileHeightSettleT);
-      mobileHeightSettleT = setTimeout(() => { layoutGroups(); draw(); }, 180);
+      // The hero is built for the viewport it was built in and this cheap path
+      // never rebuilds it, so a bar slide left the dot columns hanging above the
+      // new bottom edge. Move the WHOLE hero down by the growth instead, on the
+      // settle rather than on the slide's own ticks (it writes every dot's top,
+      // the kind of work that stalls a slide enough to snap the bar back).
+      mobileHeightSettleT = setTimeout(() => {
+        page0ApplyDrop();
+        layoutGroups();
+        draw();
+      }, 180);
       return;
     }
     // buildPage0AllDots() must run before layoutGroups() — it repopulates

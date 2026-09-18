@@ -39,6 +39,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300..800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <!-- Someone who already dismissed the work-in-progress gate (see .shk-gate at
+       the foot of <body>) must never see it flash. This has to run BEFORE the
+       first paint, which rules out doing it from js/intro-gate.js at the end of
+       the body — hence an inline head script. It only ever sets a class; the
+       gate's own script owns the flag's name (keep the two in sync). -->
+  <script>
+    try { if (localStorage.getItem("shk-gate-seen") === "1") document.documentElement.classList.add("shk-gate-seen"); } catch (e) {}
+  </script>
 </head>
 <body>
   <!-- The page's one h1. Every visible heading is an <h2> inside a scrolling
@@ -292,6 +300,42 @@
       </section>
     </div>
   </div>
+
+  <!-- WORK-IN-PROGRESS GATE. The first thing a visitor sees: a darkened page
+       behind a short "please don't circulate this yet" card. @fold1's entrance
+       (playPage0Entrance) is HELD until the button is pressed — see
+       shkGateWait() in js/intro-gate.js and its one call site in
+       js/bootstrap.js — so the reveal plays for someone who is looking at it,
+       not behind a modal.
+
+       Static markup rather than JS-built so it is already painted on first
+       frame; the <html class="shk-gate-seen"> test in <head> is what keeps a
+       returning visitor from seeing it flash before the script can remove it.
+       data-gate-style picks the look (doc | dark | squares | min) — the four
+       candidates the _debug-gate.js harness flips between. -->
+  <div class="shk-gate" id="shkGate" data-gate-style="doc"
+       role="dialog" aria-modal="true" aria-labelledby="shkGateText">
+    <div class="shk-gate-card">
+      <!-- The six group colours, in roster order (see GROUPS, js/groups.js).
+           They GROW in — never fade — per the project's dot rule. -->
+      <div class="shk-gate-squares" aria-hidden="true">
+        <i style="--sq: #F9B624"></i><i style="--sq: #454545"></i><i style="--sq: #F024FF"></i><i style="--sq: #6B89FF"></i><i style="--sq: #FF1A94"></i><i style="--sq: #31CE1C"></i>
+      </div>
+      <!-- .section-title + .text-card-frame are the SAME shared rules the
+           scrolling title cards use, so the dashed frame is drawn for free by
+           updateTextCardFrameDashes() (js/core.js), which walks every
+           .text-card-frame on the page. The non-`doc` styles strip the frame's
+           fill/padding and hide its dash in CSS rather than dropping the class,
+           so the harness can flip between them with no DOM surgery. -->
+      <div class="text-card-frame shk-gate-frame">
+        <h2 class="section-title shk-gate-text" id="shkGateText">הפרויקט נמצא בתהליך עבודה, אנא הימנעו מהפצתו בשלב זה, תודה.</h2>
+        <!-- INSIDE the frame, under the sentence — the notice is one title
+             block, not a card with a control parked beneath it. -->
+        <button type="button" class="shk-gate-btn" id="shkGateBtn">הבנתי, להמשך הפרויקט</button>
+      </div>
+    </div>
+  </div>
+
   <script src="squareboundingbox.js"></script>
   <script src="page1.js"></script>
   <script src="page7.js"></script>
@@ -305,6 +349,7 @@
   <script src="js/fold8-tooltip.js"></script>
   <script src="js/groups.js"></script>
   <script src="js/update-groups.js"></script>
+  <script src="js/intro-gate.js"></script>
   <script src="js/page8-9-scroll.js"></script>
   <script src="js/fold11.js"></script>
   <script src="js/bootstrap.js"></script>
@@ -325,7 +370,7 @@
       h.endsWith(".local") || /^10\./.test(h) || /^192\.168\./.test(h) ||
       /^172\.(1[6-9]|2\d|3[01])\./.test(h);
     if (!local) return;
-    ["_debug-bus.js", "_debug-inspect.js", "_debug-pick13-size.js", "_debug-misclassified.js"].forEach(function (src) {
+    ["_debug-bus.js", "_debug-inspect.js", "_debug-pick13-size.js", "_debug-misclassified.js", "_debug-gate.js"].forEach(function (src) {
       document.write('<script src="' + src + '"><\/script>');
     });
   })();
