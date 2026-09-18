@@ -77,7 +77,7 @@ Loaded as plain `<script>` tags, in this order (`project.html`):
 squareboundingbox.js → page1.js → page7.js → page8.js → page9.js → page12.js
 → js/core.js → js/nav.js → js/fold1-intro.js → js/page7-scrub.js
 → js/fold8-tooltip.js → js/groups.js → js/update-groups.js
-→ js/page8-9-scroll.js → js/fold11.js → js/bootstrap.js → reload.js
+→ js/intro-gate.js → js/page8-9-scroll.js → js/fold11.js → js/bootstrap.js → reload.js
 ```
 
 There are no modules and no imports. Every file declares top-level `const`/`function`s
@@ -110,6 +110,7 @@ Two places load order does matter:
 | `js/fold8-tooltip.js` | @fold7's tooltip typewriter demo (`fold8*` state + fns) |
 | `js/groups.js` | `GROUPS` roster, fold2 grid tables, `groupItems` DOM, FOLD6 square tables/elements, title-card refs, `makeTrigger`, **all fold triggers**, `watchCardThreshold` + checkers, legend/fold4/fold6-note constants |
 | `js/update-groups.js` | The `updateGroups` monolith, `layoutGroups`, groups/axis scroll wiring |
+| `js/intro-gate.js` | The work-in-progress gate — holds @fold1's entrance until the notice is dismissed |
 | `js/page8-9-scroll.js` | page8 title-center hold, page9 sticky/title scroll |
 | `js/fold11.js` | Outro morph (`updateFold13`) + the scroll gate |
 | `js/bootstrap.js` | Font-load bootstrap + resize handler — **must load last** |
@@ -121,6 +122,45 @@ Two places load order does matter:
 | `squareboundingbox.js` | Shared grid geometry (`SBB` — only `.top` is read, `SBB_TIMELINE`, `CENTER_GAP`) |
 | `reload.js` | Dev-only mtime poll → auto page reload |
 | `server.py` | Local dev server + xlsx → `events.json` generation |
+
+## The work-in-progress gate
+
+A first-time visitor lands on a darkened page behind a one-button notice
+(«הפרויקט נמצא בתהליך עבודה…» / «הבנתי, להמשך הפרויקט») and presses through it
+before anything plays. Markup: `.shk-gate` at the foot of `<body>`
+(`project.html`); behaviour: `js/intro-gate.js`; styling: the `.shk-gate` block
+at the end of `style.css`.
+
+- **@fold1's entrance is held, not restarted.** `js/bootstrap.js` hands
+  `playPage0Entrance` to `shkGateWait()` instead of calling it; the gate runs the
+  queued callback `SHK_GATE_FADE_MS` (240ms) after the button, once the backdrop
+  has finished clearing. That constant **mirrors the `.shk-gate` opacity
+  transition in `style.css`** — change one and change the other. With no gate,
+  `shkGateWait` runs its callback synchronously, exactly as the bare call did.
+- **Scroll is locked** via `html.shk-gate-open { overflow: hidden }` on both
+  `html` and `body`, plus a `scrollTo(0, 0)`. Not a scroll listener: every fold
+  is a function of scroll position, so letting the document move behind the gate
+  would burn through folds nobody saw.
+- **Once per browser.** `localStorage["shk-gate-seen"]`. The flag is read twice —
+  by `js/intro-gate.js`, and by an **inline `<head>` script** in `project.html`
+  that adds `.shk-gate-seen` to `<html>` before first paint so a returning
+  visitor never sees the notice flash. Keep the two key names in sync.
+- **The button is inside the frame**, under the sentence — the notice is one
+  title block, not a card with a control parked below it. It is @fold15's
+  dark-fill share button (`.page12-share.is-filled`): `#111` fill, `#fff` text,
+  a 1.5px `#111` edge, `#444` on hover over 180ms, set in the 14px Assistant the
+  mini-legend and `.p7-scope-btn` use. The `dark` and `min` styles swap it for
+  the outline half of the same button (white edge, fills white on hover), and
+  re-state `color: #fff` **on the `<h2>`** — `.section-title` sets `color: #111`
+  there, so a colour inherited from the frame never reaches the text.
+  Nothing is focused on open: a programmatic `focus()` paints `:focus-visible`
+  for mouse users too, ringing the filled button in a second black outline.
+- **Four looks**, switched by `data-gate-style` on `.shk-gate`: `doc` (default —
+  the piece's own dashed title card, `.section-title` + `.text-card-frame`, so
+  `updateTextCardFrameDashes()` draws its dash for free), `dark` (inverted card),
+  `squares` (light card under the six group colours **growing** in — never
+  fading, per the dot rule) and `min` (no card; text on the darkened page). Each
+  ships its own `--gate-dark` / `--gate-blur` backdrop defaults.
 
 ## Page dispatch
 

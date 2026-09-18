@@ -3647,7 +3647,13 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        desktop rule). The 50% cancels the viewport height out of the solve, so
        the value holds at any phone height; only the 390px WIDTH it was tuned
        at matters, since that is what fixes the 3-line wrap. */
-    top: calc(50% - 228.6px);
+    /* + var(--page0-drop): when a phone's bar collapses the viewport grows and
+       the whole hero moves down with it by the growth, so the composition this
+       fold was measured at survives (page0ApplyDrop, page1.js). `50%` has
+       already carried HALF the growth on its own — this is the other half, so
+       the text travels exactly as far as the dot columns, which are absolute px
+       and take the whole delta. 0px everywhere else. */
+    top: calc(50% - 228.6px + var(--page0-drop, 0px));
   }
 
   /* The subtitle keeps its 18px and its 125px width here — only the leading and
@@ -3658,7 +3664,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     /* Same trimmed solve as the title: -167.8 puts the last baseline 20.5px
        above its own dot column's top edge. Re-solve this whenever the leading
        above moves — the two are one setting. */
-    top: calc(50% - 168.8px);
+    top: calc(50% - 168.8px + var(--page0-drop, 0px));
   }
 
   /* The pinned title card rests 4.4vh (~37px on an 844px phone) from the top
@@ -4961,4 +4967,188 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 .group-item.is-filter-hover .group-swatch { transform: scale(1.5); }
 .groups-overlay.is-filter-hover-any .group-item:not(.is-filter-hover):not(.is-filtered-off) {
   opacity: 0.45;
+}
+
+/* ═══ THE WORK-IN-PROGRESS GATE ══════════════════════════════════════════════
+   The notice a first-time visitor presses through before @fold1's entrance
+   plays (markup: .shk-gate in project.html; behaviour: js/intro-gate.js).
+
+   Four looks, switched by [data-gate-style] on the same DOM — `doc` (the
+   dashed title card), `dark` (inverted card), `squares` (the six group
+   colours growing in above the text) and `min` (no card at all). The shared
+   base is everything below up to the per-style blocks. */
+
+/* Written as custom properties because the darkening is what gets tuned: the
+   _debug-gate.js harness drives these two and nothing else. --gate-dark is the
+   backdrop's alpha over the page, --gate-blur the blur behind it. */
+.shk-gate {
+  --gate-dark: 0.45;
+  --gate-blur: 2px;
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  direction: rtl;
+  background: rgba(0, 0, 0, var(--gate-dark));
+  -webkit-backdrop-filter: blur(var(--gate-blur));
+  backdrop-filter: blur(var(--gate-blur));
+  /* A pure state flip (open → dismissed), so a CSS transition is right here —
+     nothing repaints this element per frame. The duration is mirrored by
+     SHK_GATE_FADE_MS in js/intro-gate.js, which fires the entrance when it
+     ends; change one and change the other. */
+  opacity: 0;
+  transition: opacity 240ms ease;
+}
+.shk-gate.is-open { opacity: 1; }
+/* The visitor has pressed through once already — the inline <head> script in
+   project.html adds this class before the first paint so the gate can't flash
+   on a return visit, and js/intro-gate.js then removes the element outright. */
+.shk-gate-seen .shk-gate { display: none; }
+/* While the gate is up the document must not scroll: every fold's animation is
+   a function of scroll position, so scrolling behind the gate would burn
+   through folds nobody saw. */
+.shk-gate-open, .shk-gate-open body { overflow: hidden; }
+
+.shk-gate-card {
+  width: var(--card-w);
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+/* ONE title block, button included. .text-card-frame is the scrolling cards'
+   own chrome used verbatim, so updateTextCardFrameDashes() (js/core.js) draws
+   its dash for free — the frame is a <div> here rather than the <h2> itself
+   only because it now wraps two children. */
+.shk-gate-frame {
+  max-width: 100%;
+  text-align: center;
+}
+.shk-gate-text { margin: 0; }
+
+/* @fold15's share row is the page's own dark-fill button (.page12-share.is-filled
+   — #111 fill, #fff text, #444 on hover, a 1.5px #111 edge), so this is that
+   button in a rectangular box rather than a new treatment. The face and size are
+   the mini-legend's / .p7-scope-btn's 14px Assistant, which is what everything
+   that isn't a title is set in on this page. */
+.shk-gate-btn {
+  margin-top: 18px;
+  font: 14px 'Assistant', sans-serif;
+  color: #fff;
+  background: #111;
+  border: 1.5px solid #111;
+  border-radius: 4px;
+  padding: 9px 20px;
+  cursor: pointer;
+  /* Pure state flips, so a CSS transition is right — the same 180ms ease the
+     .p7-scope-btn uses for its own hover. */
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+.shk-gate-btn:hover {
+  background: #444;
+  border-color: #444;
+}
+.shk-gate-btn:focus-visible { outline: 2px solid #111; outline-offset: 3px; }
+
+/* The six group colours (roster order, see GROUPS in js/groups.js). They GROW
+   in from nothing — the project's dots never arrive or leave by opacity — on a
+   short stagger, so the card announces the piece's own palette before the text
+   is read. Hidden in every style but `squares`. */
+.shk-gate-squares {
+  display: none;
+  gap: 8px;
+}
+.shk-gate-squares i {
+  display: block;
+  width: 14px;
+  height: 14px;
+  background: var(--sq);
+  transform: scale(0);
+  transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.shk-gate.is-open .shk-gate-squares i { transform: scale(1); }
+.shk-gate-squares i:nth-child(1) { transition-delay: 120ms; }
+.shk-gate-squares i:nth-child(2) { transition-delay: 190ms; }
+.shk-gate-squares i:nth-child(3) { transition-delay: 260ms; }
+.shk-gate-squares i:nth-child(4) { transition-delay: 330ms; }
+.shk-gate-squares i:nth-child(5) { transition-delay: 400ms; }
+.shk-gate-squares i:nth-child(6) { transition-delay: 470ms; }
+
+/* ── style `doc` (default): the dashed title card, exactly as the scrolling
+      folds draw it — the gate reads as the piece's first title block. ── */
+.shk-gate[data-gate-style="doc"] .shk-gate-frame { background: #fff; }
+
+/* ── style `dark`: the card inverts. Same geometry, near-black fill and white
+      text — the tooltip/fold-badge end of the project's language. The dashed
+      frame is dropped (its stroke is hard-coded black in js/core.js and would
+      vanish on this fill); a hairline border stands in. The button inverts with
+      it: on a black card a #111 fill is invisible, so it becomes the outline
+      half of the same share-row button, filling white on hover. ── */
+.shk-gate[data-gate-style="dark"] { --gate-dark: 0.6; }
+.shk-gate[data-gate-style="dark"] .text-card-frame-dash { display: none; }
+/* .section-title sets `color: #111` ON THE <h2>, so an inherited colour from
+   the frame never reaches the text — it has to be re-stated here or the
+   sentence renders black on black. */
+.shk-gate[data-gate-style="dark"] .shk-gate-text { color: #fff; }
+.shk-gate[data-gate-style="dark"] .shk-gate-frame {
+  background: rgba(0, 0, 0, 0.92);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+.shk-gate[data-gate-style="dark"] .shk-gate-btn {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #fff;
+}
+.shk-gate[data-gate-style="dark"] .shk-gate-btn:hover {
+  background: #fff;
+  border-color: #fff;
+  color: #111;
+}
+.shk-gate[data-gate-style="dark"] .shk-gate-btn:focus-visible { outline-color: #fff; }
+
+/* ── style `squares`: the plain light card, with the six group colours growing
+      in above it. ── */
+.shk-gate[data-gate-style="squares"] .shk-gate-squares { display: flex; }
+.shk-gate[data-gate-style="squares"] .text-card-frame-dash { display: none; }
+.shk-gate[data-gate-style="squares"] .shk-gate-frame {
+  background: var(--bg);
+  border-radius: 0;
+}
+.shk-gate[data-gate-style="squares"] .shk-gate-btn { border-radius: 0; }
+
+/* ── style `min`: no card. The sentence sits straight on the darkened page in
+      white, so the button loses its box too and becomes the outline variant —
+      the backdrop does all the work, and it leans darker. ── */
+.shk-gate[data-gate-style="min"] { --gate-dark: 0.72; }
+.shk-gate[data-gate-style="min"] .text-card-frame-dash { display: none; }
+/* .section-title sets `color: #111` ON THE <h2>, so an inherited colour from
+   the frame never reaches the text — it has to be re-stated here or the
+   sentence renders black on black. */
+.shk-gate[data-gate-style="min"] .shk-gate-text { color: #fff; }
+.shk-gate[data-gate-style="min"] .shk-gate-frame {
+  background: transparent;
+  padding: 0;
+  border-color: transparent;
+  color: #fff;
+}
+.shk-gate[data-gate-style="min"] .shk-gate-btn {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #fff;
+}
+.shk-gate[data-gate-style="min"] .shk-gate-btn:hover {
+  background: #fff;
+  border-color: #fff;
+  color: #111;
+}
+.shk-gate[data-gate-style="min"] .shk-gate-btn:focus-visible { outline-color: #fff; }
+
+@media (max-width: 600px) {
+  .shk-gate { padding: 20px; }
 }

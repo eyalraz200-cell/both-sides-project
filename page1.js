@@ -178,8 +178,62 @@ function buildPage0DotColorSet(counts) {
 // Rebuilds the dot columns (in #page0DotsOverlay, a fixed one-viewport-tall
 // layer — see the comment above) from the current window.innerHeight —
 // re-run on resize (see js/bootstrap.js) since how many dots fit depends on vh.
+/* A PHONE'S BOTTOM/URL BAR COLLAPSES AND THE VIEWPORT GROWS UNDER THE HERO.
+   The columns are built to fill `window.innerHeight` as it was at build time,
+   and a height-only resize on mobile deliberately never rebuilds them
+   (js/bootstrap.js: the full relayout stalls the main thread hard enough that
+   the browser gives up and snaps the bar back). So the columns stayed where
+   they were and left dead space under them.
+
+   THE WHOLE HERO MOVES DOWN by exactly the growth, so the composition the fold
+   was tuned to is preserved — the columns keep the same distance from the
+   bottom edge they had before the bar moved, and the title keeps its measured
+   gap to the top of its column.
+
+   Two coordinate systems have to travel the same distance to do that:
+     - the dots are absolute px, so they take the full delta;
+     - `.page0-title` / `.page0-subtitle` are `top: calc(50% - Npx)`, so the
+       viewport growth already moves them HALF of it. They get the other half
+       through `--page0-drop`.
+   Both end up exactly `delta` lower.
+
+   The dots' `top` is written directly rather than transformed. An overlay
+   transform was tried and is wrong here: @fold2's filler flight
+   (js/update-groups.js) writes these same elements' left/top in VIEWPORT
+   coordinates, so a transform offset every dot that flew into the camp grids.
+   Writing the top (and `anchor.top`, the same number by construction) keeps one
+   coordinate space, so nothing downstream needs to know this happened. */
+let PAGE0_BUILD_VH = 0;   // the innerHeight the columns were last built for
+// TOTAL drop since the build, not the last step's. The dots ACCUMULATE theirs
+// (each call adds to `top`), so the number handed to CSS has to accumulate with
+// them — written as `= delta / 2` it described only the most recent change, and
+// coming back from a collapse the title overshot its home by half a bar.
+let PAGE0_DROP_PX = 0;
+
+function page0ApplyDrop() {
+  if (!PAGE0_BUILD_VH) return;
+  const delta = window.innerHeight - PAGE0_BUILD_VH;
+  if (!delta) return;
+  PAGE0_DECORATIVE_DOT_ELS.forEach((d) => {
+    d.anchor.top += delta;
+    d.el.style.top = `${d.anchor.top.toFixed(2)}px`;
+  });
+  Object.keys(PAGE0_GROUP_DOT_ANCHORS).forEach((c) => {
+    PAGE0_GROUP_DOT_ANCHORS[c].top += delta;
+  });
+  // The half the 50%-anchored title and subtitle have not already travelled.
+  PAGE0_DROP_PX += delta / 2;
+  document.documentElement.style.setProperty("--page0-drop", `${PAGE0_DROP_PX}px`);
+  // The hero now describes the live viewport; nothing left to correct.
+  PAGE0_BUILD_VH = window.innerHeight;
+}
+
 function buildPage0AllDots() {
   const vh = window.innerHeight;
+  PAGE0_BUILD_VH = vh;
+  // A fresh build already describes the live viewport.
+  PAGE0_DROP_PX = 0;
+  document.documentElement.style.setProperty("--page0-drop", "0px");
   const overlay = document.getElementById("page0DotsOverlay");
 
   overlay.querySelectorAll(".page0-dot").forEach((el) => el.remove());
