@@ -1947,6 +1947,8 @@ function fold7HoldArm(x, y) {
     fold7Hold.timer = null;
     if (!fold7HoldAllowed()) return;
     fold7Hold.active = true;
+    // The title blocks SNAP out for the length of the hold (style.css).
+    document.body.classList.add("is-tip-holding");
     // Belt and braces with the user-select: none on #page-6/#page-7
     // (style.css): drop any selection the long-press may have started.
     const sel = window.getSelection && window.getSelection();
@@ -1998,6 +2000,7 @@ function fold7HoldEnd() {
   fold7HoldCancelPending();
   if (!fold7Hold.active) return;
   fold7Hold.active = false;
+  document.body.classList.remove("is-tip-holding");
   window.removeEventListener("touchmove", fold7HoldMove, { passive: false });
   fold7UserLoupeEl.classList.remove("is-visible");
   // Let go and the frame FLIES back to the example's spot (tooltipDockTopPx)

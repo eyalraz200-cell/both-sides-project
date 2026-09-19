@@ -7175,6 +7175,7 @@ function p7InspectInit() {
 
   function hideLoupe() {
     p7Inspect.dragging = false;
+    document.body.classList.remove("is-tip-holding");
     loupeLastKey = null;   // the next hold blits afresh, whatever the paint serial says
     window.removeEventListener("touchmove", loupeMove, { passive: false });
     // @fold13's growth and dim have to ramp back DOWN, and that needs frames
@@ -7659,6 +7660,8 @@ function p7InspectInit() {
     pendingTimer = setTimeout(() => {
       pendingTimer = null;
       p7Inspect.dragging = true;
+      // The title blocks SNAP out for the length of the hold (style.css).
+      document.body.classList.add("is-tip-holding");
       window.addEventListener("touchmove", loupeMove, { passive: false });
       loupeX = startX;
       loupeY = startY;

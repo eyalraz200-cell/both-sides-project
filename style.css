@@ -5171,3 +5171,11 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 @media (max-width: 600px) {
   .shk-gate { padding: 20px; }
 }
+
+/* MOBILE: while the reader's own press-and-hold is live — the timeline/@fold13
+   picker (p7InspectInit, page7.js) or @fold5's user hold (fold7HoldArm,
+   js/groups.js) — the title blocks SNAP out, and snap back on release. No
+   transition on purpose. The demo's own (non-user) tooltip never sets this. */
+@media (max-width: 600px) {
+  body.is-tip-holding .text-card { visibility: hidden; }
+}
