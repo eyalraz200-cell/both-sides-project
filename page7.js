@@ -1897,10 +1897,6 @@ function p7GridClearSide(side) {
   // clear — fall back to the full rebuild.
   if (P7_GRID_GROUPING === "none") { p7Grid.layout = null; return; }
   L.done[side] = false;
-  // The side re-lays lazily under whatever mode is on NOW — flat, if the reader
-  // is on @fold11 or coming back up through it. Flag it so restoring the tiers
-  // re-lays it (p7SizeGridSet) instead of keeping flat cells as if tiered.
-  if (p7GridUniform) L.builtFlat = true;
   L.bucket[side].clear();
   if (L.scat) L.scat[side] = null;
   for (const e of (side === "left" ? p7.leftEvents : p7.rightEvents) || []) L.pos.delete(e);
@@ -2107,15 +2103,7 @@ function p7GridPreclaim(L, isLeft) {
   // block of that colour. Pre-claiming the whole survivor set instead re-lays the
   // camp in list order, so a restored group comes back shuffled through the rest.
   const gate = p7Grid.solveVis || p7Grid.packVis;
-  // A hidden group never takes a cell, whichever gate is in force. Without the
-  // pre-claim (a filter set on @fold13, the layout dropped, @fold10 re-entered
-  // from below) the fallback gate is p7.lastPositions — the SETTLED map, which
-  // page7 does not prune while it is not drawing, so it still listed every
-  // hidden dot. The pack then laid 3,912 cells for groups that are not drawn,
-  // and the 271 survivors sat scattered among them across the whole camp.
-  const hiddenEv = (typeof p7FilterHiddenEv === "function") ? p7FilterHiddenEv : () => false;
-  const vis = (gate ? events.filter(e => gate.has(e)) : events.filter(e => p7.lastPositions.has(e)))
-    .filter(e => !hiddenEv(e));
+  const vis = gate ? events.filter(e => gate.has(e)) : events.filter(e => p7.lastPositions.has(e));
   if (!vis.length) return;
 
   const byId = new Map();
@@ -2482,13 +2470,10 @@ function p7SizeGridLayout(W, H) {
       }
       unit = L.SQ;
       if (bestCell) { p7Grid.layout = null; p7Grid.solveVis = null;
-        p7Grid.layout = p7BuildSizeGrid(W, H, 0, bestCell); p7Grid.layout.builtFlat = !!p7GridUniform; return p7Grid.layout; }
+        p7Grid.layout = p7BuildSizeGrid(W, H, 0, bestCell); return p7Grid.layout; }
       p7Grid.solveVis = null;
     }
     p7Grid.layout = p7BuildSizeGrid(W, H, unit);
-    // Remembered so un-flattening knows whether these cells are the tiered
-    // pack or @fold11's flat one — see p7SizeGridSet.
-    p7Grid.layout.builtFlat = !!p7GridUniform;
   }
   return p7Grid.layout;
 }
@@ -2641,21 +2626,6 @@ function p7SizeGridSet(on, opts) {
   }
   const wasOn = p7Grid.on;
   const sameGrid = on && wasOn;   // only the flatten flag moved
-  // RESTORING THE TIERS OVER CELLS THAT WERE LAID FLAT. Coming back up to
-  // @fold10 from below passes through @fold11's uniform state, so a side
-  // cleared by a filter set on @fold13, or a layout rebuilt on the way, was
-  // laid by the FLAT pack — one row along the bottom, across the camp's whole
-  // width. `sameGrid` then kept it as the tiered layout, and the survivors of
-  // the filtered camp sat strung out in that row while the other camp showed
-  // its proper tiers. A normal re-entry never re-laid anything (the tiered
-  // cells from the first visit were still there), which is why only the
-  // filtered case showed it. Drop such a layout when the tiers come back; the
-  // `from` snapshot above turns the rebuild into the same morph a first entry
-  // plays.
-  if (sameGrid && p7GridUniform && !uniform && p7Grid.layout && p7Grid.layout.builtFlat) {
-    p7Grid.layout = null;
-    p7Grid.packVis = null;
-  }
   p7Grid.on = on;
   p7GridUniform = uniform;
   if (!sameGrid) {
@@ -2919,21 +2889,8 @@ function p7FilterCommit(restoring, actor) {
   // came out in different cells and visibly reshuffled for no reason. The
   // snapshot above is what the dots then fly from, so this stays continuous.
   if (p7Grid.on) {
-    if (currentPage <= 11) {
-      p7Grid.packVis = new Set(p7GridRoster());
-      p7GridClearSide(p7FilterSideOf(actor));
-    } else {
-      // @fold13 and later: the grid is still `on` (it rides through @fold12's
-      // glide on purpose) but nothing draws from it here, so the per-side clear
-      // above has no frame to re-pack in. The layout then came back to @fold10
-      // intact, that side marked done, the survivors sitting in the cells of a
-      // block whose other groups had gone — 271 dots spread across the full
-      // width of a vanished camp. There is no continuity to keep on these
-      // folds: drop the layout, and @fold10's entry rebuilds it from the
-      // survivors with its own morph, as a first visit does.
-      p7Grid.layout = null;
-      p7Grid.packVis = null;
-    }
+    p7Grid.packVis = new Set(p7GridRoster());
+    p7GridClearSide(p7FilterSideOf(actor));
   }
   p7FilterMorph = from.size
     ? { from, start: performance.now(), restoring: !!restoring, actor, skipFly: p7FilterSoloOnSide(actor) }
@@ -3004,7 +2961,6 @@ function p7FilterReset() {
   p7FilterOff.clear();
   p7FilterRebuild();          // no filter left: p7FilterLayout goes null
   p7Grid.packVis = null;
-  p7Grid.layout = null;       // stale roster; the reset fires above the grid's folds
   p7FilterMorph = from.size
     ? { from, start: performance.now(), restoring: true, actor: null, actors, skipFly: false }
     : null;

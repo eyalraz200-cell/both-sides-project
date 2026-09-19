@@ -1046,14 +1046,7 @@ zone** instead of back on the timeline. Two beats, strictly in order:
    the flip move 0px; a repack at one cell each would read as a rearrangement
    between the two beats). `p7GridKey`
    deliberately does **not** carry the uniform flag, and `p7SizeGridSet` skips
-   the `layout = null` / `packVis = null` reset when only the flag moves —
-   **unless the cells were laid while flat.** A layout built (or a side
-   cleared by the filter) under `p7GridUniform` is stamped `layout.builtFlat`,
-   and un-flattening over such a layout drops it so the tiers re-pack (the
-   `from` snapshot makes that the usual morph). Without this, a filter set on
-   @fold13 and @fold10 re-entered from below (which passes through @fold11's
-   flat state) kept the flat cells as the tiered pack, and the survivors hung
-   scattered/unpacked while the other camp showed its tiers.
+   the `layout = null` / `packVis = null` reset when only the flag moves.
    It is also **not** "the grid off" — off means the dots fly home to the
    timeline.
 2. After `p7MorphTotalMs()` (~2.4s) — a wall-clock `setTimeout`, because the two
@@ -1645,13 +1638,7 @@ again to bring it back. Multiple groups can be off at once.
     block of that colour. `p7FilterCommit` sets `p7Grid.packVis` to the survivor
     set and `p7GridPreclaim` prefers it over the on-screen gate, so the camp is
     re-laid in list (date) order and the restored group threads back through the
-    rest. `packVis` is cleared by `p7FilterReset` and by `p7SizeGridSet`. A
-    filter committed **below @fold12** (`currentPage > 11`) drops `layout` and
-    `packVis` outright instead — nothing of the grid is on screen there, and the
-    pre-claim would go stale by the time @fold10 is re-entered. `p7GridPreclaim`
-    also never lays a cell for a hidden group, whichever gate is in force: its
-    fallback gate is `p7.lastPositions`, the SETTLED map, which is not pruned
-    while page7 isn't drawing and so still lists every hidden dot. A hidden dot also **skips the grid branch
+    rest. `packVis` is cleared by `p7FilterReset` and by `p7SizeGridSet`. A hidden dot also **skips the grid branch
   entirely** (`if (gridOn && !evHidden)` in `p7DrawSideSquares`): that branch
   assigns `restSize = g.sq`, so letting a filtered dot through it handed the
   shrink back and the dot reappeared at its tier size on @fold10/@fold12.
