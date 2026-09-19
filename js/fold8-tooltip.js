@@ -421,17 +421,15 @@ function tooltipDockMobile(el) {
   // Before the spot is solved: the fit frame's height is what it subtracts.
   const fit = docked && tooltipFitFold7();
   el.classList.toggle("is-fit", fit);
-  // IN FRONT OF THE TITLE BLOCK, not under it: every @fold7 frame (they all open
-  // upward, so a long description grows toward that card), and the docked frame
-  // on @fold10/@fold11, whose cards scroll over the pinned timeline. style.css
+  // IN FRONT OF THE TITLE BLOCK, not under it: the docked frame on
+  // @fold10/@fold11, whose cards scroll over the pinned timeline. style.css
   // gives those cards 1004/1005, deliberately above the frame's usual 1000, so
   // the class out-stacks them.
-  // …but never @fold8's: once that card is on screen it is the copy being read,
-  // and the @fold7-spot frame (still up until the squares fly) goes UNDER it.
-  const fold8Card = typeof page7TitleCardEl !== "undefined" && page7TitleCardEl
-    && page7TitleCardEl.getBoundingClientRect().top < window.innerHeight;
-  const overCard = docked && !fold8Card && (fit
-    || (typeof currentPage !== "undefined" && (currentPage === 9 || currentPage === 10)));
+  // NOT the @fold5 frames: that fold's title block paints IN FRONT of the
+  // example tooltip (explicit instruction), and during the reader's own hold
+  // the card is snapped out anyway (body.is-tip-holding, style.css).
+  const overCard = docked && !fit
+    && typeof currentPage !== "undefined" && (currentPage === 9 || currentPage === 10);
   el.classList.toggle("is-over-card", overCard);
   if (docked) {
     // Horizontal centering is the transform's job, so whatever the floating

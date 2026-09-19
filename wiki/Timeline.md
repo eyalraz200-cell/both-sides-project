@@ -2387,6 +2387,13 @@ extreme-side dots are pickable). `release()`'s fold-8 typewriter re-seed is gate
 `display: none` outside the 600px query, so **desktop is unreachable, not merely
 unaffected**.
 
+**The title blocks snap out while a hold is live.** `body.is-tip-holding` is set the
+moment the hold completes and cleared on release — by the picker (`armTimer` /
+`hideLoupe`, page7.js) and by @fold5's reader hold (`fold7HoldArm` / `fold7HoldEnd`,
+js/groups.js). Under the 600px breakpoint it is `visibility: hidden` on every
+`.text-card` (style.css), no transition — a snap both ways. @fold5's scripted example
+never sets it.
+
 **There is no button.** The gesture is the affordance — a press-and-hold anywhere on the
 chart — and the docked frame's resting content is the line of text that names it. Two
 states, both classes on `#page9Tooltip`:
