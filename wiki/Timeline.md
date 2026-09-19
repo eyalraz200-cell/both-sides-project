@@ -22,8 +22,8 @@ mid-animation blends), `hoveredEvent`, `axisEventPositions`, `hoveredAxisEvent`.
 ## The square grid
 
 Geometry comes from `SBB_TIMELINE` in `squareboundingbox.js`
-(`top 0.07, bottom 0.93` as fractions of H; the outer x edge is the fixed
-`SBB_TIMELINE_LEFT_PX` = **190px** on desktop, read via `sbbTimelineLeftX(W, H)` and mirrored
+(desktop top/bottom are fixed **32px** insets off the viewport edges, `SBB_TIMELINE_TOP_PX` / `SBB_TIMELINE_BOTTOM_PX` — they set how tall the vertical axis stands; the outer x edge is the fixed
+`SBB_TIMELINE_LEFT_PX` = **120px** on desktop, read via `sbbTimelineLeftX(W, H)` and mirrored
 at `W − 190` on the right — an exact px picked by eye, never a fraction of W) plus the centre gap: `p7CenterGap()` is
 `P7_VERT.wideCorridorPx` = **256** on desktop (the vertical axis's corridor — line, rings,
 the side year labels and the side headline cards; `P7_AXIS_CORRIDOR_PX` 64 is the band-mode
@@ -31,7 +31,7 @@ fallback) and `CENTER_GAP = 4` on mobile. `SBB` itself belongs to page9, **not**
 here. On desktop **both grids hug the corridor** inside `p7GridGeometry`: the right camp's
 origin is `W/2 + gap/2`, the left camp's is `W/2 − gap/2 − cols·CELL`, so the corridor edges
 sit exactly at `W/2 ± gap/2` and the `floor(sideW / CELL)` leftover lands on the *outer* edge of
-both sides (mirror-symmetric; `leftX0` is therefore ≥ the 190px inset, not equal to it). Mobile
+both sides (mirror-symmetric; `leftX0` is therefore ≥ the 120px inset, not equal to it). Mobile
 keeps the left grid anchored at `sbbTimelineLeftX`. There is no `right` field.
 
 `P7_SQ = 3.5`, `P7_GAP = 1.5`, `P7_CELL = 5` are the *ceiling*: on desktop the square is
@@ -157,7 +157,7 @@ missing clear here is what made those squares land outside the grid on other vie
 ## The cascade: rows on desktop, months on mobile
 
 Both share the same pop (`P7_POP_DURATION` 220 ms, `p7Ease`, `scale = 0.5 + 0.5*presence`,
-`alpha = presence`), the same wave length (`P7_ANIM_TOTAL_DURATION` 2200 ms per unit) and
+`alpha = presence`), the same wave length (`p7AnimTotalMs()` — 1400 ms desktop / 550 mobile — per unit) and
 the same reversible one-number-per-unit cursor. They differ in what the unit is and what
 starts it.
 
@@ -187,7 +187,7 @@ and its presence is a pure function of its row's cursor (`undefined` row = never
 `P7_VERT_MOBILE.enabled` true, mobile runs the row-cursor system above instead.*
 
 `p7DrawSideSquares` animates one month's worth of squares at a time:
-`stagger = P7_ANIM_TOTAL_DURATION - P7_POP_DURATION` (2200 − 220 = 1980 ms) spread across
+`stagger = p7AnimTotalMs() - p7PopMs()` (desktop 1400 − 140 = 1260 ms) spread across
 the month's events, each popping over `P7_POP_DURATION` with `p7Ease`
 (`scale = 0.5 + 0.5*presence`, `alpha = presence`).
 
@@ -243,7 +243,7 @@ fades, the intro wipe, the axis fill lag, or `p7EntryAnim`. It redraws only whil
 
 ## Scroll scrub
 
-`#page-8` is `min-height: 730vh`. `page7UpdateFromScroll()` measures from @fold8's title
+`#page-8` is `min-height: 560vh`. `page7UpdateFromScroll()` measures from @fold8's title
 card:
 
 ```
@@ -253,15 +253,15 @@ t          = clamp(-titleTop / scrubRange, 0, 1)
 p7.currentDate = minDate + round(p7ScrubEaseIn(t) * totalDays) days
 ```
 
-`t = 0` is the instant @fold8's title clears the top; `t = 1` is the section's bottom
+`t = 0` is the engagement line below (desktop: @fold8's title card 90% out of the top; mobile: its top edge at the viewport top); `t = 1` is the section's bottom
 reaching `P7_SCRUB_END_LEAD_VH = 0.5` viewports above the viewport bottom — half a
 viewport of scroll before @fold10's card crosses 0.5 and the size grid takes over. That
 lead is deliberate: the axis's own fill trails `p7.currentDate` through the
-`P7_AXIS_FILL_LAG_DAMPING` lerp, so ending the dataset flush with @fold10 leaves the axis
+`p7AxisFillLagDamping()` (`P7_AXIS_FILL_LAG_DAMPING_DESKTOP` / `_MOBILE`) lerp, so ending the dataset flush with @fold10 leaves the axis
 still visibly filling as the grid starts, while a *whole* viewport of lead (bottom hitting
 the viewport bottom) is 100vh of dead scroll with the timeline already complete.
 
-The section height must track the lead — `680vh + lead · 100vh` (today 730vh; mobile
+The section height must track the lead — `510vh + lead · 100vh` (today 560vh; mobile
 460vh + lead, today 510vh) — so `scrubRange`, and with it the scrub's pace, never move
 when the lead is retuned.
 
@@ -272,8 +272,13 @@ when the lead is retuned.
 
 ```js
 p7HasEngaged = p7HasEngaged ? top <= P7_ENGAGE_HYSTERESIS_PX   // 24
-                            : top <= 0;   // top = #page-7 .text-card's top
+                            : top <= 0;   // top = #page-7 .text-card's top + p7EngageOffsetPx()
 ```
+
+`p7EngageOffsetPx()` is the card's height × `P7_ENGAGE_CARD_OUT_FRAC_DESKTOP` (**0.9** — the
+timeline engages once 90% of the card has left the top) / `_MOBILE` (**0** — the card's top
+edge at the viewport top). The scrub's `t = 0` uses the same offset, so the first day always
+lands on engagement.
 
 While `!p7HasEngaged`, `currentDate` is hard-pinned to `minDate`.
 `p7RealTimelineReached` is a separate flag that lets the retreat keep running on folds
@@ -293,7 +298,7 @@ axis so the first event's label can center over its own circle).
   at the bottom `sbbTimelineMobileBottomPx()` solves from `SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX` (64) and the year label under it is only 14px): a faint full-span
   bar (`P7_AXIS_BG_ALPHA` 0.22; during hover-elsewhere it drops to
   `P7_AXIS_UNFILLED_HOVER_ALPHA` 0.14) with a black "reached" bar drawn from `curX` rightward.
-  `curX` follows a damped lag (`P7_AXIS_FILL_LAG_DAMPING` 0.12) that self-restarts the
+  `curX` follows a damped lag (`p7AxisFillLagDamping()` (`P7_AXIS_FILL_LAG_DAMPING_DESKTOP` / `_MOBILE`), 0.5 desktop / 0.12 mobile) that self-restarts the
   anim loop and snaps within 0.0005.
 - **Year ticks** are hollow ring markers (background disc punched out at
   `P7_AXIS_MARKER_RADIUS` 4, then a stroked circle) — or, with `P7_AXIS_YEAR_MARK`
@@ -444,7 +449,7 @@ axis so the first event's label can center over its own circle).
   that punches the line out from under the dot uses `markerRadius + reachedT`, not the full
   radius (and not a flat `+1` pad, which left a 2px hole closing in one frame), so **the line behind heals continuously as the dot shrinks** rather than
   snapping closed the frame the dot disappears.
-- **Intro wipe** — `P7_AXIS_INTRO_DURATION` 2800 ms, a right-to-left `ctx.clip()` reveal
+- **Intro wipe** — `p7AxisIntroDuration()` (1750 ms desktop / 2800 mobile), a right-to-left `ctx.clip()` reveal
   covering line, rings, labels and events alike. Gated by `p7AxisShouldShow()` =
   `fold9FlyTrigger.target() > 0` (the fly's TARGET, not its progress — on the reverse
   crossing the axis and its cards collapse at once, even while the squares are still
@@ -1049,7 +1054,7 @@ zone** instead of back on the timeline. Two beats, strictly in order:
    the `layout = null` / `packVis = null` reset when only the flag moves.
    It is also **not** "the grid off" — off means the dots fly home to the
    timeline.
-2. After `p7MorphTotalMs()` (~2.4s) — a wall-clock `setTimeout`, because the two
+2. After `fold11BeatGapMs()` = `p7MorphTotalMs(true)` (423ms — the flatten's size beats only) — a wall-clock `setTimeout`, because the two
    animations run on separate clocks — `p8Trigger()` glides the whole field into
    the legit grid. The handle (`fold11SizeBeatTO`) is kept and cleared, so a
    reverse crossing mid-beat cancels a flight that hasn't left yet.
@@ -1450,12 +1455,14 @@ camps' packs meet on the centre line instead of straddling the corridor.
   `GROUP_TRANSITION_MS`, because it is choreographed:
 - **Morph choreography** — four `manual/` knobs in **milliseconds** on one wall
   clock, each window re-eased from **raw** progress by `p7MorphWin` (`p9Ease`):
-  `P7_MORPH_FLY_MS` (**1400**) the flight, then the sizes grow in tier waves,
+  `P7_MORPH_FLY_MS` (**1043** mobile / `_DESKTOP` **1311**) the flight, then the sizes grow in tier waves,
   biggest crowd first — the top tier starts at `P7_MORPH_SIZE_START_MS`
-  (**1200**), each lower tier `P7_MORPH_TIER_STAGGER_MS` (**140**) later, each
-  grow lasting `P7_MORPH_SIZE_MS` (**450**); `p7MorphWindows(tier)`. Total =
-  `p7MorphTotalMs()` = max(fly, start + 5·stagger + grow) = 2350 at the
-  defaults; `p7AnyAnimActive` and the morph clear read it. **OFF (scrolling
+  (**894** / desktop **1124**), each lower tier `P7_MORPH_TIER_STAGGER_MS` (**104** / desktop **131**) later, each
+  grow lasting `P7_MORPH_SIZE_MS` (**335** / desktop **421**) — every desktop value is the same name + `_DESKTOP`; `p7MorphWindows(tier)`. Total =
+  `p7MorphTotalMs()` = max(fly, start + 5·stagger + grow) = 1749 at the
+  defaults — **for the flatten it is start + 5·stagger + grow alone**: the flatten has no
+  position beat, so its `fly` is never on screen, and counting it held @fold11's finished
+  field motionless before the glide left (**removed — don't reintroduce**); `p7AnyAnimActive` and the morph clear read it. **OFF (scrolling
   back to @fold9) is the exact mirror of that clock** (`dir === "off"` flips
   every window to `T − start − len`): the smallest tier shrinks first, the
   biggest last, and the flight home comes at the end.
@@ -1472,7 +1479,8 @@ camps' packs meet on the centre line instead of straddling the corridor.
 - **@fold10 and @fold11 tune separately.** Those four `P7_MORPH_*` values are
   @fold10's **grow** only. @fold11's flatten runs the same machinery off its
   own set — `P7_FLAT_FLY_MS` / `P7_FLAT_SIZE_MS` / `P7_FLAT_SIZE_START_MS` /
-  `P7_FLAT_TIER_STAGGER_MS` (page7.js, 1400 / 450 / 0 / 50) —
+  `P7_FLAT_TIER_STAGGER_MS` (page7.js, 1400 / 273 / 0 / 30; desktop's `P7_FLAT_SIZE_MS_DESKTOP` 420 and `P7_FLAT_TIER_STAGGER_MS_DESKTOP` 46 — the `FLY` value is unused by
+  the flatten's clock, see above) —
   picked by `p7MorphKnobs(flat)`,
   which both `p7MorphTotalMs(flat)` and `p7MorphWindows(tier, flat)` take. The
   flag is `p7GridMorph.flat`, set in `p7SizeGridSet` from `sameGrid`: true when
@@ -1728,7 +1736,8 @@ again to bring it back. Multiple groups can be off at once.
 `page8.js` is the bridge and imports page9's geometry as the source of truth
 (`p9EnsureIndex`, `p9LegitGeometry`, `p9LegitPosOf`). `p8CurrentT()` runs at constant
 speed over the current phase's clock — `p8ForwardMs()` forward (the `P8_SHRINK_MS` /
-`P8_FLY_MS` beats staged by `P8_STAGING`: 3000 / 3000 ms concurrent by default),
+`P8_FLY_MS` beats staged by `P8_STAGING`: 1450 / 1450 ms mobile, `P8_SHRINK_MS_DESKTOP` / `P8_FLY_MS_DESKTOP` 1700 / 1700 desktop, read via `p8ShrinkMs()` / `p8FlyMs()`, concurrent by default; js/nav.js's
+mid-flight handoff into page9 reads the same `p8ForwardMs()`),
 `P8_REVERSE_DURATION` 700 ms reverse (`p8PhaseDur`) — so a mid-flight reversal covers
 only the remaining distance. The reverse is deliberately much faster: it fires while the
 reader is already scrolling back up the multi-viewport scrub, and at 3000 ms the canvas
@@ -1883,7 +1892,7 @@ no extra invalidation; desktop rendering is untouched.
 | | Desktop | Mobile | Why |
 |---|---|---|---|
 | Square / gap (pitch) | 3.5 / 1.5 (5) | **solved per viewport**, gap = half the square | See "The solved square size" below |
-| Box `left` | **190px** (`SBB_TIMELINE_LEFT_PX`) | 0.03 | The desktop px exists only to clear the *left*-pinned desktop legend; on mobile the legend is top-pinned, so this becomes a plain screen-edge inset (≈12px at 393, matching `FOLD6_LEGEND_INSET_MOBILE`) |
+| Box `left` | **120px** (`SBB_TIMELINE_LEFT_PX`) | 0.03 | The desktop px exists only to clear the *left*-pinned desktop legend; on mobile the legend is top-pinned, so this becomes a plain screen-edge inset (≈12px at 393, matching `FOLD6_LEGEND_INSET_MOBILE`) |
 | Box `top` | 0.07 | **54px** shipping (`SBB_TIMELINE_MOBILE_TOP_BADGE_PX`); **101px** only under a top-anchored headline slot — see `sbbTimelineMobileTopPx()` above | Clears whatever actually prints above the grid. A px clearance, not a fraction — the thing being cleared is fixed-px, so a fraction would waste a band on a tall phone and collide on a short one |
 | Box `bottom` | 0.93 | **axis − 64px** (`SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX`) | `P7_AXIS_Y_FRAC_MOBILE`×H minus the tallest label block that can print above the axis — sized for what really prints: at the 220px wrap all seven titles fit on **one line**, so the block is offset 36 + ~10px cap height = 46 — minus the *same* 18px `SBB_TIMELINE_MOBILE_GAP_PX` used at the top, so the dots clear the labels by exactly as much as they clear the tooltip. Reserving spare lines left every real block floating in a hole; a longer title added later would wrap and eat 18px per extra line out of the gap. Three lines is the worst case |
 | `P7_AXIS_MARGIN` | 120 | 28 | At 120 a 393px screen would leave ~150px of axis; 28 gives ~337px, year ticks ~90px apart |
@@ -1891,7 +1900,7 @@ no extra invalidation; desktop rendering is untouched.
 | Title / date type | 14 / 14px | 14 / 14px | The date matches the year label, so the two lines under the axis read as one size |
 | Label offset / date offset / line height | 34 / 18 / 19 | 36 / 15 / 15 | |
 | Title `maxWidth` | all `null` | 220 default, per-event `maxWidthMobile` | Mobile prints one centred block (below), so the whole axis width is available — most titles come back to one or two lines, well inside the 3-line reserve |
-| `.page7-scrub` | 730vh | 510**vh** | A touch flick covers far more page per gesture. `vh`, never `dvh`: `dvh` re-resolves when the URL/bottom bar collapses, which grew the section ~600px mid-scrub and jumped the visible date back by months |
+| `.page7-scrub` | 560vh | 510**vh** | A touch flick covers far more page per gesture. `vh`, never `dvh`: `dvh` re-resolves when the URL/bottom bar collapses, which grew the section ~600px mid-scrub and jumped the visible date back by months |
 
 `sbbTimeline(H)` takes the canvas height it is being used for and turns those two px
 clearances into the `top`/`bottom` fractions the rest of the code already expects, so no
@@ -2108,7 +2117,7 @@ answer that differently:
 Read live off the element's `getBoundingClientRect().bottom` rather than off a scroll trigger's
 progress, so it means exactly what it says at any viewport height.
 
-`P7_AXIS_INTRO_DURATION` (2800ms) is the wipe itself.
+`p7AxisIntroDuration()` (1750ms desktop / 2800 mobile) is the wipe itself.
 
 **The axis EVENTS ride the wipe too** (mobile only). The wipe's own clip is restored *before*
 `p7DrawAxisEventsVertical` runs, so every dot and card used to be there from the first frame of
@@ -2142,7 +2151,7 @@ since deleted) that ran entirely under the 600px breakpoint. Every knob is read 
 bare constant. **Desktop keeps its previous behaviour on every one of them:** offset 0,
 `'fade'`, no unreached markers, the original wall-clock `p7AxisEventOpacity` ramp, the
 original `state.reachedT` lerp toward the live fill edge, and the lead marker. The cascade
-pair is split the same way — `p7AnimTotalMs()` / `p7PopMs()`, desktop 2200/220, mobile
+pair is split the same way — `p7AnimTotalMs()` / `p7PopMs()`, desktop 1400/140, mobile
 550/40. See the breakpoint-isolation rule in `CLAUDE.md`.
 
 **Cards run on house triggers, not a scrub — and there are TWO of them**, fired at two
@@ -2187,7 +2196,7 @@ side-plaque fly now all run off the one trigger. Don't reintroduce a `curY` comp
 | `P7_AXIS_MARKER_ENTER` | `'full'` | `'grow'` starts at `P7_AXIS_MARKER_GROW_FROM × P7_AXIS_MARKER_RADIUS` (1.4px) and grows to full while recolouring; `'full'` sits at the full 4px before the fill arrives so **only** the colour moves and nothing on the axis shifts when an event fires. The unreached size is measured off `P7_AXIS_MARKER_RADIUS`, **never** off the prominence-derived resting radius — prominence is 0 before an event fires, so that had already collapsed to `_FADED`, giving 0.7px vs 2px and making the two modes indistinguishable. |
 | `P7_AXIS_MARKER_GROW_FROM` | `1` | `'grow'`'s starting fraction — **unused** while `ENTER` is `'full'`. |
 
-`p7PopMs()` (**40ms** mobile / 220 desktop) and `p7AnimTotalMs()` (**550** / 2200) came out
+`p7PopMs()` (**40ms** mobile / 140 desktop) and `p7AnimTotalMs()` (**550** / 1400) came out
 of the same pass: a fast, tight cascade on the phone, where the dots snap in almost
 individually, because the old swell read as sluggish once the field was that dense.
 
@@ -2435,8 +2444,11 @@ z-index — at `z-index: 999`, under the docked frame.
 > is gone.
 - Height is the line's own height plus its padding — **38px** — and the timeline's box
   **reserves exactly that** on whichever edge the band is on (`p7HintBandTopH` /
-  `p7HintBandBottomH`, read by `sbbTimelineMobileTopPx` / `…BottomPx`). 0 while it isn't
-  showing, so the timeline takes the space back.
+  `p7HintBandBottomH`, read by `sbbTimelineMobileTopPx` / `…BottomPx`). The reserve is **held before the sentence
+  types** (`p7HintBandReserveH`: every fold up to @fold11's crossing, measured off the
+  hidden band once per width), so the box starts where the band will leave it and the
+  timeline never shifts when the hint arrives at 2024. Only the **clip**
+  (`p7HintClipTopY` → `p7HintBandH`) waits for the band to really be on screen.
 - **`P7_HINT_PLACE_MOBILE`** — `'above'` (shipped) or `'below'`. Only `'above'` clips the
   timeline; below, the band stands **on top of the מקרא bar**, which hugs the bottom of the screen at this fold: `bottom: 0` printed the
   line straight through it. The offset is `p7MLegendBarH()`, measured off the live element
@@ -2527,7 +2539,7 @@ the selection, so the axis eases back to normal along with everything else. `sho
 dragging pick in its roster-target check). Desktop is untouched: `p7Inspect.event` is only
 ever set ≤600px (`p7InspectPage`).
 
-**The docked frame paints in front of the title blocks on @fold10 and @fold11** — `.is-over-card` (`z-index: 1006`, style.css), added by `tooltipDockMobile` on `currentPage` 9 and 10, beats those cards' 1004; without it a card scrolling over the pinned timeline slid in front of the frame. The `.fold6-mlegend-layer` shares the 1006 and comes later in `.layout`, so the מקרא bar still wins the tie and stays above the frame.
+**@fold8's title block paints in front of the docked frame** — `tooltipDockMobile` drops `.is-over-card` as soon as `page7TitleCardEl` is on screen, so the @fold7-spot frame (still up until the squares fly) goes under that card's 1005. **The docked frame paints in front of the title blocks on @fold10 and @fold11** — `.is-over-card` (`z-index: 1006`, style.css), added by `tooltipDockMobile` on `currentPage` 9 and 10, beats those cards' 1004; without it a card scrolling over the pinned timeline slid in front of the frame. The `.fold6-mlegend-layer` shares the 1006 and comes later in `.layout`, so the מקרא bar still wins the tie and stays above the frame.
 
 **The hold costs nothing while nothing moves.** Three things used to repaint all 14k dots every frame of a hold (the stutter under the glass on a big dot), all fixed:
 - the bulge and dim ramps stepped *back* off their target — `target > t ? up : down` sent a value that had just reached 1 down a step and up again the next frame, 1 → 0.993 → 1 → …, so `p7BulgeActive()` never saw them settle and `p7StartAnimLoop`'s `step` drew every frame (this hit every desktop hover too); a ramp now holds at its target (`p7BulgeTick`, page7.js).

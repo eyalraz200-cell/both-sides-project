@@ -1233,10 +1233,10 @@ function p7MonthKeyToStartStr(monthKey) {
 // was this dense). Desktop was never part of that tuning and keeps its own
 // numbers. Live reads through p7AnimTotalMs()/p7PopMs(), same isMobile()
 // convention as p7Sq()/p7GapRatio() — never reference the constants directly.
-const P7_ANIM_TOTAL_MS_DESKTOP = 2200; // ms — full span of a month's staggered cascade
-const P7_POP_MS_DESKTOP        = 220;  // ms — each individual square's own pop in/out
-const P7_ANIM_TOTAL_MS_MOBILE  = 550;
-const P7_POP_MS_MOBILE         = 40;
+var P7_ANIM_TOTAL_MS_DESKTOP = 1400; // ms — full span of a month's staggered cascade
+var P7_POP_MS_DESKTOP        = 140;  // ms — each individual square's own pop in/out
+var P7_ANIM_TOTAL_MS_MOBILE  = 550;
+var P7_POP_MS_MOBILE         = 40;
 function p7AnimTotalMs() { return isMobile() ? P7_ANIM_TOTAL_MS_MOBILE : P7_ANIM_TOTAL_MS_DESKTOP; }
 function p7PopMs()       { return isMobile() ? P7_POP_MS_MOBILE       : P7_POP_MS_DESKTOP; }
 const p7MonthPhase = {};        // monthKey -> { fromC, toC, start } | undefined (never reached)
@@ -1408,9 +1408,21 @@ let p7RealTimelineReached = false;
 // Once engaged, disengaging requires the
 // title to clear this small buffer past 0, not just barely cross it.
 const P7_ENGAGE_HYSTERESIS_PX = 24;
+// How much of @fold8's title card must have left the top of the viewport before
+// the timeline engages, as a fraction of the card's own height. 0 = the instant
+// its top edge touches the viewport top; 0.9 = only a tenth of it still showing.
+// page7UpdateFromScroll (js/page7-scrub.js) starts its t=0 at the same line, so
+// the dataset still begins at its first day. Per breakpoint — mobile keeps 0.
+const P7_ENGAGE_CARD_OUT_FRAC_DESKTOP = 0.9;
+const P7_ENGAGE_CARD_OUT_FRAC_MOBILE  = 0;
+function p7EngageOffsetPx() {
+  if (!page7TitleCardEl) return 0;
+  const f = isMobile() ? P7_ENGAGE_CARD_OUT_FRAC_MOBILE : P7_ENGAGE_CARD_OUT_FRAC_DESKTOP;
+  return f * page7TitleCardEl.getBoundingClientRect().height;
+}
 function p7UpdateEngagement() {
   if (!page7TitleCardEl) { p7HasEngaged = false; return; }
-  const top = page7TitleCardEl.getBoundingClientRect().top;
+  const top = page7TitleCardEl.getBoundingClientRect().top + p7EngageOffsetPx();
   // Engagement is deliberately NOT gated on @fold9's squares finishing their
   // fly-in (fold9FlyTrigger, js/groups.js — legacy name). Per explicit instruction
   // the two are unrelated animations that simply run at the same time: the
@@ -1428,7 +1440,11 @@ function p7UpdateEngagement() {
 // fraction instead of a scroll-derived pixel offset. p7.currentDate itself
 // (which drives the real per-event cascade's month timing) is untouched —
 // only the axis's own visual fill lags, not the timeline's actual engagement.
-const P7_AXIS_FILL_LAG_DAMPING = 0.12;
+// Per breakpoint: 1 = glued to scroll,
+// smaller = the fill trails further behind and takes longer to catch up.
+let P7_AXIS_FILL_LAG_DAMPING_DESKTOP = 0.5;    // manual/-baked 2026-09-19 — tighter than @fold1's 0.12 tempo on purpose
+let P7_AXIS_FILL_LAG_DAMPING_MOBILE  = 0.12;
+function p7AxisFillLagDamping() { return isMobile() ? P7_AXIS_FILL_LAG_DAMPING_MOBILE : P7_AXIS_FILL_LAG_DAMPING_DESKTOP; }
 let p7AxisLaggedFillFrac = null;
 
 function p7AxisFillFracTarget() {
@@ -1455,7 +1471,7 @@ function p7AxisUpdateFillLag() {
   if (p7AxisLaggedFillFrac === null) {
     p7AxisLaggedFillFrac = target;
   } else {
-    const next = p7AxisLaggedFillFrac + (target - p7AxisLaggedFillFrac) * P7_AXIS_FILL_LAG_DAMPING;
+    const next = p7AxisLaggedFillFrac + (target - p7AxisLaggedFillFrac) * p7AxisFillLagDamping();
     // An exponential lerp only ever asymptotically approaches its target —
     // once within the same epsilon p7AxisFillLagActive uses to decide the lag
     // has "settled," snap the rest of the way there instead of leaving a
@@ -1487,7 +1503,7 @@ function p7AnyAnimActive() {
   if (p7AxisFillLagActive()) return true;
   if (p7EntryAnim && now - p7EntryAnim.start < p7EntryAnim.duration) return true;
   if (p7GridMorph && now - p7GridMorph.start < p7MorphTotalMs()) return true;
-  if (p7FilterMorph && now - p7FilterMorph.start < P7_FILTER_MORPH_MS) return true;
+  if (p7FilterMorph && now - p7FilterMorph.start < p7FilterMorphMs()) return true;
   return false;
 }
 
@@ -1506,7 +1522,7 @@ function p7AnyAnimActive() {
 // ...plus @fold13 (currentPage 12) while the axis's reverse wipe is still
 // running: it can outlive @fold12 now that it runs at the build-in's speed, and
 // drawPage9 finishes drawing it (see the tail of drawPage9, page9.js).
-function p7ShouldRedrawForAnim() { return currentPage === 6 || currentPage === 7 || currentPage === 8 || currentPage === 9 || currentPage === 10 || currentPage === 11 || (currentPage === 12 && p7AxisOutroStart !== null); }
+function p7ShouldRedrawForAnim() { return currentPage === 4 || currentPage === 6 || currentPage === 7 || currentPage === 8 || currentPage === 9 || currentPage === 10 || currentPage === 11 || (currentPage === 12 && p7AxisOutroStart !== null); }
 
 // The 8 claimed squares are DOM, repositioned only by updateGroups() — which
 // nothing calls per frame. Same freeze page8's glide hits: without this they
@@ -2492,12 +2508,19 @@ let p7GridMorph = null;
 // waves, biggest crowd first, each tier P7_MORPH_TIER_STAGGER_MS after the one
 // before. OFF (scrolling back up) is the exact MIRROR of that clock: what grew
 // last shrinks first, and the flight home comes at the end.
-let P7_MORPH_FLY_MS          = 1400;   // the flight
-let P7_MORPH_SIZE_MS         = 450;   // one tier's grow
-let P7_MORPH_SIZE_START_MS   = 1200;   // when the first tier starts growing (= FLY: strictly after)
-let P7_MORPH_TIER_STAGGER_MS = 140;   // tier-to-tier delay, biggest first
+let P7_MORPH_FLY_MS          = 1043;   // the flight
+let P7_MORPH_SIZE_MS         = 335;   // one tier's grow
+let P7_MORPH_SIZE_START_MS   = 894;   // when the first tier starts growing (= FLY: strictly after)
+let P7_MORPH_TIER_STAGGER_MS = 104;   // tier-to-tier delay, biggest first
 // Squares that finish growing before they have flown would sit on their
 // neighbours; see the throttle in p7MorphBlend.
+// DESKTOP's own four (manual/-baked 2026-09-19: the whole grow 1750 -> 2200ms,
+// same internal rhythm). The un-suffixed four above are MOBILE's — the names stay
+// so the mobile timing harness keeps driving them. Read through p7MorphKnobs().
+let P7_MORPH_FLY_MS_DESKTOP          = 1311;
+let P7_MORPH_SIZE_MS_DESKTOP         = 421;
+let P7_MORPH_SIZE_START_MS_DESKTOP   = 1124;
+let P7_MORPH_TIER_STAGGER_MS_DESKTOP = 131;
 let P7_MORPH_PUSH = true;
 let P7_MORPH_PUSH_MAX = 2;   // how far a dot may outgrow its current spacing
 // @fold11's flatten is a DIFFERENT move on the same machinery and gets its OWN
@@ -2506,21 +2529,32 @@ let P7_MORPH_PUSH_MAX = 2;   // how far a dot may outgrow its current spacing
 // flatten only ever shrinks, so it can never collide and has no reason to wait.
 // Tune the two folds separately — one shared value always spoils one of them.
 let P7_FLAT_FLY_MS           = 1400;
-let P7_FLAT_SIZE_MS          = 450;
+let P7_FLAT_SIZE_MS          = 273;
 let P7_FLAT_SIZE_START_MS    = 0;    // the flatten only shrinks — nothing to wait for
-let P7_FLAT_TIER_STAGGER_MS  = 50;
+let P7_FLAT_TIER_STAGGER_MS  = 30;
+// DESKTOP's flatten (manual/-baked 2026-09-19: 423 -> 650ms); SIZE/STAGGER above are MOBILE's.
+let P7_FLAT_SIZE_MS_DESKTOP         = 420;
+let P7_FLAT_TIER_STAGGER_MS_DESKTOP = 46;
 // Which set of four is live. `flat` defaults to the morph currently running
 // (p7GridMorph.flat, set in p7SizeGridSet: true when only the flatten flag
 // moved — @fold11 either way — false when the grid itself came on or off).
 function p7MorphKnobs(flat) {
   const f = flat === undefined ? !!(p7GridMorph && p7GridMorph.flat) : !!flat;
+  if (!isMobile()) return f
+    ? { fly: P7_FLAT_FLY_MS,  size: P7_FLAT_SIZE_MS_DESKTOP,  start: P7_FLAT_SIZE_START_MS,  stag: P7_FLAT_TIER_STAGGER_MS_DESKTOP }
+    : { fly: P7_MORPH_FLY_MS_DESKTOP, size: P7_MORPH_SIZE_MS_DESKTOP, start: P7_MORPH_SIZE_START_MS_DESKTOP, stag: P7_MORPH_TIER_STAGGER_MS_DESKTOP };
   return f
     ? { fly: P7_FLAT_FLY_MS,  size: P7_FLAT_SIZE_MS,  start: P7_FLAT_SIZE_START_MS,  stag: P7_FLAT_TIER_STAGGER_MS }
     : { fly: P7_MORPH_FLY_MS, size: P7_MORPH_SIZE_MS, start: P7_MORPH_SIZE_START_MS, stag: P7_MORPH_TIER_STAGGER_MS };
 }
 function p7MorphTotalMs(flat) {
   const k = p7MorphKnobs(flat);
-  return Math.max(k.fly, k.start + P7_MAX_TIER * k.stag + k.size);
+  const f = flat === undefined ? !!(p7GridMorph && p7GridMorph.flat) : !!flat;
+  const sizeEnd = k.start + P7_MAX_TIER * k.stag + k.size;
+  // The flatten has NO position beat (see p7MorphWindows), so its `fly` is not
+  // on screen — counting it left @fold11 holding a finished, motionless field
+  // for fly − sizeEnd ms (700 of 1400) before fold11BeatGapMs() let the glide go.
+  return f ? sizeEnd : Math.max(k.fly, sizeEnd);
 }
 // The two windows for one tier, in ms, on the ON clock.
 //
@@ -2787,9 +2821,10 @@ const p7FilterGhosts = new Map();
 // vacated before it is closed. Removing a group runs shrink→fly; bringing one
 // back runs the same clock in the other order (fly→grow), so the returning dots
 // arrive at a spot that has already been opened for them.
-const P7_FILTER_SHRINK_MS = 380;
-const P7_FILTER_FLY_MS = 900;
-const P7_FILTER_MORPH_MS = P7_FILTER_SHRINK_MS + P7_FILTER_FLY_MS;
+// `var`: a manual/ harness drives them — the total is read live for that reason.
+var P7_FILTER_SHRINK_MS = 380;
+var P7_FILTER_FLY_MS = 900;
+function p7FilterMorphMs() { return P7_FILTER_SHRINK_MS + P7_FILTER_FLY_MS; }
 // Size channel and position channel, run back to back. Each channel keeps its
 // OWN duration wherever it lands in the order — a size change is a short beat
 // and a flight is a long one, so swapping the order must not also swap the
@@ -2838,7 +2873,7 @@ function p7FilterSizeFactor(ev) {
   return p7FilterMorph.restoring ? t : 1 - t;
 }
 function p7FilterMorphDur(m) {
-  return m && m.skipFly ? P7_FILTER_SHRINK_MS : P7_FILTER_MORPH_MS;
+  return m && m.skipFly ? P7_FILTER_SHRINK_MS : p7FilterMorphMs();
 }
 function p7FilterMorphActive() {
   return !!p7FilterMorph && performance.now() - p7FilterMorph.start < p7FilterMorphDur(p7FilterMorph);
@@ -4101,7 +4136,7 @@ function p7AxisTriggerIfNeeded() {
     // wipe currently is (back-date the start so introT continues seamlessly).
     const t = p7AxisIntroT();
     p7AxisOutroStart = null;
-    p7AxisIntroStart = performance.now() - t * P7_AXIS_INTRO_DURATION;
+    p7AxisIntroStart = performance.now() - t * p7AxisIntroDuration();
     p7StartAnimLoop();
   } else if (p7AxisIntroStart === null) {
     p7AxisIntroStart = performance.now();
@@ -4167,7 +4202,9 @@ const P7_AXIS_LABEL_COLOR       = "rgba(0, 0, 0, 0.65)";
 // clock, starting from p7.minDate's anchor (the "2023" end) since that's
 // where the scroll-driven reveal above starts from too. p7AxisIntroStart is
 // null when not yet triggered (or reset back to it, see p7AxisTriggerIfNeeded).
-const P7_AXIS_INTRO_DURATION = 2800; // ms — full right-edge-to-left-edge wipe
+var P7_AXIS_INTRO_DURATION_DESKTOP = 1750;   // manual/-baked 2026-09-19
+var P7_AXIS_INTRO_DURATION_MOBILE  = 1750;   // matched to desktop for now
+function p7AxisIntroDuration() { return isMobile() ? P7_AXIS_INTRO_DURATION_MOBILE : P7_AXIS_INTRO_DURATION_DESKTOP; }  // ms — full right-edge-to-left-edge wipe
 // WHEN the build-in fires on MOBILE: @fold8's title block is almost off the top
 // of the screen — only this many px of it still showing. (page7TitleCardEl is
 // `#page-7 .text-card`, i.e. @fold8's card; the name carries the legacy
@@ -4191,7 +4228,7 @@ function p7AxisIntroCardAlmostOut() {
 // the first setting between them and still lagged @fold10's morph. This is the
 // FULL-wipe time; an interrupted intro reverses over only its remaining
 // distance (duration scaled by how far it had got), per convention.
-const P7_AXIS_OUTRO_DURATION = 1250; // ms — full left-edge-back-to-right-edge un-wipe
+var P7_AXIS_OUTRO_DURATION = 800; // ms — full left-edge-back-to-right-edge un-wipe
 let p7AxisIntroStart = null;
 let p7AxisOutroStart = null; // non-null while the reverse wipe is running
 let p7AxisOutroFromT = 0;    // introT captured at the moment the reverse began
@@ -4219,14 +4256,16 @@ function p7AxisIntroEdgeY(H) {
 //
 // MOBILE ONLY — desktop keeps its existing arrival. Multiplied into the marker's
 // RADIUS, never its alpha: dots arrive and leave by size (see the hard rules).
-const P7_AXIS_INTRO_DOT_MS = 480;   // one event's arrival, matching p7AxisCardMs
+var P7_AXIS_INTRO_DOT_MS_DESKTOP = 300;   // scaled with the wipe
+var P7_AXIS_INTRO_DOT_MS_MOBILE  = 300;
+function p7AxisIntroDotMs() { return isMobile() ? P7_AXIS_INTRO_DOT_MS_MOBILE : P7_AXIS_INTRO_DOT_MS_DESKTOP; }  // one event's arrival, matching p7AxisCardMs
 const p7AxisIntroAt = [];
 function p7AxisIntroReveal(i, y, H) {
   if (!isMobile()) return 1;
   if (!p7AxisShouldShow()) { p7AxisIntroAt[i] = null; return 0; }
   if (p7AxisIntroEdgeY(H) < y) { p7AxisIntroAt[i] = null; return 0; }
   if (p7AxisIntroAt[i] == null) p7AxisIntroAt[i] = performance.now();
-  const t = Math.min(1, (performance.now() - p7AxisIntroAt[i]) / P7_AXIS_INTRO_DOT_MS);
+  const t = Math.min(1, (performance.now() - p7AxisIntroAt[i]) / p7AxisIntroDotMs());
   if (t < 1) p7StartAnimLoop();
   return t;
 }
@@ -4238,7 +4277,7 @@ function p7AxisIntroT() {
     return p7AxisOutroFromT * (1 - Math.min(1, gone));
   }
   if (p7AxisIntroStart === null) return 0;
-  return Math.min(1, (performance.now() - p7AxisIntroStart) / P7_AXIS_INTRO_DURATION);
+  return Math.min(1, (performance.now() - p7AxisIntroStart) / p7AxisIntroDuration());
 }
 
 // Maps a date string to an x position along the axis: p7.minDate anchors the
@@ -6967,23 +7006,47 @@ function p7MLegendBarH() {
   if (!r.height || r.bottom < viewportH() - 24) return 0;
   return Math.round(r.height);
 }
-// The height the band takes off the timeline's box, on whichever edge it is on.
-// 0 when it is not showing, so the timeline takes the space back.
+// The band's height while it is actually ON SCREEN — what the clip reads
+// (p7HintClipTopY): nothing is cut at a rule that is not drawn yet.
 function p7HintBandH() {
   if (!isMobile() || !p7HintBandEl || p7HintBandEl.hidden) return 0;
   return p7HintBandEl.offsetHeight || 0;
 }
+// The height the band RESERVES off the timeline's box, on whichever edge it is
+// on. Held for the band's whole fold range (p7HintBandWanted), typed or not: the
+// sentence only arrives at 2024, and a reserve that followed it pushed the whole
+// timeline down mid-scrub. So the box starts where the band will put it and
+// never moves. Measured with the band unhidden for one synchronous read — a
+// hidden element has no height — and refreshed whenever it is really showing.
+let p7HintBandReserveCache = 0, p7HintBandReserveW = 0;
+function p7HintBandReserveH() {
+  // Wider than p7HintBandWanted on the way IN (no `currentPage < 8` floor):
+  // @fold8's squares fly to cells solved from this same box, so it has to be in
+  // its final place before the timeline fold is even current.
+  if (!isMobile() || currentPage > 10) return 0;
+  if (typeof fold11SizePast === "function" && fold11SizePast()) return 0;
+  const el = p7HintBandInit();
+  if (!el.hidden) return (p7HintBandReserveCache = el.offsetHeight || p7HintBandReserveCache);
+  if (!p7HintBandReserveCache || p7HintBandReserveW !== window.innerWidth) {
+    el.hidden = false;
+    const v = el.style.visibility; el.style.visibility = "hidden";
+    p7HintBandReserveCache = el.offsetHeight || 0;
+    el.style.visibility = v; el.hidden = true;
+    p7HintBandReserveW = window.innerWidth;
+  }
+  return p7HintBandReserveCache;
+}
 function p7HintBandTopH() {
-  if (P7_HINT_PLACE_MOBILE !== 'above' || !p7HintBandH()) return 0;
-  return Math.max(0, p7HintBandH() + P7_HINT_Y_MOBILE);
+  if (P7_HINT_PLACE_MOBILE !== 'above' || !p7HintBandReserveH()) return 0;
+  return Math.max(0, p7HintBandReserveH() + P7_HINT_Y_MOBILE);
 }
 // Below the timeline, the band's reserve is its own height PLUS whatever it is
 // standing on (the מקרא bar), so the box's bottom edge lands on the band's top.
 function p7HintBandBottomH() {
-  if (P7_HINT_PLACE_MOBILE === 'above' || !p7HintBandH()) return 0;
+  if (P7_HINT_PLACE_MOBILE === 'above' || !p7HintBandReserveH()) return 0;
   // − the nudge: moving the band DOWN hands that much back to the timeline, so
   // the box's bottom edge stays on the band's top wherever it is put.
-  return Math.max(0, p7HintBandH() + p7MLegendBarH() - P7_HINT_Y_MOBILE);
+  return Math.max(0, p7HintBandReserveH() + p7MLegendBarH() - P7_HINT_Y_MOBILE);
 }
 
 // The @fold13 hint's typewriter spans (built in p7InspectInit, typed by

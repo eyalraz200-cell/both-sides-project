@@ -119,6 +119,7 @@ function foldPickerInit() {
     panel.className = "fold-picker";
     panel.setAttribute("aria-hidden", "true");
     sections.forEach((section, i) => {
+      if (section.hidden) return;   // folds parked with `hidden` keep their number, lose their row
       const row = document.createElement("button");
       row.type = "button";
       row.className = "fold-picker-row";
@@ -204,17 +205,18 @@ function setActivePage(page) {
   if (typeof p7SizeGridOnPage === "function") p7SizeGridOnPage(page);
   if (page === currentPage) return;
   // Scrolling back out of the timeline toward a fold that doesn't draw the
-  // per-event squares at all (anything before drawFold7, i.e. currentPage < 6)
+  // per-event squares at all (anything before drawFold7 — @fold5 draws it too
+  // now that @fold6/@fold7 are hidden — i.e. currentPage < 4)
   // — wipe all per-month animation state so the next entry replays from
   // scratch instead of showing the previously-settled dots hanging around.
   //
-  // Deliberately NOT on the 7 -> 6 crossing. drawFold9/drawFold7 (js/core.js)
+  // Deliberately NOT on the 7 -> 4 crossing (7 -> 6 while those folds are shown). drawFold9/drawFold7 (js/core.js)
   // keep drawing and retreating the squares while p7RealTimelineReached, so the
   // reverse cascade is *supposed* to play out across that boundary; wiping here
   // made every dot vanish in one frame the instant the IntersectionObserver
   // crossed. Those two draw functions run the wipe themselves once the retreat
   // has actually finished.
-  if (currentPage >= 6 && page < 6) p7ResetForReplay();
+  if (currentPage >= 4 && page < 4) p7ResetForReplay();
 
   // Continuing into page9 (fold12) while page8's own timeline->legit-grid
   // glide (p8CurrentT, page8.js) hasn't actually finished yet — the
@@ -239,8 +241,8 @@ function setActivePage(page) {
     const W = canvas.clientWidth, H = canvas.clientHeight;
     p9.anim = {
       from: p8CaptureBlendedPositions(W, H, 0),
-      start: performance.now() - P8_TRANSITION_DURATION * p8CurrentT(),
-      duration: P8_TRANSITION_DURATION,
+      start: performance.now() - p8ForwardMs() * p8CurrentT(),
+      duration: p8ForwardMs(),   // the glide's own live clock (page8.js)
       plainGlide: true, // see p9PlaceDot (page9.js) — keeps this at page8's own pace, no tier stagger
       // The glide's starting SQUARE SIZE too, not just its positions: page8
       // shrinks the dots across the flight and drawPage9 has to keep doing so,

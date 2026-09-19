@@ -171,10 +171,19 @@ function page0ApplyLogoScrollFade() {
 // FOLD2_ENTRANCE_MS's multi-beat pacing — this is the user's very first
 // impression of the page, not a transition between two states they've
 // already seen.
-const PAGE0_TITLE_MS = 1700;
-const PAGE0_ROW_STAGGER_MS = 40;
-const PAGE0_POP_MS = 280;
-const PAGE0_LOGO_FADE_MS = 900;
+// `var`: a manual/ harness drives them (reload to replay — the entrance runs once).
+var PAGE0_TITLE_MS_DESKTOP = 1308;
+var PAGE0_TITLE_MS_MOBILE  = 1308;
+function page0TitleMs() { return isMobile() ? PAGE0_TITLE_MS_MOBILE : PAGE0_TITLE_MS_DESKTOP; }
+var PAGE0_ROW_STAGGER_MS_DESKTOP = 31;
+var PAGE0_ROW_STAGGER_MS_MOBILE  = 31;
+function page0RowStaggerMs() { return isMobile() ? PAGE0_ROW_STAGGER_MS_MOBILE : PAGE0_ROW_STAGGER_MS_DESKTOP; }
+var PAGE0_POP_MS_DESKTOP = 215;
+var PAGE0_POP_MS_MOBILE  = 215;
+function page0PopMs() { return isMobile() ? PAGE0_POP_MS_MOBILE : PAGE0_POP_MS_DESKTOP; }
+var PAGE0_LOGO_FADE_MS_DESKTOP = 692;
+var PAGE0_LOGO_FADE_MS_MOBILE  = 692;
+function page0LogoFadeMs() { return isMobile() ? PAGE0_LOGO_FADE_MS_MOBILE : PAGE0_LOGO_FADE_MS_DESKTOP; }
 // page0PopT (parallel to GROUPS — each group's own entrance progress, 0..1)
 // is declared further down, right after GROUPS itself, since GROUPS doesn't
 // exist yet at this point in the script.
@@ -185,23 +194,25 @@ function playPage0Entrance() {
     .filter((r) => r !== undefined);
   const allRows = decorRows.concat(groupRows);
   const maxRow = allRows.length ? Math.max(...allRows) : 0;
-  const dotsDoneMs = PAGE0_TITLE_MS + maxRow * PAGE0_ROW_STAGGER_MS + PAGE0_POP_MS;
-  const totalMs = dotsDoneMs + PAGE0_LOGO_FADE_MS;
   const start = performance.now();
 
   function frame() {
     const elapsed = performance.now() - start;
+    // Per frame, not captured once: the durations are live `var`s, and with the
+    // gate already dismissed this starts before a harness has applied its values.
+    const dotsDoneMs = page0TitleMs() + maxRow * page0RowStaggerMs() + page0PopMs();
+    const totalMs = dotsDoneMs + page0LogoFadeMs();
 
     if (!page0TitleTakenOver && window.scrollY > 0) {
       page0TitleTakenOver = true;
       // Hand the title over from wherever the entrance currently has it —
       // see page0BeginTitleHandover. Uses this frame's own eased progress,
       // the same value the entrance branch below would have used.
-      page0BeginTitleHandover(p9Ease(Math.max(0, Math.min(1, elapsed / PAGE0_TITLE_MS))));
+      page0BeginTitleHandover(p9Ease(Math.max(0, Math.min(1, elapsed / page0TitleMs()))));
     }
 
     if (!page0TitleTakenOver) {
-      const titleT = p9Ease(Math.max(0, Math.min(1, elapsed / PAGE0_TITLE_MS)));
+      const titleT = p9Ease(Math.max(0, Math.min(1, elapsed / page0TitleMs())));
       const titleOffsetVh = (1 - titleT) * 100;
       page0TitleEl.style.transform = `translateY(${titleOffsetVh}vh)`;
       const subtitleAlignPx = (107 * (1 - titleT)).toFixed(2);
@@ -218,7 +229,7 @@ function playPage0Entrance() {
       // to once per frame now, so a stale write here would win the frame and
       // the dots would never shrink.
       if (d.popped) return;
-      const rowRaw = Math.max(0, Math.min(1, (elapsed - PAGE0_TITLE_MS - d.syncedRow * PAGE0_ROW_STAGGER_MS) / PAGE0_POP_MS));
+      const rowRaw = Math.max(0, Math.min(1, (elapsed - page0TitleMs() - d.syncedRow * page0RowStaggerMs()) / page0PopMs()));
       const rowT = p9Ease(rowRaw);
       d.el.style.opacity = String(rowT);
       d.el.style.transform = `scale(${rowT})`;
@@ -231,13 +242,13 @@ function playPage0Entrance() {
       // the rest of the legend system rather than blocking on a row that
       // doesn't exist.
       const syncedRow = anchor ? anchor.syncedRow : 0;
-      const rowRaw = Math.max(0, Math.min(1, (elapsed - PAGE0_TITLE_MS - syncedRow * PAGE0_ROW_STAGGER_MS) / PAGE0_POP_MS));
+      const rowRaw = Math.max(0, Math.min(1, (elapsed - page0TitleMs() - syncedRow * page0RowStaggerMs()) / page0PopMs()));
       page0PopT[i] = p9Ease(rowRaw);
     });
     updateGroups();
 
     if (!page0EntranceDone) {
-      const logoT = p9Ease(Math.max(0, Math.min(1, (elapsed - dotsDoneMs) / PAGE0_LOGO_FADE_MS)));
+      const logoT = p9Ease(Math.max(0, Math.min(1, (elapsed - dotsDoneMs) / page0LogoFadeMs())));
       page0LogoOpacity = logoT;
       page0LogoEl.style.opacity = String(logoT);
       if (elapsed >= totalMs) { page0EntranceDone = true; page0CueSchedule(PAGE0_CUE_IDLE_MS); }

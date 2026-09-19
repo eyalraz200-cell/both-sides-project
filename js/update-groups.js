@@ -101,7 +101,7 @@ function updateGroups() {
   // and then slice.
   const fold3Raw = fold3Trigger.currentRaw();
   const fold3BeatRaw = b =>
-    Math.max(0, Math.min(1, (fold3Raw - FOLD3_BEATS[b].start) / FOLD3_BEATS[b].len));
+    Math.max(0, Math.min(1, (fold3Raw - fold3Beats()[b].start) / fold3Beats()[b].len));
   const fillerShrinkT = p9Ease(fold3BeatRaw("shrink"));
   const alignT        = p9Ease(fold3BeatRaw("align"));
   const typeBaseRaw   = fold3BeatRaw("type");
@@ -1436,7 +1436,7 @@ function updateGroups() {
   // first GROW_SPAN of the trigger's raw timeline (own re-eased span, "position
   // never does" convention) so the pop finishes well before the mini-legend
   // glide (also driven by e6) settles, instead of taking the full duration.
-  const GROW_SPAN = 0.55;
+  const GROW_SPAN = SQUARES_GROW_SPAN;   // js/groups.js — shared with fold5DemoGate
   // Grow-in is @fold5 (#page-4, «כל ריבוע מייצג פעולה פוליטית…») via squaresRevealTrigger —
   // detached from fold6Trigger (the split) so the squares only appear on the
   // next fold, after the mini-legend split has settled.
@@ -1494,9 +1494,9 @@ function updateGroups() {
     // flight — square 0, or the @fold7 hover's pick.
     if (i === (fold7HoverIdx ?? 0)) fold8FlyMoveT = moveT;
 
-    // All 8 take their group colour together on @fold8's trigger #1 (the
-    // demo square no longer leads alone).
-    const colorT = fold9Phase1T;
+    // The squares are BORN in their group colour (@fold5 grows them in already
+    // coloured) — @fold8's fold9Trigger no longer colours anything.
+    const colorT = 1;
     sq.style.background = lerpFold6SquareColor(FOLD6_SQUARE_COLORS[i], colorT);
 
     // This square's own real event, resolved once and reused below (hover-dim,
@@ -1879,7 +1879,7 @@ window.addEventListener("scroll", () => {
   if (fold9AxisTicking) return;
   fold9AxisTicking = true;
   requestAnimationFrame(() => {
-    if (currentPage === 6 || currentPage === 7) draw();
+    if (currentPage === 4 || currentPage === 6 || currentPage === 7) draw();
     fold9AxisTicking = false;
   });
 }, { passive: true });

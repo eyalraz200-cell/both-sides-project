@@ -25,10 +25,10 @@ function p7ScrubEaseIn(t) {
 // 0 would land t=1 exactly as #page-8's bottom leaves the viewport top, which is
 // the same instant @fold10's card crosses its 0.5 threshold and the size grid
 // takes over — too early: the year axis's own fill trails p7.currentDate by the
-// P7_AXIS_FILL_LAG_DAMPING lerp (page7.js), so it would still be visibly filling
+// p7AxisFillLagDamping() lerp (page7.js), so it would still be visibly filling
 // when the grid started. Half a viewport of scroll past t=1 lets the fill settle
 // first. Raise it to end the dataset earlier (more quiet scroll at the end),
-// lower it to end later; keep the section height in step (680vh + lead·100vh)
+// lower it to end later; keep the section height in step (desktop 510vh + lead·100vh)
 // so the scrub range, and the pace, don't move.
 const P7_SCRUB_END_LEAD_VH = 0.5;
 
@@ -56,7 +56,11 @@ function page7UpdateFromScroll() {
   const titleTop = page7TitleCardEl ? page7TitleCardEl.getBoundingClientRect().top : rect.top;
   const gap = rect.top - titleTop;
   const scrubRange = rect.height + gap - window.innerHeight * P7_SCRUB_END_LEAD_VH;
-  const t = scrubRange > 0 ? Math.max(0, Math.min(1, -titleTop / scrubRange)) : 0;
+  // t=0 sits on the engagement line (p7EngageOffsetPx, page7.js — desktop waits
+  // for the card to be 90% out), not on titleTop = 0, so the first day lands
+  // exactly when the timeline engages; t=1 stays where it was.
+  const engageOff = p7EngageOffsetPx();
+  const t = scrubRange > engageOff ? Math.max(0, Math.min(1, (-titleTop - engageOff) / (scrubRange - engageOff))) : 0;
   if (!p7.ready) return;
 
   // Refresh engagement state before checking it — without this, the check below

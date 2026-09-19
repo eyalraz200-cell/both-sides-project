@@ -16,15 +16,21 @@ const SBB = {
 // mirrors left automatically (see p7GridGeometry), so no `right` field.
 // DESKTOP `left` is a fixed px (SBB_TIMELINE_LEFT_PX), not a fraction — picked by eye
 // with the `manual/` edge harness on 2026-09-04 at 1920 wide (was 0.18 ≈ 346px there),
-// re-tuned to 190 by eye on 2026-09-05.
+// re-tuned to 190 by eye on 2026-09-05, then to 120 (manual/, 2026-09-19 at 1492 wide).
 // Read it through sbbTimelineLeftX(W, H), never W * box.left, so the exact px survives
 // every viewport width. Mobile stays a fraction (SBB_TIMELINE_MOBILE_LEFT).
-const SBB_TIMELINE_LEFT_PX = 190;
+const SBB_TIMELINE_LEFT_PX = 120;
 const SBB_TIMELINE = {
   left:   0.18,   // fraction of W — MOBILE-ONLY fallback; desktop uses SBB_TIMELINE_LEFT_PX
-  top:    0.07,   // fraction of H
-  bottom: 0.93,   // fraction of H
+  top:    0.07,   // fraction of H — unread: desktop uses SBB_TIMELINE_TOP_PX, mobile solves its own
+  bottom: 0.93,   // fraction of H — unread, same reason (SBB_TIMELINE_BOTTOM_PX)
 };
+// DESKTOP top/bottom are fixed px insets off the viewport's edges, manual/-baked
+// 2026-09-19 at 835 tall (were 0.07 / 0.93 ≈ 58px there) — the vertical axis is glued
+// to the field, so these two ARE how tall the axis stands. Exact px, not a fraction,
+// so the tuned clearance survives every viewport height (the LEFT_PX rule above).
+const SBB_TIMELINE_TOP_PX    = 32;
+const SBB_TIMELINE_BOTTOM_PX = 32;
 
 // Mobile variant (≤600px). `left` is a screen-edge inset (0.03×393≈12px,
 // matching FOLD6_LEGEND_INSET_MOBILE) — the legend is top-pinned there, not
@@ -88,8 +94,8 @@ function sbbTimelineMobileTopPx() {
   const topAnchored = V && V.enabled && V.headline === 'slot'
     && (V.slotAnchor === 'top' || V.slotAnchor === 'fill');
   // ...plus the picker's instruction band when it sits ABOVE the timeline
-  // (p7HintBandTopH, page7.js). 0 on the other placement, and 0 while it is not
-  // showing — the timeline takes that space back.
+  // (p7HintBandTopH, page7.js). 0 on the other placement. Held from before the
+  // sentence types (it arrives at 2024) so the box never moves when it does.
   const band = (typeof p7HintBandTopH === "function") ? p7HintBandTopH() : 0;
   return (topAnchored ? SBB_TIMELINE_MOBILE_TOP_PX : SBB_TIMELINE_MOBILE_TOP_BADGE_PX) + band;
 }
@@ -123,8 +129,8 @@ function sbbTimelineMobileBottomPx() {
 // off window.innerHeight so the box can never disagree with the geometry it's
 // being used for.
 function sbbTimeline(H) {
-  if (!isMobile()) return SBB_TIMELINE;
   const h = H || window.innerHeight;
+  if (!isMobile()) return { left: SBB_TIMELINE.left, top: SBB_TIMELINE_TOP_PX / h, bottom: (h - SBB_TIMELINE_BOTTOM_PX) / h };
   const vertBottom = sbbTimelineMobileBottomPx();
   return {
     left:   SBB_TIMELINE_MOBILE_LEFT,
