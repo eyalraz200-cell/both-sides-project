@@ -451,6 +451,27 @@ const P9_GAP_PADDING = 190;
 // dataset carried English category names.)
 const CATEGORY_TO_IDX = Object.fromEntries(P9_CATEGORIES.map((c, i) => [c, i]));
 
+// How long each pill's dots take to fly into the extreme zones, as a share of
+// the base tempo (600ms travel + 4ms/dot stagger) — index-aligned with
+// P9_CATEGORIES. 1 = base, 0.5 = twice as fast. The bigger the pill, the lower
+// its factor, so the long cascades don't drag. One table per breakpoint.
+var P9_ARRIVAL_FACTOR_DESKTOP = [0.4, 1, 1, 0.4, 0.5, 0.5, 1, 0.65, 0.4, 0.75];
+var P9_ARRIVAL_FACTOR_MOBILE  = [0.4, 1, 1, 0.4, 0.5, 0.5, 1, 0.65, 0.4, 0.75];
+// State 1's "column makes room before the new dots fly in" length, by how many
+// dots the fuller extreme column already holds: the first tier whose `upTo`
+// covers the count wins (last tier = everything above). Per breakpoint.
+var P9_REPOSITION_TIERS_DESKTOP = [{ upTo: 500, ms: 2200 }, { upTo: 2000, ms: 2200 }, { upTo: 5000, ms: 1650 }, { upTo: Infinity, ms: 2200 }];
+var P9_REPOSITION_TIERS_MOBILE  = [{ upTo: 500, ms: 2200 }, { upTo: 2000, ms: 2200 }, { upTo: 5000, ms: 1650 }, { upTo: Infinity, ms: 2200 }];
+function p9RepositionMs(count) {
+  const tiers = isMobile() ? P9_REPOSITION_TIERS_MOBILE : P9_REPOSITION_TIERS_DESKTOP;
+  for (const t of tiers) if (count <= t.upTo) return t.ms;
+  return tiers[tiers.length - 1].ms;
+}
+function p9ArrivalFactor(idx) {
+  const f = (isMobile() ? P9_ARRIVAL_FACTOR_MOBILE : P9_ARRIVAL_FACTOR_DESKTOP)[idx];
+  return f > 0 ? f : 1;
+}
+
 // 0..1 eased progress of the horizontal divider line growing in from the left —
 // not scroll-driven: a fixed-duration animation triggered once the title card
 // crosses the viewport's vertical center (see p9TriggerLine, called from
@@ -603,7 +624,7 @@ function p9RunAnimLoop() {
 // The same tempo the drop's own reposition phase runs at (STATE1_REPOSITION_MS
 // in commitDropState) — this IS that move: the column re-filling itself around
 // dots that left.
-const P9_FILTER_REPACK_MS = 2200;
+var P9_FILTER_REPACK_MS = 2200;
 function p9FilterSnapshot() {
   if (!p9PageVisible() || !p9.lastPositions?.size) return;
   // NOT a plain glide: the shape wanted here is the tier-staggered "existing
@@ -1866,9 +1887,9 @@ function p9ScopeMorphMs() {
 // STRICT FLY, THEN GROW — the whole field lands, then every tier grows,
 // biggest crowd first. Page9's OWN constants, so tuning them never touches
 // @fold10's, though they're seeded from @fold10's numbers.
-var P9_SCOPE_FLY_MS     = 1400;
-var P9_SCOPE_SIZE_MS    = 450;
-var P9_SCOPE_STAGGER_MS = 140;    // tier-to-tier delay, biggest crowd first
+var P9_SCOPE_FLY_MS     = 1098;
+var P9_SCOPE_SIZE_MS    = 353;
+var P9_SCOPE_STAGGER_MS = 110;    // tier-to-tier delay, biggest crowd first
 var P9_SCOPE_PUSH       = true;   // hold a dot back from outgrowing its spacing
 
 function p9ScopeWindows(tier) {
@@ -3220,6 +3241,8 @@ function p9BuildPanel() {
     if (!row || !col) return;
     const el = p9VacancyFor(pill);
     el.style.gridColumn = col;
+    // Same pop slot as the pill it replaces, so it leaves in the pill's turn.
+    el.style.setProperty("--p9-pop-i", pill.style.getPropertyValue("--p9-pop-i") || "0");
     el.style.height = `${pill.getBoundingClientRect().height}px`;
     row.appendChild(el);
   }
@@ -3352,7 +3375,9 @@ function p9BuildPanel() {
       // 2200ms — per explicit feedback, the already-placed dots' own
       // rearrangement read too fast while running concurrently with a new
       // pill's dots flying in. State 1's 2200ms (below) is untouched.
-      const STATE1_REPOSITION_MS = 2200;
+      // State 1's value is tiered by how many dots already sit in the fuller
+      // column — p9RepositionMs() / P9_REPOSITION_TIERS_* near P9_ARRIVAL_FACTOR.
+      const STATE1_REPOSITION_MS = p9RepositionMs(Math.max(baseLeft, baseRight));
       const STATE2_REPOSITION_MS = 3400;
       const REPOSITION_MS = (baseLeft > 0 || baseRight > 0)
         ? (wasInterrupting ? STATE2_REPOSITION_MS : STATE1_REPOSITION_MS)
@@ -3366,9 +3391,9 @@ function p9BuildPanel() {
       // finishes proportionally sooner rather than just compressing the
       // stagger (which would bunch the dots up instead of reading as an
       // across-the-board faster version of the same motion).
-      const FAST_ARRIVAL_CATEGORIES = new Set([0, 3, 5, 8]);
-      const FAST_ARRIVAL_FACTOR     = 0.75;
-      const arrivalSpeedFactor = FAST_ARRIVAL_CATEGORIES.has(newCatIdx) ? FAST_ARRIVAL_FACTOR : 1;
+      // The factor is per pill and per breakpoint — P9_ARRIVAL_FACTOR_* below
+      // the P9_CATEGORIES list (1 = the base tempo, smaller = faster).
+      const arrivalSpeedFactor = p9ArrivalFactor(newCatIdx);
 
       const BASE_TRAVEL_MS     = 600 * arrivalSpeedFactor;
       const ARRIVAL_STAGGER_MS = 4 * arrivalSpeedFactor;    // ms/dot at the anchor count
@@ -3701,6 +3726,14 @@ function p9BuildPanel() {
       document.body.appendChild(ghost);
 
       pill.classList.add("dragging");
+      // THE CELL EMPTIES THE MOMENT THE PILL IS PICKED UP, not when the drop
+      // lands — while dragging, `.dragging` takes the pill to opacity 0, so the
+      // cell reads as empty and should already show its marker. Only for a drag
+      // that STARTS in the tray; a pill dragged back down from the extreme zone
+      // already has its vacancy up, and it stays until the drop actually lands.
+      // The pill is still sitting in its own cell here, which is what
+      // p9SyncVacancy reads the row and column off.
+      if (!draggingFromAbove) p9SyncVacancy(pill, zoneAbove);
       panel.classList.add("dragging");
       // Origin marker for CSS: a drag OUT of the extreme zone highlights the
       // legit band below as the destination (and suppresses the extreme
@@ -3773,6 +3806,12 @@ function p9BuildPanel() {
         } else if (activeDropTarget) {
           commitDrop(pill, activeDropTarget.targetZone);
         }
+        // Whatever just happened, the marker follows where the pill ACTUALLY
+        // ended up. commitDrop covers the two committing paths, but a drag
+        // released over nothing commits nothing and leaves the pill where it
+        // started — without this the vacancy raised at drag-start would outlive
+        // a pill that never went anywhere.
+        p9SyncVacancy(pill, zoneAbove.contains(pill) ? zoneAbove : zoneBelow);
         // Release the held hover-dim from drag-start (extreme-origin drags
         // only — see holdPillHoverDim above). After a real drop the fade-out
         // runs under the dot-migration animation; after a cancelled drag the

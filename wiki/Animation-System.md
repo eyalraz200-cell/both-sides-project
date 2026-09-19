@@ -108,26 +108,45 @@ retimes the exit automatically.
 ## Duration tiers
 
 **~1900 ms — the shared "legend tempo"** (`GROUP_TRANSITION_MS`). One deliberate tempo
-so the legend system reads as one piece. Used by `fold3Trigger`, `fold6Trigger`,
-`squaresRevealTrigger`, `fold7LabelTrigger`, `fold13Trigger`.
+so the legend system reads as one piece. Used by `fold7LabelTrigger` and the later
+legend beats. `fold13Trigger` (@fold14's spread) has its own `FOLD13_SPREAD_MS` (1150). `P7_AXIS_OUTRO_DURATION` is 800.
+
+**@fold4, @fold5 and @fold8 own their durations**, no longer moving with
+`GROUP_TRANSITION_MS`: `fold4GlideMs()` **1250 desktop / 1603 mobile** (`fold6Trigger`; mobile's is the SUM of its
+hand-off phases, which js/groups.js cuts from it as shares — `FOLD6_MLEGEND_WIDTH_MS`
+210 + `FOLD6_MLEGEND_OPEN_MS` 270 + `FOLD6_MFLY_HOLD_MS` 263 + `FOLD6_MFLY_MS` 860; a
+clock shorter than that sum clamps the flight, `fold6MFlyLen`),
+`fold5SquaresMs()` **1000** (`squaresRevealTrigger`; the visible grow-in is its first
+`SQUARES_GROW_SPAN` = 550ms, and `fold5DemoGate` opens there), `FOLD5_TOOLTIP_MS` 1900
+(`fold8TooltipTrigger`) and `FOLD8_NOTE_MS` 1900 (`acledNoteTrigger`).
+
+**Per-breakpoint readers** (a `*_DESKTOP`/`*_MOBILE` `var` pair behind `isMobile()`;
+manual/-baked 2026-09-19 on desktop, mobile set to the same numbers on request — the
+pairs stay so either side can be retuned alone): `page0TitleMs()` 1308,
+`page0RowStaggerMs()` 31, `page0PopMs()` 215, `page0LogoFadeMs()` 692 (@fold1, ≈3200ms
+in all), `fold2EntranceMs()` 1600, `fold3EntranceMs()` / `fold3Beats()` (derived from
+`FOLD3_BEAT_MS_DESKTOP`/`_MOBILE` by `fold3BeatsRebuild()`, 1600), `fold4GlideMs()`,
+`fold5SquaresMs()`, `fold6HeadUntypeMs()` 329. Also paired, mobile matched to desktop for now: `fold8TypeMsPerChar()` 9 (the demo tooltip's typewriter, js/fold8-tooltip.js), `p7AxisIntroDuration()` 1750 and `p7AxisIntroDotMs()` 300 (the year-axis wipe, page7.js). **Genuinely different:** `p7AnimTotalMs()` 1400 desktop / 550 mobile and `p7PopMs()` 140 / 40 (a month's cascade — the phone's was tuned faster on purpose). Every fold duration up to @fold9 is a
+`var` read through a thunk (`makeTrigger(() => xMs(), …)` resolves per frame), so a
+harness can drive it live.
 
 Named exceptions, each because the shared tempo read wrong for that specific beat:
 
 | Constant | ms | Why |
 |---|---|---|
-| `FOLD2_ENTRANCE_MS` | 2400 | Multi-beat entrance |
-| `FOLD3_ENTRANCE_MS` | derived (~1890) | From `FOLD3_BEAT_MS`'s last-ending beat |
+| `fold2EntranceMs()` | 1600 | Multi-beat entrance |
+| `fold3EntranceMs()` | derived (1600) | From `FOLD3_BEAT_MS_*`'s last-ending beat |
 | `FOLD8_GROW_MS` / `FOLD8_SQUARE_DIM_MS` | 350 | Tooltip grow-in; the dim finishes exactly as the tooltip reaches full scale |
-| `FOLD8_TYPE_MS_PER_CHAR` | 15 | Typewriter, tuned snappy |
+| `fold8TypeMsPerChar()` | 9 desktop / 15 mobile | Typewriter, tuned snappy |
 | `FOLD9_COLOR_MS` | 500 | A plain background-color swap read as sluggish at 1900 |
-| `FOLD9_FLY_MS` | 1500 | Squares fly to their real dots |
+| `fold9FlyMs()` — `FOLD9_FLY_MS` (mobile) / `FOLD9_FLY_MS_DESKTOP` | 1500 / 1200 | Squares fly to their real dots |
 | `FOLD9_TOOLTIP_SHRINK_MS` / `_DELAY_MS` | 400 / 500 | Hold, then shrink |
 | `PAGE0_TITLE_MS` / `PAGE0_POP_MS` / `PAGE0_LOGO_FADE_MS` | 1700 / 280 / 900 | Cover entrance |
 
 **Bigger canvas glides:** `P7_ANIM_TOTAL_DURATION` 2200 (one cascade unit — a row on the
 desktop vertical axis, a month on mobile; see [Timeline](Timeline.md)),
-`P7_POP_DURATION` 220 (one square), the @fold11 glide's two beats — `P8_SHRINK_MS` 3000
-(each square morphing down to the legit-grid size) and `P8_FLY_MS` 3000 (its position
+`P7_POP_DURATION` 220 (one square), the @fold11 glide's two beats — `P8_SHRINK_MS` 1450 (desktop `P8_SHRINK_MS_DESKTOP` 1700)
+(each square morphing down to the legit-grid size) and `P8_FLY_MS` 1450 (desktop `P8_FLY_MS_DESKTOP` 1700; its position
 travelling to the legit cell), staged by `P8_STAGING` (`"together"` — both from 0, each
 on its own ms, the shipped look; `"shrink-then-fly"`; `"fly-then-shrink"`) with
 `p8ForwardMs()` the resulting full traverse and `p8Beats(t)` slicing the phase's **raw**
@@ -144,7 +163,7 @@ reads as a wipe, not a moving object, so easing it looks wrong.
 
 **Damped exponential lag** (not a trigger at all): `PAGE0_OPACITY_DAMPING` /
 `PAGE0_SCROLL_LAG_DAMPING` 0.12 with `PAGE0_SCROLL_LAG_MAX_PX` 150, and
-`P7_AXIS_FILL_LAG_DAMPING` 0.12. Same tempo on purpose so each pair reads as one motion.
+`p7AxisFillLagDamping()` (`P7_AXIS_FILL_LAG_DAMPING_DESKTOP` / `_MOBILE`) 0.5 desktop / 0.12 mobile. Mobile shares the tempo on purpose so each pair reads as one motion.
 
 ## Stagger
 

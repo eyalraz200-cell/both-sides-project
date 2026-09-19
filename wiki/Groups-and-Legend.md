@@ -346,7 +346,7 @@ are both fixed px, so on a phone an H-scaled distance would swing with the URL b
 `#fold6SquaresOverlay` holds 8 plain divs (`FOLD6_SQUARE_REST_COLOR` = `#767676`), which:
 
 - **grow in at @fold5** at screen center, taking the cluster's vacated spot
-  (`squaresRevealTrigger`); the ACLED note follows one fold later, at @fold6 (`acledNoteTrigger`);
+  (`squaresRevealTrigger`); the ACLED note follows on @fold8's card, 0.5 (`acledNoteTrigger` — @fold6, its old home, is hidden for now);
 - **gain labels at @fold7** (`FOLD6_SQUARE_LABELS`), while square 0 shows the shared
   `#page9Tooltip` with a real event's date + description, grown and typed on its own
   wall-clock sequence;
@@ -421,7 +421,7 @@ gone). It's anchored to that column's **bottom** row target — the settled labe
 edge is computed as `bottom anchor + LEFT_LEGEND_SWATCH_SIZE/2 + groupLabelInkShift(14) +
 fold6RowMeasureEl.offsetHeight/2` (the same swatch-half + ink-shift offset the live labels
 get) — at `noteRightEdge = W - FOLD6_LEGEND_INSET_RIGHT`, and reveals on
-`acledNoteTrigger` (@fold6, the ACLED card) by **typing in** character by character over the
+`acledNoteTrigger` (@fold8's card, `#page-7`, at 0.5 — it carries the ACLED copy while @fold6 is hidden) by **typing in** character by character over the
 trigger's whole raw span (`FOLD6_NOTE_BEATS`, `js/groups.js`, `p9Ease`). The note is four typewriter
 segments (the title / text / the live `ACLED` link / text, `fold6NoteSegments`, each a `fold8SetupTypewriter`
 span pair) so the link survives and the 155px block keeps its final wrap from the first frame;
@@ -852,18 +852,28 @@ still opening, and the flight aims at the rows' REST positions).
   `fold8TooltipGrowEase`, the same pop the `@fold7` tooltip uses. So it lands
   while the on-canvas rows are still leaving behind it. The `@fold4` intro below still waits
   for the *unmapped* progress to reach 1.
+- **MOBILE: the מקרא drawer collapses at `@fold4`, as built** (explicit instruction). `FOLD6_MLEGEND_HOLD_OPEN` (js/groups.js) is **`false`**: `fold6MFlyArrive` shuts the panel `FOLD6_MFLY_CLOSE_GAP_MS` after the rows land, `fold6MLegendAutoBeat`'s `want` is `squaresRevealTrigger.currentT() <= 0` (so `@fold5` keeps it shut and nothing reopens it), scrolling closes a hand-opened panel, and the ACLED note arrives collapsed inside the closed drawer. **Everything below about the panel being HELD open until the year axis has drawn describes the flag's `true` state and is not what ships on mobile** — holding open is the DESKTOP behaviour (labels + note staying typed, `checkLegendCollapse`).
+- **The close is LATCHED** (desktop; mobile too when `FOLD6_MLEGEND_HOLD_OPEN` is on) (`legendAxisLatch`, js/groups.js): once the axis has fully drawn and the legend has closed it stays closed — the axis un-wiping later (@fold10's undraw, the bridge) does not reopen it. **Desktop reopens it on the way UP out of the timeline into @fold8**: the moment `fold9FlyTrigger`'s reverse crossing fires (its target back at 0 — the same line the axis un-wipes on, `currentPage < 9`) the latch releases and the labels + note type back; drawing the axis again re-collapses it. On mobile only going back above @fold4 (`currentPage < 3`, where the legend doesn't exist yet and the sequence re-arms) releases the latch. Hover (desktop) and a tap on מקרא (mobile) still open it by hand.
+- **Desktop collapse = the year axis fully drawn, not @fold4's landing.** `fold6Trigger`'s settle no longer fires `fold6LabelUntypeTrigger` forward (it still reverses it on the way up). `checkLegendCollapse` (js/groups.js) — two `watchFlag`s on `legendAxisDrawn()` (`p7AxisIntroT() >= 1`, desktop only, rAF-polled while the wipe is mid-flight) — un-types the six labels **and** the ACLED note together, and types them back when the axis un-wipes. Hover re-typing a collapsed legend is unchanged. Any older line on this page saying the labels un-type when the glide lands, or the note un-types on @fold7, is superseded by this.
 - **The panel's own beats after the hand-off** (`fold6MLegendAutoBeat`, called from
-  `updateGroups` right after `fold6SetMobileLegendVisible`). `@fold4`'s hand-off closes the
-  panel itself `FOLD6_MFLY_CLOSE_GAP_MS` (`var`, js/groups.js) after the rows land
-  (`fold6MFlyArrive` — wall-clock from the landing frame, cancelled if the trigger reverses
-  first, `fold6EndMLegendIntro` once the close lands); **`@fold5` (`squaresRevealTrigger`)
-  closes it** too, for the non-fly variant and a panel reopened by hand — — the grey sample squares are that fold's
-  subject and an open panel covers them — **and it stays closed from there on. `@fold6` does
-  NOT reopen it** (explicit instruction): the ACLED card is that fold's subject, and a panel
-  opening over it covers the thing being read. The note still arrives *inside* the closed
-  panel on its own `acledNoteTrigger` ramp, waiting for a reader who taps מקרא. `want` is
-  *derived from `squaresRevealTrigger` every frame*, not latched on a crossing, so scrolling
-  back up past `@fold5` reopens it; only the **changes** are acted on, so a reader who taps
+  `updateGroups` right after `fold6SetMobileLegendVisible`). **The panel STAYS OPEN from the
+  rows landing at `@fold4` until the year axis has fully drawn** (explicit instruction): the
+  six group rows, and then the ACLED note that joins them on `@fold8`'s crossing, are
+  readable for as long as the folds that introduce them are on screen. `want` is
+  `!(p7AxisIntroT() >= 1)` (page7.js). Three things make that hold:
+  `fold6MFlyArrive` no longer shuts the panel `FOLD6_MFLY_CLOSE_GAP_MS` after the rows land
+  while the beat wants it open — it ends the intro (`fold6EndMLegendIntro`,
+  `fold6MLegendRestRows`) and leaves the frame up, setting `fold6MLegendAutoHeldOpen`; the
+  **scroll-closes-it listener is skipped** while `fold6MLegendAutoHeldOpen &&
+  fold6MLegendAutoWantsOpen()`; and `fold6MFlyMaybeReopen` re-arms the reverse flight off an
+  auto-held panel (only a *hand*-opened one is left alone). The axis wipe runs on its own
+  wall clock with nothing calling `updateGroups` per frame, so the beat **polls it by rAF
+  while `0 < p7AxisIntroT() < 1`** (`fold6MLegendAxisPoll`). When the note becomes available
+  inside a held-open panel, **its «איסוף הנתונים» section expands itself**
+  (`fold6MDataSetAvailable` → `fold6MDataToggle(true)`); in a closed panel it keeps its
+  collapsed default. `want` is
+  *derived from that live progress every frame*, not latched on a crossing, so scrolling
+  back up — the axis un-wiping below 1 — reopens it; only the **changes** are acted on, so a reader who taps
   the button mid-fold keeps what they chose until the next beat. The memo
   (`fold6MLegendAutoWant`) clears whenever the bar is gone, which re-arms the sequence.
   Two things follow from the fold not opening the card, both in `js/update-groups.js`:
@@ -898,8 +908,9 @@ still opening, and the flight aims at the rows' REST positions).
   `content: none` (no chevron in the panel) went with them.
 - Open/close: tap the button, tap **anywhere** outside it, **scroll the page**, or Escape.
   Resizing to desktop closes it (`fold6SetMobileLegendVisible(0)`). The scroll listener is
-  **gated on the hand-off not being in flight** (`fold6MLegendIntroActive`) and on no drag
-  being in progress: `@fold4` opens the panel *while the reader is scrolling* — that is the
+  **gated on the hand-off not being in flight** (`fold6MLegendIntroActive`), on the auto-beat
+  **not holding the panel open** (`fold6MLegendAutoHeldOpen` — @fold4 through the axis's
+  build-in, see the auto-beat above) and on no drag being in progress: `@fold4` opens the panel *while the reader is scrolling* — that is the
   whole point of the flight — so an ungated listener would slam it shut on the very next
   scroll frame and the six rows would land in a card that is already closing. It is
   `passive`, since it only reads state.
@@ -1151,8 +1162,8 @@ still opening, and the flight aims at the rows' REST positions).
   (`FOLD6_MLEGEND_ARRIVE_MS`, **0** — skipped, so the sheet's open is the first thing seen);
   the sheet widens (`FOLD6_MLEGEND_WIDTH_MS`, **170**) then grows
   (`FOLD6_MLEGEND_OPEN_MS`, **410**); it holds (`FOLD6_MFLY_HOLD_MS`, **400**); the rows fly
-  (`FOLD6_MFLY_MS`, **1900**); and it stays open `FOLD6_MFLY_CLOSE_GAP_MS` (**500**) before
-  closing itself. The flight is a `{start, len}` window on the trigger's **raw** progress
+  (`FOLD6_MFLY_MS`, **1900**); and `FOLD6_MFLY_CLOSE_GAP_MS` (**500**) later the intro ends — the
+  sheet **stays open** (the auto-beat holds it until the year axis has drawn). The flight is a `{start, len}` window on the trigger's **raw** progress
   (`fold6MFlyStart()` / `fold6MFlyLen()`), derived from those durations against
   `GROUP_TRANSITION_MS`, so retiming any step retimes the release. **The arrival is measured
   in EASED progress while the window is cut from RAW** — `fold6MFlyStart` converts through
@@ -1200,8 +1211,8 @@ still opening, and the flight aims at the rows' REST positions).
 - **`@fold4` itself fires LATE on mobile** — `FOLD6_CARD_FRAC` (**0.23**, vs the house 0.5;
   bigger is earlier, so this is well below it and the card's top has to climb almost all the
   way up before the hand-off starts), picked by eye with the `manual/` trigger harness on
-  2026-09-14. The whole hand-off — the six rows flying into the מקרא sheet, then the sheet
-  closing itself `FOLD6_MFLY_CLOSE_GAP_MS` after they land — therefore plays out as @fold5
+  2026-09-14. The whole hand-off — the six rows flying into the מקרא sheet, which then stays
+  open — therefore plays out as @fold5
   comes up rather than while this fold is still centred. Desktop keeps 0.5.
 - **The rows' flight starts late going DOWN, but takes the whole unwind coming BACK**
   (`fold6MFlyT`, js/update-groups.js). Forward, the flight is the `{fold6MFlyStart(),
@@ -1223,19 +1234,17 @@ still opening, and the flight aims at the rows' REST positions).
   bottom-anchored); a width change leaves `x` stale until the panel next opens and
   re-measures (`fold6MFlyTargets = null` on open). Reproduce headless with
   `page.setViewportSize` mid-scroll — a wheel-only probe never sees it.
-- **Then, in the fly variant, it closes itself** (explicit instruction): the rows land,
-  the panel holds `FOLD6_MFLY_CLOSE_GAP_MS`, then shrinks back into the מקרא pill
-  (`fold6MFlyArrive`); `fold6MLegendRestRows` hands the rows back to CSS on that close. The
-  old typewriter variant has no hold and no close of its own. The later open/close beats are
-  `fold6MLegendAutoBeat`'s.
-- **The ACLED note is ADDED at `@fold6`, on its own card**, and `@fold6` is also the beat
-  that reopens the panel around it. `checkAcledNote` is a plain
-  `watchCardThreshold(acledNoteCardEl, 0.5, …)` on **both** viewports.
+- **Then it stays open** (explicit instruction): the rows land, `FOLD6_MFLY_CLOSE_GAP_MS`
+  later `fold6MFlyArrive` ends the intro and `fold6MLegendRestRows` hands the rows back to
+  CSS — without closing. The close belongs to `fold6MLegendAutoBeat` (the year axis fully
+  drawn). `fold6MFlyArrive`'s own close survives only for the case the beat does not want the
+  panel open.
+- **The ACLED note is ADDED on `@fold8`'s card** (`#page-7`, which carries the ACLED copy
+  while `@fold6` is hidden): `checkAcledNote` is a plain
+  `watchCardThreshold(page7TitleCardEl, 0.5, …)` on **both** viewports, and the note's
+  section opens itself in the held-open panel.
   *Removed — don't reintroduce:* the mobile-only early wiring that crossed this trigger on
-  `@fold5`'s card (`#page-4`) at `FOLD3_CARD_FRAC`. It made sense only while the panel stayed
-  open from `@fold4` onward; now that `@fold5` closes it, firing there landed the credit
-  inside a closing panel — i.e. nowhere — and, because both triggers then read as "on" at the
-  same fold, it also wedged `fold6MLegendAutoBeat` so the panel never closed at all.
+  `@fold5`'s card (`#page-4`) at `FOLD3_CARD_FRAC`.
   `fold6MLegendIntroActive` does not gate it — that flag stays true for as long as the
   rows can still fly back out. `updateGroups` keeps the note + rule `hidden` (out of layout,
   not just transparent) only while `fold6MLegendOpenRaw < 1`, i.e. while the card is still

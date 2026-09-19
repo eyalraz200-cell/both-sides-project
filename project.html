@@ -162,15 +162,15 @@
       </section>
       <section class="text-section" data-page="4" id="page-4">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">כל ריבוע מייצג פעולה פוליטית של אחת הקבוצות שהתרחשה מ-2023 ועד היום - כגון הפגנה, הפרת סדר ותקיפה פיזית.</h2>
+          <h2 class="section-title text-card-frame">כל ריבוע מייצג פעולה פוליטית פיזית של אחת הקבוצות. <span class="copy-desktop">ריחוף עם העכבר חושף את פרטי האירוע ואת היקף גודלו.</span><span class="copy-mobile">לחיצה ארוכה על ריבוע חושפת את פרטי האירוע ואת היקף גודלו.</span></h2>
         </div>
       </section>
-      <section class="text-section" data-page="5" id="page-5">
+      <section class="text-section" data-page="5" id="page-5" hidden>
         <div class="section-text text-card">
           <h2 class="section-title text-card-frame">הנתונים לקוחים מגוף המחקר הבינלאומי <a class="latin-acronym card-link" href="https://acleddata.com/" target="_blank" rel="noopener">ACLED</a>, המתעד וממפה אירועי מחאה ואלימות פוליטית על בסיס דיווחים מכלי תקשורת ומקורות מקומיים<span class="copy-desktop">.</span><span class="copy-mobile"> - פרטים במקרא.</span></h2>
         </div>
       </section>
-      <section class="text-section" data-page="6" id="page-6">
+      <section class="text-section" data-page="6" id="page-6" hidden>
         <div class="section-text text-card">
           <!-- @fold7 is the one card whose copy differs by input device: desktop
              hovers, a phone presses and holds. Two spans swapped by the 600px
@@ -182,7 +182,7 @@
       </section>
       <section class="text-section" data-page="7" id="page-7">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">צבע הריבוע מציין את הקבוצה שביצעה את הפעולה.<br>ניתן לסנן קבוצות באמצעות המקרא.</h2>
+          <h2 class="section-title text-card-frame">הנתונים לקוחים ממאגר <a class="latin-acronym card-link" href="https://acleddata.com/" target="_blank" rel="noopener">ACLED</a>, גוף מחקר בינלאומי, וכוללים אירועים משנת 2023 ועד היום.<span class="copy-mobile"> פרטים במקרא.</span></h2>
         </div>
       </section>
       <section class="text-section page7-scrub" data-page="8" id="page-8"></section>
@@ -370,7 +370,7 @@
       h.endsWith(".local") || /^10\./.test(h) || /^192\.168\./.test(h) ||
       /^172\.(1[6-9]|2\d|3[01])\./.test(h);
     if (!local) return;
-    ["_debug-bus.js", "_debug-inspect.js", "_debug-pick13-size.js", "_debug-misclassified.js", "_debug-gate.js"].forEach(function (src) {
+    ["_debug-bus.js", "_debug-inspect.js"].forEach(function (src) {
       document.write('<script src="' + src + '"><\/script>');
     });
   })();

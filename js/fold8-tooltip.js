@@ -48,7 +48,10 @@ var   FOLD8_TOOLTIP_DELAY_MS = 250; // dead time after the crossing, before the 
 let fold8SeqDelayMs = FOLD8_TOOLTIP_DELAY_MS;
 // Which side of its dot the callout hangs: "left" (mirrored) or "right".
 let fold8TooltipSide = "left";
-var   FOLD8_TYPE_MS_PER_CHAR = 15;  // typewriter speed — tuned snappy, not sluggish
+// typewriter speed, ms per letter — per breakpoint (desktop manual/-baked 2026-09-19)
+var FOLD8_TYPE_MS_PER_CHAR_DESKTOP = 9;
+var FOLD8_TYPE_MS_PER_CHAR_MOBILE  = 9;   // matched to desktop for now, to be tuned on its own
+function fold8TypeMsPerChar() { return isMobile() ? FOLD8_TYPE_MS_PER_CHAR_MOBILE : FOLD8_TYPE_MS_PER_CHAR_DESKTOP; }
 
 // Repositions the tooltip against its anchor square each frame — pulled out
 // so both updateGroups' own per-frame call (below) and the standalone
@@ -423,7 +426,11 @@ function tooltipDockMobile(el) {
   // on @fold10/@fold11, whose cards scroll over the pinned timeline. style.css
   // gives those cards 1004/1005, deliberately above the frame's usual 1000, so
   // the class out-stacks them.
-  const overCard = docked && (fit
+  // …but never @fold8's: once that card is on screen it is the copy being read,
+  // and the @fold7-spot frame (still up until the squares fly) goes UNDER it.
+  const fold8Card = typeof page7TitleCardEl !== "undefined" && page7TitleCardEl
+    && page7TitleCardEl.getBoundingClientRect().top < window.innerHeight;
+  const overCard = docked && !fold8Card && (fit
     || (typeof currentPage !== "undefined" && (currentPage === 9 || currentPage === 10)));
   el.classList.toggle("is-over-card", overCard);
   if (docked) {
@@ -563,7 +570,7 @@ function fold8AdvanceSequence() {
   // `|| ""` — two rows in full_v3.xlsx have an empty description_he_medium,
   // which server.py passes through as null.
   const totalChars = event.date.length + (event.descHeMedium || "").length;
-  const total = fold8SeqDelayMs + FOLD8_GROW_MS + totalChars * FOLD8_TYPE_MS_PER_CHAR;
+  const total = fold8SeqDelayMs + FOLD8_GROW_MS + totalChars * fold8TypeMsPerChar();
   fold8SeqElapsed = Math.max(0, Math.min(total, fold8SeqElapsed + fold8SeqDirection * dt));
 
   const shrinkT = fold9TooltipShrinkTrigger.currentT();
@@ -607,7 +614,7 @@ function fold8AdvanceSequence() {
     fold8TooltipDateEl.style.opacity = "0";
     fold8TooltipDescEl.style.opacity = "0";
   } else {
-    const shown = Math.min(totalChars, Math.floor((seqT - FOLD8_GROW_MS) / FOLD8_TYPE_MS_PER_CHAR));
+    const shown = Math.min(totalChars, Math.floor((seqT - FOLD8_GROW_MS) / fold8TypeMsPerChar()));
     if (fold8DateSpans) fold8UpdateTypewriter(fold8DateSpans, Math.min(event.date.length, shown));
     if (fold8DescSpans) fold8UpdateTypewriter(fold8DescSpans, Math.max(0, shown - event.date.length));
     const FOLD9_TOOLTIP_TEXT_FADE_SPAN = 0.15;

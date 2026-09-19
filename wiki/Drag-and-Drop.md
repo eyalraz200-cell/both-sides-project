@@ -116,14 +116,39 @@ placement — so a pill always returns to its own cell.
 
 **The vacancy.** Because those slots are permanent, a pill moving up to
 `#page9ZoneAbove` leaves its cell standing empty rather than the row closing up.
-`p9SyncVacancy` (page9.js, called from `placePillInZone` — the one choke point every
-desktop path goes through) drops a `.page9-pill-vacancy` into that cell: the pill's
+`p9SyncVacancy` (page9.js) drops a `.page9-pill-vacancy` into that cell: the pill's
 footprint pressed faintly into the paper, `rgba(0, 0, 0, 0.0275)` at the pill's own 4px
 radius, no border and no text. Picked in a `compare/` pass against a dashed frame, a
 frame still carrying the category name, a single dashed underline, and the faded pill
 itself. The flat alpha is deliberate — it composites identically to the harness's
 0.05 fill behind 0.55 opacity (measured `rgb(246,245,248)` on the paper) while staying
 one number instead of two knobs.
+
+**It follows the pill, not the drop.** The marker goes up the moment a tray pill is
+PICKED UP — `.dragging` takes the pill to opacity 0, so the cell already reads as empty
+and should already be marked — and it comes down again the moment the pill is back in the
+tray. Three call sites cover every path:
+
+- **drag start** (the `pointerdown` handler), for a drag that starts in the tray. A pill
+  dragged back DOWN from the extreme zone already has its marker up and keeps it until the
+  drop lands.
+- **`placePillInZone`**, the one choke point both committing paths share (drag-drop and
+  click-to-classify, plus the keyboard's Enter). Called BEFORE the move, while the pill is
+  still in its cell for the row/column to be read off it.
+- **drag end**, unconditionally, from wherever the pill actually ended up. A drag released
+  over nothing commits nothing and leaves the pill where it started — without this the
+  marker raised at drag-start would outlive a pill that never went anywhere.
+
+During a drag the marker and the (invisible) pill share one cell. That is safe **only**
+because the marker is explicitly placed at `grid-row: 1`: an explicitly-placed item
+overlaps, while an auto-placed one would be bumped to an implicit second row under the
+tray. Verified with real pointer drags — the tray row stays 38px and no pill moves.
+
+The marker **pops with `.engaged`**, not `.pills-in`: it is `scale(0)` until @fold13's
+stick, on the pill's clock and its own `--p9-pop-i` (copied off the pill in
+`p9SyncVacancy`). The way out is a **snap** — the transition lives only on the `.engaged`
+rule — so when the title block unsticks on the scroll back up every marker is gone at
+once, instead of staying behind over @fold12 as a row of ghost pills.
 
 Two things it must keep doing:
 
@@ -398,9 +423,9 @@ republished from `drawPage9` when the line moves. Only on @fold13
   `p9ScopeRunLoop`, which yields its `draw()`
   while `p9.anim` owns the frame. Windows are page9's own — `p9ScopeWindows` /
   `p9ScopeTotalMs`, reusing `p7MorphWin` and the `P7_MORPH_PUSH` throttle —
-  order **strict-fly**: the flight fully lands (`P9_SCOPE_FLY_MS` 1400ms), then
-  every tier grows (`P9_SCOPE_SIZE_MS` 450ms) staggered biggest-first by
-  `P9_SCOPE_STAGGER_MS` (140ms), 2550ms total. Mirrored on the clock for
+  order **strict-fly**: the flight fully lands (`P9_SCOPE_FLY_MS` 1098ms), then
+  every tier grows (`P9_SCOPE_SIZE_MS` 353ms) staggered biggest-first by
+  `P9_SCOPE_STAGGER_MS` (110ms), 2000ms total. Mirrored on the clock for
   `dir: "off"`. **Shrinkers are the exception** (`p9ScopeBlend`): a dot that ends up
   smaller than it started needs no room, so it resizes on the fly window itself
   (`[0, P9_SCOPE_FLY_MS]`) and is at size when it lands; only growers land first and then
@@ -464,7 +489,7 @@ column count actually grows (`neededColsNow > prevColsSticky`).
 Arrival timing: `BASE_TRAVEL_MS = 600 * factor`, `ARRIVAL_STAGGER_MS = 4 * factor` per dot,
 sqrt-scaled against `ANCHOR_COUNT = 1880`
 (`effectiveStagger = 4 * max(1, sqrt(1880 / maxNew))`) so a small category still reads as
-a cascade. `FAST_ARRIVAL_CATEGORIES = {0, 3, 5, 8}` (the four largest categories) get `FAST_ARRIVAL_FACTOR = 0.75`.
+a cascade. State 1's make-room wait before the new dots fly is tiered by how many dots the fuller column already holds — `p9RepositionMs(count)` over `P9_REPOSITION_TIERS_DESKTOP` / `_MOBILE` (`{upTo, ms}`, first match wins; ≤500 2200ms, ≤2000 2200ms, ≤5000 1650ms, above 2200ms). Each pill has its own tempo factor, per breakpoint — `P9_ARRIVAL_FACTOR_DESKTOP` / `_MOBILE` behind `p9ArrivalFactor(idx)` (index-aligned with `P9_CATEGORIES`; 1 = base, smaller = faster). Both tables are `[0.4, 1, 1, 0.4, 0.5, 0.5, 1, 0.65, 0.4, 0.75]` — the bigger the pill, the faster it runs.
 In state 2, dots still mid-flight from the interrupted animation are carried forward with
 their **original** arrival times.
 

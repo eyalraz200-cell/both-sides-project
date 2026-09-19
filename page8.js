@@ -19,21 +19,26 @@
 //   "shrink-then-fly" — resize in place first, then fly at the landed size
 //   "fly-then-shrink" — fly at the timeline size, then resize once landed
 // var, not const: tuned live through a manual/ compare/ harness.
-var P8_SHRINK_MS = 3000;
-var P8_FLY_MS    = 3000;
+var P8_SHRINK_MS = 1450;   // manual/-baked 2026-09-19
+var P8_FLY_MS    = 1450;
+// DESKTOP's pair (manual/-baked 2026-09-19, 1450 -> 1700); the two above are MOBILE's.
+var P8_SHRINK_MS_DESKTOP = 1700;
+var P8_FLY_MS_DESKTOP    = 1700;
+function p8ShrinkMs() { return isMobile() ? P8_SHRINK_MS : P8_SHRINK_MS_DESKTOP; }
+function p8FlyMs()    { return isMobile() ? P8_FLY_MS    : P8_FLY_MS_DESKTOP; }
 var P8_STAGING   = "together";
 
 // Full-traverse ms for the forward direction — sequential stagings take both
 // beats end to end, the concurrent one takes the longer of the two.
 function p8ForwardMs() {
-  const S = Math.max(1, P8_SHRINK_MS), F = Math.max(1, P8_FLY_MS);
+  const S = Math.max(1, p8ShrinkMs()), F = Math.max(1, p8FlyMs());
   return P8_STAGING === "together" ? Math.max(S, F) : S + F;
 }
 
 // Slice the phase's RAW progress into the two beats and re-apply p9Ease fresh
 // per beat (house multi-beat convention — never ease an already-eased slice).
 function p8Beats(t) {
-  const S = Math.max(1, P8_SHRINK_MS), F = Math.max(1, P8_FLY_MS);
+  const S = Math.max(1, p8ShrinkMs()), F = Math.max(1, p8FlyMs());
   if (P8_STAGING === "shrink-then-fly") {
     const s = S / (S + F);
     return { sizeE: p9Ease(Math.min(1, t / s)),
@@ -48,7 +53,7 @@ function p8Beats(t) {
   return { sizeE: p9Ease(Math.min(1, (t * tot) / S)),
            posE:  p9Ease(Math.min(1, (t * tot) / F)) };
 }
-const P8_TRANSITION_DURATION = 3000; // ms — p8ForwardMs() drives this file's glide; setActivePage (js/nav.js) still reads this as the clock for the mid-flight handoff into page9's p9.anim
+const P8_TRANSITION_DURATION = 1450; // ms — only seeds p8PhaseDur below; p8ForwardMs() drives this file's glide; setActivePage (js/nav.js) still reads this as the clock for the mid-flight handoff into page9's p9.anim
 // The reverse runs on its own, much shorter clock. The forward glide is a
 // reveal the reader watches in place, but the reverse fires while they're
 // already scrolling away back up @fold9's multi-viewport scrub — at 3000ms a

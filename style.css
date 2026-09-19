@@ -211,6 +211,9 @@ body {
   direction: rtl;
   text-align: right;
 }
+/* A fold parked with the `hidden` attribute (@fold6, @fold7 for now) — the
+   display:flex above would otherwise beat the UA's [hidden] rule. */
+.text-section[hidden] { display: none; }
 
 .text-section > .section-text {
   /* Without min-width:0, any unshrinkable (nowrap) descendant would push its
@@ -232,8 +235,10 @@ body {
      moved half a viewport later (P7_SCRUB_END_LEAD_VH 0.5 — enough scroll left
      for the year axis's lagged fill to settle before the size grid takes over)
      and the section shortened by that same 50vh, so the scrub's pace is
-     unchanged. Height must stay 680vh + P7_SCRUB_END_LEAD_VH * 100vh. */
-  min-height: 730vh;
+     unchanged.
+     730vh -> 560vh (manual/-baked 2026-09-19, DESKTOP — mobile has its own rule):
+     a quicker run down the axis. Height must stay 510vh + P7_SCRUB_END_LEAD_VH * 100vh. */
+  min-height: 560vh;
   display: block;
   padding: 0;
 }
@@ -814,6 +819,18 @@ body {
   visibility: visible;
   transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1),
               visibility 0s linear 0s;
+}
+/* The vacancy pops on the pill's clock (same --p9-pop-i, copied over in
+   p9SyncVacancy) but is scoped to .engaged, NOT .pills-in: it belongs to
+   @fold13's drop zone, so it leaves when the title block unsticks on the way
+   back up — otherwise the recesses read as a row of ghost pills over @fold12. */
+.page9-sticky.page9-layout-v2 .page9-tray .page9-pill-vacancy {
+  transform: scale(0); /* no transition: leaving is a snap, only the way in pops */
+}
+.page9-sticky.page9-layout-v2.engaged .page9-tray .page9-pill-vacancy {
+  transition: transform var(--p9-pop-ms) cubic-bezier(0.37, 0, 0.63, 1);
+  transform: scale(1);
+  transition-delay: calc(var(--p9-pop-i, 0) * var(--p9-pop-stagger));
 }
 .page9-sticky.page9-layout-v2.pills-in .page9-tray .page9-pill {
   transform: scale(1);
@@ -3545,6 +3562,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      touches, so suppressing it on the canvas alone is never enough. */
   .graphic-col,
   #canvas,
+  #page-4,
   #page-6,
   #page-7,
   #page-8,
@@ -4368,6 +4386,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      title" on device: it scrolls up over the still-docked frame while the
      timeline is pinned behind it, and its --card-top (48px) sits above the
      frame's 62px, so without this it slid underneath. */
+  #page-4 > .section-text.text-card,
   #page-6 > .section-text.text-card,
   #page-7 > .section-text.text-card,
   #page-11 > .section-text.text-card,

@@ -412,7 +412,7 @@ made the real device the one place the panel could not reach.
   the in-page panel back.
 - `_debug-panel.html` is scaffolding like the rest — delete it with the last `_debug-*.js`.
 
-**Live right now:** `_debug-hint-band.js` (@fold9, mobile) — the picker's instruction band.
+**Live right now:** none — `project.html` loads only `_debug-bus.js` + `_debug-inspect.js`. On disk but not loaded (re-add its name to the scaffolding block to use it): `_debug-fold-timings-mobile-v3.js` (the panel resolves a harness as `_debug-<title>.js`, so `title` and file name must match — a renamed title with the old file name is silently dropped from the rail) (opening → timeline) — ten sliders, one per animation, each the animation's **full length in ms**; every phase constant inside it scales by the same ratio, and Copy lists the constants each length resolves to. One file per breakpoint, generated from one table; baking a length that differs between them means splitting that constant into a `*_DESKTOP`/`*_MOBILE` pair. The opening plays once, so reload to see it. Every open copy of the page follows the sliders (its `init` adopts any other page's `state` off the harness channel) — the panel tab drives ONE host per title, and with the page open in two places it was moving the copy nobody was watching. · `_debug-hint-band.js` (@fold9, mobile) — the picker's instruction band.
 A `compare/` mode pair for the placement (`above` the timeline, shipped, vs `below`) driving
 `P7_HINT_PLACE_MOBILE`, and two `manual/` sliders: `P7_HINT_Y_MOBILE` (the hint up/down) and
 `P7_FIELD_Y_MOBILE` (the whole timeline up/down). Both nudges are positive = down.
@@ -487,7 +487,8 @@ is the live one in code:
 | `P7_VERT_SQ_BOOST` (desktop axis length) | 0.88 | `page7.js` |
 | `TOOLTIP_DOCK_BOTTOM_PX` (mobile docked frame's bottom inset) | −18 | `js/fold8-tooltip.js` |
 | `P7_VERT_MOBILE.slotTopPx` (mobile headline slot top) | 78 | `page7.js` |
-| `SBB_TIMELINE_LEFT_PX` (@fold9 outer dot edge, desktop) | 190 | `squareboundingbox.js` |
+| `SBB_TIMELINE_LEFT_PX` (@fold9 outer dot edge, desktop) | 120 | `squareboundingbox.js` |
+| `SBB_TIMELINE_TOP_PX` / `SBB_TIMELINE_BOTTOM_PX` (@fold9 field + axis height, desktop) | 32 / 32 | `squareboundingbox.js` |
 | `P7_INSPECT_SCRIM` / `P7_INSPECT_HOLE_DOTS` (loupe halo-by-subtraction, `p7DrawInspectScrim`) | 0.76 / 1 | `page7.js` |
 | `P7_SCOPE_BTN_GAP` (scope pill above the right-hand legend) | 22 | `js/groups.js` |
 | `PAGE0_CUE_SCALE` / `PAGE0_CUE_DOT_MS` / `PAGE0_CUE_ROW_STAGGER_MS` / `PAGE0_CUE_EXIT_MS` (@fold1 idle scroll cue) | 0.3 / 940 / 22.5 / 260 | `js/fold1-intro.js` |

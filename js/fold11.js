@@ -155,10 +155,10 @@ function updateFold13() {
 // exceptions to GROUP_TRANSITION_MS because the beats are deliberately uneven —
 // a quick pop, then a long flight.
 // var, not const: tuned live through a manual/ harness (since removed).
-var FOLD14_POP_MS_DESKTOP = 480;   // manual/-baked 2026-09-17 — beat 1, newcomers grow in
-var FOLD14_POP_MS_MOBILE  = 775;   // the phone keeps the pre-tuning value (breakpoint isolation)
+var FOLD14_POP_MS_DESKTOP = 371;   // manual/-baked 2026-09-19 — beat 1, newcomers grow in
+var FOLD14_POP_MS_MOBILE  = 371;   // matched to desktop for now (explicit instruction); tune on its own later
 function fold14PopMs() { return isMobile() ? FOLD14_POP_MS_MOBILE : FOLD14_POP_MS_DESKTOP; }
-var FOLD14_FLY_MS = 2240;  // beat 2 — the field flies to the couple slots
+var FOLD14_FLY_MS = 1729;  // beat 2 — the field flies to the couple slots
 function fold14TotalMs() { return fold14PopMs() + FOLD14_FLY_MS; }
 function fold14PopSpan() { return fold14PopMs() / Math.max(1, fold14TotalMs()); }
 

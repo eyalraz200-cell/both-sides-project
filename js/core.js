@@ -90,7 +90,7 @@ function prefersReducedMotion() {
 // and 15 (@fold16, the outro card)
 // share drawPage12: the freeform-morph canvas is established on arrival at
 // @fold14 and simply persists behind the credits card that follows it.
-const PAGES = [drawPage1, drawBackground, drawBackground, drawFoldSplit, drawBackground, drawBackground, drawFold7, drawFold9, drawPage7, drawPage7, drawPage8, drawPage8, drawPage9, drawPage12, drawPage12, drawPage12];
+const PAGES = [drawPage1, drawBackground, drawBackground, drawFoldSplit, drawFold7, drawBackground, drawFold7, drawFold9, drawPage7, drawPage7, drawPage8, drawPage8, drawPage9, drawPage12, drawPage12, drawPage12];
 let currentPage = 0;
 
 // How far every OTHER dot/square drops in opacity while one event is hovered
