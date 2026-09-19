@@ -472,7 +472,12 @@ function groupLabelColumnMaxWidth(g) {
 }
 function groupLabelLegendMaxWidth() { return isMobile() ? FOLD6_LABEL_MAX_WIDTH_MOBILE : null; }
 if (document.fonts && document.fonts.ready) {
-  document.fonts.ready.then(() => { groupLabelWidths = {}; groupLabelHeights = {}; groupLabelInkShifts = {}; updateGroups(); });
+  document.fonts.ready.then(() => { groupLabelWidths = {}; groupLabelHeights = {}; groupLabelInkShifts = {};
+    // With the fonts already cached this resolves BEFORE js/update-groups.js (the
+    // next script tag) has parsed. Nothing is lost by skipping: the caches are
+    // empty either way, and bootstrap's first updateGroups() measures fresh.
+    if (typeof updateGroups === "function") updateGroups();
+  });
 }
 
 // How far a label's INK center sits from its line box's own center, at a
