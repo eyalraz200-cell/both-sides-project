@@ -8,7 +8,7 @@ anywhere, hero dots included. Any doc claiming 8/10/12 groups is stale.
 
 `GROUPS` is the source of truth for colors, labels and the `actor` join key.
 
-**מחנה הימין (coalition column, screen-right), top → bottom:**
+**קואליציית הימין (coalition column, screen-right), top → bottom:**
 
 | Color | Label | `actor` |
 |---|---|---|
@@ -33,7 +33,7 @@ values in `GROUPS`.
 
 **Mobile swaps two pairs.** Under the breakpoint the order is the desktop sort with
 `MOBILE_ROW_SWAPS` (`js/groups.js`) applied — מתנגדי הרפורמה המשפטית ↔ תומכי עסקת חטופים
-ומתנגדי המלחמה in גוש השינוי, and מפגינים חרדים ↔ קבוצות ימין לאומיות in מחנה הימין — so
+ומתנגדי המלחמה in גוש השינוי, and מפגינים חרדים ↔ קבוצות ימין לאומיות in קואליציית הימין — so
 mobile reads **תנועות התנחלות / קבוצות ימין / מפגינים חרדים** and **תומכי עסקת חטופים /
 מתנגדי הרפורמה / מפגינים ערבים**, top→bottom. Everything that derives the order goes
 through one helper, `campRowOrder(camp, mobile)`: @fold3's column (`legendRow`) and the

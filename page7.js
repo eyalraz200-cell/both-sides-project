@@ -3411,7 +3411,7 @@ function p7BuildDataSummary(data) {
   // FOLD4_COALITION_ROWS/FOLD4_CHANGE_ROWS are the same camp split the legend
   // renders, so the spoken roster and the drawn one can't disagree.
   const camps = [
-    { name: "מחנה הימין",  rows: FOLD4_COALITION_ROWS, side: "right" },
+    { name: "קואליציית הימין",  rows: FOLD4_COALITION_ROWS, side: "right" },
     { name: "גוש השינוי", rows: FOLD4_CHANGE_ROWS,    side: "left"  },
   ];
 

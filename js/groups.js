@@ -96,7 +96,7 @@ const FOLD4_CHANGE_ROWS    = ["peace movements", "protesters against government"
 // MOBILE ONLY: two pairs of rows trade places within their camp (per explicit
 // instruction, 2026-09-12) —
 //   גוש השינוי:  מתנגדי הרפורמה המשפטית ↔ תומכי עסקת חטופים ומתנגדי המלחמה
-//   מחנה הימין:  מפגינים חרדים ↔ קבוצות ימין לאומיות
+//   קואליציית הימין:  מפגינים חרדים ↔ קבוצות ימין לאומיות
 // so mobile reads settlers / right-wing / haredi and peace / reform / arab,
 // top→bottom. Expressed as a swap of the SHARED order rather than a second set
 // of fold6.y values, because that order is what every legend layout derives
@@ -2427,7 +2427,7 @@ const FOLD6_LEGEND_TOP_MOBILE = 24;
 // above if it's ever tweaked.
 // (FOLD4_COALITION_ROWS/FOLD4_CHANGE_ROWS themselves are declared up by
 // GROUPS — @fold2's own grid roster needs them before this point.)
-const CAMP_HEADER_TITLE_COALITION = "מחנה הימין";
+const CAMP_HEADER_TITLE_COALITION = "קואליציית הימין";
 const CAMP_HEADER_TITLE_CHANGE    = "גוש השינוי";
 // Plain px from each column's own top-row center up to its header's center —
 // fixed, NOT frame-scaled (it used to multiply by H/GROUPS_FRAME_H, which made

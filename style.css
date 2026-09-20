@@ -2779,7 +2779,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   color: #000;
 }
 
-/* The two camp headers ("מחנה הימין" / "גוש השינוי") — no Figma node, new
+/* The two camp headers ("קואליציית הימין" / "גוש השינוי") — no Figma node, new
    content per explicit written spec. ONE pair of elements spanning three
    folds, not a fold-4 thing: they type in at @fold2, stay through @fold3 and
    un-type at @fold4 — not fold-4-only, despite living near @fold4's code.

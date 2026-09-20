@@ -59,7 +59,7 @@ EVENTS_XLSX = "full_v3.xlsx"
 # instead. These two rosters must stay in sync with FOLD4_COALITION_ROWS /
 # FOLD4_CHANGE_ROWS in js/groups.js, which define the same membership by color.
 ACTOR_SIDE = {
-    # מחנה הימין (coalition)
+    # קואליציית הימין (coalition)
     "haredi jews":                   "right",
     "settlers":                      "right",
     "right wing protesters":         "right",

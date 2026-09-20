@@ -76,7 +76,7 @@ Figma source: file `QASHSt1u7b6m6ASgrUPswf` ("Design"). Screens are revised one 
 
 `GROUPS` in `js/groups.js` is **6 groups**, three per camp:
 
-- **מחנה הימין (coalition):** תנועות התנחלות באיו״ש `#F9B624` (`settlers`), מפגינים חרדים `#454545` (`haredi jews`), קבוצות ימין לאומיות `#F024FF` (`right wing protesters`) (top→bottom)
+- **קואליציית הימין (coalition):** תנועות התנחלות באיו״ש `#F9B624` (`settlers`), מפגינים חרדים `#454545` (`haredi jews`), קבוצות ימין לאומיות `#F024FF` (`right wing protesters`) (top→bottom)
 - **גוש השינוי (change):** מתנגדי הרפורמה המשפטית `#6B89FF` (`protesters against government`), תומכי עסקת חטופים ומתנגדי המלחמה `#FF1A94` (`peace movements`), מפגינים ערבים ישראלים `#31CE1C` (`arab israelis`) (top→bottom)
 
 The `actor` values are the xlsx's lowercase `main_actor` strings; the camp split is derived from them by `ACTOR_SIDE` in `server.py`, which must stay in sync with `FOLD4_*_ROWS` by hand. Dot color is `p7ActorColor(actor)` (`#888` fallback). Row order, colors and the rest are in [Groups-and-Legend](wiki/Groups-and-Legend.md).
