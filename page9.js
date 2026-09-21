@@ -4029,7 +4029,17 @@ function p9BuildPanel() {
     p9MeasureTrayLayout();
   });
   p9RemeasureTray = p9MeasureTrayLayout; // see the resize hook below
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(p9RevealTray);
+  // Gated on DOMContentLoaded as well as the fonts: with the fonts already cached
+  // fonts.ready resolves BEFORE js/core.js (a later script tag) has parsed, the
+  // measure's isMobile() throws, and .is-measured never lands — the tray, and
+  // every pill in it, stays at opacity 0 for the whole visit. Registered after
+  // the listener above, so the variant class and first measure still run first.
+  const p9DomParsed = document.readyState === "loading"
+    ? new Promise(res => document.addEventListener("DOMContentLoaded", res, { once: true }))
+    : Promise.resolve();
+  if (document.fonts && document.fonts.ready) {
+    Promise.all([document.fonts.ready, p9DomParsed]).then(p9RevealTray);
+  }
   // No document.fonts at all (or a font that never resolves): don't strand the
   // tray invisible forever — window load is late enough that the DOMContentLoaded
   // measure above has certainly run.

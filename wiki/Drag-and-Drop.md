@@ -1423,8 +1423,12 @@ base rule, `.page9-tray.is-measured { opacity: 1 }` — and `p9RevealTray` (page
 class one `requestAnimationFrame` after the `document.fonts.ready` measure pass, i.e. once the
 corrected height has actually been committed. Opacity specifically, **not** `display: none`:
 `p9MeasureTrayLayout` reads `offsetWidth`/`offsetHeight` off the pills, which `display: none`
-would zero out. If `document.fonts` is missing the reveal falls back to `window load`, so the
-tray can never be stranded invisible. `.is-measured` is deliberately separate from `.engaged`
+would zero out. The reveal waits on **both** `document.fonts.ready` and `DOMContentLoaded`
+(`Promise.all`): with the fonts already cached, `fonts.ready` alone resolves before
+`js/core.js` — a later script tag — has parsed, the measure's `isMobile()` throws, and
+`.is-measured` never lands, leaving every pill invisible for the whole visit. If
+`document.fonts` is missing the reveal falls back to `window load`, so the tray can never be
+stranded invisible. `.is-measured` is deliberately separate from `.engaged`
 — it only asserts "the hidden transform now really hides"; whether the tray is on screen stays
 `.engaged`'s job. Nothing writes an inline opacity on the tray (`updateFold13` fades the
 header, title card, zone wrap and legend, never this), so nothing competes with it.
