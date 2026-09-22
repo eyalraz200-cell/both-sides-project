@@ -1948,7 +1948,16 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    index.html at weight 400 only — request another weight there first.
    line-height 1.5 opens up the multi-line Hebrew cards. This is the shared
    base for ALL title cards; no page should override font-size/weight here
-   individually. */
+   individually.
+
+   TO GO BACK TO HADASSAH (the previous face, still in fonts/ with its
+   @font-face rules at the top of this file):
+     1. this rule:  font: 100 20px/1.5 'HadassahFriedlaender', serif;
+        (Thin 100 — the real Thin OTF; 16px mobile override is unchanged)
+     2. js/bootstrap.js: swap the Plex preload back to
+        document.fonts.load("100 16px 'HadassahFriedlaender'"),
+     3. index.html: drop &family=IBM+Plex+Sans+Hebrew:wght@400 from the
+        Google Fonts link (optional — harmless if left). */
 .section-title {
   font: 400 20px/1.5 'IBM Plex Sans Hebrew', sans-serif;
   color: #111;

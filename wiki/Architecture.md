@@ -233,6 +233,9 @@ a near-viewport-tall card, not a caption. Any other title that looks differently
 the same viewport width is a regression. The face was picked by eye in the
 `_debug-title-font.js` compare harness (David Libre, Miriam Libre, IBM Plex Sans Hebrew,
 Assistant, vs. HadassahFriedlaender Thin); that harness is still wired in for revisiting.
+**Going back to Hadassah:** `font: 100 20px/1.5 'HadassahFriedlaender', serif` on the rule, and
+preload `"100 16px 'HadassahFriedlaender'"` instead of Plex in `js/bootstrap.js` — the steps
+are spelled out in the comment above `.section-title` in `style.css`.
 
 **@fold1's hero title** still uses HadassahFriedlaender (`.page0-title`, `style.css`): it asked
 for `600` — the last synthesized weight left on the site — and read as *changing weight
