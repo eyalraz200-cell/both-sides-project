@@ -237,14 +237,16 @@ Assistant, vs. HadassahFriedlaender Thin); that harness is still wired in for re
 preload `"100 16px 'HadassahFriedlaender'"` instead of Plex in `js/bootstrap.js` — the steps
 are spelled out in the comment above `.section-title` in `style.css`.
 
-**@fold1's hero title** still uses HadassahFriedlaender (`.page0-title`, `style.css`): it asked
-for `600` — the last synthesized weight left on the site — and read as *changing weight
-during the reveal*. Synthetic bold is applied by the rasteriser at draw time rather than
-baked into the glyph outlines, so how much ink it lays down is free to differ between
-rendering paths (composited vs not, LCD vs grayscale AA) for the same element; a real
-drawn face has fixed outlines and no such freedom. It is `font: 400 42px` — Regular, a
-real file. **Don't set a HadassahFriedlaender weight that has no `@font-face` rule
-behind it.** Adding a licensed face is the only way to widen the range.
+**@fold1's hero title** (`.page0-title`, `style.css`) and its subtitle (`.page0-subtitle`, was Assistant 300) are IBM Plex Sans Hebrew 300 too — the
+same face and weight as the cards (was HadassahFriedlaender 400). Its `top` (desktop and the
+≤600px block) is solved for the font's metrics, so re-solve it with `_debug-hero-title.js`
+whenever the face changes. **Desktop hero (baked 2026-09-22):** title 48px/1.17, width 172, `left: calc(50% + 6.5px)`,
+`top: calc(50% - 281.6px)` (last baseline 22px above its dots); subtitle 16px/1.73, width 106,
+`left: calc(50% - 8px)`, `top: calc(50% - 189.8px)` (20px). On desktop the subtitle wraps by
+width — its `<br>`s are hidden (`@media (min-width: 601px)`) and each has a real space before it
+in `index.html`; phones keep the `<br>`s and the pre-bake left/width/size, pinned in the ≤600px
+block. HadassahFriedlaender's `@font-face` rules stay in `style.css`
+for going back.
 
 The 600px breakpoint drops it to **16px** — that's a width override applied
 to the same shared rule, so the titles stay uniform with each other at any given width;

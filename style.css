@@ -2629,7 +2629,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      transform) were fighting over the same element's position every frame,
      which read as jitter no amount of lerp/clamp tuning fixed. */
   position: fixed;
-  left: calc(50% + 8px);
+  left: calc(50% + 6.5px);
   /* Nudged up an extra 18px (276 vs the Figma-literal 258) so the gap below
      the title to its dot column relates to the subtitle's own gap — title and
      subtitle render at different heights and different fonts (3 lines @42px
@@ -2643,8 +2643,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      grow with line-height. Trimmed, this sits at 23.73px against the
      subtitle's 20px — picked by eye on 2026-09-07 with the hero-title
      `manual/` harness (wiki/Dev-Workflow.md). */
-  top: calc(50% - 276px);
-  width: 185px;
+  top: calc(50% - 281.6px);
+  width: 172px;
   /* 400, not 600: fonts/ holds exactly two HadassahFriedlaender faces (Thin
      100, Regular 400 — see the @font-face rules at the top of this file), so
      a 600 request had no file behind it and the browser synthesised a fake
@@ -2654,11 +2654,15 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      title changing weight during the reveal. 400 is a real drawn face with
      fixed outlines and no such freedom. If retail weights above 400 are ever
      licensed, add the @font-face rule first, then this value may go up. */
-  font: 400 42px 'HadassahFriedlaender', serif;
+  /* IBM Plex Sans Hebrew Light, matching the title cards (the only Plex
+     weight loaded — see .section-title). Was 400 42px 'HadassahFriedlaender'.
+     The `top` values here and in the ≤600px block were solved for Hadassah's
+     metrics — re-solve with _debug-hero-title.js. */
+  font: 300 48px 'IBM Plex Sans Hebrew', sans-serif;
   /* 1.31 is what the browser's own `normal` already resolved to for this face
      (55px / 42px) — stated explicitly so the `top` above stays valid if the
      font file is ever swapped for one with different metrics. */
-  line-height: 1.31;
+  line-height: 1.17;
   color: #000;
   text-align: left;
   margin: 0;
@@ -2673,24 +2677,38 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 .page0-subtitle {
   /* position: fixed — same reasoning as .page0-title above. */
   position: fixed;
-  left: calc(50% - 10px);
+  left: calc(50% - 8px);
   transform: translateX(-100%);
   /* 189.1, not the old 179: the line-height below opened the 4 lines up, and
      `top` is re-solved so the LAST BASELINE lands 20px above its dot column's
      top edge (the trimmed gap — see .page0-title). Both numbers were picked by
      eye on 2026-09-07 with the hero-title `manual/` harness. Exact px as
      tuned, deliberately not converted to a relative unit. */
-  top: calc(50% - 189.1px);
-  width: 125px;
-  font: 300 18px 'Assistant', sans-serif;
+  top: calc(50% - 189.8px);
+  width: 106px;
+  /* IBM Plex Sans Hebrew Light, like the hero title (was 300 18px Assistant). */
+  font: 300 16px 'IBM Plex Sans Hebrew', sans-serif;
   /* Opened up from the browser's `normal` (which resolved to 1.2778 here) —
      4 lines of 18px Assistant read tight against the title's much larger
      leading. Changing this moves the last baseline, so `top` above must be
      re-solved with it; the two are one setting. */
-  line-height: 1.52;
+  line-height: 1.73;
   color: #000;
   text-align: right;
   margin: 0;
+}
+
+/* DESKTOP hero, baked 2026-09-22 from the _debug-hero-title.js Copy (16:43,
+   measured at 1900×990): title 48px/1.17, width 172, left +6.5 (2px outside
+   its column's left edge minus a −1.5 nudge for Plex's side bearing), last
+   baseline 22px above its dots; subtitle 16px/1.73, width 106, right edge 2px
+   inside its column's right edge, last baseline 20px above its dots. The
+   subtitle wraps by WIDTH on desktop — its <br>s are hidden here and each one
+   has a real space before it in index.html, so the words stay apart.
+   Mobile keeps its own values: see the ≤600px block, which restores the
+   pre-bake left/width/size so this desktop tuning never reaches a phone. */
+@media (min-width: 601px) {
+  .page0-subtitle br { display: none; }
 }
 
 #page-0 .section-text {
@@ -3607,6 +3625,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      this font size. At 430px and up the min() still resolves to 185px, so
      wider screens are untouched. */
   .page0-title {
+    /* Pre-bake desktop left, pinned so the 2026-09-22 desktop bake (+6.5px)
+       stays off phones. */
+    left: calc(50% + 8px);
     width: min(185px, 50vw - 20px);
     /* 42px is a desktop-scale display size that eats a third of a phone
        screen — 32px still reads as the hero and keeps the same 3-line break. */
@@ -3641,6 +3662,11 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      the top are re-tuned, in step with the title above (see that comment for
      why mobile needs its own leading at all). Still 4 lines at this width. */
   .page0-subtitle {
+    /* Pre-bake desktop values, pinned here so the 2026-09-22 desktop hero bake
+       (16px, 106 wide, −8px) stays off phones. */
+    left: calc(50% - 10px);
+    width: 125px;
+    font-size: 18px;
     line-height: 1.465;
     /* Same trimmed solve as the title: -167.8 puts the last baseline 20.5px
        above its own dot column's top edge. Re-solve this whenever the leading
