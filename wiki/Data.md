@@ -22,6 +22,23 @@ An unmatched `actor` falls back to `#888`. All six `GROUPS` actors — including
 (מפגינים ערבים ישראלים, `arab israelis`, 537 events) — are present in the data, so every
 group appears on the timeline.
 
+## Data licensing — the xlsx are local-only, never committed
+
+Every workbook (`full_v3.xlsx`, `full_v4.xlsx`, `Events_with_description_he_medium.xlsx`,
+`archive/combined_V1_hebrew_summaries.xlsx`) and the raw ACLED exports (`raw-*.csv`) contain
+ACLED-licensed rows. ACLED forbids giving the public direct access to its content, so they
+are **gitignored (`*.xlsx`, `raw-*.csv`) and exist only on local disks** — the public repo's
+history was rewritten on 2026-09-22 to remove every past copy (along with
+`map/event-points.json` and `_debug-misclassified.json`, which carried per-event data).
+A clone without the workbooks still runs: `server.py` serves the committed `events.json`
+unchanged and skips `_sync_static_events()`.
+
+`events.json` (date, actor, side, category, `descHeMedium`, crowd, rowId per event) is the
+**single committed derivative**, because GitHub Pages needs it client-side. Its acceptability
+under ACLED's "cannot be reverse-engineered" condition is **pending ACLED's written answer**;
+if they refuse, the follow-up is a private backend or a description-less dataset. Never add
+any other event-level export to the repo.
+
 ## Source of truth: the xlsx
 
 ### `Events_with_description_he_medium.xlsx` — the crowd-size column (`CROWD_XLSX`)
@@ -62,7 +79,7 @@ unmatched. Coordinates are settlement centroids: 904 distinct points across all 
 Two row pairs in the sheet are literal duplicates of one ACLED event and share an `acled_id`:
 `row-4132`/`row-4134` (`ISR42882`), `row-8895`/`row-8896` (`PSE46925`). `server.py` reads
 `full_v3.xlsx`, not this file; **nothing in the page consumes the geodata** — `full_v4.xlsx`
-is kept in the repo as data only.
+is kept on local disk as data only (gitignored, see above).
 
 > **Removed — don't reintroduce:** the @fold16 event map (`map.js`, `map/region.geojson`,
 > `map/event-points.json`), snapshot at commit `834ee0d`; its geodata came from

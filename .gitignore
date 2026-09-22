@@ -14,3 +14,9 @@ _debug-copy.json
 
 # Scratch screenshots from headless probes — local only.
 shots/
+
+# ACLED-licensed data — NEVER commit. ACLED forbids public access to its content,
+# so every workbook (and the raw exports above) stays on disk only. events.json is
+# the single committed derivative, pending ACLED's written OK (see wiki/Data.md).
+*.xlsx
+_debug-misclassified.json

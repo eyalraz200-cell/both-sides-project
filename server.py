@@ -176,13 +176,23 @@ def load_events():
         print(f"  WARNING: dropped rows with unmapped main_actor: {sorted(unknown_actors)}")
     return events
 
-EVENTS_JSON = json.dumps(load_events(), ensure_ascii=False).encode()
+# The workbooks are ACLED-licensed and gitignored (local-only). A clone without
+# them serves the committed events.json as-is instead of crashing.
+if (WATCH_DIR / EVENTS_XLSX).exists():
+    EVENTS_JSON = json.dumps(load_events(), ensure_ascii=False).encode()
+    _EVENTS_FROM_XLSX = True
+else:
+    EVENTS_JSON = (WATCH_DIR / "events.json").read_bytes()
+    _EVENTS_FROM_XLSX = False
+    print(f"  NOTE: {EVENTS_XLSX} not found — serving the committed events.json unchanged")
 
 # Keep the committed static events.json (what GitHub Pages serves) in sync with
 # the xlsx: the deployed file once shipped without the `crowd` column, so every
 # dot read as tier 0 and @fold10's size grid never resized. Write only when the
 # content actually differs, so an unchanged xlsx leaves git status clean.
 def _sync_static_events():
+    if not _EVENTS_FROM_XLSX:
+        return
     path = WATCH_DIR / "events.json"
     try:
         current = path.read_bytes()

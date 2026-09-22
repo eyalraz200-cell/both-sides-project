@@ -11,7 +11,7 @@ the mtimes of every `.html`/`.css`/`.js` file at the project root **and under `j
 (recursively)**; `reload.js` polls `/__mtime__` to auto-reload the browser on any change to
 them. It rebuilds `events.json` from the xlsx at startup and rewrites the committed file when
 the content changed (commit it — see [Data](Data.md)) — but does **not** watch the xlsx, so
-spreadsheet edits need a restart. `--port` and `--watch` narrow a second
+spreadsheet edits need a restart. The workbooks are ACLED-licensed and gitignored — local-only; without them the server serves the committed `events.json` as-is (see [Data](Data.md#data-licensing--the-xlsx-are-local-only-never-committed)). `--port` and `--watch` narrow a second
 instance (next section).
 
 ### One worktree + one server per chat (`--port 0`)
