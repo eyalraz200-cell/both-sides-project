@@ -242,10 +242,11 @@ same face and weight as the cards (was HadassahFriedlaender 400). Its `top` (des
 ≤600px block) is solved for the font's metrics, so re-solve it with `_debug-hero-title.js`
 whenever the face changes. **Desktop hero (baked 2026-09-22):** title 48px/1.17, width 172, `left: calc(50% + 6.5px)`,
 `top: calc(50% - 281.6px)` (last baseline 22px above its dots); subtitle 16px/1.73, width 106,
-`left: calc(50% - 8px)`, `top: calc(50% - 189.8px)` (20px). On desktop the subtitle wraps by
-width — its `<br>`s are hidden (`@media (min-width: 601px)`) and each has a real space before it
-in `index.html`; phones keep the `<br>`s and the pre-bake left/width/size, pinned in the ≤600px
-block. HadassahFriedlaender's `@font-face` rules stay in `style.css`
+`left: calc(50% - 8px)`, `top: calc(50% - 189.8px)` (20px). The subtitle wraps by width —
+its `<br>`s are hidden and each has a real space before it in `index.html`. **Mobile (≤600px):**
+only the title shrinks — 32px/1.17, `width: min(115px, 50vw - 20px)` (3 lines), same +6.5px left,
+top −207.6px (18.5px gap); the subtitle is the desktop one with top −172.8px (20.5px gap). Both
+mobile tops add `var(--page0-drop)`. HadassahFriedlaender's `@font-face` rules stay in `style.css`
 for going back.
 
 The 600px breakpoint drops it to **16px** — that's a width override applied

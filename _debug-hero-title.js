@@ -45,8 +45,8 @@
     // panel reproduces the baked hero exactly (baked 2026-09-07).
     // Mobile has its own shipped values (style.css ≤600px block, 2026-09-12).
     values: window.matchMedia('(max-width: 600px)').matches ? {
-      title:    { size: 32, lh: 1.45, gap: 18.5, weight: 300, nudge: 0, width: Math.min(185, window.innerWidth / 2 - 20) },
-      subtitle: { size: 18, lh: 1.465, gap: 20.5, weight: 300, nudge: 0, width: 125 },
+      title:    { size: 32, lh: 1.17, gap: 18.5, weight: 300, nudge: -1.5, width: Math.min(115, window.innerWidth / 2 - 20) },
+      subtitle: { size: 16, lh: 1.73, gap: 20.5, weight: 300, nudge: 2, width: 106 },
     } : {
       title:    { size: 48, lh: 1.17, gap: 22, weight: 300, nudge: -1.5, width: 172 },
       subtitle: { size: 16, lh: 1.73, gap: 20, weight: 300, nudge: 2, width: 106 },
