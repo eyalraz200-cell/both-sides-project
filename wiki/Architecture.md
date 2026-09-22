@@ -448,9 +448,8 @@ What holds today:
   per-group and per-category counts, the total, and the date range. **Every figure is derived
   from the loaded `events.json`, never hardcoded** — the xlsx is rebuilt on each server start,
   so a hand-written number would go stale silently.
-- **Text contrast clears AA 4.5:1.** The three that didn't were fixed at the declaration and
-  carry their ratio in a comment: `.shk-photo-credits` `#70757a` (was `#9aa0a6`, 2.64:1), the
-  ACLED note title `#767676` (was `#949494`, 3.03:1), its chevron `#7a7a7a` (was `#919191`).
+- **Text contrast clears AA 4.5:1.** The two that didn't were fixed at the declaration and
+  carry their ratio in a comment: the ACLED note title `#767676` (was `#949494`, 3.03:1), its chevron `#7a7a7a` (was `#919191`).
   Tooltip fills go through `tooltipFill()` — see [Timeline](Timeline.md).
 
 - **@fold14 is keyboard-operable.** Pills are focusable `role="button"` toggles; Enter/Space
@@ -459,8 +458,6 @@ What holds today:
   [Drag-and-Drop](Drag-and-Drop.md#keyboard-path). This is also what makes @fold15–@fold17
   reachable at all without a pointer, since `p13GateLocked()` (`js/fold11.js`) gates
   scrolling on a pill being classified.
-
-Known open gaps, in severity order — **none of these are fixed**:
 
 ## Per-frame cost — the layout-read rule
 
