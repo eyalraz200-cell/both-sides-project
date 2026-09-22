@@ -224,8 +224,8 @@ silent, a mid-stuck re-bake (iOS address-bar `resize`) froze the stuck-size view
 and on scroll-back-up the dash faded back in stretched across the wider un-stuck frame
 while the white fill tracked the real box — fill leaking outside a distorted stroke.
 
-`.section-title`'s base rule (`font: 400 20px/1.5 'IBM Plex Sans Hebrew'`, Google Fonts,
-weight 400 only — request another weight in `index.html`'s font link before using it) is
+`.section-title`'s base rule (`font: 300 20px/1.5 'IBM Plex Sans Hebrew'`, Google Fonts,
+weight 300 only — request another weight in `index.html`'s font link before using it) is
 shared by **every** card. No page overrides its font-size or weight — with **one named
 exception: @fold17's credits card, `#page-16 .section-title`, is 40px on desktop and 28px
 under the 600px breakpoint** (`style.css`), because it is the piece's closing headline over

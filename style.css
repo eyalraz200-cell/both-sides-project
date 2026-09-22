@@ -1941,7 +1941,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   top: -6px;
 }
 
-/* Title cards: IBM Plex Sans Hebrew Regular (400), 20px (Figma's size,
+/* Title cards: IBM Plex Sans Hebrew Light (300), 20px (Figma's size,
    nodes 119:997, 117:788, 117:818, 120:1279), picked by eye in the
    _debug-title-font.js comparison over David Libre, Miriam Libre, Assistant
    and the old HadassahFriedlaender Thin. Loaded from Google Fonts in
@@ -1956,10 +1956,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
         (Thin 100 — the real Thin OTF; 16px mobile override is unchanged)
      2. js/bootstrap.js: swap the Plex preload back to
         document.fonts.load("100 16px 'HadassahFriedlaender'"),
-     3. index.html: drop &family=IBM+Plex+Sans+Hebrew:wght@400 from the
+     3. index.html: drop &family=IBM+Plex+Sans+Hebrew:wght@300 from the
         Google Fonts link (optional — harmless if left). */
 .section-title {
-  font: 400 20px/1.5 'IBM Plex Sans Hebrew', sans-serif;
+  font: 300 20px/1.5 'IBM Plex Sans Hebrew', sans-serif;
   color: #111;
   margin: 0 0 8px;
 }

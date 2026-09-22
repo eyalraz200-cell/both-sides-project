@@ -32,7 +32,7 @@
         source: 'style.css:1958 — .section-title font-size (desktop)' },
       { key: 'sizeM', label: 'title size on phone', min: 12, max: 26, step: 1, value: 16,
         source: 'style.css:3165 — .section-title font-size (≤600px)' },
-      { key: 'weight', label: 'how heavy the letters are', min: 100, max: 900, step: 100, value: 400,
+      { key: 'weight', label: 'how heavy the letters are', min: 100, max: 900, step: 100, value: 300,
         modes: FONTS.map(function (f) { return f[1]; }),
         source: '.section-title font-weight (candidate font)' },
       { key: 'lh', label: 'space between lines', min: 1.1, max: 2, step: 0.05, value: 1.5,
