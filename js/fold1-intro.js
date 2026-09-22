@@ -9,7 +9,9 @@
 // scroll-driven control doesn't fight the page-load entrance animation,
 // which owns both elements' opacity (fading them in from 0) until it
 // finishes — see playPage0Entrance. ──
-const page0LogoEl = document.querySelector(".page0-logo");
+// The hero logo was removed (the שקוף branding is gone); its fade timing still
+// paces the entrance's end, so the opacity writes below stay, null-guarded.
+const page0LogoEl = document.querySelector(".page0-logo"); // null
 const page0TitleEl = document.querySelector(".page0-title");
 const page0SubtitleEl = document.querySelector(".page0-subtitle");
 const PAGE0_FADE_VH = 0.4; // fraction of one viewport height
@@ -62,7 +64,7 @@ let page0TitleTakenOver = false; // see playPage0Entrance below
 let page0HandoverTitlePx = 0;
 let page0HandoverSubtitlePx = 0;
 let page0EntranceDone = false;
-page0LogoEl.style.opacity = "0";
+if (page0LogoEl) page0LogoEl.style.opacity = "0";
 // Starting position for the entrance below (full off-screen, same vh unit
 // the rest of @fold1 already uses) — set synchronously here, before first
 // paint, rather than via a CSS class, so there's no flash of the title at
@@ -136,7 +138,7 @@ function page0ApplyLogoScrollFade() {
   page0LogoOpacity = page0LogoOpacity === null
     ? opacityTarget
     : page0LogoOpacity + (opacityTarget - page0LogoOpacity) * PAGE0_OPACITY_DAMPING;
-  page0LogoEl.style.opacity = String(page0LogoOpacity);
+  if (page0LogoEl) page0LogoEl.style.opacity = String(page0LogoOpacity);
 }
 
 // ── @fold1's page-load entrance, per explicit spec: title/subtitle slide up
@@ -250,7 +252,7 @@ function playPage0Entrance() {
     if (!page0EntranceDone) {
       const logoT = p9Ease(Math.max(0, Math.min(1, (elapsed - dotsDoneMs) / page0LogoFadeMs())));
       page0LogoOpacity = logoT;
-      page0LogoEl.style.opacity = String(logoT);
+      if (page0LogoEl) page0LogoEl.style.opacity = String(logoT);
       if (elapsed >= totalMs) { page0EntranceDone = true; page0CueSchedule(PAGE0_CUE_IDLE_MS); }
     } else {
       page0ApplyLogoScrollFade();

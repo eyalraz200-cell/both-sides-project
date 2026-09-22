@@ -2600,41 +2600,6 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   text-decoration: underline;
 }
 
-/* Logo recropped per node 217:9176 — swapped to the wordmark-only asset
-   (images/שקוף-לוגו-2020.svg, the pre-cropped "שקוף" glyphs) instead of the
-   full elephant+tagline export,
-   since Figma's box (91x34, 2.68:1) only ever showed the bare wordmark. Still
-   anchored top-right, 30px in from the right edge, but the vertical anchor
-   needed recomputing for the new box: Figma's box top is 32px from the frame
-   top (459px above the frame's vertical center); top is expressed as the
-   box's center (compensating for the translateY(-50%) below) by subtracting
-   half this box's own rendered height (91px wide / 2.617 aspect ≈ 34.8px
-   tall, so 17.4px half-height) from that 459px.
-   position: fixed — per explicit instruction the logo doesn't scroll up with
-   the rest of @fold1 like the title/subtitle do, it fades out in place
-   instead (page0ApplyTitleScrollLag in js/fold1-intro.js sets its opacity directly, no
-   transform). .page0-title/.page0-subtitle are also position: fixed now
-   (see their own comments below) but, unlike the logo, still get a JS
-   transform each frame to reproduce their own scroll-up motion — just
-   computed as a direct function of a lagged scroll value rather than as a
-   byproduct of native document flow. The calc(50% - ...) math here is
-   unchanged since .page0-overlay's box already matched the viewport exactly
-   at scroll 0 — fixed just keeps that same computed position glued to the
-   viewport at any scroll position. */
-.page0-logo {
-  position: fixed;
-  right: 30px;
-  top: 32px;
-  width: 91px;
-  visibility: hidden;
-}
-
-.page0-logo-img {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
 /* Title/subtitle no longer share a bottom edge (node 217:9176 drops the old
    node's flush-bottom pairing) — each is independently top-anchored,
    matching Figma's own absolute top values converted to the project's
@@ -2648,7 +2613,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 .page0-title {
   /* position: fixed (not absolute, despite the general note above about
      .page0-title/.page0-subtitle staying normal-flow) — same reasoning and
-     same math as .page0-logo just above: .page0-overlay's box already
+     .page0-overlay's box already
      matches the viewport exactly at scroll 0, so this calc(50% - Npx) value
      renders identically either way, and fixed just keeps it glued to the
      viewport instead of scrolling away by document flow. Switched from
@@ -3630,14 +3595,6 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   /* The other half of the device-dependent card copy — see .copy-mobile above. */
   .copy-desktop { display: none; }
   .copy-mobile  { display: inline; }
-
-  /* @fold1's hero: the logo's 30px inset and the title/subtitle's fixed
-     widths are center-relative already, so they only need to not collide —
-     tighten the logo inset so it clears the title's right edge. */
-  .page0-logo {
-    right: 16px;
-    top: 20px;
-  }
 
   /* The title starts at calc(50% + 8px), so its fixed 185px box runs past the
      right edge below ~430px wide. Cap it against the half-viewport it

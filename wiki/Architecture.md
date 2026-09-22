@@ -101,7 +101,7 @@ Two places load order does matter:
 |---|---|
 | `js/core.js` | Canvas + `ctx`, `PAGES[]` dispatch, `currentPage`, trivial draw fns, `draw`/`init`, dashed-frame SVG utilities |
 | `js/nav.js` | `.text-section` roster, `setActivePage`, the IntersectionObserver |
-| `js/fold1-intro.js` | @fold1 logo scroll-fade, title scroll-lag, page-load entrance |
+| `js/fold1-intro.js` | @fold1 title scroll-lag, page-load entrance (the old logo fade timing still paces its end; `page0LogoEl` is null) |
 | `js/page7-scrub.js` | `#page-9` scroll→date scrub + its scroll listener |
 | `js/fold8-tooltip.js` | @fold7's tooltip typewriter demo (`fold8*` state + fns) |
 | `js/groups.js` | `GROUPS` roster, fold2 grid tables, `groupItems` DOM, FOLD6 square tables/elements, title-card refs, `makeTrigger`, **all fold triggers**, `watchCardThreshold` + checkers, legend/fold4/fold6-note constants |
