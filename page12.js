@@ -461,8 +461,9 @@ function p12CardWidthFit() {
 // fixed vh — every fixed value tried (45vh, 80vh, 100vh) was off by exactly
 // the half-card it ignored.
 // Air left under the outro card once the page is scrolled to its end — matches
-// the 48px the card keeps off the viewport's top and bottom edges.
-const P12_OUTRO_END = 48;
+// the 22px the card keeps off the viewport's top and bottom edges (desktop,
+// #page-16 .text-card-frame's height in style.css; the two are one setting).
+const P12_OUTRO_END = 22;
 function p12SpacingFit() {
   const H = window.innerHeight;
   // Solved on card 1's WRAPPER now, not the section: the closing statement

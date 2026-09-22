@@ -896,7 +896,9 @@ still opening, and the flight aims at the rows' REST positions).
 - **«איסוף הנתונים» — a collapsible section at the bottom of the מקרא panel**, under the
   group rows behind `.fold6-mlegend-divider`. **Only from @fold6 on** — `fold6MDataSetAvailable(noteRevealT > 0)` (js/update-groups.js) hides it above that fold's `acledNoteTrigger` crossing and resets it collapsed. **Collapsed by default.** Header
   `.fold6-mlegend-data-head` (the desktop note title's type + its chevron, turned by
-  `--note-open`); body `.fold6-mlegend-data-body` holds `FOLD6_NOTE_TEXT` with ACLED as a link.
+  `--note-open`; the chevron is a 6px box with a **1px** stroke at `left: 0`, i.e. the card's
+  13px padding from the outline, mirroring the text's right edge, and lifted **1.25px** off the
+  line's centre because only two sides of the box are inked — picked by eye 2026-09-22); body `.fold6-mlegend-data-body` holds `FOLD6_NOTE_TEXT` with ACLED as a link.
   `fold6MDataToggle` (js/groups.js) eases it open/closed over `FOLD6_MDATA_MS` (350ms, `p9Ease`),
   writing the body's height/opacity per frame and repainting the card with it. The bar
   captures every pointer, so the header tap and the link are resolved in `fold6MLegendDragEnd`

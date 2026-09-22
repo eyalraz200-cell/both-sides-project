@@ -530,10 +530,13 @@ body {
 }
 
 .page9-header-subtitle {
-  font: 600 16px 'Assistant', sans-serif;
+  /* Mobile values (harness pick, 2026-09-22): 500 / 0.25. Desktop overrides
+     BOTH properties in the min-width: 601px block below, so this base rule is
+     effectively the mobile one. */
+  font: 500 16px 'Assistant', sans-serif;
   /* Alpha, not the `opacity` property — that one is the stick reveal
      (0 → 1 on .is-stuck, ~line 274) and overwriting it would kill the fade. */
-  color: rgba(0, 0, 0, 0.45);
+  color: rgba(0, 0, 0, 0.25);
   margin: 4px 0 0;
   white-space: nowrap;
 }
@@ -1342,7 +1345,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    far less room — keeps the smaller size. */
 @media (min-width: 601px) {
   #page9ZoneAbove:empty::after { font-size: 16px; color: rgba(0, 0, 0, 0.25); }
-  /* Desktop-tuned subtitle (harness); mobile keeps the base 600 / 0.45. */
+  /* Desktop-tuned subtitle (harness); mobile keeps the base 500 / 0.25. */
   .page9-header-subtitle { font-weight: 400; color: rgba(0, 0, 0, 0.35); }
 }
 
@@ -2017,7 +2020,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 
 /* The actual dashed-border white card chrome (Figma node 119:997: 4px dashed
    black border, white fill, 8px radius, 21px/29px padding — stroke thinned to
-   2px per explicit instruction, overriding the Figma-spec 4px) — applied only
+   1.5px per explicit instruction (harness pick 2026-09-22; was 2px), overriding the Figma-spec 4px;
+   1.25px under the 600px breakpoint — see the ≤600px block) — applied only
    to the title, not to sibling content below it.
 
    Native `border: 4px dashed` renders the browser's own loose dash spacing
@@ -2035,7 +2039,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    viewBox-to-CSS-px mapping on both axes, so the dash/radius can't be
    scaled or distorted no matter the box's aspect ratio. */
 .text-card-frame {
-  --frame-border-w: 2px;
+  --frame-border-w: 1.5px;
   position: relative;
   /* display:block + width:fit-content + margin:0 auto centers the box itself
      within .text-card regardless of content width — display:inline-block
@@ -2392,8 +2396,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   pointer-events: none;
 }
 
-/* The card's size is set from the VIEWPORT EDGES, not from its copy: a 48px
-   gap above and below (height = 100vh − 2×48). The WIDTH is solved at load and
+/* The card's size is set from the VIEWPORT EDGES, not from its copy: a 22px
+   gap above and below (height = 100vh − 2×22). The WIDTH is solved at load and
    on resize by p12CardWidthFit() (page12.js) — the narrowest width in
    320–900px at which the copy still clears the bottom padding, which is also
    the width that fills the card, since a narrower column is a taller one. The
@@ -2407,7 +2411,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 }
 #page-16 .text-card-frame {
   width: 520px;
-  height: calc(100vh - 96px);
+  height: calc(100vh - 44px);   /* 22px off the screen's top and bottom (picked by eye 2026-09-22, @fold17 harness) */
   padding: 42px 40px;   /* 42px top and bottom, 40px sides */
   box-sizing: border-box;
   display: flex;
@@ -2437,10 +2441,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 }
 
 #page-16 .section-title {
-  font-size: 40px;
+  font-size: 36px;   /* desktop; picked by eye 2026-09-22 (was 40) */
   text-align: center;
   line-height: 1.2;
-  margin-bottom: 32px;
+  margin-bottom: 42px;
 }
 
 .page12-body {
@@ -2452,8 +2456,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 }
 
 .page12-body-heading {
-  font-weight: 700;
-  margin-bottom: 12px;
+  /* 600 / 8px picked by eye on desktop 2026-09-22 (@fold17 harness) and
+     carried to mobile as-is (was 700 / 12px). */
+  font-weight: 600;
+  margin-bottom: 8px;
 }
 
 .page12-body p {
@@ -3168,8 +3174,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      The frame around it is scaled to match rather than left at its desktop
      padding: at 21px/29px around 16px type the box reads as a large empty
      white slab with a small title floating in it. 16px/22px holds the Figma
-     frame's own horizontal:vertical ratio (29/21 = 1.38, 22/16 = 1.375), and
-     the frame's own horizontal:vertical ratio (29/21 = 1.38, 22/16 = 1.375).
+     frame's own horizontal:vertical ratio (29/21 = 1.38, 22/16 = 1.375).
 
      Only font-size is touched, deliberately: on the title cards .section-title
      and .text-card-frame are the SAME <h2>, so the base rule's `margin: 0 0
@@ -3182,10 +3187,13 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      the frame's real pixel box and rewrites the viewBox 1:1, so the 2px dash
      stays exact at the new size. */
   .section-title {
-    font-size: 18px;
+    font-size: 17px; /* harness pick 2026-09-22 (was 18) */
   }
   .text-card-frame {
     padding: 16px 22px;
+    /* Thinner dash on a phone (harness pick 2026-09-22; desktop stays 1.5px).
+       MUST match FRAME_STROKE_W_MOBILE in js/core.js. */
+    --frame-border-w: 1.25px;
   }
 
   /* The outro card carries its own fixed width instead of --card-w. */
@@ -3203,8 +3211,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      documented per-page title size (the shared .section-title 20px base is
      untouched — see the hard rule in CLAUDE.md). */
   #page-16 .section-title {
-    font-size: 28px;
-    margin-bottom: 20px;
+    font-size: 26px;      /* desktop's 40→36 step carried over (was 28) */
+    margin-bottom: 26px;  /* desktop's 32→42 ratio carried over (was 20) */
   }
 
   /* The outro (#page-16) is the one fold whose height is set by its own copy,
@@ -3230,7 +3238,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   #page-16 .page12-sticky-center {
     height: auto;
     min-height: 100vh;
-    padding: 32px 0;
+    /* top is overwritten inline by p12SpacingFit(); the 16px bottom is the air
+       the document ends with under the card — desktop's 48→22 step, carried
+       over (was 32). */
+    padding: 32px 0 16px;
     box-sizing: border-box;
   }
 
@@ -4723,14 +4734,18 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   .fold6-mlegend-data-head::after {
     content: "";
     position: absolute;
-    /* 12, not 6: it sits inside the card's own padding now, so the old inset
-       put it almost on the outline. */
-    left: 12px;
-    top: 50%;
+    /* left 0 = flush with the heading's edge, i.e. the card's 13px padding
+       away from the outline — the same distance the text keeps on the right
+       (harness pick 2026-09-22; was 12px on top of the padding, ~25px in).
+       The 1.25px lift compensates for the ink: only two sides of the box are
+       drawn, so the pointing-down L's visual centre sits below the box centre.
+       1px stroke, a hair lighter than the desktop note's 1.5. */
+    left: 0;
+    top: calc(50% - 1.25px);
     width: 6px;
     height: 6px;
-    border-left: 1.5px solid currentColor;
-    border-bottom: 1.5px solid currentColor;
+    border-left: 1px solid currentColor;
+    border-bottom: 1px solid currentColor;
     transform: translateY(-50%) rotate(calc(-45deg + var(--note-open, 0) * 180deg));
     color: #7a7a7a;
   }

@@ -300,15 +300,20 @@ function init() {
 // pixel box, so the 2px-dash/2px-gap stroke and 8px radius render exactly,
 // with no scaling distortion regardless of the frame's aspect ratio.
 //
-// The rect's path is inset 1px (half the 2px stroke-width) so the stroke
-// straddles the frame's true outer edge, same as a normal CSS border. Its
-// own rx/ry is therefore 8-1=7, not 8: CSS `border-radius: 8px` centers its
-// corner arc 8px in from the box's true edge, but a path already inset by
-// 1px with rx=8 would center its arc 9px in — drawing a visibly different
-// curve from the white background's actual border-radius clip at every
-// corner. rx=7 on the inset path puts the stroke's *outer* edge (path
-// radius + the 1px the stroke extends outward) back on radius 8, matching
+// The stroke width is per breakpoint — 1.5px desktop, 1.25px mobile (both
+// tuned by eye 2026-09-22; each MUST match --frame-border-w on
+// .text-card-frame in style.css at that breakpoint). The rect's path
+// is inset by half the stroke so the stroke straddles the frame's true outer
+// edge, same as a normal CSS border. Its own rx/ry is therefore 8 minus that
+// half-stroke, not 8: CSS `border-radius: 8px` centers its corner arc 8px in
+// from the box's true edge, but a path already inset with rx=8 would center
+// its arc further in — drawing a visibly different curve from the white
+// background's actual border-radius clip at every corner. The reduced rx on
+// the inset path puts the stroke's *outer* edge back on radius 8, matching
 // the background's curve exactly.
+const FRAME_STROKE_W_DESKTOP = 1.5;
+const FRAME_STROKE_W_MOBILE = 1.25;
+function frameStrokeW() { return isMobile() ? FRAME_STROKE_W_MOBILE : FRAME_STROKE_W_DESKTOP; }
 // A 2px-dash/2px-gap pattern only closes cleanly if the outline's perimeter
 // happens to be a whole multiple of the 4px period — otherwise the run that
 // wraps past the path's start point lands on top of the first dash, which
@@ -358,6 +363,7 @@ function updateTextCardFrameDashes() {
     textCardFrameResizeObs?.observe(frame, { box: "border-box" }); // re-observe is a no-op
     const w = frame.offsetWidth, h = frame.offsetHeight;
     if (w === 0 || h === 0) return;
+    const sw = frameStrokeW();
     let svg = frame.querySelector(":scope > svg.text-card-frame-dash");
     let rect;
     if (!svg) {
@@ -366,20 +372,22 @@ function updateTextCardFrameDashes() {
       rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
       rect.setAttribute("fill", "none");
       rect.setAttribute("stroke", "#000");
-      rect.setAttribute("stroke-width", "2");
       rect.setAttribute("stroke-dasharray", "2 2");
-      rect.setAttribute("rx", "7");
-      rect.setAttribute("ry", "7");
       svg.appendChild(rect);
       frame.insertBefore(svg, frame.firstChild);
     } else {
       rect = svg.firstElementChild;
     }
+    // Stroke-dependent attrs are rewritten every pass, not only on creation:
+    // a resize across the 600px breakpoint must re-stroke an existing rect.
+    rect.setAttribute("stroke-width", sw);
+    rect.setAttribute("rx", 8 - sw / 2);
+    rect.setAttribute("ry", 8 - sw / 2);
     svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
-    rect.setAttribute("x", 1);
-    rect.setAttribute("y", 1);
-    rect.setAttribute("width", Math.max(0, w - 2));
-    rect.setAttribute("height", Math.max(0, h - 2));
+    rect.setAttribute("x", sw / 2);
+    rect.setAttribute("y", sw / 2);
+    rect.setAttribute("width", Math.max(0, w - sw));
+    rect.setAttribute("height", Math.max(0, h - sw));
     rect.setAttribute("stroke-dasharray", fitDashArray(rect));
   });
 }

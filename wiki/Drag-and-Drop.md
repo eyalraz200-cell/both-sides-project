@@ -21,7 +21,7 @@ to fixed — a 50vh sticky was still mid-viewport at that moment and everything 
 inside it (the header) jumped to the top. The gate must stay *after* the stick point, or it
 would hold scroll where the card never pins and the fold deadlocks.
 
-- `.page9-title-row` — the normal scrolling title card plus `.page9-header-subtitle` (desktop: weight 400, `rgba(0,0,0,0.35)`; mobile keeps 600 / 0.45; the empty zone hint is `rgba(0,0,0,0.25)` on desktop, 0.5 on mobile)
+- `.page9-title-row` — the normal scrolling title card plus `.page9-header-subtitle` (desktop: weight 400, `rgba(0,0,0,0.35)`; mobile is 500 / `rgba(0,0,0,0.25)`, the base rule; the empty zone hint is `rgba(0,0,0,0.25)` on desktop, 0.5 on mobile)
   — whose text is set from JS (`p9SyncSubtitle`, re-run on resize), because the gesture it
   names differs by breakpoint: `P9_SUBTITLE_DESKTOP` "גררו סוגי פעולות הנחשבות
   קיצוניות בעיניכם" / `P9_SUBTITLE_MOBILE` "סמנו פעולות הנחשבות לקיצוניות בעיניכם" — «סמנו»
@@ -32,7 +32,7 @@ would hold scroll where the card never pins and the fold deadlocks.
   «מהי פעולה קיצונית בעיניכם?» — its gesture is "mark the extreme ones", not "sort both
   piles", and the long form wraps to three lines on a phone. The desktop
   string is also `index.html`'s literal markup; JS overwrites it. It renders at
-  `rgba(0, 0, 0, 0.45)` — set on the *colour*, because the `opacity` property on the same
+  `rgba(0, 0, 0, 0.25)` on mobile / 0.35 on desktop — set on the *colour*, because the `opacity` property on the same
   element is the stick reveal (0 → 1 once the title card pins).
 - `.page9-sticky` — `position: sticky; top: 0; height: 100vh` at every width (see above — the desktop trim is on the title row). Gains `.pills-in` at
   @fold13's title crossing (both breakpoints), `.engaged` once the

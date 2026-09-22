@@ -213,8 +213,15 @@ horizontally centered block that scrolls with the page (nothing pins). Visibilit
 
 The dashed white box is a **separate** class, `.text-card-frame`, applied only to the
 `<h2 class="section-title">` — never to sibling content like a legend. The dash is not
-`border-style: dashed` (too loose); it's a `border-image` sliced so the rounded corners
-render unscaled and the 2px-dash/2px-gap edge tiles seamlessly. `DASH_PERIOD = 4` plus
+`border-style: dashed` (too loose) and not a `border-image` (unreliable on wide, short
+boxes); it's a transparent CSS border of `--frame-border-w` (**1.5px desktop, 1.25px under the
+600px breakpoint**, both picked by eye 2026-09-22; was 2px) plus an inline
+`<svg class="text-card-frame-dash">` rect drawn against a 1:1 viewBox, stroke
+`frameStrokeW()` (`FRAME_STROKE_W_DESKTOP` **1.5** / `FRAME_STROKE_W_MOBILE` **1.25**,
+`js/core.js` — each must equal `--frame-border-w` at its breakpoint; the stroke attrs are
+rewritten on every bake so a resize across the breakpoint re-strokes), 2px-dash/2px-gap,
+inset by half the stroke with rx = 8 − half-stroke
+so the outer edge sits on the box's 8px radius. `DASH_PERIOD = 4` plus
 `fitDashArray`/`updateTextCardFrameDashes` in `js/core.js` keep the repeat aligned. A
 `ResizeObserver` on every frame re-runs the bake whenever a frame's border box changes —
 it MUST observe with `{ box: "border-box" }`, not the default content-box: @fold14's
@@ -227,7 +234,7 @@ while the white fill tracked the real box — fill leaking outside a distorted s
 `.section-title`'s base rule (`font: 300 20px/1.5 'IBM Plex Sans Hebrew'`, Google Fonts,
 weight 300 only — request another weight in `index.html`'s font link before using it) is
 shared by **every** card. No page overrides its font-size or weight — with **one named
-exception: @fold17's credits card, `#page-16 .section-title`, is 40px on desktop and 28px
+exception: @fold17's credits card, `#page-16 .section-title`, is 36px on desktop and 26px
 under the 600px breakpoint** (`style.css`), because it is the piece's closing headline over
 a near-viewport-tall card, not a caption. Any other title that looks differently sized at
 the same viewport width is a regression. The face was picked by eye in the
@@ -249,7 +256,7 @@ title 37px/1.22, `width: min(115px, 50vw - 20px)` (3 lines), left +8px, top −2
 mobile tops add `var(--page0-drop)`. HadassahFriedlaender's `@font-face` rules stay in `style.css`
 for going back.
 
-The 600px breakpoint drops it to **18px** — that's a width override applied
+The 600px breakpoint drops it to **17px** (harness pick 2026-09-22) — that's a width override applied
 to the same shared rule, so the titles stay uniform with each other at any given width;
 it is not the per-page kind the rule forbids.
 
@@ -315,7 +322,7 @@ throughout. What the breakpoint actually changes:
 |---|---|---|
 | `--card-w` (`style.css`) | 480px | `min(480px, 100vw - 48px)` |
 | `.text-section` gutter | 48px | 24px |
-| `.section-title` | 20px (`#page-16`: 40px) | 16px (`#page-16`: 28px) |
+| `.section-title` | 20px (`#page-16`: 36px) | 16px (`#page-16`: 26px) |
 | `.page0-title` / `.page0-subtitle` (hero) | title 42px/`1.31`, `top: calc(50% - 276px)`; subtitle 18px/`1.52`, `top: calc(50% - 189.1px)` | title 32px/**`1.45`**, `top: calc(50% - 228.6px)`; subtitle 18px (unchanged) /**`1.465`**, `top: calc(50% - 168.8px)` — baked 2026-09-12. **Mobile overrides the leading too, and must.** `line-height` is unitless, so dropping the title to 32px alone took its leading to 41.92 against the subtitle's unchanged 27.36: the desktop **2:1 nest** (55.02 / 27.36 = 2.011) that locks the two baseline grids fell to 1.532 and the subtitle's lines walked against the title's by ~12.8px per line down the block. The shipped pair is 46.4 / 26.37 = **1.760**, ~6.3px per line — picked by eye against live baseline rulers, not solved to a whole ratio. Each `top` is solved so that text's **last baseline** sits a trimmed gap above its own dot column (title 18.5px, subtitle 20.5px); the `50%` cancels viewport height out, so only the 390px width it was tuned at matters. **Leading and `top` are one setting** — move either and re-solve the other |
 | `.text-card-frame` padding | `21px 29px` | `16px 22px` (holds the 1.38 h:v ratio); exception: @fold14's title frame (`.page9-title-row`) runs `padding-block: 8px` — its single short line read as an oversized fill at 16px. The subtitle's `-8px` margin-top is derived from it (gap − 10) |
 | camp header → top swatch row (`js/update-groups.js`) | `FOLD4_HEADER_GAP` 44 frame-units center-to-center, `H`-scaled | `FOLD4_HEADER_GAP_MOBILE_PX` — a flat **24px visible** gap, measured off the header's rendered height |
@@ -325,7 +332,7 @@ throughout. What the breakpoint actually changes:
 | @fold3 row step (`fold3RowStep`) | 34px flat (`FOLD3_ROW_PITCH_DESKTOP_PX`, inside `updateGroups`) | per row: this row's tallest wrapped label + **13px** (`FOLD3_ROW_LABEL_GAP_PX`), floored at 32 (`FOLD3_MIN_ROW_PITCH_MOBILE_PX`) — equal visible gaps. Both mobile numbers are module-scope `var`s at the top of js/update-groups.js so a manual/ harness can drive them live; the desktop pitch deliberately stays a function-local `const`, so raising the mobile gap cannot reach it |
 | @fold7 legend row pitch (`fold6RowPitchPx()`) | 24px | measured — tallest wrapped legend label + 6px |
 | Mini-legend + ACLED note | Six DOM group rows over the canvas; the note sits above their top row | **The legend collapses into the מקרא sheet** — a **full-bleed bottom sheet** (`FOLD6_MLEGEND_POSE = "sheet"`, js/groups.js), not a floating corner card, whose title row is the מקרא button; the six group rows fly into it at `@fold4` and it **closes itself** shortly after they land. The ACLED credit lives **inside** the sheet as a collapsible «איסוף הנתונים» section (`fold6MobileDataHeadEl` / `fold6MobileDataBodyEl`) — **removed, don't reintroduce:** the bare `acleddata.com` link that used to sit in the opposite top-left corner. See [Groups-and-Legend](Groups-and-Legend.md#the-mobile-מקרא-bar) |
-| `#page-16` (@fold17, the credits card) frame / title | sized from the viewport edges: `height: calc(100vh - 96px)` (48px gap top and bottom), width solved in JS by `p12CardWidthFit()` (page12.js, at load, on `document.fonts.ready` and on a debounced resize) — the narrowest width in 320–900px at which the copy still clears the bottom padding, which is also the width that FILLS the fixed height, since a narrower column is a taller one; the CSS `width: 520px` is that answer for a 982px-tall viewport and the fallback if the script never runs. 40px side padding, 42px top/bottom, copy vertically centred in whatever height is left over (`#page-16 .text-card` is `fit-content` so it stays centred) / 40px | `min(450px, 100vw-48px)` border-box, height auto / 28px |
+| `#page-16` (@fold17, the credits card) frame / title | sized from the viewport edges: `height: calc(100vh - 44px)` (22px gap top and bottom), width solved in JS by `p12CardWidthFit()` (page12.js, at load, on `document.fonts.ready` and on a debounced resize) — the narrowest width in 320–900px at which the copy still clears the bottom padding, which is also the width that FILLS the fixed height, since a narrower column is a taller one; the CSS `width: 520px` is that answer for a 982px-tall viewport and the fallback if the script never runs. 40px side padding, 42px top/bottom, copy vertically centred in whatever height is left over (`#page-16 .text-card` is `fit-content` so it stays centred) / 36px, 42px under it; the «נתונים ושיטת עבודה» heading (`.page12-body-heading`) is 600 with 8px under it at both widths | `min(450px, 100vw-48px)` border-box, height auto / 26px, 26px under it |
 
 **The camp gap is the load-bearing one.** `FOLD2_CAMP_CENTER_GAP_PX` (162) puts two 104px
 blocks *plus* @fold3's outward-trailing labels at ~500–600px of required width. Everything
