@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- lang="he" so screen readers use a Hebrew voice. NOT dir="rtl" at the root:
      the stylesheet declares `direction: rtl` per block, and the flex rows that
-     don't (the @fold13 pill tray, .page9-zone) would reverse their inline
+     don't (the @fold14 pill tray, .page9-zone) would reverse their inline
      order under a root RTL. Setting it is still the right end state — it needs
      an eyeball pass over folds 10–12 first. -->
 <html lang="he">
@@ -17,7 +17,7 @@
   <meta name="description" content="אספנו 14,451 פעולות פוליטיות במרחב הציבורי לאורך ארבע השנים האחרונות. קבעו בעצמכם — מי הם הקיצוניים משני הצדדים? פרויקט אינטראקטיבי מאת איל רז." />
   <link rel="canonical" href="https://eyalraz200-cell.github.io/both-sides-project/project.html" />
   <!-- Open Graph / Twitter card — what WhatsApp, X, Facebook, LinkedIn render when
-       the link is shared (the @fold15 share row relies on this). og:image must be an
+       the link is shared (the @fold16 share row relies on this). og:image must be an
        ABSOLUTE url; og-image.png is a 2400×1260 (2× of the 1200×630 card) shot of @fold1.
        Served from GitHub Pages at /both-sides-project/. -->
   <meta property="og:type" content="article" />
@@ -103,12 +103,12 @@
          child, NOT nested in .graphic-col: that column is its own stacking
          context (position:fixed + z-index:0), which traps any z-index inside
          it below .text-col's full-viewport sections — on mobile that made the
-         docked frame untappable, every touch landing on section#page-8. -->
+         docked frame untappable, every touch landing on section#page-9. -->
     <div class="page9-tooltip" id="page9Tooltip" aria-hidden="true">
       <div class="page9-tooltip-date"></div>
       <div class="page9-tooltip-desc"></div>
     </div>
-    <!-- Hover tooltip for a category pill in #page-12's (@fold13) tray (#page9ZoneBelow
+    <!-- Hover tooltip for a category pill in #page-13's (@fold14) tray (#page9ZoneBelow
          only — see p9CategoryTooltipInit in page9.js). Same reasoning as
          #page9Tooltip above: a direct .layout child, not nested in
          .graphic-col, so its z-index actually stacks above .text-col's tray/
@@ -182,36 +182,41 @@
       </section>
       <section class="text-section" data-page="7" id="page-7">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">הנתונים לקוחים ממאגר <a class="latin-acronym card-link" href="https://acleddata.com/" target="_blank" rel="noopener">ACLED</a>, גוף מחקר בינלאומי, וכוללים אירועים משנת 2023 ועד היום.<span class="copy-mobile"> פרטים במקרא.</span></h2>
+          <h2 class="section-title text-card-frame">תיאורי האירועים ומועדי התרחשותם לקוחים ממאגר <a class="latin-acronym card-link" href="https://acleddata.com/" target="_blank" rel="noopener">ACLED</a>, גוף מחקר בינלאומי. שיוך האירועים לקבוצות, סיווגם ותרגומם לעברית נעשו בעזרת מודלים של <span class="latin-acronym">OpenAI</span>.<span class="copy-mobile"> פרטים במקרא.</span></h2>
         </div>
       </section>
-      <section class="text-section page7-scrub" data-page="8" id="page-8"></section>
-      <!-- @fold10: the size grid. Arriving here fires p7SizeGridSet(true)
+      <section class="text-section" data-page="8" id="page-8">
+        <div class="section-text text-card">
+          <h2 class="section-title text-card-frame">האירועים המוצגים התרחשו מתחילת 2023 ועד היום.</h2>
+        </div>
+      </section>
+      <section class="text-section page7-scrub" data-page="9" id="page-9"></section>
+      <!-- @fold11: the size grid. Arriving here fires p7SizeGridSet(true)
            (p7SizeGridOnPage, page7.js) — the timeline undraws and every dot on
            screen grows to its crowd tier and re-packs. -->
-      <section class="text-section" data-page="9" id="page-9">
+      <section class="text-section" data-page="10" id="page-10">
         <div class="section-text text-card">
           <h2 class="section-title text-card-frame">המחנות נבדלים במספר הפעולות שביצעו, אך פעולה אחת עשויה להתבצע בידי אדם יחיד, ואחרת בהשתתפות מאות אלפי אנשים.</h2>
         </div>
       </section>
-      <!-- @fold11: every square SIZES DOWN to one uniform cell where it
+      <!-- @fold12: every square SIZES DOWN to one uniform cell where it
            stands, and then the whole field FLIES to page9's legit zone —
-           @fold10's morph played backwards, but landing in the legit grid
+           @fold11's morph played backwards, but landing in the legit grid
            instead of back on the timeline (fold11SizeApply, js/groups.js).
            Its PAGES slot (10) is drawPage8, the bridge glide — the SAME draw
-           function @fold12 uses — because this fold owns the glide now, so
-           @fold12 simply arrives with it already at rest. -->
-      <section class="text-section" data-page="10" id="page-10">
+           function @fold13 uses — because this fold owns the glide now, so
+           @fold13 simply arrives with it already at rest. -->
+      <section class="text-section" data-page="11" id="page-11">
         <div class="section-text text-card">
           <h2 class="section-title text-card-frame">לצורך ההשוואה המספרית, כל הריבועים יוצגו בגודל אחיד.<br>ניתן להציג את גודל האירועים באמצעות הכפתור במקרא.</h2>
         </div>
       </section>
-      <section class="text-section" data-page="11" id="page-11">
+      <section class="text-section" data-page="12" id="page-12">
         <div class="section-text text-card">
           <h2 class="section-title text-card-frame">פעולות פוליטיות נבדלות זו מזו במטרה, באמצעים ובאופן הפעולה. אבל הגבול בין פעולה לגיטימית לפעולה קיצונית אינו תמיד מוסכם.</h2>
         </div>
       </section>
-      <section class="text-section page9-panel" data-page="12" id="page-12">
+      <section class="text-section page9-panel" data-page="13" id="page-13">
         <div class="page9-title-row">
           <div class="section-text text-card">
             <!-- Mobile gets its own, shorter headline — the same .copy-desktop /
@@ -235,21 +240,21 @@
           </div>
         </div>
       </section>
-      <!-- @fold14 — the closing statement. The scroll gate (p13GateMax) and the
-           drag-panel fade-out (fold13ScrollT) key off #page-13, and the
+      <!-- @fold15 — the closing statement. The scroll gate (p13GateMax) and the
+           drag-panel fade-out (fold13ScrollT) key off #page-14, and the
            gate-hidden toggle off its .page12-sticky-center, so this section
-           carries that wrapper; the share block (@fold15, #page-14) and the
-           credits card (@fold16, #page-15) follow it. The extreme dots' morph
+           carries that wrapper; the share block (@fold16, #page-15) and the
+           credits card (@fold17, #page-16) follow it. The extreme dots' morph
            to freeform (checkFold13) is watched on this wrapper at its 0.5
            crossing. This wrapper is made position:static in style.css. -->
-      <section class="text-section" data-page="13" id="page-13">
+      <section class="text-section" data-page="14" id="page-14">
         <div class="page12-sticky-center">
           <div class="section-text text-card">
             <h2 class="section-title text-card-frame">בתקופה של מחלוקות עמוקות, חשוב שנסתכל מעבר למטרות הפוליטיות של שני המחנות, אלא גם על האמצעים להשגתן.&#x200F;</h2>
           </div>
         </div>
         <!-- The closing statement continues as two more house title blocks,
-             each centred in its own 100vh run (.page13-follow). Inside #page-13
+             each centred in its own 100vh run (.page13-follow). Inside #page-14
              so no fold ids shift; card 1 above stays the section's first
              .text-card-frame, which p12SpacingFit solves the wrapper from. -->
         <div class="page13-follow">
@@ -263,10 +268,10 @@
           </div>
         </div>
       </section>
-      <!-- @fold15 — the share block: its own title block between the closing
+      <!-- @fold16 — the share block: its own title block between the closing
            statement and the outro (moved out of the outro card). The links get
            their real hrefs from p12ShareInit (page12.js) at load. -->
-      <section class="text-section" data-page="14" id="page-14">
+      <section class="text-section" data-page="15" id="page-15">
         <div class="section-text text-card">
           <div class="text-card-frame page12-share-card">
             <h2 class="section-title">שתפו עם אחרים</h2>
@@ -280,8 +285,8 @@
           </div>
         </div>
       </section>
-      <!-- @fold16 — the outro/credits card. -->
-      <section class="text-section" data-page="15" id="page-15">
+      <!-- @fold17 — the outro/credits card. -->
+      <section class="text-section" data-page="16" id="page-16">
         <div class="page12-sticky-center">
           <div class="section-text text-card">
             <div class="text-card-frame page12-card">
@@ -289,11 +294,12 @@
               <div class="page12-body" dir="rtl">
                 <p class="page12-body-heading">נתונים ושיטת עבודה</p>
                 <p>המאגר שמאחורי הפרויקט נבנה מתוך אירועים פוליטיים מתועדים שהתרחשו בישראל ובשטחים מאז תחילת 2023. נכללו בו רק פעולות שהתרחשו פיזית במרחב הציבורי או בשטח: הפגנות, חסימות כבישים, עימותים, תקיפות, הטרדות, פגיעה ברכוש, ניכוס שטח ואירועים דומים. אמירות, פוסטים, הצהרות או עמדות פוליטיות שלא לוו בפעולה ממשית לא נכללו בניתוח.</p>
-                <p>בנוסף לסיווג לפי סוג הפעולה, כל אירוע שויך גם לקבוצה ולמחנה פוליטי. החלוקה לקבוצות נועדה לאפשר השוואה בין דפוסי פעולה של מחנות שונים, אך היא אינה מניחה שכל חברי הקבוצה פועלים באותו אופן או מחזיקים באותן עמדות. במקרים שבהם היו מעורבים כמה גורמים, האירוע שויך לקבוצה שהובילה את הפעולה המרכזית או הייתה מזוהה איתה באופן הברור ביותר.</p>
+                <p>תיאורי האירועים ומועדי התרחשותם לקוחים ממאגר <a class="card-link" href="https://acleddata.com/" target="_blank" rel="noopener">ACLED</a>. שיוך האירועים לקבוצות וסיווגם נעשו במסגרת הפרויקט בעזרת מודלי בינה מלאכותית של OpenAI, שניתחו את תיאורי האירועים לפי הנחיות וקטגוריות שהוגדרו מראש. המודלים שימשו גם לתרגום התיאורים לעברית. מלבד התרגום, לא נעשו שינויים בתיאורי האירועים.</p>
+                <p>החלוקה לקבוצות פוליטיות נועדה לאפשר השוואה בין דפוסי פעולה של מחנות שונים, אך היא אינה מניחה שכל חברי הקבוצה פועלים באותו אופן או מחזיקים באותן עמדות. במקרים שבהם היו מעורבים כמה גורמים, האירוע שויך לקבוצה שהובילה את הפעולה המרכזית או הייתה מזוהה איתה באופן הברור ביותר.</p>
                 <p>כדי לאפשר השוואה עקבית בין קבוצות שונות, כל האירועים הותאמו למערכת קטגוריות אחידה של סוגי פעולה, ובהן הפגנות, חסימות כבישים, הפרות סדר, פגיעה ברכוש, ניכוס שטח, תקיפות פיזיות, החזקה בכפייה, שימוש בנשק ופוגרומים. לצד הסיווג נקבע גם מדרג אנליטי בין הקטגוריות, בהסתמך על CAMEO / Goldstein Scale של <a class="card-link" href="https://gdeltproject.org/" target="_blank" rel="noopener">GDELT</a> ועל Crime Severity Score של ה־<a class="card-link" href="https://www.ons.gov.uk/" target="_blank" rel="noopener">ONS</a> הבריטי. במקרים שבהם אירוע כלל כמה סוגי פעולה, נבחרה הקטגוריה בעלת הדירוג הגבוה יותר במדרג.</p>
                 <p>חשוב לציין: סיווג של אירועים פוליטיים אינו תמיד חד־משמעי. אותו אירוע יכול לכלול כמה גורמים, כמה מטרות וכמה רמות חומרה. הסיווגים נועדו ליצור בסיס השוואה ברור ככל האפשר - לא לתאר כל אירוע על כל מורכבותו, אלא לזהות את דפוסי הפעולה הרחבים שמופיעים לאורך זמן.</p>
               </div>
-              <p class="page12-credits">מחקר, עיצוב ופיתוח: איל רז (<a href="https://eyalraz.com/" target="_blank" rel="noopener">eyalraz.com</a>)<br>הנחיה: מושון זר־אביב<br>תודה למכללת שנקר - הנדסה, עיצוב ואמנות<br>מקור הנתונים: <a href="https://acleddata.com/" target="_blank" rel="noopener">acleddata.com</a></p>
+              <p class="page12-credits">מחקר, עיצוב ופיתוח: איל רז (<a href="https://eyalraz.com/" target="_blank" rel="noopener">eyalraz.com</a>)<br>הנחיה: מושון זר־אביב, רקפת כנען<br>תודה למכללת שנקר - הנדסה, עיצוב ואמנות<br>מקור הנתונים: <a href="https://acleddata.com/" target="_blank" rel="noopener">acleddata.com</a></p>
               </div>
             </div>
           </div>

@@ -1,10 +1,10 @@
-// ── Page 7's tall section (#page-8) is a pure scroll-driver: scroll position
+// ── Page 7's tall section (#page-9) is a pure scroll-driver: scroll position
 // -> date. Its own intro title used to be fused in here as a static header
 // above the timeline's month list — it's now its own earlier fold (#page-6,
 // "כל ריבוע..."), with fold 9 ("צבע הריבוע...", #page-7) after it, so the
 // real per-event reveal below doesn't engage until both have been scrolled
 // past. ──
-const page7Section = document.getElementById("page-8");
+const page7Section = document.getElementById("page-9");
 let page7Ticking = false;
 
 // The scrub's opening is deliberately slower than the rest: over the first
@@ -21,9 +21,9 @@ function p7ScrubEaseIn(t) {
   return P7_SCRUB_EASE_IN_SPAN * u * u * (2 - u);
 }
 
-// How far (in viewports) before @fold10 takes the screen the dataset finishes.
-// 0 would land t=1 exactly as #page-8's bottom leaves the viewport top, which is
-// the same instant @fold10's card crosses its 0.5 threshold and the size grid
+// How far (in viewports) before @fold11 takes the screen the dataset finishes.
+// 0 would land t=1 exactly as #page-9's bottom leaves the viewport top, which is
+// the same instant @fold11's card crosses its 0.5 threshold and the size grid
 // takes over — too early: the year axis's own fill trails p7.currentDate by the
 // p7AxisFillLagDamping() lerp (page7.js), so it would still be visibly filling
 // when the grid started. Half a viewport of scroll past t=1 lets the fill settle
@@ -35,29 +35,31 @@ const P7_SCRUB_END_LEAD_VH = 0.5;
 function page7UpdateFromScroll() {
   const rect = page7Section.getBoundingClientRect();
 
-  // t=0 the instant fold 9's own title card clears the top of the viewport
+  // t=0 the instant @fold9's date-range card's centre clears the top of the viewport
   // (the same instant p7HasEngaged flips true below) rather than when
-  // #page-8's own top reaches the viewport top — #page-7 (fold 9) keeps
-  // scrolling for a while after its title clears before #page-8 actually
-  // begins, and anchoring t=0 to #page-8's own top left that whole stretch as
+  // #page-9's own top reaches the viewport top — #page-7 (fold 9) keeps
+  // scrolling for a while after its title clears before #page-9 actually
+  // begins, and anchoring t=0 to #page-9's own top left that whole stretch as
   // dead scroll space where engagement had already fired but the axis never
-  // moved off 0%. `gap` (page7TitleCardEl's top minus #page-8's own top, at
+  // moved off 0%. `gap` (fold9AxisCardEl's top minus #page-9's own top, at
   // this same instant) is a pure document-layout constant regardless of
   // current scroll position, so recomputing it fresh here — instead of
   // caching it — keeps this correct across a resize too.
   //
-  // t=1 is anchored to #page-8's bottom reaching P7_SCRUB_END_LEAD_VH of a
+  // t=1 is anchored to #page-9's bottom reaching P7_SCRUB_END_LEAD_VH of a
   // viewport above the viewport bottom — see that constant. It used to be the
   // bottom reaching the viewport BOTTOM (lead = 1), which left a whole viewport
-  // of scroll where the dataset had already finished and @fold10's card hadn't
+  // of scroll where the dataset had already finished and @fold11's card hadn't
   // arrived yet — dead scroll. The section is shortened/lengthened in step with
   // the lead (style.css .text-section.page7-scrub), so the range — and with it
   // the scrub's pace — is unchanged whatever the lead is.
-  const titleTop = page7TitleCardEl ? page7TitleCardEl.getBoundingClientRect().top : rect.top;
+  // The card is @fold9's date-range card (fold9AxisCardEl, js/groups.js) — the
+  // same element p7UpdateEngagement measures, so t=0 and engagement coincide.
+  const titleTop = (typeof fold9AxisCardEl !== "undefined" && fold9AxisCardEl) ? fold9AxisCardEl.getBoundingClientRect().top : rect.top;
   const gap = rect.top - titleTop;
   const scrubRange = rect.height + gap - window.innerHeight * P7_SCRUB_END_LEAD_VH;
-  // t=0 sits on the engagement line (p7EngageOffsetPx, page7.js — desktop waits
-  // for the card to be 90% out), not on titleTop = 0, so the first day lands
+  // t=0 sits on the engagement line (p7EngageOffsetPx, page7.js — the card's
+  // vertical centre past the top edge), not on titleTop = 0, so the first day lands
   // exactly when the timeline engages; t=1 stays where it was.
   const engageOff = p7EngageOffsetPx();
   const t = scrubRange > engageOff ? Math.max(0, Math.min(1, (-titleTop - engageOff) / (scrubRange - engageOff))) : 0;
@@ -67,13 +69,14 @@ function page7UpdateFromScroll() {
   // would use whatever the last draw call left, which can be one scroll event stale.
   p7UpdateEngagement();
 
-  // Hold currentDate at minDate until engagement actually fires — otherwise
+  // Hold currentDate at the pre-start date (p7PreStartDate, page7.js — a day
+  // before minDate, so NOTHING reads as reached) until engagement actually fires — otherwise
   // scroll position advances curMonthKey silently while !p7HasEngaged, so the
   // first months have no animStart and appear settled (instantly filled) the
   // moment the first draw call with p7HasEngaged===true hits them.
   if (!p7HasEngaged) {
-    p7.currentDate = p7.minDate;
-    if (currentPage === 8) { draw(); p7RecheckHover(); }
+    p7.currentDate = p7PreStartDate();
+    if (currentPage === 9) { draw(); p7RecheckHover(); }
     return;
   }
 
@@ -84,7 +87,7 @@ function page7UpdateFromScroll() {
   cur.setUTCDate(cur.getUTCDate() + Math.round(p7ScrubEaseIn(t) * totalDays));
   p7.currentDate = cur.toISOString().slice(0, 10);
 
-  if (currentPage === 8) { draw(); p7RecheckHover(); }
+  if (currentPage === 9) { draw(); p7RecheckHover(); }
 }
 
 window.addEventListener("scroll", () => {

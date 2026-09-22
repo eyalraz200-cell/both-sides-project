@@ -10,7 +10,7 @@ const SWATCH_VANISH_PX = 1;
 // Same per-frame coalescing as draw() (js/core.js) and for the same reason:
 // every animating makeTrigger's own rAF loop plus fold9EnsureP8SyncLoop each
 // call this global directly, which measured out at 2+ full DOM restyles per
-// frame during @fold12's bridge glide. First call in a frame runs; later
+// frame during @fold13's bridge glide. First call in a frame runs; later
 // same-frame calls queue one rerun next frame so no state change is dropped.
 let ugRanThisFrame = false;
 let ugRerunQueued  = false;
@@ -930,19 +930,19 @@ function updateGroups() {
       el.style.display = live ? "block" : "none";
     });
     // The per-row filter strips ride inside those boxes, so their coordinates
-    // are relative to the box, not the viewport. Clickable on @fold9 through
-    // @fold13 — the folds whose dots can still answer a toggle by size.
+    // are relative to the box, not the viewport. Clickable on @fold10 through
+    // @fold14 — the folds whose dots can still answer a toggle by size.
     const pitch = fold6RowPitchPx();
-    const canFilter = live && (currentPage >= 8 && currentPage <= 12)
+    const canFilter = live && (currentPage >= 9 && currentPage <= 13)
       && typeof p7FilterOff !== "undefined";
-    const filterLives = live && currentPage >= 8 && typeof p7FilterOff !== "undefined";
+    const filterLives = live && currentPage >= 9 && typeof p7FilterOff !== "undefined";
     GROUPS.forEach((g, gi) => {
       if (!g.fold6) return;
       const el = fold6LegendFilterEl(g);
       el.style.top = `${fold6RowY(g, H) - hoverTop - pitch / 2}px`;
       el.style.height = `${pitch}px`;
       el.style.display = canFilter ? "block" : "none";
-      // The dim outlives the click target: on @fold14+ the filter is still in
+      // The dim outlives the click target: on @fold15+ the filter is still in
       // force, so the legend must keep saying which groups are missing.
       const off = filterLives && p7FilterOff.has(g.actor);
       const item = groupItems[gi];
@@ -955,15 +955,15 @@ function updateGroups() {
   // ── The מקרא panel's rows are the MOBILE filter buttons ────────────────────
   // Same two states the desktop strips carry, off the same conditions, so the
   // two breakpoints can never disagree about which groups are out:
-  //   .is-armed        — this fold will answer a tap (@fold9…@fold13)
+  //   .is-armed        — this fold will answer a tap (@fold10…@fold14)
   //   .is-filtered-off — this group is currently filtered out. It OUTLIVES the
-  //                      armed state: past @fold13 the filter still applies, so
+  //                      armed state: past @fold14 the filter still applies, so
   //                      the panel must keep saying which groups are missing
   //                      even though tapping can no longer change it.
   if (typeof fold6MobileRowEls !== "undefined" && isMobile()) {
     const mLive = typeof p7FilterOff !== "undefined";
-    const mArmed = mLive && currentPage >= 8 && currentPage <= 12;
-    const mLives = mLive && currentPage >= 8;
+    const mArmed = mLive && currentPage >= 9 && currentPage <= 13;
+    const mLives = mLive && currentPage >= 9;
     fold6MobileRowEls.forEach((r) => {
       if (!r.row) return;
       r.row.classList.toggle("is-armed", mArmed);
@@ -974,10 +974,10 @@ function updateGroups() {
   // ── The «הצגת גודל האירועים» toggle ───────────────────────────────────────────
   // Parked above the TOP row of the right-hand legend column, right edges
   // flush with it (the rows are right-aligned to W - fold6LegendInsetRight(),
-  // so the button is too). It appears on @fold11's crossing — the fold whose
+  // so the button is too). It appears on @fold12's crossing — the fold whose
   // own copy names it — and then STAYS for every fold after it, deliberately
-  // NOT shown on @fold10 before that. It leaves the way the rest of the page
-  // does: on @fold14's scroll-linked fade-out (p9.fold13OutT, js/fold11.js),
+  // NOT shown on @fold11 before that. It leaves the way the rest of the page
+  // does: on @fold15's scroll-linked fade-out (p9.fold13OutT, js/fold11.js),
   // the same clock the tray, the pills and the legit dots fade on, so nothing
   // is left hanging over the closing statement. Before the crossing it is
   // click-through-dead — pointer-events plus a real `hidden` — so it can never
@@ -999,7 +999,7 @@ function updateGroups() {
       && ((typeof fold11SizePast === "function" && fold11SizePast()) || revealRaw > 0);
     p7ScopeBtnEl.hidden = !shown;
     // Mobile: the same control lives in the מקרא panel instead, from the same
-    // crossing to @fold14's fade (which fades the whole legend layer anyway).
+    // crossing to @fold15's fade (which fades the whole legend layer anyway).
     if (typeof fold6MobileScopeEl !== "undefined") {
       const mShown = fold6MobileLegend
         && typeof fold11SizePast === "function" && fold11SizePast();
@@ -1038,12 +1038,12 @@ function updateGroups() {
         `${swatchCx - btnW + P7_SCOPE_RING_PX / 2}px`;
       p7ScopeBtnEl.style.top =
         `${fold6RowIndexY(0, H) - P7_SCOPE_BTN_GAP - btnH + 10}px`;  // +10 by eye, 2026-09-10
-      // @fold14's fade-out, shared with everything else on screen.
+      // @fold15's fade-out, shared with everything else on screen.
       const outT = (typeof p9 !== "undefined" && p9.fold13OutT) || 0;
       p7ScopeBtnEl.style.opacity = String(1 - outT);
       p7ScopeBtnEl.style.pointerEvents = outT > 0.5 ? "none" : "auto";
       // Pressed = crowd sizes are showing, i.e. the grid is up and NOT flat.
-      // On @fold13 the grid itself is long gone — the dots live in page9's
+      // On @fold14 the grid itself is long gone — the dots live in page9's
       // extreme columns — but the same flag still says whether the crowd
       // tiers are showing, so the button reads pressed there too.
       const p9Live = typeof p9PageVisible === "function" && p9PageVisible();
@@ -1393,12 +1393,12 @@ function updateGroups() {
   }
 
   const e7Label = fold7LabelTrigger.currentT();
-  // @fold12 trigger #1 (its title card's ordinary midpoint crossing, see
+  // @fold13 trigger #1 (its title card's ordinary midpoint crossing, see
   // checkFold9 above) colors in only the highlighted square (index 0) and
   // its tooltip's border below — the other 7 squares stay base gray until a
   // later trigger is added.
   const fold9Phase1T = fold9Trigger.currentT();
-  // @fold12 trigger #2 (title card fully offscreen, same crossing as the year
+  // @fold13 trigger #2 (title card fully offscreen, same crossing as the year
   // axis appearing — see checkFold9Fly above) colors in the other 7 squares,
   // resizes all 8 to their real per-event dot's size, and only once that's
   // done flies them to that dot's position — two sequential beats, not
@@ -1524,7 +1524,7 @@ function updateGroups() {
     const FOLD6_SQUARE_DIM_OPACITY = 0.3;
     const dimT = fold8SquareDimT();
     const dimFromFold8 = 1 - (1 - FOLD6_SQUARE_DIM_OPACITY) * dimT;
-    // Restored to full opacity in step with @fold12 trigger #2 (fold9FlyT) —
+    // Restored to full opacity in step with @fold13 trigger #2 (fold9FlyT) —
     // once a square is colored in and flying to its real dot, the dimmed
     // ~30% opacity (which only ever fit its gray, pre-color state) no longer
     // applies; a real timeline dot is always full opacity.
@@ -1543,7 +1543,7 @@ function updateGroups() {
     if (typeof p7 !== "undefined" && p7.hoveredEvent && targetEvent) {
       if (targetEvent !== p7.hoveredEvent) opacity *= hoverDim(targetEvent.actor);
     }
-    // Same parity for @fold13's own hover-dim (p9.hoveredEvent/hoveredCategoryIdx/
+    // Same parity for @fold14's own hover-dim (p9.hoveredEvent/hoveredCategoryIdx/
     // hoverDimT, page9.js's p9PlaceDot) — these squares are also drawn a second
     // time as an ordinary canvas dot in page9's legit/extreme grid (this DOM
     // square just sits on top of it once it arrives), so without this the
@@ -1575,7 +1575,7 @@ function updateGroups() {
       if (lt > 0 && targetEvent.actor !== fold6LegendHoverActor)
         opacity *= 1 - (1 - hoverDim(targetEvent.actor)) * lt;
     }
-    // @fold14's own legit-dot fade-out (p9.fold13OutT, drawPage9) only ever
+    // @fold15's own legit-dot fade-out (p9.fold13OutT, drawPage9) only ever
     // fades events whose category is still classified "below" (legitimate) —
     // extreme ("above") events morph away separately instead (p9.fold13ExtremeMorphT,
     // drawPage12). Same classification check, so a square whose category was
@@ -1585,7 +1585,7 @@ function updateGroups() {
       const idx = CATEGORY_TO_IDX[targetEvent.category];
       const isExtreme = idx !== undefined && p9.sides && p9.sides[idx] === "above";
       if (!isExtreme) opacity *= 1 - (p9.fold13OutT ?? 0);
-      // Once @fold13 reclassifies this square's category to extreme, its
+      // Once @fold14 reclassifies this square's category to extreme, its
       // canvas twin flies up into the extreme column — but this DOM square
       // only ever blends to p9LegitPosOf (the legit band spot), so it stayed
       // parked on the band: exempt from the pill-hover dim (its category IS
@@ -1595,7 +1595,7 @@ function updateGroups() {
       // also hidden while any drop animation runs, so dragging the pill back
       // to legit can't pop the square onto the band before its twin's return
       // flight has landed there.
-      if (currentPage >= 12 && (isExtreme || p9.anim)) opacity = 0;
+      if (currentPage >= 13 && (isExtreme || p9.anim)) opacity = 0;
     }
     // (Removed. These 8 DOM squares had to be dimmed by hand to match the
     // picker's white scrim painted on the canvas under them — but that scrim no
@@ -1618,26 +1618,26 @@ function updateGroups() {
       const event = targetEvent;
       // shrinkT >= 1 (fold 9's own, later, one-way "arrived at its real dot"
       // collapse) or a missing event forces an immediate hide below —
-      // unrelated to @fold9's own scroll reversal, which is handled entirely
+      // unrelated to @fold10's own scroll reversal, which is handled entirely
       // by fold8SeqElapsed/fold8SeqDirection instead (see their own comments
       // above fold8SequenceEvent).
       // Mobile keeps the EMPTY docked frame on screen after the shrink beat
       // has emptied it (see fold8AdvanceSequence's own opacity branch): the
       // frame is a designated fixture of @fold7/@fold8/the timeline, not a
       // callout that comes and goes with one event, so it holds its spot
-      // through them and only stands down once the bridge (@fold12) takes the
+      // through them and only stands down once the bridge (@fold13) takes the
       // squares over into page9's grid.
-      // It now runs through @fold13 (page 9) as well: the press-and-hold event
+      // It now runs through @fold14 (page 9) as well: the press-and-hold event
       // picker serves that fold too on mobile (p7InspectPage, page7.js), and it
       // needs the same resting empty frame to write into. The bound is a plain
       // <= 10 rather than "7 or 9" so the frame doesn't blink off across the
-      // bridge fold (page 8) in between — and it includes page 10 (@fold14)
+      // bridge fold (page 8) in between — and it includes page 10 (@fold15)
       // because the IntersectionObserver flips currentPage to 10 partway
-      // through @fold14's scroll-in: a <= 9 bound made forceHide fire
+      // through @fold15's scroll-in: a <= 9 bound made forceHide fire
       // fold8ResetTooltip at that arbitrary flip point, display:none-ing the
       // frame mid-fade (the "tooltip snaps" bug). Through page 10 the frame's
       // exit belongs to updateFold13's scroll fade instead.
-      const keepEmptyFrame = isMobile() && currentPage <= 13;
+      const keepEmptyFrame = isMobile() && currentPage <= 14;
       const forceHide = !event || (shrinkT >= 1 && !keepEmptyFrame);
       const wantShow = !forceHide && tooltipT > 0.001;
 
@@ -1667,7 +1667,7 @@ function updateGroups() {
       } else if (fold8SequenceEvent) {
         fold8TooltipOwnsIt = true;
         // Colors in step with the highlighted square itself (both driven by
-        // fold9Phase1T/@fold12 trigger #1) — gray until the title card's
+        // fold9Phase1T/@fold13 trigger #1) — gray until the title card's
         // midpoint crossing, then transitions to the actor's real group
         // color together with the square.
         // `color`, not `border-color` — the visible stroke is the dashed <svg>
@@ -1762,7 +1762,7 @@ function updateGroups() {
     // always the same, call the same function the canvas calls instead of
     // re-deriving it. `posE` drives position, `sizeE` size — never one `ease`
     // for both.
-    const rawT  = currentPage >= 12 ? 1 : (typeof p8CurrentT === "function" ? p8CurrentT() : 0);
+    const rawT  = currentPage >= 13 ? 1 : (typeof p8CurrentT === "function" ? p8CurrentT() : 0);
     const beats = typeof p8Beats === "function" ? p8Beats(rawT)
                                                 : { posE: p9Ease(rawT), sizeE: p9Ease(rawT) };
     const ease = beats.posE;
@@ -1879,7 +1879,7 @@ window.addEventListener("scroll", () => {
   if (fold9AxisTicking) return;
   fold9AxisTicking = true;
   requestAnimationFrame(() => {
-    if (currentPage === 4 || currentPage === 6 || currentPage === 7) draw();
+    if (currentPage === 4 || currentPage === 6 || currentPage === 7 || currentPage === 8) draw();
     fold9AxisTicking = false;
   });
 }, { passive: true });

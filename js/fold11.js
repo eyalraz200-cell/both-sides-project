@@ -1,18 +1,18 @@
-// ── @fold14 animations ───────────────────────────────────────────────────────
-// Throughout this file, #page-13 is @fold14 — the closing statement card; the
-// share block (@fold15, #page-14) and the outro/credits card (@fold16,
-// #page-15) follow it. Every *scroll*
-// threshold here (gate, hand-off, sticky freeze) is measured off @fold14's
+// ── @fold15 animations ───────────────────────────────────────────────────────
+// Throughout this file, #page-14 is @fold15 — the closing statement card; the
+// share block (@fold16, #page-15) and the outro/credits card (@fold17,
+// #page-16) follow it. Every *scroll*
+// threshold here (gate, hand-off, sticky freeze) is measured off @fold15's
 // offsetTop, so its own height never moves any of them. That height is 150vh
 // (style.css): one viewport to bring the card to centre, then half a viewport
 // of empty run so the next card doesn't rise into view
 // while this one is still mid-screen. That only reads as spacing because
-// #page-13's .page12-sticky-center is overridden to position:static — left
+// #page-14's .page12-sticky-center is overridden to position:static — left
 // sticky, extra height pins the card at centre instead of scrolling it away.
-// Two independently-driven progress values, per explicit feedback: @fold13
+// Two independently-driven progress values, per explicit feedback: @fold14
 // is "in position" the instant its interaction state is reached (the gate
 // line) — from there, scrolling in *either* direction must visibly move
-// @fold13's own panel/frame and @fold14's title with no dead scroll space,
+// @fold14's own panel/frame and @fold15's title with no dead scroll space,
 // but the *extreme dots'* spread into freeform must still only play once the
 // title fully stops at the top, as a proper animated flourish rather than
 // something scroll-scrubbed.
@@ -24,17 +24,17 @@
 //       - extreme zone + dropped pill labels fade out (page9ZoneWrapEl opacity)
 //       - canvas count numbers + legit dots fade out (p9.fold13OutT). The
 //         camp dividing line does NOT — it rides eTrigger instead, so it
-//         survives @fold14 under the standing dot columns (see page9.js).
+//         survives @fold15 under the standing dot columns (see page9.js).
 //       - legend fades out (groupsOverlayEl opacity), and on mobile its מקרא
 //         button too (fold6MobileLegendLayerEl opacity)
 //       - fold12's own title card (frame included) fades out (page9TitleCardEl opacity)
-//   - eTrigger (fold13Trigger): fires once, when @fold14's own
+//   - eTrigger (fold13Trigger): fires once, when @fold15's own
 //     .page12-sticky-center reaches mid-viewport (checkFold13, frac 0.5,
 //     js/groups.js), and plays out over a fixed GROUP_TRANSITION_MS regardless
 //     of further scroll. Drives only the extreme dots' morph to freeform
 //     (p9.fold13ExtremeMorphT) and, with it, the camp dividing line's fade-out.
 //
-// Both halves now belong to @fold14 and run BACK TO BACK, not together: the
+// Both halves now belong to @fold15 and run BACK TO BACK, not together: the
 // fade is compressed into the first half of the card's rise (FOLD13_FADE_SPAN)
 // so it has finished by the time the card is halfway up, and the spread fires
 // at exactly that point, onto an otherwise-clear screen. The two constants —
@@ -71,7 +71,7 @@ function updateFold13() {
 
   // The fade runs over the FIRST HALF of the card's rise and is fully done by
   // the time the card reaches mid-screen — which is exactly where the freeform
-  // spread fires (checkFold13 watches @fold14's wrapper at frac 0.5,
+  // spread fires (checkFold13 watches @fold15's wrapper at frac 0.5,
   // js/groups.js). So the sequence reads as: everything fades out as the
   // closing statement climbs, and the instant it is halfway up — with the
   // screen otherwise clear — the extreme dots spread. The two never overlap.
@@ -87,7 +87,7 @@ function updateFold13() {
 
   // When fully reversed (eScroll=0) clear inline opacity so CSS class rules
   // (engaged, is-active, etc.) take over — inline "1" would otherwise
-  // override them and freeze elements in their @fold14 state.
+  // override them and freeze elements in their @fold15 state.
   const opacityVal = eScroll > 0 ? String(1 - eScroll) : '';
   // The tray (the pills' frame) fades out in place with everything else —
   // it used to slide off (up on mobile/V2, down in the old bottom-sheet
@@ -99,7 +99,7 @@ function updateFold13() {
   // The whole panel is position:fixed (.frozen) from the gate onward and never
   // leaves the screen, so once it is faded it still sat invisibly over the
   // folds behind it — its tray band (pointer-events:auto) ate the hover on
-  // @fold15's share buttons whenever the card scrolled through it. Inert while
+  // @fold16's share buttons whenever the card scrolled through it. Inert while
   // anything is faded; cleared with the rest at eScroll=0.
   page9StickyEl.style.pointerEvents = eScroll > 0 ? "none" : "";
   if (page9HeaderEl)    page9HeaderEl.style.opacity    = opacityVal;
@@ -108,7 +108,7 @@ function updateFold13() {
   groupsOverlayEl.style.opacity = opacityVal;
   // fold6NoteLayerEl (the ACLED source-credit note) lives outside
   // groupsOverlayEl now (see project.html) so it needs the same fade
-  // explicitly — otherwise it stays visible through @fold14 while the rest
+  // explicitly — otherwise it stays visible through @fold15 while the rest
   // of the legend fades out.
   fold6NoteLayerEl.style.opacity = opacityVal;
   // Same for the mobile מקרא bar: it is the legend's *control* on a phone, in
@@ -117,7 +117,7 @@ function updateFold13() {
   // Fading the whole layer takes the panel with it if it happens to be open.
   if (fold6MobileLegendLayerEl) fold6MobileLegendLayerEl.style.opacity = opacityVal;
   // The shared #page9Tooltip too — on mobile it's the docked event frame,
-  // which sat fully visible through @fold14 while everything around it faded.
+  // which sat fully visible through @fold15 while everything around it faded.
   // Inline opacity only (the base rule has no opacity transition), cleared at
   // eScroll=0 like the rest so its normal show/hide styling takes back over.
   // Cleared ONCE, on the way back from a fade — never re-cleared while eScroll
@@ -133,20 +133,20 @@ function updateFold13() {
   // above to fade a still-legit square out with the rest of the legit grid —
   // without this call it would only pick that up next time something else
   // happens to invoke updateGroups (e.g. a fold9 trigger tick), not on every
-  // fold13ScrollT-driven scroll tick like every other @fold14 element here.
+  // fold13ScrollT-driven scroll tick like every other @fold15 element here.
   updateGroups();
   draw();
 }
 
-// @fold15 — the camps pair up. A SECOND move on top of @fold14's spread:
-// @fold14's camp-split freeform positions are the from, the couple slots
+// @fold16 — the camps pair up. A SECOND move on top of @fold15's spread:
+// @fold15's camp-split freeform positions are the from, the couple slots
 // (p12EnsurePairTargets, page12.js) are the to. p9Ease (sine in-out, the house
 // default), fully reversible — scrolling back up walks the couples home and
 // shrinks the filler dots away.
 // TWO BEATS, sliced off the trigger's RAW progress with p9Ease re-applied
 // fresh per window (house convention — never ease an already-eased slice):
 //   pop  [0 … span)  the newcomers grow in on their own camp's side,
-//                    everything still standing in @fold14's spread
+//                    everything still standing in @fold15's spread
 //   fly  [span … 1]  the whole field travels to the couple slots
 // Nothing moves until every newcomer is fully there.
 // The two beats are timed INDEPENDENTLY, in ms: the trigger's duration is their
@@ -179,23 +179,23 @@ function updateFold14() {
 let fold14PairStarted = false;
 
 // The fade-out is the title block's ARRIVAL, not a separate scroll range
-// (explicit instruction): 0 the instant @fold14's card first pokes above the
+// (explicit instruction): 0 the instant @fold15's card first pokes above the
 // viewport's bottom edge, 1 when it has finished rising to its resting spot
-// (scrollY = #page-13's offsetTop, where the static wrapper's padding-top
+// (scrollY = #page-14's offsetTop, where the static wrapper's padding-top
 // leaves it). So the panel is going out for exactly as long as the card is
 // coming up — no stretch of scroll where everything has faded and there is
 // nothing on screen yet. The card is flush with its section top at every width
 // (style.css), so that start lands exactly ON the gate line — the fade begins
 // the instant the gate releases. That pairing is the whole dead-space fix:
-// @fold13's panel is `.frozen` (motionless at top:0) through the hand-off, so
+// @fold14's panel is `.frozen` (motionless at top:0) through the hand-off, so
 // any scroll before the card appears is a crossfade on a still image and reads
 // as empty. Padding the card down inside its section re-opens that stretch.
-// #page-13's height beyond the resting spot is trailing gap and doesn't
+// #page-14's height beyond the resting spot is trailing gap and doesn't
 // stretch this range. A plain scroll readout, not a makeTrigger, since this
 // must move continuously with scroll in both directions rather than play out
 // over fixed real time.
 function fold13ScrollT() {
-  const page12 = document.getElementById("page-13");
+  const page12 = document.getElementById("page-14");
   if (!page12) return 0;
   const card = page12.querySelector(".page12-sticky-center");
   const end  = page12.offsetTop;
@@ -210,21 +210,21 @@ function fold13ScrollT() {
   return Math.max(0, Math.min(1, (window.scrollY - start) / (end - start)));
 }
 
-// ── @fold14 scroll gate ──────────────────────────────────────────────────────
-// #page-13 is locked until at least one @dragcard has been dropped into the
+// ── @fold15 scroll gate ──────────────────────────────────────────────────────
+// #page-14 is locked until at least one @dragcard has been dropped into the
 // extreme zone. p9.sides (page9.js) is the source of truth.
 function p13GateLocked() {
   return !p9.sides.some(s => s === "above");
 }
 
-// The gate position: keep #page-13's top at the viewport bottom (scrollY max =
-// gateEl.offsetTop - innerHeight). Beyond this, #page-13 enters the viewport.
+// The gate position: keep #page-14's top at the viewport bottom (scrollY max =
+// gateEl.offsetTop - innerHeight). Beyond this, #page-14 enters the viewport.
 function p13GateMax() {
-  const gateEl = document.getElementById("page-13");
+  const gateEl = document.getElementById("page-14");
   return gateEl ? gateEl.offsetTop - window.innerHeight : Infinity;
 }
 
-// #page-13's title is centred in a 100vh wrapper flush with the section top, so
+// #page-14's title is centred in a 100vh wrapper flush with the section top, so
 // the *instant* real
 // scrollY crosses the gate — even for a single momentum-phase wheel tick that
 // ignores preventDefault (some browsers mark those non-cancelable, so the
@@ -239,7 +239,7 @@ function p13GateMax() {
 // to p13SyncTouchBlock: that call reaches p13SyncTouchBlock at load, and a `let`
 // further down the file is still in its temporal dead zone at that moment — the
 // throw killed the rest of this script, so the gate's wheel/key/scroll listeners
-// were never registered and @fold14 could be scrolled past with no pill dropped.
+// were never registered and @fold15 could be scrolled past with no pill dropped.
 let p13TouchBlockOn = false;
 
 function p13SyncGateVisibility() {
@@ -251,7 +251,7 @@ p13SyncGateVisibility();
 // Desktop: block downward mouse-wheel past the gate. Must also catch the
 // single wheel tick that *crosses* the gate, not just ticks that land on/past
 // it — checking only `scrollY >= max` let one large-delta tick scroll clean
-// past the threshold (revealing #page-13's title for a frame until the
+// past the threshold (revealing #page-14's title for a frame until the
 // scroll-event safety net below caught up), instead of ever actually stopping
 // right at the line.
 window.addEventListener("wheel", (e) => {
@@ -304,7 +304,7 @@ function p13SyncTouchBlock() {
 // wheel events that ignore preventDefault, scrollbar drags, etc). Corrects
 // synchronously in the scroll handler itself rather than deferring to the next
 // requestAnimationFrame — that extra frame of delay is exactly the window
-// during which #page-13's title was visibly peeking up before snapping back.
+// during which #page-14's title was visibly peeking up before snapping back.
 window.addEventListener("scroll", () => {
   p13SyncTouchBlock();
   if (!p13GateLocked()) return;
@@ -314,13 +314,13 @@ window.addEventListener("scroll", () => {
   }
 }, { passive: true });
 
-// Freeze the page9 sticky panel in place while scrolled into @fold14 — once
-// the user passes #page-13's scroll context, position:sticky releases and the
+// Freeze the page9 sticky panel in place while scrolled into @fold15 — once
+// the user passes #page-14's scroll context, position:sticky releases and the
 // panel would drift off. Switching to position:fixed keeps it locked at top:0.
-// The sticky element unpins at scrollY = #page-13.offsetTop - window.innerHeight
-// (one full viewport before #page-13 starts), so freeze at that same threshold,
-// not at #page-13.offsetTop itself (that would be too late by a full vh).
-const p13GateEl = document.getElementById("page-13");
+// The sticky element unpins at scrollY = #page-14.offsetTop - window.innerHeight
+// (one full viewport before #page-14 starts), so freeze at that same threshold,
+// not at #page-14.offsetTop itself (that would be too late by a full vh).
+const p13GateEl = document.getElementById("page-14");
 window.addEventListener("scroll", () => {
   if (!p13GateEl) return;
   page9StickyEl.classList.toggle("frozen", window.scrollY >= p13GateEl.offsetTop - window.innerHeight);

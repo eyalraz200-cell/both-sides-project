@@ -67,7 +67,7 @@ window.addEventListener("orientationchange", refreshBreakpointCache, { passive: 
 // js/groups.js, which collapses its duration to 0 and lands every fold on its
 // end state instantly) and CSS transitions (see the reduced-motion block in
 // style.css). What it deliberately does NOT turn off: motion that IS the
-// scroll position — @fold9's scrubbed timeline and @fold12's glide are the
+// scroll position — @fold10's scrubbed timeline and @fold13's glide are the
 // content, not decoration around it, and freezing them would leave nothing to
 // read. Nor page9.js's drop animation, which is finalized.
 const REDUCED_MOTION_MQ =
@@ -81,16 +81,18 @@ function prefersReducedMotion() {
 // drawFoldSplit/drawFold7/drawFold9 are tiny inline background-only
 // functions (see below) — these folds' only visual content is the DOM overlay.
 // Folds whose canvas is *purely* background use drawBackground directly.
-// Index 9 is @fold10, the size grid: the same drawPage7 canvas, with p7Grid
+// Index 8 is the new @fold9 (the date-range card): drawFold9 again, so the
+// axis can already be drawing in while that card is on screen.
+// Index 10 is @fold11, the size grid: the same drawPage7 canvas, with p7Grid
 // on (the axis undraws, the dots re-pack) — see p7SizeGridOnPage.
-// Indices 10 (@fold11) and 11 (@fold12) BOTH draw page8's bridge glide: @fold11
-// flattens the grid and then fires the glide, so @fold12 is reached with it
+// Indices 11 (@fold12) and 12 (@fold13) BOTH draw page8's bridge glide: @fold12
+// flattens the grid and then fires the glide, so @fold13 is reached with it
 // already running or at rest, on the same canvas.
-// Indices 13 (@fold14, the closing statement), 14 (@fold15, the share block)
-// and 15 (@fold16, the outro card)
+// Indices 14 (@fold15, the closing statement), 15 (@fold16, the share block)
+// and 16 (@fold17, the outro card)
 // share drawPage12: the freeform-morph canvas is established on arrival at
-// @fold14 and simply persists behind the credits card that follows it.
-const PAGES = [drawPage1, drawBackground, drawBackground, drawFoldSplit, drawFold7, drawBackground, drawFold7, drawFold9, drawPage7, drawPage7, drawPage8, drawPage8, drawPage9, drawPage12, drawPage12, drawPage12];
+// @fold15 and simply persists behind the credits card that follows it.
+const PAGES = [drawPage1, drawBackground, drawBackground, drawFoldSplit, drawFold7, drawBackground, drawFold7, drawFold9, drawFold9, drawPage7, drawPage7, drawPage8, drawPage8, drawPage9, drawPage12, drawPage12, drawPage12];
 let currentPage = 0;
 
 // How far every OTHER dot/square drops in opacity while one event is hovered
@@ -148,7 +150,7 @@ function drawFoldSplit(ctx, W, H) {
 
 // Timeline-intro fold (id #page-6, Figma node 120:1299) — just the timeline's
 // intro title now. The real pinned scrub section (drawPage7/page7-scrub) lives
-// at #page-8, *after* fold 9, specifically so the real per-event reveal
+// at #page-9, *after* fold 9, specifically so the real per-event reveal
 // doesn't engage until then — bundling them together (the original
 // structure) meant the real dot-grid started growing the instant this
 // title appeared, clashing with fold 6-9's own curated squares for the
@@ -178,14 +180,14 @@ function drawFold7(ctx, W, H) {
 // p7AxisTriggerIfNeeded (its trigger is p7HasEngaged, i.e. this very fold's
 // own title card passing fully offscreen, which also kicks off the axis's
 // one-shot build-in wipe), rather than waiting until currentPage actually
-// flips to the real timeline/#page-8. p7DrawYearAxis itself is still also called from
+// flips to the real timeline/#page-9. p7DrawYearAxis itself is still also called from
 // drawPage7, since the axis needs to keep drawing for the whole rest of the
 // timeline.
 function drawFold9(ctx, W, H) {
   drawBackground(ctx, W, H);
   if (!p7.ready) return;
   p7UpdateEngagement(); // keeps p7HasEngaged live while scrolling back through this fold too (page7.js)
-  // Once the real timeline (drawPage7, #page-8) has actually been reached at
+  // Once the real timeline (drawPage7, #page-9) has actually been reached at
   // least once, keep drawing/animating its per-event squares here too — see
   // p7RealTimelineReached's own comment (page7.js) for why: without this, the
   // instant the user scrolls back up far enough for currentPage to drop from
@@ -193,7 +195,7 @@ function drawFold9(ctx, W, H) {
   // events) just vanished in a single frame instead of finishing its reverse
   // cascade. Gated on p7RealTimelineReached rather than p7HasEngaged alone
   // (which flips true earlier, while still on this very fold) so the
-  // *forward* reveal still only ever starts once #page-8 is actually reached
+  // *forward* reveal still only ever starts once #page-9 is actually reached
   // — this only smooths out the reverse crossing.
   if (p7RealTimelineReached) {
     p7DrawTimelineSquares(ctx, W, H);
@@ -206,7 +208,7 @@ function drawFold9(ctx, W, H) {
 
 // Several independent rAF loops legitimately run at once (p8RunAnimLoop,
 // p7StartAnimLoop, every animating makeTrigger, …) and each calls this same
-// global draw() — measured at ~2 full canvas paints per frame during @fold12's
+// global draw() — measured at ~2 full canvas paints per frame during @fold13's
 // bridge glide, which is where its scroll stutter came from. Coalesced: the
 // first call in a frame paints, later same-frame calls queue ONE rerun on the
 // next frame instead (not dropped — state mutated between the two calls still
@@ -260,17 +262,17 @@ function drawNow() {
   // morphT hits 0 and snap back instead of animating.
   if ((p9?.fold13ExtremeMorphT ?? 0) > 0) {
     drawPage12(ctx, W, H);
-  } else if (currentPage === 9 && typeof p8Engaged !== "undefined" && p8Engaged
+  } else if (currentPage === 10 && typeof p8Engaged !== "undefined" && p8Engaged
              && typeof p8CurrentT === "function" && p8CurrentT() > 0) {
-    // @fold11's reverse glide flew past the flip to @fold10 (on desktop the
+    // @fold12's reverse glide flew past the flip to @fold11 (on desktop the
     // un-crossing sits ~44vh above the flip, inside a 700ms glide): keep page8
     // painting until it lands, or drawPage7 draws every dot at its rest cell in
     // one frame. drawPage8 hands back to drawPage7 itself at t <= 0.
     drawPage8(ctx, W, H);
-  } else if (currentPage === 11 && typeof p9 !== "undefined" && p9.anim
+  } else if (currentPage === 12 && typeof p9 !== "undefined" && p9.anim
              && typeof p8CurrentT === "function" && p8CurrentT() >= 1) {
-    // @fold13's reverse un-stick sends the dropped dots home over 3s
-    // (p9ResetDrops, js/page8-9-scroll.js); the flip to @fold12 lands inside
+    // @fold14's reverse un-stick sends the dropped dots home over 3s
+    // (p9ResetDrops, js/page8-9-scroll.js); the flip to @fold13 lands inside
     // that flight when the title reaches mid-screen, and drawPage8's landed
     // pass paints every dot at its rest cell in one frame. Keep drawPage9
     // painting until the flight lands (the divider and counts are already
@@ -335,7 +337,7 @@ function fitDashArray(geomEl) {
 // The dash <svg> is CSS-sized at 100% of the frame but drawn against a baked
 // viewBox — any box-size change the bake didn't see leaves the stroke scaled
 // off the box edge while the white fill (a plain CSS background) still hugs
-// the real box, i.e. fill visibly outside the stroke. @fold13's card is the
+// the real box, i.e. fill visibly outside the stroke. @fold14's card is the
 // worst case: on mobile its padding TRANSITIONS on .is-stuck (style.css), so
 // the box resizes over 0.35s with no explicit update call, and an address-bar
 // resize could even re-bake the viewBox mid-transition/while-stuck, freezing
@@ -348,7 +350,7 @@ const textCardFrameResizeObs = typeof ResizeObserver !== "undefined"
 
 function updateTextCardFrameDashes() {
   document.querySelectorAll(".text-card-frame").forEach((frame) => {
-    // border-box, NOT the default content-box: @fold13's stick/un-stick
+    // border-box, NOT the default content-box: @fold14's stick/un-stick
     // animates PADDING, which moves the border box while the content box
     // stays put — the default observer stayed silent through the whole
     // transition, so a mid-stuck re-bake (address-bar resize) froze a stale
@@ -560,7 +562,7 @@ function tooltipFillScaled(r, g, b) {
 //                which carries white text.
 // Four call sites write it — p7HoverInit and p7InspectInit (page7.js),
 // p9HoverInit (page9.js) and @fold7's scripted demo (js/update-groups.js) —
-// and the first version of the fill missed two of them, so @fold9's timeline
+// and the first version of the fill missed two of them, so @fold10's timeline
 // hover silently kept the raw colour. Hence the helper.
 // `fill` (optional) overrides the derived fill — for a caller animating
 // between two colours, which must lerp the fills themselves.

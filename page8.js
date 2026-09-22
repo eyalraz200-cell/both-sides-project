@@ -56,7 +56,7 @@ function p8Beats(t) {
 const P8_TRANSITION_DURATION = 1450; // ms — only seeds p8PhaseDur below; p8ForwardMs() drives this file's glide; setActivePage (js/nav.js) still reads this as the clock for the mid-flight handoff into page9's p9.anim
 // The reverse runs on its own, much shorter clock. The forward glide is a
 // reveal the reader watches in place, but the reverse fires while they're
-// already scrolling away back up @fold9's multi-viewport scrub — at 3000ms a
+// already scrolling away back up @fold10's multi-viewport scrub — at 3000ms a
 // flick leaves the canvas showing a crushed page9-blend band and the end-state
 // axis several folds away for seconds. Position still animates continuously
 // (never snaps); it just resolves before the reader has left the neighborhood.
@@ -82,19 +82,19 @@ function p8CurrentT() {
 
 function p8RunAnimLoop() {
   if (p8PhaseStart === null) return;
-  // Page 9 too: the reverse can still be in the air after the flip to @fold10
+  // Page 9 too: the reverse can still be in the air after the flip to @fold11
   // (js/core.js drawNow routes that frame here).
-  if (currentPage >= 9 && currentPage <= 11) draw();
+  if (currentPage >= 10 && currentPage <= 12) draw();
   if (p8CurrentT() !== p8PhaseToT) {
     requestAnimationFrame(p8RunAnimLoop);
   } else {
     p8PhaseFromT = p8PhaseToT; // settle here — p8CurrentT() reads this once phaseStart is null
     p8PhaseStart = null;
     if (p8PhaseToT === 0) p8Engaged = false; // back at rest — forward can fire again later
-    if (currentPage >= 9 && currentPage <= 11) draw(); // final frame, locked at rest
+    if (currentPage >= 10 && currentPage <= 12) draw(); // final frame, locked at rest
     // LANDED: a «הצגת גודל האירועים» press made in the air runs now — the dots
     // settle first, then resize (p7ScopeFlushPending, js/groups.js).
-    // …unless @fold13 has taken the glide over (page 12, js/nav.js): its own
+    // …unless @fold14 has taken the glide over (page 12, js/nav.js): its own
     // continuation flushes when IT lands, on the layer that is actually drawing.
     const p9HasIt = typeof p9 !== "undefined" && p9.anim && p9.anim.plainGlide;
     if (p8PhaseToT === 1 && !p9HasIt && typeof p7ScopeFlushPending === "function") p7ScopeFlushPending();
@@ -140,7 +140,7 @@ function drawPage8(ctx, W, H) {
 
   // Deliberately no fallback trigger here: currentPage flips to 10 (via the -50%
   // IntersectionObserver in js/nav.js) well before the title visually reaches
-  // center, since page-11 already overlaps the screen-center line earlier than
+  // center, since page-12 already overlaps the screen-center line earlier than
   // that. Triggering on that flip would fire too early — page8CheckScroll
   // (js/page8-9-scroll.js) is the only thing that calls p8Trigger/p8TriggerReverse, exactly
   // when the title crosses center (or scroll retreats back past that point).
@@ -167,12 +167,12 @@ function drawPage8(ctx, W, H) {
   const rightX0 = p7GridGeometry(W, H).rightX0;
 
   // A hovered legend ROW (fold6LegendHoverActor, js/groups.js) dims every
-  // other group here too — the same clause page7 / page9 apply, so @fold12
+  // other group here too — the same clause page7 / page9 apply, so @fold13
   // answers the legend like the folds either side of it. Read once per frame.
   let p8NullG = 0, p8TotalG = 0;   // diagnostics: how many dots fell back to their timeline cell this frame
   const legendActor = typeof fold6LegendHoverActor !== "undefined" ? fold6LegendHoverActor : null;
   const legendT = typeof fold6LegendHoverDimT === "function" ? fold6LegendHoverDimT() : 0;
-  // Landed (t >= 1), the strip answers a dot hover exactly as @fold13's does
+  // Landed (t >= 1), the strip answers a dot hover exactly as @fold14's does
   // (p9HoverInit, page9.js): the hovered dot swells on the strip's own ladder
   // and pushes its neighbours (p9LegitBulges), the rest dim. The positions go
   // on record (p9.lastPositions) for that hit-test — this fold has no
@@ -189,7 +189,7 @@ function drawPage8(ctx, W, H) {
   let deferred = null;   // the hovered dot paints last, over its held neighbours
   function blendAndDraw(events, indexOf, side, positions, x0) {
     events.forEach((e, i) => {
-      // The @fold9 legend filter carries through this fold — a group filtered
+      // The @fold10 legend filter carries through this fold — a group filtered
       // out of the timeline stays out of the glide and of everything after it.
       // Toggled ON this fold it shrinks/grows in place rather than blinking out:
       // p7FilterSizeFactor is the size ramp (1 → 0, or 0 → 1 restoring). The
@@ -201,14 +201,14 @@ function drawPage8(ctx, W, H) {
       const cell = positions[i];
       const col  = cell % cols;
       const row  = Math.floor(cell / cols);
-      // @fold10 leaves the size grid ON across this fold (p7SizeGridOnPage,
+      // @fold11 leaves the size grid ON across this fold (p7SizeGridOnPage,
       // page7.js), so the flight starts from each dot's packed cell — its own
       // tier size included — not from the timeline cell it hasn't occupied
-      // since @fold9. Off (mobile, or straight from @fold9) this is the
+      // since @fold10. Off (mobile, or straight from @fold10) this is the
       // timeline cell exactly as before.
       let g = p7GridLiveRect(e, side === "left");
-      // Grid switched OFF under the glide (@fold10's crossing reached while
-      // @fold11's reverse is still in the air): page7 is flying the grid home
+      // Grid switched OFF under the glide (@fold11's crossing reached while
+      // @fold12's reverse is still in the air): page7 is flying the grid home
       // on p7GridMorph, so the near end of THIS glide follows that flight —
       // not the timeline cell it will only reach when the morph lands.
       if (!g && typeof p7GridMorph !== "undefined" && p7GridMorph && p7GridMorph.dir === "off"
@@ -229,7 +229,7 @@ function drawPage8(ctx, W, H) {
       let y = fromY + (target.y - fromY) * ease;
       // Shrink each dot from the (now enlarged) real-timeline square size (p7.SQ)
       // down to page9's legit-grid size (P9_SQ) across the glide, so the dots
-      // visibly get smaller on the way into @fold14 and land at exactly the size
+      // visibly get smaller on the way into @fold15 and land at exactly the size
       // drawPage9 will keep drawing them — no size jump at the handoff. Both
       // endpoints are top-left anchored (fromX/Y and target.x/y are cell corners),
       // so a plain linear size lerp lines up at both ends.
@@ -241,8 +241,8 @@ function drawPage8(ctx, W, H) {
       const endSQ  = legitGeom.mode === "bar" ? legitGeom.cell
                    : (target.sq ?? p9Metrics().legitSq);
       let drawSQ = fromSQ + (endSQ - fromSQ) * sizeE;
-      // Landed (t = 1): the «הצגת גודל האירועים» press on @fold11/@fold12 runs
-      // @fold13's own tier morph (p9ScopeSet, seeded from this fold's landed
+      // Landed (t = 1): the «הצגת גודל האירועים» press on @fold12/@fold13 runs
+      // @fold14's own tier morph (p9ScopeSet, seeded from this fold's landed
       // positions in p7ScopeToggle) — same windows, same push throttle — so
       // the strip morphs between flat and tiered here exactly as it does one
       // fold later, instead of snapping to the new endpoint.
@@ -261,7 +261,7 @@ function drawPage8(ctx, W, H) {
       const lb = p9LegitBulgeApply(e, x, y, drawSQ, legitGeom, legitBulges);
       if (lb) { x = lb.x; y = lb.y; drawSQ = lb.sq; }
       if (landed) posMap.set(e, { x, y, sq: drawSQ });
-      // A hovered dot (this fold or @fold13's — same p9.hoveredEvent) wins
+      // A hovered dot (this fold or @fold14's — same p9.hoveredEvent) wins
       // over the legend row, same order as p9PlaceDot.
       const alpha = hov ? (e === hov ? 1 : hoverDim(e.actor))
                   : (legendT > 0 && e.actor !== legendActor) ? 1 - (1 - hoverDim(e.actor)) * legendT : 1;
@@ -283,14 +283,14 @@ function drawPage8(ctx, W, H) {
   // Once the glide has fully landed on a bar layout (mobile), stop drawing
   // dot-by-dot: thousands of 1px dots at fractionally-lerped positions leave
   // ragged colour seams the moment motion stops masking them, and this
-  // function keeps drawing at t=1 until @fold13's own drawPage9 takes over.
+  // function keeps drawing at t=1 until @fold14's own drawPage9 takes over.
   // Same solid-rect pass drawPage9's at-rest bar uses (p9DrawBarRects,
   // page9.js), so the handoff is pixel-identical.
   if (t >= 1 && legitGeom.mode === "bar") {
     p9DrawBarRects(ctx, legitGeom, H, 1);
   } else {
     blendAndDraw(p7.leftEvents,  p9.leftIndexOf,  "left",  p7.leftPos,  leftX0);
-    // DIAGNOSTIC (reported: on the first reverse through @fold11's line the
+    // DIAGNOSTIC (reported: on the first reverse through @fold12's line the
     // field flies to the timeline, then snaps into the grid — not reproduced
     // headless). Warn once per glide when the grid should be under the field
     // but most dots have no grid cell, with the state that explains it.
@@ -355,8 +355,8 @@ function p8CaptureBlendedPositions(W, H, tOverride) {
       const col  = cell % cols;
       const row  = Math.floor(cell / cols);
       let g = p7GridLiveRect(e, side === "left");
-      // Grid switched OFF under the glide (@fold10's crossing reached while
-      // @fold11's reverse is still in the air): page7 is flying the grid home
+      // Grid switched OFF under the glide (@fold11's crossing reached while
+      // @fold12's reverse is still in the air): page7 is flying the grid home
       // on p7GridMorph, so the near end of THIS glide follows that flight —
       // not the timeline cell it will only reach when the morph lands.
       if (!g && typeof p7GridMorph !== "undefined" && p7GridMorph && p7GridMorph.dir === "off"

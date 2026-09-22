@@ -15,7 +15,7 @@ white box around just the `<h2>` is `.text-card-frame`.
 `@fold4` and alive through every later fold.
 
 **`@dragcards` / "draggable events"** — the category **pills** (`.page9-pill`,
-`P9_CATEGORIES`) in `@fold13`'s tray. **Not** the per-event canvas dots.
+`P9_CATEGORIES`) in `@fold14`'s tray. **Not** the per-event canvas dots.
 
 **"Axis events"** — the 9 `P7_AXIS_EVENTS` headline events on the year axis: side plaques
 beside the vertical axis on desktop (each with a `desc` that types in on hover — see
@@ -23,9 +23,10 @@ beside the vertical axis on desktop (each with a `desc` that types in on hover �
 stays on the axis until reverse scroll un-reaches it. **Not** the per-event canvas dots.
 
 **"Axis appearing" vs "axis filling up"** — two distinct behaviors, easy to confuse:
-*appearing* is the 2800 ms build-in wipe (`p7AxisIntroT`); *filling up* is the dark
-"reached" bar growing as `p7.currentDate` advances. Both are currently gated off the same
-crossing. Both run **top → bottom** down the vertical centre axis, on desktop and on
+*appearing* is the build-in wipe (`p7AxisIntroT`, `P7_AXIS_INTRO_DURATION_*` 1750 ms);
+*filling up* is the dark "reached" bar growing as `p7.currentDate` advances. They are now
+**two separate crossings of @fold9's date-range card**: appearing on its 0.5
+(`fold9AxisTrigger`), filling once it is fully out of the top (`p7HasEngaged`). Both run **top → bottom** down the vertical centre axis, on desktop and on
 mobile alike (`P7_VERT_MOBILE.enabled` is true; the old horizontal bottom axis is gone).
 
 **"Band" / "widen"** — the two headline placements under comparison on the desktop
@@ -61,9 +62,9 @@ divider.
 `@fold1` decorative dots; they shrink away at `@fold3`, leaving each row's rightmost rect
 as the persistent `.group-item`.
 
-**Size grid** — what `@fold10` (`#page-9`, desktop) does: arriving on the fold turns it on
+**Size grid** — what `@fold11` (`#page-10`, desktop) does: arriving on the fold turns it on
 (`p7SizeGridSet`/`p7SizeGridOnPage`, page7.js), the timeline undraws, and the visible squares
 grow to their crowd-tier block size and re-pack into a gap-exact skyline grid per camp, at
-the timeline's own gap. Scrolling back to `@fold9` flies them back. There is no button.
+the timeline's own gap. Scrolling back to `@fold10` flies them back. There is no button.
 Distinct from the hover **bulge** (same tiers, different multipliers). See
 [Timeline](Timeline.md#the-size-grid--p7sizegridset-page7js).

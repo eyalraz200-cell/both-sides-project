@@ -109,7 +109,7 @@ retimes the exit automatically.
 
 **~1900 ms — the shared "legend tempo"** (`GROUP_TRANSITION_MS`). One deliberate tempo
 so the legend system reads as one piece. Used by `fold7LabelTrigger` and the later
-legend beats. `fold13Trigger` (@fold14's spread) has its own `FOLD13_SPREAD_MS` (1150). `P7_AXIS_OUTRO_DURATION` is 800.
+legend beats. `fold13Trigger` (@fold15's spread) has its own `FOLD13_SPREAD_MS` (1150). `P7_AXIS_OUTRO_DURATION` is 800.
 
 **@fold4, @fold5 and @fold8 own their durations**, no longer moving with
 `GROUP_TRANSITION_MS`: `fold4GlideMs()` **1250 desktop / 1603 mobile** (`fold6Trigger`; mobile's is the SUM of its
@@ -126,7 +126,7 @@ pairs stay so either side can be retuned alone): `page0TitleMs()` 1308,
 `page0RowStaggerMs()` 31, `page0PopMs()` 215, `page0LogoFadeMs()` 692 (@fold1, ≈3200ms
 in all), `fold2EntranceMs()` 1600, `fold3EntranceMs()` / `fold3Beats()` (derived from
 `FOLD3_BEAT_MS_DESKTOP`/`_MOBILE` by `fold3BeatsRebuild()`, 1600), `fold4GlideMs()`,
-`fold5SquaresMs()`, `fold6HeadUntypeMs()` 329. Also paired, mobile matched to desktop for now: `fold8TypeMsPerChar()` 9 (the demo tooltip's typewriter, js/fold8-tooltip.js), `p7AxisIntroDuration()` 1750 and `p7AxisIntroDotMs()` 300 (the year-axis wipe, page7.js). **Genuinely different:** `p7AnimTotalMs()` 1400 desktop / 550 mobile and `p7PopMs()` 140 / 40 (a month's cascade — the phone's was tuned faster on purpose). Every fold duration up to @fold9 is a
+`fold5SquaresMs()`, `fold6HeadUntypeMs()` 329. Also paired, mobile matched to desktop for now: `fold8TypeMsPerChar()` 9 (the demo tooltip's typewriter, js/fold8-tooltip.js), `p7AxisIntroDuration()` 1750 and `p7AxisIntroDotMs()` 300 (the year-axis wipe, page7.js). **Genuinely different:** `p7AnimTotalMs()` 1400 desktop / 550 mobile and `p7PopMs()` 140 / 40 (a month's cascade — the phone's was tuned faster on purpose). Every fold duration up to @fold10 is a
 `var` read through a thunk (`makeTrigger(() => xMs(), …)` resolves per frame), so a
 harness can drive it live.
 
@@ -145,14 +145,14 @@ Named exceptions, each because the shared tempo read wrong for that specific bea
 
 **Bigger canvas glides:** `P7_ANIM_TOTAL_DURATION` 2200 (one cascade unit — a row on the
 desktop vertical axis, a month on mobile; see [Timeline](Timeline.md)),
-`P7_POP_DURATION` 220 (one square), the @fold11 glide's two beats — `P8_SHRINK_MS` 1450 (desktop `P8_SHRINK_MS_DESKTOP` 1700)
+`P7_POP_DURATION` 220 (one square), the @fold12 glide's two beats — `P8_SHRINK_MS` 1450 (desktop `P8_SHRINK_MS_DESKTOP` 1700)
 (each square morphing down to the legit-grid size) and `P8_FLY_MS` 1450 (desktop `P8_FLY_MS_DESKTOP` 1700; its position
 travelling to the legit cell), staged by `P8_STAGING` (`"together"` — both from 0, each
 on its own ms, the shipped look; `"shrink-then-fly"`; `"fly-then-shrink"`) with
 `p8ForwardMs()` the resulting full traverse and `p8Beats(t)` slicing the phase's **raw**
 progress and re-easing each beat fresh; forward only — the reverse runs on
 `P8_REVERSE_DURATION` 700 as one undivided traverse, because it fires while the reader is
-already flicking back up @fold9's scrub and at 3000 ms the canvas showed a crushed
+already flicking back up @fold10's scrub and at 3000 ms the canvas showed a crushed
 page9-blend band several folds away, `P9_LINE_DURATION` 800, page9's dot migration (600 ms travel per dot plus
 stagger; 2200/3400 ms reposition; flat 3000 ms back to legit) — see
 [Drag-and-Drop](Drag-and-Drop.md).
@@ -206,14 +206,14 @@ Near-zero rather than `none` so `transitionend`/`animationend` still fire and th
 still lands. It's safe to apply that broadly only because of the rule above — JS-repainted
 elements carry no CSS transition to fight with.
 
-**Deliberately NOT reduced:** motion that *is* the scroll position — @fold9's scrubbed
-timeline and @fold12's glide are the content, not decoration around it, and freezing them
+**Deliberately NOT reduced:** motion that *is* the scroll position — @fold10's scrubbed
+timeline and @fold13's glide are the content, not decoration around it, and freezing them
 would leave nothing to read. Nor page9.js's finalized state-1 drop animation.
 
 ## Dots never fade
 
 A dot — any per-event square, on any fold — enters and leaves by **size**: it grows
 from nothing or shrinks to nothing. Never animate a dot's opacity to hide, remove,
-filter or reveal it. Opacity is for text, cards, rules and labels. (The @fold9
+filter or reveal it. Opacity is for text, cards, rules and labels. (The @fold10
 legend filter is the reference case: filtered-out dots shrink to zero, they do not
 fade — see [Timeline](Timeline.md#the-legend-filter-fold9-desktop-only--p7filtertoggle-page7js).)

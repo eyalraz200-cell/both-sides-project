@@ -137,7 +137,7 @@ opacity every frame, so nothing has to switch it back on.
   hover box, and types in the moment the pointer leaves with the dot still hovered. **Hovering a row's click strip also lights up that group's dots**
   (`fold6LegendHoverActor` + `fold6LegendHoverDimTrigger`, 90ms, js/groups.js): every other
   dot on the canvas dims to `hoverDim(actor)`, the same floor a hovered dot uses, on all
-  four dim sites — page7's `p7DrawSideSquares`, page8's bridge (`blendAndDraw`, @fold12),
+  four dim sites — page7's `p7DrawSideSquares`, page8's bridge (`blendAndDraw`, @fold13),
   page9's `p9PlaceDot`, and the 8 claimed DOM squares in `updateGroups` — as the lowest-priority rule (a hovered dot or pill wins).
   The actor is kept through the fade-out so its dots stay bright while the rest come back.
   A row whose group is **filtered out** (`p7FilterOff`) gets no highlight, and filtering a
@@ -153,8 +153,8 @@ opacity every frame, so nothing has to switch it back on.
    new one, and is skipped/cancelled while `fold6LegendPointerOver` is true, so a real
    hover during the demo simply takes over. Desktop only. See [Folds](Folds.md).
    **Hovering a DOT opens just that dot's row.** Any per-event square, on any fold whose
-   hover layer is live (`p7HoverInit` on @fold9/@fold10 — including the 8 claimed DOM
-   squares — and `p9HoverInit` on @fold13) calls `fold6DotHover(actor)` (js/groups.js)
+   hover layer is live (`p7HoverInit` on @fold10/@fold11 — including the 8 claimed DOM
+   squares — and `p9HoverInit` on @fold14) calls `fold6DotHover(actor)` (js/groups.js)
    alongside setting its own `hoveredEvent`. That drives a **per-group** trigger
    (`fold6DotHoverTriggers`, one per actor, also `FOLD6_LABEL_HOVER_MS` 420) which joins the
    same combination in `updateGroups` (js/update-groups.js): `restT = Math.max(untypeVisibleT,
@@ -266,7 +266,7 @@ right column at either breakpoint.
 
 ## The «הצגת גודל האירועים» button above the right column
 
-@fold11's manual switch for the crowd-size tiers (`p7ScopeBtnEl`, js/groups.js;
+@fold12's manual switch for the crowd-size tiers (`p7ScopeBtnEl`, js/groups.js;
 `.p7-scope-btn`, style.css; 14px Assistant, **no letter-spacing** — matching `.group-label`'s settled mini-legend type exactly). It is **not a pill**:
 borderless text with a **10px ring** 8px to its right (`::before`, `flex-direction:
 row-reverse` so the ring lands on the RTL row's right) — empty when off, **filled dark** under
@@ -287,7 +287,7 @@ a `.groups-overlay` child. The overlay is `pointer-events: none` *and*
 `z-index: 0` with its own stacking context, so a button inside it would sit under
 `.text-col` and never see a click; the button is a direct `.layout` child at
 `z-index: 3` instead (`.fold6-note-link` gets away with living in the overlay
-only because `.fold6-note-layer` is a separate `z-index: 2` layer). Appears on @fold11's crossing — the fold whose copy points at it — and it **never fades in**:
+only because `.fold6-note-layer` is a separate `z-index: 2` layer). Appears on @fold12's crossing — the fold whose copy points at it — and it **never fades in**:
 the ring **pops** in on `p7Ease` over `P7_SCOPE_RING_POP_MS` (260) and the label **types** in
 behind it at `P7_SCOPE_TYPE_MS_PER_CHAR` (22) per character on `p9Ease` (`typedText`), the same
 grow-then-type order the @fold7 tooltip uses. One `p7ScopeRevealTrigger` (js/groups.js) fired
@@ -304,14 +304,14 @@ for a harness. Values (manual/-baked 2026-09-16): grow **3.5**px, text alpha **1
 transform), and the typed label is measured *before* the button's right-edge placement each
 frame, so the ring holds still while the characters grow leftward. The accessible name comes
 from a static `aria-label`, since the visible text is sliced. Then it stays for every fold
-after it, fading out with everything else on @fold14's `p9.fold13OutT` clock;
+after it, fading out with everything else on @fold15's `p9.fold13OutT` clock;
 `hidden` before that. Desktop only. Behaviour and what it
 toggles: [Timeline](Timeline.md#the-size-grid--p7sizegridset-page7js).
 
-The click is **page-gated** (js/groups.js): `currentPage < 12` → page7's
-`p7SizeGridSet(true, {uniform: !p7GridUniform})`; `currentPage === 12` →
+The click is **page-gated** (js/groups.js): `currentPage < 13` → page7's
+`p7SizeGridSet(true, {uniform: !p7GridUniform})`; `currentPage === 13` →
 page9's own `p9ScopeSet(!p7GridUniform)`, which tiers **both the extreme columns
-and the legit strip** on @fold13 (see Drag-and-Drop); any later page → inert. `p7GridUniform` stays the single
+and the legit strip** on @fold14 (see Drag-and-Drop); any later page → inert. `p7GridUniform` stays the single
 source of truth for "tiers showing" on both paths, so the pressed look
 (`!p7GridUniform && (p7Grid.on || p9PageVisible())`, js/update-groups.js) is
 one formula covering both folds.
@@ -354,7 +354,7 @@ are both fixed px, so on a phone an H-scaled distance would swing with the URL b
   each its group color, and `fold6SquareOccurrence(i)` says which chronological occurrence
   of that actor it stands in for. The real cascade never draws those 8 events
   (`p7GetClaimedEvents`), so the DOM square just stays once it lands.
-- **shrink with the @fold12 glide** — as page8's blend carries them down to the legit
+- **shrink with the @fold13 glide** — as page8's blend carries them down to the legit
   band, both position *and size* lerp by the same ease (`js/update-groups.js`): the end
   size is the band's own rule (`legitGeom.cell` in bar mode, else `p9Metrics().legitSq`),
   matching what page8.js uses for canvas dots. On big desktop that's a no-op (legitSq =
@@ -406,7 +406,11 @@ hover handlers to stay in sync — the squares are DOM, outside `draw()`.
 ## ACLED note
 
 `FOLD6_NOTE_TEXT` (`js/groups.js`) is rendered into `#fold6NoteLayer` with "ACLED" wrapped as a
-link. **On mobile the note is not positioned at all** — it is reparented into the מקרא
+link. It credits ACLED for the event descriptions and dates, and states that the grouping
+and classification were done for this project with OpenAI models, leaving the descriptions
+themselves unaltered. At **270 characters** it is roughly twice the length of the single
+sentence it replaced, so it wraps to about twice as many lines at the same
+`FOLD6_NOTE_WIDTH` and hangs correspondingly further below the legend rows. **On mobile the note is not positioned at all** — it is reparented into the מקרא
 panel (below) and flows there; everything in this section is the desktop layout.
 
 **Mobile also toggles `hidden` on the note and its rule** (`js/update-groups.js`, right
@@ -546,17 +550,19 @@ as the square-labels fold takes over. **The title stays** (explicit instruction)
 the rule, shrunk back to the title's height. `fold6UpdateNoteTypewriter` therefore takes
 **two** counts, title and body: the title follows the reveal alone, the body follows the
 un-type; both are slices of the same running total, so the first type-in still reads as one
-stream. **Hovering the mini-legend types the body back** — and so does hovering **the note or
-its title**, which are their own hit target (explicit instruction; `.fold6-note` /
+stream. **Hovering the note types the body back — and nothing else** (explicit instruction). The note
+and the group rows are **two independent hover zones**: the note's own hit target (`.fold6-note` /
 `.fold6-note-title` opt back into `pointer-events` inside the otherwise click-through note
 layer, and the typewriter keeps the block at full size so the hit area never shrinks; the
-**card** is part of that target too). It runs on its **own** trigger,
+**card** is part of that target too) opens the note and leaves the six labels closed, and the
+legend columns' hit boxes (`fold6LegendHoverSync`) open **all six labels together — never one
+row on its own** — and leave the note closed. The two regions are disjoint by construction: the
+column boxes stop `FOLD6_LEGEND_HOVER_PAD` below the bottom row and the note hangs below that,
+so a pointer is never inside both. It runs on its **own** trigger,
 `fold6NoteHoverTrigger` / `FOLD6_NOTE_HOVER_MS` = **700ms**, rather than the group labels'
 `fold6LabelHoverTrigger` (420ms) — explicit instruction: it doesn't have to land with them and
 wants more breathing time, there being far more text here than in a label and a card opening
-underneath it at the same time. Both triggers fire from exactly the same two places (the
-legend columns' hit boxes and the note itself), so hovering either still brings both back;
-only the tempo differs. It is combined the same way: the visible count is `min(reveal, max(1 - untype, hover))`, so a hover caught
+underneath it at the same time. It is combined the same way: the visible count is `min(reveal, max(1 - untype, hover))`, so a hover caught
 mid-un-type re-fills from where the count already is. Un-typing from the end is just the
 character count running back down — no slice flip (unlike the left legend column's labels).
 **Desktop only**: mobile has no hover, so an un-typed note there would be unrecoverable, and
@@ -699,7 +705,7 @@ still opening, and the flight aims at the rows' REST positions).
   (1002) → the groups (1003) → the title blocks (1004, and 1005 on the folds whose cards
   have to clear the docked tooltip)**. So a title block paints over both, and the group rows
   paint over the legend. Mobile only, with `.text-section > .section-text.text-card`
-  supplying the `position: relative` — the child combinator leaves `@fold13`/`@fold14`'s
+  supplying the `position: relative` — the child combinator leaves `@fold14`/`@fold15`'s
   sticky/fixed cards alone. The bar keeps a four-digit number (rather than being dropped to
   a low one) purely to stay above the docked event tooltip's 1000, exactly as it was; the
   cards were lifted past it instead, which leaves every other tooltip relationship alone.
@@ -853,7 +859,7 @@ still opening, and the flight aims at the rows' REST positions).
   while the on-canvas rows are still leaving behind it. The `@fold4` intro below still waits
   for the *unmapped* progress to reach 1.
 - **MOBILE: the מקרא drawer collapses at `@fold4`, as built** (explicit instruction). `FOLD6_MLEGEND_HOLD_OPEN` (js/groups.js) is **`false`**: `fold6MFlyArrive` shuts the panel `FOLD6_MFLY_CLOSE_GAP_MS` after the rows land, `fold6MLegendAutoBeat`'s `want` is `squaresRevealTrigger.currentT() <= 0` (so `@fold5` keeps it shut and nothing reopens it), scrolling closes a hand-opened panel, and the ACLED note arrives collapsed inside the closed drawer. **Everything below about the panel being HELD open until the year axis has drawn describes the flag's `true` state and is not what ships on mobile** — holding open is the DESKTOP behaviour (labels + note staying typed, `checkLegendCollapse`).
-- **The close is LATCHED** (desktop; mobile too when `FOLD6_MLEGEND_HOLD_OPEN` is on) (`legendAxisLatch`, js/groups.js): once the axis has fully drawn and the legend has closed it stays closed — the axis un-wiping later (@fold10's undraw, the bridge) does not reopen it. **Desktop reopens it on the way UP out of the timeline into @fold8**: the moment `fold9FlyTrigger`'s reverse crossing fires (its target back at 0 — the same line the axis un-wipes on, `currentPage < 9`) the latch releases and the labels + note type back; drawing the axis again re-collapses it. On mobile only going back above @fold4 (`currentPage < 3`, where the legend doesn't exist yet and the sequence re-arms) releases the latch. Hover (desktop) and a tap on מקרא (mobile) still open it by hand.
+- **The close is LATCHED** (desktop; mobile too when `FOLD6_MLEGEND_HOLD_OPEN` is on) (`legendAxisLatch`, js/groups.js): once the axis has fully drawn and the legend has closed it stays closed — the axis un-wiping later (@fold11's undraw, the bridge) does not reopen it. **Desktop reopens it on the way UP out of the timeline into @fold8**: the moment `fold9FlyTrigger`'s reverse crossing fires (its target back at 0 — the same line the axis un-wipes on, `currentPage < 10`) the latch releases and the labels + note type back; drawing the axis again re-collapses it. On mobile only going back above @fold4 (`currentPage < 3`, where the legend doesn't exist yet and the sequence re-arms) releases the latch. Hover (desktop) and a tap on מקרא (mobile) still open it by hand.
 - **Desktop collapse = the year axis fully drawn, not @fold4's landing.** `fold6Trigger`'s settle no longer fires `fold6LabelUntypeTrigger` forward (it still reverses it on the way up). `checkLegendCollapse` (js/groups.js) — two `watchFlag`s on `legendAxisDrawn()` (`p7AxisIntroT() >= 1`, desktop only, rAF-polled while the wipe is mid-flight) — un-types the six labels **and** the ACLED note together, and types them back when the axis un-wipes. Hover re-typing a collapsed legend is unchanged. Any older line on this page saying the labels un-type when the glide lands, or the note un-types on @fold7, is superseded by this.
 - **The panel's own beats after the hand-off** (`fold6MLegendAutoBeat`, called from
   `updateGroups` right after `fold6SetMobileLegendVisible`). **The panel STAYS OPEN from the
@@ -886,7 +892,7 @@ still opening, and the flight aims at the rows' REST positions).
   same sides (coalition right, by `dir: rtl` + source order), each column in `campRowOrder`'s
   mobile order (see the roster section — it passes `mobile: true` outright, since the panel is
   built once at parse time and only ever shown under the breakpoint).
-- **«הצגת גודל האירועים» row** (`fold6MobileScopeEl`) directly under the group rows, shown from @fold11's crossing (`fold11SizePast()`, js/update-groups.js) — the desktop `p7ScopeBtnEl`'s mobile twin, same `p7ScopeToggle` (@fold11–@fold12 via `p7SizeGridSet`, @fold13 via `p9ScopeSet`). Tap resolved in `fold6MLegendDragEnd` (`d.onScope`).
+- **«הצגת גודל האירועים» row** (`fold6MobileScopeEl`) directly under the group rows, shown from @fold12's crossing (`fold11SizePast()`, js/update-groups.js) — the desktop `p7ScopeBtnEl`'s mobile twin, same `p7ScopeToggle` (@fold12–@fold13 via `p7SizeGridSet`, @fold14 via `p9ScopeSet`). Tap resolved in `fold6MLegendDragEnd` (`d.onScope`).
 - **«איסוף הנתונים» — a collapsible section at the bottom of the מקרא panel**, under the
   group rows behind `.fold6-mlegend-divider`. **Only from @fold6 on** — `fold6MDataSetAvailable(noteRevealT > 0)` (js/update-groups.js) hides it above that fold's `acledNoteTrigger` crossing and resets it collapsed. **Collapsed by default.** Header
   `.fold6-mlegend-data-head` (the desktop note title's type + its chevron, turned by
@@ -1266,7 +1272,7 @@ still opening, and the flight aims at the rows' REST positions).
 **The מקרא hand-off intro re-arms only above @fold4.** `fold6SetMobileLegendVisible`
 plays `fold6PlayMLegendIntro` once (`fold6MLegendIntroPlayed`) and re-arms it when the
 bar's `vis` drops to 0 — but `vis` also reads 0 on a DESKTOP viewport, so a phone
-rotated to landscape and back re-armed it at @fold11 and replayed the whole intro there:
+rotated to landscape and back re-armed it at @fold12 and replayed the whole intro there:
 the sheet opening itself for 1.2s on a fold where it has no business. The re-arm is now
 gated on `currentPage <= 3` (@fold4 and above). A rotation at any later fold leaves the
 memo set.
@@ -1297,9 +1303,9 @@ un-types at `@fold4`.
 
 Dots enter and leave by **size**, never opacity — the project-wide rule is [Animation-System → Dots never fade](Animation-System.md#dots-never-fade); its sub-pixel corollaries here are `SWATCH_VANISH_PX` (**1**, `js/update-groups.js` — the mobile swatch shrink's opacity is multiplied by `swatchSize / SWATCH_VANISH_PX`, so the fade lives entirely inside an already-invisible pixel) and the 8 sample squares' wraps going `display: none` at `growScale` 0 (safe only because `layoutFold6Squares` never measures them).
 
-## Clicking a legend row — the @fold9 filter
+## Clicking a legend row — the @fold10 filter
 
-On the real timeline (@fold9) each legend row is also a **filter toggle** (`.fold6-legend-filter` strips, built by `fold6LegendFilterEl(g)` and positioned per frame by `updateGroups`; desktop only): click it and that group leaves the graph by size, and the filter stays in force through every later fold.
+On the real timeline (@fold10) each legend row is also a **filter toggle** (`.fold6-legend-filter` strips, built by `fold6LegendFilterEl(g)` and positioned per frame by `updateGroups`; desktop only): click it and that group leaves the graph by size, and the filter stays in force through every later fold.
 Mechanics, hover/filtered-off styling and how the 8 claimed squares follow it: [Timeline](Timeline.md#the-legend-filter-fold9-desktop-only--p7filtertoggle-page7js).
 
 ## The מקרא sheet's gesture (mobile)
@@ -1329,7 +1335,7 @@ drag that begins on a row is still a drag. `pointerdown`/`move`/`up` on
 `fold6MLegendRowTap` calls the same `p7FilterToggle` the desktop strips do, gated to the
 same folds (`currentPage` 8–12), then `p9FilterKick()` + `updateGroups()`. `p7FilterToggle`
 used to early-return on `isMobile()`; that gate is **gone** — everything downstream (the
-shrink, the re-pack, the fly, @fold10's grid repack) was already breakpoint-agnostic and
+shrink, the re-pack, the fly, @fold11's grid repack) was already breakpoint-agnostic and
 only the entry point was closed. `p7.vert` still gates it: with no vertical layout there is
 nothing to re-pack.
 
@@ -1338,6 +1344,6 @@ strips use so the breakpoints can never disagree:
 
 | class | meaning |
 |---|---|
-| `.is-armed` | this fold will answer a tap (@fold9…@fold13) — `cursor: pointer`, nothing else, since a phone has no hover |
-| `.is-filtered-off` | this group is out. **Outlives** the armed state: past @fold13 the filter still applies, so the panel keeps saying which groups are missing even though tapping can no longer change it. 0.28, matching `.group-item.is-filtered-off` exactly |
+| `.is-armed` | this fold will answer a tap (@fold10…@fold14) — `cursor: pointer`, nothing else, since a phone has no hover |
+| `.is-filtered-off` | this group is out. **Outlives** the armed state: past @fold14 the filter still applies, so the panel keeps saying which groups are missing even though tapping can no longer change it. 0.28, matching `.group-item.is-filtered-off` exactly |
 | `.is-pressed` | the finger is on it. Written on **pointerdown** by the sheet's own pointer handler (js/groups.js), no transition, `#d2d2d2`; gone the moment the gesture turns into a drag of the sheet (`FOLD6_MLEGEND_DRAG_SLOP_PX`) or on release. It exists because the real state can only be decided at pointerup — the same gesture may be a drag — so without it a row answered only after the finger lifted plus a 140ms fade, which read as a slow button. `fold6MLegendRowTap` also writes `.is-filtered-off` itself on the tap, rather than waiting for `updateGroups()` (once per frame, so its own call can be re-queued to the next) |

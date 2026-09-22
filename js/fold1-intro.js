@@ -329,7 +329,7 @@ function page0CueSchedule(delayMs) {
 }
 
 // The six group swatches carry a CSS `transition: transform 260ms ease` for
-// the @fold9 legend filter-hover flip (style.css). The cue writes transform
+// the @fold10 legend filter-hover flip (style.css). The cue writes transform
 // every frame, so that transition damps the pulse: the swatches lagged the
 // 470ms shrink half and visibly bottomed out well short of PAGE0_CUE_SCALE
 // while the .page0-dots (no transition) hit it exactly — the flying dots

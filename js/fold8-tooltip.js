@@ -1,4 +1,4 @@
-// @fold9's square shows the shared #page9Tooltip (page7.js/page9.js's own
+// @fold10's square shows the shared #page9Tooltip (page7.js/page9.js's own
 // hover tooltip element) with a real event's date+description instead of a
 // static action-type label — see the fold7LabelTrigger-driven block in
 // updateGroups below. Kept visible unconditionally for the duration of that
@@ -9,7 +9,7 @@ const fold8TooltipDescEl = fold8TooltipEl.querySelector(".page9-tooltip-desc");
 // Ownership flag, same pattern p7HoverInit/p9HoverInit use for the same
 // shared element (hoveredEvent) — only hide/reset the tooltip below if this
 // fold is the one that showed it, or updateGroups (which runs every frame on
-// every page) would stomp an unrelated hover-driven tooltip on page-8/-9.
+// every page) would stomp an unrelated hover-driven tooltip on page-9/-9.
 let fold8TooltipOwnsIt = false;
 
 // The fold-8 tooltip's grow-then-type reveal is sequenced on wall-clock time,
@@ -62,7 +62,7 @@ function fold8TypeMsPerChar() { return isMobile() ? FOLD8_TYPE_MS_PER_CHAR_MOBIL
 // size no longer changes once grown (see fold8SetupTypewriter's own comment
 // on why), so in practice this only needs to run once the grow-in finishes —
 // still called every frame regardless, it's cheap.
-// MOBILE ONLY — @fold7, @fold8 and the real timeline (#page-8) don't float the
+// MOBILE ONLY — @fold7, @fold8 and the real timeline (#page-9) don't float the
 // tooltip beside its dot at all: a ~2px square on a 393px screen leaves no
 // room for a 222px callout to sit next to it without covering the very dot it
 // describes (and, on the timeline, half the grid). Instead the tooltip becomes
@@ -88,15 +88,15 @@ function fold8TypeMsPerChar() { return isMobile() ? FOLD8_TYPE_MS_PER_CHAR_MOBIL
 //     (top to bottom), so the frame closes the screen rather than opening it,
 //     and the grid's bottom clearance (sbbTimelineMobileBottomPx,
 //     squareboundingbox.js) is derived from it instead of its top.
-//   @fold13 engaged — p9DockTopM() (page9.js): pushed further down to clear the
+//   @fold14 engaged — p9DockTopM() (page9.js): pushed further down to clear the
 //     pill tray band, which on mobile pins itself under the titles rather than
 //     sitting at the bottom of the screen. Runs on p9TooltipDropTrigger
 //     (js/groups.js), fired from the same `isStuck` crossing that slides the
 //     tray in, so the frame steps down as the band arrives and back up on the
 //     way out.
 //
-// The move between the first two runs on fold9FlyTrigger — the same crossing that
-// brings the real timeline in and flies the 8 squares out to their real dots —
+// The move between the first two runs on fold9FlyTrigger — the 8 squares' fly
+// from @fold9's date-range card on its 0.5 crossing, with the axis draw-in —
 // so the frame animates up exactly as the timeline hits, and reverses back
 // down with it on a scroll up. Position, per the house rule, lerps
 // continuously; it never snaps.
@@ -209,20 +209,20 @@ function tooltipDockRestPx() {
   return viewportH() - TOOLTIP_DOCK_BOTTOM_PX - TOOLTIP_DOCK_H_PX;
 }
 // The folds the two-spot frame serves: the ones the picker is live on
-// (@fold9, @fold10, @fold11 up to its crossing, @fold13) — and @fold12's bridge
+// (@fold10, @fold11, @fold12 up to its crossing, @fold14) — and @fold13's bridge
 // between them, so the frame holds its spot through the glide instead of
 // dropping to the old bottom line for one fold and climbing back. Mobile only
 // — desktop has hover and no docked frame.
 function p7TipTwoSpotFold() {
   return isMobile() && typeof currentPage !== "undefined" &&
-         (currentPage >= 8 && currentPage <= 12);
+         (currentPage >= 9 && currentPage <= 13);
 }
 
-// Blends @fold13's drop onto whatever spot the earlier two produced, so the
+// Blends @fold14's drop onto whatever spot the earlier two produced, so the
 // three-way lerp stays continuous even if the user scrolls back up mid-drop.
 //
 // It only runs DURING the step-down now. At d >= 1 the spot function owns the
-// position outright — and because @fold13's top spot IS p9DockTopM(), `base` at
+// position outright — and because @fold14's top spot IS p9DockTopM(), `base` at
 // that point is the very number this lerp was heading for, so the hand-over is
 // continuous and invisible. Left as a lerp all the way to 1 it pinned the frame
 // to p9DockTopM() regardless of the spot, and the flip to the bottom spot simply
@@ -234,7 +234,7 @@ function tooltipDockDropPx(base) {
   return base + (p7TipTopSpotPx() - base) * d;
 }
 
-// The @fold7 resting spot, frozen the moment the @fold8→@fold9 fly starts.
+// The @fold7 resting spot, frozen the moment the @fold8→@fold10 fly starts.
 // It CANNOT be re-measured live mid-fly: the 8 sample squares it's measured
 // against are themselves flying to their real timeline dots on the very same
 // trigger, so a live measurement makes the lerp's start point chase the
@@ -305,11 +305,11 @@ function tooltipDockHandoverScale() {
   // An event IS in the frame — the picker has one open, or @fold7's demo is
   // still running. Full size, whatever the fly is doing.
   if (typeof p7Inspect !== "undefined" && p7Inspect.event) return 1;
-  // @fold13 (page 12) is the frame's other home: the picker serves that fold
+  // @fold14 (page 12) is the frame's other home: the picker serves that fold
   // too, and the frame carries its own «לחצו והחזיקו» line there (`.is-hint`,
   // page7.js) — so it is open at rest here, whatever the timeline's fly left
   // behind. The timeline's own collapse below is untouched.
-  if (typeof currentPage !== "undefined" && currentPage === 12) return 1;
+  if (typeof currentPage !== "undefined" && currentPage === 13) return 1;
   const t = fold9FlyTrigger.currentT();
   if (t <= 0) return 1;
   // ...and it does NOT grow back. The frame collapses at its @fold7 spot and
@@ -330,8 +330,8 @@ function tooltipDockHandoverScale() {
 // serves a live finger, and an animated frame would pass through the very glass
 // it is dodging.
 //
-// Every LATER fold used to have its own dodge here — @fold9 up to the grid's top
-// clearance, @fold13 down onto its bottom one. Both are gone: those folds have
+// Every LATER fold used to have its own dodge here — @fold10 up to the grid's top
+// clearance, @fold14 down onto its bottom one. Both are gone: those folds have
 // two spots of their own now and FLIP between them (p7TipSpotTopPx), which is the
 // same idea done once instead of per fold. `p7TipAvoidActive` is therefore
 // written by @fold7's hold and by nothing else — and it is STICKY: the first
@@ -362,27 +362,27 @@ let P7_TIP_BOTTOM_PX = 66;    // the bottom spot's BOTTOM edge, px up from the s
 let P7_TIP_SWITCH_Y  = 248;
 let p7TipAtBottom = false;   // which spot is live right now (written by syncTipAvoid)
 
-// The TOP spot, per fold. @fold13's frame is packed against the pill tray and
+// The TOP spot, per fold. @fold14's frame is packed against the pill tray and
 // the whole grid below it is measured off that same line (p9ExtremeTopY), so its
 // top spot is p9DockTopM() — which is also exactly where the frame already rests
 // there today, so adopting the two-spot model changes nothing at rest on that
-// fold. @fold9/@fold10 use the tuned P7_TIP_TOP_PX.
+// fold. @fold10/@fold11 use the tuned P7_TIP_TOP_PX.
 //
 // p9DockTopM() stays the GRID's anchor and must never learn about p7TipAtBottom:
 // the dots would jump every time the frame flipped.
 function p7TipTopSpotPx() {
-  if (typeof currentPage !== "undefined" && currentPage === 12 &&
+  if (typeof currentPage !== "undefined" && currentPage === 13 &&
       typeof p9DockTopM === "function") return p9DockTopM();
   return P7_TIP_TOP_PX;
 }
 // The switch LINE, per fold. A fixed y per fold, never a distance from the live
 // frame: the frame moves, so measuring against it makes the threshold chase its
-// own result and chatter at the boundary. @fold13's frame rests much higher than
+// own result and chatter at the boundary. @fold14's frame rests much higher than
 // the timeline's, so its line is derived from its own top spot plus the COLLAPSED
 // frame height (the same height p9ExtremeTopY reserves) and a margin.
 const P7_TIP_SWITCH_MARGIN_PX = 24;
 function p7TipSwitchY() {
-  if (typeof currentPage !== "undefined" && currentPage === 12) {
+  if (typeof currentPage !== "undefined" && currentPage === 13) {
     return p7TipTopSpotPx() + TOOLTIP_DOCK_H_PX + P7_TIP_SWITCH_MARGIN_PX;
   }
   return P7_TIP_SWITCH_Y;
@@ -410,7 +410,7 @@ function tooltipAvoidPx(el, top) {
   }
   // Every later fold: nothing to dodge. They have two spots of their own and FLIP
   // between them on the switch line, resolved in tooltipDockRestPx before this
-  // ever runs. **Removed — don't reintroduce:** @fold13's dodge-down onto the
+  // ever runs. **Removed — don't reintroduce:** @fold14's dodge-down onto the
   // grid's bottom clearance (P7_TIP_AVOID_DROP_PX, 32), which fought the flip.
   return top;
 }
@@ -422,14 +422,14 @@ function tooltipDockMobile(el) {
   const fit = docked && tooltipFitFold7();
   el.classList.toggle("is-fit", fit);
   // IN FRONT OF THE TITLE BLOCK, not under it: the docked frame on
-  // @fold10/@fold11, whose cards scroll over the pinned timeline. style.css
+  // @fold11/@fold12, whose cards scroll over the pinned timeline. style.css
   // gives those cards 1004/1005, deliberately above the frame's usual 1000, so
   // the class out-stacks them.
   // NOT the @fold5 frames: that fold's title block paints IN FRONT of the
   // example tooltip (explicit instruction), and during the reader's own hold
   // the card is snapped out anyway (body.is-tip-holding, style.css).
   const overCard = docked && !fit
-    && typeof currentPage !== "undefined" && (currentPage === 9 || currentPage === 10);
+    && typeof currentPage !== "undefined" && (currentPage === 10 || currentPage === 11);
   el.classList.toggle("is-over-card", overCard);
   if (docked) {
     // Horizontal centering is the transform's job, so whatever the floating
@@ -598,7 +598,7 @@ function fold8AdvanceSequence() {
     // textOpacity further down) while the frame itself holds its spot, ready
     // for the next selection. Only reversing the whole fold back to elapsed 0
     // fades the frame itself, through growT.
-    // × (1 - fold13OutT): the sequence rAF keeps running while @fold14's
+    // × (1 - fold13OutT): the sequence rAF keeps running while @fold15's
     // scroll fade is active (mobile keeps the docked frame alive through
     // page 9), so without this factor each animation frame snapped the
     // frame back to full grow-in opacity between fold13 scroll ticks.

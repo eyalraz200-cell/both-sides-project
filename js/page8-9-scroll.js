@@ -7,11 +7,11 @@
 // past while the glide plays in the background. Scrolling back up past that same
 // point plays the glide back in reverse via
 // p8TriggerReverse, once currentPage has made it back to 9. ──
-// @fold12's title no longer drives the glide — @fold11 (#page-10) owns it now
+// @fold13's title no longer drives the glide — @fold12 (#page-11) owns it now
 // (fold11SizeApply, js/groups.js), so the squares can size down to one uniform
 // cell BEFORE they fly. What is left of this watcher is the mobile tooltip
-// drop below, which still rides @fold12's own crossing.
-const page8TitleEl = document.querySelector("#page-11 .section-title");
+// drop below, which still rides @fold13's own crossing.
+const page8TitleEl = document.querySelector("#page-12 .section-title");
 let page8Ticking = false;
 
 // Tracks the title's own crossing state (same isPast pattern as
@@ -26,7 +26,7 @@ let page8Ticking = false;
 // Crossing-based detection only fires once per actual direction change.
 let page8TitleWasPast = null;
 
-// @fold12's crossing: the title's own CENTRE passing the viewport midpoint —
+// @fold13's crossing: the title's own CENTRE passing the viewport midpoint —
 // the house 0.5 every other fold uses. Confirmed by eye on device against a
 // harness that swept 0.05-0.95 (2026-09-13); 0.5 is where it stays.
 function page8CheckScroll() {
@@ -34,14 +34,14 @@ function page8CheckScroll() {
   const nowPast = rect.top + rect.height / 2 <= window.innerHeight / 2;
   // (The mobile docked-tooltip drop that clears room for the tray band is NOT
   // fired here: per explicit instruction the docked frame keeps the
-  // resting spot it has on @fold11 for the whole of @fold12, so the drop to
-  // p9DockTopM() rides @fold13's stick instead — see page9UpdateFromScroll
+  // resting spot it has on @fold12 for the whole of @fold13, so the drop to
+  // p9DockTopM() rides @fold14's stick instead — see page9UpdateFromScroll
   // below. It used to ride this crossing, back when the band itself only
-  // arrived at @fold13 and the frame could get out of the way a fold early.)
+  // arrived at @fold14 and the frame could get out of the way a fold early.)
 
-  // @fold12's crossing pops the @dragcards pills in, one fold ahead of the rest
+  // @fold13's crossing pops the @dragcards pills in, one fold ahead of the rest
   // of the panel — the rule, the drop zone and the pinned header still wait for
-  // @fold13's stick (.engaged, below), and so do the pills' own ⓘ and selection
+  // @fold14's stick (.engaged, below), and so do the pills' own ⓘ and selection
   // circle. Same pop animation and stagger on both breakpoints; only the class
   // driving it differs (.pills-in — see the .page9-layout-v2.pills-in rules in
   // style.css for desktop V2 and the .pills-in rules in the 600px block for
@@ -69,24 +69,24 @@ window.addEventListener("scroll", () => {
 //    this early: the canvas is a full-viewport fixed overlay, not a
 //    scrolling DOM node, so there's no "still scrolling" artifact to worry
 //    about.
-const page9TitleCardEl  = document.querySelector("#page-12 .text-card");
-const page9TitleRowEl   = document.querySelector("#page-12 .page9-title-row");
-const page9StickyEl     = document.querySelector("#page-12 .page9-sticky");
-const page9TrayEl       = document.querySelector("#page-12 .page9-tray");
-const page9HeaderEl     = document.querySelector("#page-12 .page9-header");
-const page9ZoneWrapEl   = document.querySelector("#page-12 .page9-zone-wrap-extreme");
+const page9TitleCardEl  = document.querySelector("#page-13 .text-card");
+const page9TitleRowEl   = document.querySelector("#page-13 .page9-title-row");
+const page9StickyEl     = document.querySelector("#page-13 .page9-sticky");
+const page9TrayEl       = document.querySelector("#page-13 .page9-tray");
+const page9HeaderEl     = document.querySelector("#page-13 .page9-header");
+const page9ZoneWrapEl   = document.querySelector("#page-13 .page9-zone-wrap-extreme");
 let page9Ticking = false;
 let page9LinePast = false; // previous "title past center" state, so the line trigger only fires on the transition
 let page9WasStuck = false; // tracks isStuck across frames to detect the stuck→unstuck transition
 // Categories dropped into the extreme zone at the moment the user last
-// scrolled up out of @fold13 — captured in #page9ZoneAbove's own DOM order
+// scrolled up out of @fold14 — captured in #page9ZoneAbove's own DOM order
 // (most-recently-dropped first) right before p9ResetDrops clears it, so
 // p9RestoreDrops can put the exact same pills/dots back if they scroll back
-// down into @fold13, rather than that choice being lost for the rest of the
+// down into @fold14, rather than that choice being lost for the rest of the
 // session the instant they scroll away.
 let page9SavedAboveIdxs = null;
 
-// @fold13's title block is an ordinary centered card while it scrolls up, and
+// @fold14's title block is an ordinary centered card while it scrolls up, and
 // only travels to the right edge once it pins at the top (mobile only — desktop
 // stays centered throughout). CSS can't animate that trip on its own: the flush
 // is `margin-inline: 0 auto` and `auto` doesn't interpolate, so the box would
@@ -117,7 +117,7 @@ function page9UpdateTitleFlush(isStuck) {
 // docked tooltip frame has been sitting in, so the frame steps down to
 // p9DockTopM() (page9.js) to clear it.
 //
-// It waits for the CONVOY to finish, not just for the stick — @fold13 plays in
+// It waits for the CONVOY to finish, not just for the stick — @fold14 plays in
 // two beats on mobile (pills first, then everything else), and the frame moving
 // while the train is still running is exactly the kind of competing motion that
 // split the fold's attention. `.training` is p9TrainToggle's own flag, so the
@@ -159,7 +159,7 @@ function page9UpdateFromScroll() {
   // mobile the two disagree by the browser-bar height exactly when the bars are
   // showing — i.e. while scrolling UP — which released .is-stuck ~100px before
   // CSS sticky let go of the card, leaving the white-filled dashed frame pinned
-  // at the top of @fold13 in its un-stuck styling.
+  // at the top of @fold14 in its un-stuck styling.
   const cardTopPx = parseFloat(getComputedStyle(page9TitleCardEl).top) || 0;
   const rowRect = page9TitleRowEl.getBoundingClientRect();
   const naturalTop = rowRect.top + (rowRect.height - page9TitleCardEl.offsetHeight) / 2;
@@ -169,7 +169,7 @@ function page9UpdateFromScroll() {
   // Both tray and zone-wrap are position:fixed — always at their final viewport
   // position — so both can fire together the moment the title card sticks.
   // Mobile runs the convoy across this crossing (p9TrainToggle, page9.js): the
-  // pills thread out of @fold12's wrapped block into @fold13's single row, and
+  // pills thread out of @fold13's wrapped block into @fold14's single row, and
   // back. It owns the class toggle itself, because the FLIP measurement has to
   // straddle it; on desktop, with no pills yet, or under reduced motion it is a
   // plain toggle.
@@ -180,8 +180,8 @@ function page9UpdateFromScroll() {
     page9StickyEl.classList.toggle("engaged", isStuck);
   }
   // Safety net for the pills' earlier beat: if the panel is engaged the pills
-  // must be in, even if @fold12's crossing was never ticked (a load or jump
-  // straight into @fold13 fires no scroll event over that title).
+  // must be in, even if @fold13's crossing was never ticked (a load or jump
+  // straight into @fold14 fires no scroll event over that title).
   if (isStuck) page9StickyEl.classList.add("pills-in");
   p9SyncTooltipDrop();
 
@@ -197,7 +197,7 @@ function page9UpdateFromScroll() {
     page9SavedAboveIdxs = droppedIdxs.length ? droppedIdxs : null;
     p9ResetDrops(true);
   } else if (!page9WasStuck && isStuck && page9SavedAboveIdxs && typeof p9RestoreDrops === "function") {
-    // Scrolling back down into @fold13 — replay the saved drops.
+    // Scrolling back down into @fold14 — replay the saved drops.
     p9RestoreDrops(page9SavedAboveIdxs);
     page9SavedAboveIdxs = null;
   }

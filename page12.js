@@ -2,10 +2,10 @@ let p12FreeformTargets = null;
 let p12FreeformW = 0, p12FreeformH = 0, p12FreeformFiltSig = "";
 
 // WHICH DOTS THIS FOLD SHOWS. Two independent gates, and both have to hold:
-// the category was dropped "above" (@fold13's own doing), AND the dot's group
-// isn't filtered out through the mini-legend. The @fold9 filter is SET on the
+// the category was dropped "above" (@fold14's own doing), AND the dot's group
+// isn't filtered out through the mini-legend. The @fold10 filter is SET on the
 // timeline but LIVES from there on — page8.js and page9.js both honour it, so
-// @fold14/@fold15 must too, or a hidden group's dots snap back into the spread.
+// @fold15/@fold16 must too, or a hidden group's dots snap back into the spread.
 function p12Shown(e) {
   const idx = CATEGORY_TO_IDX[e.category];
   if (idx === undefined || p9.sides[idx] !== "above") return false;
@@ -27,7 +27,7 @@ function p12EnsureFreeformTargets(W, H) {
   p12FreeformTargets = new Map();
   p12FreeformW = W; p12FreeformH = H; p12FreeformFiltSig = filtSig;
 
-  // Mobile scatters at @fold13's own pitch (p9Metrics: 2px) — the desktop
+  // Mobile scatters at @fold14's own pitch (p9Metrics: 2px) — the desktop
   // P7_CELL pitch is more than double it and made the spread dots read
   // oversized/sparse on a phone. Desktop keeps P7_CELL as before.
   const CELL  = isMobile() ? p9Metrics().CELL : P7_CELL;
@@ -59,9 +59,9 @@ function p12EnsureFreeformTargets(W, H) {
 }
 
 // ---------------------------------------------------------------------------
-// @fold15 — the camps pair up.
-// @fold14 leaves the extreme dots in a camp-SPLIT spread (above): left events
-// left of W/2, right events right of it. @fold15 dissolves that divide — every
+// @fold16 — the camps pair up.
+// @fold15 leaves the extreme dots in a camp-SPLIT spread (above): left events
+// left of W/2, right events right of it. @fold16 dissolves that divide — every
 // visible dot couples with a dot from the other camp and the couples share the
 // whole screen. A couple is two dots P12_PAIR_GAP apart, laid out like a
 // domino — most lie flat (left dot, right dot), a share of them stand upright
@@ -90,7 +90,7 @@ let p12PairTargets = null;
 let p12PairW = 0, p12PairH = 0, p12PairGapUsed = 0,
     p12PairSpreadUsed = 0, p12PairMaxUsed = 0, p12PairFiltSig = "";
 
-// Lerp between two "#rrggbb" strings. @fold15's dots do not keep their group
+// Lerp between two "#rrggbb" strings. @fold16's dots do not keep their group
 // colour: they RECOLOUR as they fly (see the fly beat in drawPage12), so the
 // finished field is a mix of all six group colours rather than two camp-shaped
 // blocks of colour. Colour is a "secondary attribute" and may run on its own
@@ -278,20 +278,20 @@ function drawPage12(ctx, W, H) {
   // Overdraw extreme dots at their lerped freeform positions.
   const targets  = p12EnsureFreeformTargets(W, H);
   const startPos = p9.fold13StartPos;
-  // Same size the dots had in @fold13's extreme grid (1.5px on mobile, 3px on
+  // Same size the dots had in @fold14's extreme grid (1.5px on mobile, 3px on
   // desktop) — drawing the morph at a hardcoded P9_SQ doubled them on a phone.
   const SQ       = p9Metrics().SQ;
 
-  // @fold15, in two beats (both already eased per-window in updateFold14):
+  // @fold16, in two beats (both already eased per-window in updateFold14):
   // popT — the partner dots grow in beside the lonely dots, everything still
-  // standing in @fold14's spread; then pairT — the whole field flies to the
+  // standing in @fold15's spread; then pairT — the whole field flies to the
   // couple slots. Nothing moves until every newcomer is fully there.
   const popT  = p9.fold14PopT ?? 0;
   const pairT = p9.fold14PairT ?? 0;
   const pairs = (popT > 0 || pairT > 0) ? p12EnsurePairTargets(W, H) : null;
   // Where a dot is right now, mid-morph — the filler's partner is one of these,
   // and the filler has to pop in beside it wherever it happens to be.
-  // Where a dot stands in @fold14's spread alone, with @fold15 not applied —
+  // Where a dot stands in @fold15's spread alone, with @fold16 not applied —
   // the fillers pop in against THIS, so they don't inherit the pair flight.
   // The near end is the dot's LIVE column position — drawPage9 just ran
   // (recordOnly under the spread, see drawBandedCols) and p9.lastPositions is
@@ -321,7 +321,7 @@ function drawPage12(ctx, W, H) {
     return p;
   };
 
-  // A dot arriving from @fold13 may be wearing a crowd-tier size (the
+  // A dot arriving from @fold14 may be wearing a crowd-tier size (the
   // «הצגת גודל האירועים» button, p9ScopeSet in page9.js) — up to nine cells across
   // where the spread wants a flat SQ. Lerp it down on the spread's own clock,
   // shrinking about the block's centre, so it eases into the field instead of
@@ -339,7 +339,7 @@ function drawPage12(ctx, W, H) {
     if (!c) continue;
     const sq  = sizeOf(e);
     const pair = pairs?.byEvent.get(e);
-    // RECOLOUR ON THE FLY BEAT: a dot leaves @fold14's spread in its own group
+    // RECOLOUR ON THE FLY BEAT: a dot leaves @fold15's spread in its own group
     // colour and arrives at its couple slot in a colour drawn from the whole
     // six-group roster, so the finished field is a full mix instead of two
     // camp-coloured halves. Colour may run on its own timing; position can't.
@@ -347,7 +347,7 @@ function drawPage12(ctx, W, H) {
       ? p12MixColor(p7ActorColor(e.actor), pair.c, pairT)
       : p7ActorColor(e.actor);
     // Over the P12_DOT_COUNT target: a dot with no couple slot shrinks away on
-    // the pop beat — in place, in @fold14's spread, on the same clock the
+    // the pop beat — in place, in @fold15's spread, on the same clock the
     // newcomers grow in on. By size, never by opacity.
     if (pairs && !pair) {
       const s = sq * (1 - popT);
@@ -358,7 +358,7 @@ function drawPage12(ctx, W, H) {
   }
 
   // Partnerless slots: a decorative dot from the short camp. It GROWS in
-  // (never fades) among its OWN camp, on that camp's half of @fold14's still
+  // (never fades) among its OWN camp, on that camp's half of @fold15's still
   // split spread — then flies to its couple slot on the second beat, with
   // everything else.
   if (pairs) {
@@ -374,11 +374,11 @@ function drawPage12(ctx, W, H) {
   ctx.globalAlpha = 1;
 }
 
-// Share row on the @fold14 card (teacher review 2026-09-03, K2). The anchors
+// Share row on the @fold15 card (teacher review 2026-09-03, K2). The anchors
 // ship with href="#" and get their real share URLs here, from the page's own
 // location at load; the copy button writes the URL to the clipboard and flips
-// its label for a moment as feedback. The row is @fold15's own title block
-// (#page-14). Runs once from bootstrap (p12ShareInit).
+// its label for a moment as feedback. The row is @fold16's own title block
+// (#page-15). Runs once from bootstrap (p12ShareInit).
 function p12ShareInit() {
   const wrap = document.getElementById("page12Share");
   if (!wrap) return;
@@ -424,8 +424,8 @@ function p12ShareInit() {
   });
 }
 
-// The @fold16 card's height comes from the viewport (100vh − 2×48px, style.css
-// #page-15 .text-card-frame). Its WIDTH is solved here, because CSS can't: a
+// The @fold17 card's height comes from the viewport (100vh − 2×48px, style.css
+// #page-16 .text-card-frame). Its WIDTH is solved here, because CSS can't: a
 // narrower column is a taller one, so the narrowest width at which the copy
 // still clears the bottom padding is also the width that FILLS the card — any
 // wider and the leftover height opens as a void above and below the centred
@@ -434,7 +434,7 @@ function p12ShareInit() {
 const P12_CARD_MIN_W = 320;
 const P12_CARD_MAX_W = 900;
 function p12CardWidthFit() {
-  const f = document.querySelector("#page-15 .text-card-frame");
+  const f = document.querySelector("#page-16 .text-card-frame");
   if (!f) return;
   if (window.innerWidth <= 600) { f.style.removeProperty("width"); return; }  // mobile card is height:auto
   const fits = (w) => {
@@ -450,10 +450,10 @@ function p12CardWidthFit() {
   while (hi - lo > 1) { const mid = Math.round((lo + hi) / 2); if (fits(mid)) hi = mid; else lo = mid; }
   fits(hi);
 }
-// @fold14 → @fold15 spacing, the house rhythm made exact. Every other pair of
+// @fold15 → @fold16 spacing, the house rhythm made exact. Every other pair of
 // title blocks is "card centred in a 100vh section", so consecutive card
-// CENTRES are always exactly 100vh apart. @fold14's card is flush to the top
-// of its section instead (the gate needs that — see #page-13 in style.css), so
+// CENTRES are always exactly 100vh apart. @fold15's card is flush to the top
+// of its section instead (the gate needs that — see #page-14 in style.css), so
 // its section's height is what sets that distance: the next card's centre sits
 // at (section height + 50vh) below this card's top, and that equals 100vh
 // below this card's CENTRE only when the section is 50vh + half the card. The
@@ -468,13 +468,13 @@ function p12SpacingFit() {
   // Solved on card 1's WRAPPER now, not the section: the closing statement
   // continues as two 100vh .page13-follow blocks after it, so the wrapper's
   // height is what puts card 2's centre 100vh below card 1's (and, down the
-  // chain, @fold15's share card 100vh below card 3's).
-  const sec = document.getElementById("page-13");
+  // chain, @fold16's share card 100vh below card 3's).
+  const sec = document.getElementById("page-14");
   const wrap = sec && sec.querySelector(".page12-sticky-center");
   const card = wrap && wrap.querySelector(".text-card-frame");
   if (card) wrap.style.height = Math.round(H / 2 + card.offsetHeight / 2) + "px";
 
-  // @fold15 → @fold16: the outro card is near-viewport-tall (100vh − 96px), so
+  // @fold16 → @fold17: the outro card is near-viewport-tall (100vh − 96px), so
   // "centred in a 100vh section" reads WRONG — it leaves only 50vh − half the
   // share card + 48px of air above it, well short of the house distance. What
   // reads as the house gap is the air between card EDGES, which for two title
@@ -483,8 +483,8 @@ function p12SpacingFit() {
   // share card into its own section, making the edge-to-edge gap exactly
   // 100vh − share card. The section is then just tall enough to scroll the card
   // to rest with P12_OUTRO_END px under it, and the document ends there.
-  const share = document.querySelector("#page-14 .page12-share-card");
-  const sec15 = document.getElementById("page-15");
+  const share = document.querySelector("#page-15 .page12-share-card");
+  const sec15 = document.getElementById("page-16");
   const outro = sec15 && sec15.querySelector(".text-card-frame");
   if (!share || !outro) return;
   const padTop = Math.round(H / 2 - share.offsetHeight / 2);

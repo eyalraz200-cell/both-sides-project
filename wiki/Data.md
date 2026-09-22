@@ -13,7 +13,7 @@ One object per event:
 | `actor` | Join key into `GROUPS`' `actor` field → the dot's color (`p7ActorColor`) |
 | `category` | Hebrew category string (the xlsx's `event_type`) → `CATEGORY_TO_IDX` (`page9.js`) |
 | `descHeMedium` | Per-event Hebrew description, shown in the hover tooltip |
-| `crowd` | Integer crowd estimate or `null` — from the **crowd size** column of a *second* workbook, see below. Drives the @fold9 hover bulge tier (`p7BulgeTier`, [Timeline](Timeline.md#the-hover-bulge--p7bulgetick--p7bulgelist--p7bulgeshift-page7js)) |
+| `crowd` | Integer crowd estimate or `null` — from the **crowd size** column of a *second* workbook, see below. Drives the @fold10 hover bulge tier (`p7BulgeTier`, [Timeline](Timeline.md#the-hover-bulge--p7bulgetick--p7bulgelist--p7bulgeshift-page7js)) |
 
 Committed dataset (`events.json` at the repo root, `crowd` field included): **14,451
 events — 5,325 left, 9,126 right**, from **2023-01-01** to **2026-07-03**.
@@ -64,7 +64,7 @@ Two row pairs in the sheet are literal duplicates of one ACLED event and share a
 `full_v3.xlsx`, not this file; **nothing in the page consumes the geodata** — `full_v4.xlsx`
 is kept in the repo as data only.
 
-> **Removed — don't reintroduce:** the @fold15 event map (`map.js`, `map/region.geojson`,
+> **Removed — don't reintroduce:** the @fold16 event map (`map.js`, `map/region.geojson`,
 > `map/event-points.json`), snapshot at commit `834ee0d`; its geodata came from
 > `full_v4.xlsx`'s `latitude`/`longitude` columns.
 
@@ -81,7 +81,7 @@ whenever the generated content differs from the file on disk — same bytes as `
 (`ensure_ascii=False`, single line), so an unchanged xlsx leaves git clean. Deployments that
 don't run `server.py` (GitHub Pages) read that file: after editing either xlsx, restart the
 server and **commit the rewritten `events.json`**. A stale copy with no `crowd` field makes
-`p7BulgeTier` return 0 for every event, and @fold10's size grid then never resizes anything.
+`p7BulgeTier` return 0 for every event, and @fold11's size grid then never resizes anything.
 
 Note that `server.py`'s mtime watcher polls `.html`/`.css`/`.js` files only (at the root
 and under `js/`) — it does **not** watch the xlsx. Editing the spreadsheet requires a server
