@@ -305,7 +305,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         elif self.path == "/__flags__":
             self._json(flags_read())
         elif self.path == "/__harnesses__":
-            # The harness files project.html loads RIGHT NOW, from disk. The
+            # The harness files index.html loads RIGHT NOW, from disk. The
             # panel hides any row whose file is not in this list, so a page tab
             # loaded before a deletion (auto-reload is off) cannot keep a
             # deleted harness on screen by still announcing it.
@@ -403,10 +403,10 @@ def copy_queue(entry):
 
 def _harness_files():
     try:
-        html = (WATCH_DIR / "project.html").read_text()
+        html = (WATCH_DIR / "index.html").read_text()
     except OSError:
         return []
-    # Either form project.html has used: a plain <script src="_debug-x.js"> tag,
+    # Either form index.html has used: a plain <script src="_debug-x.js"> tag,
     # or a name in the dev-host-only loader's array ("_debug-x.js" strings the
     # inline script document.write()s) — the latter is what it uses now, so a
     # tag-only scan came back empty and the panel hid every harness.
@@ -453,6 +453,6 @@ print(f"Serving at http://localhost:{PORT}  "
       f"(auto-reload on: {', '.join(WATCH_ONLY) if WATCH_ONLY else 'all html/css/js'})")
 _ip = _lan_ip()
 if _ip:
-    print(f"  on your phone (same Wi-Fi):  http://{_ip}:{PORT}/project.html")
+    print(f"  on your phone (same Wi-Fi):  http://{_ip}:{PORT}/")
     print(f"  harness panel tab:           http://{_ip}:{PORT}/_debug-panel.html")
 _srv.serve_forever()

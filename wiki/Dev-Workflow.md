@@ -105,7 +105,7 @@ There's no test suite, so the habit is:
 
 ```
 node --check js/update-groups.js          # (or whichever file was edited)
-curl -o /dev/null -w "%{http_code}" http://localhost:8080/project.html
+curl -o /dev/null -w "%{http_code}" http://localhost:8080/
 ```
 
 `node --check` catches the syntax errors that would otherwise silently blank the whole
@@ -115,7 +115,7 @@ in a completely different file.
 
 ## The fold badge
 
-A small fixed chip in the **top-left** corner of `project.html` showing which fold you're
+A small fixed chip in the **top-left** corner of `index.html` showing which fold you're
 on — `#foldNumberBadge` (`.fold-number-badge` in style.css, driven by
 `updateFoldNumberBadge()` in js/nav.js off `currentPage + 1`).
 
@@ -145,7 +145,7 @@ lives (the drag zone, the timeline and the legend all sit further in). Rows are 
 the sections themselves — the number plus that fold's own `.section-title`, with the
 `.copy-desktop` half of any breakpoint-split headline stripped out, falling back to the
 section id for the folds that carry no title card (@fold1 and @fold10) — so the list cannot
-drift out of step with `project.html`. The current fold is marked and scrolled to inside
+drift out of step with `index.html`. The current fold is marked and scrolled to inside
 the panel, so it opens oriented. A click outside, Escape, or picking a row dismisses it.
 The panel is capped at **340px** wide on desktop (a fixed box shrink-to-fits, and the long
 Hebrew titles stretched it most of the way across the viewport); mobile keeps its
@@ -188,7 +188,7 @@ numbers in the source.
    unlike `custom`, which only the on-page panel can run.
 3. Insert `if (window.innerWidth < 900) return;   // desktop-only layout` immediately
    after `(function () {`.
-4. Add `<script src="_debug-<thing>.js"></script>` at the end of `project.html`'s script
+4. Add `<script src="_debug-<thing>.js"></script>` at the end of `index.html`'s script
    list.
 5. Verify with `node --check` + `curl`.
 
@@ -286,7 +286,7 @@ for — the **remote panel**:
   request (file, title, label, fold, time) to **`_debug-trash.json`** (untracked). A
   `UserPromptSubmit` hook in `.claude/settings.json` prints that queue to Claude at the
   start of every message, so Claude removes the `_debug-*.js`, its `<script>` tag in
-  `project.html` and its wiki mentions together, then empties the queue to `[]`. The rail
+  `index.html` and its wiki mentions together, then empties the queue to `[]`. The rail
   strikes the row through meanwhile and the harness hands itself back. A harness knows its
   own file from `document.currentScript` (captured below the config-end marker, so the
   splice recipe carries it).
@@ -297,7 +297,7 @@ for — the **remote panel**:
   entries for harnesses it built itself (matched by file/label), removes just those from the
   file, and leaves the rest, saying so in a line. Delete entries may be acted on by any chat.
 - **The rail shows what exists on disk, not what a tab remembers.** The panel polls
-  `/__harnesses__` (the `_debug-*.js` files `project.html` loads right now — `_harness_files()` in server.py scans the HTML for any quoted `_debug-*.js` name, so it reads both a plain `<script src>` tag and the name in the dev-host-only loader's array; a tag-only scan came back empty once the loader arrived and the rail hid every harness) every 3s and
+  `/__harnesses__` (the `_debug-*.js` files `index.html` loads right now — `_harness_files()` in server.py scans the HTML for any quoted `_debug-*.js` name, so it reads both a plain `<script src>` tag and the name in the dev-host-only loader's array; a tag-only scan came back empty once the loader arrived and the rail hid every harness) every 3s and
   hides — or drops — any row, live or dormant, whose file is not in that list. Auto-reload
   is off, so a page tab loaded before a deletion keeps announcing the deleted harness until
   it reloads; without this the ghost row came straight back.
@@ -412,7 +412,7 @@ made the real device the one place the panel could not reach.
   the in-page panel back.
 - `_debug-panel.html` is scaffolding like the rest — delete it with the last `_debug-*.js`.
 
-**Live right now:** none — `project.html` loads only `_debug-bus.js` + `_debug-inspect.js`. On disk but not loaded (re-add its name to the scaffolding block to use it): `_debug-fold-timings-mobile-v3.js` (the panel resolves a harness as `_debug-<title>.js`, so `title` and file name must match — a renamed title with the old file name is silently dropped from the rail) (opening → timeline) — ten sliders, one per animation, each the animation's **full length in ms**; every phase constant inside it scales by the same ratio, and Copy lists the constants each length resolves to. One file per breakpoint, generated from one table; baking a length that differs between them means splitting that constant into a `*_DESKTOP`/`*_MOBILE` pair. The opening plays once, so reload to see it. Every open copy of the page follows the sliders (its `init` adopts any other page's `state` off the harness channel) — the panel tab drives ONE host per title, and with the page open in two places it was moving the copy nobody was watching. · `_debug-hint-band.js` (@fold10, mobile) — the picker's instruction band.
+**Live right now:** none — `index.html` loads only `_debug-bus.js` + `_debug-inspect.js`. On disk but not loaded (re-add its name to the scaffolding block to use it): `_debug-fold-timings-mobile-v3.js` (the panel resolves a harness as `_debug-<title>.js`, so `title` and file name must match — a renamed title with the old file name is silently dropped from the rail) (opening → timeline) — ten sliders, one per animation, each the animation's **full length in ms**; every phase constant inside it scales by the same ratio, and Copy lists the constants each length resolves to. One file per breakpoint, generated from one table; baking a length that differs between them means splitting that constant into a `*_DESKTOP`/`*_MOBILE` pair. The opening plays once, so reload to see it. Every open copy of the page follows the sliders (its `init` adopts any other page's `state` off the harness channel) — the panel tab drives ONE host per title, and with the page open in two places it was moving the copy nobody was watching. · `_debug-hint-band.js` (@fold10, mobile) — the picker's instruction band.
 A `compare/` mode pair for the placement (`above` the timeline, shipped, vs `below`) driving
 `P7_HINT_PLACE_MOBILE`, and two `manual/` sliders: `P7_HINT_Y_MOBILE` (the hint up/down) and
 `P7_FIELD_Y_MOBILE` (the whole timeline up/down). Both nudges are positive = down.
@@ -468,7 +468,7 @@ the panel applies without listing a rail row). Same change in the templates.
 ## Currently in the repo
 
 Nothing but the transport and the inspector. `_debug-bus.js`, `_debug-inspect.js` (both
-loaded by `project.html`) and `_debug-panel.html`
+loaded by `index.html`) and `_debug-panel.html`
 stay until the last harness is gone for good; every `manual/`/`compare/` harness built so far
 has been baked and deleted.
 
@@ -538,9 +538,8 @@ down each page:
   off-screen. A `position: fixed` ancestor means it can't extend document scroll, but it's
   still visibly clipped, and mobile browsers can pan to it.
 
-Sweep **320 / 360 / 393 / 430 / 600 / 768 / 1024 / 1440** on both `index.html` and
-`project.html`. 320 is the useful floor — it catches fixed-width rows that survive 393.
-Remember the article page is RTL, so overflow extends *left*: `getBoundingClientRect().left
+Sweep **320 / 360 / 393 / 430 / 600 / 768 / 1024 / 1440** on `index.html`. 320 is the useful floor — it catches fixed-width rows that survive 393.
+RTL blocks overflow *left*: `getBoundingClientRect().left
 < 0` is as much a failure as `right > vw`.
 
 Fix the offending element's own width; don't reach for `overflow-x: hidden` on `html`/`body`

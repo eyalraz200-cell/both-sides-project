@@ -721,7 +721,7 @@ body {
 
 /* Used to separate the "פעולות" title from the dragcards below it — removed
    per explicit request (the tray's own new border, above, was enough
-   definition without this too). Element (project.html) is kept in the DOM
+   definition without this too). Element (index.html) is kept in the DOM
    rather than removed from markup, just made invisible here. */
 .page9-tray-divider {
   display: none;
@@ -929,7 +929,7 @@ body {
 }
 
 /* "סוגי פעולות" — dropped in V2 per explicit request: the band is just the
-   pills. The element stays in the DOM (project.html), same as the divider. */
+   pills. The element stays in the DOM (index.html), same as the divider. */
 .page9-sticky.page9-layout-v2 .page9-tray-title {
   display: none;
 }
@@ -1414,7 +1414,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    before the ✕ existed: 6-dot grip on the right, no ✕. Kept whole because the
    decision is deferred, not made.
 
-   TO TURN IT ON: add the class to .page9-sticky (in project.html's markup, or a
+   TO TURN IT ON: add the class to .page9-sticky (in index.html's markup, or a
    one-liner in page9.js). That is the only change needed — the
    <span class="page9-pill-x"> is already built into every pill (p9BuildPanel,
    page9.js) and is display:none until these rules match.
@@ -1811,7 +1811,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 
 .page9-tooltip-desc {
   /* 550, not 400 — a real weight off the `Assistant` VARIABLE font (loaded at
-     wght@300..800, project.html:10), picked by eye against the group-colour
+     wght@300..800, index.html:10), picked by eye against the group-colour
      fill below, where plain 400 in white went thin and hazy. Applies on mobile
      too, where the same text sits dark on white and simply reads a touch
      sturdier. Any value outside 300-800 would be browser-synthesised — keep it
@@ -1889,7 +1889,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   /* Above EVERY title block, per explicit instruction. The mobile ladder it has
      to clear: the docked event tooltip is 1000, the cards that share the screen
      with it are bumped to 1001, and the open מקרא panel to 1002 — so this sits
-     at 1003. It's a direct .layout child (project.html), which is what makes
+     at 1003. It's a direct .layout child (index.html), which is what makes
      the number bite at all: nested in .graphic-col it would be trapped in that
      stacking context. It's `pointer-events: none`, so painting on top of a card
      costs the card nothing. Raised past that whole ladder — and past the drag
@@ -2083,7 +2083,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   display: none;
 }
 
-/* A direct .layout child (project.html), NOT nested in .graphic-col: that column
+/* A direct .layout child (index.html), NOT nested in .graphic-col: that column
    is its own stacking context, so a group row inside it could never climb above
    the מקרא bar's layer — and on mobile the groups have to paint OVER the legend
    (see the mobile stack comment in the 600px block). `position: fixed; inset: 0`,
@@ -2272,7 +2272,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   padding: 0;
 }
 
-/* The closing statement's cards 2 and 3 (project.html). Ordinary house title
+/* The closing statement's cards 2 and 3 (index.html). Ordinary house title
    blocks — each centred in a 100vh run — placed after card 1's wrapper, whose
    height is solved to 50vh + half card 1 (p12SpacingFit). So card centres sit
    halfCard, 100vh + halfCard, 200vh + halfCard below the section top, and
@@ -2801,7 +2801,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   direction: rtl;
   font: 18px 'Assistant', sans-serif;
   /* Tuned by eye (manual/ harness). 'Assistant' is loaded as a VARIABLE font
-     (wght@300..800, project.html), so 660 is a real interpolated face, not a
+     (wght@300..800, index.html), so 660 is a real interpolated face, not a
      rounded-up 700 — an off-hundred value here is deliberate, don't "tidy" it
      to 700. It keeps the heading clearly above the 400 group rows beneath
      while sitting a shade lighter than full bold. */
@@ -4367,7 +4367,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      z-index of its own. Mobile-only: the bar doesn't exist above the
      breakpoint. */
   .section-text.text-card { z-index: 1004; }
-  /* The groups band. The overlay is a direct .layout child (project.html) —
+  /* The groups band. The overlay is a direct .layout child (index.html) —
      that is what makes this number bite at all; nested in .graphic-col it was
      trapped in that column's stacking context and could never reach past the
      bar. Desktop keeps the base z-index: 0 and is unaffected. */
@@ -4994,7 +4994,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 
 /* ═══ THE WORK-IN-PROGRESS GATE ══════════════════════════════════════════════
    The notice a first-time visitor presses through before @fold1's entrance
-   plays (markup: .shk-gate in project.html; behaviour: js/intro-gate.js).
+   plays (markup: .shk-gate in index.html; behaviour: js/intro-gate.js).
 
    Four looks, switched by [data-gate-style] on the same DOM — `doc` (the
    dashed title card), `dark` (inverted card), `squares` (the six group
@@ -5027,7 +5027,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 }
 .shk-gate.is-open { opacity: 1; }
 /* The visitor has pressed through once already — the inline <head> script in
-   project.html adds this class before the first paint so the gate can't flash
+   index.html adds this class before the first paint so the gate can't flash
    on a return visit, and js/intro-gate.js then removes the element outright. */
 .shk-gate-seen .shk-gate { display: none; }
 /* While the gate is up the document must not scroll: every fold's animation is

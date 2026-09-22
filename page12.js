@@ -383,7 +383,7 @@ function p12ShareInit() {
   const wrap = document.getElementById("page12Share");
   if (!wrap) return;
   // THE PUBLIC URL, not the one in the address bar. The preview card a chat
-  // app shows (og:image and friends, project.html's <head>) is fetched by that
+  // app shows (og:image and friends, index.html's <head>) is fetched by that
   // app from the link it is handed — so a link to this machine's dev server
   // (192.168.x.x:8080, or localhost) gets no card at all, and a link that
   // carries a hash or a query fragment can miss the cached one. og:url IS the

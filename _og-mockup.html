@@ -5,7 +5,7 @@
 <title>og card — share mockups</title>
 <!-- SCAFFOLDING. The og card inside the three previews it actually has to
      survive: WhatsApp, X and Facebook/LinkedIn. Title and description are the
-     REAL tags from project.html — an og card is never seen alone, and a card
+     REAL tags from index.html — an og card is never seen alone, and a card
      that reads fine at 1200x630 can still collide with the text beside it. -->
 <style>
   :root {
@@ -93,7 +93,7 @@
   <h2 class="sec">in the previews it has to survive</h2>
   <p class="note">Every frame below is the <b>live card</b> in an iframe, so turning a
   knob in the harness updates all of them at once. Title and description are the real
-  tags from project.html. Note how much of the card each platform actually crops.</p>
+  tags from index.html. Note how much of the card each platform actually crops.</p>
 
   <div class="row">
     <div class="wa">
@@ -137,9 +137,9 @@
 </div>
 
 <script>
-/* The real tags, read straight out of project.html so this mockup can never
+/* The real tags, read straight out of index.html so this mockup can never
    drift from what the platforms will actually show. */
-fetch('project.html').then(function (r) { return r.text(); }).then(function (html) {
+fetch('index.html').then(function (r) { return r.text(); }).then(function (html) {
   var doc = new DOMParser().parseFromString(html, 'text/html');
   var get = function (sel) {
     var m = doc.querySelector(sel);

@@ -710,7 +710,7 @@ still opening, and the flight aims at the rows' REST positions).
   a low one) purely to stay above the docked event tooltip's 1000, exactly as it was; the
   cards were lifted past it instead, which leaves every other tooltip relationship alone.
   `.groups-overlay` can take part at all only because it is a **direct `.layout` child**
-  (project.html) — inside `.graphic-col` its z-index was trapped in that column's stacking
+  (index.html) — inside `.graphic-col` its z-index was trapped in that column's stacking
   context. Out-stacking the full-viewport `.text-section` boxes is also what keeps the מקרא
   button tappable. The cards' lift only counts because **`.text-col` deliberately carries no
   `z-index`** — giving it one re-opens a stacking context and traps every descendant.

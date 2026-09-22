@@ -31,7 +31,7 @@ would hold scroll where the card never pins and the fold deadlocks.
   «מה נחשב בעיניכם לפעולה לגיטימית, ומה לפעולה קיצונית?», mobile gets
   «מהי פעולה קיצונית בעיניכם?» — its gesture is "mark the extreme ones", not "sort both
   piles", and the long form wraps to three lines on a phone. The desktop
-  string is also `project.html`'s literal markup; JS overwrites it. It renders at
+  string is also `index.html`'s literal markup; JS overwrites it. It renders at
   `rgba(0, 0, 0, 0.45)` — set on the *colour*, because the `opacity` property on the same
   element is the stick reveal (0 → 1 once the title card pins).
 - `.page9-sticky` — `position: sticky; top: 0; height: 100vh` at every width (see above — the desktop trim is on the title row). Gains `.pills-in` at

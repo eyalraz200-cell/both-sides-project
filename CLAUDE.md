@@ -15,25 +15,29 @@
 > except in the explicit "Removed — don't reintroduce" callouts. If a wiki page and the
 > code disagree, **the code wins** — fix the page.
 
-Two separate, unrelated HTML entry points sharing no layout:
+One HTML entry point: **`index.html`** — the scrollytelling experience, served at the site
+root. Uses `style.css`, the `js/` controller scripts, and the per-page `pageN.js` scripts. A
+full-viewport `<canvas>` (`.graphic-col`) renders the visuals; a separate scroll column
+(`.text-col`) drives scroll position and `IntersectionObserver`-based page activation.
 
-- **`index.html`** — the article/home page ("שקוף" branding). Static content with a CTA button (`.shk-cta-button`) linking to `project.html`. Uses `trigger.css`.
-- **`project.html`** — the scrollytelling experience. Uses `style.css`, the `js/` controller scripts, and the per-page `pageN.js` scripts. A full-viewport `<canvas>` (`.graphic-col`) renders the visuals; a separate scroll column (`.text-col`) drives scroll position and `IntersectionObserver`-based page activation.
+**Removed — don't reintroduce:** the שקוף article/home page (the old `index.html` +
+`trigger.css` + its three article images) that used to front the project. The root URL is
+the project itself now.
 
 ## Run / commands
 
 - **Serve:** `python3 server.py` → http://localhost:8080 (no-cache headers; auto-reloads the browser on any `.html`/`.css`/`.js` change at the root or under `js/` via mtime polling — it does NOT watch the xlsx). `--port N` and `--watch a.js,dir` narrow that. Requires `openpyxl` (`pip install openpyxl`). Vanilla JS, **no build step, no npm, no tests** — edit files directly.
 - **Never kill the dev server as a cleanup step** — leave `:8080` running. Restarting it on explicit request is fine.
-- **Verify a JS edit:** `node --check <file>.js` then `curl -o /dev/null -w "%{http_code}" http://localhost:8080/project.html` — a classic `<script>` that fails to parse takes every global in it down, and the visible symptom can surface in a different file.
+- **Verify a JS edit:** `node --check <file>.js` then `curl -o /dev/null -w "%{http_code}" http://localhost:8080/` — a classic `<script>` that fails to parse takes every global in it down, and the visible symptom can surface in a different file.
 - **Regenerate `events.json`:** rebuilt on every server start (`load_events()` in `server.py`) from `full_v3.xlsx` plus `Events_with_description_he_medium.xlsx` (the `crowd` column — both are live dependencies). **Both workbooks are ACLED-licensed, gitignored (`*.xlsx`) and must never be committed** — they exist only on local disks; a clone without them serves the committed `events.json` unchanged. `events.json` is the single committed derivative, pending ACLED's written OK (see [Data](wiki/Data.md)). `page7.js` fetches `events.json` at runtime. The server also **writes the committed static `events.json`** (what GitHub Pages serves) whenever the generated content differs (`_sync_static_events()`, `ensure_ascii=False`, single line) — an unchanged xlsx leaves git clean. After changing either xlsx: restart the server, then commit the rewritten `events.json`, or the deployed site drifts (a stale copy without `crowd` once made every dot tier 0, so @fold11 never resized).
 
 ## Files
 
-`project.html` loads these via plain `<script>` tags (globals shared across all of them, resolved at call time — a symbol used in one file is often defined in another; that's intentional, not a missing import):
+`index.html` loads these via plain `<script>` tags (globals shared across all of them, resolved at call time — a symbol used in one file is often defined in another; that's intentional, not a missing import):
 
 | File | Role |
 |---|---|
-| `js/*.js` (10 files) | The former `main.js`, split by concern — load order matters and is fixed in `project.html`: `core` (canvas/`PAGES`/`draw`/dash utils) → `nav` (`setActivePage`, fold badge) → `fold1-intro` → `page7-scrub` → `fold8-tooltip` → `groups` (`GROUPS` roster + **all fold triggers**) → `update-groups` (`updateGroups`) → `page8-9-scroll` → `fold11` → `bootstrap` (last, always). Full table in [Architecture](wiki/Architecture.md) |
+| `js/*.js` (10 files) | The former `main.js`, split by concern — load order matters and is fixed in `index.html`: `core` (canvas/`PAGES`/`draw`/dash utils) → `nav` (`setActivePage`, fold badge) → `fold1-intro` → `page7-scrub` → `fold8-tooltip` → `groups` (`GROUPS` roster + **all fold triggers**) → `update-groups` (`updateGroups`) → `page8-9-scroll` → `fold11` → `bootstrap` (last, always). Full table in [Architecture](wiki/Architecture.md) |
 | `page1.js` | `drawPage1` + page-0 decorative dot column builder |
 | `page7.js` | Pinned real timeline: per-event square cascade + canvas year axis |
 | `page8.js` | Bridge glide from timeline layout → page9 legit grid |
@@ -43,7 +47,7 @@ Two separate, unrelated HTML entry points sharing no layout:
 | `reload.js` | Dev-only mtime poll → auto page reload |
 | `server.py` | Local dev server + `full_v3.xlsx`→`events.json` generation (derives `side` from `main_actor`) |
 
-`index.html`/`trigger.css` are the separate article page. `main.js` and the `main_*` scratch files do not exist; don't recreate them.
+`main.js` and the `main_*` scratch files do not exist; don't recreate them.
 
 Figma source: file `QASHSt1u7b6m6ASgrUPswf` ("Design"). Screens are revised one at a time against Figma nodes, pixel-parity style — **only pages explicitly documented as revised should be treated as matching Figma**; everything else is still placeholder layout. See the wiki's per-fold notes and [Data](wiki/Data.md).
 

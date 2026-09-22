@@ -1,23 +1,19 @@
 # Architecture
 
-## Two unrelated entry points
+## One entry point
 
-- **`index.html`** — the article/home page ("שקוף" branding). Static content, uses
-  `trigger.css`, links to `project.html` via `.shk-cta-button`. Shares no layout or JS
-  with the scrollytelling page.
-- **`project.html`** — the scrollytelling experience. Everything else in this wiki is
-  about this page.
+**`index.html`** — the scrollytelling experience, served at the site root. Everything in
+this wiki is about this page. It pulls Assistant from Google Fonts and declares the two
+local Hadassah faces (`@font-face` in `style.css`).
 
-Fonts are split to match, and neither page loads the other's: `index.html` pulls Rubik
-(700/900) + Noto Sans Hebrew + Assistant from Google Fonts; `project.html` pulls Assistant
-alone and declares the two local Hadassah faces (`@font-face` in `style.css`).
-`trigger.css` carries **no** `@font-face` — it once declared Hadassah, which that page
-never renders, costing readers a 184KB OTF for nothing.
+> **Removed — don't reintroduce:** the שקוף article/home page (the old `index.html` +
+> `trigger.css` + `images/protest.webp`, `related-knesset.jpg`, `related-march.jpg`) that
+> used to front the project behind a `.shk-cta-button`. The root URL is the project now.
 
 ## Search / discoverability
 
 The site is served by GitHub Pages at `https://eyalraz200-cell.github.io/both-sides-project/`
-(no `CNAME`). Both pages carry a `<title>`, a `<meta name="description">`, a
+(no `CNAME`). The page carries a `<title>`, a `<meta name="description">`, a
 self-referencing absolute `<link rel="canonical">`, the OG/Twitter card set, a favicon and
 `lang="he"`. `robots.txt` (allow-all + the `Sitemap:` line) and `sitemap.xml` (both URLs)
 sit at the repo root; `index.html` also carries a JSON-LD `NewsArticle` block whose
@@ -30,14 +26,13 @@ Two things that are easy to get wrong here:
   snippet unless a real `<meta name="description">` exists. Both are present on purpose.
 - **Do not add `.nojekyll`.** Its absence is load-bearing: Jekyll refuses to serve any
   path beginning with `_`, which is exactly what keeps every `_debug-*.js` out of
-  production. See the comment in `project.html`.
+  production. See the comment in `index.html`.
 
-`index.html` is the SEO-carrying page — it is the only one whose text is real HTML.
-`project.html` is a canvas app: a crawler sees its ~16 `.section-title` scroll cards and
+`index.html` is a canvas app: a crawler sees its ~16 `.section-title` scroll cards and
 nothing else, since all 14,451 events are painted. Anything that must be findable has to
-exist as markup on the article page.
+exist as real markup on the page (the `.a11y-only` `<h1>`, the `<meta name="description">`).
 
-## `project.html`'s layout
+## `index.html`'s layout
 
 ```
 .layout
@@ -71,7 +66,7 @@ Add a `z-index` here and every descendant gets trapped under that layer again.
 
 ## Scripts and shared globals
 
-Loaded as plain `<script>` tags, in this order (`project.html`):
+Loaded as plain `<script>` tags, in this order (`index.html`):
 
 ```
 squareboundingbox.js → page1.js → page7.js → page8.js → page9.js → page12.js
@@ -128,7 +123,7 @@ Two places load order does matter:
 A first-time visitor lands on a darkened page behind a one-button notice
 («הפרויקט נמצא בתהליך עבודה…» / «הבנתי, להמשך הפרויקט») and presses through it
 before anything plays. Markup: `.shk-gate` at the foot of `<body>`
-(`project.html`); behaviour: `js/intro-gate.js`; styling: the `.shk-gate` block
+(`index.html`); behaviour: `js/intro-gate.js`; styling: the `.shk-gate` block
 at the end of `style.css`.
 
 - **@fold1's entrance is held, not restarted.** `js/bootstrap.js` hands
@@ -142,7 +137,7 @@ at the end of `style.css`.
   is a function of scroll position, so letting the document move behind the gate
   would burn through folds nobody saw.
 - **Once per browser.** `localStorage["shk-gate-seen"]`. The flag is read twice —
-  by `js/intro-gate.js`, and by an **inline `<head>` script** in `project.html`
+  by `js/intro-gate.js`, and by an **inline `<head>` script** in `index.html`
   that adds `.shk-gate-seen` to `<html>` before first paint so a returning
   visitor never sees the notice flash. Keep the two key names in sync.
 - **The button is inside the frame**, under the sentence — the notice is one
@@ -270,9 +265,9 @@ See also: [Folds](Folds.md), [Animation-System](Animation-System.md),
 
 ## Mobile / responsive
 
-One breakpoint, **600px**, declared in three places that must stay in sync: `MOBILE_BP` /
+One breakpoint, **600px**, declared in two places that must stay in sync: `MOBILE_BP` /
 `isMobile()` (`js/core.js`), `@media (max-width: 600px)` (the block at the end of
-`style.css`), and `trigger.css`'s existing article breakpoint.
+`style.css`).
 
 `isMobile()` reads `window.innerWidth` **live** rather than caching — every caller runs
 inside layout code that the existing `resize` handler (`js/bootstrap.js`) already re-runs,
@@ -421,14 +416,13 @@ Three fixed-width things were what actually overflowed, each fixed at the elemen
 
 | Element | Was | Now (≤600px) |
 |---|---|---|
-| `.shk-utility-inner` (`trigger.css`, the article masthead) | `position: absolute; left: 24px` + 48px padding ⇒ 353px wide | static, wrapping flex row, 16px padding |
 | `.page9-tray-row` (`style.css`) | 5 fixed grid columns of 20px pills | `display: contents`; all 10 pills form one `nowrap` horizontally-scrolling row on `#page9ZoneBelow`, 16px pills, one line — see [Folds](Folds.md) |
 | `.page9-tray` (`style.css`) | bottom sheet: `bottom: 0`, slides up from below | band at `top: 112px` under the title card, slides down from above, no `.page9-tray-title`, rule on the bottom edge only; the docked tooltip frame drops below it (`p9TooltipDropTrigger`) — see [Folds](Folds.md) |
 | `.page9-title-row .text-card-frame` (`style.css`) | title box centered by `margin: 0 auto` | centered while scrolling, then flushed right **in `.is-stuck` only** — a measured `translateX(--p9-title-flush)` (`page9UpdateTitleFlush`, `js/page8-9-scroll.js`), side padding zeroed alongside it — see [Folds](Folds.md#fold13s-tray-on-mobile) |
 | `.page0-title` | flat `width: 185px` from `calc(50% + 8px)` | `min(185px, 50vw - 20px)` |
 
-The article page is **RTL**, so its overflow ran off the *left* edge — `scrollWidth` still
-catches it, but a check that only looks at `right > vw` does not.
+RTL blocks overflow off the *left* edge — `scrollWidth` still catches it, but a check that
+only looks at `right > vw` does not.
 
 Per-fold mobile state is the table in [Folds](Folds.md#mobile-status).
 
@@ -436,14 +430,12 @@ Per-fold mobile state is the table in [Folds](Folds.md#mobile-status).
 
 What holds today:
 
-- **`project.html` is `lang="he"`, `index.html` is `lang="he" dir="rtl"`.** `project.html`
-  deliberately has **no root `dir="rtl"`** — the stylesheet declares `direction: rtl`
+- **`index.html` is `lang="he"`** and deliberately has **no root `dir="rtl"`** — the stylesheet declares `direction: rtl`
   per block, and the flex rows that don't (`.page9-zone`, `.page9-tray-row`) would reverse
   their inline order under a root RTL. Setting it is the right end state but needs an
   eyeball pass over @fold14–@fold17 first; the reason is commented at the `<html>` tag.
-- **One `<h1>` per document.** `project.html`'s is `.a11y-only` (every visible heading is an
-  `<h2>` in a scrolling title card). `index.html` runs h1 → h2s only; the small "עוד בשקוף"
-  heading is an `<h2>` styled down, not an `<h4>` — its rule is `.shk-more h2`.
+- **One `<h1>` per document,** `.a11y-only` (every visible heading is an `<h2>` in a
+  scrolling title card).
 - **`.a11y-only`** (`style.css`, next to the `*` reset) is the off-screen utility: a clipped
   1px box, **not** `display: none`/`visibility: hidden`, which would drop the element from
   the accessibility tree too.
@@ -470,13 +462,6 @@ What holds today:
 
 Known open gaps, in severity order — **none of these are fixed**:
 
-1. **`index.html`'s six social links are `href="#"`** — placeholders, so they focus and
-   activate but go nowhere.
-
-**Removed — don't reintroduce:** `index.html`'s fixed ♿ `.shk-a11y-btn` (and its
-`trigger.css` rule). It had no handler on any page, so it advertised an accessibility panel
-that did not exist.
-
 ## Per-frame cost — the layout-read rule
 
 Anything called from a draw loop, a scroll handler or `updateGroups` runs tens of thousands
@@ -485,7 +470,7 @@ browser to flush style/layout:
 
 - **`window.innerWidth` / `window.innerHeight`.** `isMobile()` and `viewportH()` (js/core.js)
   are **cached**, refreshed from the same comparison on `resize`/`orientationchange`. The
-  listener is registered in `core.js`, the first `js/` file `project.html` loads, so it
+  listener is registered in `core.js`, the first `js/` file `index.html` loads, so it
   updates before any other resize handler and no consumer sees a stale value. A mobile
   URL-bar collapse fires resize with the width unchanged, so `isMobile()` correctly holds.
   Never go back to reading `innerWidth` live: it was **14.4% of all CPU** on a throttled

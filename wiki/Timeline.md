@@ -880,7 +880,7 @@ frame's own inner width when the description reports none, so a mistimed call ca
 silently as "fits" a second time.
 
 The frame can only receive that tap because `#page9Tooltip` is a **direct `.layout` child**
-(project.html) — it originally sat inside `.graphic-col`, whose stacking context (fixed,
+(index.html) — it originally sat inside `.graphic-col`, whose stacking context (fixed,
 z-index 0) trapped the tooltip's z-index 1000 under `.text-col`'s full-viewport sections, so
 every touch landed on `section#page-9` instead. Same trap, same fix as `#page9CatTooltip`
 and `#fold6NoteLayer` — see [Architecture](Architecture.md).
