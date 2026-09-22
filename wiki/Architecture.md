@@ -224,24 +224,17 @@ silent, a mid-stuck re-bake (iOS address-bar `resize`) froze the stuck-size view
 and on scroll-back-up the dash faded back in stretched across the wider un-stuck frame
 while the white fill tracked the real box — fill leaking outside a distorted stroke.
 
-`.section-title`'s base rule (`font: 100 20px/1.5 'HadassahFriedlaender'`) is shared by
-**every** card. No page overrides its font-size or weight — with **one named exception:
-@fold17's credits card, `#page-16 .section-title`, is 40px on desktop and 28px under the
-600px breakpoint** (`style.css`), because it is the piece's closing headline over a
-near-viewport-tall card, not a caption. Any other title that looks differently sized at
-the same viewport width is a regression. Only two faces exist in `fonts/` — Regular (400)
-and Thin (100) — so **the light end is the real Thin file** while anything from 500
-up is browser-synthesized thickening of Regular. That is why the light weight was picked
-over the 300-700 sweep: the synthesized weights read as one muddy face, Thin is genuinely
-drawn. It is written as `100` rather than `300`: with only 100 and 400 present, CSS
-font-matching already resolved a 300 request down to this same Thin file, so the two
-render identically and 100 names the weight actually drawn. If a real Light 300 face is
-ever licensed, add its `@font-face` first — only then does 300 mean something different.
-It also retires the `.latin-acronym` workaround, which now inherits the base weight
-instead of forcing 400 — with no synthesis there is no filled-apex artifact to dodge,
-and a 400 acronym would sit heavier than the Hebrew around it.
+`.section-title`'s base rule (`font: 400 20px/1.5 'IBM Plex Sans Hebrew'`, Google Fonts,
+weight 400 only — request another weight in `index.html`'s font link before using it) is
+shared by **every** card. No page overrides its font-size or weight — with **one named
+exception: @fold17's credits card, `#page-16 .section-title`, is 40px on desktop and 28px
+under the 600px breakpoint** (`style.css`), because it is the piece's closing headline over
+a near-viewport-tall card, not a caption. Any other title that looks differently sized at
+the same viewport width is a regression. The face was picked by eye in the
+`_debug-title-font.js` compare harness (David Libre, Miriam Libre, IBM Plex Sans Hebrew,
+Assistant, vs. HadassahFriedlaender Thin); that harness is still wired in for revisiting.
 
-The same face rule covers **@fold1's hero title** (`.page0-title`, `style.css`): it asked
+**@fold1's hero title** still uses HadassahFriedlaender (`.page0-title`, `style.css`): it asked
 for `600` — the last synthesized weight left on the site — and read as *changing weight
 during the reveal*. Synthetic bold is applied by the rasteriser at draw time rather than
 baked into the glyph outlines, so how much ink it lays down is free to differ between

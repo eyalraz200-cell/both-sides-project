@@ -1941,21 +1941,16 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   top: -6px;
 }
 
-/* Figma specs every title card at 20px (verified across nodes 119:997,
-   117:788, 117:818, 120:1279). The light weight was chosen by eye over the
-   300-700 sweep: with only Regular (400) and Thin (100) OTFs in fonts/,
-   500-700 are all browser-synthesized thickening of Regular and read as the
-   same muddy face, while the light end stays a genuine drawn weight.
-   Written as 100, not 300: only 100 and 400 exist, so CSS font-matching
-   already resolved a 300 request down to the Thin file — the two render
-   identically and 100 is the weight actually being drawn. (If a real Light
-   300 face is ever licensed, add its @font-face rule and this may go back to
-   300, which would then pick that file instead.) line-height 1.5 (up from
-   the face's default `normal`) opens up the multi-line Hebrew cards. This is
-   the shared base for ALL title cards; no page should override
-   font-size/weight here individually. */
+/* Title cards: IBM Plex Sans Hebrew Regular (400), 20px (Figma's size,
+   nodes 119:997, 117:788, 117:818, 120:1279), picked by eye in the
+   _debug-title-font.js comparison over David Libre, Miriam Libre, Assistant
+   and the old HadassahFriedlaender Thin. Loaded from Google Fonts in
+   index.html at weight 400 only — request another weight there first.
+   line-height 1.5 opens up the multi-line Hebrew cards. This is the shared
+   base for ALL title cards; no page should override font-size/weight here
+   individually. */
 .section-title {
-  font: 100 20px/1.5 'HadassahFriedlaender', serif;
+  font: 400 20px/1.5 'IBM Plex Sans Hebrew', sans-serif;
   color: #111;
   margin: 0 0 8px;
 }
