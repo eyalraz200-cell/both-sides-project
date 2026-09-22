@@ -6,8 +6,11 @@
   document.head.appendChild(l);
   // ---------------------------------------------------------------- CONFIG --
   var CONFIG = {
-    title: 'hero-title',
-    label: 'hero title & subtitle alignment',
+    // Its own panel row per breakpoint: a phone and a laptop both running
+    // this harness used to share one row, and the panel drove only one of them.
+    title: window.matchMedia('(max-width: 600px)').matches ? 'hero-title-mobile' : 'hero-title',
+    label: window.matchMedia('(max-width: 600px)').matches
+      ? 'hero title & subtitle — PHONE' : 'hero title & subtitle — desktop',
     fold: '@fold1',
     viewport: 'both',
     remoteOnly: true,
@@ -45,8 +48,8 @@
     // panel reproduces the baked hero exactly (baked 2026-09-07).
     // Mobile has its own shipped values (style.css ≤600px block, 2026-09-12).
     values: window.matchMedia('(max-width: 600px)').matches ? {
-      title:    { size: 32, lh: 1.17, gap: 18.5, weight: 300, nudge: -1.5, width: Math.min(115, window.innerWidth / 2 - 20) },
-      subtitle: { size: 16, lh: 1.73, gap: 20.5, weight: 300, nudge: 2, width: 106 },
+      title:    { size: 37, lh: 1.22, gap: 19, weight: 300, nudge: 0, width: Math.min(115, window.innerWidth / 2 - 20) },
+      subtitle: { size: 16, lh: 1.43, gap: 20.5, weight: 300, nudge: 2, width: 106 },
     } : {
       title:    { size: 48, lh: 1.17, gap: 22, weight: 300, nudge: -1.5, width: 172 },
       subtitle: { size: 16, lh: 1.73, gap: 20, weight: 300, nudge: 2, width: 106 },
@@ -339,7 +342,9 @@
     summary: function (v, mode) {
       var m = mode || {};
       var x = window.__heroX || { t: 8, s: -10 }, g = (v.__global || v).colGap;
-      var out = ['dot columns: gap ' + g + 'px → PAGE0_DOT_COLS centerX calc(50% ± ' + (g / 2 + PAGE0_DOT_SQ / 2) + 'px), offsetX ±' + (g / 2 + PAGE0_DOT_SQ / 2),
+      var mob = window.matchMedia('(max-width: 600px)').matches;
+      var out = ['BREAKPOINT: ' + (mob ? 'MOBILE (≤600px) — bake into the ≤600px block ONLY' : 'DESKTOP (>600px) — bake into the base rules; mobile block untouched') + '   [' + window.innerWidth + '×' + window.innerHeight + ']',
+                 'dot columns: gap ' + g + 'px → PAGE0_DOT_COLS centerX calc(50% ± ' + (g / 2 + PAGE0_DOT_SQ / 2) + 'px), offsetX ±' + (g / 2 + PAGE0_DOT_SQ / 2),
                  '.page0-title { left: calc(50% + ' + x.t + 'px); }   .page0-subtitle { left: calc(50% - ' + (-x.s) + 'px); }'];
       [['title', '.page0-title', 0], ['subtitle', '.page0-subtitle', 2 * PAGE0_DOT_STEP]]
         .forEach(function (row) {
@@ -1221,7 +1226,7 @@
     if (TRASHED) return;
     var a = readAuto();
     try {
-      DISC.postMessage({ t: 'iam', title: CONFIG.title, inst: INST,
+      DISC.postMessage({ t: 'iam', title: CONFIG.title, file: FILE, inst: INST,
                          foldBadge: foldBadgeState(),
                          autoReload: a ? a.on : null, behind: a ? a.behind : 0 });
     } catch (e) {}

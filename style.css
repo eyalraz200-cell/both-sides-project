@@ -3622,15 +3622,15 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      this font size. At 430px and up the min() still resolves to 185px, so
      wider screens are untouched. */
   .page0-title {
-    /* Mobile hero, 2026-09-22: the desktop bake's proportions at 32px —
-       line-height 1.17, same +6.5px left, narrowed to 115px so it keeps its 3
-       lines; last baseline 18.5px above its dots (solved headless at 390×844,
-       top below). */
-    left: calc(50% + 6.5px);
+    /* Mobile hero, baked 2026-09-22 from the PHONE harness Copy (16:56,
+       390×763): 37px/1.22, 115 wide (3 lines), left +8px, last baseline 19px
+       above its dots. The Copy's own `top` was measured mid-entrance and is
+       wrong; the top below is solved headless at 390px. */
+    left: calc(50% + 8px);
     width: min(115px, 50vw - 20px);
     /* 42px is a desktop-scale display size that eats a third of a phone
        screen — 32px still reads as the hero and keeps the same 3-line break. */
-    font-size: 32px;
+    font-size: 37px;
     /* Mobile gets its OWN leading, unlike every earlier revision of this block,
        which let both hero texts inherit the desktop 1.31/1.52. That inheritance
        was the bug: line-height is unitless, so dropping the title to 32px took
@@ -3640,7 +3640,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        title's by ~12.8px per line down the block. 1.45 and the subtitle's 1.465
        below were picked by eye on 2026-09-12 with the mobile hero `manual/`
        harness (wiki/Dev-Workflow.md) against its live baseline rulers. */
-    line-height: 1.17;
+    line-height: 1.22;
     /* Re-solved for the leading above — a line-height change always moves the
        last baseline, so this number and the one above are ONE setting. -227.8
        puts the title's last baseline 18.5px above its dot column's top edge,
@@ -3654,20 +3654,21 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        already carried HALF the growth on its own — this is the other half, so
        the text travels exactly as far as the dot columns, which are absolute px
        and take the whole delta. 0px everywhere else. */
-    top: calc(50% - 207.6px + var(--page0-drop, 0px));
+    top: calc(50% - 229.5px + var(--page0-drop, 0px));
   }
 
   /* The subtitle keeps its 18px and its 125px width here — only the leading and
      the top are re-tuned, in step with the title above (see that comment for
      why mobile needs its own leading at all). Still 4 lines at this width. */
   .page0-subtitle {
-    /* Same as desktop (16px/1.73, 106 wide, −8px, <br>s hidden → 4 lines);
-       only the top is re-solved: last baseline 20.5px above its dots. */
-    line-height: 1.73;
+    /* As desktop (16px, 106 wide, −8px, <br>s hidden → 4 lines) but with its
+       own leading, 1.43 (PHONE harness, 16:56); last baseline 20.5px above
+       its dots, top solved headless. */
+    line-height: 1.43;
     /* Same trimmed solve as the title: -167.8 puts the last baseline 20.5px
        above its own dot column's top edge. Re-solve this whenever the leading
        above moves — the two are one setting. */
-    top: calc(50% - 172.8px + var(--page0-drop, 0px));
+    top: calc(50% - 156.4px + var(--page0-drop, 0px));
   }
 
   /* The pinned title card rests 4.4vh (~37px on an 844px phone) from the top
