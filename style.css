@@ -2657,7 +2657,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   /* IBM Plex Sans Hebrew Light, matching the title cards (the only Plex
      weight loaded — see .section-title). Was 400 42px 'HadassahFriedlaender'.
      The `top` values here and in the ≤600px block were solved for Hadassah's
-     metrics — re-solve with _debug-hero-title.js. */
+     metrics — re-solve them (hero harness: _debug-hero-title.js, in git
+     history at 3d233aa). */
   font: 300 48px 'IBM Plex Sans Hebrew', sans-serif;
   /* 1.31 is what the browser's own `normal` already resolved to for this face
      (55px / 42px) — stated explicitly so the `top` above stays valid if the
@@ -3181,7 +3182,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      the frame's real pixel box and rewrites the viewBox 1:1, so the 2px dash
      stays exact at the new size. */
   .section-title {
-    font-size: 16px;
+    font-size: 18px;
   }
   .text-card-frame {
     padding: 16px 22px;

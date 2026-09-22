@@ -231,15 +231,15 @@ exception: @fold17's credits card, `#page-16 .section-title`, is 40px on desktop
 under the 600px breakpoint** (`style.css`), because it is the piece's closing headline over
 a near-viewport-tall card, not a caption. Any other title that looks differently sized at
 the same viewport width is a regression. The face was picked by eye in the
-`_debug-title-font.js` compare harness (David Libre, Miriam Libre, IBM Plex Sans Hebrew,
-Assistant, vs. HadassahFriedlaender Thin); that harness is still wired in for revisiting.
+`compare/` harness (David Libre, Miriam Libre, IBM Plex Sans Hebrew,
+Assistant, vs. HadassahFriedlaender Thin); that harness has been removed.
 **Going back to Hadassah:** `font: 100 20px/1.5 'HadassahFriedlaender', serif` on the rule, and
 preload `"100 16px 'HadassahFriedlaender'"` instead of Plex in `js/bootstrap.js` — the steps
 are spelled out in the comment above `.section-title` in `style.css`.
 
 **@fold1's hero title** (`.page0-title`, `style.css`) and its subtitle (`.page0-subtitle`, was Assistant 300) are IBM Plex Sans Hebrew 300 too — the
 same face and weight as the cards (was HadassahFriedlaender 400). Its `top` (desktop and the
-≤600px block) is solved for the font's metrics, so re-solve it with `_debug-hero-title.js`
+≤600px block) is solved for the font's metrics, so re-solve it (a `manual/` hero harness — restore `_debug-hero-title.js` from git history, commit `3d233aa`)
 whenever the face changes. **Desktop hero (baked 2026-09-22):** title 48px/1.17, width 172, `left: calc(50% + 6.5px)`,
 `top: calc(50% - 281.6px)` (last baseline 22px above its dots); subtitle 16px/1.73, width 106,
 `left: calc(50% - 8px)`, `top: calc(50% - 189.8px)` (20px). The subtitle wraps by width —
@@ -249,7 +249,7 @@ title 37px/1.22, `width: min(115px, 50vw - 20px)` (3 lines), left +8px, top −2
 mobile tops add `var(--page0-drop)`. HadassahFriedlaender's `@font-face` rules stay in `style.css`
 for going back.
 
-The 600px breakpoint drops it to **16px** — that's a width override applied
+The 600px breakpoint drops it to **18px** — that's a width override applied
 to the same shared rule, so the titles stay uniform with each other at any given width;
 it is not the per-page kind the rule forbids.
 
