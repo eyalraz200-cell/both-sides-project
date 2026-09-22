@@ -22,7 +22,7 @@ full-viewport `<canvas>` (`.graphic-col`) renders the visuals; a separate scroll
 
 **Removed — don't reintroduce:** the שקוף article/home page (the old `index.html` +
 `trigger.css` + its three article images) that used to front the project. The root URL is
-the project itself now.
+the project itself now. `project.html` is only a redirect stub to the root so old shared links keep working — never put content in it.
 
 ## Run / commands
 

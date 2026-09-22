@@ -8,7 +8,8 @@ local Hadassah faces (`@font-face` in `style.css`).
 
 > **Removed — don't reintroduce:** the שקוף article/home page (the old `index.html` +
 > `trigger.css` + `images/protest.webp`, `related-knesset.jpg`, `related-march.jpg`) that
-> used to front the project behind a `.shk-cta-button`. The root URL is the project now.
+> used to front the project behind a `.shk-cta-button`. The root URL is the project now; `project.html` is a redirect stub to the root that
+> keeps old shared links alive — never put content in it.
 
 ## Search / discoverability
 
