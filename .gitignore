@@ -20,3 +20,4 @@ shots/
 # the single committed derivative, pending ACLED's written OK (see wiki/Data.md).
 *.xlsx
 _debug-misclassified.json
+_debug-fonts/

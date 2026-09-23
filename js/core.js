@@ -300,7 +300,7 @@ function init() {
 // pixel box, so the 2px-dash/2px-gap stroke and 8px radius render exactly,
 // with no scaling distortion regardless of the frame's aspect ratio.
 //
-// The stroke width is per breakpoint — 1.5px desktop, 1.25px mobile (both
+// The stroke width is per breakpoint — 2px at both today (the 1.5/1.25px trial was reverted; both
 // tuned by eye 2026-09-22; each MUST match --frame-border-w on
 // .text-card-frame in style.css at that breakpoint). The rect's path
 // is inset by half the stroke so the stroke straddles the frame's true outer
@@ -311,8 +311,8 @@ function init() {
 // background's actual border-radius clip at every corner. The reduced rx on
 // the inset path puts the stroke's *outer* edge back on radius 8, matching
 // the background's curve exactly.
-const FRAME_STROKE_W_DESKTOP = 1.5;
-const FRAME_STROKE_W_MOBILE = 1.25;
+const FRAME_STROKE_W_DESKTOP = 2;
+const FRAME_STROKE_W_MOBILE = 2;
 function frameStrokeW() { return isMobile() ? FRAME_STROKE_W_MOBILE : FRAME_STROKE_W_DESKTOP; }
 // A 2px-dash/2px-gap pattern only closes cleanly if the outline's perimeter
 // happens to be a whole multiple of the 4px period — otherwise the run that

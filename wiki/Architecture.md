@@ -3,7 +3,7 @@
 ## One entry point
 
 **`index.html`** — the scrollytelling experience, served at the site root. Everything in
-this wiki is about this page. It pulls Assistant and Miriam Libre from Google Fonts and declares the two
+this wiki is about this page. It pulls Assistant from Google Fonts and declares the two
 local Hadassah faces (`@font-face` in `style.css`).
 
 > **Removed — don't reintroduce:** the שקוף article/home page (the old `index.html` +
@@ -214,10 +214,10 @@ horizontally centered block that scrolls with the page (nothing pins). Visibilit
 The dashed white box is a **separate** class, `.text-card-frame`, applied only to the
 `<h2 class="section-title">` — never to sibling content like a legend. The dash is not
 `border-style: dashed` (too loose) and not a `border-image` (unreliable on wide, short
-boxes); it's a transparent CSS border of `--frame-border-w` (**1.5px desktop, 1.25px under the
-600px breakpoint**, both picked by eye 2026-09-22; was 2px) plus an inline
+boxes); it's a transparent CSS border of `--frame-border-w` (**2px at both breakpoints** — the
+1.5/1.25px trial of 2026-09-22 was reverted with the font change) plus an inline
 `<svg class="text-card-frame-dash">` rect drawn against a 1:1 viewBox, stroke
-`frameStrokeW()` (`FRAME_STROKE_W_DESKTOP` **1.5** / `FRAME_STROKE_W_MOBILE` **1.25**,
+`frameStrokeW()` (`FRAME_STROKE_W_DESKTOP` / `FRAME_STROKE_W_MOBILE`, both **2**,
 `js/core.js` — each must equal `--frame-border-w` at its breakpoint; the stroke attrs are
 rewritten on every bake so a resize across the breakpoint re-strokes), 2px-dash/2px-gap,
 inset by half the stroke with rx = 8 − half-stroke
@@ -231,34 +231,26 @@ silent, a mid-stuck re-bake (iOS address-bar `resize`) froze the stuck-size view
 and on scroll-back-up the dash faded back in stretched across the wider un-stuck frame
 while the white fill tracked the real box — fill leaking outside a distorted stroke.
 
-`.section-title`'s base rule (`font: 400 21px/1.5 'Miriam Libre'`, Google Fonts,
-weight 400 only — Miriam Libre's lightest face; request another weight in `index.html`'s font
-link before using it) is shared by **every** card. No page overrides its font-size or weight —
-with **one named exception: @fold17's credits card, `#page-16 .section-title`, is 36px on desktop
-and 26px under the 600px breakpoint** (`style.css`), because it is the piece's closing headline
-over a near-viewport-tall card, not a caption. Any other title that looks differently sized at
-the same viewport width is a regression. The face and size were picked by eye on 2026-09-23 in
-the `_debug-title-font.js` `compare/` harness (Miriam Libre, IBM Plex Sans Hebrew, Heebo, Rubik,
-Alef, Noto Sans Hebrew, HadassahFriedlaender); that harness and its phone twin have been
-removed. **Going back to Hadassah:** `font: 100 20px/1.5 'HadassahFriedlaender', serif` on the
-rule, and preload `"100 16px 'HadassahFriedlaender'"` instead of Miriam in `js/bootstrap.js` — the
-steps are spelled out in the comment above `.section-title` in `style.css`.
+`.section-title`'s base rule (`font: 100 20px/1.5 'HadassahFriedlaender'`, the local Thin face
+declared by `@font-face` at the top of `style.css`; only Thin 100 and Regular 400 exist) is shared
+by **every** card. No page overrides its font-size or weight — with **one named exception:
+@fold17's credits card, `#page-16 .section-title`, is 36px on desktop and 26px under the 600px
+breakpoint** (`style.css`), because it is the piece's closing headline over a near-viewport-tall
+card, not a caption. Any other title that looks differently sized at the same viewport width is a
+regression. IBM Plex Sans Hebrew (2026-09-22) and Miriam Libre (2026-09-23) were each tried and
+reverted the same day; the `_debug-title-font.js` `compare/` harness (and its phone twin) is the
+tool for trying another face — it is untracked scaffolding, not committed.
 
-**@fold1's hero title** (`.page0-title`, `style.css`) is Miriam Libre 400 too — the same face and
-weight as the cards. Its subtitle (`.page0-subtitle`) is **Assistant 300** (the title-font
-harness's "hero subtitle" pick). Their `top` (desktop and the ≤600px block) is solved for each
-font's metrics, so re-solve it (a `manual/` hero harness — restore `_debug-hero-title.js` from git
-history) whenever a face, size or leading changes. **Desktop hero (baked 2026-09-23):** title
-52px/1.15, width 172, `left: calc(50% + 7.5px)`, `top: calc(50% - 289.9px)` (last baseline 24px
-above its dots); subtitle 16px/1.9, width 106, `left: calc(50% - 8.5px)`, `top: calc(50% -
-166.1px)` (18px). The subtitle wraps by width (3 lines) — its `<br>`s are hidden and each has a
-real space before it in `index.html`. **Mobile (≤600px):** title 37px/1.22, `width: min(115px,
-50vw - 20px)` (3 lines), left +8px, top −227px (18.5px gap); the subtitle is the desktop one but
-line-height 1.43, top −132.5px (20.5px gap). Both mobile tops add `var(--page0-drop)`. The tops
-were solved headless (Chromium, 1900×990 and 390×763) as trimmed last-baseline → dot-column-top
-distances. HadassahFriedlaender's `@font-face` rules stay in `style.css` for going back.
+**@fold1's hero title** (`.page0-title`, `style.css`) is HadassahFriedlaender Regular 400, 42px/1.31,
+185 wide, `left: calc(50% + 8px)`, `top: calc(50% - 276px)` (last baseline ≈23.7px above its dots,
+trimmed). Its subtitle (`.page0-subtitle`) is Assistant 300, 18px/1.52, 125 wide, `left: calc(50%
+- 10px)`, `top: calc(50% - 189.1px)` (20px), wrapping on its own `<br>`s (4 lines). **Mobile
+(≤600px):** title 32px/1.45, `width: min(185px, 50vw - 20px)`, top −228.6px; subtitle line-height
+1.465, top −168.8px; both mobile tops add `var(--page0-drop)`. The tops are solved for each font's
+metrics, so re-solve them (the `manual/` hero harness, `_debug-hero-title.js`) whenever a face,
+size or leading changes.
 
-The 600px breakpoint drops it to **16px** (harness pick 2026-09-23) — that's a width override applied
+The 600px breakpoint drops it to **16px** — that's a width override applied
 to the same shared rule, so the titles stay uniform with each other at any given width;
 it is not the per-page kind the rule forbids.
 
