@@ -372,8 +372,10 @@
       h.endsWith(".local") || /^10\./.test(h) || /^192\.168\./.test(h) ||
       /^172\.(1[6-9]|2\d|3[01])\./.test(h);
     if (!local) return;
-    ["_debug-bus.js", "_debug-inspect.js", "_debug-title-font.js", "_debug-title-font-mobile.js", "_debug-hero-title.js"].forEach(function (src) {
-      document.write('<script src="' + src + '"><\/script>');
+    ["_debug-bus.js", "_debug-inspect.js"].forEach(function (src) {
+      // Cache-busted: VS Code's built-in browser keeps serving a stale harness
+      // script despite the dev server's no-cache headers, replaying old state.
+      document.write('<script src="' + src + '?v=' + Date.now() + '"><\/script>');
     });
   })();
   </script>
