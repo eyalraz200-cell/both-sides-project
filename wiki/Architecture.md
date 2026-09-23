@@ -3,7 +3,7 @@
 ## One entry point
 
 **`index.html`** — the scrollytelling experience, served at the site root. Everything in
-this wiki is about this page. It pulls Assistant from Google Fonts and declares the two
+this wiki is about this page. It pulls Assistant and Miriam Libre from Google Fonts and declares the two
 local Hadassah faces (`@font-face` in `style.css`).
 
 > **Removed — don't reintroduce:** the שקוף article/home page (the old `index.html` +
@@ -231,32 +231,34 @@ silent, a mid-stuck re-bake (iOS address-bar `resize`) froze the stuck-size view
 and on scroll-back-up the dash faded back in stretched across the wider un-stuck frame
 while the white fill tracked the real box — fill leaking outside a distorted stroke.
 
-`.section-title`'s base rule (`font: 300 20px/1.5 'IBM Plex Sans Hebrew'`, Google Fonts,
-weight 300 only — request another weight in `index.html`'s font link before using it) is
-shared by **every** card. No page overrides its font-size or weight — with **one named
-exception: @fold17's credits card, `#page-16 .section-title`, is 36px on desktop and 26px
-under the 600px breakpoint** (`style.css`), because it is the piece's closing headline over
-a near-viewport-tall card, not a caption. Any other title that looks differently sized at
-the same viewport width is a regression. The face was picked by eye in the
-`compare/` harness (David Libre, Miriam Libre, IBM Plex Sans Hebrew,
-Assistant, vs. HadassahFriedlaender Thin); that harness has been removed.
-**Going back to Hadassah:** `font: 100 20px/1.5 'HadassahFriedlaender', serif` on the rule, and
-preload `"100 16px 'HadassahFriedlaender'"` instead of Plex in `js/bootstrap.js` — the steps
-are spelled out in the comment above `.section-title` in `style.css`.
+`.section-title`'s base rule (`font: 400 21px/1.5 'Miriam Libre'`, Google Fonts,
+weight 400 only — Miriam Libre's lightest face; request another weight in `index.html`'s font
+link before using it) is shared by **every** card. No page overrides its font-size or weight —
+with **one named exception: @fold17's credits card, `#page-16 .section-title`, is 36px on desktop
+and 26px under the 600px breakpoint** (`style.css`), because it is the piece's closing headline
+over a near-viewport-tall card, not a caption. Any other title that looks differently sized at
+the same viewport width is a regression. The face and size were picked by eye on 2026-09-23 in
+the `_debug-title-font.js` `compare/` harness (Miriam Libre, IBM Plex Sans Hebrew, Heebo, Rubik,
+Alef, Noto Sans Hebrew, HadassahFriedlaender); that harness and its phone twin have been
+removed. **Going back to Hadassah:** `font: 100 20px/1.5 'HadassahFriedlaender', serif` on the
+rule, and preload `"100 16px 'HadassahFriedlaender'"` instead of Miriam in `js/bootstrap.js` — the
+steps are spelled out in the comment above `.section-title` in `style.css`.
 
-**@fold1's hero title** (`.page0-title`, `style.css`) and its subtitle (`.page0-subtitle`, was Assistant 300) are IBM Plex Sans Hebrew 300 too — the
-same face and weight as the cards (was HadassahFriedlaender 400). Its `top` (desktop and the
-≤600px block) is solved for the font's metrics, so re-solve it (a `manual/` hero harness — restore `_debug-hero-title.js` from git history, commit `3d233aa`)
-whenever the face changes. **Desktop hero (baked 2026-09-22):** title 48px/1.17, width 172, `left: calc(50% + 6.5px)`,
-`top: calc(50% - 281.6px)` (last baseline 22px above its dots); subtitle 16px/1.73, width 106,
-`left: calc(50% - 8px)`, `top: calc(50% - 189.8px)` (20px). The subtitle wraps by width —
-its `<br>`s are hidden and each has a real space before it in `index.html`. **Mobile (≤600px):**
-title 37px/1.22, `width: min(115px, 50vw - 20px)` (3 lines), left +8px, top −229.5px
-(19px gap); the subtitle is the desktop one but line-height 1.43, top −156.4px (20.5px gap). Both
-mobile tops add `var(--page0-drop)`. HadassahFriedlaender's `@font-face` rules stay in `style.css`
-for going back.
+**@fold1's hero title** (`.page0-title`, `style.css`) is Miriam Libre 400 too — the same face and
+weight as the cards. Its subtitle (`.page0-subtitle`) is **Assistant 300** (the title-font
+harness's "hero subtitle" pick). Their `top` (desktop and the ≤600px block) is solved for each
+font's metrics, so re-solve it (a `manual/` hero harness — restore `_debug-hero-title.js` from git
+history) whenever a face, size or leading changes. **Desktop hero (baked 2026-09-23):** title
+52px/1.15, width 172, `left: calc(50% + 7.5px)`, `top: calc(50% - 289.9px)` (last baseline 24px
+above its dots); subtitle 16px/1.9, width 106, `left: calc(50% - 8.5px)`, `top: calc(50% -
+166.1px)` (18px). The subtitle wraps by width (3 lines) — its `<br>`s are hidden and each has a
+real space before it in `index.html`. **Mobile (≤600px):** title 37px/1.22, `width: min(115px,
+50vw - 20px)` (3 lines), left +8px, top −227px (18.5px gap); the subtitle is the desktop one but
+line-height 1.43, top −132.5px (20.5px gap). Both mobile tops add `var(--page0-drop)`. The tops
+were solved headless (Chromium, 1900×990 and 390×763) as trimmed last-baseline → dot-column-top
+distances. HadassahFriedlaender's `@font-face` rules stay in `style.css` for going back.
 
-The 600px breakpoint drops it to **17px** (harness pick 2026-09-22) — that's a width override applied
+The 600px breakpoint drops it to **16px** (harness pick 2026-09-23) — that's a width override applied
 to the same shared rule, so the titles stay uniform with each other at any given width;
 it is not the per-page kind the rule forbids.
 

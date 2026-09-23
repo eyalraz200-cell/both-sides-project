@@ -40,6 +40,10 @@
 
 body {
   background: var(--bg);
+  /* No text selection anywhere — the page is read and scrolled, never copied,
+     and a drag across a card must not paint a highlight over the artwork. */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* The fold badge — the current @foldN as a bare number, small, top-left.
@@ -1944,12 +1948,12 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   top: -6px;
 }
 
-/* Title cards: IBM Plex Sans Hebrew Light (300), 20px (Figma's size,
-   nodes 119:997, 117:788, 117:818, 120:1279), picked by eye in the
-   _debug-title-font.js comparison over David Libre, Miriam Libre, Assistant
-   and the old HadassahFriedlaender Thin. Loaded from Google Fonts in
-   index.html at weight 400 only — request another weight there first.
-   line-height 1.5 opens up the multi-line Hebrew cards. This is the shared
+/* Title cards: Miriam Libre Regular (400), 21px — the _debug-title-font.js
+   harness pick of 2026-09-23 (over IBM Plex Sans Hebrew 300 20px, Heebo,
+   Rubik, Alef, Noto Sans Hebrew, Hadassah). Miriam Libre's lightest face is
+   400; it is loaded from Google Fonts in index.html at 400 only — request
+   another weight there first. line-height 1.5 opens up the multi-line Hebrew
+   cards. This is the shared
    base for ALL title cards; no page should override font-size/weight here
    individually.
 
@@ -1959,10 +1963,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
         (Thin 100 — the real Thin OTF; 16px mobile override is unchanged)
      2. js/bootstrap.js: swap the Plex preload back to
         document.fonts.load("100 16px 'HadassahFriedlaender'"),
-     3. index.html: drop &family=IBM+Plex+Sans+Hebrew:wght@300 from the
+     3. index.html: drop &family=Miriam+Libre:wght@400 from the
         Google Fonts link (optional — harmless if left). */
 .section-title {
-  font: 300 20px/1.5 'IBM Plex Sans Hebrew', sans-serif;
+  font: 400 21px/1.5 'Miriam Libre', sans-serif;
   color: #111;
   margin: 0 0 8px;
 }
@@ -2635,7 +2639,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      transform) were fighting over the same element's position every frame,
      which read as jitter no amount of lerp/clamp tuning fixed. */
   position: fixed;
-  left: calc(50% + 6.5px);
+  left: calc(50% + 7.5px);
   /* Nudged up an extra 18px (276 vs the Figma-literal 258) so the gap below
      the title to its dot column relates to the subtitle's own gap — title and
      subtitle render at different heights and different fonts (3 lines @42px
@@ -2649,7 +2653,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      grow with line-height. Trimmed, this sits at 23.73px against the
      subtitle's 20px — picked by eye on 2026-09-07 with the hero-title
      `manual/` harness (wiki/Dev-Workflow.md). */
-  top: calc(50% - 281.6px);
+  top: calc(50% - 289.9px);
   width: 172px;
   /* 400, not 600: fonts/ holds exactly two HadassahFriedlaender faces (Thin
      100, Regular 400 — see the @font-face rules at the top of this file), so
@@ -2660,16 +2664,18 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      title changing weight during the reveal. 400 is a real drawn face with
      fixed outlines and no such freedom. If retail weights above 400 are ever
      licensed, add the @font-face rule first, then this value may go up. */
-  /* IBM Plex Sans Hebrew Light, matching the title cards (the only Plex
-     weight loaded — see .section-title). Was 400 42px 'HadassahFriedlaender'.
-     The `top` values here and in the ≤600px block were solved for Hadassah's
-     metrics — re-solve them (hero harness: _debug-hero-title.js, in git
-     history at 3d233aa). */
-  font: 300 48px 'IBM Plex Sans Hebrew', sans-serif;
-  /* 1.31 is what the browser's own `normal` already resolved to for this face
-     (55px / 42px) — stated explicitly so the `top` above stays valid if the
-     font file is ever swapped for one with different metrics. */
-  line-height: 1.17;
+  /* Miriam Libre Regular, matching the title cards (its lightest face; the
+     only weight loaded — see .section-title). Was 300 48px IBM Plex Sans
+     Hebrew, before that 400 42px 'HadassahFriedlaender'. Desktop hero baked
+     2026-09-23 from the _debug-hero-title.js Copy (11:00, 1900×990): 52px/1.15,
+     172 wide (3 lines), left +7.5, last baseline 24px above its dots. The
+     `top` values here and in the ≤600px block are solved for THIS face's
+     metrics (headless, trimmed baseline→dot) — re-solve them whenever the
+     face, size or leading changes (_debug-hero-title.js). */
+  font: 400 52px 'Miriam Libre', sans-serif;
+  /* Stated explicitly so the `top` above stays valid if the font file is ever
+     swapped for one with different metrics. */
+  line-height: 1.15;
   color: #000;
   text-align: left;
   margin: 0;
@@ -2684,32 +2690,33 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 .page0-subtitle {
   /* position: fixed — same reasoning as .page0-title above. */
   position: fixed;
-  left: calc(50% - 8px);
+  left: calc(50% - 8.5px);
   transform: translateX(-100%);
   /* 189.1, not the old 179: the line-height below opened the 4 lines up, and
      `top` is re-solved so the LAST BASELINE lands 20px above its dot column's
      top edge (the trimmed gap — see .page0-title). Both numbers were picked by
      eye on 2026-09-07 with the hero-title `manual/` harness. Exact px as
-     tuned, deliberately not converted to a relative unit. */
-  top: calc(50% - 189.8px);
+     tuned, deliberately not converted to a relative unit. Re-solved 2026-09-23
+     for Assistant 16px/1.9 (now 3 lines at 106 wide): last baseline 18px above
+     its column. */
+  top: calc(50% - 166.1px);
   width: 106px;
-  /* IBM Plex Sans Hebrew Light, like the hero title (was 300 18px Assistant). */
-  font: 300 16px 'IBM Plex Sans Hebrew', sans-serif;
-  /* Opened up from the browser's `normal` (which resolved to 1.2778 here) —
-     4 lines of 18px Assistant read tight against the title's much larger
-     leading. Changing this moves the last baseline, so `top` above must be
-     re-solved with it; the two are one setting. */
-  line-height: 1.73;
+  /* Assistant Light, 16px — the title-font harness's "hero subtitle:
+     Assistant" pick of 2026-09-23 (was 300 16px IBM Plex Sans Hebrew, before
+     that 300 18px Assistant). */
+  font: 300 16px 'Assistant', sans-serif;
+  /* 1.9 (hero harness, 2026-09-23). Changing this moves the last baseline, so
+     `top` above must be re-solved with it; the two are one setting. */
+  line-height: 1.9;
   color: #000;
   text-align: right;
   margin: 0;
 }
 
-/* DESKTOP hero, baked 2026-09-22 from the _debug-hero-title.js Copy (16:43,
-   measured at 1900×990): title 48px/1.17, width 172, left +6.5 (2px outside
-   its column's left edge minus a −1.5 nudge for Plex's side bearing), last
-   baseline 22px above its dots; subtitle 16px/1.73, width 106, right edge 2px
-   inside its column's right edge, last baseline 20px above its dots. The
+/* DESKTOP hero, baked 2026-09-23 from the _debug-hero-title.js Copy (11:00,
+   measured at 1900×990): title 52px/1.15 Miriam Libre, width 172, left +7.5,
+   last baseline 24px above its dots; subtitle 16px/1.9 Assistant, width 106,
+   left −8.5, last baseline 18px above its dots. The
    subtitle wraps by WIDTH at both breakpoints — its <br>s are hidden and each
    one has a real space before it in index.html, so the words stay apart.
    Mobile: only the title is smaller (≤600px block). */
@@ -3187,7 +3194,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      the frame's real pixel box and rewrites the viewBox 1:1, so the 2px dash
      stays exact at the new size. */
   .section-title {
-    font-size: 17px; /* harness pick 2026-09-22 (was 18) */
+    font-size: 16px; /* harness pick 2026-09-23 (was 17) */
   }
   .text-card-frame {
     padding: 16px 22px;
@@ -3659,14 +3666,16 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        measured TRIMMED (baseline to dot, not box bottom to dot — see the
        desktop rule). The 50% cancels the viewport height out of the solve, so
        the value holds at any phone height; only the 390px WIDTH it was tuned
-       at matters, since that is what fixes the 3-line wrap. */
+       at matters, since that is what fixes the 3-line wrap. Re-solved
+       2026-09-23 (headless, 390px) for Miriam Libre 37px/1.22 — still 3
+       lines at 115 wide, last baseline 18.5px above its column. */
     /* + var(--page0-drop): when a phone's bar collapses the viewport grows and
        the whole hero moves down with it by the growth, so the composition this
        fold was measured at survives (page0ApplyDrop, page1.js). `50%` has
        already carried HALF the growth on its own — this is the other half, so
        the text travels exactly as far as the dot columns, which are absolute px
        and take the whole delta. 0px everywhere else. */
-    top: calc(50% - 229.5px + var(--page0-drop, 0px));
+    top: calc(50% - 227px + var(--page0-drop, 0px));
   }
 
   /* The subtitle keeps its 18px and its 125px width here — only the leading and
@@ -3677,10 +3686,11 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        own leading, 1.43 (PHONE harness, 16:56); last baseline 20.5px above
        its dots, top solved headless. */
     line-height: 1.43;
-    /* Same trimmed solve as the title: -167.8 puts the last baseline 20.5px
-       above its own dot column's top edge. Re-solve this whenever the leading
-       above moves — the two are one setting. */
-    top: calc(50% - 156.4px + var(--page0-drop, 0px));
+    /* Same trimmed solve as the title: -132.5 puts the last baseline 20.5px
+       above its own dot column's top edge (re-solved 2026-09-23 for Assistant
+       16px, 3 lines). Re-solve this whenever the leading above moves — the
+       two are one setting. */
+    top: calc(50% - 132.5px + var(--page0-drop, 0px));
   }
 
   /* The pinned title card rests 4.4vh (~37px on an 844px phone) from the top
