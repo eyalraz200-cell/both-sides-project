@@ -49,12 +49,24 @@ const GROUPS = [
     // Narrowing the shared card box instead was measured and rejected: at 100 it
     // takes three OTHER labels out of agreement.
     labelCapLegend: 100 },
-  { color: "#6B89FF", label: "מתנגדי הרפורמה המשפטית", actor: "protesters against government",
+  { color: "#6B89FF", label: "מתנגדי הרפורמה המשפטית ומדיניות הממשלה", actor: "protesters against government",
+    // MOBILE-ONLY SHORTER NAME (groupLabelText). The full label's best possible
+    // two-line break is «מתנגדי הרפורמה המשפטית» / «ומדיניות הממשלה», and that
+    // first line is one unbreakable 140px run at 14px Assistant — wider than the
+    // 122.5px the מקרא card can give a label on any phone (labelCapMobile * 14/16,
+    // see the card builder), and wider than its column at 390px besides. So it
+    // fell to THREE lines there and at @fold3, and fold6MEqualiseRows hands that
+    // height to all six cards. Raising the cap instead would push the label past
+    // the column and clip the cards. This variant measures 193px and breaks to two
+    // lines at both sizes with room to spare (180px at 14px, widest line 91px).
+    // DESKTOP KEEPS THE FULL NAME.
+    labelMobile: "מתנגדי הרפורמה ומדיניות הממשלה",
     fold4: { x: 725,  y: 488, swatchFirst: true }, fold6: { x: 31, y: 512 },
-    // Per-group @fold3 wrap cap on mobile (see groupLabelColumnMaxWidth). Tuned
-    // for the former 5-word label (3 lines at the shared 100px, 2 at 140px); the
-    // current 3-word label sits on two lines at either cap, so this is now inert
-    // but kept so the mechanism stays wired. Only this label carries it.
+    // Per-group @fold3 wrap cap on mobile (see groupLabelColumnMaxWidth). Live,
+    // and measured against `labelMobile` above (the only string that renders at
+    // this breakpoint): 206px at 16px Assistant, which is THREE lines at the
+    // shared 100px cap and two at 140 ("מתנגדי הרפורמה" / "ומדיניות הממשלה",
+    // 99 and 104px). Don't drop it back to the shared cap.
     labelCapMobile: 140 },
   { color: "#FF1A94", label: "תומכי עסקת חטופים ומתנגדי המלחמה", actor: "peace movements",
     fold4: { x: 725,  y: 462, swatchFirst: true }, fold6: { x: 31, y: 536 },
@@ -95,7 +107,7 @@ const FOLD4_CHANGE_ROWS    = ["peace movements", "protesters against government"
 
 // MOBILE ONLY: two pairs of rows trade places within their camp (per explicit
 // instruction, 2026-09-12) —
-//   גוש השינוי:  מתנגדי הרפורמה המשפטית ↔ תומכי עסקת חטופים ומתנגדי המלחמה
+//   גוש השינוי:  מתנגדי הרפורמה המשפטית ומדיניות הממשלה ↔ תומכי עסקת חטופים ומתנגדי המלחמה
 //   קואליציית הימין:  מפגינים חרדים ↔ קבוצות ימין לאומיות
 // so mobile reads settlers / right-wing / haredi and peace / reform / arab,
 // top→bottom. Expressed as a swap of the SHARED order rather than a second set
@@ -231,7 +243,7 @@ const FOLD2_GROUP_CELL = [
   { row: 0, col: 1 },  // #31CE1C  מפגינים ערבים ישראלים   (change)
   { row: 0, col: 3 },  // #F9B624  תנועות התנחלות          (coalition)
   { row: 2, col: 0 },  // #F024FF  קבוצות ימין לאומיות     (coalition)
-  { row: 2, col: 0 },  // #6B89FF  מתנגדי הרפורמה המשפטית (change)
+  { row: 2, col: 0 },  // #6B89FF  מתנגדי הרפורמה המשפטית ומדיניות הממשלה (change)
   { row: 0, col: 0 },  // #FF1A94  תומכי עסקת חטופים ומתנגדי המלחמה              (change)
   { row: 1, col: 1 },  // #454545  מפגינים חרדים           (coalition)
 ];
@@ -368,6 +380,18 @@ const page0PopT = GROUPS.map(() => 0);
 const groupLabelMeasureEl = document.createElement("span");
 groupLabelMeasureEl.className = "group-label";
 groupLabelMeasureEl.style.cssText = "visibility:hidden;left:-9999px;top:0";
+// The text a group's label actually RENDERS — a group may carry a shorter
+// `labelMobile` for the phone, where @fold3's column and the מקרא card's own cap
+// are narrow enough that the full name wraps to an extra line. Every consumer of
+// the label text goes through here (the two hidden measurers, @fold3/@fold4's
+// typewriter, the מקרא card) so the measured width and the drawn text can never
+// disagree; the width/height caches are keyed per group and cleared on every
+// resize (js/bootstrap.js), so a breakpoint crossing re-measures the new string.
+// NOT used by the share summary (page7.js), which is prose and wants the full name.
+function groupLabelText(g) {
+  return isMobile() && g.labelMobile ? g.labelMobile : g.label;
+}
+
 let groupLabelWidths = {};
 function groupLabelWidth(g) {
   if (groupLabelWidths[g.color] == null) {
@@ -376,7 +400,7 @@ function groupLabelWidth(g) {
     // so it has to be applied inline here or the width would be measured at
     // a cap the live label doesn't use.
     const cap = groupLabelColumnMaxWidth(g);
-    groupLabelMeasureEl.textContent = g.label;
+    groupLabelMeasureEl.textContent = groupLabelText(g);
     if (cap != null) groupLabelMeasureEl.style.maxWidth = `${cap}px`;
     // The BOX is `width: max-content` capped at maxWidth, so a wrapping label
     // measures as the full cap — but its lines each break short of it, and the
@@ -418,7 +442,7 @@ let groupLabelHeights = {};
 function groupLabelHeight(g, fontSize, maxWidth) {
   const key = `${g.color}@${fontSize}@${maxWidth == null ? "css" : maxWidth}`;
   if (groupLabelHeights[key] == null) {
-    groupLabelMeasureEl.textContent = g.label;
+    groupLabelMeasureEl.textContent = groupLabelText(g);
     groupLabelMeasureEl.style.fontSize = `${fontSize}px`;
     if (maxWidth != null) groupLabelMeasureEl.style.maxWidth = `${maxWidth}px`;
     groupLabelHeights[key] = groupLabelMeasureEl.offsetHeight;
@@ -2766,7 +2790,7 @@ fold6NoteLayerEl.appendChild(fold6NoteTitleMeasureEl);
 const fold6RowMeasureEl = document.createElement("span");
 fold6RowMeasureEl.className = "group-label";
 fold6RowMeasureEl.style.cssText = "visibility:hidden; left:-9999px; top:-9999px; font-size:14px; font-weight:400;";
-fold6RowMeasureEl.textContent = FOLD6_TOP_ROW.label;
+fold6RowMeasureEl.textContent = groupLabelText(FOLD6_TOP_ROW);
 groupsOverlayEl.appendChild(fold6RowMeasureEl);
 const fold6NoteRuleEl = document.createElement("div");
 fold6NoteRuleEl.className = "fold6-note-rule";
@@ -2905,7 +2929,9 @@ const fold6MobileCampHeadEls = {};
     swatch.style.background = g.color;
     const label = document.createElement("span");
     label.className = "fold6-mlegend-label";
-    label.textContent = g.label;
+    // The mobile string unconditionally, matching the typewriter below: this card
+    // is built at parse time and only ever renders under the breakpoint.
+    label.textContent = g.labelMobile || g.label;
     row.appendChild(swatch);
     row.appendChild(label);
     col.appendChild(row);
@@ -2937,7 +2963,7 @@ const fold6MobileCampHeadEls = {};
     // 16 is groupLabelColumnFontSize() on mobile; keep them in step with those.
     const fold3Cap = (g.labelCapMobile || GROUP_LABEL_MAX_WIDTH_MOBILE);
     label.style.maxWidth = `${fold3Cap * (14 / 16)}px`;
-    fold6MobileRowEls.push({ g, row, swatch, label, spans: fold8SetupTypewriter(label, g.label) });
+    fold6MobileRowEls.push({ g, row, swatch, label, spans: fold8SetupTypewriter(label, g.labelMobile || g.label) });
   });
   fold6MobileRowsEl.appendChild(col);
 });
@@ -3925,7 +3951,9 @@ function fold6MFlyRowCloneFor(g) {
     swatch.style.background = g.color;
     const label = document.createElement("span");
     label.className = "group-label";
-    label.textContent = g.label;
+    // groupLabelText: this stand-in is what is on screen during @fold4's mobile
+    // fly, so it has to carry the same string the real row does.
+    label.textContent = groupLabelText(g);
     el.appendChild(swatch);
     el.appendChild(label);
     return { el, swatch, label };
@@ -4005,7 +4033,8 @@ function fold6MFlyPaintClone(g, item, landed) {
   // row's first line (see fold6MFlyMeasure's `ly` and the is-mfly-topanchor
   // block in js/update-groups.js). Nothing here reads a wrapped HEIGHT, which
   // is what keeps the landing pixel-exact for one- and multi-line labels alike.
-  if (c._text !== g.label) { c._text = g.label; c.label.textContent = g.label; }
+  const flyText = groupLabelText(g);
+  if (c._text !== flyText) { c._text = flyText; c.label.textContent = flyText; }
   // className, not just cssText. The stand-in is what is actually ON SCREEN
   // during the flight (the real row is visibility:hidden), so anything driven
   // by a CLASS rather than an inline style has to come across too — cssText

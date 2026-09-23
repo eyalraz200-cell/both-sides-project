@@ -465,10 +465,14 @@ function updateGroups() {
     // the transparent span, and the label types inside its final wrapped shape.
     // Desktop labels are nowrap one-liners with nothing to re-break, so they keep
     // the plain textContent path — which also clears the spans on a resize down.
+    // groupLabelText, not g.label: this group carries a shorter phone name, and
+    // the spans are rebuilt whenever the resolved text changes — which is what
+    // re-breaks the label after a breakpoint crossing.
+    const labelText = groupLabelText(g);
     if (isMobile()) {
-      if (!item.labelSpans || item.labelSpans.fullText !== g.label)
-        item.labelSpans = fold8SetupTypewriter(item.label, g.label);
-      fold8UpdateTypewriter(item.labelSpans, Math.round(labelCharT * g.label.length));
+      if (!item.labelSpans || item.labelSpans.fullText !== labelText)
+        item.labelSpans = fold8SetupTypewriter(item.label, labelText);
+      fold8UpdateTypewriter(item.labelSpans, Math.round(labelCharT * labelText.length));
     } else {
       // DESKTOP: once the glide has landed the label un-types away, leaving a
       // bare swatch — and types back in while the pointer is over the legend
@@ -499,8 +503,8 @@ function updateGroups() {
       const restChars = Math.min(labelT, restT);
       const untypeIsDriving = untypeVisibleT >= hoverVisibleT;
       item.label.textContent = (!isRightLegend && untypeIsDriving && restT < labelT)
-        ? g.label.slice(g.label.length - Math.round(restChars * g.label.length))
-        : typedText(g.label, restChars);
+        ? labelText.slice(labelText.length - Math.round(restChars * labelText.length))
+        : typedText(labelText, restChars);
     }
     item.label.style.opacity = String(popT);
 

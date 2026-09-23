@@ -20,9 +20,29 @@ anywhere, hero dots included. Any doc claiming 8/10/12 groups is stale.
 
 | Color | Label | `actor` |
 |---|---|---|
-| `#6B89FF` | מתנגדי הרפורמה המשפטית | `protesters against government` |
+| `#6B89FF` | מתנגדי הרפורמה המשפטית ומדיניות הממשלה (mobile: מתנגדי הרפורמה ומדיניות הממשלה) | `protesters against government` |
 | `#FF1A94` | תומכי עסקת חטופים ומתנגדי המלחמה | `peace movements` |
 | `#31CE1C` | מפגינים ערבים ישראלים | `arab israelis` |
+
+### A group may carry a shorter name on mobile
+
+`groupLabelText(g)` (`js/groups.js`) resolves the text a label actually renders:
+`g.labelMobile` under the breakpoint if the group has one, `g.label` otherwise. Only the
+blue change group carries a variant — «מתנגדי הרפורמה ומדיניות הממשלה» against the desktop
+«מתנגדי הרפורמה המשפטית ומדיניות הממשלה». The full name's best possible two-line break puts
+one unbreakable 140px run (at 14px Assistant) on the first line, wider than the 122.5px the
+מקרא card gives a label on any phone, so it fell to three lines there and at @fold3 — and
+`fold6MEqualiseRows` then hands that height to all six cards. The variant is 180px and
+breaks to two lines at both sizes, its widest line 91px against the 106px a 360px phone
+can give.
+
+**Every consumer of the label text goes through the reader** — the two hidden measurers
+(`groupLabelWidth` / `groupLabelHeight`), @fold3/@fold4's typewriter in `updateGroups`, and
+the מקרא card builder (which takes the mobile string unconditionally, since it is built at
+parse time and only ever renders on a phone). That is what keeps the measured width and the
+drawn text from disagreeing; the measurement caches are cleared on every resize
+(`js/bootstrap.js`), so a breakpoint crossing re-measures the new string. The one deliberate
+exception is the share summary (`page7.js`), which is prose and wants the full name.
 
 Row order in **both** columns is the sort of that camp's `fold6.y` values (`legendRow` in
 `js/update-groups.js`), not the declaration order of `FOLD4_COALITION_ROWS` /
@@ -32,7 +52,7 @@ never reshuffle past each other on the glide. Reordering a camp = swapping two `
 values in `GROUPS`.
 
 **Mobile swaps two pairs.** Under the breakpoint the order is the desktop sort with
-`MOBILE_ROW_SWAPS` (`js/groups.js`) applied — מתנגדי הרפורמה המשפטית ↔ תומכי עסקת חטופים
+`MOBILE_ROW_SWAPS` (`js/groups.js`) applied — מתנגדי הרפורמה המשפטית ומדיניות הממשלה ↔ תומכי עסקת חטופים
 ומתנגדי המלחמה in גוש השינוי, and מפגינים חרדים ↔ קבוצות ימין לאומיות in קואליציית הימין — so
 mobile reads **תנועות התנחלות / קבוצות ימין / מפגינים חרדים** and **תומכי עסקת חטופים /
 מתנגדי הרפורמה / מפגינים ערבים**, top→bottom. Everything that derives the order goes
@@ -230,11 +250,12 @@ The wrap cap is the real lever on the row gap: `fold6RowPitchPx` is
 @fold3's 100px cap the longest labels wrapped to **three** lines and every row inherited
 that height. 150px (each legend column owns a half-width — @fold3's 100px exists because
 both camps must fit side by side) drops them to two. Two groups override the column cap:
-מתנגדי הרפורמה המשפטית and תומכי עסקת חטופים ומתנגדי המלחמה carry `labelCapMobile: 140` on
+מתנגדי הרפורמה המשפטית ומדיניות הממשלה and תומכי עסקת חטופים ומתנגדי המלחמה carry `labelCapMobile: 140` on
 their `GROUPS` entries, read by `groupLabelColumnMaxWidth(g)` (per-group, always pass the
 group) and applied inline by `updateGroups` and by the hidden measurer, so the pink label
-(226px at 16px — three lines at 100px) lands on two lines at @fold3. The blue one (163px)
-sits on two lines at either cap, so its override is presently inert but stays wired. The cap is **lerped from the column cap → 150 over `e6`** on the label's inline `max-width` (`js/update-groups.js`), alongside the
+(226px at 16px — three lines at 100px) lands on two lines at @fold3. The blue one is live too, measured against the shorter
+`labelMobile` string that is the only one rendering at this breakpoint (206px at 16px):
+three lines at 100px, two at 140. The cap is **lerped from the column cap → 150 over `e6`** on the label's inline `max-width` (`js/update-groups.js`), alongside the
 16 → 12 font-size lerp, so the text reflows gradually through the glide rather than
 dropping a line all at once at the end.
 
@@ -809,9 +830,9 @@ still opening, and the flight aims at the rows' REST positions).
   `.is-coalition` **124px**, `.is-change` **160px** (the modifier class is set in
   `js/groups.js` when the column is built) — and a long group name stacks lines inside that
   cap instead of widening the column and squeezing the other camp.
-  Which labels wrap was specified by hand: only «תומכי עסקת חטופים ומתנגדי המלחמה» and
-  «תנועות התנחלות באיו״ש» do («מתנגדי הרפורמה המשפטית», 143px at 14px Assistant,
-  fits the 160px change cap on one line). **That cannot be done with one
+  Which labels wrap: «תומכי עסקת חטופים ומתנגדי המלחמה», «מתנגדי הרפורמה ומדיניות
+  הממשלה» (the blue group's `labelMobile`, 180px at 14px) and «תנועות התנחלות באיו״ש».
+  **That cannot be done with one
   shared width**: at 14px Assistant those measure 198px and 124.5px, but «מפגינים ערבים
   ישראלים» — which must stay on one line — is 123.4px, ~1px under the settlers label. So each camp is capped on its own
   longest *keeper* instead (coalition: קבוצות ימין לאומיות 101px; change: מפגינים ערבים
