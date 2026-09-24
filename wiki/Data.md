@@ -15,8 +15,9 @@ One object per event:
 | `descHeMedium` | Per-event Hebrew description, shown in the hover tooltip |
 | `crowd` | Integer crowd estimate or `null` — from the **crowd size** column of a *second* workbook, see below. Drives the @fold10 hover bulge tier (`p7BulgeTier`, [Timeline](Timeline.md#the-hover-bulge--p7bulgetick--p7bulgelist--p7bulgeshift-page7js)) |
 
-Committed dataset (`events.json` at the repo root, `crowd` field included): **14,451
-events — 5,325 left, 9,126 right**, from **2023-01-01** to **2026-07-03**.
+Committed dataset (`events.json` at the repo root, `crowd` field included): **10,420
+events — 5,330 left, 5,090 right**, from **2023-01-01** to **2026-07-03**. That is the
+14,456 sheet rows minus the 4,036 dropped by `SOLE_SOURCE_EXCLUDE` (see below).
 
 An unmatched `actor` falls back to `#888`. All six `GROUPS` actors — including `#31CE1C`
 (מפגינים ערבים ישראלים, `arab israelis`, 537 events) — are present in the data, so every
@@ -43,11 +44,11 @@ any other event-level export to the repo.
 
 ### `Events_with_description_he_medium.xlsx` — the crowd-size column (`CROWD_XLSX`)
 
-`full_v3.xlsx` has no crowd column; the reported figure lives in this second workbook
+`full_v4.xlsx` has no crowd column; the reported figure lives in this second workbook
 (sheet `Sheet1`: side, main actor, event category, description, date, fatalities,
 **crowd size**, description_he_medium — 13,523 rows). `load_crowd()` (`server.py`) joins it
 to the v3 rows on the **first 80 characters of the English `Description`** — the only text
-shared verbatim by both files. 2,757 of 14,451 events end up with a figure; the rest are
+shared verbatim by both files. About 2,750 of the sheet rows end up with a figure; the rest are
 `null`. If the file is missing the server warns and every `crowd` is `null`.
 
 `parse_crowd(raw)` turns the cell's free text (`crowd size=about 2,000`,
@@ -56,7 +57,9 @@ the text and the first word bucket in `CROWD_WORDS` (hundreds of thousands 300,0
 of thousands 30,000 · thousands 3,000 · hundreds 300 · dozens 50 · tens 30); blank / "no
 report" → `null`. Distribution: < 100 — 837 · 100–999 — 985 · 1k–9,999 — 734 · ≥ 10k — 201.
 
-`full_v3.xlsx` at the repo root (sheet `raw-israel`, 14,451 data rows). Columns:
+`full_v4.xlsx` at the repo root (14,456 data rows: 14,451 ACLED rows + 5 hand-added
+events, `row-15392`…`row-15396`, that carry no `acled_id`/geodata). `full_v3.xlsx` is the
+same 10 columns without the geodata and is **no longer read by anything**. Columns:
 
 | Column | Used as |
 |---|---|
@@ -66,9 +69,10 @@ report" → `null`. Distribution: < 100 — 837 · 100–999 — 985 · 1k–9,9
 | `description_he_medium` | `descHeMedium` (2 rows empty → `null`) |
 | `row_id` | `rowId` — the stable per-row handle JS pins to, and what a harness reports back for marking rows in the sheet |
 | `actor_type` | unused by code (hidden column J). Sub-type filled for three groups of rows: `anti judicial reform demonstrators` (2,094) and `anti government protesters` (373) — both `main_actor` `protesters against government` — and `hostage deal protesters` (2,146), whose `main_actor` is `peace movements` (so תומכי עסקת חטופים ומתנגדי המלחמה = left activists + hostage-deal protesters; the sub-type column keeps them distinguishable) |
-| `Description`, `location`, `fatalities`, `source` | unused; columns G–J are hidden in the sheet |
+| `Description`, `location`, `fatalities` | unused; columns G–J are hidden in the sheet |
+| `source` | `;`-separated outlet names, filled on every row (backfilled from the raw ACLED exports on 2026-09-23). **Read by `load_events()`**: a row whose *only* source(s) are in `SOLE_SOURCE_EXCLUDE` (`server.py`) is dropped. Currently that set is just `plo negotiations affairs department` — it is the sheet's largest source (5,056 rows, all settler events) and 4,036 of them cite nothing else; those 4,036 are excluded, the 1,020 that also cite another outlet stay. Origin split of the 96 outlets: `sources-by-origin.csv` (untracked) |
 
-### `full_v4.xlsx` — v3 + geodata (source of `map/event-points.json`)
+### `full_v4.xlsx` — the four geodata columns
 
 `full_v4.xlsx` is `full_v3.xlsx` with four columns appended: `acled_id` (ACLED
 `event_id_cnty`, e.g. `ISR13526`), `latitude`, `longitude`, `geo_precision` (ACLED's 1 =
@@ -77,9 +81,8 @@ Each row was matched against the raw ACLED exports (`raw-israel.csv`, `raw-pales
 repo root) on `(date, Description == notes, location)` — 14,451/14,451 matched, zero
 unmatched. Coordinates are settlement centroids: 904 distinct points across all rows.
 Two row pairs in the sheet are literal duplicates of one ACLED event and share an `acled_id`:
-`row-4132`/`row-4134` (`ISR42882`), `row-8895`/`row-8896` (`PSE46925`). `server.py` reads
-`full_v3.xlsx`, not this file; **nothing in the page consumes the geodata** — `full_v4.xlsx`
-is kept on local disk as data only (gitignored, see above).
+`row-4132`/`row-4134` (`ISR42882`), `row-8895`/`row-8896` (`PSE46925`). `server.py` reads this
+file for events, but **nothing in the page consumes the geodata** (gitignored, see above).
 
 > **Removed — don't reintroduce:** the @fold16 event map (`map.js`, `map/region.geojson`,
 > `map/event-points.json`), snapshot at commit `834ee0d`; its geodata came from

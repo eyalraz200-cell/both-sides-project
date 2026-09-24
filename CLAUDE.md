@@ -29,7 +29,7 @@ the project itself now. `project.html` is only a redirect stub to the root so ol
 - **Serve:** `python3 server.py` → http://localhost:8080 (no-cache headers; auto-reloads the browser on any `.html`/`.css`/`.js` change at the root or under `js/` via mtime polling — it does NOT watch the xlsx). `--port N` and `--watch a.js,dir` narrow that. Requires `openpyxl` (`pip install openpyxl`). Vanilla JS, **no build step, no npm, no tests** — edit files directly.
 - **Never kill the dev server as a cleanup step** — leave `:8080` running. Restarting it on explicit request is fine.
 - **Verify a JS edit:** `node --check <file>.js` then `curl -o /dev/null -w "%{http_code}" http://localhost:8080/` — a classic `<script>` that fails to parse takes every global in it down, and the visible symptom can surface in a different file.
-- **Regenerate `events.json`:** rebuilt on every server start (`load_events()` in `server.py`) from `full_v3.xlsx` plus `Events_with_description_he_medium.xlsx` (the `crowd` column — both are live dependencies). **Both workbooks are ACLED-licensed, gitignored (`*.xlsx`) and must never be committed** — they exist only on local disks; a clone without them serves the committed `events.json` unchanged. `events.json` is the single committed derivative, pending ACLED's written OK (see [Data](wiki/Data.md)). `page7.js` fetches `events.json` at runtime. The server also **writes the committed static `events.json`** (what GitHub Pages serves) whenever the generated content differs (`_sync_static_events()`, `ensure_ascii=False`, single line) — an unchanged xlsx leaves git clean. After changing either xlsx: restart the server, then commit the rewritten `events.json`, or the deployed site drifts (a stale copy without `crowd` once made every dot tier 0, so @fold11 never resized).
+- **Regenerate `events.json`:** rebuilt on every server start (`load_events()` in `server.py`) from `full_v4.xlsx` plus `Events_with_description_he_medium.xlsx` (the `crowd` column — both are live dependencies). **Both workbooks are ACLED-licensed, gitignored (`*.xlsx`) and must never be committed** — they exist only on local disks; a clone without them serves the committed `events.json` unchanged. `events.json` is the single committed derivative, pending ACLED's written OK (see [Data](wiki/Data.md)). `page7.js` fetches `events.json` at runtime. The server also **writes the committed static `events.json`** (what GitHub Pages serves) whenever the generated content differs (`_sync_static_events()`, `ensure_ascii=False`, single line) — an unchanged xlsx leaves git clean. After changing either xlsx: restart the server, then commit the rewritten `events.json`, or the deployed site drifts (a stale copy without `crowd` once made every dot tier 0, so @fold11 never resized).
 
 ## Files
 
@@ -45,7 +45,7 @@ the project itself now. `project.html` is only a redirect stub to the root so ol
 | `page12.js` | `drawPage12` (@fold15's freeform spread) + `p12ShareInit` |
 | `squareboundingbox.js` | Shared grid-geometry constants (`SBB`, `SBB_TIMELINE`, `CENTER_GAP`) |
 | `reload.js` | Dev-only mtime poll → auto page reload |
-| `server.py` | Local dev server + `full_v3.xlsx`→`events.json` generation (derives `side` from `main_actor`) |
+| `server.py` | Local dev server + `full_v4.xlsx`→`events.json` generation (derives `side` from `main_actor`; drops rows whose only source is in `SOLE_SOURCE_EXCLUDE`) |
 
 `main.js` and the `main_*` scratch files do not exist; don't recreate them.
 

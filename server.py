@@ -53,9 +53,9 @@ def watch():
         if t > last_modified:
             last_modified = t
 
-EVENTS_XLSX = "full_v3.xlsx"
+EVENTS_XLSX = "full_v4.xlsx"
 
-# full_v3.xlsx has no `side` column — the camp split is derived from main_actor
+# full_v4.xlsx has no `side` column — the camp split is derived from main_actor
 # instead. These two rosters must stay in sync with FOLD4_COALITION_ROWS /
 # FOLD4_CHANGE_ROWS in js/groups.js, which define the same membership by color.
 ACTOR_SIDE = {
@@ -70,12 +70,19 @@ ACTOR_SIDE = {
 }
 
 # The crowd-size column lives in a DIFFERENT workbook from EVENTS_XLSX
-# (full_v3.xlsx has no such column), so it is joined in. The only key that
+# (full_v4.xlsx has no such column), so it is joined in. The only key that
 # survives across the two files is the English `Description` text: joining on
 # (date, main_actor, description) hits only 57%, description alone hits
 # 13,075 / 14,451 (90%). Unmatched rows get crowd = None, which reads as the
 # small/no-halo tier in JS.
 CROWD_XLSX = "Events_with_description_he_medium.xlsx"
+
+# Rows whose ONLY cited source is one of these outlets are dropped from the
+# dataset. The PLO Negotiations Affairs Department is the single biggest source
+# in the sheet (5,056 rows, all settler events) and 4,036 of those rest on it
+# alone with no corroborating outlet; rows where it appears alongside any other
+# source are kept. Multi-source cells are ";"-separated.
+SOLE_SOURCE_EXCLUDE = {"plo negotiations affairs department"}
 
 # "crowd size=about 2,000" / "…=tens of thousands" → one integer ESTIMATE.
 # The estimate is what ships; the small/medium/large cutoffs are a JS-side
@@ -138,10 +145,15 @@ def load_events():
     unknown_actors = set()
     crowd = load_crowd()
     matched = 0
+    sole_dropped = 0
     for row in rows:
         actor = row[col["main_actor"]]
         date  = row[col["date"]]
         if date is None or actor is None:
+            continue
+        sources = {x.strip().lower() for x in str(row[col["source"]] or "").split(";") if x.strip()}
+        if sources and sources <= SOLE_SOURCE_EXCLUDE:
+            sole_dropped += 1
             continue
         side = ACTOR_SIDE.get(str(actor).strip().lower())
         if side is None:
@@ -171,6 +183,7 @@ def load_events():
     wb.close()
 
     print(f"  crowd size: {matched}/{len(events)} events carry a reported figure")
+    print(f"  dropped {sole_dropped} rows whose only source is in SOLE_SOURCE_EXCLUDE")
 
     if unknown_actors:
         print(f"  WARNING: dropped rows with unmapped main_actor: {sorted(unknown_actors)}")

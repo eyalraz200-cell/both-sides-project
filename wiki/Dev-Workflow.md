@@ -95,7 +95,7 @@ If the site ever moves, those four URLs (two per file) are the only things to up
 follow the deploy automatically.
 
 `og:description` / `twitter:description` are the **same sentence on both pages**, and it
-quotes the event count as a **hardcoded number** (currently 14,451 — `len(events.json)`).
+quotes the event count as a **hardcoded number** (currently 10,420 — `len(events.json)`).
 Nothing recomputes it, so re-check it whenever either xlsx is regenerated or the preview
 card starts advertising a count the timeline no longer holds.
 
@@ -201,12 +201,10 @@ numbers in the source.
   returns to the last checkpoint (the state at the last Copy, or the loaded state before any
   Copy) — never to the shipped values unless Shift is held. Buttons in fixed order: **Go · Copy · Reset ·
   Pop out · Hide** (`H` toggles hide; the chip is always clickable back).
-- **`remoteOnly: true` is the default** in `CONFIG`: the harness injects and answers
-  discovery as always, but paints nothing on the page — no panel, no chip. Its UI is the
-  `_debug-panel.html` tab. On-page chrome lies on top of the very artwork being judged,
-  and on a 390px phone viewport it covers most of it. `H` still summons the panel when no
-  panel tab is open; once summoned it behaves normally (`H` again → chip). Set
-  `remoteOnly: false` only for a harness you really want floating over the page.
+- **`remoteOnly: false` is the default** in `CONFIG` (user's standing choice, 2026-09-24):
+  the harness paints its floating panel on the page. The `_debug-panel.html` tab still
+  works alongside it. Set `remoteOnly: true` only on explicit request for a page with no
+  chrome on it — then `H` summons the panel when no panel tab is open.
 - **Every harness gets a Go button** — it teleports the page to the fold being tuned.
   Config: `goTo` (selector or fn, e.g. `'#page-13'`), `goLabel` (`'@fold14'`), optional
   `onGo(el)` to put the fold into the state worth looking at. The scroll is **animated** —
@@ -407,7 +405,7 @@ made the real device the one place the panel could not reach.
   writes by hand must therefore carry `Content-Length` or the client waits for an EOF that
   a kept-alive connection never sends.
 - **There is no "Dock"/"Hand back" button.** It used to return a harness to its in-page
-  panel, but with `remoteOnly: true` the default there is no in-page panel to return to —
+  panel, but under `remoteOnly: true` there is no in-page panel to return to —
   pressing it just made the harness vanish. Close the tab (or press `H` on the page) to get
   the in-page panel back.
 - `_debug-panel.html` is scaffolding like the rest — delete it with the last `_debug-*.js`.
@@ -478,6 +476,13 @@ has been baked and deleted.
 
 What the harnesses baked into — so a rebuilt one knows where its numbers land. Each value
 is the live one in code:
+
+- **`_debug-note-width.js`** (desktop, `@fold8`) → `FOLD6_NOTE_WIDTH` = **172** (`js/groups.js`).
+  One knob, the ACLED note's block width, driven through a `window.FOLD6_NOTE_WIDTH_OVERRIDE`
+  read in `updateGroups` that came out with the harness. Picked on a 982px-tall window, where
+  the two-paragraph copy measures 353px and its foot lands at 921px, 61px clear of the bottom
+  edge; the old 155 gave 392px and overran it. The panel carried a live readout of the height
+  and the overflow, because the foot is off-screen and cannot be judged by eye.
 
 | Constant | Live value | File |
 |---|---|---|
