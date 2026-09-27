@@ -30,7 +30,7 @@ Two things that are easy to get wrong here:
   production. See the comment in `index.html`.
 
 `index.html` is a canvas app: a crawler sees its ~16 `.section-title` scroll cards and
-nothing else, since all 10,420 events are painted. Anything that must be findable has to
+nothing else, since all 14,456 events are painted. Anything that must be findable has to
 exist as real markup on the page (the `.a11y-only` `<h1>`, the `<meta name="description">`).
 
 ## `index.html`'s layout
@@ -44,7 +44,7 @@ exist as real markup on the page (the `.a11y-only` `<h1>`, the `<meta name="desc
 ├── #groupsOverlay        z-index 0, mobile 1003 — the 6 persistent group DOM nodes (see Groups-and-Legend)
 ├── #page9Tooltip         shared event tooltip (page7 + page9 + @fold7's demo)
 ├── #page9CatTooltip      tray-pill tooltip
-├── #fold6NoteLayer       z-index 2 — the ACLED source note is reparented here at init
+├── #fold6NoteLayer       z-index 2, desktop 1005 (above the 1004 title cards — the note paints in front of whatever it meets) — the ACLED source note is reparented here at init
 ├── #fold6MobileLegendLayer  z-index 3 — the mobile מקרא bar (Groups-and-Legend)
 └── .text-col             NO z-index (see below) — the 16 <section.text-section> scroll drivers (`#page-0` … `#page-16`)
 ```
@@ -485,7 +485,7 @@ the row cursor with one frame-wide timestamp; batching opaque squares into one `
 colour; cached `viewportH()` and memoised `fitDashArray()`.
 
 The pinned timeline (@fold10) stays the heaviest fold — ~22ms/frame at 6× throttle — but it is
-now dominated by **browser rasterisation of the full-screen canvas**, not by JS: 10,420
+now dominated by **browser rasterisation of the full-screen canvas**, not by JS: 14,456
 squares on a 1179×2556 backing store. Further gains there need a rendering change, not
 another micro-optimisation. See [Timeline](Timeline.md) for the draw-loop specifics.
 

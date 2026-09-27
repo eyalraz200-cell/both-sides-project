@@ -95,7 +95,7 @@ If the site ever moves, those four URLs (two per file) are the only things to up
 follow the deploy automatically.
 
 `og:description` / `twitter:description` are the **same sentence on both pages**, and it
-quotes the event count as a **hardcoded number** (currently 10,420 — `len(events.json)`).
+quotes the event count as a **hardcoded number** (currently 14,456 — `len(events.json)`).
 Nothing recomputes it, so re-check it whenever either xlsx is regenerated or the preview
 card starts advertising a count the timeline no longer holds.
 

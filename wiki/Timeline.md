@@ -1,6 +1,6 @@
 # The real timeline — `@fold10` (`#page-9`, `page7.js`)
 
-The pinned, scroll-scrubbed section that renders all 10,420 events as per-event squares.
+The pinned, scroll-scrubbed section that renders all 14,456 events as per-event squares.
 **Desktop:** the canvas year axis runs **vertically down the centre** between the two camps
 and every dot's row is its date (see "The vertical axis" below). **Mobile:** the axis is
 horizontal along the bottom and the fill order is the free `p7OrderFromCenter` jumble.
@@ -9,7 +9,7 @@ horizontal along the bottom and the fill order is the free `p7OrderFromCenter` j
 
 `initPage7()` fetches `events.json`, sorts by `date` (lexicographic on `YYYY-MM-DD` =
 chronological), and splits by `e.side` into `p7.leftEvents` / `p7.rightEvents`.
-Committed dataset: **10,420 events — 5,330 left, 5,090 right**, spanning
+Committed dataset: **14,456 events — 5,330 left, 9,126 right**, spanning
 `p7.minDate` **2023-01-01** → `p7.maxDate` **2026-07-03**. A fetch error is swallowed to
 `console.error` and `p7.ready` stays false (every draw path early-returns to just the
 background).
@@ -147,7 +147,9 @@ unused):
 ### `p7TargetCellCache`
 
 `Map` keyed `actor + "|" + occurrence` → `{side, cell}`, used by
-`p7TargetForActorOccurrence` to tell @fold8's flying squares where to land. The occurrence
+`p7TargetForActorOccurrence` to tell @fold8's flying squares where to land. That target is
+**snapped to device pixels** (`round(v·dpr)/dpr` on x, y and size) exactly like the canvas
+dots in `p7DrawSideSquares`, so the DOM square lands on its dot, not a sub-pixel beside it. The occurrence
 comes from each square's pinned row id via `p7OccurrenceOfRowId` (`fold6SquareOccurrence`),
 not from its position in the actor list.
 **It is cleared in exactly one place** — `p7UpdateLayout`, whenever `leftPos`/`rightPos`
@@ -1147,11 +1149,10 @@ camps' packs meet on the centre line instead of straddling the corridor.
   `p7AxisOutroStart`, `P7_AXIS_OUTRO_DURATION` 1250ms, scaled by whatever intro
   progress it had). Scrolling back out re-triggers the build-in from wherever
   the reverse got to, so the pair is reversible mid-flight like everything else —
-  but **not on the same beat as the dots**: `p7AxisShouldShow()` also stays false
-  for as long as the grid's OFF morph is running (`p7GridMorph.dir === "off"`,
-  `p7MorphTotalMs(flat)`), so scrolling back up to @fold10 plays two ordered
-  beats — the dots fly home first, THEN the axis wipes in, never through a field
-  still in the air. The one carve-out: `p7AxisEventsAnimActive`'s `p7Grid.on`
+  and **on the same beat as the dots**: `p7AxisShouldShow()` does not wait for
+  the grid's OFF morph, so scrolling back up to @fold10 starts the axis build-in
+  wipe on the trigger frame, simultaneously with the dots flying home (explicit
+  instruction). The one carve-out: `p7AxisEventsAnimActive`'s `p7Grid.on`
   early return (above) also requires `p7AxisOutroStart === null`, so the outro
   gets its frames.
 - **The years leave with the axis cards, not with the wipe.** The year rings and
@@ -1199,7 +1200,7 @@ camps' packs meet on the centre line instead of straddling the corridor.
   **0.88**, read through `p7GridWidthFrac()` / `p7GridHeightFrac()` — **always
   go through those two, never the constants**, so a resize across the 600px
   breakpoint re-solves the unit (they are also what `p7GridKey` carries). A phone
-  packs the same 10420 dots into a third of the width, so the desktop 0.7 x 1
+  packs the same 14456 dots into a third of the width, so the desktop 0.7 x 1
   frame suffocates: the width goes nearly full-bleed (316px of 390) and the height
   passes 1 on purpose, letting the block reach **5% above the timeline box's top
   edge**, which is empty by then because the axis has undrawn. At 390x844 that is
@@ -2142,7 +2143,21 @@ the build-in and only the line drew top to bottom. `p7AxisIntroEdgeY(H)` — the
 the clip uses, so it is exactly in step with the drawn edge — feeds
 `p7AxisIntroReveal(i, y, H)`, which multiplies the marker's **radius** (never its alpha — dots
 arrive by size) and the card's presence, so the dots grow in and the plaques open as the line
-reaches them. Desktop keeps its existing arrival.
+reaches them. **Desktop gates the same way, but on the trigger itself**: in
+`p7UpdateAxisEventTriggers(W, H)` an event cannot become `reached` (and in
+`p7DrawAxisEventsVertical` its marker's `reachedT` cannot rise) while `p7AxisIntroEdgeY(H)` is
+still above its row, **and** — coming back up out of @fold11 — not before the grid's OFF morph has
+landed the dots (`p7AxisEventIntroReady(i, y, H)`, off the latched landing time `p7AxisSettleAt`
+= `p7GridMorph.start + p7MorphTotalMs`). The order after the landing: **the years first** —
+rings grow and digits fade in over `P7_AXIS_RESETTLE_YEARS_MS` (350, `p7AxisYearsIntroT`, multiplied
+into the ring radius and the digits' alpha in `p7DrawYearAxis`) — **then the cards**, event `i`
+a further `i × P7_AXIS_RESETTLE_STAGGER_MS` (60) after the years. So on that re-draw the line
+wipes in with the flight, the years arrive on the landing, and the cards with their circles follow
+top to bottom, one after another — never all together on the landing frame. On the first draw no
+landing is pending, so the years come with the wipe as always and the fill brings the cards.
+The filled line's skipped span around each event circle is sized by the marker's **drawn** radius
+(last frame's `p7.axisEventPositions`), so a circle that is not there yet leaves no lighter patch
+on the line — it stays solid black across that row until the dot actually grows in.
 
 **It is a wall-clock beat PER EVENT** — `P7_AXIS_INTRO_DOT_MS` (**480**, matching
 `p7AxisCardMs`), latched the frame the edge passes that dot (`p7AxisIntroAt[i]`) — and not a ramp

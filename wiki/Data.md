@@ -15,9 +15,9 @@ One object per event:
 | `descHeMedium` | Per-event Hebrew description, shown in the hover tooltip |
 | `crowd` | Integer crowd estimate or `null` — from the **crowd size** column of a *second* workbook, see below. Drives the @fold10 hover bulge tier (`p7BulgeTier`, [Timeline](Timeline.md#the-hover-bulge--p7bulgetick--p7bulgelist--p7bulgeshift-page7js)) |
 
-Committed dataset (`events.json` at the repo root, `crowd` field included): **10,420
-events — 5,330 left, 5,090 right**, from **2023-01-01** to **2026-07-03**. That is the
-14,456 sheet rows minus the 4,036 dropped by `SOLE_SOURCE_EXCLUDE` (see below).
+Committed dataset (`events.json` at the repo root, `crowd` field included): **14,456
+events — 5,330 left, 9,126 right**, from **2023-01-01** to **2026-07-03** — every sheet row
+(`SOLE_SOURCE_EXCLUDE` is empty, see below).
 
 An unmatched `actor` falls back to `#888`. All six `GROUPS` actors — including `#31CE1C`
 (מפגינים ערבים ישראלים, `arab israelis`, 537 events) — are present in the data, so every
@@ -70,7 +70,7 @@ same 10 columns without the geodata and is **no longer read by anything**. Colum
 | `row_id` | `rowId` — the stable per-row handle JS pins to, and what a harness reports back for marking rows in the sheet |
 | `actor_type` | unused by code (hidden column J). Sub-type filled for three groups of rows: `anti judicial reform demonstrators` (2,094) and `anti government protesters` (373) — both `main_actor` `protesters against government` — and `hostage deal protesters` (2,146), whose `main_actor` is `peace movements` (so תומכי עסקת חטופים ומתנגדי המלחמה = left activists + hostage-deal protesters; the sub-type column keeps them distinguishable) |
 | `Description`, `location`, `fatalities` | unused; columns G–J are hidden in the sheet |
-| `source` | `;`-separated outlet names, filled on every row (backfilled from the raw ACLED exports on 2026-09-23). **Read by `load_events()`**: a row whose *only* source(s) are in `SOLE_SOURCE_EXCLUDE` (`server.py`) is dropped. Currently that set is just `plo negotiations affairs department` — it is the sheet's largest source (5,056 rows, all settler events) and 4,036 of them cite nothing else; those 4,036 are excluded, the 1,020 that also cite another outlet stay. Origin split of the 96 outlets: `sources-by-origin.csv` (untracked) |
+| `source` | `;`-separated outlet names, filled on every row (backfilled from the raw ACLED exports on 2026-09-23). **Read by `load_events()`**: a row whose *only* source(s) are in `SOLE_SOURCE_EXCLUDE` (`server.py`) is dropped. **The set is currently empty, so nothing is dropped.** The candidate it exists for: `plo negotiations affairs department`, the sheet's largest source (5,056 rows, all settler events), 4,036 of which cite nothing else. Origin split of the 96 outlets: `sources-by-origin.csv` (untracked) |
 
 ### `full_v4.xlsx` — the four geodata columns
 

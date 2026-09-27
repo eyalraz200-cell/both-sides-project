@@ -1836,7 +1836,7 @@ let P7_GRID_UNIT_PX = 0;
 let P7_GRID_HEIGHT_FRAC = 1;    // manual/-baked 2026-09-08
 // Mobile gets its own pair, `manual/`-baked 2026-09-12 at 390x844 (the harness
 // tuned the frame in px: 316px wide, 554px tall of the 520px box). A phone has
-// the same 10420 dots in a third of the width, so the desktop 0.7 x 1 frame is
+// the same 14456 dots in a third of the width, so the desktop 0.7 x 1 frame is
 // too small to breathe: the width goes nearly full-bleed. The height was
 // re-tuned to 0.88 on 2026-09-14 together with the lower baseline below (the
 // box got taller, so a smaller share keeps the block's top in place). The camp gap is shared
@@ -3672,7 +3672,11 @@ function p7TargetForActorOccurrence(actor, n, W, H) {
       }
     }
   }
-  return { x: cx - sq / 2, y: cy - sq / 2, size: sq };
+  // Snapped to device pixels exactly like the canvas dots (p7DrawSideSquares'
+  // `q`), so the DOM square lands ON its dot instead of up to half a device
+  // pixel beside it, at the dot's rounded size.
+  const dpr = window.devicePixelRatio || 1, q = v => Math.round(v * dpr) / dpr;
+  return { x: q(cx - sq / 2), y: q(cy - sq / 2), size: Math.max(1 / dpr, q(sq)) };
 }
 
 // Returns the real event object (date/descHeMedium/actor/...) for the nth
@@ -4098,13 +4102,9 @@ function p7AxisShouldShow() {
   // reverse wipe every other exit uses (p7AxisReverseOut, via
   // p7AxisTriggerIfNeeded), not by vanishing on the trigger frame.
   if (p7Grid.on) return false;
-  // ...and for as long as the grid's OFF morph is still flying the dots back
-  // onto the timeline. The two beats are strictly ordered on the way up: the
-  // DOTS fly first, and only once they have landed does the axis draw itself
-  // in. Starting the build-in wipe on the frame the grid switched off had it
-  // wiping through a field still in the air.
-  if (p7GridMorph && p7GridMorph.dir === "off"
-      && performance.now() - p7GridMorph.start < p7MorphTotalMs(p7GridMorph.flat)) return false;
+  // On the way back up the axis does NOT wait for the grid's OFF morph: the
+  // build-in wipe starts on the frame the grid switches off, together with the
+  // dots flying home (explicit instruction — the two beats run simultaneously).
   // BOTH breakpoints: the axis draws in on @fold9's date-range card reaching
   // the house 0.5 (fold9AxisTrigger, js/groups.js — a flag trigger fired by
   // checkFold9Axis). Its TARGET, not its progress: the axis appears on the
@@ -4259,6 +4259,48 @@ function p7AxisIntroEdgeY(H) {
 // MOBILE ONLY — desktop keeps its existing arrival. Multiplied into the marker's
 // RADIUS, never its alpha: dots arrive and leave by size (see the hard rules).
 var P7_AXIS_INTRO_DOT_MS_DESKTOP = 300;   // scaled with the wipe
+// DESKTOP: may axis event `i` (dot at `y`) arrive yet? Two gates, both about
+// the re-draw coming back up out of @fold11 (on the first draw the fill starts
+// after the wipe, so neither ever bites):
+//   1. the build-in WIPE has reached its row (p7AxisIntroEdgeY — the clip's edge);
+//   2. the DOTS HAVE SETTLED — the grid's OFF morph has flown them home
+//      (p7MorphTotalMs). The line draws with the flight; the cards and their
+//      circles wait for it to land, then — after the years' own beat — arrive
+//      top to bottom, one every P7_AXIS_RESETTLE_STAGGER_MS, so they read as the normal arrival rather
+//      than all firing on the landing frame (explicit instruction).
+// Keeps the anim loop alive while a gate is pending — nothing else would
+// redraw once the morph has finished.
+// The landing time is LATCHED (p7AxisSettleAt): p7GridMorph is nulled the frame
+// the morph completes, which is exactly when the stagger has to start counting.
+// A stale value lies in the past and gates nothing.
+let p7AxisSettleAt = null;
+function p7AxisSettleLatch() {
+  if (p7GridMorph && p7GridMorph.dir === "off") p7AxisSettleAt = p7GridMorph.start + p7MorphTotalMs(p7GridMorph.flat);
+}
+// The re-draw's order after the dots land: YEARS first (rings grow, digits
+// fade, over P7_AXIS_RESETTLE_YEARS_MS), then the cards, one every
+// P7_AXIS_RESETTLE_STAGGER_MS. Desktop only.
+var P7_AXIS_RESETTLE_YEARS_MS   = 350;
+var P7_AXIS_RESETTLE_STAGGER_MS = 60;
+// 0 -> 1 for the year rings + digits on the re-draw; 1 whenever no landing is
+// pending (the first draw, where they arrive with the wipe as always).
+function p7AxisYearsIntroT() {
+  if (isMobile()) return 1;
+  p7AxisSettleLatch();
+  if (p7AxisSettleAt === null) return 1;
+  const t = (performance.now() - p7AxisSettleAt) / P7_AXIS_RESETTLE_YEARS_MS;
+  if (t < 1) p7StartAnimLoop();
+  return p9Ease(Math.max(0, Math.min(1, t)));
+}
+function p7AxisEventIntroReady(i, y, H) {
+  if (p7AxisIntroEdgeY(H) < y) return false;
+  const now = performance.now();
+  p7AxisSettleLatch();
+  if (p7AxisSettleAt === null) return true;
+  const readyAt = p7AxisSettleAt + P7_AXIS_RESETTLE_YEARS_MS + i * P7_AXIS_RESETTLE_STAGGER_MS;
+  if (now < readyAt) { p7StartAnimLoop(); return false; }
+  return true;
+}
 var P7_AXIS_INTRO_DOT_MS_MOBILE  = 300;
 function p7AxisIntroDotMs() { return isMobile() ? P7_AXIS_INTRO_DOT_MS_MOBILE : P7_AXIS_INTRO_DOT_MS_DESKTOP; }  // one event's arrival, matching p7AxisCardMs
 const p7AxisIntroAt = [];
@@ -4717,7 +4759,7 @@ function p7AxisEventBounds(ctx, ev, i, W) {
 // including the first, uses this same rule: date reached AND the fill edge
 // has caught up to the drawn (xOffset-nudged) position — see the comment at
 // the x test below. No special-cased extra delay for the first one.
-function p7UpdateAxisEventTriggers(W) {
+function p7UpdateAxisEventTriggers(W, H) {
   const now0 = performance.now();
   // While the axis is UNDRAWING, every headline event that is still up is
   // leaving — including the last one, which would otherwise sit there fully
@@ -4761,6 +4803,16 @@ function p7UpdateAxisEventTriggers(W) {
       // triggers — see p7AxisFlyTrigger.
       atDot = hasScrolled && !!p7.vert && !!rows && p7CurRow() >= rows[i].reachRow;
       reached = hasScrolled && !!p7.vert && !!rows && p7CurRow() >= rows[i].reachRow + p7AxisTriggerRowOffset();
+      // DESKTOP: an event may not fire before the build-in WIPE has reached its
+      // row. Coming back up out of @fold11 the fill already stands past every
+      // event, so without this all of them fired on the frame the axis
+      // reappeared — cards and circles snapping in together while only the
+      // line drew. Gated on the same edge the clip uses (p7AxisIntroEdgeY),
+      // each one now plays its normal arrival as the line reaches it, top to
+      // bottom, exactly like the first draw (explicit instruction). Mobile has
+      // its own gate for this (p7AxisIntroReveal) and is left on it.
+      if (!isMobile() && reached && rows && H !== undefined
+          && !p7AxisEventIntroReady(i, p7RowY(rows[i].row, H), H)) reached = false;
     } else if (evMs > maxMs) {
       // An event dated past the dataset's end has no date the scrub can ever
       // reach — clamping its compare date to maxDate fired it only on the one
@@ -5447,7 +5499,14 @@ function p7DrawYearAxisVertical(ctx, W, H) {
     // dot sits on line the fill has already passed, so it must not shove the
     // drawn edge forward when it appears — only card below the dot is skipped.
     const cardExtra = sp ? Math.max(0, sp.bottom - (y + P7_AXIS_MARKER_RADIUS)) * spanShrink : 0;
-    return [y - dotR, y + dotR + cardExtra];
+    // The span is the marker's DRAWN radius (last frame's, p7.axisEventPositions
+    // — the events paint after this pass), not the full one: a dot that is not
+    // there yet (unreached, or held back on the re-draw out of @fold11) has no
+    // span, so the filled line stays solid black across its row instead of
+    // showing a lighter patch where a circle will eventually sit.
+    const pos = p7.axisEventPositions && p7.axisEventPositions.get(ev);
+    const r = Math.min(dotR, pos ? pos.radius : 0);
+    return [y - r, y + r + cardExtra];
   }).sort((p, q) => p[0] - q[0]);
   dotSpans.forEach(([top, bottom]) => {
     const gap = bottom - top;
@@ -5487,8 +5546,11 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   // span, which the wipe consumes LAST, so it stood alone on an empty screen
   // for the whole outro and then snapped off. Rings shrink (they are markers),
   // digits fade (text — allowed).
-  ctx.globalAlpha *= spanShrink;
-  const yearR = P7_AXIS_MARKER_RADIUS * spanShrink;
+  // ...and on the re-draw out of @fold11 they ARRIVE only once the dots have
+  // landed, before the cards (p7AxisYearsIntroT — 1 on every other draw).
+  const yearsIn = p7AxisYearsIntroT();
+  ctx.globalAlpha *= spanShrink * yearsIn;
+  const yearR = P7_AXIS_MARKER_RADIUS * spanShrink * yearsIn;
   for (const m of marks) {
     const { tick, row } = m;
     // Ring (when on) at the top of the centred block; with the ring off R is
@@ -5506,7 +5568,7 @@ function p7DrawYearAxisVertical(ctx, W, H) {
       // reached/unreached colouring (the unreached alpha is its own knob), no
       // punch-out — it lies across the axis line rather than on it. Leaves by
       // LENGTH (spanShrink), like the ring leaves by radius.
-      const half = (P7_AXIS_YEAR_LINE_LEN / 2) * spanShrink;
+      const half = (P7_AXIS_YEAR_LINE_LEN / 2) * spanShrink * yearsIn;
       ctx.lineWidth = P7_AXIS_MARKER_STROKE;
       ctx.strokeStyle = hoverActive ? P7_AXIS_BG_COLOR
         : (reached ? P7_AXIS_FILLED_COLOR : `rgba(0, 0, 0, ${P7_AXIS_YEAR_LINE_ALPHA})`);
@@ -5689,7 +5751,7 @@ function p7DrawAccentBar(ctx, cx, y, w, alpha = 1) {
 }
 
 function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlightY, yearSpans) {
-  p7UpdateAxisEventTriggers(W);
+  p7UpdateAxisEventTriggers(W, H);
   const now = performance.now();
   const v = p7.vert;
   ctx.save();
@@ -5759,8 +5821,11 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
       state.reachedT = p7AxisFlyTrigger(i).currentT();
       reached = state.triggeredAt !== null && state.leavingAt === null;
     } else {
-      // DESKTOP: unchanged — the original lerp toward the live fill edge.
-      reached = y <= curY || (state.triggeredAt !== null && state.leavingAt === null);
+      // DESKTOP: the original lerp toward the live fill edge — but never ahead
+      // of the build-in wipe: the marker grows in as the line reaches its row
+      // (same gate as the card's trigger in p7UpdateAxisEventTriggers).
+      reached = (y <= curY || (state.triggeredAt !== null && state.leavingAt === null))
+        && p7AxisEventIntroReady(i, evY[i], H);
       const reachedTarget = reached ? 1 : 0;
       state.reachedT += (reachedTarget - state.reachedT) * P7_AXIS_HOVER_ANIM_SPEED;
       if (Math.abs(reachedTarget - state.reachedT) < 0.001) state.reachedT = reachedTarget;
