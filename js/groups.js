@@ -33,7 +33,7 @@ const GROUPS_FRAME_H = 982; // Figma frame height the y-coordinates below are au
 // camp membership they imply is duplicated as ACTOR_SIDE in server.py, which
 // derives each event's `side` from them (full_v3.xlsx has no side column).
 const GROUPS = [
-  { color: "#31CE1C", label: "מפגינים ערבים ישראלים",  actor: "arab israelis",
+  { color: "#31CE1C", label: "קבוצות ופעילים ערבים בישראל",  actor: "arab israelis",
     fold4: { x: 725,  y: 514, swatchFirst: true }, fold6: { x: 31, y: 560 } },
   { color: "#F9B624", label: "תנועות התנחלות באיו״ש",           actor: "settlers",
     fold4: { x: 887,  y: 488, swatchFirst: true }, fold6: { x: 31, y: 512 } },
@@ -186,13 +186,13 @@ function fold2RowPitchPx() {
 // center (Figma: block centers at x=590 and x=913 about the frame's own 756).
 // Symmetric on purpose — Figma's own two blocks are within ~5px of symmetric,
 // and at @fold2 neither block carries a label to unbalance it.
-// 162, not Figma's measured 160 — picked by eye with the `manual/` camp-gap
-// harness on 2026-09-07 (it had been widened to 180 by an earlier @fold3 harness
-// on 2026-09-04). @fold3's rows trail a LABEL out of each column, which @fold2's
-// bare rect blocks don't, so this value has to clear the tighter of the two: the
-// two camps' label runs must not close on each other at @fold3. One constant
-// anchors both folds (and the camp headers) on purpose.
-const FOLD2_CAMP_CENTER_GAP_PX = 162;
+// 180, not Figma's measured 160 — picked by eye with the `manual/` camp-gap
+// harness on 2026-09-27. @fold3's rows trail a LABEL out of each column, which
+// @fold2's bare rect blocks don't, so this value has to clear the tighter of the
+// two: the two camps' label runs must not close on each other at @fold3. One
+// constant anchors both folds (and the camp headers) on purpose, so @fold2's
+// blocks sit wider apart than Figma to buy @fold3's labels their room.
+const FOLD2_CAMP_CENTER_GAP_PX = 180;
 // Live gap for a given viewport width. Desktop keeps the Figma-measured 160px
 // flat; on mobile (isMobile, js/core.js) the flat 160 would need ~500-600px of
 // width, so the two blocks are instead set to a fixed 90px of VISIBLE space
@@ -240,7 +240,7 @@ function campCenterGapPx(W, edgeGapMobile) {
 // own row of the block's rightmost column (see the align beat in
 // updateGroups), so the labels still get one clean line each.
 const FOLD2_GROUP_CELL = [
-  { row: 0, col: 1 },  // #31CE1C  מפגינים ערבים ישראלים   (change)
+  { row: 0, col: 1 },  // #31CE1C  קבוצות ופעילים ערבים בישראל   (change)
   { row: 0, col: 3 },  // #F9B624  תנועות התנחלות          (coalition)
   { row: 2, col: 0 },  // #F024FF  קבוצות ימין לאומיות     (coalition)
   { row: 2, col: 0 },  // #6B89FF  מתנגדי הרפורמה המשפטית ומדיניות הממשלה (change)
@@ -726,15 +726,28 @@ function lerpFold6SquareColor(targetHex, t, base = FOLD6_SQUARE_REST_COLOR) {
   return `rgb(${rr}, ${gg}, ${bb})`;
 }
 
+// A square's resting anchor (its wrap's left/top), SNAPPED to device pixels.
+// The Figma offsets carry different fractions per row (-36.4, -15.6, 5.2…),
+// and a wrap left at a fraction is composited from a layer origin snapped to a
+// whole pixel — so two squares translated to the same timeline column landed a
+// sub-pixel apart from each other. With the anchor on the pixel grid, the
+// translate (target − rest, both snapped) is the only fraction left, and it is
+// the same 1/dpr multiple for every square. updateGroups' restX/restY MUST read
+// this same function, or the translate arithmetic drifts from the anchor.
+function fold6SquareRest(i, W, H) {
+  const dpr = window.devicePixelRatio || 1, q = v => Math.round(v * dpr) / dpr;
+  const { dx, dy } = FOLD6_SQUARES_OFFSET[i];
+  return { x: q(W / 2 + dx), y: q(H / 2 + dy) };
+}
 function layoutFold6Squares(W, H) {
   // Each square sits at its own {dx, dy} offset (FOLD6_SQUARES_OFFSET) from
   // the whole 8-square group's center, which itself is pinned to the
   // canvas's own center — so the group is centered as a unit rather than
   // reproducing Figma's absolute frame position.
   fold6SquareEls.forEach(({ wrap }, i) => {
-    const { dx, dy } = FOLD6_SQUARES_OFFSET[i];
-    wrap.style.left = `${W / 2 + dx}px`;
-    wrap.style.top  = `${H / 2 + dy}px`;
+    const r = fold6SquareRest(i, W, H);
+    wrap.style.left = `${r.x}px`;
+    wrap.style.top  = `${r.y}px`;
   });
 }
 
@@ -1556,12 +1569,11 @@ const checkMLegendJump = watchCardThreshold(page7TitleCardEl, 0.5, {
 // rests at 0.
 const checkNoteUntype    = () => {};
 // DESKTOP: the mini-legend collapses — the six labels AND the ACLED note spell
-// themselves away — once the YEAR AXIS HAS FULLY DRAWN (p7AxisIntroT() >= 1,
-// page7.js), and types back when the axis un-wipes on the way up. Until then it
-// stays open from @fold4's landing. (Mobile's counterpart is the מקרא panel
-// held open by fold6MLegendAutoBeat.) The wipe runs on its own wall clock, so
-// the flag polls by rAF while it is mid-flight.
-let legendCollapsePolling = false;
+// themselves away — the moment the YEAR AXIS FILL ENGAGES (p7HasEngaged via
+// p7EngagedNow(): @fold9's card centre past the top edge), not when the draw-in
+// wipe finishes, and types back when the reader scrolls back up out of the
+// timeline (the latch below). Until then it stays open from @fold4's landing.
+// (Mobile's counterpart is the מקרא panel held open by fold6MLegendAutoBeat.)
 // LATCHED (explicit instruction): once the axis has drawn and the legend has
 // closed, it STAYS closed — the axis un-wiping later (@fold11's undraw, the
 // bridge, or scrolling back up through @fold8..@fold5) must not open it again.
@@ -1585,14 +1597,13 @@ function legendAxisLatch(t) {
     legendAxisLatched = false;
   return legendAxisLatched;
 }
+// The collapse cue is the axis FILL engaging (p7HasEngaged — @fold9's card
+// centre passing the top edge, the same line the fill and the scrub's t=0 hang
+// off), NOT the draw-in wipe finishing. Scroll-driven, so no rAF poll: it is
+// re-read on every checkGroupTriggers.
 function legendAxisDrawn() {
-  if (isMobile() || typeof p7AxisIntroT !== "function") return false;
-  const t = p7AxisIntroT();
-  if (t > 0 && t < 1 && !legendCollapsePolling) {
-    legendCollapsePolling = true;
-    requestAnimationFrame(() => { legendCollapsePolling = false; checkLegendCollapse(); });
-  }
-  return legendAxisLatch(t);
+  if (isMobile()) return false;
+  return legendAxisLatch(p7EngagedNow() ? 1 : 0);
 }
 const watchLabelCollapse = watchFlag(legendAxisDrawn, fold6LabelUntypeTrigger);
 const watchNoteCollapse  = watchFlag(legendAxisDrawn, fold6NoteUntypeTrigger);
@@ -2589,8 +2600,22 @@ function typedText(full, t) {
 // anchors are frame-scaled, sizing isn't" convention as .group-label's own
 // hardcoded font sizes above. FOLD6_TOP_ROW is the mini-legend's top-most row
 // of the RIGHT (coalition) column — the column the note hangs below.
-const FOLD6_NOTE_TEXT = "תיאורי האירועים ומועדי התרחשותם לקוחים ממאגר ACLED, המתעד וממפה אירועי מחאה ואלימות פוליטית על בסיס דיווחים מכלי תקשורת וממקורות מקומיים.\nשיוך האירועים לקבוצות, סיווגם ותרגומם לעברית נעשו במסגרת הפרויקט על סמך ניתוח תיאוריהם בעזרת מודלי בינה מלאכותית של OpenAI. מלבד התרגום, לא נעשו שינויים בתיאורי האירועים.";
-const FOLD6_NOTE_WIDTH = 155;
+const FOLD6_NOTE_TEXT = "הנתונים לקוחים ממאגר ACLED, גוף מחקר בינלאומי המתעד וממפה אירועי מחאה ואלימות פוליטית על בסיס דיווחים מכלי תקשורת וממקורות מקומיים. נכללו אירועים מתחילת 2023 ועד היום, שבהם אזרחי ישראל ביצעו פעולות פוליטיות במרחב הציבורי בישראל ובשטחים.\nשיוך האירועים לקבוצות ולמחנות, סיווגם ומדרג החומרה הוגדרו במסגרת הפרויקט ואינם של ACLED. השיוך והסיווג נעשו על סמך תיאורי האירועים בעזרת מודלי בינה מלאכותית של OpenAI, ששימשו גם לתרגומם לעברית. מלבד התרגום, התיאורים לא שונו.";
+// 172, picked in a manual/ harness against the two-paragraph copy on a 982px-tall
+// window: the note measures 353px there and its foot lands at 921px, 61px clear of
+// the bottom edge. At the old 155 the same copy was 392px and ran past it. The note
+// hangs DOWNWARD from a legend block centred without counting it (fold6RowIndexY),
+// so this is the width at which the block still lands inside the viewport — widen
+// it further if the copy grows again, don't let the note run off the foot.
+const FOLD6_NOTE_WIDTH = 172;
+// Small desktop (viewport ≤ 1550px wide): 190, picked in a manual/ harness on
+// 2026-09-24 — the two paragraphs wrap too tall at 172 there. Desktop only:
+// mobile carries no on-canvas note. Read through fold6NoteWidth().
+const FOLD6_NOTE_WIDTH_SMALL = 190;
+const FOLD6_NOTE_SMALL_DESKTOP_MAX_W = 1550;
+function fold6NoteWidth() {
+  return window.innerWidth <= FOLD6_NOTE_SMALL_DESKTOP_MAX_W ? FOLD6_NOTE_WIDTH_SMALL : FOLD6_NOTE_WIDTH;
+}
 // Heading over the note (explicit instruction). Same 14px/1.4 box as the note
 // so the divider's ink-top math below keeps working unchanged — only the
 // weight separates them.
@@ -2659,9 +2684,20 @@ function fold6RowIndexY(rowIndex, H) {
   // center), so centering the anchors centers the block.
   return H / 2 - (pitch * (FOLD6_ROW_FRAME_YS.length - 1)) / 2 + rowIndex * pitch;
 }
+// The note copy says "ACLED" TWICE — the source, then the disclaimer that the
+// grouping, classification and severity tiers are the project's own and NOT
+// ACLED's — and only the FIRST mention is the link; a second copy of the same
+// href reads as noise. indexOf, deliberately not String.split("ACLED"): split
+// returns THREE parts for this copy, and both builders below destructure two,
+// which silently dropped the whole tail after the second mention — the entire
+// disclaimer sentence. Both builders share this so they can never disagree.
+function fold6NoteSplitOnAcled() {
+  const i = FOLD6_NOTE_TEXT.indexOf("ACLED");
+  return [FOLD6_NOTE_TEXT.slice(0, i), FOLD6_NOTE_TEXT.slice(i + "ACLED".length)];
+}
 const fold6NoteEl = document.createElement("div");
 fold6NoteEl.className = "fold6-note";
-fold6NoteEl.style.width = `${FOLD6_NOTE_WIDTH}px`;
+fold6NoteEl.style.width = `${fold6NoteWidth()}px`;
 // The note TYPES in at @fold6 (explicit instruction — it used to fade), using
 // fold8's two-span typewriter so the wrapped 155px block keeps its final line
 // breaks from the first frame instead of re-flowing as characters arrive. The
@@ -2672,7 +2708,7 @@ fold6NoteEl.style.width = `${FOLD6_NOTE_WIDTH}px`;
 const fold6NoteTitleEl = document.createElement("div");
 fold6NoteTitleEl.className = "fold6-note-title";
 const fold6NoteSegments = (() => {
-  const [before, after] = FOLD6_NOTE_TEXT.split("ACLED");
+  const [before, after] = fold6NoteSplitOnAcled();
   const mk = (tag, text, cls) => {
     const el = document.createElement(tag);
     if (cls) el.className = cls;
@@ -2953,7 +2989,7 @@ const fold6MobileCampHeadEls = {};
     // groupLabelColumnFontSize(). Text width is linear in font size, so the
     // same words land on the same lines.
     // Derived rather than written per group: the two that differed (תנועות
-    // התנחלות and מפגינים ערבים ישראלים) were one line here and two at @fold3
+    // התנחלות and קבוצות ופעילים ערבים בישראל) were one line here and two at @fold3
     // purely because the card's column is wider than 100px of 16px type.
     // Inline, not a class: the flight reads it back off the element below.
     // The two sizes as literals, NOT the constants that hold them: this builder
@@ -3008,7 +3044,7 @@ const fold6MobileDataBodyEl = document.createElement("div");
 fold6MobileDataBodyEl.className = "fold6-mlegend-data-body";
 {
   const inner = document.createElement("p");
-  const [before, after] = FOLD6_NOTE_TEXT.split("ACLED");
+  const [before, after] = fold6NoteSplitOnAcled();
   const link = document.createElement("a");
   link.className = "fold6-note-link";
   link.href = "https://acleddata.com/";

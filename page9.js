@@ -2565,6 +2565,7 @@ function drawPage9(ctx, W, H) {
       }
     }
     let clipped = 0;
+    let deferred = null;
     orderArr.forEach((e, rawI) => {
       const P = layout.pos.get(e);
       const i = slotOf.get(e);
@@ -2579,13 +2580,24 @@ function drawPage9(ctx, W, H) {
       let x = rightAlign ? centerX + inset - (c + n) * cell : rightX0 - inset + c * cell;
       let y = scopeBox.anchorY - (r + n) * cell;
       let size = tiered ? n * cell - gapPx : undefined;
+      let isOwn = false;
       if (bulges.length) {
         const own = bulges.find(b => b.ev === e);
-        if (own) { size = own.size; x -= own.push; y -= own.push; }   // grow about the cell centre
+        if (own) { size = own.size; x -= own.push; y -= own.push; isOwn = true; }   // grow about the cell centre
         else {
           const sh = p7BulgeShift(bulges, c, r);
           x += rightAlign ? -sh.dx : sh.dx;
           y -= sh.dy;
+        }
+        // DESKTOP: the bulge never crosses the divider — the mirror of the legit
+        // strip's gridTopY clamp (p9LegitBulgeApply). The grown dot keeps its
+        // bottom edge on the resting bottom row's line (one gap above midY) and
+        // grows UPWARD past that; a neighbour shoved downward is held on that
+        // same line instead of dipping under it. Mobile's picker bulge keeps its
+        // own path.
+        if (!mobile) {
+          const floor = scopeBox.anchorY - gapPx - (size ?? SQ);
+          if (y > floor) y = floor;
         }
       }
       // Clipped at midY, the grid's own anchor — NOT at H - 16. On desktop the
@@ -2604,8 +2616,12 @@ function drawPage9(ctx, W, H) {
           x = b.cx - b.sq / 2; y = b.cy - b.sq / 2; size = b.sq;
         }
       }
+      // The hovered dot paints LAST so the neighbours held on the divider line
+      // never cover it (same deferred pattern as drawJumbledBot).
+      if (isOwn && !mobile) { deferred = [e, x, y, i, size]; return; }
       p9PlaceDot(e, x, y, targetAlpha, i, visN, lowRankCount, size, morphing);
     });
+    if (deferred) p9PlaceDot(deferred[0], deferred[1], deferred[2], targetAlpha, deferred[3], visN, lowRankCount, deferred[4], morphing);
     // Merged across the two calls; drawPage9 clears it before the left one.
     p9.scopeStats = Object.assign(p9.scopeStats || {}, {
       [rightAlign ? "leftRows" : "rightRows"]: layout.rows,

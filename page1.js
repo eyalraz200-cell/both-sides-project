@@ -3,10 +3,10 @@ function drawPage1(ctx, W, H) {
 }
 
 // @fold1's two dot columns — two independent single-file columns, 7x7px
-// squares on a 10px gap (17px step). Col. 1's square-centers sit 13.5px
-// right of the frame's horizontal center, col. 2's 13.5px left of it (27px
-// apart) — derived from Figma's literal left edges (766px / 739px in the
-// 1512-wide reference frame) plus half the square. Vertically, col. 1's
+// squares on a 10px gap (17px step). Col. 1's square-centers sit page0DotColX()
+// right of the frame's horizontal center, col. 2's the same distance left of it
+// (desktop 16.5 → 33px apart; mobile 13.5 → 27px, Figma's literal left edges
+// 766px / 739px in the 1512-wide reference frame plus half the square). Vertically, col. 1's
 // first square-center sits 97.77px above the frame's vertical center; col.
 // 2 starts 34px (2 steps) lower. Each column stops at the bottom of the
 // first viewport.
@@ -24,10 +24,25 @@ function drawPage1(ctx, W, H) {
 const PAGE0_DOT_SQ = 7;
 const PAGE0_DOT_STEP = 17;
 
+// Column centre distance from the viewport's horizontal centre, per breakpoint.
+// DESKTOP 16.5 = a 26px gap between the columns' inner edges (hero harness pick
+// 2026-09-27; was 13.5 / 20px, the Figma-literal value MOBILE still uses — a
+// desktop pick must not move the phone). buildPage0AllDots() re-derives
+// PAGE0_DOT_COLS' centerX/offsetX from this on every build, so a resize across
+// the breakpoint picks the right one up.
+const PAGE0_DOT_COL_X_DESKTOP = 16.5;
+const PAGE0_DOT_COL_X_MOBILE = 13.5;
+function page0DotColX() { return isMobile() ? PAGE0_DOT_COL_X_MOBILE : PAGE0_DOT_COL_X_DESKTOP; }
+
 const PAGE0_DOT_COLS = [
-  { centerX: "calc(50% + 13.5px)", offsetX: 13.5, startOffsetY: 0 },
-  { centerX: "calc(50% - 13.5px)", offsetX: -13.5, startOffsetY: 2 * PAGE0_DOT_STEP },
+  { centerX: "calc(50% + 16.5px)", offsetX: 16.5, startOffsetY: 0 },
+  { centerX: "calc(50% - 16.5px)", offsetX: -16.5, startOffsetY: 2 * PAGE0_DOT_STEP },
 ];
+function page0SyncDotCols() {
+  const x = page0DotColX();
+  PAGE0_DOT_COLS[0].centerX = `calc(50% + ${x}px)`; PAGE0_DOT_COLS[0].offsetX = x;
+  PAGE0_DOT_COLS[1].centerX = `calc(50% - ${x}px)`; PAGE0_DOT_COLS[1].offsetX = -x;
+}
 const PAGE0_DOT_BASE_OFFSET_Y = 97.77; // px above viewport center, col. 1
 
 // On mobile the whole hero (title, subtitle and both dot columns) sits 1 dot
@@ -240,6 +255,7 @@ function buildPage0AllDots() {
   PAGE0_GROUP_DOT_ANCHORS = {};
   PAGE0_DECORATIVE_DOT_ELS = [];
 
+  page0SyncDotCols();
   const counts = PAGE0_DOT_COLS.map(({ startOffsetY }) => {
     const firstCenterY = vh / 2 - page0DotBaseOffsetY() + startOffsetY;
     return Math.max(0, Math.ceil((vh - firstCenterY) / PAGE0_DOT_STEP));

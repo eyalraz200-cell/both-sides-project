@@ -146,10 +146,17 @@ def load_events():
     crowd = load_crowd()
     matched = 0
     sole_dropped = 0
+    hidden_dropped = 0
+    # Optional `hidden` column: any non-empty cell keeps the row in the workbook
+    # but out of the project. Absent in older copies of the sheet, hence .get().
+    hidden_col = col.get("hidden")
     for row in rows:
         actor = row[col["main_actor"]]
         date  = row[col["date"]]
         if date is None or actor is None:
+            continue
+        if hidden_col is not None and hidden_col < len(row) and str(row[hidden_col] or "").strip():
+            hidden_dropped += 1
             continue
         sources = {x.strip().lower() for x in str(row[col["source"]] or "").split(";") if x.strip()}
         if sources and sources <= SOLE_SOURCE_EXCLUDE:
@@ -184,6 +191,7 @@ def load_events():
 
     print(f"  crowd size: {matched}/{len(events)} events carry a reported figure")
     print(f"  dropped {sole_dropped} rows whose only source is in SOLE_SOURCE_EXCLUDE")
+    print(f"  dropped {hidden_dropped} rows marked in the `hidden` column")
 
     if unknown_actors:
         print(f"  WARNING: dropped rows with unmapped main_actor: {sorted(unknown_actors)}")

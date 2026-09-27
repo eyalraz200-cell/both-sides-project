@@ -22,7 +22,7 @@ anywhere, hero dots included. Any doc claiming 8/10/12 groups is stale.
 |---|---|---|
 | `#6B89FF` | מתנגדי הרפורמה המשפטית ומדיניות הממשלה (mobile: מתנגדי הרפורמה ומדיניות הממשלה) | `protesters against government` |
 | `#FF1A94` | תומכי עסקת חטופים ומתנגדי המלחמה | `peace movements` |
-| `#31CE1C` | מפגינים ערבים ישראלים | `arab israelis` |
+| `#31CE1C` | קבוצות ופעילים ערבים בישראל | `arab israelis` |
 
 ### A group may carry a shorter name on mobile
 
@@ -308,7 +308,7 @@ a `.groups-overlay` child. The overlay is `pointer-events: none` *and*
 `z-index: 0` with its own stacking context, so a button inside it would sit under
 `.text-col` and never see a click; the button is a direct `.layout` child at
 `z-index: 3` instead (`.fold6-note-link` gets away with living in the overlay
-only because `.fold6-note-layer` is a separate `z-index: 2` layer). Appears on @fold12's crossing — the fold whose copy points at it — and it **never fades in**:
+only because `.fold6-note-layer` is a separate layer — `z-index: 2`, raised to **1005 on desktop** in style.css's >600px stacking block so the note prints IN FRONT of the 1004 title cards when a card scrolls over it; the demo cursor / category tooltip at 1006 still sit above it). Its card (`.fold6-note-card`) is **opaque** — the tint is layered over `--bg` — so canvas dots colliding with the note are hidden behind it, in both the open and the collapsed title-row state (the card tracks both). Appears on @fold12's crossing — the fold whose copy points at it — and it **never fades in**:
 the ring **pops** in on `p7Ease` over `P7_SCOPE_RING_POP_MS` (260) and the label **types** in
 behind it at `P7_SCOPE_TYPE_MS_PER_CHAR` (22) per character on `p9Ease` (`typedText`), the same
 grow-then-type order the @fold7 tooltip uses. One `p7ScopeRevealTrigger` (js/groups.js) fired
@@ -427,11 +427,32 @@ hover handlers to stay in sync — the squares are DOM, outside `draw()`.
 ## ACLED note
 
 `FOLD6_NOTE_TEXT` (`js/groups.js`) is rendered into `#fold6NoteLayer` with "ACLED" wrapped as a
-link. It credits ACLED for the event descriptions and dates, and states that the grouping
-and classification were done for this project with OpenAI models, leaving the descriptions
-themselves unaltered. At **270 characters** it is roughly twice the length of the single
-sentence it replaced, so it wraps to about twice as many lines at the same
-`FOLD6_NOTE_WIDTH` and hangs correspondingly further below the legend rows. **On mobile the note is not positioned at all** — it is reparented into the מקרא
+link. Two paragraphs, split on the string's one `\n` (`white-space: pre-line`): the first
+credits ACLED as the source and states the scope (Israeli citizens' political actions in the
+public space, in Israel and the territories, from the start of 2023 to today); the second
+says the grouping into groups and camps, the classification and the severity tiers are the
+project's own and **not** ACLED's, done from the event descriptions with OpenAI models that
+also translated them, with nothing but the translation changed.
+
+**The copy names ACLED twice, and only the first is the link.** `fold6NoteSplitOnAcled()`
+does that split with `indexOf`, shared by the desktop builder and the מקרא card so the two
+cannot disagree. Do **not** go back to `FOLD6_NOTE_TEXT.split("ACLED")`: it returns three
+parts for this copy while both builders destructure two, which silently dropped everything
+after the second mention — the whole disclaimer sentence.
+
+At **461 characters** the note measures **353px tall** at the **172px** `FOLD6_NOTE_WIDTH`
+(14px/1.4 Assistant). It hangs DOWNWARD from the bottom legend row, and the legend block is
+centred on the viewport without counting it (`fold6RowIndexY`), so nothing stops the note
+running off the foot — `.fold6-note` is absolutely positioned with no `max-height`. **That is
+what 172 is for**: it was 155px for the shorter copy this replaced, where the new text came to
+392px and overran the bottom edge. 172 was picked in a `manual/` harness on a 982px-tall
+window, the note's foot landing at 921px, 61px clear. Width is the lever if the copy grows
+again — wider block, fewer lines, shorter drop — and a much shorter window can still overrun
+it, since the block is centred and only the note hangs below. **Small desktop tier:** on a
+viewport **≤ 1550px wide** the note wraps at **190px** instead (`FOLD6_NOTE_WIDTH_SMALL`,
+`FOLD6_NOTE_SMALL_DESKTOP_MAX_W`; both read through `fold6NoteWidth()` in `js/groups.js`,
+which `js/update-groups.js` calls every tick, so a resize across 1550 re-wraps live). Picked
+in a `manual/` harness on 2026-09-24. **On mobile the note is not positioned at all** — it is reparented into the מקרא
 panel (below) and flows there; everything in this section is the desktop layout.
 
 **Mobile also toggles `hidden` on the note and its rule** (`js/update-groups.js`, right
@@ -602,8 +623,8 @@ The stack reads downward from the bottom row: the **title** sits `FOLD6_NOTE_TOP
 rows with the note `FOLD6_NOTE_TITLE_GAP` (**4px**) under the title's measured box, and
 the rule runs alongside all of it.
 
-The note box is a fixed `FOLD6_NOTE_WIDTH` = **155px** wrap width (`js/groups.js`); in the
-mobile panel it has no width at all and fills the panel. It is RTL and right-aligned, so it hugs the rule and extends leftward. Editing `FOLD6_NOTE_WIDTH` re-wraps the
+The note box is a fixed wrap width — `fold6NoteWidth()`: **172px**, or **190px** on a viewport ≤ 1550px wide (`js/groups.js`); in the
+mobile panel it has no width at all and fills the panel. It is RTL and right-aligned, so it hugs the rule and extends leftward. Editing either width re-wraps the
 note and changes its height; the legend rows do not move with it — the note just extends
 further down. **Removed — don't reintroduce:** a `fold6NoteShiftPx` row pre-shift.
 
@@ -880,8 +901,8 @@ still opening, and the flight aims at the rows' REST positions).
   while the on-canvas rows are still leaving behind it. The `@fold4` intro below still waits
   for the *unmapped* progress to reach 1.
 - **MOBILE: the מקרא drawer collapses at `@fold4`, as built** (explicit instruction). `FOLD6_MLEGEND_HOLD_OPEN` (js/groups.js) is **`false`**: `fold6MFlyArrive` shuts the panel `FOLD6_MFLY_CLOSE_GAP_MS` after the rows land, `fold6MLegendAutoBeat`'s `want` is `squaresRevealTrigger.currentT() <= 0` (so `@fold5` keeps it shut and nothing reopens it), scrolling closes a hand-opened panel, and the ACLED note arrives collapsed inside the closed drawer. **Everything below about the panel being HELD open until the year axis has drawn describes the flag's `true` state and is not what ships on mobile** — holding open is the DESKTOP behaviour (labels + note staying typed, `checkLegendCollapse`).
-- **The close is LATCHED** (desktop; mobile too when `FOLD6_MLEGEND_HOLD_OPEN` is on) (`legendAxisLatch`, js/groups.js): once the axis has fully drawn and the legend has closed it stays closed — the axis un-wiping later (@fold11's undraw, the bridge) does not reopen it. **Desktop reopens it on the way UP out of the timeline into @fold8**: the moment `fold9FlyTrigger`'s reverse crossing fires (its target back at 0 — the same line the axis un-wipes on, `currentPage < 10`) the latch releases and the labels + note type back; drawing the axis again re-collapses it. On mobile only going back above @fold4 (`currentPage < 3`, where the legend doesn't exist yet and the sequence re-arms) releases the latch. Hover (desktop) and a tap on מקרא (mobile) still open it by hand.
-- **Desktop collapse = the year axis fully drawn, not @fold4's landing.** `fold6Trigger`'s settle no longer fires `fold6LabelUntypeTrigger` forward (it still reverses it on the way up). `checkLegendCollapse` (js/groups.js) — two `watchFlag`s on `legendAxisDrawn()` (`p7AxisIntroT() >= 1`, desktop only, rAF-polled while the wipe is mid-flight) — un-types the six labels **and** the ACLED note together, and types them back when the axis un-wipes. Hover re-typing a collapsed legend is unchanged. Any older line on this page saying the labels un-type when the glide lands, or the note un-types on @fold7, is superseded by this.
+- **The close is LATCHED** (desktop; mobile too when `FOLD6_MLEGEND_HOLD_OPEN` is on) (`legendAxisLatch`, js/groups.js): once the axis fill has engaged and the legend has closed it stays closed — the axis un-wiping later (@fold11's undraw, the bridge) does not reopen it. **Desktop reopens it on the way UP out of the timeline into @fold8**: the moment `fold9FlyTrigger`'s reverse crossing fires (its target back at 0 — the same line the axis un-wipes on, `currentPage < 10`) the latch releases and the labels + note type back; drawing the axis again re-collapses it. On mobile only going back above @fold4 (`currentPage < 3`, where the legend doesn't exist yet and the sequence re-arms) releases the latch. Hover (desktop) and a tap on מקרא (mobile) still open it by hand.
+- **Desktop collapse = the year axis FILL engaging, not the draw-in finishing and not @fold4's landing.** `fold6Trigger`'s settle no longer fires `fold6LabelUntypeTrigger` forward (it still reverses it on the way up). `checkLegendCollapse` (js/groups.js) — two `watchFlag`s on `legendAxisDrawn()` (`p7EngagedNow()`, i.e. `p7HasEngaged`: @fold9's card centre past the top edge, the same line the fill and the scrub's t=0 hang off; desktop only, scroll-driven, no rAF poll) — un-types the six labels **and** the ACLED note together, and types them back when the latch releases on the way up. Hover re-typing a collapsed legend is unchanged. Any older line on this page saying the labels un-type when the glide lands, or the note un-types on @fold7, is superseded by this.
 - **The panel's own beats after the hand-off** (`fold6MLegendAutoBeat`, called from
   `updateGroups` right after `fold6SetMobileLegendVisible`). **The panel STAYS OPEN from the
   rows landing at `@fold4` until the year axis has fully drawn** (explicit instruction): the
@@ -1052,7 +1073,7 @@ still opening, and the flight aims at the rows' REST positions).
     explicit instruction): rounding it to whole px cut more re-layouts still, but 18 → 14
     in four steps reads as the text snapping down in size.
     **The anchors below only work if `.group-label.is-mfly-topanchor` actually parses.**
-    The historical "one group stutters" bug (מפגינים ערבים ישראלים lurching on every
+    The historical "one group stutters" bug (קבוצות ופעילים ערבים בישראל lurching on every
     re-break, all labels sitting a full width right of their swatch) was ultimately a
     stray `*/` in the comment above that rule in `style.css`: CSS error recovery ate the
     junk *and the selector after it*, so `translateX(-100%)` never applied and every
@@ -1070,7 +1091,7 @@ still opening, and the flight aims at the rows' REST positions).
     box, line breaking included, right there. Done inside `GROUPS.forEach` that is six
     layout flushes per frame, interleaved with the writes so none of them can be batched.
     The row that pays most is the one with the most line breaking to redo, i.e. the single
-    3-line mobile label (מפגינים ערבים ישראלים) — everything else re-wraps trivially, so
+    3-line mobile label (קבוצות ופעילים ערבים בישראל) — everything else re-wraps trivially, so
     only that row visibly stuttered. The measurement is therefore behind
     `labelLeftRest()` in `js/update-groups.js` and called **only on the non-flying branch**;
     the flying branch anchors the box's right edge and never needs a width. If a future

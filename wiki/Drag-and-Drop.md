@@ -702,7 +702,12 @@ reads `p7.hoveredEvent`); it schedules its own `requestAnimationFrame(draw)` whi
 is still tweening, since `p9RunAnimLoop` only runs during `p9.anim` (and hover is off then).
 The size and shifted target are applied in `drawBandedCols` at the call into `p9PlaceDot`
 (`sizeOverride` + moved x/y) — `p9PlaceDot`'s animation branches, including the finalized
-state 1, are untouched. `posMap` therefore records the pushed positions, so the hit-test
+state 1, are untouched. **Desktop: the bulge never crosses the divider** — the mirror of the
+legit strip's `gridTopY` clamp: the grown dot's bottom edge is pinned to the resting bottom
+row's line (`anchorY − gap − size`), so it grows UPWARD past that point with x still centred,
+and a neighbour shoved downward is held on that same line instead of dipping under `midY`.
+The hovered dot is painted **last** (the `deferred` pattern from `drawJumbledBot`) so held
+neighbours never cover it. Mobile's picker-driven bulge keeps its unclamped path. `posMap` therefore records the pushed positions, so the hit-test
 follows the shoved dots; the hovered dot's hit box is its **grown** box and wins outright,
 otherwise the cursor sitting in the white space the bulge opened dropped the hover and the
 grid flickered between dimmed and full. The flipped tooltip hangs below the grown box

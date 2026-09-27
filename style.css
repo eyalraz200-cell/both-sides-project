@@ -8,6 +8,13 @@
   font-weight: 100;
   src: url('fonts/HadassahFriedlaender-Thin-TRIAL.otf') format('opentype');
 }
+/* Discordia (Naipe Foundry, licensed via Hafontia) — the DESKTOP title-block and
+   hero-title face since 2026-09-27 (typeface harness pick). Regular only. */
+@font-face {
+  font-family: 'Discordia';
+  font-weight: 400;
+  src: url('fonts/Discordia-Regular.otf') format('opentype');
+}
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -30,7 +37,7 @@
   /* .text-card width — 480px on desktop, but never wider than the viewport
      minus the .text-section gutters, so it fits a phone without overflowing.
      Still a DEFINITE width (min() resolves to one), which .text-card relies on. */
-  --card-w: min(480px, 100vw - 48px);
+  --card-w: min(456px, 100vw - 48px); /* 456 = title-width harness pick 2026-09-27 (was 480, then 448); phones still get 100vw - 48px */
   /* vh, NOT dvh: on mobile vh is pinned to the LARGE viewport and never
      re-resolves, while dvh tracks the URL/bottom bar and moves everything it
      sizes each time the bar collapses — the exact instability it was once
@@ -1948,10 +1955,11 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   top: -6px;
 }
 
-/* Title cards: HadassahFriedlaender Thin (100), 20px (Figma's size, nodes
-   119:997, 117:788, 117:818, 120:1279) — restored 2026-09-23 after the Plex
-   and Miriam Libre trials were reverted. The two local faces (Thin 100,
-   Regular 400) are declared at the top of this file. line-height 1.5 opens up
+/* Title cards, DESKTOP: Discordia Regular (400), 18.5px — the _debug-typeface.js
+   harness pick of 2026-09-27 (over Hadassah, Days, Fedra Serif Pro, Lava Pro).
+   The ≤600px block keeps the PHONE on HadassahFriedlaender Thin 100 / 16px
+   (never tuned on a phone — a desktop pick must not touch mobile). Both local
+   families are declared at the top of this file. line-height 1.5 opens up
    the multi-line Hebrew cards. This is the shared
    base for ALL title cards; no page should override font-size/weight here
    individually.
@@ -1965,7 +1973,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      3. index.html: drop the candidate family from the Google Fonts link
         (optional — harmless if left). */
 .section-title {
-  font: 100 20px/1.5 'HadassahFriedlaender', serif;
+  font: 400 18.5px/1.5 'Discordia', serif; /* 18.5: title-size compare pick 2026-09-27 (was 18) */
   color: #111;
   margin: 0 0 8px;
 }
@@ -2638,7 +2646,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      transform) were fighting over the same element's position every frame,
      which read as jitter no amount of lerp/clamp tuning fixed. */
   position: fixed;
-  left: calc(50% + 8px);
+  left: calc(50% + 8.5px); /* hero harness 2026-09-27: 26px column gap, box 1.5px inside its column's inner edge (was +8 at the 20px gap) */
   /* Nudged up an extra 18px (276 vs the Figma-literal 258) so the gap below
      the title to its dot column relates to the subtitle's own gap — title and
      subtitle render at different heights and different fonts (3 lines @42px
@@ -2652,7 +2660,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      grow with line-height. Trimmed, this sits at 23.73px against the
      subtitle's 20px — picked by eye on 2026-09-07 with the hero-title
      `manual/` harness (wiki/Dev-Workflow.md). */
-  top: calc(50% - 276px);
+  top: calc(50% - 270.8px); /* hero harness 2026-09-27: last baseline 22px above its dots (was -276 / 23.7px) */
   width: 185px;
   /* 400, not 600: fonts/ holds exactly two HadassahFriedlaender faces (Thin
      100, Regular 400 — see the @font-face rules at the top of this file), so
@@ -2663,11 +2671,13 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      title changing weight during the reveal. 400 is a real drawn face with
      fixed outlines and no such freedom. If retail weights above 400 are ever
      licensed, add the @font-face rule first, then this value may go up. */
-  font: 400 42px 'HadassahFriedlaender', serif;
+  /* Desktop: Discordia, like the title blocks (typeface harness, 2026-09-27);
+     the ≤600px block keeps Hadassah. */
+  font: 400 40px 'Discordia', serif; /* 40px, hero harness 2026-09-27 (was 42) */
   /* 1.31 is what the browser's own `normal` already resolved to for this face
      (55px / 42px) — stated explicitly so the `top` above stays valid if the
      font file is ever swapped for one with different metrics. */
-  line-height: 1.31;
+  line-height: 1.35; /* hero harness 2026-09-27 (was 1.31) */
   color: #000;
   text-align: left;
   margin: 0;
@@ -2682,21 +2692,21 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 .page0-subtitle {
   /* position: fixed — same reasoning as .page0-title above. */
   position: fixed;
-  left: calc(50% - 10px);
+  left: calc(50% - 11.5px); /* hero harness 2026-09-27: 26px column gap (was -10 at the 20px gap); the ≤600px block keeps -10 */
   transform: translateX(-100%);
   /* 189.1, not the old 179: the line-height below opened the 4 lines up, and
      `top` is re-solved so the LAST BASELINE lands 20px above its dot column's
      top edge (the trimmed gap — see .page0-title). Both numbers were picked by
      eye on 2026-09-07 with the hero-title `manual/` harness. Exact px as
      tuned, deliberately not converted to a relative unit. */
-  top: calc(50% - 189.1px);
-  width: 125px;
+  top: calc(50% - 186.7px); /* hero harness 2026-09-27: last baseline 20px above its dots (was -189.1) */
+  width: 139px; /* hero harness 2026-09-27 (was 125); the ≤600px block keeps 125 */
   font: 300 18px 'Assistant', sans-serif;
   /* Opened up from the browser's `normal` (which resolved to 1.2778 here) —
      4 lines of 18px Assistant read tight against the title's much larger
      leading. Changing this moves the last baseline, so `top` above must be
      re-solved with it; the two are one setting. */
-  line-height: 1.52;
+  line-height: 1.48; /* hero harness 2026-09-27 (was 1.52) */
   color: #000;
   text-align: right;
   margin: 0;
@@ -3055,7 +3065,13 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      variants: no border at all, just a tint. The note is an aside — a drawn
      frame competed with the legend rows it sits under. */
   border: var(--note-card-border, none);
-  background: var(--note-card-bg, rgba(0, 0, 0, 0.035));
+  /* OPAQUE: the tint is laid over the page's own paper (--bg), not over whatever
+     is behind the card — the note sits in front of the timeline dots when they
+     collide (explicit instruction), in the open AND the collapsed (title-row)
+     state alike, since updateGroups keeps this card sized to both. A bare tint
+     let the canvas dots print through the copy. */
+  background: linear-gradient(var(--note-card-bg, rgba(0, 0, 0, 0.035)),
+                              var(--note-card-bg, rgba(0, 0, 0, 0.035))), var(--bg);
   pointer-events: auto; /* part of the note's hover target, like the text */
   opacity: 0;
 }
@@ -3175,7 +3191,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      the frame's real pixel box and rewrites the viewBox 1:1, so the 2px dash
      stays exact at the new size. */
   .section-title {
-    font-size: 16px;
+    /* Phone keeps the Hadassah Thin title blocks — the 2026-09-27 Discordia
+       pick was made on desktop only. */
+    font: 100 16px/1.5 'HadassahFriedlaender', serif;
   }
   .text-card-frame {
     padding: 16px 22px;
@@ -3619,6 +3637,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      this font size. At 430px and up the min() still resolves to 185px, so
      wider screens are untouched. */
   .page0-title {
+    /* Phone keeps the Hadassah hero title (desktop moved to Discordia on
+       2026-09-27; this block's `top` is solved for Hadassah's metrics). */
+    font-family: 'HadassahFriedlaender', serif;
+    left: calc(50% + 8px); /* phone keeps its +8 at its 20px column gap (desktop: +8.5 at 26px, 2026-09-27) */
     width: min(185px, 50vw - 20px);
     /* 42px is a desktop-scale display size that eats a third of a phone
        screen — 32px still reads as the hero and keeps the same 3-line break. */
@@ -3653,6 +3675,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      the top are re-tuned, in step with the title above (see that comment for
      why mobile needs its own leading at all). Still 4 lines at this width. */
   .page0-subtitle {
+    /* Phone keeps its 125px box and -10px offset at its 20px column gap (desktop: 139 / -11.5 at 26px, 2026-09-27). */
+    width: 125px;
+    left: calc(50% - 10px);
     line-height: 1.465;
     /* Same trimmed solve as the title: -167.8 puts the last baseline 20.5px
        above its own dot column's top edge. Re-solve this whenever the leading
@@ -4769,14 +4794,6 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     min-width: 0;
   }
 
-  /* Which labels wrap is a design call, and the two camps need different caps
-     to get it: «תנועות התנחלות באיו״ש» (≈124px at 14px Assistant) must wrap
-     while «מפגינים ערבים ישראלים» (≈123px) must not, so no single shared width
-     can separate them — they're ~1px apart. Capping each camp on its own longest
-     KEEPER instead gives both caps a wide, device-proof margin.
-     Widths are the label box; +12px for the 6px swatch and 6px row gap.
-     Coalition: keeps קבוצות ימין לאומיות (101px), wraps תנועות התנחלות (124px).
-     Change:    keeps מפגינים ערבים ישראלים (123px), wraps מתנגדי הרפורמה… (207px). */
   /* ONE width for both camps, and it is DERIVED, not chosen:
      160 = label wrap 118 + dot 8 + dot-to-label gap 10 + 2x12 row padding.
      The two camps used to carry different caps (124 / 160) because their
@@ -4929,6 +4946,13 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   /* The dragged pill's ghost is NOT a tooltip — it rides the cursor and must
      stay visible over everything, cards included. */
   .page9-pill-ghost { z-index: 1005; }
+  /* The mini-legend's ACLED note layer paints OVER the title blocks (explicit
+     instruction: the note sits in front of whatever it collides with). 1005
+     clears the cards' 1004 and the event tooltip's 1000; the demo cursor and
+     the category tooltip (1006) still ride above it. The layer itself stays
+     pointer-events: none, so only .fold6-note-link catches clicks. Desktop only:
+     the note is hidden on mobile. */
+  .fold6-note-layer { z-index: 1005; }
 }
 
 /* @fold10's legend filter: one click strip per legend row, inside that

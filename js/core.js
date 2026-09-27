@@ -459,7 +459,7 @@ function updateTooltipDash(tip) {
 // Above 600px the event tooltip is FILLED with the event's own group colour and
 // its text is white (style.css, the `min-width: 601px` block). Two of the six
 // group colours are simply too light for that: תנועות התנחלות #F9B624 gives
-// white ~1.7:1 and מפגינים ערבים ישראלים #31CE1C ~1.9:1 — legible-ish, but
+// white ~1.7:1 and קבוצות ופעילים ערבים בישראל #31CE1C ~1.9:1 — legible-ish, but
 // visibly hazier than the other four, which is the reported symptom.
 //
 // Rather than hand-pick darker substitutes (six duplicate hexes to keep in sync

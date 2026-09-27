@@ -149,7 +149,11 @@ unused):
 `Map` keyed `actor + "|" + occurrence` → `{side, cell}`, used by
 `p7TargetForActorOccurrence` to tell @fold8's flying squares where to land. That target is
 **snapped to device pixels** (`round(v·dpr)/dpr` on x, y and size) exactly like the canvas
-dots in `p7DrawSideSquares`, so the DOM square lands on its dot, not a sub-pixel beside it. The occurrence
+dots in `p7DrawSideSquares`, so the DOM square lands on its dot, not a sub-pixel beside it. The
+squares' resting anchors are snapped the same way (`fold6SquareRest`, js/groups.js — the Figma
+offsets carry different fractions per row, and a fractional wrap `left` composites from a
+whole-pixel layer origin, which put squares in the same column a sub-pixel apart); the fly's
+translate is `target − rest` off that same function. The occurrence
 comes from each square's pinned row id via `p7OccurrenceOfRowId` (`fold6SquareOccurrence`),
 not from its position in the actor list.
 **It is cleared in exactly one place** — `p7UpdateLayout`, whenever `leftPos`/`rightPos`
@@ -668,7 +672,7 @@ first version missed two, leaving @fold10's timeline hover on the raw colour; he
 helper. At **every** width the box is
 **filled** from `--tip-fill`, which `setTooltipColor` derives via `tooltipFill()`:
 the fill carries white text, and two group
-colours — תנועות התנחלות `#F9B624` (~1.7:1 against white) and מפגינים ערבים ישראלים
+colours — תנועות התנחלות `#F9B624` (~1.7:1 against white) and קבוצות ופעילים ערבים בישראל
 `#31CE1C` (~1.9:1) — are too light for that, so `tooltipFill` scales RGB down uniformly
 (hue untouched) until relative luminance clears `TOOLTIP_FILL_MAX_L` **0.28**. That
 ceiling is the luminance of `#6B89FF`, the lightest colour that already read fine, so the
@@ -2150,8 +2154,10 @@ still above its row, **and** — coming back up out of @fold11 — not before th
 landed the dots (`p7AxisEventIntroReady(i, y, H)`, off the latched landing time `p7AxisSettleAt`
 = `p7GridMorph.start + p7MorphTotalMs`). The order after the landing: **the years first** —
 rings grow and digits fade in over `P7_AXIS_RESETTLE_YEARS_MS` (350, `p7AxisYearsIntroT`, multiplied
-into the ring radius and the digits' alpha in `p7DrawYearAxis`) — **then the cards**, event `i`
-a further `i × P7_AXIS_RESETTLE_STAGGER_MS` (60) after the years. So on that re-draw the line
+into the ring radius and the digits' alpha in `p7DrawYearAxis`), starting
+`P7_AXIS_RESETTLE_YEARS_LEAD_MS` (400) **before** the landing so they finish as the dots settle
+(the wipe ends ~450ms before the morph does, and the finished line stood bare that long) — **then the
+cards**, event `i` a further `i × P7_AXIS_RESETTLE_STAGGER_MS` (60) after the landing. So on that re-draw the line
 wipes in with the flight, the years arrive on the landing, and the cards with their circles follow
 top to bottom, one after another — never all together on the landing frame. On the first draw no
 landing is pending, so the years come with the wipe as always and the fill brings the cards.

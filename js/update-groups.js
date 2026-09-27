@@ -166,7 +166,7 @@ function updateGroups() {
   // on-canvas mini-legend at all any more — the legend collapsed into the מקרא
   // card (js/groups.js), and mobile carries no ACLED credit at all. So every measured value here is desktop-only.
   const fold6MobileLegend = isMobile();
-  const fold6NoteWidthPx = FOLD6_NOTE_WIDTH;
+  const fold6NoteWidthPx = fold6NoteWidth(); // 172, or 190 on a small desktop (js/groups.js)
   let fold6NoteHeightPx = 0;
   if (!fold6MobileLegend) {
     fold6NoteEl.style.width = `${fold6NoteWidthPx}px`;
@@ -657,7 +657,7 @@ function updateGroups() {
     // to re-resolve the box, line breaking included, right here. Six of those
     // per frame is bad; the one that hurts is the label with the MOST line
     // breaking to redo, which on mobile is the single three-line label
-    // (מפגינים ערבים ישראלים — see GROUP_LABEL_MAX_WIDTH_MOBILE's comment in
+    // (קבוצות ופעילים ערבים בישראל — see GROUP_LABEL_MAX_WIDTH_MOBILE's comment in
     // js/groups.js). That is why the stutter looked like it belonged to one
     // group rather than to the geometry: it was that row paying for a relayout
     // the others could largely skip. The flying path below does not use the
@@ -1091,9 +1091,9 @@ function updateGroups() {
   // FOLD6_NOTE_TOP_GAP below them, then the note body under that. The vertical
   // rule runs down the block's right edge (see the rule block further down).
   //
-  // On a narrow screen watch this against the title card: #fold6NoteLayer is a
-  // direct .layout child stacked ABOVE .text-col (so its ACLED link stays
-  // clickable), which means it prints *through* the card rather than behind it.
+  // On a narrow screen this can meet a title card: #fold6NoteLayer is a direct
+  // .layout child at z 1005 on desktop (style.css, the >600px stacking block),
+  // above the cards' 1004, so it prints IN FRONT of the card, never behind it.
   // The TITLE takes the note's old slot under the rows and the note hangs
   // below it; both are the same 14px/1.4 box, so the rule's leading trim below
   // holds for either end of the block.
@@ -1822,8 +1822,8 @@ function updateGroups() {
       : 1;
     const scaleT = growScale * filtF;
     if (target) {
-      const restX = W / 2 + FOLD6_SQUARES_OFFSET[i].dx;
-      const restY = H / 2 + FOLD6_SQUARES_OFFSET[i].dy;
+      const rest = fold6SquareRest(i, W, H);   // the wrap's own snapped anchor
+      const restX = rest.x, restY = rest.y;
       const dx = (target.x - restX) * moveT + growOffset;
       const dy = (target.y - restY) * moveT + growOffset;
       sq.style.transform = `translate(${dx}px, ${dy}px) scale(${scaleT})`;

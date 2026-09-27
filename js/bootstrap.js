@@ -1,6 +1,7 @@
 Promise.all([
   document.fonts.load("400 24px 'HadassahFriedlaender'"),
   document.fonts.load("100 16px 'HadassahFriedlaender'"),
+  document.fonts.load("400 16px 'Discordia'"),
   document.fonts.load("400 16px 'Assistant'"),
   document.fonts.load("700 16px 'Assistant'"),
 ]).then(() => {

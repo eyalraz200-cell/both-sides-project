@@ -4281,6 +4281,10 @@ function p7AxisSettleLatch() {
 // fade, over P7_AXIS_RESETTLE_YEARS_MS), then the cards, one every
 // P7_AXIS_RESETTLE_STAGGER_MS. Desktop only.
 var P7_AXIS_RESETTLE_YEARS_MS   = 350;
+// The years START this long before the landing, so they finish growing as the
+// dots settle: the wipe (1750ms) ends ~450ms before the morph (2200ms), and
+// waiting the whole gap left the finished line bare for too long.
+var P7_AXIS_RESETTLE_YEARS_LEAD_MS = 400;
 var P7_AXIS_RESETTLE_STAGGER_MS = 60;
 // 0 -> 1 for the year rings + digits on the re-draw; 1 whenever no landing is
 // pending (the first draw, where they arrive with the wipe as always).
@@ -4288,7 +4292,7 @@ function p7AxisYearsIntroT() {
   if (isMobile()) return 1;
   p7AxisSettleLatch();
   if (p7AxisSettleAt === null) return 1;
-  const t = (performance.now() - p7AxisSettleAt) / P7_AXIS_RESETTLE_YEARS_MS;
+  const t = (performance.now() - (p7AxisSettleAt - P7_AXIS_RESETTLE_YEARS_LEAD_MS)) / P7_AXIS_RESETTLE_YEARS_MS;
   if (t < 1) p7StartAnimLoop();
   return p9Ease(Math.max(0, Math.min(1, t)));
 }
@@ -4297,7 +4301,8 @@ function p7AxisEventIntroReady(i, y, H) {
   const now = performance.now();
   p7AxisSettleLatch();
   if (p7AxisSettleAt === null) return true;
-  const readyAt = p7AxisSettleAt + P7_AXIS_RESETTLE_YEARS_MS + i * P7_AXIS_RESETTLE_STAGGER_MS;
+  const readyAt = p7AxisSettleAt + Math.max(0, P7_AXIS_RESETTLE_YEARS_MS - P7_AXIS_RESETTLE_YEARS_LEAD_MS)
+    + i * P7_AXIS_RESETTLE_STAGGER_MS;
   if (now < readyAt) { p7StartAnimLoop(); return false; }
   return true;
 }

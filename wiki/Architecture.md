@@ -231,26 +231,34 @@ silent, a mid-stuck re-bake (iOS address-bar `resize`) froze the stuck-size view
 and on scroll-back-up the dash faded back in stretched across the wider un-stuck frame
 while the white fill tracked the real box — fill leaking outside a distorted stroke.
 
-`.section-title`'s base rule (`font: 100 20px/1.5 'HadassahFriedlaender'`, the local Thin face
-declared by `@font-face` at the top of `style.css`; only Thin 100 and Regular 400 exist) is shared
-by **every** card. No page overrides its font-size or weight — with **one named exception:
-@fold17's credits card, `#page-16 .section-title`, is 36px on desktop and 26px under the 600px
-breakpoint** (`style.css`), because it is the piece's closing headline over a near-viewport-tall
-card, not a caption. Any other title that looks differently sized at the same viewport width is a
-regression. IBM Plex Sans Hebrew (2026-09-22) and Miriam Libre (2026-09-23) were each tried and
-reverted the same day; the `_debug-title-font.js` `compare/` harness (and its phone twin) is the
-tool for trying another face — it is untracked scaffolding, not committed.
+`.section-title`'s base rule is shared by **every** card. **Desktop: `font: 400 18.5px/1.5 'Discordia'`**
+(Discordia Regular, a local `@font-face` at the top of `style.css`, `fonts/Discordia-Regular.otf`;
+Naipe Foundry, licensed via Hafontia) — the `_debug-typeface.js` harness pick of 2026-09-27 over
+Hadassah, Days, Fedra Serif Pro and Lava Pro, tuned at 1896×990. **Phone (≤600px): `font: 100
+16px/1.5 'HadassahFriedlaender'`** — the pick was made on desktop only, so the ≤600px block pins the
+phone to its previous face and size. No page overrides font-size or weight — with **one named
+exception: @fold17's credits card, `#page-16 .section-title`, is 36px on desktop and 26px under
+the 600px breakpoint** (`style.css`), because it is the piece's closing headline over a
+near-viewport-tall card, not a caption. Any other title that looks differently sized at the same
+viewport width is a regression. The card column `--card-w` is `min(456px, 100vw - 48px)` (456, the
+title-width harness pick of 2026-09-27; phones resolve the `100vw - 48px` arm as before).
 
-**@fold1's hero title** (`.page0-title`, `style.css`) is HadassahFriedlaender Regular 400, 42px/1.31,
-185 wide, `left: calc(50% + 8px)`, `top: calc(50% - 276px)` (last baseline ≈23.7px above its dots,
-trimmed). Its subtitle (`.page0-subtitle`) is Assistant 300, 18px/1.52, 125 wide, `left: calc(50%
-- 10px)`, `top: calc(50% - 189.1px)` (20px), wrapping on its own `<br>`s (4 lines). **Mobile
-(≤600px):** title 32px/1.45, `width: min(185px, 50vw - 20px)`, top −228.6px; subtitle line-height
-1.465, top −168.8px; both mobile tops add `var(--page0-drop)`. The tops are solved for each font's
-metrics, so re-solve them (the `manual/` hero harness, `_debug-hero-title.js`) whenever a face,
-size or leading changes.
+**@fold1's hero title** (`.page0-title`, `style.css`) follows the title blocks' face per breakpoint.
+**Desktop (hero harness bake, 2026-09-27):** Discordia 400, 40px/1.35, 185 wide, `left: calc(50% +
+8.5px)`, `top: calc(50% - 270.8px)` (last baseline 22px above its dots, trimmed). Subtitle
+(`.page0-subtitle`): Assistant 300, 18px/1.48, 139 wide, `left: calc(50% - 11.5px)`, `top: calc(50% -
+186.7px)` (20px), wrapping on its own `<br>`s (4 lines). **The dot columns' gap is per breakpoint
+too:** `page0DotColX()` in `page1.js` — `PAGE0_DOT_COL_X_DESKTOP` 16.5 (a 26px gap between the
+columns' inner edges) / `PAGE0_DOT_COL_X_MOBILE` 13.5 (20px, the Figma-literal value);
+`buildPage0AllDots()` re-derives `PAGE0_DOT_COLS` from it on every build. The texts sit relative to
+their column's inner edge (title box 1.5px inside the right column's edge, subtitle's right edge
+1.5px inside the left column's), so a gap change moves them with it.
+**Phone (≤600px block, unchanged by the desktop bake):** title Hadassah 400, 32px/1.45, `width:
+min(185px, 50vw - 20px)`, left +8px, top −228.6px; subtitle 125 wide, left −10px, line-height 1.465,
+top −168.8px; both mobile tops add `var(--page0-drop)`. The tops are solved for each font's metrics,
+so re-solve them whenever a face, size or leading changes.
 
-The 600px breakpoint drops it to **16px** — that's a width override applied
+The 600px breakpoint's Hadassah 16px is a width override applied
 to the same shared rule, so the titles stay uniform with each other at any given width;
 it is not the per-page kind the rule forbids.
 
@@ -320,7 +328,7 @@ throughout. What the breakpoint actually changes:
 | `.page0-title` / `.page0-subtitle` (hero) | title 42px/`1.31`, `top: calc(50% - 276px)`; subtitle 18px/`1.52`, `top: calc(50% - 189.1px)` | title 32px/**`1.45`**, `top: calc(50% - 228.6px)`; subtitle 18px (unchanged) /**`1.465`**, `top: calc(50% - 168.8px)` — baked 2026-09-12. **Mobile overrides the leading too, and must.** `line-height` is unitless, so dropping the title to 32px alone took its leading to 41.92 against the subtitle's unchanged 27.36: the desktop **2:1 nest** (55.02 / 27.36 = 2.011) that locks the two baseline grids fell to 1.532 and the subtitle's lines walked against the title's by ~12.8px per line down the block. The shipped pair is 46.4 / 26.37 = **1.760**, ~6.3px per line — picked by eye against live baseline rulers, not solved to a whole ratio. Each `top` is solved so that text's **last baseline** sits a trimmed gap above its own dot column (title 18.5px, subtitle 20.5px); the `50%` cancels viewport height out, so only the 390px width it was tuned at matters. **Leading and `top` are one setting** — move either and re-solve the other |
 | `.text-card-frame` padding | `21px 29px` | `16px 22px` (holds the 1.38 h:v ratio); exception: @fold14's title frame (`.page9-title-row`) runs `padding-block: 8px` — its single short line read as an oversized fill at 16px. The subtitle's `-8px` margin-top is derived from it (gap − 10) |
 | camp header → top swatch row (`js/update-groups.js`) | `FOLD4_HEADER_GAP` 44 frame-units center-to-center, `H`-scaled | `FOLD4_HEADER_GAP_MOBILE_PX` — a flat **24px visible** gap, measured off the header's rendered height |
-| camp gap (`campCenterGapPx`, `js/groups.js`) | flat 162px half-gap | a fixed **90px visible** gap between the blocks' facing edges (`FOLD2_CAMP_EDGE_GAP_MOBILE_PX`), i.e. a 97px half-gap at the 4-wide shape — chosen by eye. **@fold3 has its own**, `FOLD3_CAMP_EDGE_GAP_MOBILE_PX` **82**, lerped from @fold2's over `alignT` — see below |
+| camp gap (`campCenterGapPx`, `js/groups.js`) | flat 180px half-gap | a fixed **90px visible** gap between the blocks' facing edges (`FOLD2_CAMP_EDGE_GAP_MOBILE_PX`), i.e. a 97px half-gap at the 4-wide shape — chosen by eye. **@fold3 has its own**, `FOLD3_CAMP_EDGE_GAP_MOBILE_PX` **82**, lerped from @fold2's over `alignT` — see below |
 | `.group-label` | 18px, `nowrap` | 16px, wraps, `width: max-content` + `max-width: 100px`, `direction: rtl` |
 | group-label font-size (inline, `js/update-groups.js`) | 18 column / 14 legend | 16 column / 12 legend — via `groupLabelColumnFontSize()` / `groupLabelLegendFontSize()` |
 | @fold3 row step (`fold3RowStep`) | 34px flat (`FOLD3_ROW_PITCH_DESKTOP_PX`, inside `updateGroups`) | per row: this row's tallest wrapped label + **13px** (`FOLD3_ROW_LABEL_GAP_PX`), floored at 32 (`FOLD3_MIN_ROW_PITCH_MOBILE_PX`) — equal visible gaps. Both mobile numbers are module-scope `var`s at the top of js/update-groups.js so a manual/ harness can drive them live; the desktop pitch deliberately stays a function-local `const`, so raising the mobile gap cannot reach it |
@@ -328,7 +336,7 @@ throughout. What the breakpoint actually changes:
 | Mini-legend + ACLED note | Six DOM group rows over the canvas; the note sits above their top row | **The legend collapses into the מקרא sheet** — a **full-bleed bottom sheet** (`FOLD6_MLEGEND_POSE = "sheet"`, js/groups.js), not a floating corner card, whose title row is the מקרא button; the six group rows fly into it at `@fold4` and it **closes itself** shortly after they land. The ACLED credit lives **inside** the sheet as a collapsible «איסוף הנתונים» section (`fold6MobileDataHeadEl` / `fold6MobileDataBodyEl`) — **removed, don't reintroduce:** the bare `acleddata.com` link that used to sit in the opposite top-left corner. See [Groups-and-Legend](Groups-and-Legend.md#the-mobile-מקרא-bar) |
 | `#page-16` (@fold17, the credits card) frame / title | sized from the viewport edges: `height: calc(100vh - 44px)` (22px gap top and bottom), width solved in JS by `p12CardWidthFit()` (page12.js, at load, on `document.fonts.ready` and on a debounced resize) — the narrowest width in 320–900px at which the copy still clears the bottom padding, which is also the width that FILLS the fixed height, since a narrower column is a taller one; the CSS `width: 520px` is that answer for a 982px-tall viewport and the fallback if the script never runs. 40px side padding, 42px top/bottom, copy vertically centred in whatever height is left over (`#page-16 .text-card` is `fit-content` so it stays centred) / 36px, 42px under it; the «נתונים ושיטת עבודה» heading (`.page12-body-heading`) is 600 with 8px under it at both widths | `min(450px, 100vw-48px)` border-box, height auto / 26px, 26px under it |
 
-**The camp gap is the load-bearing one.** `FOLD2_CAMP_CENTER_GAP_PX` (162) puts two 104px
+**The camp gap is the load-bearing one.** `FOLD2_CAMP_CENTER_GAP_PX` (180) puts two 104px
 blocks *plus* @fold3's outward-trailing labels at ~500–600px of required width. Everything
 that positions a camp — the @fold2 grid, @fold3's `campFold3X` column, and both camp
 headers — now goes through `campAnchorX`, which reads `campCenterGapPx(W)`. Never
@@ -420,7 +428,7 @@ Three fixed-width things were what actually overflowed, each fixed at the elemen
 | `.page9-tray-row` (`style.css`) | 5 fixed grid columns of 20px pills | `display: contents`; all 10 pills form one `nowrap` horizontally-scrolling row on `#page9ZoneBelow`, 16px pills, one line — see [Folds](Folds.md) |
 | `.page9-tray` (`style.css`) | bottom sheet: `bottom: 0`, slides up from below | band at `top: 112px` under the title card, slides down from above, no `.page9-tray-title`, rule on the bottom edge only; the docked tooltip frame drops below it (`p9TooltipDropTrigger`) — see [Folds](Folds.md) |
 | `.page9-title-row .text-card-frame` (`style.css`) | title box centered by `margin: 0 auto` | centered while scrolling, then flushed right **in `.is-stuck` only** — a measured `translateX(--p9-title-flush)` (`page9UpdateTitleFlush`, `js/page8-9-scroll.js`), side padding zeroed alongside it — see [Folds](Folds.md#fold13s-tray-on-mobile) |
-| `.page0-title` | flat `width: 185px` from `calc(50% + 8px)` | `min(185px, 50vw - 20px)` |
+| `.page0-title` | flat `width: 185px` from `calc(50% + 8.5px)` | `min(185px, 50vw - 20px)` from `calc(50% + 8px)` |
 
 RTL blocks overflow off the *left* edge — `scrollWidth` still catches it, but a check that
 only looks at `right > vw` does not.

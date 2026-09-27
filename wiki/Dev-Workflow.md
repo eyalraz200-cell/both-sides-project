@@ -465,10 +465,11 @@ the panel applies without listing a rail row). Same change in the templates.
 
 ## Currently in the repo
 
-Nothing but the transport and the inspector. `_debug-bus.js`, `_debug-inspect.js` (both
-loaded by `index.html`) and `_debug-panel.html`
-stay until the last harness is gone for good; every `manual/`/`compare/` harness built so far
-has been baked and deleted.
+The transport and the inspector — `_debug-bus.js`, `_debug-inspect.js` (both loaded by
+`index.html`) and `_debug-panel.html` — stay until the last harness is gone for good.
+
+`_debug-typeface.js` is another chat's harness, loaded by `index.html`; it is listed here
+only so this section stays a true list of what the page pulls in.
 
 
 
@@ -486,7 +487,7 @@ is the live one in code:
 
 | Constant | Live value | File |
 |---|---|---|
-| `FOLD2_CAMP_CENTER_GAP_PX` (@fold2/@fold3 half-gap: each camp's centre sits this many px either side of screen centre; mobile computes its own from `FOLD2_CAMP_EDGE_GAP_MOBILE_PX`, and @fold3 from `FOLD3_CAMP_EDGE_GAP_MOBILE_PX` 82) | 162 | `js/groups.js` |
+| `FOLD2_CAMP_CENTER_GAP_PX` (@fold2/@fold3 half-gap: each camp's centre sits this many px either side of screen centre; mobile computes its own from `FOLD2_CAMP_EDGE_GAP_MOBILE_PX`, and @fold3 from `FOLD3_CAMP_EDGE_GAP_MOBILE_PX` 82) | 180 | `js/groups.js` |
 | `HOVER_DIM_OPACITY` (the shared hover-dim; `HOVER_DIM_BY_ACTOR` overrides per actor) | 0.27 | `js/core.js` |
 | `FOLD8_TOOLTIP_CLEARANCE_PX` (@fold7's measured trigger crossing) | −20 | `js/groups.js` |
 | `P7_VERT_SQ_BOOST` (desktop axis length) | 0.88 | `page7.js` |
