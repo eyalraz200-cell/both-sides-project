@@ -567,7 +567,7 @@ function fold8AdvanceSequence() {
 
   // `|| ""` — two rows in full_v3.xlsx have an empty description_he_medium,
   // which server.py passes through as null.
-  const totalChars = event.date.length + (event.descHeMedium || "").length;
+  const totalChars = event.date.length + p7EventDesc(event).length;
   const total = fold8SeqDelayMs + FOLD8_GROW_MS + totalChars * fold8TypeMsPerChar();
   fold8SeqElapsed = Math.max(0, Math.min(total, fold8SeqElapsed + fold8SeqDirection * dt));
 

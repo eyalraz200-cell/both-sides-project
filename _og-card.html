@@ -9,14 +9,10 @@
      og-image.png is baked — unless it earns its keep as the thing that can
      re-shoot the card when the palette changes. -->
 <style>
+  /* Discordia — the site's desktop title face (style.css). Regular only. */
   @font-face {
-    font-family: 'Hadassah Friedlaender';
-    src: url('fonts/HadassahFriedlaender-Thin-TRIAL.otf') format('opentype');
-    font-weight: 300;
-  }
-  @font-face {
-    font-family: 'Hadassah Friedlaender';
-    src: url('fonts/HadassahFriedlaender-Regular-TRIAL.otf') format('opentype');
+    font-family: 'Discordia';
+    src: url('fonts/Discordia-Regular.otf') format('opentype');
     font-weight: 400;
   }
 
@@ -35,7 +31,7 @@
     --cardw: 728px;     /* title card width */
     --cardr: 8px;       /* title card corner radius */
     --fs: 59px;         /* title size */
-    --fw: 400;          /* 300 = the real Thin OTF, 400 = Regular */
+    --fw: 400;          /* Discordia ships Regular 400 only */
     /* DASH SCALE. The project's title block draws a 2px stroke on a 4px period,
        which is right for a screen at 1:1 — but this card is NEVER seen at 1:1.
        WhatsApp renders it at 25%, X at 34%, Facebook at 41%, so an unscaled
@@ -97,7 +93,7 @@
   }
   #plate h1 {
     margin: 0;
-    font-family: 'Hadassah Friedlaender', system-ui, sans-serif;
+    font-family: 'Discordia', serif;
     font-weight: var(--fw);
     font-size: var(--fs);
     line-height: 1;
@@ -116,6 +112,20 @@
       <h1>קיצוניים משני הצדדים</h1>
     </div>
   </div>
+  <!-- ?lang=en — the English card (og-image-en.png, used by en/index.html).
+       Same artboard, same dots; only the title and its direction change. -->
+  <script>
+  if (/[?&]lang=en/.test(location.search)) {
+    document.documentElement.lang = 'en';
+    document.documentElement.dir = 'ltr';
+    document.querySelector('#plate h1').textContent = 'Extremists on Both Sides';
+    /* The English title is wider than --cardw allows, so the plate hugs the
+       text instead, with the side margin the Hebrew title ends up with. */
+    var enPlate = document.getElementById('plate');
+    enPlate.style.width = 'auto';
+    enPlate.style.paddingLeft = enPlate.style.paddingRight = '48px';
+  }
+  </script>
 
 <script>
 /* ---------------------------------------------------------------- palettes --

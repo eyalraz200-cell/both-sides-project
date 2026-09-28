@@ -33,7 +33,7 @@ const GROUPS_FRAME_H = 982; // Figma frame height the y-coordinates below are au
 // camp membership they imply is duplicated as ACTOR_SIDE in server.py, which
 // derives each event's `side` from them (full_v3.xlsx has no side column).
 const GROUPS = [
-  { color: "#31CE1C", label: "קבוצות ופעילים ערבים בישראל",  actor: "arab israelis",
+  { color: "#31CE1C", label: "פעילים ערבים ישראלים",  actor: "arab israelis",
     fold4: { x: 725,  y: 514, swatchFirst: true }, fold6: { x: 31, y: 560 } },
   { color: "#F9B624", label: "תנועות התנחלות באיו״ש",           actor: "settlers",
     fold4: { x: 887,  y: 488, swatchFirst: true }, fold6: { x: 31, y: 512 } },
@@ -240,7 +240,7 @@ function campCenterGapPx(W, edgeGapMobile) {
 // own row of the block's rightmost column (see the align beat in
 // updateGroups), so the labels still get one clean line each.
 const FOLD2_GROUP_CELL = [
-  { row: 0, col: 1 },  // #31CE1C  קבוצות ופעילים ערבים בישראל   (change)
+  { row: 0, col: 1 },  // #31CE1C  פעילים ערבים ישראלים   (change)
   { row: 0, col: 3 },  // #F9B624  תנועות התנחלות          (coalition)
   { row: 2, col: 0 },  // #F024FF  קבוצות ימין לאומיות     (coalition)
   { row: 2, col: 0 },  // #6B89FF  מתנגדי הרפורמה המשפטית ומדיניות הממשלה (change)
@@ -389,7 +389,7 @@ groupLabelMeasureEl.style.cssText = "visibility:hidden;left:-9999px;top:0";
 // resize (js/bootstrap.js), so a breakpoint crossing re-measures the new string.
 // NOT used by the share summary (page7.js), which is prose and wants the full name.
 function groupLabelText(g) {
-  return isMobile() && g.labelMobile ? g.labelMobile : g.label;
+  return tr(isMobile() && g.labelMobile ? g.labelMobile : g.label);
 }
 
 let groupLabelWidths = {};
@@ -512,7 +512,9 @@ if (document.fonts && document.fonts.ready) {
 // top rather than its middle. Measured off a fixed reference string (not
 // each row's own text) so every row shifts by the same amount, and cached
 // per font-size since it's a pure property of the face.
-const GROUP_LABEL_INK_REF = "אבגדהוזחט";
+// English page: Latin caps + x-height letters, so the swatches and the scope
+// ring centre on the ink of the labels actually drawn there.
+const GROUP_LABEL_INK_REF = isEnglish() ? "Haxeo" : "אבגדהוזחט";
 let groupLabelInkShifts = {};
 const groupLabelInkCtx = document.createElement("canvas").getContext("2d");
 function groupLabelInkShift(fontSize) {
@@ -562,7 +564,7 @@ const groupItems = GROUPS.map(({ color, label: labelText }) => {
   swatch.style.background = color;
   const label = document.createElement("span");
   label.className = "group-label";
-  label.textContent = labelText;
+  label.textContent = tr(labelText);
   el.appendChild(swatch);
   el.appendChild(label);
   groupsOverlayEl.appendChild(el);
@@ -696,7 +698,7 @@ const fold6SquareEls = FOLD6_SQUARES_OFFSET.map((_, i) => {
   sq.className = "fold6-square";
   const label = document.createElement("span");
   label.className = "fold6-square-label";
-  label.textContent = FOLD6_SQUARE_LABELS[i];
+  label.textContent = tr(FOLD6_SQUARE_LABELS[i]);
   wrap.appendChild(sq);
   wrap.appendChild(label);
   fold6SquaresOverlayEl.appendChild(wrap);
@@ -1643,7 +1645,7 @@ function fold8MeasureTooltipHeight() {
   const dateEl = probe.querySelector(".page9-tooltip-date");
   const descEl = probe.querySelector(".page9-tooltip-desc");
   if (dateEl) dateEl.textContent = p7FormatDateDMY(event.date);
-  if (descEl) descEl.textContent = event.descHeMedium || "";
+  if (descEl) descEl.textContent = p7EventDesc(event);
   document.body.appendChild(probe);
   const h = probe.getBoundingClientRect().height;
   probe.remove();
@@ -2284,7 +2286,7 @@ function fold11SizePast() {
 // see a click (the same trap #page9CatTooltip and .fold6-note-layer work
 // around). updateGroups (js/update-groups.js) parks it above the right-hand
 // legend column every frame.
-const P7_SCOPE_BTN_LABEL = "הצגת גודל האירועים";
+const P7_SCOPE_BTN_LABEL = tr("הצגת גודל האירועים");
 // Vertical gap between the button's bottom edge and the TOP legend row's
 // centre line (fold6RowIndexY(0, H)) — the pitch between rows is 24, so this
 // reads as "one row further up, plus air".
@@ -2471,8 +2473,8 @@ const FOLD6_LEGEND_TOP_MOBILE = 24;
 // above if it's ever tweaked.
 // (FOLD4_COALITION_ROWS/FOLD4_CHANGE_ROWS themselves are declared up by
 // GROUPS — @fold2's own grid roster needs them before this point.)
-const CAMP_HEADER_TITLE_COALITION = "קואליציית הימין";
-const CAMP_HEADER_TITLE_CHANGE    = "גוש השינוי";
+const CAMP_HEADER_TITLE_COALITION = tr("קואליציית הימין");
+const CAMP_HEADER_TITLE_CHANGE    = tr("גוש השינוי");
 // Plain px from each column's own top-row center up to its header's center —
 // fixed, NOT frame-scaled (it used to multiply by H/GROUPS_FRAME_H, which made
 // the gap breathe on window resize while everything around it held; per
@@ -2600,10 +2602,11 @@ function typedText(full, t) {
 // anchors are frame-scaled, sizing isn't" convention as .group-label's own
 // hardcoded font sizes above. FOLD6_TOP_ROW is the mini-legend's top-most row
 // of the RIGHT (coalition) column — the column the note hangs below.
-const FOLD6_NOTE_TEXT = "הנתונים לקוחים ממאגר ACLED, גוף מחקר בינלאומי המתעד וממפה אירועי מחאה ואלימות פוליטית על בסיס דיווחים מכלי תקשורת וממקורות מקומיים. נכללו אירועים מתחילת 2023 ועד היום, שבהם אזרחי ישראל ביצעו פעולות פוליטיות במרחב הציבורי בישראל ובשטחים.\nשיוך האירועים לקבוצות ולמחנות, סיווגם ומדרג החומרה הוגדרו במסגרת הפרויקט ואינם של ACLED. השיוך והסיווג נעשו על סמך תיאורי האירועים בעזרת מודלי בינה מלאכותית של OpenAI, ששימשו גם לתרגומם לעברית. מלבד התרגום, התיאורים לא שונו.";
+// English page: its own copy (three paragraphs), same ACLED-as-link split.
+const FOLD6_NOTE_TEXT = isEnglish() ? "Event descriptions and dates are sourced from ACLED, an international research organization that tracks and maps protests and political violence based on reports from media outlets and local sources.\nThe dataset includes events from the beginning of 2023 to the present in which Israeli citizens carried out political actions in public spaces in Israel and the Palestinian territories.\nThe assignment of events to groups and political camps, their classification, and severity ranking were defined for this project and are not part of ACLED’s methodology. Events were assigned and classified based on their descriptions using OpenAI models, which were also used to translate them into Hebrew. Apart from translation, the descriptions were not altered." : "תיאורי האירועים ומועדי התרחשותם לקוחים ממאגר ACLED, גוף מחקר בינלאומי המתעד וממפה אירועי מחאה ואלימות פוליטית על בסיס דיווחים מכלי תקשורת וממקורות מקומיים. נכללו אירועים מתחילת 2023 ועד היום, שבהם אזרחי ישראל ביצעו פעולות פוליטיות במרחב הציבורי בישראל ובשטחים.\nשיוך האירועים לקבוצות ולמחנות, סיווגם ומדרג החומרה הוגדרו במסגרת הפרויקט ואינם של ACLED. השיוך והסיווג נעשו על סמך תיאורי האירועים בעזרת מודלי בינה מלאכותית של OpenAI, ששימשו גם לתרגומם לעברית. מלבד התרגום, התיאורים לא שונו.";
 // 172, picked in a manual/ harness against the two-paragraph copy on a 982px-tall
-// window: the note measures 353px there and its foot lands at 921px, 61px clear of
-// the bottom edge. At the old 155 the same copy was 392px and ran past it. The note
+// window. The copy has since gained a line at the front, so the note measures 372px
+// at this width and its foot clears the bottom of that window by ~41px. At the old 155 the same copy was 392px and ran past it. The note
 // hangs DOWNWARD from a legend block centred without counting it (fold6RowIndexY),
 // so this is the width at which the block still lands inside the viewport — widen
 // it further if the copy grows again, don't let the note run off the foot.
@@ -2613,13 +2616,18 @@ const FOLD6_NOTE_WIDTH = 172;
 // mobile carries no on-canvas note. Read through fold6NoteWidth().
 const FOLD6_NOTE_WIDTH_SMALL = 190;
 const FOLD6_NOTE_SMALL_DESKTOP_MAX_W = 1550;
+// English page: the copy is three paragraphs and runs longer than the Hebrew, so
+// at the widths above its foot ran ~95px past a 982px window. 270 brings it back
+// inside. Hebrew page untouched.
+const FOLD6_NOTE_WIDTH_EN = 270;
 function fold6NoteWidth() {
+  if (isEnglish()) return FOLD6_NOTE_WIDTH_EN;
   return window.innerWidth <= FOLD6_NOTE_SMALL_DESKTOP_MAX_W ? FOLD6_NOTE_WIDTH_SMALL : FOLD6_NOTE_WIDTH;
 }
 // Heading over the note (explicit instruction). Same 14px/1.4 box as the note
 // so the divider's ink-top math below keeps working unchanged — only the
 // weight separates them.
-const FOLD6_NOTE_TITLE_TEXT = "איסוף הנתונים";
+const FOLD6_NOTE_TITLE_TEXT = tr("איסוף הנתונים");
 const FOLD6_NOTE_TITLE_GAP = 4;   // px between the title's box and the note's
 // Divider (faint hairline) sits between the last row and the note. The two
 // gaps are EQUAL on purpose — that's what keeps the divider in the middle of
@@ -2881,7 +2889,7 @@ fold6MobileVeilEl.setAttribute("aria-hidden", "true");
 fold6MobileLegendLayerEl.appendChild(fold6MobileVeilEl);
 const fold6MobileLegendEl = document.createElement("div");
 fold6MobileLegendEl.className = "fold6-mlegend";
-const FOLD6_MOBILE_LEGEND_LABEL = "מקרא";
+const FOLD6_MOBILE_LEGEND_LABEL = tr("מקרא");
 // The tinted card behind the bar — the mobile twin of fold6NoteCardEl, and
 // like it a SIBLING painted under the content (first child), sized per frame by
 // fold6MLegendPaintCard rather than by layout, so it can open in two steps
@@ -2905,7 +2913,7 @@ fold6MobileLegendEl.appendChild(fold6MobileLegendBtnEl);
 const fold6MobileCloseBtnEl = document.createElement("button");
 fold6MobileCloseBtnEl.type = "button";
 fold6MobileCloseBtnEl.className = "fold6-mlegend-close";
-fold6MobileCloseBtnEl.setAttribute("aria-label", "סגירת המקרא");
+fold6MobileCloseBtnEl.setAttribute("aria-label", tr("סגירת המקרא"));
 fold6MobileLegendEl.appendChild(fold6MobileCloseBtnEl);
 // KEYBOARD ONLY. A real tap never reaches this: the bar captures the pointer on
 // pointerdown, which retargets the resulting click to the bar itself, so the
@@ -2967,7 +2975,7 @@ const fold6MobileCampHeadEls = {};
     label.className = "fold6-mlegend-label";
     // The mobile string unconditionally, matching the typewriter below: this card
     // is built at parse time and only ever renders under the breakpoint.
-    label.textContent = g.labelMobile || g.label;
+    label.textContent = tr(g.labelMobile || g.label);
     row.appendChild(swatch);
     row.appendChild(label);
     col.appendChild(row);
@@ -2989,7 +2997,7 @@ const fold6MobileCampHeadEls = {};
     // groupLabelColumnFontSize(). Text width is linear in font size, so the
     // same words land on the same lines.
     // Derived rather than written per group: the two that differed (תנועות
-    // התנחלות and קבוצות ופעילים ערבים בישראל) were one line here and two at @fold3
+    // התנחלות and פעילים ערבים ישראלים) were one line here and two at @fold3
     // purely because the card's column is wider than 100px of 16px type.
     // Inline, not a class: the flight reads it back off the element below.
     // The two sizes as literals, NOT the constants that hold them: this builder
@@ -2999,7 +3007,7 @@ const fold6MobileCampHeadEls = {};
     // 16 is groupLabelColumnFontSize() on mobile; keep them in step with those.
     const fold3Cap = (g.labelCapMobile || GROUP_LABEL_MAX_WIDTH_MOBILE);
     label.style.maxWidth = `${fold3Cap * (14 / 16)}px`;
-    fold6MobileRowEls.push({ g, row, swatch, label, spans: fold8SetupTypewriter(label, g.labelMobile || g.label) });
+    fold6MobileRowEls.push({ g, row, swatch, label, spans: fold8SetupTypewriter(label, tr(g.labelMobile || g.label)) });
   });
   fold6MobileRowsEl.appendChild(col);
 });

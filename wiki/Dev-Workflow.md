@@ -86,9 +86,14 @@ Don't remove the gate.
 ## Link previews (Open Graph)
 
 Both entry points carry `og:*` + `twitter:*` meta tags in `<head>` so WhatsApp/X/Facebook
-render a preview card. `og-image.png` at the repo root is a **2400×1260** (2× of the
-1200×630 card) shot of @fold1 at rest, taken headless with any dev-only chrome (a harness
-panel, a fold chip) hidden; reshoot it the same way if the hero changes. `og:image` must be an absolute URL, so the
+render a preview card. There is one card per language, both **2400×1260** (2× of the
+1200×630 card): `og-image.png` (Hebrew, `index.html`) and `og-image-en.png` (English,
+`en/index.html`). Both are headless shots of the artboard `_og-card.html` — the title in
+Discordia Regular on a dashed plate over two dot columns — at `?bare=1` (Hebrew) and
+`?bare=1&lang=en` (English, where the plate hugs the wider title). Reshoot with a headless
+Chromium at `--window-size=1200,630 --force-device-scale-factor=2`. Platforms cache the
+image by URL, so a changed card only reaches already-shared links under a new filename.
+`og:image` must be an absolute URL, so the
 tags hardcode the live GitHub Pages base — `https://eyalraz200-cell.github.io/both-sides-project/`.
 If the site ever moves, those four URLs (two per file) are the only things to update; the
 @fold16 share buttons build their URLs from `location.href` (`p12ShareInit`, page12.js) and
@@ -465,11 +470,16 @@ the panel applies without listing a rail row). Same change in the templates.
 
 ## Currently in the repo
 
-The transport and the inspector — `_debug-bus.js`, `_debug-inspect.js` (both loaded by
-`index.html`) and `_debug-panel.html` — stay until the last harness is gone for good.
+**No harnesses.** `index.html`'s dev loader pulls in the transport and the inspector only —
+`_debug-bus.js` and `_debug-inspect.js` — and `_debug-panel.html` is the remote tab that
+hosts whichever harness exists next. Those three stay until the last harness is gone for
+good. `_debug-mobile-window.js` also stays: it is a node launcher for a phone-sized headed
+Chromium window, run by hand and loaded by no page.
 
-`_debug-typeface.js` is another chat's harness, loaded by `index.html`; it is listed here
-only so this section stays a true list of what the page pulls in.
+`_debug-fonts/` is the typeface work's candidate library, gitignored and left in place. The
+faces the site actually ships live in `fonts/` (`Discordia-Regular.otf`,
+HadassahFriedlaender) — `style.css` never points at `_debug-fonts/`, so that folder can go
+whenever its owner is done with it.
 
 
 

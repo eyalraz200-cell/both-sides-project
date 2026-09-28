@@ -22,8 +22,19 @@ except the 2 marked in the `hidden` column (`SOLE_SOURCE_EXCLUDE` is empty, see 
 its first is 2023-10-14.
 
 An unmatched `actor` falls back to `#888`. All six `GROUPS` actors — including `#31CE1C`
-(קבוצות ופעילים ערבים בישראל, `arab israelis`, 545 events) — are present in the data, so every
+(פעילים ערבים ישראלים, `arab israelis`, 545 events) — are present in the data, so every
 group appears on the timeline.
+
+## `events-en.json` — English descriptions
+
+`{ rowId: description }`, the workbook's `Description` column (ACLED's original English
+text, verbatim). Written by `server.py` next to `events.json` on every start. Fetched
+**only** by the English page (`p7LoadEnglishDescs`, page7.js), which stores it as
+`descEn` on each event; `p7EventDesc(ev)` returns `descEn`, else `descHeMedium`.
+**Committed alongside `events.json`**, so the deployed English page has it — after changing
+the xlsx, restart the server and commit both. It is ACLED content verbatim, under the same
+pending-approval status as `events.json`. If the file is missing the English page falls
+back to the Hebrew descriptions.
 
 ## Data licensing — the xlsx are local-only, never committed
 

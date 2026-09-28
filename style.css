@@ -47,8 +47,9 @@
 
 body {
   background: var(--bg);
-  /* No text selection anywhere — the page is read and scrolled, never copied,
-     and a drag across a card must not paint a highlight over the artwork. */
+  /* No text selection — the page is read and scrolled, and a drag must not paint
+     a highlight over the artwork. One exception: the title blocks' own text on
+     desktop (see the foot of this file). */
   -webkit-user-select: none;
   user-select: none;
 }
@@ -5183,4 +5184,120 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    transition on purpose. The demo's own (non-user) tooltip never sets this. */
 @media (max-width: 600px) {
   body.is-tip-holding .text-card { visibility: hidden; }
+}
+
+
+/* ── English version (en/index.html, <html class="lang-en">) ────────────────
+   Same look as the Hebrew page; only the reading direction of the title blocks
+   and the event tooltip flips. Everything else stays on the shared rules. */
+.lang-en .text-card,
+.lang-en .page9-tooltip {
+  direction: ltr;
+  text-align: left;
+}
+.lang-en .page9-tooltip-date,
+.lang-en .page9-tooltip-desc {
+  text-align: left;
+}
+
+/* Language switch (both pages) — a plain link to the other language's url.
+   Top-left corner; the dev fold badge and its picker hang BELOW it (see the
+   end of this file). Above the mobile legend layer (1006), below the gate. */
+.lang-switch {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1007;
+  font: 600 13px/1 'Assistant', sans-serif;
+  color: #111;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  border-radius: 4px;
+  padding: 5px 8px;
+  text-decoration: none;
+}
+.lang-switch:hover { background: #111; color: #fff; }
+
+/* English hero text reads left-to-right. Same boxes and positions as the Hebrew
+   hero; only the direction, so a word wider than the title's box («Extremists»)
+   keeps its LEFT edge on the box and spills rightward, lining up with the lines
+   under it. */
+.lang-en .page0-title,
+.lang-en .page0-subtitle {
+  direction: ltr;
+}
+
+/* Title-block text CAN be highlighted — the one exception to body's
+   `user-select: none`. Desktop only: on a phone a press on a card is the
+   press-and-hold gesture, and the ≤600px block keeps selection off there. */
+@media (min-width: 601px) {
+  .text-card-frame.section-title {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
+/* English pills read left-to-right: the grip handle leads on the LEFT, label
+   after it. Set on the pill itself (and the drag ghost, which lives on <body>),
+   so only the pill's own contents flip — the tray's placement is untouched.
+   Desktop only; the phone's tick-box pills keep the shared layout. */
+@media (min-width: 601px) {
+  .lang-en .page9-pill,
+  .lang-en .page9-pill-ghost {
+    direction: ltr;
+  }
+}
+
+/* English ACLED note reads left-to-right, and its heading and chevron trade
+   places: heading ranged LEFT, chevron on the card's right edge. updateGroups
+   places both (padding-left carries the heading on the card's moving left edge),
+   hence border-box: the padding must come out of the box's fixed width. */
+.lang-en .fold6-note {
+  direction: ltr;
+  text-align: left;
+}
+.lang-en .fold6-note-title {
+  direction: ltr;
+  text-align: left;
+  box-sizing: border-box;
+}
+/* …but not in the phone's מקרא panel, where the heading flows and has no chevron. */
+.lang-en .fold6-note-title.is-in-panel {
+  padding-left: 0 !important;
+}
+
+/* English drop-zone hint. */
+.lang-en #page9ZoneAbove:empty::after {
+  content: "Drag extreme action types here";
+}
+
+/* English credits card (@fold17) reads left-to-right. */
+/* Only the body copy ranges left — the title and the credits stay centred, as
+   on the Hebrew card. */
+.lang-en #page-16 .text-card-frame {
+  direction: ltr;
+}
+.lang-en #page-16 .page12-body {
+  text-align: left;
+}
+
+/* English pill tooltip reads left-to-right. */
+.lang-en .page9-cat-tooltip-desc {
+  direction: ltr;
+}
+
+/* English work-in-progress gate reads left-to-right (it stays centred). */
+.lang-en .shk-gate,
+.lang-en .shk-gate-text {
+  direction: ltr;
+}
+
+/* The dev fold badge sits under the language switch, which owns the corner. */
+.fold-number-badge { top: 46px; }
+.fold-picker { top: 74px; }
+
+/* English scope button: ring first, label to its right (it sits over the LEFT
+   legend column — updateGroups places it). */
+.lang-en .p7-scope-btn {
+  flex-direction: row;
 }

@@ -22,7 +22,7 @@ anywhere, hero dots included. Any doc claiming 8/10/12 groups is stale.
 |---|---|---|
 | `#6B89FF` | מתנגדי הרפורמה המשפטית ומדיניות הממשלה (mobile: מתנגדי הרפורמה ומדיניות הממשלה) | `protesters against government` |
 | `#FF1A94` | תומכי עסקת חטופים ומתנגדי המלחמה | `peace movements` |
-| `#31CE1C` | קבוצות ופעילים ערבים בישראל | `arab israelis` |
+| `#31CE1C` | פעילים ערבים ישראלים | `arab israelis` |
 
 ### A group may carry a shorter name on mobile
 
@@ -440,13 +440,14 @@ cannot disagree. Do **not** go back to `FOLD6_NOTE_TEXT.split("ACLED")`: it retu
 parts for this copy while both builders destructure two, which silently dropped everything
 after the second mention — the whole disclaimer sentence.
 
-At **461 characters** the note measures **353px tall** at the **172px** `FOLD6_NOTE_WIDTH`
-(14px/1.4 Assistant). It hangs DOWNWARD from the bottom legend row, and the legend block is
+The note measures **372px tall** at the **172px** `FOLD6_NOTE_WIDTH` (14px/1.4 Assistant,
+measured in Chromium). It hangs DOWNWARD from the bottom legend row, and the legend block is
 centred on the viewport without counting it (`fold6RowIndexY`), so nothing stops the note
 running off the foot — `.fold6-note` is absolutely positioned with no `max-height`. **That is
 what 172 is for**: it was 155px for the shorter copy this replaced, where the new text came to
 392px and overran the bottom edge. 172 was picked in a `manual/` harness on a 982px-tall
-window, the note's foot landing at 921px, 61px clear. Width is the lever if the copy grows
+window; the copy has since gained an opening clause, so the foot now clears that window by
+about 41px. At the same type it is 333px at 190px wide and 294px at 210px. Width is the lever if the copy grows
 again — wider block, fewer lines, shorter drop — and a much shorter window can still overrun
 it, since the block is centred and only the note hangs below. **Small desktop tier:** on a
 viewport **≤ 1550px wide** the note wraps at **190px** instead (`FOLD6_NOTE_WIDTH_SMALL`,
@@ -1073,7 +1074,7 @@ still opening, and the flight aims at the rows' REST positions).
     explicit instruction): rounding it to whole px cut more re-layouts still, but 18 → 14
     in four steps reads as the text snapping down in size.
     **The anchors below only work if `.group-label.is-mfly-topanchor` actually parses.**
-    The historical "one group stutters" bug (קבוצות ופעילים ערבים בישראל lurching on every
+    The historical "one group stutters" bug (פעילים ערבים ישראלים lurching on every
     re-break, all labels sitting a full width right of their swatch) was ultimately a
     stray `*/` in the comment above that rule in `style.css`: CSS error recovery ate the
     junk *and the selector after it*, so `translateX(-100%)` never applied and every
@@ -1091,7 +1092,7 @@ still opening, and the flight aims at the rows' REST positions).
     box, line breaking included, right there. Done inside `GROUPS.forEach` that is six
     layout flushes per frame, interleaved with the writes so none of them can be batched.
     The row that pays most is the one with the most line breaking to redo, i.e. the single
-    3-line mobile label (קבוצות ופעילים ערבים בישראל) — everything else re-wraps trivially, so
+    3-line mobile label (פעילים ערבים ישראלים) — everything else re-wraps trivially, so
     only that row visibly stuttered. The measurement is therefore behind
     `labelLeftRest()` in `js/update-groups.js` and called **only on the non-flying branch**;
     the flying branch anchors the box's right edge and never needs a width. If a future

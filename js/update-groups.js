@@ -63,6 +63,11 @@ function fold6MFlyT(flyStart, flyLen) {
   return t;
 }
 
+// English page, desktop only: @fold2/@fold3's rows read swatch-then-label.
+// Mobile keeps the shared layout — its FLY hand-off anchors the label's right
+// edge and is tuned to that.
+function fold3SwatchLeads() { return isEnglish() && !isMobile(); }
+
 function updateGroups() {
   if (ugRanThisFrame) {
     if (!ugRerunQueued) {
@@ -273,10 +278,13 @@ function updateGroups() {
   // run. Not a grid column any more — the labels are what has to look
   // centered under the title at @fold3, not the (by then vanished) cells.
   // labelW is the camp's WIDEST label, so all 3 rows share one rect column.
+  // ENGLISH DESKTOP mirrors the pair (fold3SwatchLeads): the rect LEADS on the
+  // left with its label trailing right, so the pair spans [x, x + swatch + gap +
+  // labelW] and the rect sits LEFT of the anchor by that same half run.
   const campFold3X = (rows) => {
     const labelW = Math.max(...rows.map(groupLabelWidth));
     return campAnchorX(rows === FOLD4_COALITION_ROWS)
-      + (CLUSTER_LABEL_GAP + labelW - CLUSTER_SWATCH_SIZE) / 2;
+      + (fold3SwatchLeads() ? -1 : 1) * (CLUSTER_LABEL_GAP + labelW - CLUSTER_SWATCH_SIZE) / 2;
   };
   const fold2CellX = (isCoalition, col) =>
     (isCoalition ? coalitionBlockX : changeBlockX) + col * fold2ColPitchPx();
@@ -650,14 +658,21 @@ function updateGroups() {
     // fold-4 legend move instead of snapping — and so it never happens on
     // mobile, where there are no two columns to mirror between: the row keeps
     // its column layout the whole way into the מקרא button.
-    const sideT = g.fold6 && !isRightLegend ? fold6ShapeT : 0;
+    // ENGLISH DESKTOP (fold3SwatchLeads): left-to-right reading order, so the
+    // camp columns START mirrored (1 — swatch on the left, label to its right).
+    // The change rows simply stay that way into the left legend column; the
+    // coalition rows glide back to 0 for the right-edge column, on the same
+    // fold6ShapeT.
+    const sideT = fold3SwatchLeads()
+      ? (g.fold6 && isRightLegend ? 1 - fold6ShapeT : 1)
+      : (g.fold6 && !isRightLegend ? fold6ShapeT : 0);
     // LAZY on purpose — `offsetWidth` is a forced synchronous layout, and this
     // frame has already written a new font-size and max-width onto this very
     // label, so the read cannot be served from the last layout: the browser has
     // to re-resolve the box, line breaking included, right here. Six of those
     // per frame is bad; the one that hurts is the label with the MOST line
     // breaking to redo, which on mobile is the single three-line label
-    // (קבוצות ופעילים ערבים בישראל — see GROUP_LABEL_MAX_WIDTH_MOBILE's comment in
+    // (פעילים ערבים ישראלים — see GROUP_LABEL_MAX_WIDTH_MOBILE's comment in
     // js/groups.js). That is why the stutter looked like it belonged to one
     // group rather than to the geometry: it was that row paying for a relayout
     // the others could largely skip. The flying path below does not use the
@@ -1038,8 +1053,12 @@ function updateGroups() {
       // thing on the row (row-reverse), flush with the button's right edge, so
       // its center is `btnW - P7_SCOPE_RING_PX / 2` in from `left`.
       const swatchCx = right - LEFT_LEGEND_SWATCH_SIZE / 2;
-      p7ScopeBtnEl.style.left =
-        `${swatchCx - btnW + P7_SCOPE_RING_PX / 2}px`;
+      // ENGLISH PAGE: the button sits over the LEFT legend column, ring first
+      // (.lang-en .p7-scope-btn is a plain `row`), the ring's centre on that
+      // column's swatch line and the label typing out rightward from it.
+      p7ScopeBtnEl.style.left = isEnglish()
+        ? `${fold6LegendInsetLeft() + LEFT_LEGEND_SWATCH_SIZE / 2 - P7_SCOPE_RING_PX / 2}px`
+        : `${swatchCx - btnW + P7_SCOPE_RING_PX / 2}px`;
       p7ScopeBtnEl.style.top =
         `${fold6RowIndexY(0, H) - P7_SCOPE_BTN_GAP - btnH + 10}px`;  // +10 by eye, 2026-09-10
       // @fold15's fade-out, shared with everything else on screen.
@@ -1079,7 +1098,10 @@ function updateGroups() {
   const noteRightEdge = W - fold6LegendInsetRight();
   // The note's TEXT takes the legend's right-edge alignment, same as the dot
   // rows; the rule sits FOLD6_RULE_GAP outside that edge (see below).
-  const fold6X = noteRightEdge - fold6NoteWidthPx;
+  // ENGLISH PAGE: the note hangs under the LEFT legend column instead, its
+  // text box starting on that column's swatch edge (fold6NoteOnLeft).
+  const fold6NoteOnLeft = isEnglish() && !isMobile();
+  const fold6X = fold6NoteOnLeft ? fold6LegendInsetLeft() : noteRightEdge - fold6NoteWidthPx;
   const fold6BottomAnchorY = fold6RowIndexY(FOLD6_ROW_FRAME_YS.length - 1, H);
   // The settled label's box center sits at anchor + half the 6px swatch +
   // groupLabelInkShift — the same `top = swatchSize/2 + inkShift` the live
@@ -1274,7 +1296,11 @@ function updateGroups() {
     const contentW = closedW + (fold6NoteWidthPx - closedW) * cardWT;
     // The card hugs the legend's right edge, so it grows and shrinks leftward:
     // the RIGHT edge is the fixed one.
-    fold6NoteCardEl.style.left = `${noteRightEdge - contentW - FOLD6_CARD_PAD}px`;
+    // …except on the English page's left-hand note, which is pinned by its LEFT
+    // edge and grows rightward.
+    fold6NoteCardEl.style.left = fold6NoteOnLeft
+      ? `${fold6X - FOLD6_CARD_PAD}px`
+      : `${noteRightEdge - contentW - FOLD6_CARD_PAD}px`;
     fold6NoteCardEl.style.top = `${noteTitleY - FOLD6_CARD_PAD}px`;
     fold6NoteCardEl.style.width = `${contentW + 2 * FOLD6_CARD_PAD}px`;
     fold6NoteCardEl.style.height = `${cardH + 2 * FOLD6_CARD_PAD}px`;
@@ -1282,6 +1308,22 @@ function updateGroups() {
     // The chevron rides the card's left edge (it is absolutely positioned
     // inside the title box, which stays a fixed 155px wide however narrow the
     // card gets) — so hand it that edge in the title's own coordinates.
+    // ENGLISH PAGE: title and chevron trade places — the chevron holds the card's
+    // fixed RIGHT edge and the title ranges left, starting at the card's left
+    // edge. That edge is the one that travels as the card widens, so the title
+    // is carried on it by padding (the box itself stays put, and the chevron,
+    // being absolutely positioned, ignores the padding).
+    // On the LEFT (desktop) the card's fixed edge is its left one, so the title
+    // needs no carrying and the chevron rides the card's moving RIGHT edge.
+    if (fold6NoteOnLeft) {
+      fold6NoteTitleEl.style.paddingLeft = "0px";
+      fold6NoteTitleEl.style.setProperty("--note-chevron-x",
+        `${(contentW - chevSize - chevInset).toFixed(1)}px`);
+    } else if (isEnglish()) {
+      fold6NoteTitleEl.style.paddingLeft = `${(fold6NoteWidthPx - contentW).toFixed(1)}px`;
+      fold6NoteTitleEl.style.setProperty("--note-chevron-x",
+        `${(fold6NoteWidthPx - chevSize - chevInset).toFixed(1)}px`);
+    } else
     fold6NoteTitleEl.style.setProperty("--note-chevron-x",
       `${(fold6NoteWidthPx - contentW + chevInset).toFixed(1)}px`);
   }
@@ -1661,7 +1703,7 @@ function updateGroups() {
         fold8SeqLastFrameTime = null;
         fold8PrevTooltipRaw = fold8TooltipTrigger.currentRaw();
         fold8DateSpans = fold8SetupTypewriter(fold8TooltipDateEl, p7FormatDateDMY(event.date));
-        fold8DescSpans = fold8SetupTypewriter(fold8TooltipDescEl, event.descHeMedium || "");
+        fold8DescSpans = fold8SetupTypewriter(fold8TooltipDescEl, p7EventDesc(event));
         // The scripted demo waits for the fake cursor too; a hover restart doesn't.
         fold8SeqDelayMs = FOLD8_TOOLTIP_DELAY_MS + (fold7HoverIdx === null ? fold7CursorDelayMs() : 0);
       }

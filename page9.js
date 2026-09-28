@@ -2824,7 +2824,7 @@ function drawPage9(ctx, W, H) {
       // pin it down consistently) — drawing the word and the number as two
       // separately-positioned calls sidesteps bidi entirely, so "word left of
       // number" is guaranteed regardless of engine.
-      const P9_EVENTS_WORD = "אירועים";
+      const P9_EVENTS_WORD = tr("אירועים");
       const P9_EVENTS_GAP  = 4; // px between the word and the number
       function drawEventsCount(count, targetCenterX, y) {
         const numStr = String(count);
@@ -2844,6 +2844,12 @@ function drawPage9(ctx, W, H) {
         const numWidth    = ctx.measureText(numStr).width;
         const leftX       = targetCenterX - (wordWidth + P9_EVENTS_GAP + numWidth) / 2;
         ctx.textAlign = "left";
+        // English reads number-then-word («123 events»).
+        if (isEnglish()) {
+          ctx.fillText(numStr, leftX, y);
+          ctx.fillText(P9_EVENTS_WORD, leftX + numWidth + P9_EVENTS_GAP, y);
+          return;
+        }
         ctx.fillText(P9_EVENTS_WORD, leftX, y);
         ctx.fillText(numStr, leftX + wordWidth + P9_EVENTS_GAP, y);
       }
@@ -3187,8 +3193,10 @@ function p9BuildPanel() {
     const label = pill.querySelector(".page9-pill-label")?.textContent || "";
     const total = Array.from(document.querySelectorAll(".page9-pill"))
       .filter(pillIsExtreme).length;
-    liveEl.textContent =
-      `${label} — ${extreme ? "סווגה כפעולה קיצונית" : "הוחזרה לפעולות לגיטימיות"}. ` +
+    liveEl.textContent = isEnglish()
+      ? `${label} — ${extreme ? "marked as an extreme action" : "returned to legitimate actions"}. ` +
+        `${total} of ${P9_CATEGORIES.length} marked as extreme.`
+      : `${label} — ${extreme ? "סווגה כפעולה קיצונית" : "הוחזרה לפעולות לגיטימיות"}. ` +
       `${total} מתוך ${P9_CATEGORIES.length} מסווגות כקיצוניות.`;
   }
 
@@ -3645,7 +3653,7 @@ function p9BuildPanel() {
 
     const labelEl = document.createElement("span");
     labelEl.className   = "page9-pill-label";
-    labelEl.textContent = label;
+    labelEl.textContent = tr(label);
     pill.appendChild(labelEl);
 
     // Mobile-only ⓘ affordance: touch has no hover, so the category description
@@ -3658,7 +3666,7 @@ function p9BuildPanel() {
     infoEl.type        = "button";
     infoEl.className   = "page9-pill-info";
     infoEl.textContent = "i";
-    infoEl.setAttribute("aria-label", `מידע על ${label}`);
+    infoEl.setAttribute("aria-label", isEnglish() ? `About ${tr(label)}` : `מידע על ${label}`);
     pill.appendChild(infoEl);
 
     // DECORATIVE ✕ for a dropped (extreme) pill — currently PARKED and never
@@ -4082,11 +4090,11 @@ p9BuildPanel();
 // breakpoint — drag on desktop, tap on mobile. Kept in JS rather than as two
 // CSS-toggled <p>s so there is exactly one copy of each string, and re-synced
 // on resize so crossing the breakpoint corrects it live.
-const P9_SUBTITLE_DESKTOP = "גררו סוגי פעולות הנחשבות קיצוניות בעיניכם";
+const P9_SUBTITLE_DESKTOP = tr("גררו סוגי פעולות הנחשבות קיצוניות בעיניכם");
 // «סמנו», not «בחרו»/«גררו»: mobile classifies by ticking the pill's own
 // selection circle in place (.page9-pill-check), so the verb names that mark
 // rather than a drag or a pick.
-const P9_SUBTITLE_MOBILE  = "סמנו פעולות הנחשבות לקיצוניות בעיניכם";
+const P9_SUBTITLE_MOBILE  = tr("סמנו פעולות הנחשבות לקיצוניות בעיניכם");
 function p9SyncSubtitle() {
   const el = document.querySelector(".page9-header-subtitle");
   if (el) el.textContent = isMobile() ? P9_SUBTITLE_MOBILE : P9_SUBTITLE_DESKTOP;
@@ -4320,7 +4328,7 @@ function p9HoverInit() {
     }
 
     dateEl.textContent = p7FormatDateDMY(bestEvent.date);
-    descEl.textContent = bestEvent.descHeMedium;
+    descEl.textContent = p7EventDesc(bestEvent);
     // `color`, not `border-color`: the visible stroke is the dashed <svg>
     // overlay (updateTooltipDash, js/core.js), which strokes currentColor.
     setTooltipColor(tooltipEl, p7ActorColor(bestEvent.actor));
@@ -4513,7 +4521,7 @@ function p9CategoryTooltipInit() {
     // Ignore it, or the tooltip would pop back up mid-drag right after this
     // same gesture is what should dismiss it.
     if (panel.classList.contains("dragging")) return;
-    descEl.textContent = P9_CATEGORY_DESC[Number(pill.dataset.idx)];
+    descEl.textContent = tr(P9_CATEGORY_DESC[Number(pill.dataset.idx)]);
     tooltipEl.classList.add("is-visible");
 
     const rect     = pill.getBoundingClientRect();

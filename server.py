@@ -182,6 +182,9 @@ def load_events():
             "category": row[col["event_type"]],
             "date": date_str,
             "descHeMedium": row[col["description_he_medium"]] or None,
+            # ACLED's own English text. NOT shipped in events.json — split off
+            # into events-en.json below, which only the English page fetches.
+            "descEn": str(desc_en).strip() if desc_en else None,
             # Reported crowd size as an integer estimate, or None when the
             # source says "no report" / the description didn't join. Drives the
             # bulge tier on the timeline dots (p7BulgeTier, page7.js).
@@ -200,7 +203,13 @@ def load_events():
 # The workbooks are ACLED-licensed and gitignored (local-only). A clone without
 # them serves the committed events.json as-is instead of crashing.
 if (WATCH_DIR / EVENTS_XLSX).exists():
-    EVENTS_JSON = json.dumps(load_events(), ensure_ascii=False).encode()
+    _events = load_events()
+    # rowId -> English description, for en/index.html (p7LoadEnglishDescs,
+    # page7.js). Kept out of events.json so the Hebrew page's payload is unchanged.
+    EVENTS_EN_JSON = json.dumps(
+        {e["rowId"]: e.pop("descEn") for e in _events}, ensure_ascii=False
+    ).encode()
+    EVENTS_JSON = json.dumps(_events, ensure_ascii=False).encode()
     _EVENTS_FROM_XLSX = True
 else:
     EVENTS_JSON = (WATCH_DIR / "events.json").read_bytes()
@@ -222,6 +231,10 @@ def _sync_static_events():
     if current != EVENTS_JSON:
         path.write_bytes(EVENTS_JSON)
         print("  events.json rewritten from the xlsx — commit it so the deployed site matches")
+    en_path = WATCH_DIR / "events-en.json"
+    if not en_path.exists() or en_path.read_bytes() != EVENTS_EN_JSON:
+        en_path.write_bytes(EVENTS_EN_JSON)
+        print("  events-en.json rewritten from the xlsx")
 
 _sync_static_events()
 

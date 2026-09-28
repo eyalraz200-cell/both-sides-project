@@ -11,6 +11,49 @@ local Hadassah faces (`@font-face` in `style.css`).
 > used to front the project behind a `.shk-cta-button`. The root URL is the project now; `project.html` is a redirect stub to the root that
 > keeps old shared links alive — never put content in it.
 
+## English version — `en/index.html`
+
+Served at `/en/`. A copy of `index.html` with `<html lang="en" class="lang-en">` and
+`<base href="../">`, so it loads the **same** `style.css`, scripts and `events.json` as the
+Hebrew page — there is no second stylesheet or script set. Its canonical / `og:url` point
+at `/en/`, so the @fold16 share row shares the English link.
+
+Both pages carry a **language switch** (`.lang-switch`, fixed in the top-left corner; the dev
+fold badge sits under it and a bare **F** — or Ctrl+Shift+F — hides/shows the badge, a direct `.layout`
+child): a plain link — «EN» → `en/` on the Hebrew page, «עב» → the root on the English one.
+
+What differs, all gated on `.lang-en` / `isEnglish()` (page7.js):
+
+- **Title blocks and the event tooltip read left-to-right** (`.lang-en .text-card`,
+  `.lang-en .page9-tooltip`, foot of `style.css`). Everything else keeps the shared look.
+- **Tooltips show ACLED's English description** — `p7EventDesc(ev)` (page7.js) is the one
+  reader every tooltip uses; see [Data](Data.md).
+
+- **The hero text is `direction: ltr`** (`.lang-en .page0-title, .page0-subtitle`) — same
+  boxes and positions as the Hebrew hero; a word wider than the title box spills right, so
+  the title's lines share one left edge.
+- **@fold2/@fold3 rows read swatch-then-label on desktop** (`fold3SwatchLeads()`,
+  js/update-groups.js): the rect sits on the left of its label, and `campFold3X` centres
+  that mirrored pair on the camp anchor. Into @fold4 the change rows stay that way; the
+  coalition rows glide back to label-then-swatch for the right-edge legend column. Mobile
+  keeps the shared layout.
+- **Tooltip descriptions drop their leading date** (`p7StripLeadingDate`, page7.js) — the
+  tooltip already shows the date on its own line. `events-en.json` itself stays verbatim.
+- **Desktop legend furniture sits on the LEFT**: the ACLED note hangs under the left legend
+  column, pinned by its left edge and growing rightward (`fold6NoteOnLeft`), heading on the
+  left and chevron on the card's right edge; the «Show event scale» button sits over that
+  same column, ring first, its ring centred on the swatch line. The note is 270px wide
+  (`FOLD6_NOTE_WIDTH_EN`). Swatches and ring centre on Latin ink (`GROUP_LABEL_INK_REF`).
+- **Copy is English.** The title blocks, hero and share block are translated in
+  `en/index.html` itself. Strings the scripts render (camp headers, group labels, legend
+  controls, category pills, the @fold14 subtitle) go through `tr()` in `js/i18n.js` —
+  loaded first on both pages, a Hebrew → English table (`I18N_EN`). `tr()` is
+  **display-only**: the Hebrew strings remain the keys (`category`, `P9_CATEGORIES`,
+  `GROUPS` labels), and on the Hebrew page it returns its argument unchanged. A new
+  script-rendered string needs a `tr()` at its render site and a row in `I18N_EN`.
+
+**A markup change to `index.html` must be repeated in `en/index.html`.**
+
 ## Search / discoverability
 
 The site is served by GitHub Pages at `https://eyalraz200-cell.github.io/both-sides-project/`
@@ -205,6 +248,8 @@ It then sets `currentPage`, and calls `updateGroups()` and `draw()`.
 rAF-throttled behind passive `scroll` listeners (`page7Ticking` and friends).
 
 ## Title blocks
+
+Title-block text is **selectable on desktop** (`.text-card-frame.section-title`, `user-select: text`) — the one exception to `body`'s `user-select: none`. Phones keep selection off, since a press on a card is the press-and-hold gesture.
 
 Each scrolling section's text is a `.section-text.text-card` — a normal-flow, 480px-wide,
 horizontally centered block that scrolls with the page (nothing pins). Visibility is an

@@ -3388,10 +3388,47 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
   ctx.globalAlpha = 1;
 }
 
+// The one reader for an event's tooltip description. Hebrew page: the Hebrew
+// text. English page (en/index.html, <html class="lang-en">): ACLED's English
+// original, falling back to the Hebrew if events-en.json didn't load.
+function p7EventDesc(ev) {
+  return (ev && (ev.descEn || ev.descHeMedium)) || "";
+}
+
+// ACLED opens nearly every description with the event's date («On 6 January
+// 2023, …», «Around 18 March 2023 (as reported), …», sometimes behind a
+// «Property destruction: » tag). The tooltip already carries the date on its own
+// line, so the English text drops it and re-capitalises what follows. The tag
+// («Land seizure:», «Looting:» …) is ACLED's own sub-event label and goes too.
+// A description that doesn't open this way is returned untouched.
+const P7_DESC_DATE_RE =
+  /^([A-Z][A-Za-z\- ]{2,30}: ?:? ?)?(?:(?:On|Around)\s+\d{1,2}(?:[–-]\d{1,2})?\s+[A-Z][a-z]+\s+\d{4}(?:\s*\([^)]*\))?,?\s*)?/;
+function p7StripLeadingDate(text) {
+  if (!text) return text;
+  const m = P7_DESC_DATE_RE.exec(text);
+  if (!m || !m[0]) return text;
+  const rest = text.slice(m[0].length);
+  // A handful of rows state the date twice — go round again until it's gone.
+  return p7StripLeadingDate(rest.charAt(0).toUpperCase() + rest.slice(1));
+}
+
+// English page only: events-en.json is a { rowId: description } map, written by
+// server.py next to events.json.
+async function p7LoadEnglishDescs(data) {
+  if (!isEnglish()) return;
+  try {
+    const en = await (await fetch("events-en.json")).json();
+    for (const e of data) e.descEn = p7StripLeadingDate(en[e.rowId]) || null;
+  } catch (err) {
+    console.error("Failed to load English descriptions:", err);
+  }
+}
+
 async function initPage7() {
   try {
     const res  = await fetch("events.json");
     const data = await res.json();
+    await p7LoadEnglishDescs(data);
     data.sort((a, b) => a.date.localeCompare(b.date));
 
     p7.leftEvents  = data.filter(e => e.side === "left");
@@ -3420,7 +3457,9 @@ function p7BuildDataSummary(data) {
   const host = document.getElementById("canvasA11ySummary");
   if (!host || typeof GROUPS === "undefined") return;
 
-  const he = (n) => n.toLocaleString("he-IL");
+  const en = isEnglish();
+  const he = (n) => n.toLocaleString(en ? "en-US" : "he-IL");
+  const docd = en ? "documented actions" : "פעולות מתועדות";
   // events.json stores YYYY-MM-DD; the rest of the page shows DD-MM-YYYY.
   const date = (iso) => iso.split("-").reverse().join("-");
 
@@ -3441,15 +3480,25 @@ function p7BuildDataSummary(data) {
   const campList = camps.map(c => {
     const total = data.filter(e => e.side === c.side).length;
     const items = c.rows.map(g =>
-      `<li>${g.label}: ${he(byActor.get(g.actor) || 0)} פעולות מתועדות</li>`).join("");
-    return `<h3>${c.name} — ${he(total)} פעולות מתועדות</h3><ul>${items}</ul>`;
+      `<li>${tr(g.label)}: ${he(byActor.get(g.actor) || 0)} ${docd}</li>`).join("");
+    return `<h3>${tr(c.name)} — ${he(total)} ${docd}</h3><ul>${items}</ul>`;
   }).join("");
 
   const catList = [...byCategory.entries()]
     .sort((a, b) => b[1] - a[1])
-    .map(([cat, n]) => `<li>${cat}: ${he(n)}</li>`)
+    .map(([cat, n]) => `<li>${tr(cat)}: ${he(n)}</li>`)
     .join("");
 
+  if (en) {
+    host.innerHTML =
+      `<h2>Text description of the data</h2>` +
+      `<p>The project shows ${he(data.length)} documented political actions that took place in public space ` +
+      `in Israel and the Palestinian territories, between ${date(p7.minDate)} and ${date(p7.maxDate)}. ` +
+      `The data come from ACLED. Each square in the visualisation is one action, and its colour marks the group that carried it out.</p>` +
+      `<h3>By camp and group</h3>` + campList +
+      `<h3>By type of action</h3><ul>${catList}</ul>`;
+    return;
+  }
   host.innerHTML =
     `<h2>תיאור מילולי של הנתונים</h2>` +
     `<p>הפרויקט מציג ${he(data.length)} פעולות פוליטיות מתועדות שהתרחשו במרחב הציבורי ` +
@@ -4429,8 +4478,11 @@ const P7_AXIS_EVENTS_ALL = [
 // A browser dragged across the breakpoint mid-session keeps the set it loaded
 // with until a reload — the same reload-scoped treatment the layout already
 // gives a desktop<->mobile crossing.
+// label/desc pass through tr() (js/i18n.js) — English on en/index.html, the
+// strings above untouched on the Hebrew page.
 const P7_AXIS_EVENTS = P7_AXIS_EVENTS_ALL.filter(
-  (ev) => !(ev.hideOnMobile && window.innerWidth <= 600));
+  (ev) => !(ev.hideOnMobile && window.innerWidth <= 600))
+  .map((ev) => ({ ...ev, label: tr(ev.label), desc: tr(ev.desc) }));
 
 // Fixed real-time (wall-clock) fade durations — these only govern the crossfade
 // itself, not how long an event stays fully visible (that's driven by scroll: it
@@ -6081,7 +6133,8 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
         ctx.beginPath(); ctx.rect(cxA, cyA, cwA, chA); ctx.clip();
         // RTL paragraph direction so a trailing «.» lands at the END of the
         // Hebrew run (its left), not flung to the right like in an LTR context.
-        ctx.direction = 'rtl';
+        // English page: LTR, for the same reason mirrored.
+        ctx.direction = isEnglish() ? 'ltr' : 'rtl';
         // Right-side plaques sit flush to their axis-side (left) edge; the
         // left-side ones stay right-aligned (compare/ pick, 2026-09-07).
         const alignLeft = evDirI > 0;
@@ -6690,7 +6743,7 @@ function p7HoverInit() {
     }
 
     dateEl.textContent = p7FormatDateDMY(bestEvent.date);
-    descEl.textContent = bestEvent.descHeMedium;
+    descEl.textContent = p7EventDesc(bestEvent);
     // setTooltipColor (js/core.js), not a bare style.color: the dashed <svg>
     // overlay strokes currentColor, while desktop's filled box paints from
     // --tip-fill, the contrast-floored version of the same colour.
@@ -6876,8 +6929,8 @@ const P7_INSPECT_SNAP_PX = 44; // furthest a dot can be from the finger and stil
 const P7_LONGPRESS_MS      = 300; // hold this long, without moving, to open the loupe
 const P7_LONGPRESS_SLOP_PX = 10;  // move further than this first and it's a scroll, not a hold
 // The clipped-description toggle's two labels (p7-tip-more).
-const P7_TIP_MORE          = "עוד";
-const P7_TIP_LESS          = "פחות";
+const P7_TIP_MORE          = tr("עוד");
+const P7_TIP_LESS          = tr("פחות");
 // Must match `-webkit-line-clamp` on `.page9-tooltip.is-docked
 // .page9-tooltip-desc` (style.css) — syncMore measures the text against this
 // budget instead of against the clamped box, which misreports its own height.
@@ -6936,7 +6989,7 @@ function p7InspectSource() {
 // sit behind the text and in front of the canvas — the frame can be neither.
 // A direct `.layout` child, per the house rule: `.graphic-col`'s stacking
 // context traps z-index.
-const P7_INSPECT_HINT = "לחצו והחזיקו על נקודה להצגת פרטי האירוע";
+const P7_INSPECT_HINT = tr("לחצו והחזיקו על נקודה להצגת פרטי האירוע");
 // WHICH EDGE it sits on — 'above' the timeline or 'below' it. `let` for the
 // compare/ harness. MOBILE ONLY; desktop has hover and no band at all.
 let P7_HINT_PLACE_MOBILE = 'above';
@@ -7317,7 +7370,7 @@ function p7InspectInit() {
     // two elements, so there is nothing to hand the frame back to there.
     if (currentPage === 9 && typeof fold8SequenceEvent !== "undefined" && fold8SequenceEvent) {
       fold8DateSpans = fold8SetupTypewriter(dateEl, p7FormatDateDMY(fold8SequenceEvent.date));
-      fold8DescSpans = fold8SetupTypewriter(descEl, fold8SequenceEvent.descHeMedium || "");
+      fold8DescSpans = fold8SetupTypewriter(descEl, p7EventDesc(fold8SequenceEvent));
     }
     if (typeof updateGroups === "function") updateGroups();
   }
@@ -7330,7 +7383,7 @@ function p7InspectInit() {
     // to be running, same as p7HoverInit does when a hover starts.
     p7StartAnimLoop();
     dateEl.textContent = p7FormatDateDMY(ev.date);
-    descEl.textContent = ev.descHeMedium || "";
+    descEl.textContent = p7EventDesc(ev);
     // The sequence's own inline fades are still on these two elements from the
     // @fold8 shrink beat that emptied the frame — clear them or the text this
     // picker just wrote is invisible.

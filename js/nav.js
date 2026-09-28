@@ -27,7 +27,7 @@ function setFoldBadgeVisible(visible) {
   if (!foldNumberBadge) return;
   foldNumberBadge.classList.toggle("is-visible", visible);
   foldNumberBadge.classList.toggle("is-dot", !visible);
-  foldNumberBadge.title = visible ? "fold — click to jump (Ctrl+Shift+F hides)"
+  foldNumberBadge.title = visible ? "fold — click to jump (F hides)"
                                   : "show the fold number";
   try { localStorage.setItem("foldNumberBadgeVisible", visible ? "1" : "0"); } catch {}
 }
@@ -38,7 +38,11 @@ if (foldNumberBadge) {
   // on by default while working on the folds.
   setFoldBadgeVisible(pref !== "0");
   window.addEventListener("keydown", (e) => {
-    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "f") {
+    // Ctrl+Shift+F, or a bare F (no modifier, and not while typing in a field).
+    const bareF = !e.ctrlKey && !e.metaKey && !e.altKey && e.code === "KeyF"
+      && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || "")
+      && !(e.target && e.target.isContentEditable);
+    if (bareF || (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "f")) {
       e.preventDefault();
       setFoldBadgeVisible(!foldNumberBadge.classList.contains("is-visible"));
     }

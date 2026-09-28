@@ -411,14 +411,14 @@ function p12ShareInit() {
     const label = el.dataset.tip;
     el.addEventListener("click", () => {
       const done = () => {
-        el.dataset.tip = "הקישור הועתק";
+        el.dataset.tip = tr("הקישור הועתק");
         el.classList.add("is-copied");
         setTimeout(() => { el.dataset.tip = label; el.classList.remove("is-copied"); }, 1600);
       };
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(url).then(done, done);
       } else {
-        window.prompt("העתיקו את הקישור:", url);
+        window.prompt(tr("העתיקו את הקישור:"), url);
       }
     });
   });
