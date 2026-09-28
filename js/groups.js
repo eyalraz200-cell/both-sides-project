@@ -33,7 +33,7 @@ const GROUPS_FRAME_H = 982; // Figma frame height the y-coordinates below are au
 // camp membership they imply is duplicated as ACTOR_SIDE in server.py, which
 // derives each event's `side` from them (full_v3.xlsx has no side column).
 const GROUPS = [
-  { color: "#31CE1C", label: "פעילים ערבים ישראלים",  actor: "arab israelis",
+  { color: "#31CE1C", label: "גורמים ערבים ישראלים",  actor: "arab israelis",
     fold4: { x: 725,  y: 514, swatchFirst: true }, fold6: { x: 31, y: 560 } },
   { color: "#F9B624", label: "תנועות התנחלות באיו״ש",           actor: "settlers",
     fold4: { x: 887,  y: 488, swatchFirst: true }, fold6: { x: 31, y: 512 } },
@@ -240,7 +240,7 @@ function campCenterGapPx(W, edgeGapMobile) {
 // own row of the block's rightmost column (see the align beat in
 // updateGroups), so the labels still get one clean line each.
 const FOLD2_GROUP_CELL = [
-  { row: 0, col: 1 },  // #31CE1C  פעילים ערבים ישראלים   (change)
+  { row: 0, col: 1 },  // #31CE1C  גורמים ערבים ישראלים   (change)
   { row: 0, col: 3 },  // #F9B624  תנועות התנחלות          (coalition)
   { row: 2, col: 0 },  // #F024FF  קבוצות ימין לאומיות     (coalition)
   { row: 2, col: 0 },  // #6B89FF  מתנגדי הרפורמה המשפטית ומדיניות הממשלה (change)
@@ -2997,7 +2997,7 @@ const fold6MobileCampHeadEls = {};
     // groupLabelColumnFontSize(). Text width is linear in font size, so the
     // same words land on the same lines.
     // Derived rather than written per group: the two that differed (תנועות
-    // התנחלות and פעילים ערבים ישראלים) were one line here and two at @fold3
+    // התנחלות and גורמים ערבים ישראלים) were one line here and two at @fold3
     // purely because the card's column is wider than 100px of 16px type.
     // Inline, not a class: the flight reads it back off the element below.
     // The two sizes as literals, NOT the constants that hold them: this builder

@@ -22,7 +22,7 @@ anywhere, hero dots included. Any doc claiming 8/10/12 groups is stale.
 |---|---|---|
 | `#6B89FF` | מתנגדי הרפורמה המשפטית ומדיניות הממשלה (mobile: מתנגדי הרפורמה ומדיניות הממשלה) | `protesters against government` |
 | `#FF1A94` | תומכי עסקת חטופים ומתנגדי המלחמה | `peace movements` |
-| `#31CE1C` | פעילים ערבים ישראלים | `arab israelis` |
+| `#31CE1C` | גורמים ערבים ישראלים | `arab israelis` |
 
 ### A group may carry a shorter name on mobile
 
@@ -1074,7 +1074,7 @@ still opening, and the flight aims at the rows' REST positions).
     explicit instruction): rounding it to whole px cut more re-layouts still, but 18 → 14
     in four steps reads as the text snapping down in size.
     **The anchors below only work if `.group-label.is-mfly-topanchor` actually parses.**
-    The historical "one group stutters" bug (פעילים ערבים ישראלים lurching on every
+    The historical "one group stutters" bug (גורמים ערבים ישראלים lurching on every
     re-break, all labels sitting a full width right of their swatch) was ultimately a
     stray `*/` in the comment above that rule in `style.css`: CSS error recovery ate the
     junk *and the selector after it*, so `translateX(-100%)` never applied and every
@@ -1092,7 +1092,7 @@ still opening, and the flight aims at the rows' REST positions).
     box, line breaking included, right there. Done inside `GROUPS.forEach` that is six
     layout flushes per frame, interleaved with the writes so none of them can be batched.
     The row that pays most is the one with the most line breaking to redo, i.e. the single
-    3-line mobile label (פעילים ערבים ישראלים) — everything else re-wraps trivially, so
+    3-line mobile label (גורמים ערבים ישראלים) — everything else re-wraps trivially, so
     only that row visibly stuttered. The measurement is therefore behind
     `labelLeftRest()` in `js/update-groups.js` and called **only on the non-flying branch**;
     the flying branch anchors the box's right edge and never needs a width. If a future

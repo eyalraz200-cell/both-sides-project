@@ -13,7 +13,7 @@ const I18N_EN = {
   "קואליציית הימין": "The Right-Wing Coalition",
   "גוש השינוי": "The Change Bloc",
   // Groups
-  "פעילים ערבים ישראלים": "Israeli Arab activists",
+  "גורמים ערבים ישראלים": "Arab Israeli actors",
   "תנועות התנחלות באיו״ש": "West Bank settler movements",
   "קבוצות ימין לאומיות": "Nationalist right-wing groups",
   "מתנגדי הרפורמה המשפטית ומדיניות הממשלה": "Coalition policy and judicial overhaul opponents",

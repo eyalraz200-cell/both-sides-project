@@ -22,7 +22,7 @@ except the 2 marked in the `hidden` column (`SOLE_SOURCE_EXCLUDE` is empty, see 
 its first is 2023-10-14.
 
 An unmatched `actor` falls back to `#888`. All six `GROUPS` actors — including `#31CE1C`
-(פעילים ערבים ישראלים, `arab israelis`, 545 events) — are present in the data, so every
+(גורמים ערבים ישראלים, `arab israelis`, 545 events) — are present in the data, so every
 group appears on the timeline.
 
 ## `events-en.json` — English descriptions

@@ -672,7 +672,7 @@ function updateGroups() {
     // to re-resolve the box, line breaking included, right here. Six of those
     // per frame is bad; the one that hurts is the label with the MOST line
     // breaking to redo, which on mobile is the single three-line label
-    // (פעילים ערבים ישראלים — see GROUP_LABEL_MAX_WIDTH_MOBILE's comment in
+    // (גורמים ערבים ישראלים — see GROUP_LABEL_MAX_WIDTH_MOBILE's comment in
     // js/groups.js). That is why the stutter looked like it belonged to one
     // group rather than to the geometry: it was that row paying for a relayout
     // the others could largely skip. The flying path below does not use the

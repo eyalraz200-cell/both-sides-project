@@ -672,7 +672,7 @@ first version missed two, leaving @fold10's timeline hover on the raw colour; he
 helper. At **every** width the box is
 **filled** from `--tip-fill`, which `setTooltipColor` derives via `tooltipFill()`:
 the fill carries white text, and two group
-colours — תנועות התנחלות `#F9B624` (~1.7:1 against white) and פעילים ערבים ישראלים
+colours — תנועות התנחלות `#F9B624` (~1.7:1 against white) and גורמים ערבים ישראלים
 `#31CE1C` (~1.9:1) — are too light for that, so `tooltipFill` scales RGB down uniformly
 (hue untouched) until relative luminance clears `TOOLTIP_FILL_MAX_L` **0.28**. That
 ceiling is the luminance of `#6B89FF`, the lightest colour that already read fine, so the
