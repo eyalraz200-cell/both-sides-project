@@ -1,6 +1,6 @@
 # The real timeline — `@fold8` (`#page-9`, `page7.js`)
 
-The pinned, scroll-scrubbed section that renders all 14,456 events as per-event squares.
+The pinned, scroll-scrubbed section that renders all 10,418 events as per-event squares.
 **Desktop:** the canvas year axis runs **vertically down the centre** between the two camps
 and every dot's row is its date (see "The vertical axis" below). **Mobile:** the axis is
 horizontal along the bottom and the fill order is the free `p7OrderFromCenter` jumble.
@@ -9,7 +9,7 @@ horizontal along the bottom and the fill order is the free `p7OrderFromCenter` j
 
 `initPage7()` fetches `events.json`, sorts by `date` (lexicographic on `YYYY-MM-DD` =
 chronological), and splits by `e.side` into `p7.leftEvents` / `p7.rightEvents`.
-Committed dataset: **14,456 events — 5,330 left, 9,126 right**, spanning
+Committed dataset: **10,418 events — 5,328 left, 5,090 right**, spanning
 `p7.minDate` **2023-01-01** → `p7.maxDate` **2026-07-03**. A fetch error is swallowed to
 `console.error` and `p7.ready` stays false (every draw path early-returns to just the
 background).
@@ -1290,7 +1290,7 @@ camps' packs meet on the centre line instead of straddling the corridor.
   **0.88**, read through `p7GridWidthFrac()` / `p7GridHeightFrac()` — **always
   go through those two, never the constants**, so a resize across the 600px
   breakpoint re-solves the unit (they are also what `p7GridKey` carries). A phone
-  packs the same 14456 dots into a third of the width, so the desktop 0.7 x 1
+  packs the same 10418 dots into a third of the width, so the desktop 0.7 x 1
   frame suffocates: the width goes nearly full-bleed (316px of 390) and the height
   passes 1 on purpose, letting the block reach **5% above the timeline box's top
   edge**, which is empty by then because the axis has undrawn. At 390x844 that is

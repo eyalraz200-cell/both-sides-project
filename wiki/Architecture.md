@@ -82,7 +82,7 @@ Two things that are easy to get wrong here:
   production. See the comment in `index.html`.
 
 `index.html` is a canvas app: a crawler sees its ~16 `.section-title` scroll cards and
-nothing else, since all 14,456 events are painted. Anything that must be findable has to
+nothing else, since all 10,418 events are painted. Anything that must be findable has to
 exist as real markup on the page (the `.a11y-only` `<h1>`, the `<meta name="description">`).
 
 ## `index.html`'s layout
@@ -547,7 +547,7 @@ the row cursor with one frame-wide timestamp; batching opaque squares into one `
 colour; cached `viewportH()` and memoised `fitDashArray()`.
 
 The pinned timeline (@fold8) stays the heaviest fold — ~22ms/frame at 6× throttle — but it is
-now dominated by **browser rasterisation of the full-screen canvas**, not by JS: 14,456
+now dominated by **browser rasterisation of the full-screen canvas**, not by JS: 10,418
 squares on a 1179×2556 backing store. Further gains there need a rendering change, not
 another micro-optimisation. See [Timeline](Timeline.md) for the draw-loop specifics.
 

@@ -2089,7 +2089,7 @@ let P7_GRID_UNIT_PX = 0;
 let P7_GRID_HEIGHT_FRAC = 1;    // manual/-baked 2026-09-08
 // Mobile gets its own pair, `manual/`-baked 2026-09-12 at 390x844 (the harness
 // tuned the frame in px: 316px wide, 554px tall of the 520px box). A phone has
-// the same 14456 dots in a third of the width, so the desktop 0.7 x 1 frame is
+// the same 10418 dots in a third of the width, so the desktop 0.7 x 1 frame is
 // too small to breathe: the width goes nearly full-bleed. The height was
 // re-tuned to 0.88 on 2026-09-14 together with the lower baseline below (the
 // box got taller, so a smaller share keeps the block's top in place). The camp gap is shared

@@ -79,10 +79,11 @@ CROWD_XLSX = "Events_with_description_he_medium.xlsx"
 
 # Rows whose ONLY cited source(s) are in this set are dropped from the dataset;
 # rows that also cite any other outlet are kept. Multi-source cells are
-# ";"-separated, matched lowercase. EMPTY = every row ships. (It was briefly
-# {"plo negotiations affairs department"} — 4,036 sole-source rows, all settler
-# events — and reverted on 2026-09-27; the knob stays for when that call is made.)
-SOLE_SOURCE_EXCLUDE = set()
+# ";"-separated, matched lowercase. The PLO Negotiations Affairs Department is
+# the sheet's largest source (5,056 rows, all settler events); the 4,036 rows
+# that cite nothing else are dropped, the 1,020 corroborated by another outlet
+# stay. Empty the set to ship every row.
+SOLE_SOURCE_EXCLUDE = {"plo negotiations affairs department"}
 
 # "crowd size=about 2,000" / "…=tens of thousands" → one integer ESTIMATE.
 # The estimate is what ships; the small/medium/large cutoffs are a JS-side
