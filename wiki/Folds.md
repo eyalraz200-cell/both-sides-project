@@ -124,7 +124,7 @@ The 600px breakpoint and what it changes are documented in
 ### @fold12's tray on mobile
 
 Under the breakpoint (`style.css`) the tray is **not a bottom sheet** — Figma node 294-1272
-pins it as a full-bleed **band directly under the title card** (`top: 80px`, `bottom: auto`),
+pins it as a full-bleed **band directly under the title card** (`top: 96px`, `bottom: auto`),
 so @fold12's mobile stack reads top-to-bottom as **legend → title → pill band → docked tooltip
 frame → dot grid → legit bar**. The band goes full-bleed (`width`/`max-width: 100vw`,
 overriding the base rule's `width: max-content`), carries a rule on its **bottom edge only**
@@ -132,7 +132,7 @@ overriding the base rule's `width: max-content`), carries a rule on its **bottom
 one header block with it), and hides by
 sliding **up** off the top edge
 (`translate(-50%, calc(-100% - 116px))` — its own height plus the 116px offset).
-`80` is mirrored by `P9_TRAY_TOP_M` in `page9.js`, which derives both the tooltip's drop spot
+`96` is mirrored by `P9_TRAY_TOP_M` in `page9.js`, which derives both the tooltip's drop spot
 and the grid's top from it, and by `js/fold11.js`'s slide-out; change one and you change all
 three. Its padding is a tightened
 `8px 0 10px` with a 10px gap (Figma's `23px 0 24px`/14 read too airy on device), and
@@ -201,8 +201,8 @@ gutter widens. The far (left) end keeps a plain 12px; it scrolls off screen.
 
 Two knock-on values in that stack:
 
-- **`--card-top` is `24px` under the breakpoint** (base: `4.4vh`), manual/-baked 2026-09-14 once the
-  מקרא card stopped sitting above the title; the tray band follows at `top: 80px` (`P9_TRAY_TOP_M` 80).
+- **`--card-top` is `40px` under the breakpoint** (base: `4.4vh`; 16px below the 24px manual/-bake of 2026-09-14, so the pinned title clears the language button — the tray band and `P9_TRAY_TOP_M` moved with it), first baked once the
+  מקרא card stopped sitting above the title; the tray band follows at `top: 96px` (`P9_TRAY_TOP_M` 96).
   It's flat px because the
   thing being cleared is itself fixed-px. The gap the eye actually reads is not `60 − 52`: once
   the card sticks its frame is transparent, so the measurement is bar-bottom to the first line

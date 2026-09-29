@@ -36,6 +36,7 @@ const I18N_EN = {
   "העתיקו את הקישור:": "Copy the link:",
   // Timeline axis events — labels
   "הכרזת הרפורמה": "Judicial Overhaul",
+  "הכרזת הרפורמה המשפטית": "Judicial Overhaul",   // the phone's title for the same event (labelMobile, page7.js)
   "הפיגוע בעלי": "Eli Terror Attack",
   "ביטול עילת הסבירות": "Judicial Review Law",
   "מתקפת 7 באוקטובר": "October 7 Attack",

@@ -1426,6 +1426,8 @@ function p7RowY(row, H) {
   // leave the year rings and headline dots a few px off the dots beside them.
   if (p7ZoomOutT) {
     const fit = p7Squash(p7.lastW, p7.lastH);
+    // The end of the axis is the end of the field, by the field's own sum.
+    if (fit && fit.remap && row >= v.totalRows) return p7VertTopY(H) + p7VertFieldLen();
     if (fit && fit.remap) return p7VertTopY(H) + p7ZoomLerp(row * p7.cellBase, p7FitRowOfLiveRow(row, fit.vert) * fit.cell);
   }
   return p7VertTopY(H) + (row / v.totalRows) * p7VertFieldLen();
@@ -1920,7 +1922,7 @@ function p7BulgeTick() {
   //     existed to prevent. Every pick grows, by the same amount.
   //   - it runs while the SIZE GRID is off-limits above (`p7Grid.on ? null`),
   //     because page 12 is page9's own grid, not p7's.
-  const p9Pick = (typeof p7InspectPage === "function" && p7InspectPage() === 12 &&
+  const p9Pick = (typeof p7InspectPage === "function" && p7InspectPage() === 13 &&
                   p7Inspect.dragging) ? p7Inspect.event : null;
   if (p9Pick && !p7BulgeT.has(p9Pick)) p7BulgeT.set(p9Pick, { t: 0 });
   // Every ramp here: AT its target it stays put. `target > t ? up : down` sent
@@ -1981,7 +1983,7 @@ function p7BulgeHovered() {
 }
 function p7BulgeActive() {
   const hovered = p7BulgeHovered();
-  const p9Pick = (typeof p7InspectPage === "function" && p7InspectPage() === 12 &&
+  const p9Pick = (typeof p7InspectPage === "function" && p7InspectPage() === 13 &&
                   typeof p7Inspect !== "undefined" && p7Inspect.dragging) ? p7Inspect.event : null;
   for (const [ev, b] of p7BulgeT) {
     const target = (ev === hovered || ev === p9Pick) ? 1 : 0;
@@ -2915,7 +2917,15 @@ function p7MorphBlend(ev, from, cx, cy, sq, isLeft) {
   // P7_MORPH_PUSH_MAX x the size the dot would have at its CURRENT position,
   // so a square only outgrows its neighbours by a bounded factor and catches up
   // to its full tier size as it flies. Nothing leaves the box.
-  if (P7_MORPH_PUSH && tSize > tPos) {
+  // NOT on a flatten / un-flatten in place (flat, nothing travelling): the dots
+  // already stand at grid spacing, so there is no room to wait for — and the
+  // position window they would be throttled against (k.fly) is not even on
+  // this morph's clock (p7MorphTotalMs is the size clock alone). Throttled, a
+  // big dot growing back at @fold10 was still at half its size when the clock
+  // ran out, and snapped the rest of the way: 22px of 42 for the top tier on a
+  // phone.
+  const inPlace = !!(p7GridMorph && p7GridMorph.flat && !p7GridMorph.travel);
+  if (P7_MORPH_PUSH && !inPlace && tSize > tPos) {
     const posSq = from.sq + (sq - from.sq) * tPos;
     outSq = Math.min(outSq, posSq * P7_MORPH_PUSH_MAX);
   }
@@ -4591,7 +4601,20 @@ let p7AxisOutroFromT = 0;    // introT captured at the moment the reverse began
 // wipe's own clip uses, so anything tested against it is exactly in step with
 // the drawn edge of the line.
 function p7AxisIntroEdgeY(H) {
-  return p7VertTopY(H) + p7Ease(p7AxisIntroT()) * p7VertFieldLen();
+  const span = p7AxisWipeSpan(H);
+  return span.from + p7Ease(p7AxisIntroT()) * span.len;
+}
+// The stretch of axis the wipe travels. Desktop: the whole field, top to end.
+// MOBILE: only the part that is ON SCREEN. A phone's field is over twice the
+// screen's height (~1885px on an 844px screen), so a wipe over all of it spent
+// most of its time on line nobody can see — the reverse wipe undrew off-screen
+// line for ~700 of its 800ms and then took the visible part in the last ~100,
+// which read as the axis snapping off on the way back up.
+function p7AxisWipeSpan(H) {
+  const topY = p7VertTopY(H), len = p7VertFieldLen();
+  if (!isMobile()) return { from: topY, len };
+  const from = Math.max(topY, 0);
+  return { from, len: Math.max(0, Math.min(topY + len, H) - from) };
 }
 // 0 -> 1 as the build-in wipe reaches event `i` — its ARRIVAL, on its own beat.
 //
@@ -4660,15 +4683,34 @@ function p7AxisEventIntroReady(i, y, H) {
 }
 var P7_AXIS_INTRO_DOT_MS_MOBILE  = 300;
 function p7AxisIntroDotMs() { return isMobile() ? P7_AXIS_INTRO_DOT_MS_MOBILE : P7_AXIS_INTRO_DOT_MS_DESKTOP; }  // one event's arrival, matching p7AxisCardMs
-const p7AxisIntroAt = [];
+// REVERSIBLE, like every other beat: the value walks toward its target (1 once
+// the wipe's edge has passed the dot, 0 once it is above it again) at the same
+// P7_AXIS_INTRO_DOT_MS rate, from wherever it currently is. The edge is the
+// reverse wipe's too (p7AxisIntroT reads the outro), so on the way back up each
+// dot shrinks as the undrawing line passes it, bottom to top.
+// Removed — don't reintroduce: returning 0 outright whenever the axis is
+// leaving or the edge is above the dot — every event dot vanished on the
+// reverse-crossing frame while the line was still undrawing.
+const p7AxisIntroAt = [];   // per event: { t, last } — raw 0..1 and the frame it was last stepped
 function p7AxisIntroReveal(i, y, H) {
   if (!isMobile()) return 1;
-  if (!p7AxisShouldShow()) { p7AxisIntroAt[i] = null; return 0; }
-  if (p7AxisIntroEdgeY(H) < y) { p7AxisIntroAt[i] = null; return 0; }
-  if (p7AxisIntroAt[i] == null) p7AxisIntroAt[i] = performance.now();
-  const t = Math.min(1, (performance.now() - p7AxisIntroAt[i]) / p7AxisIntroDotMs());
-  if (t < 1) p7StartAnimLoop();
-  return t;
+  const now = performance.now();
+  const st = p7AxisIntroAt[i] || (p7AxisIntroAt[i] = { t: 0, last: now });
+  // Half a pixel of tolerance: the last event's dot sits exactly ON the end of
+  // the axis, and its y and the wipe's edge reach that point by two different
+  // sums. On some screen sizes they came out a rounding error apart, the edge
+  // read as "not there yet", and the dot was drawn at radius 0 — it vanished
+  // from the zoomed-out view on a 390×844 screen and showed on a 375×667 one.
+  const target = p7AxisIntroEdgeY(H) >= y - 0.5 && p7AxisIntroT() > 0 ? 1 : 0;
+  // Not stepped for a while = the axis was off screen (the size grid, a fold
+  // away): whatever it held is stale, so the next draw-in starts from nothing.
+  if (now - st.last > 250 && p7AxisIntroT() < 1) st.t = 0;
+  // Capped dt: a dot that went undrawn for a while must not jump on its first frame back.
+  const step = Math.min(50, Math.max(0, now - st.last)) / p7AxisIntroDotMs();
+  st.last = now;
+  st.t = target ? Math.min(1, st.t + step) : Math.max(0, st.t - step);
+  if (st.t !== target) p7StartAnimLoop();
+  return st.t;
 }
 function p7AxisIntroT() {
   if (p7AxisOutroStart !== null) {
@@ -4732,7 +4774,9 @@ const P7_AXIS_EVENTS_ALL = [
   // of the axis, where a side plaque has the year label and the screen edge to
   // fight. It is placed ABOVE its dot from the start instead of flying in from
   // the side — see p7AxisEvMobileAbove.
-  { date: "2023-01-04", label: "הכרזת הרפורמה", maxWidth: null, xOffset: -14, mobileAbove: true,
+  // labelMobile: the phone's own title for this event (explicit instruction) —
+  // desktop keeps `label`.
+  { date: "2023-01-04", label: "הכרזת הרפורמה", labelMobile: "הכרזת הרפורמה המשפטית", maxWidth: null, xOffset: -14, mobileAbove: true,
     desc: "הצגת תוכניתו של שר המשפטים יריב לוין לשינויים במערכת המשפט." },
   // hideOnMobile: the phone's axis carries fewer plaques than the desktop one.
   // At the mobile square/zoom the cards crowd each other, so the roster is
@@ -4785,7 +4829,7 @@ const P7_AXIS_EVENTS_ALL = [
 // strings above untouched on the Hebrew page.
 const P7_AXIS_EVENTS = P7_AXIS_EVENTS_ALL.filter(
   (ev) => !(ev.hideOnMobile && window.innerWidth <= 600))
-  .map((ev) => ({ ...ev, label: tr(ev.label), desc: tr(ev.desc) }));
+  .map((ev) => ({ ...ev, label: tr(ev.labelMobile && window.innerWidth <= 600 ? ev.labelMobile : ev.label), desc: tr(ev.desc) }));
 
 // Fixed real-time (wall-clock) fade durations — these only govern the crossfade
 // itself, not how long an event stays fully visible (that's driven by scroll: it
@@ -4822,8 +4866,15 @@ const P7_AXIS_EVENT_FADE_OUT_MS = 1000;
 // MOBILE ONLY — desktop keeps 0 (fires at the dot). Same for every knob in this
 // block: the compare/manual pass that produced these ran under the 600px
 // breakpoint and desktop was never part of it.
-const P7_AXIS_TRIGGER_ROW_OFFSET_MOBILE = 25;
-function p7AxisTriggerRowOffset() { return isMobile() ? P7_AXIS_TRIGGER_ROW_OFFSET_MOBILE : 0; }
+// Picked as 25 rows when a mobile row was 3.45px (2026-09-12), i.e. 86px of
+// travel past the dot. The mobile fit solves the pitch per screen now, so the
+// knob is that DISTANCE and the rows are derived from the live pitch —
+// otherwise a finer pitch would fire the leave sooner after the fly.
+const P7_AXIS_TRIGGER_OFFSET_PX_MOBILE = 86;
+function p7AxisTriggerRowOffset() {
+  if (!isMobile()) return 0;
+  return p7.cellBase ? Math.round(P7_AXIS_TRIGGER_OFFSET_PX_MOBILE / p7.cellBase) : 25;
+}
 // How a headline card LEAVES. It is a trigger-driven beat either way; the modes
 // differ in what the beat does to the card.
 //   'fade'         — the old behaviour: opacity to 0 in place.
@@ -5196,7 +5247,21 @@ function p7UpdateAxisEventTriggers(W, H) {
     }
     // The fly is its own trigger on its own row; null atDot (the horizontal
     // axis) falls back to the leave signal so nothing changes off this path.
-    if (isMobile()) p7AxisFlyTrigger(i).trigger((atDot === null ? reached : atDot) ? 1 : 0);
+    if (isMobile()) {
+      const at = atDot === null ? reached : atDot;
+      // CLOSE first, then FLY — two triggers on two rows. The card closes a
+      // little BEFORE its dot (P7_AXIS_DESC_CLOSE_LEAD_PX_MOBILE) and flies at
+      // the dot, and each waits for the other so the order holds at any scroll
+      // speed: the fly does not start until the card has closed, and on the way
+      // back up the card does not re-open until it has flown home.
+      const rows = p7.vert ? p7.vert.events : null;
+      const atClose = p7VerticalAxis() && rows
+        ? hasScrolled && p7CurRow() >= rows[i].reachRow - p7AxisDescCloseLeadRows() : at;
+      const fly = p7AxisFlyTrigger(i), close = p7AxisDescCloseTrigger(i);
+      const opens = !p7AxisEvMobileAbove(ev) && !p7AxisEvMobileBelow(ev) && !!ev.desc;
+      close.trigger(atClose || fly.currentRaw() > 0 ? 1 : 0);
+      fly.trigger(at && (!opens || close.currentRaw() >= 1) ? 1 : 0);
+    }
     if (reached) {
       if (state.triggeredAt === null) {
         state.triggeredAt = now;
@@ -5283,6 +5348,26 @@ function p7AxisEventOpacity(i, now) {
     return opacity;
   }
   return p7AxisFlyTrigger(i).currentT();
+}
+// MOBILE: a side plaque stands OPEN ahead of the fill — title plus `desc` — and
+// closes to the title alone just before the fill reaches its dot. One more
+// trigger per event, fired a little AHEAD of the fly, on the desktop description's
+// own clock and beats (P7_AXIS_DESC_MS, P7_AXIS_DESC_BEATS) played backwards:
+// the copy un-types, then the card shrinks. 0 = open, 1 = closed. The two
+// pinned events (mobileAbove / mobileBelow — the first and the last) never
+// open: they are title-only labels on the ends of the axis.
+// How far before its dot the card closes, as a distance (rows come from the
+// live pitch, like the leave offset).
+const P7_AXIS_DESC_CLOSE_LEAD_PX_MOBILE = 40;
+function p7AxisDescCloseLeadRows() {
+  return p7.cellBase ? Math.round(P7_AXIS_DESC_CLOSE_LEAD_PX_MOBILE / p7.cellBase) : 0;
+}
+const p7AxisDescCloseTrigs = [];
+function p7AxisDescCloseTrigger(i) {
+  if (!p7AxisDescCloseTrigs[i]) {
+    p7AxisDescCloseTrigs[i] = makeTrigger(() => P7_AXIS_DESC_MS, () => p7StartAnimLoop());
+  }
+  return p7AxisDescCloseTrigs[i];
 }
 // Reaching the dot: the plaque glides beside -> above, the marker recolours.
 function p7AxisFlyT(i)   { return p7AxisFlyTrigger(i).currentT(); }
@@ -5807,7 +5892,7 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   // Build-in wipe, top → bottom (same clock as the horizontal wipe).
   if (introT < 1) {
     ctx.beginPath();
-    ctx.rect(0, 0, W, topY + p7Ease(introT) * len);
+    ctx.rect(0, 0, W, p7AxisIntroEdgeY(H));   // the wipe's own span — p7AxisWipeSpan
     ctx.clip();
   }
 
@@ -6790,25 +6875,44 @@ function p7DrawVertDotCards(ctx, W, H, now) {
     const pinBelow = zoomedOut ? p7AxisEvMobileAbove(ev) : p7AxisEvMobileBelow(ev);
     const sideDir = (pinAbove || pinBelow) ? 0
       : place === 'alternate' ? (i % 2 ? 1 : -1) : place === 'left' ? -1 : place === 'right' ? 1 : 0;
+    // The open card (see p7AxisDescCloseTrigger): cwA × chA is the card as
+    // drawn, cw × ch the closed, title-only one. It grows DOWNWARD from the
+    // title — the rows under an unreached dot are still empty, the ones above
+    // it are not — and its axis-side edge never moves.
+    const DT = P7_AXIS_DESC_TYPE;
+    const opens = flies && !!sideDir && !!ev.desc && isMobile();
+    const descT = opens ? 1 - p7AxisDescCloseTrigger(i).currentRaw() : 0;   // RAW: the beats re-ease it per window
+    const dwin = (w) => p9Ease(Math.min(1, Math.max(0, (descT - w.start) / w.len)));
+    let descLines = [], cwA = cw, chA = ch;
+    if (descT > 0) {
+      ctx.font = p7VertFont(DT);
+      descLines = p7WrapLabel(ctx, ev.desc, maxW);
+      let dw = 0;
+      descLines.forEach(t => { dw = Math.max(dw, ctx.measureText(t).width); });
+      const hT = dwin(P7_AXIS_DESC_BEATS.open);
+      cwA = cw + (Math.max(cw, Math.round(Math.min(maxW, dw)) + 2 * SC.padX) - cw) * hT;
+      chA = ch + (P7_AXIS_DESC_GAP + descLines.length * DT.lh) * hT;
+      ctx.font = p7VertFont(SC.type);
+    }
     let cy = pinBelow ? Math.round(below)
       : onSide && sideDir ? Math.round(dotY - ch / 2)
       : pinAbove || onlyNewest || place === 'above' ? Math.round(above) : Math.round(below + (above - below) * p9Ease(st.aboveT));
-    let cx = sideDir ? Math.round(sideDir > 0 ? axisX + SC.gap : axisX - SC.gap - cw) : Math.round(axisX - cw / 2);
+    let cx = sideDir ? Math.round(sideDir > 0 ? axisX + SC.gap : axisX - SC.gap - cwA) : Math.round(axisX - cwA / 2);
     if (flies && sideDir) {
       // Side → above on arrival: both coordinates ride the FLY trigger.
       const k = p7AxisFlyT(i);
-      const flyY = dotY - P7_AXIS_MARKER_RADIUS - V.sideFlyGapPx - ch;
-      cx = Math.round(cx + (axisX - cw / 2 - cx) * k);
+      const flyY = dotY - P7_AXIS_MARKER_RADIUS - V.sideFlyGapPx - chA;
+      cx = Math.round(cx + (axisX - cwA / 2 - cx) * k);
       cy = Math.round(cy + (flyY - cy) * k);
     }
     if (onSide) {
       // Push the dots the plaque would cover: one side for a side plaque, both
       // for an 'above' plaque straddling the line.
-      const reach = sideDir ? SC.gap + cw + V.dotGapPx : cw / 2 + V.dotGapPx;
+      const reach = sideDir ? SC.gap + cwA + V.dotGapPx : cwA / 2 + V.dotGapPx;
       const dx = Math.max(0, reach - p7CenterGap() / 2) * p9Ease(op);
       if (dx > 0 && V.sidePush) {
-        if (sideDir >= 0) p7VertCardPush.push({ side: 'right', top: cy, bottom: cy + ch, dx });
-        if (sideDir <= 0) p7VertCardPush.push({ side: 'left', top: cy, bottom: cy + ch, dx });
+        if (sideDir >= 0) p7VertCardPush.push({ side: 'right', top: cy, bottom: cy + chA, dx });
+        if (sideDir <= 0) p7VertCardPush.push({ side: 'left', top: cy, bottom: cy + chA, dx });
       }
       // Lead marker: the event's axis dot shown AHEAD of the fill. It only ever
       // existed because the main marker pass drew nothing until an event was
@@ -6834,9 +6938,32 @@ function p7DrawVertDotCards(ctx, W, H, now) {
     // save/restore because the collapse modes install a transform.
     ctx.save();
     p7AxisLeaveApply(ctx, op, axisX, dotY);
-    p7DrawHeadlineCard(ctx, SC, cx, cy, cw, ch);
+    p7DrawHeadlineCard(ctx, SC, cx, cy, cwA, chA);
     ctx.fillStyle = SC.type.color;
-    lines.forEach((t, li) => p7VertLineText(ctx, t, cx + cw / 2, cy + SC.padTop + li * SC.type.lh, SC.type.lh));
+    // The title keeps its place against the card's axis-side edge, which is the
+    // card's centre whenever the card is closed (cwA === cw).
+    const titleX = sideDir < 0 ? cx + cwA - cw / 2 : cx + cw / 2;
+    lines.forEach((t, li) => p7VertLineText(ctx, t, titleX, cy + SC.padTop + li * SC.type.lh, SC.type.lh));
+    // The description: a typed prefix of the wrapped copy, clipped to the card,
+    // set against the axis-side edge like desktop's (hard 0/1 gate, no fade).
+    const typeT = descLines.length ? dwin(P7_AXIS_DESC_BEATS.type) : 0;
+    if (typeT > 0) {
+      let left = Math.round(typeT * descLines.reduce((n, t) => n + t.length, 0));
+      ctx.save();
+      ctx.beginPath(); ctx.rect(cx, cy, cwA, chA); ctx.clip();
+      ctx.font = p7VertFont(DT);
+      ctx.direction = isEnglish() ? 'ltr' : 'rtl';
+      ctx.textAlign = sideDir > 0 ? 'left' : 'right';
+      ctx.fillStyle = DT.color;
+      const dx = sideDir > 0 ? cx + SC.padX : cx + cwA - SC.padX;
+      const dy0 = cy + SC.padTop + lines.length * SC.type.lh + P7_AXIS_DESC_GAP;
+      descLines.forEach((t, li) => {
+        if (left <= 0) return;
+        const part = t.slice(0, left); left -= t.length;
+        p7VertLineText(ctx, part, dx, dy0 + li * DT.lh, DT.lh);
+      });
+      ctx.restore();
+    }
     ctx.restore();
   });
   ctx.restore();
@@ -7219,7 +7346,7 @@ function p7PickRampTick() {
   if (p7PickRampActive()) p7PickRampRaf = requestAnimationFrame(p7PickRampTick);
 }
 function p7StartPickRamp() {
-  if (typeof p7InspectPage === "function" && p7InspectPage() !== 12 &&
+  if (typeof p7InspectPage === "function" && p7InspectPage() !== 13 &&
       !(typeof p9 !== "undefined" && (p9.pickDimT || 0) > 0)) return;
   // Only while something is actually moving. drawLoupe calls this every frame of
   // a hold, so without the check a SETTLED pick still bought a full repaint of
@@ -7843,7 +7970,7 @@ function p7InspectInit() {
     // @fold12 grows by the same ladder off its own base dot (p9PickSq, page9.js) —
     // so the glass's zoom-out and nearestEvent's sticky half-extent, which both
     // divide by this, follow that fold's own rule.
-    if (p7InspectPage() === 12 && typeof p9PickSq === "function") {
+    if (p7InspectPage() === 13 && typeof p9PickSq === "function") {
       return 1 + (p9PickSq(ev) / p9Metrics().SQ - 1) * p9Ease(b.t);
     }
     const mult = P7_BULGE_MULT[p7BulgeTier(ev)];

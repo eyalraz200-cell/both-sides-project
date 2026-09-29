@@ -9,10 +9,9 @@ row. An empty table below means the two languages agree.
 
 ## Pending
 
-_Nothing pending._
-
 | Changed | Where the Hebrew lives | What the English needs | Noted |
 |---|---|---|---|
+| The phone's title for the first axis event is now «הכרזת הרפורמה המשפטית» (desktop keeps «הכרזת הרפורמה») | `labelMobile` on the 2023-01-04 entry of `P7_AXIS_EVENTS_ALL`, `page7.js` | `I18N_EN` has the new key, but it still maps to the old English, "Judicial Overhaul". Decide whether the phone's English title should change to match. | 2026-09-29 |
 
 ## The three surfaces English copy lives in
 

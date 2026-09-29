@@ -2512,8 +2512,8 @@ const FOLD4_HEADER_GAP_MOBILE_PX = 20;
 // again without @fold3's value leaking back into @fold2.
 const FOLD3_HEADER_GAP_MOBILE_PX = FOLD4_HEADER_GAP_MOBILE_PX;
 // English page, phone: the camp names run on two lines there, so the gap under
-// them is its own number. `var` so the _debug-camp-names-en.js harness can drive it.
-var FOLD4_HEADER_GAP_MOBILE_EN_PX = 20;
+// them is its own number.
+const FOLD4_HEADER_GAP_MOBILE_EN_PX = 20;
 function fold4HeaderGapMobilePx() {
   return isEnglish() ? FOLD4_HEADER_GAP_MOBILE_EN_PX : FOLD4_HEADER_GAP_MOBILE_PX;
 }

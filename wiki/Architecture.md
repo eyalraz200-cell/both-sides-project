@@ -18,7 +18,7 @@ Served at `/en/`. A copy of `index.html` with `<html lang="en" class="lang-en">`
 Hebrew page — there is no second stylesheet or script set. Its canonical / `og:url` point
 at `/en/`, so the @fold14 share row shares the English link.
 
-Both pages carry a **language switch** (grey `#8f8f8f` letters, weight 550, no fill, 1px outline; 12px letters on desktop, 13px on the phone; `.lang-switch`, fixed in the top-left corner; the dev
+Both pages carry a **language switch** (grey `#8f8f8f` letters, weight 550, filled with the page colour `var(--bg)`, 1px outline; 12px letters on desktop, 13px on the phone; `.lang-switch`, fixed in the top-left corner; the dev
 fold badge sits under it and a bare **F** — or Ctrl+Shift+F — hides/shows the badge, a direct `.layout`
 child): a plain link — «EN» → `en/` on the Hebrew page, «עב» → the root on the English one.
 
@@ -53,6 +53,18 @@ What differs, all gated on `.lang-en` / `isEnglish()` (page7.js):
   Bloc») — the `\n` in the `I18N_EN` string, honoured by `.lang-en .camp-header`'s
   `pre` under 600px and collapsed to a space everywhere else. The gap under them is
   `FOLD4_HEADER_GAP_MOBILE_EN_PX` (`fold4HeaderGapMobilePx()`).
+- **The phone reads left-to-right too.** @fold3/@fold4 rows are swatch-then-label with
+  the label ranged left (`fold3SwatchLeads()` is true at both breakpoints; the FLY
+  hand-off anchors the label's LEFT edge, and `.lang-en .group-label.is-mfly-topanchor`
+  drops the shared `translateX(-100%)`). The legend sheet's rows are `direction: ltr`
+  per row, so the camps keep their sides. At @fold12 the pill row starts at the left and
+  scrolls rightward (`.lang-en #page9ZoneBelow`), and the ghost title block, the stuck
+  title and the action prompt range left — the stuck title travels to the LEFT edge, by
+  `--p9-title-flush` negated. The phone's @fold12 title is «What is an extreme action to
+  you?», short enough to stay on one line.
+- **Phone @fold12's left edge is 12px**, the language button's — the pinned title
+  (its stick transform carries the extra 12px), the action prompt and the first pill all
+  start on it, not on the card column's 24px.
 - **Copy is English.** The title blocks, hero and share block are translated in
   `en/index.html` itself. Strings the scripts render (camp headers, group labels, legend
   controls, category pills, the @fold12 subtitle) go through `tr()` in `js/i18n.js` —

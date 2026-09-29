@@ -225,7 +225,7 @@
                  extreme ones", not "sort both piles", so the two-clause desktop
                  question asks more than the fold delivers there (and wraps to
                  three lines on a phone). -->
-            <h2 class="section-title text-card-frame"><span class="copy-desktop">What do you consider a legitimate action, and what do you consider an extreme one?</span><span class="copy-mobile">What do you consider an extreme action?</span></h2>
+            <h2 class="section-title text-card-frame"><span class="copy-desktop">What do you consider a legitimate action, and what do you consider an extreme one?</span><span class="copy-mobile">What is an extreme action to you?</span></h2>
             <p class="page9-header-subtitle">Drag the types of action you consider extreme</p>
           </div>
         </div>
@@ -378,7 +378,7 @@
       h.endsWith(".local") || /^10\./.test(h) || /^192\.168\./.test(h) ||
       /^172\.(1[6-9]|2\d|3[01])\./.test(h);
     if (!local) return;
-    ["_debug-bus.js", "_debug-inspect.js", "_debug-camp-names-en.js"].forEach(function (src) {
+    ["_debug-bus.js", "_debug-inspect.js"].forEach(function (src) {
       // Cache-busted: VS Code's built-in browser keeps serving a stale harness
       // script despite the dev server's no-cache headers, replaying old state.
       document.write('<script src="' + src + '?v=' + Date.now() + '"><\/script>');

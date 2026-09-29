@@ -3730,8 +3730,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   :root {
     /* 24, manual/-baked 2026-09-14: the מקרא card no longer sits above the
        title, so the whole @fold12 header block moved up. The tray band follows
-       (top 80 here, P9_TRAY_TOP_M in page9.js — keep the two in step). */
-    --card-top: 24px;
+       (top 96 here, P9_TRAY_TOP_M in page9.js — keep the two in step). */
+    --card-top: 40px;   /* 16px lower than the first bake (24), both languages: the pinned title clears the language button. Rides with .page9-tray's top and P9_TRAY_TOP_M (page9.js) */
   }
 
   /* Figma node 294-1279 ("dragcard" in the full @fold12 frame): 16px Assistant
@@ -4050,7 +4050,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     /* NOT a bottom sheet on mobile: Figma node 294-1272 pins the pills as a
        band directly under the title card, above the docked tooltip frame (which
        steps down out of the way — p9TooltipDropTrigger, js/groups.js) and above
-       the dot grid. 80px is P9_TRAY_TOP_M in page9.js, which derives the
+       the dot grid. 96px is P9_TRAY_TOP_M in page9.js, which derives the
        tooltip's drop spot and the grid's top from it; the two must stay in step
        (js/fold11.js's slide-out mirrors it too).
        THE BAND DOES NOT SLIDE. Its transform is the at-rest value in BOTH
@@ -4065,7 +4065,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        in on a diagonal instead of going up and then left.
        Removed — don't reintroduce: `translate(-50%, calc(-100% - 116px))` plus
        a `transform` transition here. */
-    top: 80px;
+    top: 96px;   /* = P9_TRAY_TOP_M (page9.js); 16px lower than the first bake (80), with --card-top */
     bottom: auto;
     transform: translate(-50%, 0);
     /* One rule, on the bottom edge only (Figma node 294-1272) — it separates the
@@ -5279,12 +5279,13 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   left: 12px;
   z-index: 1007;
   /* Look baked from the lang-button manual/ harness, 2026-09-29: grey letters
-     on NO fill (the page shows through), weight 550. Colours, weight, outline,
+     on a fill in the PAGE's own colour (var(--bg) — solid, so nothing scrolling
+     under the button shows through it), weight 550. Colours, weight, outline,
      padding and corners are shared by both breakpoints; only the letter SIZE is
      per breakpoint — 13px here (phone), 12px on desktop below. */
   font: 550 13px/1 'Assistant', sans-serif;
   color: #8f8f8f;
-  background: transparent;
+  background: var(--bg);
   border: 1px solid rgba(0, 0, 0, 0.25);
   border-radius: 4px;
   padding: 5px 8px;
@@ -5421,7 +5422,65 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     white-space: pre;
     text-align: center;
     direction: ltr;
-    font-size: var(--en-camp-size, 18px);
-    line-height: var(--en-camp-lh, 1.15);
+    line-height: 1.15;
+  }
+}
+
+/* English page, PHONE only — left-to-right reading order. */
+@media (max-width: 600px) {
+  /* @fold3/@fold4 rows: the flying label is anchored by its LEFT edge (it trails
+     right of its swatch — updateGroups), so it drops the shared translateX. */
+  .lang-en .group-label.is-mfly-topanchor {
+    transform: none;
+  }
+  /* The legend sheet: swatch first, label ranged left. Set per ROW, not on
+     .fold6-mlegend-rows, so the two camps keep their sides. */
+  .lang-en .fold6-mlegend-row {
+    direction: ltr;
+  }
+  .lang-en .fold6-mlegend-label {
+    text-align: left;
+  }
+  .lang-en .fold6-mlegend-data-head,
+  .lang-en .fold6-mlegend-data-body p {
+    direction: ltr;
+    text-align: left;
+  }
+  /* @fold12: the ghost title block, the stuck title and the action prompt all
+     range LEFT. The stuck title travels to the LEFT edge, so the measured flush
+     distance is applied negated. */
+  .lang-en .text-card-frame.fold12-ghost {
+    direction: ltr;
+    text-align: left;
+  }
+  .lang-en .page9-title-row .text-card.is-stuck .text-card-frame {
+    transform: translateX(calc(-1 * var(--p9-title-flush, 0px)));
+  }
+  .lang-en .page9-title-row .page9-header-subtitle {
+    text-align: left;
+  }
+  /* @fold12's pill row starts at the LEFT and scrolls rightward; the rule under
+     it draws in from the left to match. */
+  .lang-en #page9ZoneBelow {
+    direction: ltr;
+  }
+  .lang-en .page9-tray::after {
+    transform-origin: left center;
+  }
+}
+
+/* English page, PHONE: @fold12's left edge is the language button's (12px), not
+   the card column's 24px — the pinned title, the action prompt and the first
+   pill all start on it. The title is carried there by its own stick transform
+   (the measured flush distance, negated, plus these 12px). */
+@media (max-width: 600px) {
+  .lang-en .page9-title-row .text-card.is-stuck .text-card-frame {
+    transform: translateX(calc(-1 * var(--p9-title-flush, 0px) - 12px));
+  }
+  .lang-en .page9-title-row .page9-header-subtitle {
+    margin-left: -12px;
+  }
+  .lang-en #page9ZoneBelow {
+    padding-inline: 12px;
   }
 }

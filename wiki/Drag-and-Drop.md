@@ -981,7 +981,7 @@ This is the same suppression the graphic column carries for @fold8's loupe.
   trailing the docked tooltip frame in its dropped-for-@fold12 spot. The frame's expanded
   state overlays this grid rather than moving it (hence the *collapsed* height) — see
   [Timeline](Timeline.md).
-- `p9DockTopM()` → `P9_TRAY_TOP_M (116) + p9TrayH() + P9_TRAY_TOOLTIP_GAP_M (20)` — where the
+- `p9DockTopM()` → `P9_TRAY_TOP_M (96) + p9TrayH() + P9_TRAY_TOOLTIP_GAP_M (20)` — where the
   frame comes to rest below the pill band. (Matches `P9_TOOLTIP_GRID_GAP_M` (20) — one rhythm; change them together.) The extreme grid follows the frame since it derives from this. The tray height is read with `offsetHeight`, which
   is transform-independent, so this is right even while the band is still off-screen.
 - `p9MidY(H, W)` → `H - P9_LEGIT_H_M` (54) with `P9_LEGIT_SPREAD_M` on (the current state —
@@ -1343,6 +1343,8 @@ layouts:
   `ACROSS_SPEED × lead` moves. The whole run measures **1140ms with zero overlapping pill
   pairs**, tuned down from 1920ms (0.8/1.6/140) via 1430ms (1.2/2.4/110) — every step
   re-measured for collisions rather than reasoned about.
+
+**English page:** the convoy is the same one mirrored about the screen's centre line — the row starts at the left (`.lang-en #page9ZoneBelow` is `direction: ltr`), the queue within a column row is leftmost first (`p9TrainOrder`), and the cabins travelling RIGHT are the ones that climb first (`upFirst`, `p9TrainToggle`). Speeds, lead and phases are shared.
 
   **Removed — don't reintroduce:** a single quadratic bezier through `{column x, row y}`. It
   blends the two moves, which resolves the vertical early and then plays the whole long

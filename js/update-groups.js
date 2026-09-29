@@ -86,10 +86,10 @@ function fold6MFlyT(flyStart, flyLen) {
   return t;
 }
 
-// English page, desktop only: @fold2/@fold3's rows read swatch-then-label.
-// Mobile keeps the shared layout — its FLY hand-off anchors the label's right
-// edge and is tuned to that.
-function fold3SwatchLeads() { return isEnglish() && !isMobile(); }
+// English page, both breakpoints: @fold2/@fold3's rows read swatch-then-label.
+// On the phone that also turns the FLY hand-off around — see the flying branch
+// in updateGroups, which anchors the label's LEFT edge there.
+function fold3SwatchLeads() { return isEnglish(); }
 
 function updateGroups() {
   if (ugRanThisFrame) {
@@ -305,7 +305,7 @@ function updateGroups() {
   // run. Not a grid column any more — the labels are what has to look
   // centered under the title at @fold3, not the (by then vanished) cells.
   // labelW is the camp's WIDEST label, so all 3 rows share one rect column.
-  // ENGLISH DESKTOP mirrors the pair (fold3SwatchLeads): the rect LEADS on the
+  // The ENGLISH page mirrors the pair (fold3SwatchLeads): the rect LEADS on the
   // left with its label trailing right, so the pair spans [x, x + swatch + gap +
   // labelW] and the rect sits LEFT of the anchor by that same half run.
   const campFold3X = (rows) => {
@@ -685,7 +685,7 @@ function updateGroups() {
     // fold-4 legend move instead of snapping — and so it never happens on
     // mobile, where there are no two columns to mirror between: the row keeps
     // its column layout the whole way into the מקרא button.
-    // ENGLISH DESKTOP (fold3SwatchLeads): left-to-right reading order, so the
+    // ENGLISH PAGE (fold3SwatchLeads): left-to-right reading order, so the
     // camp columns START mirrored (1 — swatch on the left, label to its right).
     // The change rows simply stay that way into the left legend column; the
     // coalition rows glide back to 0 for the right-edge column, on the same
@@ -728,7 +728,15 @@ function updateGroups() {
       // lxRight is the panel label's own right edge.
       const rightRest = -labelGap;
       const rightTgt  = flyTgt ? flyTgt.lxRight : rightRest;
-      item.label.style.left  = `${rightRest + (rightTgt - rightRest) * flyT}px`;
+      // ENGLISH PAGE: the label trails to the RIGHT of its swatch, so the edge
+      // that faces the swatch — and the one to anchor — is its LEFT one
+      // (.lang-en .group-label.is-mfly-topanchor has no translateX). Extra width
+      // then sheds rightward, off the far end, for the same reason as above.
+      const leftRest = swatchSize + labelGap;
+      const leftTgt  = flyTgt ? flyTgt.lx : leftRest;
+      item.label.style.left  = fold3SwatchLeads()
+        ? `${leftRest + (leftTgt - leftRest) * flyT}px`
+        : `${rightRest + (rightTgt - rightRest) * flyT}px`;
       item.label.style.right = "";
     } else {
       const labelLeft = labelLeftRest();

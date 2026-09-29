@@ -120,6 +120,12 @@ ends where the dots do. The headline cards stay visible in the zoomed-out view. 
 dated past the data is parked three rows short of the end, and keeps that distance in rows
 of the plan it is drawn in.
 
+**The last event's dot sits exactly on the end of the axis**, so `p7RowY` returns the field's
+own end for it (`p7VertTopY + p7VertFieldLen()`) and mobile's build-in gate
+(`p7AxisIntroReveal`) allows half a pixel. Its y and the wipe's edge used to reach that point
+by two different sums and came out a rounding error apart on some screen sizes; the dot was
+then drawn at radius 0 in the zoomed-out view.
+
 **The hover bulge counts cells in the layout the dots are standing in.** The push is by cell
 distance from the hovered dot, and a dot's neighbours in the fitted view are not its
 neighbours in the tall field, so once the beat is past halfway (`p7ZoomOutT >= 0.5`)
@@ -418,7 +424,8 @@ axis so the first event's label can center over its own circle).
   is no leave beat and therefore no `P7_AXIS_LEAVE_MODE` collapse either (the collapse is
   driven by that same presence value). It is a fixed label on the head of the axis, not an
   event that plays. Only
-  **הכרזת הרפורמה** carries it — that event is 3 days after `minDate`, hard against the top
+  **הכרזת הרפורמה** carries it (titled **«הכרזת הרפורמה המשפטית»** on the phone, its
+  `labelMobile`; desktop keeps `label`) — that event is 3 days after `minDate`, hard against the top
   of the axis, where a side plaque has the year label and the screen edge to fight.
   `p7AxisEvMobileAbove(ev)` / `p7AxisHasMobileAbove()`, mobile only.
 - **The box reserves the last plaque's overhang** — `p7AxisLastPlaqueOverhangPx()`
@@ -547,7 +554,7 @@ axis so the first event's label can center over its own circle).
   crossing the axis and its cards collapse at once, even while the squares are still
   flying back), falling back to `p7HasEngaged`. Scrolling back above
   the trigger plays the same wipe in reverse, **faster than the build-in** —
-  `P7_AXIS_OUTRO_DURATION` 1250 ms, its own constant (tuned by eye). Don't
+  `P7_AXIS_OUTRO_DURATION` 800 ms, its own constant (tuned by eye). Don't
   re-tie it to the intro: 500 ms snapped the axis away the moment @fold11's title block hit
   and read as a glitch, while the intro's full 2800 ms left it still undrawing into the
   bridge glide. Full-scale; an interrupted intro reverses over only its
@@ -1236,7 +1243,7 @@ camps' packs meet on the centre line instead of straddling the corridor.
 - **The axis un-wipes, it never snaps.** `p7AxisShouldShow()` returns false while
   `p7Grid.on`, which routes @fold9 through the reverse wipe every other axis
   exit already uses (`p7AxisTriggerIfNeeded` → `p7AxisReverseOut` →
-  `p7AxisOutroStart`, `P7_AXIS_OUTRO_DURATION` 1250ms, scaled by whatever intro
+  `p7AxisOutroStart`, `P7_AXIS_OUTRO_DURATION` 800ms, scaled by whatever intro
   progress it had). Scrolling back out re-triggers the build-in from wherever
   the reverse got to, so the pair is reversible mid-flight like everything else —
   and **on the same beat as the dots**: `p7AxisShouldShow()` does not wait for
@@ -1601,6 +1608,12 @@ camps' packs meet on the centre line instead of straddling the corridor.
   flies. Measured 0 dots off screen and ~2k overlapping pairs — neighbours
   touch, nothing piles up or escapes. Lower `P7_MORPH_PUSH_MAX` → gentler
   early growth; `1` = size can't lead position at all.
+  **The throttle is skipped on an in-place resize** — @fold10's flatten and its grow-back
+  (`p7GridMorph.flat` with no `travel`): nothing is flying, the dots already stand at grid
+  spacing, and the position window they would be measured against (`fly`) is not on that
+  morph's clock at all (`p7MorphTotalMs` is the size clock alone). Throttled, a big dot
+  growing back while scrolling up through @fold10 was still at about half its size when the
+  clock ran out and snapped the rest of the way — on a phone the top tier reached 22px of 42.
 - **Hover** while on: the bulge is off (`p7BulgeTick` sees no hovered
   event); hover dim and the tooltip work on @fold9 too — `doHitTest` and the
   scroll-hide guard accept `currentPage === 10` as well as 8, `posMap` entries
@@ -2239,7 +2252,16 @@ longer gates the wipe in either direction — it is now the *consumer* of a line
 Read live off the element's `getBoundingClientRect().bottom` rather than off a scroll trigger's
 progress, so it means exactly what it says at any viewport height.
 
-`p7AxisIntroDuration()` (1750ms desktop / 2800 mobile) is the wipe itself.
+`p7AxisIntroDuration()` (1750ms at both breakpoints) is the wipe itself.
+
+**The wipe travels `p7AxisWipeSpan(H)`.** Desktop: the whole field, top to end. **Mobile: only
+the part of the axis that is on screen** (`max(topY, 0)` → `min(field end, H)`). A phone's field
+is over twice the screen's height (~1885px on an 844px screen), so a wipe over all of it spent
+most of its time on line nobody can see. Both the clip in `p7DrawYearAxisVertical` and
+`p7AxisIntroEdgeY(H)` read the span, so they cannot drift apart.
+**Removed — don't reintroduce (mobile):** wiping the full field length — the reverse wipe undrew
+off-screen line for ~700 of its 800ms and took the visible part in the last ~100, which read as
+the axis snapping off on the way back up.
 
 **The axis EVENTS ride the wipe too** (mobile only). The wipe's own clip is restored *before*
 `p7DrawAxisEventsVertical` runs, so every dot and card used to be there from the first frame of
@@ -2247,7 +2269,13 @@ the build-in and only the line drew top to bottom. `p7AxisIntroEdgeY(H)` — the
 the clip uses, so it is exactly in step with the drawn edge — feeds
 `p7AxisIntroReveal(i, y, H)`, which multiplies the marker's **radius** (never its alpha — dots
 arrive by size) and the card's presence, so the dots grow in and the plaques open as the line
-reaches them. **Desktop gates the same way, but on the trigger itself**: in
+reaches them. The reveal is **reversible**: each event holds its own 0..1 value
+(`p7AxisIntroAt[i]`) that walks toward its target at the `P7_AXIS_INTRO_DOT_MS_MOBILE` (300) rate
+from wherever it is, and the edge it is tested against is the reverse wipe's too — so on the way
+back up each dot shrinks as the undrawing line passes it. A value not stepped for 250ms (the axis
+was off screen) restarts from 0. **Removed — don't reintroduce:** returning 0 outright whenever
+the axis is leaving — every event dot and card vanished on the reverse-crossing frame while the
+line was still undrawing. **Desktop gates the same way, but on the trigger itself**: in
 `p7UpdateAxisEventTriggers(W, H)` an event cannot become `reached` (and in
 `p7DrawAxisEventsVertical` its marker's `reachedT` cannot rise) while `p7AxisIntroEdgeY(H)` is
 still above its row, **and** — coming back up out of @fold9 — not before the grid's OFF morph has
@@ -2299,7 +2327,22 @@ loaded after `page7.js`):
 | trigger | fires at | drives |
 |---|---|---|
 | `p7AxisFlyTrigger(i)` / `p7AxisFlyT(i)` | the **dot** — `reachRow`, no offset | the plaque's glide from beside the dot to above it, `state.reachedT`, and the marker's recolour. Also what `p7AxisEventOpacity(i)` returns. |
-| `p7AxisCardTrigger(i)` / `p7AxisLeaveT(i)` | `reachRow + P7_AXIS_TRIGGER_ROW_OFFSET` | the card **leaving** (`P7_AXIS_LEAVE_MODE`). |
+| `p7AxisCardTrigger(i)` / `p7AxisLeaveT(i)` | `reachRow + p7AxisTriggerRowOffset()` | the card **leaving** (`P7_AXIS_LEAVE_MODE`). |
+| `p7AxisDescCloseTrigger(i)` | `reachRow − p7AxisDescCloseLeadRows()` (40px before the dot, `P7_AXIS_DESC_CLOSE_LEAD_PX_MOBILE`) | the open card **closing** to its title — see below. |
+
+**A side plaque stands open ahead of the fill, and closes when the fill reaches its dot.**
+Every mobile event except the two pinned ones (`mobileAbove` / `mobileBelow`, the first and
+the last) is drawn with its `desc` under the title while it is unreached. **Close first, then
+fly**: the two are separate triggers on separate rows, and each waits for the other so the
+order holds at any scroll speed — the fly does not start until the card has closed, and on
+the way back up the card does not re-open until it has flown home. A little before the dot
+`p7AxisDescCloseTrigger(i)` plays desktop's description beats backwards on
+desktop's clock (`P7_AXIS_DESC_MS` 700, `P7_AXIS_DESC_BEATS`: the copy un-types, then the card
+shrinks), reversible. It reads the trigger's **raw** progress and re-eases per window. The
+card grows **downward** from the title, since the rows under an unreached dot are still
+empty and the ones above it are not, and its axis-side edge never moves; the description
+uses `P7_AXIS_DESC_TYPE` and is set against that edge, as on desktop. The fly and the
+leave run as before, on the animated size.
 
 Two triggers, not one clock sliced into windows: the offset knob has to move the leave point
 **without dragging the fly with it**, which a single clock cannot do. Verified — offset `0`:
@@ -2327,7 +2370,7 @@ side-plaque fly now all run off the one trigger. Don't reintroduce a `curY` comp
 
 | knob | baked | what it does |
 |---|---|---|
-| `P7_AXIS_TRIGGER_ROW_OFFSET` | `25` | Where an event fires, in **rows relative to its own dot** (`p7BuildVerticalLayout`'s `reachRow`). Positive = the fill edge must travel that many rows *past* the dot first; negative fires early, above it. |
+| `P7_AXIS_TRIGGER_OFFSET_PX_MOBILE` | `86` | **A distance, turned into rows by the live pitch** (`p7AxisTriggerRowOffset()` = `round(86 / cellBase)`): it was picked as 25 rows when a mobile row was 3.45px, and the mobile fit solves the pitch per screen now. Where an event fires, in **rows relative to its own dot** (`p7BuildVerticalLayout`'s `reachRow`). Positive = the fill edge must travel that many rows *past* the dot first; negative fires early, above it. |
 | `P7_AXIS_CARD_MS` | `480` | Beat length, shared by both triggers. |
 | `P7_AXIS_LEAVE_MODE` | `'collapse'` | How a headline card leaves — a trigger-driven beat in every mode; they differ in what the beat does. `'collapse'` scales the card into its own axis dot with **no fade**, so it visibly goes back where it came from. Also `'collapseY'` / `'collapseX'` (one axis only), `'collapseFade'`, and `'fade'` (the old opacity-in-place). Applied by `p7AxisLeaveApply`, which installs a canvas transform — the caller must `save()`/`restore()`. It clamps the scale at 0.0001: a zero-determinant transform is non-invertible and Chrome drops the draw outright, which flashes the card back at full size on a reversal. |
 | `P7_AXIS_MARKER_UNREACHED_MOBILE` (read through `p7AxisMarkerUnreached()`, which is `isMobile() && …` — so this is **mobile-only**; desktop never draws an unreached marker) | `true` | Draw an event's marker **before** the fill reaches it, matching the unfilled axis line, turning black as the fill arrives (`p7AxisMarkerColorAt`). The colour is **opaque, never rgba**: the marker sits *on* the line, and translucent-over-translucent composites — the alphas stack and the unreached dot shows as a dark blob instead of matching. So the flat equivalent is computed by hand against the paper (`P7_PAPER_RGB`, `--bg` #FDFCFF): `rgb(197,197,199)` unreached → `rgb(0,0,0)` reached. Turning this on also suppresses the old **lead marker** in the card loop, which painted a second dot at a hardcoded radius in solid `#000` on top of the tuned one — that overpaint is why the marker knobs appeared to do nothing. |

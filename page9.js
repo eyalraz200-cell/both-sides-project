@@ -184,7 +184,7 @@ var P9_SCOPE_GROW_PITCH_M = false;
 const P9_SCOPE_CELL_STEPS_M = [8, 7, 6, 5, 4, 3.5, 3, 2.5, 2, 1.5, 1];  // no floating pill labels on mobile, so the gap is purely visual (widened from 40 — one-column sides sat too close to center)
 // The tray band's top rule (Figma's Line 15) — must match `top` in .page9-tray's
 // ≤600px rule, which is the thing that actually positions it.
-const P9_TRAY_TOP_M          = 80;  // manual/-baked 2026-09-14; rides with the mobile --card-top (24) and .page9-tray top (80), style.css
+const P9_TRAY_TOP_M          = 96;  // rides with the mobile --card-top (40) and .page9-tray top (96), style.css — all three 16px lower than the 2026-09-14 bake (80 / 24 / 80) so the pinned title clears the language button
 const P9_TRAY_TOOLTIP_GAP_M  = 20; // band's bottom rule -> docked frame's top (Figma had 28; tightened by eye)
 // The @fold12 hint line's height (`.is-hint .p7-inspect-hint`, style.css). The
 // extreme grid reserves only THIS under the band, not the whole collapsed frame
@@ -1500,7 +1500,7 @@ function p9BulgeTick() {
   // MOBILE has no hover: the bulge is born on the picker's held dot instead
   // (p7Inspect, page7.js), so a pick swells AND pushes its neighbours aside
   // through the very same column code the desktop hover uses.
-  const picked = (typeof p7InspectPage === "function" && p7InspectPage() === 12 &&
+  const picked = (typeof p7InspectPage === "function" && p7InspectPage() === 13 &&
                   p7Inspect.dragging) ? p7Inspect.event : null;
   const hovered = p9ScopeTiered() ? null : ((isMobile() ? picked : p9.hoveredEvent) || null);
   // `legit`: born on a strip dot (p9.hoveredLegit, set by the hit-test) — the
@@ -2395,7 +2395,7 @@ function drawPage9(ctx, W, H) {
     // what says the covered ones are not the subject.
     // Only for a pick the columns' bulge has NOT claimed (the legit bar, or the
     // tiers on) — a column pick already swells and pushes through p9BulgeT.
-    if (p7Inspect.event === e && typeof p7InspectPage === "function" && p7InspectPage() === 12 &&
+    if (p7Inspect.event === e && typeof p7InspectPage === "function" && p7InspectPage() === 13 &&
         !(p9BulgeT.get(e) && p9BulgeT.get(e).inCols)) {
       const bulge = typeof p7BulgeT !== "undefined" ? p7BulgeT.get(e) : null;
       if (bulge && bulge.t > 0) {
@@ -4743,7 +4743,9 @@ function p9TrainOrder(blockPos) {
     .sort((a, b) => {
       const dy = a.p.y - b.p.y;
       if (Math.abs(dy) > P9_TRAIN_ROW_EPS) return dy;   // higher row leaves first
-      return b.p.x - a.p.x;                             // then rightmost first (RTL)
+      // …then rightmost first (RTL). The English page runs the whole convoy
+      // MIRRORED, so there it is leftmost first.
+      return isEnglish() ? a.p.x - b.p.x : b.p.x - a.p.x;
     })
     .reduce((seq, e, n) => { seq[e.i] = n; return seq; }, []);
 }
@@ -4816,7 +4818,14 @@ function p9TrainToggle(next) {
     // mirror rather than a second animation: a cabin that went up-then-left on
     // the way in is travelling right on the way out, so it runs across first
     // and drops second — the same path, played backwards.
-    const upFirst = to[i].x <= from[i].x + 0.5;
+    //
+    // ENGLISH PAGE: the row runs left-to-right, so the convoy is this one
+    // reflected — the cabins travel RIGHT, and it is those that climb first; the
+    // single cabin travelling left runs across first. Same paths, same phases,
+    // same timings, mirrored about the screen's centre line.
+    const upFirst = isEnglish()
+      ? to[i].x >= from[i].x - 0.5
+      : to[i].x <= from[i].x + 0.5;
     return {
       at:  lead * P9_TRAIN_LEAD_MS,
       upFirst,
