@@ -59,6 +59,12 @@ The per-span table (`p7FitTable()`: rows and busiest-row count) depends on the d
 is built once. `p7DesktopFitSolve(sideW, sideH)` is the solve itself and writes nothing;
 `p7SolveDesktopFit` is the layout's entry point and stores its answer.
 
+**A year takes exactly the rows its days use.** With a fractional span, `ceil(days / span)`
+reserves a row for the sliver of the last day that spills past a row boundary, and no day ever
+starts in it, so every year ended on an empty row. `p7VertRowPlan` counts the row the year's
+last day starts in plus the rows that day owns, which is the same number whenever the span is
+whole.
+
 ### Mobile: the fit
 
 The phone runs the same three steps (`p7SolveVerticalSq` → `p7SolveMobileFit`, page7.js →

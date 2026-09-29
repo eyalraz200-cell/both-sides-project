@@ -534,7 +534,11 @@ function p7VertRowPlan(CELL) {
     const date = new Date(minMs + d * 86400000);
     const jan1 = date.getUTCMonth() === 0 && date.getUTCDate() === 1;
     if (d === 0 || jan1) {
-      if (d > 0) segStart = segStart + Math.ceil(segDay / dpr);
+      // Rows the year that just ended really USED: the row its last day starts
+      // in, plus the rows that day owns. Not ceil(days / span) — with a
+      // fractional span that reserves a row for a sliver of the last day that
+      // no day ever starts in, and every year ended on an empty row.
+      if (d > 0) segStart = segStart + Math.floor((segDay - 1) / dpr) + Math.max(1, Math.floor(1 / dpr));
       yearRow.set(date.getUTCFullYear(), segStart);
       segDay = 0;
     }

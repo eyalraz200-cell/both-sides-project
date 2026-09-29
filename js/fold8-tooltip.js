@@ -253,6 +253,8 @@ function tooltipFitFold7() {
   return fold9FlyTrigger.currentT() < TOOLTIP_DOCK_HANDOVER;
 }
 
+// The last spot solved off the squares — what the frame keeps once they are gone.
+let tooltipFold7LastSpot = null;
 function tooltipDockTopPx(el) {
   const t = typeof fold9FlyTrigger === "undefined" ? 1 : fold9FlyTrigger.currentT();
   if (t >= 1 || typeof fold6SquareEls === "undefined") return tooltipDockDropPx(tooltipDockRestPx());
@@ -271,10 +273,17 @@ function tooltipDockTopPx(el) {
     // rest is at the bottom of the screen now, and clamping to it would drag
     // every @hidden-hover frame down there too.
     const spot = tooltipFold7SpotPx(TOOLTIP_DOCK_DEMO_SIDE, TOOLTIP_DOCK_SQUARES_GAP_PX, el.offsetHeight);
-    // Nothing laid out yet — no squares to sit against.
-    if (spot === null) return tooltipDockDropPx(tooltipDockRestPx());
+    // No squares to sit against. Before the first solve that means "nothing
+    // laid out yet" and the rest spot is all there is. AFTER one it means the
+    // squares have just shrunk away (scrolling back up out of @fold5) while the
+    // frame is still closing — it stays where it was and closes there. Falling
+    // back to the rest spot sent it 500px down the screen for its last frames.
+    if (spot === null) {
+      return tooltipDockDropPx(tooltipFold7LastSpot !== null ? tooltipFold7LastSpot
+                                                             : tooltipDockRestPx());
+    }
     tooltipFold6FrozenH   = el.offsetHeight;
-    tooltipFold6TopFrozen = spot;
+    tooltipFold6TopFrozen = tooltipFold7LastSpot = spot;
   }
   // NO TRAVEL. The frame used to lerp from its @hidden-hover spot down to the dock over
   // the fly — it flew. It now COLLAPSES in place at the @hidden-hover spot over the
@@ -456,6 +465,11 @@ let fold8FlyMoveT = 0;
 function fold8PositionTooltip(sq) {
   if (tooltipDockMobile(fold8TooltipEl)) return;
   let sqRect = sq.getBoundingClientRect();
+  // The square has gone (shrunk to nothing, or not laid out) while the callout
+  // is still closing — scrolling back up out of @fold5. There is nothing to
+  // measure, so the callout keeps the position it has and closes there; solving
+  // off an empty rect put it at the screen's top-left corner for its last frames.
+  if (!sqRect.width && !sqRect.height) return;
   // A @hidden-hover hover: anchor to the square's FINAL swollen size around its
   // centre, so the callout sits still while the swell animates.
   if (fold7HoverIdx !== null && fold9FlyTrigger.currentRaw() <= 0) {

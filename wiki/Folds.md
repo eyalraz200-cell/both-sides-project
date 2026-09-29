@@ -71,6 +71,16 @@ crossing point differs by viewport.
 `{.677, .219}`, `headerChange` `{.781, .219}`. The two headers have their **own** beats,
 so one camp can start before the other.
 
+**@fold5 — the example tooltip closes where it stands.** Scrolling back up out of @fold5
+the sample squares shrink away while the tooltip is still closing, so for its last frames
+there is no square to measure. Both placements then **keep the position they have**:
+desktop's `fold8PositionTooltip` returns before writing when square 0's rect is empty, and
+mobile's `tooltipDockTopPx` falls back to `tooltipFold7LastSpot` (the last spot solved off
+the squares) rather than the rest spot. **Removed — don't reintroduce:** solving off the
+empty rect, which put the callout at the screen's top-left corner (desktop, clamped to
+8px/8px) or at the bottom dock (mobile) for the frames before it disappeared. It only
+showed on a slow scroll (js/fold8-tooltip.js).
+
 **@fold4 — the camp headers un-type while the groups fly, at both breakpoints and in
 both directions.** The headers stay exactly where @fold2 put them and lose their characters
 from the end back to the start. Their progress *is* the groups' flight progress — `e6Fly`,
