@@ -21,9 +21,9 @@ function p7ScrubEaseIn(t) {
   return P7_SCRUB_EASE_IN_SPAN * u * u * (2 - u);
 }
 
-// How far (in viewports) before @fold11 takes the screen the dataset finishes.
+// How far (in viewports) before @fold9 takes the screen the dataset finishes.
 // 0 would land t=1 exactly as #page-9's bottom leaves the viewport top, which is
-// the same instant @fold11's card crosses its 0.5 threshold and the size grid
+// the same instant @fold9's card crosses its 0.5 threshold and the size grid
 // takes over — too early: the year axis's own fill trails p7.currentDate by the
 // p7AxisFillLagDamping() lerp (page7.js), so it would still be visibly filling
 // when the grid started. Half a viewport of scroll past t=1 lets the fill settle
@@ -35,7 +35,7 @@ const P7_SCRUB_END_LEAD_VH = 0.5;
 function page7UpdateFromScroll() {
   const rect = page7Section.getBoundingClientRect();
 
-  // t=0 the instant @fold9's date-range card's centre clears the top of the viewport
+  // t=0 the instant @fold7's date-range card's centre clears the top of the viewport
   // (the same instant p7HasEngaged flips true below) rather than when
   // #page-9's own top reaches the viewport top — #page-7 (fold 9) keeps
   // scrolling for a while after its title clears before #page-9 actually
@@ -49,11 +49,11 @@ function page7UpdateFromScroll() {
   // t=1 is anchored to #page-9's bottom reaching P7_SCRUB_END_LEAD_VH of a
   // viewport above the viewport bottom — see that constant. It used to be the
   // bottom reaching the viewport BOTTOM (lead = 1), which left a whole viewport
-  // of scroll where the dataset had already finished and @fold11's card hadn't
+  // of scroll where the dataset had already finished and @fold9's card hadn't
   // arrived yet — dead scroll. The section is shortened/lengthened in step with
   // the lead (style.css .text-section.page7-scrub), so the range — and with it
   // the scrub's pace — is unchanged whatever the lead is.
-  // The card is @fold9's date-range card (fold9AxisCardEl, js/groups.js) — the
+  // The card is @fold7's date-range card (fold9AxisCardEl, js/groups.js) — the
   // same element p7UpdateEngagement measures, so t=0 and engagement coincide.
   const titleTop = (typeof fold9AxisCardEl !== "undefined" && fold9AxisCardEl) ? fold9AxisCardEl.getBoundingClientRect().top : rect.top;
   const gap = rect.top - titleTop;

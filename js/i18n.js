@@ -25,7 +25,7 @@ const I18N_EN = {
   "סגירת המקרא": "Close the legend",
   "איסוף הנתונים": "Data collection",
   "הצגת גודל האירועים": "Show event scale",
-  // @fold14
+  // @fold12
   "גררו סוגי פעולות הנחשבות קיצוניות בעיניכם": "Drag the types of action you consider extreme",
   "סמנו פעולות הנחשבות לקיצוניות בעיניכם": "Mark the actions you consider extreme",
   // Share row

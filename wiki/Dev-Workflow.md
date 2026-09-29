@@ -96,7 +96,7 @@ image by URL, so a changed card only reaches already-shared links under a new fi
 `og:image` must be an absolute URL, so the
 tags hardcode the live GitHub Pages base — `https://eyalraz200-cell.github.io/both-sides-project/`.
 If the site ever moves, those four URLs (two per file) are the only things to update; the
-@fold16 share buttons build their URLs from `location.href` (`p12ShareInit`, page12.js) and
+@fold14 share buttons build their URLs from `location.href` (`p12ShareInit`, page12.js) and
 follow the deploy automatically.
 
 `og:description` / `twitter:description` are the **same sentence on both pages**, and it
@@ -122,7 +122,7 @@ in a completely different file.
 
 A small fixed chip in the **top-left** corner of `index.html` showing which fold you're
 on — `#foldNumberBadge` (`.fold-number-badge` in style.css, driven by
-`updateFoldNumberBadge()` in js/nav.js off `currentPage + 1`).
+`updateFoldNumberBadge()` in js/nav.js). The number is the fold's place among the **visible** sections (`foldNumberOf`), and it follows the **title block**: the badge names the last fold whose card has entered the screen (`foldBadgeIndex`), updated on scroll — not `currentPage`, which flips only when the section reaches mid-screen.
 
 Switched off it is **gone — no dot, no chip** (**removed — don't reintroduce**: the 7px dot that used to stand in for it, invisible on the near-white page); the way back is the harness panel tab's fold-badge switch, which `_debug-bus.js` answers so it survives the last harness being deleted.
 
@@ -149,7 +149,7 @@ badge and never navigates, so desktop had no fold jump at all. The badge is ther
 lives (the drag zone, the timeline and the legend all sit further in). Rows are built from
 the sections themselves — the number plus that fold's own `.section-title`, with the
 `.copy-desktop` half of any breakpoint-split headline stripped out, falling back to the
-section id for the folds that carry no title card (@fold1 and @fold10) — so the list cannot
+section id for the folds that carry no title card (@fold1 and @fold8) — so the list cannot
 drift out of step with `index.html`. The current fold is marked and scrolled to inside
 the panel, so it opens oriented. A click outside, Escape, or picking a row dismisses it.
 The panel is capped at **340px** wide on desktop (a fixed box shrink-to-fits, and the long
@@ -211,7 +211,7 @@ numbers in the source.
   works alongside it. Set `remoteOnly: true` only on explicit request for a page with no
   chrome on it — then `H` summons the panel when no panel tab is open.
 - **Every harness gets a Go button** — it teleports the page to the fold being tuned.
-  Config: `goTo` (selector or fn, e.g. `'#page-13'`), `goLabel` (`'@fold14'`), optional
+  Config: `goTo` (selector or fn, e.g. `'#page-13'`), `goLabel` (`'@fold12'`), optional
   `onGo(el)` to put the fold into the state worth looking at. The scroll is **animated** —
   an instant jump would latch the pins exactly as a load-time jump does. Fires on click
   only, never on load.
@@ -251,6 +251,8 @@ numbers in the source.
 - Bake the **exact px** chosen. Never convert to vh/vw/clamp — the tuning viewport is
   unknown and a converted value re-evaluates differently.
 - Delete the file **and** its `<script>` tag once the decision is made. It never ships.
+  **A pasted Copy IS the decision:** bake the values and remove the harness in the same
+  turn, without asking and without leaving it "in case" (explicit instruction, 2026-09-28).
 
 ### Pop out, and the remote panel tab
 
@@ -276,7 +278,7 @@ for — the **remote panel**:
   describes, so the one file serves every harness.
 - **One tab hosts every harness on the page, one at a time, from a LEFT RAIL.** It asks
   `who` on a shared `harness:__all__` channel; each harness answers with its title and
-  becomes a row in the rail, **labelled with its fold** above its name (`@fold10` /
+  becomes a row in the rail, **labelled with its fold** above its name (`@fold8` /
   `dot size and glow`) — `CONFIG.fold`, or lifted out of the Go label when that names one.
   A vertical list stays readable as harnesses accumulate; the old top strip wrapped into a
   block.
@@ -415,7 +417,7 @@ made the real device the one place the panel could not reach.
   the in-page panel back.
 - `_debug-panel.html` is scaffolding like the rest — delete it with the last `_debug-*.js`.
 
-**Live right now:** none — `index.html` loads only `_debug-bus.js` + `_debug-inspect.js`. On disk but not loaded (re-add its name to the scaffolding block to use it): `_debug-fold-timings-mobile-v3.js` (the panel resolves a harness as `_debug-<title>.js`, so `title` and file name must match — a renamed title with the old file name is silently dropped from the rail) (opening → timeline) — ten sliders, one per animation, each the animation's **full length in ms**; every phase constant inside it scales by the same ratio, and Copy lists the constants each length resolves to. One file per breakpoint, generated from one table; baking a length that differs between them means splitting that constant into a `*_DESKTOP`/`*_MOBILE` pair. The opening plays once, so reload to see it. Every open copy of the page follows the sliders (its `init` adopts any other page's `state` off the harness channel) — the panel tab drives ONE host per title, and with the page open in two places it was moving the copy nobody was watching. · `_debug-hint-band.js` (@fold10, mobile) — the picker's instruction band.
+**Live right now:** none. On disk but not loaded (re-add its name to the scaffolding block to use it): `_debug-fold-timings-mobile-v3.js` (the panel resolves a harness as `_debug-<title>.js`, so `title` and file name must match — a renamed title with the old file name is silently dropped from the rail) (opening → timeline) — ten sliders, one per animation, each the animation's **full length in ms**; every phase constant inside it scales by the same ratio, and Copy lists the constants each length resolves to. One file per breakpoint, generated from one table; baking a length that differs between them means splitting that constant into a `*_DESKTOP`/`*_MOBILE` pair. The opening plays once, so reload to see it. Every open copy of the page follows the sliders (its `init` adopts any other page's `state` off the harness channel) — the panel tab drives ONE host per title, and with the page open in two places it was moving the copy nobody was watching. · `_debug-hint-band.js` (@fold8, mobile) — the picker's instruction band.
 A `compare/` mode pair for the placement (`above` the timeline, shipped, vs `below`) driving
 `P7_HINT_PLACE_MOBILE`, and two `manual/` sliders: `P7_HINT_Y_MOBILE` (the hint up/down) and
 `P7_FIELD_Y_MOBILE` (the whole timeline up/down). Both nudges are positive = down.
@@ -488,7 +490,7 @@ whenever its owner is done with it.
 What the harnesses baked into — so a rebuilt one knows where its numbers land. Each value
 is the live one in code:
 
-- **`_debug-note-width.js`** (desktop, `@fold8`) → `FOLD6_NOTE_WIDTH` = **172** (`js/groups.js`).
+- **`_debug-note-width.js`** (desktop, `@fold6`) → `FOLD6_NOTE_WIDTH` = **172** (`js/groups.js`).
   One knob, the ACLED note's block width, driven through a `window.FOLD6_NOTE_WIDTH_OVERRIDE`
   read in `updateGroups` that came out with the harness. Picked on a 982px-tall window, where
   the two-paragraph copy measures 353px and its foot lands at 921px, 61px clear of the bottom
@@ -499,16 +501,17 @@ is the live one in code:
 |---|---|---|
 | `FOLD2_CAMP_CENTER_GAP_PX` (@fold2/@fold3 half-gap: each camp's centre sits this many px either side of screen centre; mobile computes its own from `FOLD2_CAMP_EDGE_GAP_MOBILE_PX`, and @fold3 from `FOLD3_CAMP_EDGE_GAP_MOBILE_PX` 82) | 180 | `js/groups.js` |
 | `HOVER_DIM_OPACITY` (the shared hover-dim; `HOVER_DIM_BY_ACTOR` overrides per actor) | 0.27 | `js/core.js` |
-| `FOLD8_TOOLTIP_CLEARANCE_PX` (@fold7's measured trigger crossing) | −20 | `js/groups.js` |
+| `FOLD8_TOOLTIP_CLEARANCE_PX` (the hover demo's measured trigger crossing, desktop) | −517 |
+| `FOLD_FRAC_DESKTOP` (desktop trigger line per fold, all 11 keys) | 0.75 | `js/groups.js` |
 | `P7_VERT_SQ_BOOST` (desktop axis length) | 0.88 | `page7.js` |
 | `TOOLTIP_DOCK_BOTTOM_PX` (mobile docked frame's bottom inset) | −18 | `js/fold8-tooltip.js` |
 | `P7_VERT_MOBILE.slotTopPx` (mobile headline slot top) | 78 | `page7.js` |
-| `SBB_TIMELINE_LEFT_PX` (@fold10 outer dot edge, desktop) | 120 | `squareboundingbox.js` |
-| `SBB_TIMELINE_TOP_PX` / `SBB_TIMELINE_BOTTOM_PX` (@fold10 field + axis height, desktop) | 32 / 32 | `squareboundingbox.js` |
+| `SBB_TIMELINE_LEFT_PX` (@fold8 outer dot edge, desktop) | 120 | `squareboundingbox.js` |
+| `SBB_TIMELINE_TOP_PX` / `SBB_TIMELINE_TOP_PX_SMALL` / `SBB_TIMELINE_BOTTOM_PX` (@fold8 field + axis height, desktop; small = viewport ≤ 1550 wide) | 40 / 32 / 32 | `squareboundingbox.js` |
 | `P7_INSPECT_SCRIM` / `P7_INSPECT_HOLE_DOTS` (loupe halo-by-subtraction, `p7DrawInspectScrim`) | 0.76 / 1 | `page7.js` |
 | `P7_SCOPE_BTN_GAP` (scope pill above the right-hand legend) | 22 | `js/groups.js` |
 | `PAGE0_CUE_SCALE` / `PAGE0_CUE_DOT_MS` / `PAGE0_CUE_ROW_STAGGER_MS` / `PAGE0_CUE_EXIT_MS` (@fold1 idle scroll cue) | 0.3 / 940 / 22.5 / 260 | `js/fold1-intro.js` |
-| `P12_PAIR_GAP` / `P12_PAIR_SPREAD` / `P12_DOT_COUNT` (@fold16 couples) | 3 / 2.3 / 9250 | `page12.js` |
+| `P12_PAIR_GAP` / `P12_PAIR_SPREAD` / `P12_DOT_COUNT` (@fold14 couples) | 3 / 2.3 / 9250 | `page12.js` |
 | `FOLD3_BEAT_MS` (@fold3's beat windows, absolute ms) | see file | `js/groups.js` |
 | Hero title/subtitle `font-size`, explicit `line-height`, `top: calc(50% - Npx)` | see file | `style.css` |
 | `GROUPS[].color` + `FOLD4_COALITION_ROWS` / `FOLD4_CHANGE_ROWS` (resolve groups by `actor` through `groupByActor()`, which logs an unknown actor; they keyed off a retyped hex until 2026-09-17, where a re-cased colour silently went `undefined`), `FOLD2_GROUP_CELL` (positions), `FOLD2_FILLER_COLORS` (fillers; a group moved onto a filler-override cell evicts it) | see file | `js/groups.js` |

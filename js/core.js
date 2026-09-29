@@ -67,7 +67,7 @@ window.addEventListener("orientationchange", refreshBreakpointCache, { passive: 
 // js/groups.js, which collapses its duration to 0 and lands every fold on its
 // end state instantly) and CSS transitions (see the reduced-motion block in
 // style.css). What it deliberately does NOT turn off: motion that IS the
-// scroll position — @fold10's scrubbed timeline and @fold13's glide are the
+// scroll position — @fold8's scrubbed timeline and @fold11's glide are the
 // content, not decoration around it, and freezing them would leave nothing to
 // read. Nor page9.js's drop animation, which is finalized.
 const REDUCED_MOTION_MQ =
@@ -81,17 +81,17 @@ function prefersReducedMotion() {
 // drawFoldSplit/drawFold7/drawFold9 are tiny inline background-only
 // functions (see below) — these folds' only visual content is the DOM overlay.
 // Folds whose canvas is *purely* background use drawBackground directly.
-// Index 8 is the new @fold9 (the date-range card): drawFold9 again, so the
+// Index 8 is the new @fold7 (the date-range card): drawFold9 again, so the
 // axis can already be drawing in while that card is on screen.
-// Index 10 is @fold11, the size grid: the same drawPage7 canvas, with p7Grid
+// Index 10 is @fold9, the size grid: the same drawPage7 canvas, with p7Grid
 // on (the axis undraws, the dots re-pack) — see p7SizeGridOnPage.
-// Indices 11 (@fold12) and 12 (@fold13) BOTH draw page8's bridge glide: @fold12
-// flattens the grid and then fires the glide, so @fold13 is reached with it
+// Indices 11 (@fold10) and 12 (@fold11) BOTH draw page8's bridge glide: @fold10
+// flattens the grid and then fires the glide, so @fold11 is reached with it
 // already running or at rest, on the same canvas.
-// Indices 14 (@fold15, the closing statement), 15 (@fold16, the share block)
-// and 16 (@fold17, the outro card)
+// Indices 14 (@fold13, the closing statement), 15 (@fold14, the share block)
+// and 16 (@fold15, the outro card)
 // share drawPage12: the freeform-morph canvas is established on arrival at
-// @fold15 and simply persists behind the credits card that follows it.
+// @fold13 and simply persists behind the credits card that follows it.
 const PAGES = [drawPage1, drawBackground, drawBackground, drawFoldSplit, drawFold7, drawBackground, drawFold7, drawFold9, drawFold9, drawPage7, drawPage7, drawPage8, drawPage8, drawPage9, drawPage12, drawPage12, drawPage12];
 let currentPage = 0;
 
@@ -208,7 +208,7 @@ function drawFold9(ctx, W, H) {
 
 // Several independent rAF loops legitimately run at once (p8RunAnimLoop,
 // p7StartAnimLoop, every animating makeTrigger, …) and each calls this same
-// global draw() — measured at ~2 full canvas paints per frame during @fold13's
+// global draw() — measured at ~2 full canvas paints per frame during @fold11's
 // bridge glide, which is where its scroll stutter came from. Coalesced: the
 // first call in a frame paints, later same-frame calls queue ONE rerun on the
 // next frame instead (not dropped — state mutated between the two calls still
@@ -264,15 +264,15 @@ function drawNow() {
     drawPage12(ctx, W, H);
   } else if (currentPage === 10 && typeof p8Engaged !== "undefined" && p8Engaged
              && typeof p8CurrentT === "function" && p8CurrentT() > 0) {
-    // @fold12's reverse glide flew past the flip to @fold11 (on desktop the
+    // @fold10's reverse glide flew past the flip to @fold9 (on desktop the
     // un-crossing sits ~44vh above the flip, inside a 700ms glide): keep page8
     // painting until it lands, or drawPage7 draws every dot at its rest cell in
     // one frame. drawPage8 hands back to drawPage7 itself at t <= 0.
     drawPage8(ctx, W, H);
   } else if (currentPage === 12 && typeof p9 !== "undefined" && p9.anim
              && typeof p8CurrentT === "function" && p8CurrentT() >= 1) {
-    // @fold14's reverse un-stick sends the dropped dots home over 3s
-    // (p9ResetDrops, js/page8-9-scroll.js); the flip to @fold13 lands inside
+    // @fold12's reverse un-stick sends the dropped dots home over 3s
+    // (p9ResetDrops, js/page8-9-scroll.js); the flip to @fold11 lands inside
     // that flight when the title reaches mid-screen, and drawPage8's landed
     // pass paints every dot at its rest cell in one frame. Keep drawPage9
     // painting until the flight lands (the divider and counts are already
@@ -342,7 +342,7 @@ function fitDashArray(geomEl) {
 // The dash <svg> is CSS-sized at 100% of the frame but drawn against a baked
 // viewBox — any box-size change the bake didn't see leaves the stroke scaled
 // off the box edge while the white fill (a plain CSS background) still hugs
-// the real box, i.e. fill visibly outside the stroke. @fold14's card is the
+// the real box, i.e. fill visibly outside the stroke. @fold12's card is the
 // worst case: on mobile its padding TRANSITIONS on .is-stuck (style.css), so
 // the box resizes over 0.35s with no explicit update call, and an address-bar
 // resize could even re-bake the viewBox mid-transition/while-stuck, freezing
@@ -355,7 +355,7 @@ const textCardFrameResizeObs = typeof ResizeObserver !== "undefined"
 
 function updateTextCardFrameDashes() {
   document.querySelectorAll(".text-card-frame").forEach((frame) => {
-    // border-box, NOT the default content-box: @fold14's stick/un-stick
+    // border-box, NOT the default content-box: @fold12's stick/un-stick
     // animates PADDING, which moves the border box while the content box
     // stays put — the default observer stayed silent through the whole
     // transition, so a mid-stuck re-bake (address-bar resize) froze a stale
@@ -474,7 +474,7 @@ function updateTooltipDash(tip) {
 // acceptable colours pass through completely unchanged — this only ever bites
 // on the yellow and the green.
 //
-// Takes '#rrggbb' or 'rgb(r, g, b)' (lerpFold6SquareColor's output, so @fold7's
+// Takes '#rrggbb' or 'rgb(r, g, b)' (lerpFold6SquareColor's output, so @hidden-hover's
 // grey→colour tooltip transition darkens continuously along with it rather than
 // snapping at the end) and always returns 'rgb(r, g, b)'.
 const TOOLTIP_FILL_MAX_L = 0.28;
@@ -502,7 +502,7 @@ function srgbLuminance(r, g, b) {
 // Keyed by the raw group hex; the value is what the desktop box is painted.
 const TOOLTIP_FILL_OVERRIDES = { "#f9b624": [186, 92, 30] };
 // How near an incoming colour has to be (Manhattan, 0-765) to count as "that
-// group's colour". Not an equality test, because @fold7's demo feeds this
+// group's colour". Not an equality test, because @hidden-hover's demo feeds this
 // function a grey->colour LERP frame by frame: an exact match would leave the
 // whole transition on the generic path and then pop to the override on the
 // final frame. Inside the window the two are blended by closeness instead, so
@@ -569,8 +569,8 @@ function tooltipFillScaled(r, g, b) {
 //   --tip-fill — the contrast-floored version above. Paints the desktop box,
 //                which carries white text.
 // Four call sites write it — p7HoverInit and p7InspectInit (page7.js),
-// p9HoverInit (page9.js) and @fold7's scripted demo (js/update-groups.js) —
-// and the first version of the fill missed two of them, so @fold10's timeline
+// p9HoverInit (page9.js) and @hidden-hover's scripted demo (js/update-groups.js) —
+// and the first version of the fill missed two of them, so @fold8's timeline
 // hover silently kept the raw colour. Hence the helper.
 // `fill` (optional) overrides the derived fill — for a caller animating
 // between two colours, which must lerp the fills themselves.

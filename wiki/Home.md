@@ -20,6 +20,7 @@ Everything here describes the **project as it is now** — no history narration;
 | [Drag-and-Drop](Drag-and-Drop.md) | Page-9 categorization panel, drop animation states |
 | [Data](Data.md) | `events.json`, the xlsx source, category/actor mappings |
 | [Dev-Workflow](Dev-Workflow.md) | Running the project, harness (`manual/`/`compare/`) convention, verification habits |
+| [Translation-Pending](Translation-Pending.md) | Hebrew copy that has changed and whose English has not caught up, and the three surfaces English copy lives in |
 | [Glossary](Glossary.md) | Shared shorthand terms (@legend, @dragcards, axis events, state 1/2…) |
 | [Teacher-Review-2026-09-03](Teacher-Review-2026-09-03.md) | Action items from the 3 Sep 2026 review call; tick off as they land |
 
@@ -29,6 +30,6 @@ Everything here describes the **project as it is now** — no history narration;
 - Serve with `python3 server.py` → http://localhost:8080 (auto-reload; never kill it as cleanup).
 - Design source of truth: Figma file `QASHSt1u7b6m6ASgrUPswf` ("Design"); pages are revised
   one at a time to pixel parity — only explicitly revised pages match Figma.
-- Fold numbering: **always** resolve `@foldN` via [Folds](Folds.md) — it is off by one from
-  the HTML ids (`@foldN` = `id="page-(N-1)"`).
+- Fold numbering: **always** resolve `@foldN` via [Folds](Folds.md) — it numbers the visible folds 1–15
+  and is not a fixed offset from the HTML ids (hidden sections carry no number).
 

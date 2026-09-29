@@ -22,15 +22,23 @@ const SBB = {
 const SBB_TIMELINE_LEFT_PX = 120;
 const SBB_TIMELINE = {
   left:   0.18,   // fraction of W — MOBILE-ONLY fallback; desktop uses SBB_TIMELINE_LEFT_PX
-  top:    0.07,   // fraction of H — unread: desktop uses SBB_TIMELINE_TOP_PX, mobile solves its own
+  top:    0.07,   // fraction of H — unread: desktop uses sbbTimelineTopPx(), mobile solves its own
   bottom: 0.93,   // fraction of H — unread, same reason (SBB_TIMELINE_BOTTOM_PX)
 };
 // DESKTOP top/bottom are fixed px insets off the viewport's edges, manual/-baked
 // 2026-09-19 at 835 tall (were 0.07 / 0.93 ≈ 58px there) — the vertical axis is glued
 // to the field, so these two ARE how tall the axis stands. Exact px, not a fraction,
 // so the tuned clearance survives every viewport height (the LEFT_PX rule above).
-const SBB_TIMELINE_TOP_PX    = 32;
+// TOP is 40 on a large desktop (viewport wider than SBB_TIMELINE_SMALL_DESKTOP_MAX_W,
+// the same 1550 line as FOLD6_NOTE_SMALL_DESKTOP_MAX_W) — manual/ pick 2026-09-29
+// at 1900×990; a small desktop keeps 32. Read through sbbTimelineTopPx().
+const SBB_TIMELINE_TOP_PX       = 40;
+const SBB_TIMELINE_TOP_PX_SMALL = 32;
+const SBB_TIMELINE_SMALL_DESKTOP_MAX_W = 1550;
 const SBB_TIMELINE_BOTTOM_PX = 32;
+function sbbTimelineTopPx() {
+  return window.innerWidth <= SBB_TIMELINE_SMALL_DESKTOP_MAX_W ? SBB_TIMELINE_TOP_PX_SMALL : SBB_TIMELINE_TOP_PX;
+}
 
 // Mobile variant (≤600px). `left` is a screen-edge inset (0.03×393≈12px,
 // matching FOLD6_LEGEND_INSET_MOBILE) — the legend is top-pinned there, not
@@ -130,7 +138,7 @@ function sbbTimelineMobileBottomPx() {
 // being used for.
 function sbbTimeline(H) {
   const h = H || window.innerHeight;
-  if (!isMobile()) return { left: SBB_TIMELINE.left, top: SBB_TIMELINE_TOP_PX / h, bottom: (h - SBB_TIMELINE_BOTTOM_PX) / h };
+  if (!isMobile()) return { left: SBB_TIMELINE.left, top: sbbTimelineTopPx() / h, bottom: (h - SBB_TIMELINE_BOTTOM_PX) / h };
   const vertBottom = sbbTimelineMobileBottomPx();
   return {
     left:   SBB_TIMELINE_MOBILE_LEFT,

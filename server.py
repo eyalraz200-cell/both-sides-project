@@ -218,7 +218,7 @@ else:
 
 # Keep the committed static events.json (what GitHub Pages serves) in sync with
 # the xlsx: the deployed file once shipped without the `crowd` column, so every
-# dot read as tier 0 and @fold10's size grid never resized. Write only when the
+# dot read as tier 0 and @fold8's size grid never resized. Write only when the
 # content actually differs, so an unchanged xlsx leaves git status clean.
 def _sync_static_events():
     if not _EVENTS_FROM_XLSX:

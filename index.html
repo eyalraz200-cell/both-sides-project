@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- lang="he" so screen readers use a Hebrew voice. NOT dir="rtl" at the root:
      the stylesheet declares `direction: rtl` per block, and the flex rows that
-     don't (the @fold14 pill tray, .page9-zone) would reverse their inline
+     don't (the @fold12 pill tray, .page9-zone) would reverse their inline
      order under a root RTL. Setting it is still the right end state — it needs
      an eyeball pass over folds 10–12 first. -->
 <html lang="he">
@@ -17,7 +17,7 @@
   <meta name="description" content="אספנו 14,456 פעולות פוליטיות במרחב הציבורי לאורך ארבע השנים האחרונות. קבעו בעצמכם — מי הם הקיצוניים משני הצדדים? פרויקט אינטראקטיבי מאת איל רז." />
   <link rel="canonical" href="https://eyalraz200-cell.github.io/both-sides-project/" />
   <!-- Open Graph / Twitter card — what WhatsApp, X, Facebook, LinkedIn render when
-       the link is shared (the @fold16 share row relies on this). og:image must be an
+       the link is shared (the @fold14 share row relies on this). og:image must be an
        ABSOLUTE url; og-image-v2.png is a 2400×1260 (2× of the 1200×630 card) shot of _og-card.html.
        Served from GitHub Pages at /both-sides-project/. -->
   <meta property="og:type" content="article" />
@@ -78,7 +78,7 @@
       <div class="fold6-squares-overlay" id="fold6SquaresOverlay" aria-hidden="true"></div>
     </div>
     <!-- Single persistent overlay for the 6 camp groups from @fold2's
-         two-camp columns through @fold6's mini-legend glide — one set of
+         two-camp columns through @hidden-acled's mini-legend glide — one set of
          DOM nodes that's continuously repositioned/restyled as the user
          scrolls, rather than separate per-fold overlays crossfading into
          each other (see GROUPS in js/groups.js, updateGroups in js/update-groups.js).
@@ -109,7 +109,7 @@
       <div class="page9-tooltip-date"></div>
       <div class="page9-tooltip-desc"></div>
     </div>
-    <!-- Hover tooltip for a category pill in #page-13's (@fold14) tray (#page9ZoneBelow
+    <!-- Hover tooltip for a category pill in #page-13's (@fold12) tray (#page9ZoneBelow
          only — see p9CategoryTooltipInit in page9.js). Same reasoning as
          #page9Tooltip above: a direct .layout child, not nested in
          .graphic-col, so its z-index actually stacks above .text-col's tray/
@@ -170,7 +170,7 @@
       </section>
       <section class="text-section" data-page="6" id="page-6" hidden>
         <div class="section-text text-card">
-          <!-- @fold7 is the one card whose copy differs by input device: desktop
+          <!-- @hidden-hover is the one card whose copy differs by input device: desktop
              hovers, a phone presses and holds. Two spans swapped by the 600px
              breakpoint (.copy-desktop / .copy-mobile, style.css) rather than
              JS — the hidden one is display:none, so .text-card-frame's
@@ -185,11 +185,11 @@
       </section>
       <section class="text-section" data-page="8" id="page-8">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">האירועים המוצגים התרחשו מתחילת 2023 ועד היום.</h2>
+          <h2 class="section-title text-card-frame">האירועים המוצגים התרחשו מתחילת 2023 ועד היום.<br>ניתן לסנן קבוצות באמצעות המקרא.</h2>
         </div>
       </section>
       <section class="text-section page7-scrub" data-page="9" id="page-9"></section>
-      <!-- @fold11: the size grid. Arriving here fires p7SizeGridSet(true)
+      <!-- @fold9: the size grid. Arriving here fires p7SizeGridSet(true)
            (p7SizeGridOnPage, page7.js) — the timeline undraws and every dot on
            screen grows to its crowd tier and re-packs. -->
       <section class="text-section" data-page="10" id="page-10">
@@ -197,13 +197,13 @@
           <h2 class="section-title text-card-frame">המחנות נבדלים במספר הפעולות שביצעו, אך פעולה אחת עשויה להתבצע בידי אדם יחיד, ואחרת בהשתתפות מאות אלפי אנשים.</h2>
         </div>
       </section>
-      <!-- @fold12: every square SIZES DOWN to one uniform cell where it
+      <!-- @fold10: every square SIZES DOWN to one uniform cell where it
            stands, and then the whole field FLIES to page9's legit zone —
-           @fold11's morph played backwards, but landing in the legit grid
+           @fold9's morph played backwards, but landing in the legit grid
            instead of back on the timeline (fold11SizeApply, js/groups.js).
            Its PAGES slot (10) is drawPage8, the bridge glide — the SAME draw
-           function @fold13 uses — because this fold owns the glide now, so
-           @fold13 simply arrives with it already at rest. -->
+           function @fold11 uses — because this fold owns the glide now, so
+           @fold11 simply arrives with it already at rest. -->
       <section class="text-section" data-page="11" id="page-11">
         <div class="section-text text-card">
           <h2 class="section-title text-card-frame">לצורך ההשוואה המספרית, כל הריבועים יוצגו בגודל אחיד.<br>ניתן להציג את גודל האירועים באמצעות הכפתור במקרא.</h2>
@@ -218,7 +218,7 @@
         <div class="page9-title-row">
           <div class="section-text text-card">
             <!-- Mobile gets its own, shorter headline — the same .copy-desktop /
-                 .copy-mobile span pair @fold7 uses. Mobile's gesture is "mark the
+                 .copy-mobile span pair @hidden-hover uses. Mobile's gesture is "mark the
                  extreme ones", not "sort both piles", so the two-clause desktop
                  question asks more than the fold delivers there (and wraps to
                  three lines on a phone). -->
@@ -238,11 +238,11 @@
           </div>
         </div>
       </section>
-      <!-- @fold15 — the closing statement. The scroll gate (p13GateMax) and the
+      <!-- @fold13 — the closing statement. The scroll gate (p13GateMax) and the
            drag-panel fade-out (fold13ScrollT) key off #page-14, and the
            gate-hidden toggle off its .page12-sticky-center, so this section
-           carries that wrapper; the share block (@fold16, #page-15) and the
-           credits card (@fold17, #page-16) follow it. The extreme dots' morph
+           carries that wrapper; the share block (@fold14, #page-15) and the
+           credits card (@fold15, #page-16) follow it. The extreme dots' morph
            to freeform (checkFold13) is watched on this wrapper at its 0.5
            crossing. This wrapper is made position:static in style.css. -->
       <section class="text-section" data-page="14" id="page-14">
@@ -266,7 +266,7 @@
           </div>
         </div>
       </section>
-      <!-- @fold16 — the share block: its own title block between the closing
+      <!-- @fold14 — the share block: its own title block between the closing
            statement and the outro (moved out of the outro card). The links get
            their real hrefs from p12ShareInit (page12.js) at load. -->
       <section class="text-section" data-page="15" id="page-15">
@@ -283,7 +283,7 @@
           </div>
         </div>
       </section>
-      <!-- @fold17 — the outro/credits card. -->
+      <!-- @fold15 — the outro/credits card. -->
       <section class="text-section" data-page="16" id="page-16">
         <div class="page12-sticky-center">
           <div class="section-text text-card">

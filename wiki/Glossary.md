@@ -3,7 +3,7 @@
 Shorthand used in conversation about this project. Several terms collide across files —
 those are called out.
 
-**`@foldN`** — the canonical 1-indexed on-screen fold numbering. `@foldN` = `id="page-(N-1)"`.
+**`@foldN`** — the canonical fold numbering: the visible folds, 1–15, no gaps, as shown on the dev badge. `@fold1`–`@fold5` = `page-0`–`page-4`; `@fold6`–`@fold15` = `page-7`–`page-16`. The hidden sections are `@hidden-acled` (`page-5`) and `@hidden-hover` (`page-6`).
 Resolve it via [Folds](Folds.md), never by eyeballing an id or a symbol name.
 
 **Title block** — a scrolling section's text content (title, sometimes a legend). In code
@@ -15,7 +15,7 @@ white box around just the `<h2>` is `.text-card-frame`.
 `@fold4` and alive through every later fold.
 
 **`@dragcards` / "draggable events"** — the category **pills** (`.page9-pill`,
-`P9_CATEGORIES`) in `@fold14`'s tray. **Not** the per-event canvas dots.
+`P9_CATEGORIES`) in `@fold12`'s tray. **Not** the per-event canvas dots.
 
 **"Axis events"** — the 9 `P7_AXIS_EVENTS` headline events on the year axis: side plaques
 beside the vertical axis on desktop (each with a `desc` that types in on hover — see
@@ -25,7 +25,7 @@ stays on the axis until reverse scroll un-reaches it. **Not** the per-event canv
 **"Axis appearing" vs "axis filling up"** — two distinct behaviors, easy to confuse:
 *appearing* is the build-in wipe (`p7AxisIntroT`, `P7_AXIS_INTRO_DURATION_*` 1750 ms);
 *filling up* is the dark "reached" bar growing as `p7.currentDate` advances. They are now
-**two separate crossings of @fold9's date-range card**: appearing on its 0.5
+**two separate crossings of @fold7's date-range card**: appearing on its 0.5
 (`fold9AxisTrigger`), filling once it is fully out of the top (`p7HasEngaged`). Both run **top → bottom** down the vertical centre axis, on desktop and on
 mobile alike (`P7_VERT_MOBILE.enabled` is true; the old horizontal bottom axis is gone).
 
@@ -53,7 +53,7 @@ own timing.
 `@fold2` and un-type in place at `@fold4`; they never travel into the legend.
 
 **The 8 squares** — `#fold6SquaresOverlay`'s sample squares, which grow in at `@fold5`,
-gain labels at `@fold7`, and gain colors + fly to their real per-event dots at `@fold8`.
+gain labels at `@hidden-hover`, and gain colors + fly to their real per-event dots at `@fold6`.
 
 **Legit grid / extreme grid** — page9's two dot fields, below and above the `P9_MID`
 divider.
@@ -62,9 +62,9 @@ divider.
 `@fold1` decorative dots; they shrink away at `@fold3`, leaving each row's rightmost rect
 as the persistent `.group-item`.
 
-**Size grid** — what `@fold11` (`#page-10`, desktop) does: arriving on the fold turns it on
+**Size grid** — what `@fold9` (`#page-10`, desktop) does: arriving on the fold turns it on
 (`p7SizeGridSet`/`p7SizeGridOnPage`, page7.js), the timeline undraws, and the visible squares
 grow to their crowd-tier block size and re-pack into a gap-exact skyline grid per camp, at
-the timeline's own gap. Scrolling back to `@fold10` flies them back. There is no button.
+the timeline's own gap. Scrolling back to `@fold8` flies them back. There is no button.
 Distinct from the hover **bulge** (same tiers, different multipliers). See
 [Timeline](Timeline.md#the-size-grid--p7sizegridset-page7js).

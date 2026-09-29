@@ -69,7 +69,8 @@ const FOLD_PICKER_SCROLL_MS = 700;
 // CLAUDE.md fold table — not the fold's own on-screen copy. The copy is a
 // paragraph of Hebrew body text: it fills the row, reads as prose rather than a
 // name, and two folds that share a phrasing become indistinguishable in the
-// list. These are @fold1…@fold17 in order, so the row index is the fold number.
+// list. One entry per SECTION (page-0 … page-16), hidden ones included, so the
+// row index is the section index — NOT the fold number (foldNumberOf).
 const FOLD_NAMES = [
   "hero / intro",
   "dots fly into the camp grids",
@@ -89,6 +90,33 @@ const FOLD_NAMES = [
   "share block + domino pairing",
   "outro / credits",
 ];
+
+// THE FOLD NUMBER of a section: its place among the VISIBLE sections, 1-based.
+// A section parked with `hidden` has no number (0), and the folds after it
+// close the gap — so the numbers on screen always run 1, 2, 3… with no holes.
+function foldNumberOf(i) {
+  if (!sections[i] || sections[i].hidden) return 0;
+  let n = 0;
+  for (let k = 0; k <= i; k++) if (!sections[k].hidden) n++;
+  return n;
+}
+// Which section the BADGE names: the last one whose title block has entered the
+// screen (its top above the bottom edge) — so the number changes as the card
+// comes in, and matches the card being looked at. currentPage flips only when
+// the SECTION reaches mid-screen, which left a rising card wearing the previous
+// fold's number. A section with no title block (the hero, the pinned timeline)
+// keeps the mid-screen rule. Display only — currentPage still drives the canvas.
+function foldBadgeIndex() {
+  const H = window.innerHeight;
+  let best = 0;
+  sections.forEach((s, i) => {
+    if (s.hidden) return;
+    const card = s.querySelector(".text-card");
+    const top = (card || s).getBoundingClientRect().top;
+    if (top <= (card ? H : H / 2)) best = i;
+  });
+  return best;
+}
 
 function foldPickerLabel(section, i) {
   return FOLD_NAMES[i] || section.id || "";
@@ -124,14 +152,14 @@ function foldPickerInit() {
     panel.className = "fold-picker";
     panel.setAttribute("aria-hidden", "true");
     sections.forEach((section, i) => {
-      if (section.hidden) return;   // folds parked with `hidden` keep their number, lose their row
+      if (section.hidden) return;   // folds parked with `hidden` have no number and no row
       const row = document.createElement("button");
       row.type = "button";
       row.className = "fold-picker-row";
-      row.dataset.fold = String(i + 1);
+      row.dataset.fold = String(foldNumberOf(i));
       const n = document.createElement("span");
       n.className = "fold-picker-n";
-      n.textContent = String(i + 1);          // @foldN — the number alone, house style
+      n.textContent = String(foldNumberOf(i));          // @foldN — the number alone, house style
       const t = document.createElement("span");
       t.className = "fold-picker-t";
       t.textContent = foldPickerLabel(section, i);
@@ -167,7 +195,7 @@ function foldPickerInit() {
     // Mark the fold you're on, so the list opens oriented rather than needing
     // to be read from the top.
     panel.querySelectorAll(".fold-picker-row").forEach(r => {
-      r.classList.toggle("is-current", Number(r.dataset.fold) === currentPage + 1);
+      r.classList.toggle("is-current", Number(r.dataset.fold) === foldNumberOf(foldBadgeIndex()));
     });
     const cur = panel.querySelector(".fold-picker-row.is-current");
     if (cur) cur.scrollIntoView({ block: "center" });   // inside the panel only
@@ -197,7 +225,17 @@ function foldPickerInit() {
 document.addEventListener("DOMContentLoaded", foldPickerInit);
 
 function updateFoldNumberBadge() {
-  if (foldNumberBadge) foldNumberBadge.textContent = String(currentPage + 1);
+  if (foldNumberBadge) foldNumberBadge.textContent = String(foldNumberOf(foldBadgeIndex()));
+}
+if (foldNumberBadge) {
+  let foldBadgeTicking = false;
+  const foldBadgeOnScroll = () => {
+    if (foldBadgeTicking) return;
+    foldBadgeTicking = true;
+    requestAnimationFrame(() => { updateFoldNumberBadge(); foldBadgeTicking = false; });
+  };
+  window.addEventListener("scroll", foldBadgeOnScroll, { passive: true });
+  window.addEventListener("resize", foldBadgeOnScroll);
 }
 // First paint: @fold1 is the page's starting state and never crosses
 // setActivePage (which returns early on page === currentPage), so the badge
@@ -205,13 +243,13 @@ function updateFoldNumberBadge() {
 updateFoldNumberBadge();
 
 function setActivePage(page) {
-  // @fold10's size-grid toggle (page7.js) lives on that page only — snapped
+  // @fold8's size-grid toggle (page7.js) lives on that page only — snapped
   // off before any handoff below reads the timeline's positions.
   if (typeof p7SizeGridOnPage === "function") p7SizeGridOnPage(page);
   if (page === currentPage) return;
   // Scrolling back out of the timeline toward a fold that doesn't draw the
   // per-event squares at all (anything before drawFold7 — @fold5 draws it too
-  // now that @fold6/@fold7 are hidden — i.e. currentPage < 4)
+  // now that @hidden-acled/@hidden-hover are hidden — i.e. currentPage < 4)
   // — wipe all per-month animation state so the next entry replays from
   // scratch instead of showing the previously-settled dots hanging around.
   //
@@ -253,7 +291,7 @@ function setActivePage(page) {
       // shrinks the dots across the flight and drawPage9 has to keep doing so,
       // or the dots snap small at the handoff and the flight looks dimmer.
       // p8CaptureBlendedPositions above has just run p7UpdateLayout, so p7.SQ
-      // is this viewport's real timeline size. Out of @fold11's size grid there
+      // is this viewport's real timeline size. Out of @fold9's size grid there
       // is no single start size — every dot leaves at its own tier size — so
       // the scalar is left OFF there and each captured entry's own `sq` drives
       // the lerp instead (p9PlaceDot's `from.sq` branch, page9.js).
@@ -269,7 +307,7 @@ function setActivePage(page) {
   // this section starts drawing instead of page8. See p7EntryAnim's own
   // comment (page7.js) for the full rationale.
   // Page 9 too: drawNow (js/core.js) keeps page8 painting the reverse glide on
-  // @fold11, so the flip that reaches @fold10 can come from there with the
+  // @fold9, so the flip that reaches @fold8 can come from there with the
   // glide still in the air — without this hand-off drawPage7's first frame put
   // every dot at its row cursor and the field jumped.
   if ((currentPage === 10 || currentPage === 11 || currentPage === 12) && page === 9 && typeof p8CurrentT === "function" && p8CurrentT() > 0) {
@@ -292,7 +330,7 @@ function setActivePage(page) {
   currentPage = page;
   // The picker's instruction band (page7.js) is painted from the timeline's own
   // draw loop, which stops the moment the timeline does — so the fold it leaves
-  // on (@fold12's beat) has to tell it, or it stays frozen on screen fully
+  // on (@fold10's beat) has to tell it, or it stays frozen on screen fully
   // typed. AFTER the assignment above, deliberately: the band reads
   // currentPage, and running it first left it a whole fold behind.
   if (typeof p7HintBandApply === "function") p7HintBandApply();
