@@ -259,10 +259,10 @@ horizontally centered block that scrolls with the page (nothing pins). Visibilit
 The dashed white box is a **separate** class, `.text-card-frame`, applied only to the
 `<h2 class="section-title">` — never to sibling content like a legend. The dash is not
 `border-style: dashed` (too loose) and not a `border-image` (unreliable on wide, short
-boxes); it's a transparent CSS border of `--frame-border-w` (**2px at both breakpoints** — the
+boxes); it's a transparent CSS border of `--frame-border-w` (**1.25px at both breakpoints**, `manual/`-baked on desktop 2026-09-29 and matched on mobile — the
 1.5/1.25px trial of 2026-09-22 was reverted with the font change) plus an inline
 `<svg class="text-card-frame-dash">` rect drawn against a 1:1 viewBox, stroke
-`frameStrokeW()` (`FRAME_STROKE_W_DESKTOP` / `FRAME_STROKE_W_MOBILE`, both **2**,
+`frameStrokeW()` (`FRAME_STROKE_W_DESKTOP` / `FRAME_STROKE_W_MOBILE`, both **1.25**; desktop also has `FRAME_STROKE_OPACITY_DESKTOP`, **1**, written as the rect's `stroke-opacity`; `fitDashArray` keys its perimeter cache on a rect's own geometry, so a re-stroked frame re-fits its dashes instead of joining two where the path wraps;
 `js/core.js` — each must equal `--frame-border-w` at its breakpoint; the stroke attrs are
 rewritten on every bake so a resize across the breakpoint re-strokes), 2px-dash/2px-gap,
 inset by half the stroke with rx = 8 − half-stroke
@@ -279,9 +279,8 @@ while the white fill tracked the real box — fill leaking outside a distorted s
 `.section-title`'s base rule is shared by **every** card. **Desktop: `font: 400 18.5px/1.5 'Discordia'`**
 (Discordia Regular, a local `@font-face` at the top of `style.css`, `fonts/Discordia-Regular.otf`;
 Naipe Foundry, licensed via Hafontia) — the `_debug-typeface.js` harness pick of 2026-09-27 over
-Hadassah, Days, Fedra Serif Pro and Lava Pro, tuned at 1896×990. **Phone (≤600px): `font: 100
-16px/1.5 'HadassahFriedlaender'`** — the pick was made on desktop only, so the ≤600px block pins the
-phone to its previous face and size. No page overrides font-size or weight — with **one named
+Hadassah, Days, Fedra Serif Pro and Lava Pro, tuned at 1896×990. **Phone (≤600px): `font: 400 16px/1.5 'Discordia'`** (the phone typeface harness pick of 2026-09-29, over
+Hadassah, Days, Fedra Serif Pro and Lava Pro). No page overrides font-size or weight — with **one named
 exception: @fold15's credits card, `#page-16 .section-title`, is 36px on desktop and 26px under
 the 600px breakpoint** (`style.css`), because it is the piece's closing headline over a
 near-viewport-tall card, not a caption. Any other title that looks differently sized at the same
@@ -298,12 +297,13 @@ columns' inner edges) / `PAGE0_DOT_COL_X_MOBILE` 13.5 (20px, the Figma-literal v
 `buildPage0AllDots()` re-derives `PAGE0_DOT_COLS` from it on every build. The texts sit relative to
 their column's inner edge (title box 1.5px inside the right column's edge, subtitle's right edge
 1.5px inside the left column's), so a gap change moves them with it.
-**Phone (≤600px block, unchanged by the desktop bake):** title Hadassah 400, 32px/1.45, `width:
-min(185px, 50vw - 20px)`, left +8px, top −228.6px; subtitle 125 wide, left −10px, line-height 1.465,
-top −168.8px; both mobile tops add `var(--page0-drop)`. The tops are solved for each font's metrics,
+**Phone (≤600px block, phone hero harness bake 2026-09-29):** title Discordia 400, 32px/1.45,
+`width: min(185px, 50vw - 20px)`, left +8px, top −230.1px (last baseline 20px above its dots);
+subtitle 125 wide, left −10px, line-height 1.41, top −165.9px (20.5px); the phone keeps the 20px
+column gap; both mobile tops add `var(--page0-drop)`. The tops are solved for each font's metrics,
 so re-solve them whenever a face, size or leading changes.
 
-The 600px breakpoint's Hadassah 16px is a width override applied
+The 600px breakpoint's 16px is a width override applied
 to the same shared rule, so the titles stay uniform with each other at any given width;
 it is not the per-page kind the rule forbids.
 

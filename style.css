@@ -2064,7 +2064,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    viewBox-to-CSS-px mapping on both axes, so the dash/radius can't be
    scaled or distorted no matter the box's aspect ratio. */
 .text-card-frame {
-  --frame-border-w: 2px;
+  --frame-border-w: 1.25px;   /* both breakpoints; must match FRAME_STROKE_W_* (js/core.js) */
   position: relative;
   /* display:block + width:fit-content + margin:0 auto centers the box itself
      within .text-card regardless of content width — display:inline-block
@@ -3219,9 +3219,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      the frame's real pixel box and rewrites the viewBox 1:1, so the 2px dash
      stays exact at the new size. */
   .section-title {
-    /* Phone keeps the Hadassah Thin title blocks — the 2026-09-27 Discordia
-       pick was made on desktop only. */
-    font: 100 16px/1.5 'HadassahFriedlaender', serif;
+    /* Phone: Discordia too (phone typeface harness, 2026-09-29), at its own
+       16px — Discordia ships Regular only, so 400. */
+    font: 400 16px/1.5 'Discordia', serif;
   }
   .text-card-frame {
     padding: 16px 22px;
@@ -3665,9 +3665,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      this font size. At 430px and up the min() still resolves to 185px, so
      wider screens are untouched. */
   .page0-title {
-    /* Phone keeps the Hadassah hero title (desktop moved to Discordia on
-       2026-09-27; this block's `top` is solved for Hadassah's metrics). */
-    font-family: 'HadassahFriedlaender', serif;
+    /* Phone hero title: Discordia like desktop (phone harness, 2026-09-29); the
+       `top` below is solved for Discordia's metrics at 32px/1.45. */
     left: calc(50% + 8px); /* phone keeps its +8 at its 20px column gap (desktop: +8.5 at 26px, 2026-09-27) */
     width: min(185px, 50vw - 20px);
     /* 42px is a desktop-scale display size that eats a third of a phone
@@ -3696,7 +3695,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        already carried HALF the growth on its own — this is the other half, so
        the text travels exactly as far as the dot columns, which are absolute px
        and take the whole delta. 0px everywhere else. */
-    top: calc(50% - 228.6px + var(--page0-drop, 0px));
+    top: calc(50% - 230.1px + var(--page0-drop, 0px)); /* phone harness 2026-09-29: Discordia, last baseline 20px above its dots (was -228.6 / 18.5px Hadassah) */
   }
 
   /* The subtitle keeps its 18px and its 125px width here — only the leading and
@@ -3706,11 +3705,11 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     /* Phone keeps its 125px box and -10px offset at its 20px column gap (desktop: 139 / -11.5 at 26px, 2026-09-27). */
     width: 125px;
     left: calc(50% - 10px);
-    line-height: 1.465;
+    line-height: 1.41; /* phone hero harness 2026-09-29 (was 1.465) */
     /* Same trimmed solve as the title: -167.8 puts the last baseline 20.5px
        above its own dot column's top edge. Re-solve this whenever the leading
        above moves — the two are one setting. */
-    top: calc(50% - 168.8px + var(--page0-drop, 0px));
+    top: calc(50% - 165.9px + var(--page0-drop, 0px)); /* re-solved 2026-09-29 for line-height 1.41: last baseline 20.5px above its dots (was -168.8) */
   }
 
   /* The pinned title card rests 4.4vh (~37px on an 844px phone) from the top
