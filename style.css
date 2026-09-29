@@ -2091,7 +2091,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    updateTextCardFrameDashes() in js/core.js reads via offsetWidth/offsetHeight
    to set its viewBox) actually matches the frame's real border-box. */
 
-/* @fold12's ghost frame (desktop; js/page8-9-scroll.js): a clone of the title
+/* @fold12's ghost frame (both breakpoints; js/page8-9-scroll.js): a clone of the title
    block's own <h2>, parked at the top of the screen. No transition — JS writes
    its opacity every frame of the fade. */
 .text-card-frame.fold12-ghost {
@@ -3638,7 +3638,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     width: 0;
     height: 0;
     pointer-events: none;
-    z-index: 1006;
+    /* UNDER the title blocks (explicit instruction, both languages) — the
+       phone twin of desktop's .fold7-cursor rule: 1003 sits below the cards'
+       1004/1005 and above the docked tooltip's 1000 and the squares. */
+    z-index: 1003;
     opacity: 0;
   }
   .fold7-loupe.is-dismissed { visibility: hidden; }
@@ -3988,6 +3991,19 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        alongside that fade so the text glides to the edge instead of jumping. */
     transition: background 0.35s ease-out, padding 0.35s ease-out,
                 transform 0.35s ease-out;
+  }
+  /* The ghost is a clone parked OUTSIDE .page9-title-row (a .layout child), so
+     the slimmer padding above doesn't reach it — restated, so it is the same
+     box as the card heading for it. It stays centred (the base rule's
+     left: 50%); only the real card travels right. 1005 matches the card's own
+     mobile z-index further down: the docked frame (1000) shares this top edge. */
+  .text-card-frame.fold12-ghost {
+    padding-block: 8px;
+    z-index: 1005;
+    /* Outside .text-card it also loses the card's rtl + right alignment, which
+       left the Hebrew ranged left with its «?» on the wrong end. */
+    direction: rtl;
+    text-align: right;
   }
   .page9-title-row .text-card.is-stuck .text-card-frame {
     padding-inline: 0;
@@ -4982,8 +4998,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   .fold6-note-layer { z-index: 1005; }
   /* @fold5's demo cursor glides UNDER the title block (explicit instruction):
      1003 sits below the cards' 1004 and still above the event tooltip's 1000
-     and the squares it points at. Desktop only — mobile's hand (.fold7-touch)
-     keeps its 1006. */
+     and the squares it points at. Mobile's hand (.fold7-touch) has the same
+     1003 in the ≤600px block. */
   .fold7-cursor { z-index: 1003; }
 }
 
@@ -5262,13 +5278,20 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   top: 12px;
   left: 12px;
   z-index: 1007;
-  font: 600 13px/1 'Assistant', sans-serif;
-  color: #111;
-  background: #fff;
+  /* Look baked from the lang-button manual/ harness, 2026-09-29: grey letters
+     on NO fill (the page shows through), weight 550. Colours, weight, outline,
+     padding and corners are shared by both breakpoints; only the letter SIZE is
+     per breakpoint — 13px here (phone), 12px on desktop below. */
+  font: 550 13px/1 'Assistant', sans-serif;
+  color: #8f8f8f;
+  background: transparent;
   border: 1px solid rgba(0, 0, 0, 0.25);
   border-radius: 4px;
   padding: 5px 8px;
   text-decoration: none;
+}
+@media (min-width: 601px) {
+  .lang-switch { font-size: 12px; }
 }
 .lang-switch:hover { background: #111; color: #fff; }
 
@@ -5354,4 +5377,51 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    legend column — updateGroups places it). */
 .lang-en .p7-scope-btn {
   flex-direction: row;
+}
+
+/* MOBILE, @fold2: the first title block arrives 300px of scrolling sooner
+   (manual/-baked 2026-09-29). Same device as desktop's G1: the card is pulled
+   up from its centred spot (334px → 34px) and the section is shortened by the
+   same 300px, so the @fold2 → @fold3 card distance is unchanged. */
+@media (max-width: 600px) {
+  #page-1 {
+    align-items: flex-start;
+    padding-top: 34px;
+    min-height: calc(100vh - 300px);
+  }
+}
+
+/* English hero title on the PHONE. At the shared 32px «Extremists» measures
+   184px against the Hebrew title's 127px, overran its 175px column and read far
+   larger than the Hebrew hero. 24px brings it to 138px. `top` is re-solved for
+   the new size so the last baseline stays where the shared rule puts it (20px
+   above the dot column) — the two are one setting. Phone only; desktop keeps the
+   shared 40px. */
+@media (max-width: 600px) {
+  .lang-en .page0-title {
+    font-size: 24px;
+    top: calc(50% - 197.9px + var(--page0-drop, 0px));
+  }
+  /* …and the subtitle comes down a step with it: 16px (shared: 18px). `top`
+     re-solved the same way, for the same last baseline. */
+  .lang-en .page0-subtitle {
+    font-size: 16px;
+    top: calc(50% - 154.4px + var(--page0-drop, 0px));
+  }
+}
+
+/* English page, PHONE only. */
+@media (max-width: 600px) {
+  /* Camp names on two lines («The Right-Wing / Coalition», «The Change / Bloc»):
+     on one line the right camp's name ran to the screen edge. The break is the
+     \n in the string (js/i18n.js). */
+  .lang-en .camp-header {
+    /* `pre`, not `pre-line`: the \n is the ONLY break — otherwise the name also
+       breaks at the hyphen and «The Right-Wing» falls onto two lines of its own. */
+    white-space: pre;
+    text-align: center;
+    direction: ltr;
+    font-size: var(--en-camp-size, 18px);
+    line-height: var(--en-camp-lh, 1.15);
+  }
 }

@@ -43,17 +43,40 @@ var FOLD3_MIN_ROW_PITCH_MOBILE_PX = 32;
 // captured the frame the trigger's target flips, so a reversal mid-flight stays
 // continuous — position never snaps. From rest that is (1, 1) going back and
 // (0, 0) going forward, which reduces to p7Ease(raw) and the late window exactly.
-let fold6MFlyLeg = { dir: null, raw0: 0, fly0: 0 };
+//
+// THE RETURN FLIGHT WAITS FOR THE SHEET. By the time the reader scrolls back the
+// sheet has usually closed itself into the מקרא pill, and it needs its open
+// (width, then height) before there is anything to fly out OF. The rows used to
+// leave on the first frame of the unwind — on p7Ease, which is fastest at the
+// start — so all six popped into view over a closed pill. The reverse leg now
+// HOLDS the rows inside the panel for the share of the trigger the open takes
+// (`hold`, measured off how open the card is the frame the direction flips —
+// zero when it is already standing, i.e. a mid-flight reversal), and flies them
+// over what is left. While held they are the panel's own rows, revealed by the
+// card as it opens; the swap to the flying stand-ins happens at take-off, on
+// identical pixels.
+let fold6MFlyLeg = { dir: null, raw0: 0, fly0: 0, hold: 0 };
 let fold6MFlyLast = 0;
 function fold6MFlyT(flyStart, flyLen) {
   const raw = fold6Trigger.currentRaw();
   const dir = fold6Trigger.target();
-  if (dir !== fold6MFlyLeg.dir) fold6MFlyLeg = { dir, raw0: raw, fly0: fold6MFlyLast };
-  const { raw0, fly0 } = fold6MFlyLeg;
+  if (dir !== fold6MFlyLeg.dir) {
+    const openShare = (FOLD6_MLEGEND_WIDTH_MS + FOLD6_MLEGEND_OPEN_MS) / fold4GlideMs();
+    const closed = dir === 0 && fold6MFlyLast >= 1 && fold6MLegendOpenRaw < 1;
+    fold6MFlyLeg = { dir, raw0: raw, fly0: fold6MFlyLast,
+      // Never more than half the leg — the rows still need room to travel.
+      hold: closed ? Math.min(raw * 0.5, openShare) : 0 };
+  }
+  const { raw0, fly0, hold } = fold6MFlyLeg;
   const c01 = v => Math.max(0, Math.min(1, v));
   let t;
   if (dir === 0) {
-    t = raw0 <= 0 ? 0 : fly0 * p7Ease(c01(raw / raw0));
+    const span = raw0 - hold;
+    // p9Ease (sine in-out), NOT p7Ease: cubic-out played backwards is an
+    // ease-IN, so the rows accelerated all the way home and stopped dead at
+    // full speed (~19px in the last frame). The symmetric curve leaves the
+    // panel gently and lands gently.
+    t = span <= 0 ? 0 : fly0 * p9Ease(c01(raw / span));
   } else {
     // The late window, re-based onto this leg's start when it began mid-flight.
     const base = Math.max(raw0, flyStart), end = flyStart + flyLen;
@@ -738,14 +761,16 @@ function updateGroups() {
     // layers suits where it currently is (see fold6MFlyPaintClone in
     // js/groups.js). The real item stays laid out —
     // item.label.offsetWidth above depends on it — just not painted.
-    if (flying) fold6MFlyPaintClone(g, item, e6 >= 1);
+    if (flying) fold6MFlyPaintClone(g, item, e6Fly >= 1);
     else if (fold6MFlyClones.size) fold6MFlyHideClone(g, item);
   });
 
   // The other half of the fly hand-off: the panel's own rows appear the frame
   // the travelling ones land (a swap, not a fade), and the arrival is what starts
   // the panel's hold-then-close. Once per frame, not once per row.
-  if (fold6MobileLegend && fold6MFlyEnabled()) fold6MFlyArrive(fold6MFlyArriveT(e6));
+  // Landed = the FLIGHT is at rest in the panel (e6Fly), not the trigger (e6):
+  // on the way back the rows stay the panel's own for the whole reopen hold.
+  if (fold6MobileLegend && fold6MFlyEnabled()) fold6MFlyArrive(fold6MFlyArriveT(e6Fly));
 
   // @fold2's filler rects: the 18 @fold1 decorative dots that fly into the
   // camp grids' remaining cells instead of shrinking away with the rest.
@@ -791,8 +816,8 @@ function updateGroups() {
   // over alignT — the same beat that flies the rects into their column — rather
   // than being raised for both folds (which visibly opened up @fold2) or snapped
   // at the beat boundary (position never snaps).
-  const headerGapMobile = FOLD4_HEADER_GAP_MOBILE_PX
-    + (FOLD3_HEADER_GAP_MOBILE_PX - FOLD4_HEADER_GAP_MOBILE_PX) * alignT;
+  const headerGapMobile = fold4HeaderGapMobilePx()
+    + (fold3HeaderGapMobilePx() - fold4HeaderGapMobilePx()) * alignT;
   // The gap is measured off the row the header sits above. Both folds now share
   // one top anchor (fold3TopRowY === fold2TopRowY), so this blend is a constant;
   // it's kept as the blend so the header keeps tracking row 0 if either anchor
@@ -858,7 +883,7 @@ function updateGroups() {
     el.style.left = `${x}px`;
     el.style.top  = `${y}px`;
     el.style.fontSize = tgt ? `${18 + (FOLD6_MFLY_HEAD_PX - 18) * e6Fly}px` : "";
-    if (tgt) fold6MFlyPaintHeadClone(title, el, e6 >= 1);
+    if (tgt) fold6MFlyPaintHeadClone(title, el, e6Fly >= 1);
     else if (fold6MFlyClones.size) fold6MFlyHideHeadClone(title, el);
   };
   placeCampHeader(campHeaderCoalitionEl, campAnchorX(true), CAMP_HEADER_TITLE_COALITION);
@@ -869,27 +894,18 @@ function updateGroups() {
   // .headerChange) rather than sharing one — so one camp can start typing
   // before, with, or after the other.
   //
-  // The un-typing at @fold4 is that same choreography played backwards: each
-  // header's beat window is MIRRORED within the trigger (start → 1-(start+len))
-  // and its own progress inverted, so the camp that typed in last is the first
-  // to disappear, and each one loses characters from its end back to its
-  // start at the same tempo it gained them. Reusing FOLD2_BEATS' own windows
-  // (rather than a second pair of constants) means retiming the entrance
-  // automatically retimes the exit to match.
-  // On MOBILE the two share one window instead, so the phase and the length of
-  // the un-type can be set directly rather than inherited from whenever each
-  // camp happened to type in (FOLD6_HEAD_UNTYPE_AT / _MS, js/groups.js). The
-  // headers are the one thing still leaving by un-typing at this fold, so when
-  // they go and how long they take is worth its own knob.
-  const fold6BeatT = (b) => {
-    if (fold6MobileLegend) {
-      const start = fold6HeadUntypeStart(), len = fold6HeadUntypeLen();
-      return p9Ease(Math.max(0, Math.min(1, (fold6Trigger.currentRaw() - start) / len)));
-    }
-    const w = FOLD2_BEATS[b];
-    return p9Ease(Math.max(0, Math.min(1,
-      (e6 - (1 - w.start - w.len)) / w.len)));
-  };
+  // The un-typing at @fold4 loses characters from each header's end back to
+  // its start. On desktop it runs over the groups' own glide (see fold6BeatT).
+  // The headers un-type on the groups' own FLIGHT progress — e6Fly, the value
+  // that moves the six rows, at both breakpoints. They lose letters as the rows
+  // travel and are empty as the rows land; on the way BACK they re-type across
+  // the rows' return flight (on mobile that runs on a different window from the
+  // forward one, fold6MFlyT). Reading the same number is what keeps the two
+  // together in both directions and through a mid-flight reversal.
+  // **Removed — don't reintroduce:** desktop's mirrored FOLD2_BEATS windows and
+  // mobile's own window (FOLD6_HEAD_UNTYPE_AT / _MS) — both had the headers
+  // gone before the groups moved.
+  const fold6BeatT = () => e6Fly;
   // …and on mobile there is no un-typing at all: the headers stay as the מקרא
   // bar's camp names, so both factors are pinned to 1.
   // …and none of it happens in the fly variant: the header keeps every

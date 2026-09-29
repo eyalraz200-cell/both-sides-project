@@ -1205,7 +1205,7 @@ function fold8SquareDimT() {
 // the card is allowed to still overlap the tooltip's top edge by 20px when the
 // fold fires, so the box is on its way in as the card clears rather than after
 // it. Positive would fire later, negative earlier.
-var FOLD8_TOOLTIP_CLEARANCE_PX = -517;   // manual/-baked 2026-09-28   // desktop only — mobile uses FOLD8_MOBILE_CARD_FRAC
+var FOLD8_TOOLTIP_CLEARANCE_PX = -517;   // manual/-baked 2026-09-28   // desktop only — mobile fires the demo on fold5's own line
 // Fallback only, for the frames before events.json has loaded (the demo
 // event's text is what gives the box its height) or if the demo square isn't
 // built yet — the old fixed offset, kept so the crossing still has somewhere
@@ -1398,18 +1398,22 @@ let   fold13MorphStarted      = false;
 // animated-both-ways behavior): when true, scrolling back up snaps the
 // reverse (0) straight to its end state via trigger.set instead of
 // trigger.trigger.
-// DESKTOP trigger lines, one per fold: the fraction of the viewport height the
-// fold's card top must cross (bigger = earlier). Mobile never reads this table —
-// foldFrac() hands it its own value. `var` so a manual/ harness can drive it live.
+// Trigger lines, one per fold: the fraction of the viewport height the fold's
+// card top must cross (bigger = earlier). One table per breakpoint, so either
+// can be tuned without moving the other; keyed by fold number. Mobile was
+// matched to desktop on 2026-09-29. `var` so a manual/ harness can drive them.
 var FOLD_FRAC_DESKTOP = {
   fold2: 0.75, fold3: 0.75, fold4: 0.75, fold5: 0.75, fold6: 0.75, fold7: 0.75,
   fold9: 0.75, fold10: 0.75, fold11: 0.75, fold13: 0.75, fold14: 0.75,
 };   // manual/-baked 2026-09-28
-function foldFracNow(key, mobileFrac) {
-  if (!isMobile()) return FOLD_FRAC_DESKTOP[key];
-  return typeof mobileFrac === "function" ? mobileFrac() : mobileFrac;
+var FOLD_FRAC_MOBILE = {
+  fold2: 0.75, fold3: 0.75, fold4: 0.29, fold5: 0.75, fold6: 0.75, fold7: 0.75,
+  fold9: 0.75, fold10: 0.75, fold11: 0.75, fold13: 0.75, fold14: 0.75,
+};   // fold4: manual/-baked 2026-09-29
+function foldFracNow(key) {
+  return (isMobile() ? FOLD_FRAC_MOBILE : FOLD_FRAC_DESKTOP)[key];
 }
-function foldFrac(key, mobileFrac) { return () => foldFracNow(key, mobileFrac); }
+function foldFrac(key) { return () => foldFracNow(key); }
 
 function watchCardThreshold(cardEl, frac, trigger, instantReverse = false, gate = null) {
   let isPast = null;
@@ -1445,37 +1449,19 @@ function watchCardThreshold(cardEl, frac, trigger, instantReverse = false, gate 
   };
 }
 
-// Fold 2's legend (the groups overlay's first appearance) is tied to the title
-// card directly — same 0.5 convention and makeTrigger/watchCardThreshold
-// machinery as every other fold — so the legend's appearance stays in sync
-// with its own title and gives it a t (below) to stagger the rows' entrance.
-// House 0.5, tuned by eye against a live harness AFTER #page-1's card was
-// pulled up + its section shortened (style.css, G1): the card now enters the
-// viewport early enough on its own that the earlier 0.75 crossing fired the
-// dot flight while the hero title was still on screen. The gap after @fold1
-// is closed by the card's position, not by an early trigger.
-const FOLD2_CARD_FRAC = 0.5;
+// @fold2, @fold3, @fold4: each title card fires its own fold on the shared
+// per-breakpoint line (FOLD_FRAC_DESKTOP / FOLD_FRAC_MOBILE, above) — same
+// makeTrigger/watchCardThreshold machinery as every other fold.
+// **Removed — don't reintroduce:** the per-fold mobile constants
+// (FOLD2_CARD_FRAC 0.5, FOLD3_CARD_FRAC 0.6, FOLD6_CARD_FRAC 0.23) — mobile was
+// matched to desktop on 2026-09-29 and tunes through FOLD_FRAC_MOBILE now.
 const checkFold2      = watchCardThreshold(
-  page2TitleCardEl, foldFrac("fold2", FOLD2_CARD_FRAC), fold2Trigger);
-// @fold3 fires earlier than the house 0.5 on mobile, same reason as @fold4
-// below: the shrink + the labels typing in need more of the fold still on
-// screen there. A bigger fraction = an earlier crossing. Desktop keeps 0.5.
-const FOLD3_CARD_FRAC = 0.6;
+  page2TitleCardEl, foldFrac("fold2"), fold2Trigger);
 const checkFold3      = watchCardThreshold(
-  page3TitleCardEl, foldFrac("fold3", FOLD3_CARD_FRAC), fold3Trigger);
-// @fold4 fires LATE on mobile — well below the house 0.5, so the card's top has
-// to climb to 0.18 of the viewport, i.e. almost all the way up, before the
-// hand-off starts. A bigger fraction is an EARLIER crossing. 0.18, picked by
-// eye with the `manual/` @fold4 trigger harness on 2026-09-15.
-// The whole hand-off — the six rows flying into the מקרא sheet, then the sheet
-// closing itself FOLD6_MFLY_CLOSE_GAP_MS after they land — therefore plays out
-// as @fold5 comes up rather than while this fold is still centred.
-// Desktop keeps 0.5: it has no sheet to fly into, and its glide is settled.
-// `var`, not const: a manual/ harness drives it live.
-var FOLD6_CARD_FRAC = 0.23;
+  page3TitleCardEl, foldFrac("fold3"), fold3Trigger);
 const checkFold6      = watchCardThreshold(
-  page6TitleCardEl, foldFrac("fold4", () => FOLD6_CARD_FRAC), fold6Trigger);
-const checkSquaresReveal = watchCardThreshold(squaresRevealCardEl, foldFrac("fold5", 0.5), squaresRevealTrigger);
+  page6TitleCardEl, foldFrac("fold4"), fold6Trigger);
+const checkSquaresReveal = watchCardThreshold(squaresRevealCardEl, foldFrac("fold5"), squaresRevealTrigger);
 // The note's own fold (@hidden-acled, #page-5) at the usual half-screen, on BOTH
 // viewports (explicit instruction). Mobile used to fire it a fold EARLY, on
 // @fold5's card, because the מקרא panel was left open from @fold4 onward and
@@ -1503,7 +1489,7 @@ function p7EngagedNow() {
 // The note types in on @fold6's card (#page-7) at the house 0.5 — that card now
 // carries the ACLED methodology copy, so the note arrives with its own text.
 // (watchFlag / p7EngagedNow stay: the engage-timed variant, one line to swap back.)
-const checkAcledNote     = watchCardThreshold(page7TitleCardEl, foldFrac("fold6", 0.5), acledNoteTrigger);
+const checkAcledNote     = watchCardThreshold(page7TitleCardEl, foldFrac("fold6"), acledNoteTrigger);
 // MOBILE: on the same crossing the closed מקרא pill JUMPS once — it grows
 // FOLD6_MLEGEND_JUMP_PX taller and settles back, base pinned to the bottom edge
 // and width untouched, the way a waiting notification nudges itself. It is a
@@ -1573,7 +1559,7 @@ function fold6MLegendJump(past) {
   fold6MLegendJumpAt = performance.now();
   requestAnimationFrame(fold6MLegendJumpTick);
 }
-const checkMLegendJump = watchCardThreshold(page7TitleCardEl, 0.5, {
+const checkMLegendJump = watchCardThreshold(page7TitleCardEl, foldFrac("fold6"), {
   set:     v => { if (v === 1) fold6MLegendJump(true); },
   trigger: v => fold6MLegendJump(v === 1),
 });
@@ -1679,25 +1665,13 @@ function fold8MeasureTooltipHeight() {
 // watchCardThreshold compares the card's TOP against frac * innerHeight, hence
 // subtracting the card's own height here to express "the card's bottom".
 // Mobile keeps 0.5: its tooltip is docked at a fixed spot, nothing to collide.
-// Mobile's @hidden-hover crossing. The docked tooltip sits at a fixed spot on a phone,
-// so there is nothing to collide with and nothing to measure — the fraction is
-// just a chosen point in the card's rise, unlike desktop's solved value below.
-// `var`, not `const`: a manual/ harness drives it live (wiki/Dev-Workflow.md).
-//
-// It is read FRESH on every watchCardThreshold check, and the threshold it
-// makes is `FOLD8_MOBILE_CARD_FRAC * window.innerHeight`. On a phone that
-// height changes as the URL bar collapses, so the line this trigger fires on
-// moves while you scroll — keep that in mind if the fold ever reads as firing
-// twice.
-//
-// 0.15, picked by eye on 2026-09-16 with the @hidden-hover trigger harness. LOW, and
-// deliberately: the threshold is compared against the card's TOP, so a smaller
-// fraction means the card has to climb FURTHER before the fold fires — 0.15
-// holds the demo back until the card has nearly cleared the top of the screen,
-// where the docked frame and the magnifying-glass demo can own the view.
-var FOLD8_MOBILE_CARD_FRAC = 0.28;   // manual/-baked 2026-09-17
+// MOBILE: the hover demo fires on the SAME line as the squares' grow-in
+// (foldFracNow("fold5")) — one crossing for the fold. fold5DemoGate still holds
+// it until the grow-in has landed, so the demo follows the squares directly.
+// **Removed — don't reintroduce:** the separate FOLD8_MOBILE_CARD_FRAC (0.28).
+// Desktop keeps its measured crossing, below.
 function fold8TooltipCardFrac() {
-  if (isMobile()) return FOLD8_MOBILE_CARD_FRAC;
+  if (isMobile()) return foldFracNow("fold5");
   const fallback = 0.5 - FOLD8_TOOLTIP_ABOVE_PX / window.innerHeight;
   const entry = typeof fold6SquareEls !== "undefined" ? fold6SquareEls[0] : null;
   const sq = entry ? entry.sq : null;
@@ -2085,7 +2059,7 @@ function fold7HoldEnd() {
 }
 window.addEventListener("touchend", fold7HoldEnd);
 window.addEventListener("touchcancel", fold7HoldEnd);
-const checkFold9 = watchCardThreshold(page7TitleCardEl, foldFrac("fold6", 0.5), fold9Trigger);
+const checkFold9 = watchCardThreshold(page7TitleCardEl, foldFrac("fold6"), fold9Trigger);
 // «ניתן לסנן קבוצות באמצעות המקרא» — so on the same crossing the legend
 // demonstrates itself: it plays its own hover state (all labels type in, both
 // columns), holds, and un-types again. It drives the existing label-hover
@@ -2113,7 +2087,7 @@ function fold9LegendPeek(target) {
   }, FOLD6_LABEL_HOVER_MS + FOLD9_LEGEND_PEEK_HOLD_MS);
 }
 // A trigger-shaped stand-in: watchCardThreshold only ever calls .set()/.trigger().
-const checkFold9LegendPeek = watchCardThreshold(page7TitleCardEl, foldFrac("fold6", 0.5),
+const checkFold9LegendPeek = watchCardThreshold(page7TitleCardEl, foldFrac("fold6"),
   { set: fold9LegendPeek, trigger: fold9LegendPeek });
 // The fly leaves from the DATE-RANGE card (fold9AxisCardEl, @fold7) on the
 // house 0.5 — the SAME crossing that starts the axis drawing itself in
@@ -2126,8 +2100,8 @@ const checkFold9LegendPeek = watchCardThreshold(page7TitleCardEl, foldFrac("fold
 // Same on both breakpoints.
 // Reversible like every other fold's trigger: scrolling back up across the line
 // plays the fly back over only the remaining distance, never a snap.
-const checkFold9Fly  = watchCardThreshold(fold9AxisCardEl, foldFrac("fold7", 0.5), fold9FlyTrigger);
-const checkFold9Axis = watchCardThreshold(fold9AxisCardEl, foldFrac("fold7", 0.5), fold9AxisTrigger);
+const checkFold9Fly  = watchCardThreshold(fold9AxisCardEl, foldFrac("fold7"), fold9FlyTrigger);
+const checkFold9Axis = watchCardThreshold(fold9AxisCardEl, foldFrac("fold7"), fold9AxisTrigger);
 // «ניתן לסנן קבוצות באמצעות המקרא» — from the same crossing the legend's labels
 // wear the strike-through a click would give them, and KEEP it until the axis
 // starts filling up (p7EngagedNow — the moment the legend collapses): the line
@@ -2188,13 +2162,13 @@ function checkFold9FilterFlash() {
 //
 // > Previously watched fold13OutroStickyEl (@fold14's wrapper) at the same
 // > frac. Don't restore that without also un-compressing the fade.
-const checkFold13 = watchCardThreshold(page12StickyEl, foldFrac("fold13", 0.5), fold13Trigger);
+const checkFold13 = watchCardThreshold(page12StickyEl, foldFrac("fold13"), fold13Trigger);
 
 // @fold14 — the share block's own card reaching mid-screen pairs the camps off
 // (updateFold14, js/fold11.js). House 0.5 crossing, house tempo; it rides on
 // top of @fold13's spread, which is already fully played by the time this fires.
 const fold14PairCardEl  = document.querySelector("#page-15 .text-card");
-const checkFold14Pair   = watchCardThreshold(fold14PairCardEl, foldFrac("fold14", 0.5), fold14PairTrigger);
+const checkFold14Pair   = watchCardThreshold(fold14PairCardEl, foldFrac("fold14"), fold14PairTrigger);
 
 // @fold9's size grid, on the house 0.5 crossing like every other fold — the
 // card reaching mid-screen is the trigger, NOT the IntersectionObserver page
@@ -2214,12 +2188,12 @@ const fold10GridTrigger = {
   set:     v => { p7ScopeUserUniform = null; p7SizeGridSet(v === 1, { uniform: false, instant: true }); },
   trigger: v => { p7ScopeUserUniform = null; p7SizeGridSet(v === 1, { uniform: false }); },
 };
-const checkFold10Grid = watchCardThreshold(fold10GridCardEl, foldFrac("fold9", 0.5), fold10GridTrigger);
+const checkFold10Grid = watchCardThreshold(fold10GridCardEl, foldFrac("fold9"), fold10GridTrigger);
 // Where p7SizeGridOnPage (page7.js) re-syncs from when @fold9 is re-entered
 // from below, a direction in which the watcher sees no crossing at all.
 function fold10GridPast() {
   if (!fold10GridCardEl) return false;
-  return fold10GridCardEl.getBoundingClientRect().top <= window.innerHeight * foldFracNow("fold9", 0.5);
+  return fold10GridCardEl.getBoundingClientRect().top <= window.innerHeight * foldFracNow("fold9");
 }
 
 // @fold10 (#page-11) — the fold right after the size grid: the squares go back
@@ -2250,27 +2224,10 @@ function fold11BeatGapMs() {
   return FOLD11_BEAT_GAP_MS === null ? p7MorphTotalMs(true)
                                      : Math.max(0, FOLD11_BEAT_GAP_MS);
 }
-// MOBILE @fold10: FOLD11_LEGEND_JUMP_DELAY_MS after the glide lands, the
-// closed legend plays the same jump + flash as @hidden-acled's ACLED crossing
-// (fold6MLegendJump) — a nudge toward the «הצגת גודל האירועים» row that just
-// arrived in it. Armed by a real crossing only (a load-time `set` lands the
-// dots without one), fired from page8.js's landing, cancelled by the reverse.
-var FOLD11_LEGEND_JUMP_DELAY_MS = 200;   // was 1000 — read as a dead pause after the (now 1450ms) glide settled
-let fold11LegendJumpTO = null;
-let fold11LegendJumpArmed = false;
-function fold11GlideLanded() {
-  clearTimeout(fold11LegendJumpTO); fold11LegendJumpTO = null;
-  if (!isMobile() || !fold11LegendJumpArmed) return;
-  fold11LegendJumpArmed = false;
-  fold11LegendJumpTO = setTimeout(() => {
-    fold11LegendJumpTO = null;
-    fold6MLegendJump(true);
-  }, FOLD11_LEGEND_JUMP_DELAY_MS);
-}
+// **Removed — don't reintroduce:** mobile's legend jump + flash after @fold10's
+// glide landed (fold11GlideLanded / FOLD11_LEGEND_JUMP_DELAY_MS).
 function fold11SizeApply(past, instant) {
   clearTimeout(fold11SizeBeatTO); fold11SizeBeatTO = null;
-  clearTimeout(fold11LegendJumpTO); fold11LegendJumpTO = null;
-  fold11LegendJumpArmed = past && !instant;
   // A real crossing of @fold10's line owns the flag again, either way.
   p7ScopeUserUniform = null;
   // The timeline's hover tooltip / mobile picker are live up to this line and
@@ -2328,10 +2285,10 @@ const fold11SizeTrigger = {
   set:     v => fold11SizeApply(v === 1, true),
   trigger: v => fold11SizeApply(v === 1, false),
 };
-const checkFold11Size = watchCardThreshold(fold11SizeCardEl, foldFrac("fold10", 0.5), fold11SizeTrigger);
+const checkFold11Size = watchCardThreshold(fold11SizeCardEl, foldFrac("fold10"), fold11SizeTrigger);
 function fold11SizePast() {
   if (!fold11SizeCardEl) return false;
-  return fold11SizeCardEl.getBoundingClientRect().top <= window.innerHeight * foldFracNow("fold10", 0.5);
+  return fold11SizeCardEl.getBoundingClientRect().top <= window.innerHeight * foldFracNow("fold10");
 }
 
 // ── The «הצגת גודל האירועים» toggle ──────────────────────────────────────────────
@@ -2554,6 +2511,15 @@ const FOLD4_HEADER_GAP_MOBILE_PX = 20;
 // values. It stays a separate constant (and a lerp) so the two folds can diverge
 // again without @fold3's value leaking back into @fold2.
 const FOLD3_HEADER_GAP_MOBILE_PX = FOLD4_HEADER_GAP_MOBILE_PX;
+// English page, phone: the camp names run on two lines there, so the gap under
+// them is its own number. `var` so the _debug-camp-names-en.js harness can drive it.
+var FOLD4_HEADER_GAP_MOBILE_EN_PX = 20;
+function fold4HeaderGapMobilePx() {
+  return isEnglish() ? FOLD4_HEADER_GAP_MOBILE_EN_PX : FOLD4_HEADER_GAP_MOBILE_PX;
+}
+function fold3HeaderGapMobilePx() {
+  return isEnglish() ? FOLD4_HEADER_GAP_MOBILE_EN_PX : FOLD3_HEADER_GAP_MOBILE_PX;
+}
 /* ── THE מקרא CARD'S POSE ────────────────────────────────────────────────────
    Two shapes, switched here and by the matching `body` class in style.css. The
    user has moved between them more than once, so BOTH stay live rather than
@@ -3269,24 +3235,8 @@ function fold6MLegendInSpan() {
 // How long the sheet HOLDS, fully open, before the rows set off into it.
 var FOLD6_MFLY_HOLD_MS = 263;
 
-/* THE CAMP HEADERS' EXIT. They are the one thing at @fold4 that still leaves by
-   un-typing — the six group rows fly instead, keeping every character — so when
-   that happens and how long it takes are their own two numbers rather than a
-   mirror of whenever each camp typed in back at @fold2.
-   `at` is which phase of the hand-off it starts on, as a share of the trigger:
-   0 is the very top, 1 the very end. `ms` is how long the un-type itself runs.
-   Both `var` — a manual/ harness drives them. */
-var FOLD6_HEAD_UNTYPE_AT = 0;     // phase, 0..1 of fold6Trigger's raw progress
-var FOLD6_HEAD_UNTYPE_MS_DESKTOP = 329;
-var FOLD6_HEAD_UNTYPE_MS_MOBILE  = 329;
-function fold6HeadUntypeMs() { return isMobile() ? FOLD6_HEAD_UNTYPE_MS_MOBILE : FOLD6_HEAD_UNTYPE_MS_DESKTOP; }
-function fold6HeadUntypeStart() { return Math.max(0, Math.min(0.99, FOLD6_HEAD_UNTYPE_AT)); }
-function fold6HeadUntypeLen() {
-  // Never zero — a zero-length window divides by 0 and the headers would vanish
-  // in a single frame rather than un-type at all.
-  return Math.max(0.01, Math.min(1 - fold6HeadUntypeStart(),
-    fold6HeadUntypeMs() / fold4GlideMs()));
-}
+// The camp headers' un-type at @fold4 rides the rows' own flight window
+// (fold6MFlyStart / fold6MFlyLen, below) — see fold6BeatT, js/update-groups.js.
 /* THE TWO BEATS OF THE HAND-OFF ARE SEQUENTIAL (explicit instruction): the
    מקרא sheet opens FIRST, and only once it is standing do the six group rows
    fly into it. They used to run together — the sheet was still widening while
@@ -3326,11 +3276,44 @@ function fold6MFlyStart() {
   return Math.min(0.8, arriveRaw + openShare + holdShare);
 }
 let fold6MobileLegendVis = null;
+// THE REVERSE'S LAST BEAT IS SEEN, NOT CUT. With no arrival span the bar's
+// opacity used to drop to 0 on the very frame the trigger got back to 0 — the
+// open sheet vanished at once and its own close (height, then width) then
+// played invisibly. Now the bar HOLDS while that close runs, and only then
+// leaves, fading over FOLD6_MLEGEND_LEAVE_MS. Mobile only (so is this bar).
+var FOLD6_MLEGEND_LEAVE_MS = 220;
+let fold6MLegendLeaveRaf = 0;
+function fold6MLegendLeaveCancel() {
+  if (!fold6MLegendLeaveRaf) return;
+  cancelAnimationFrame(fold6MLegendLeaveRaf);
+  fold6MLegendLeaveRaf = 0;
+  fold6MobileLegendVis = null;   // force the next visible write
+}
+function fold6MLegendLeave() {
+  fold6MLegendLeaveCancel();
+  const t0 = performance.now();
+  const tick = () => {
+    const ms = prefersReducedMotion() ? 0 : FOLD6_MLEGEND_LEAVE_MS;
+    const t = ms <= 0 ? 1 : Math.min(1, (performance.now() - t0) / ms);
+    fold6MobileLegendEl.style.opacity = String(1 - p9Ease(t));
+    if (t < 1) { fold6MLegendLeaveRaf = requestAnimationFrame(tick); return; }
+    fold6MLegendLeaveRaf = 0;
+    fold6MobileLegendVis = null;
+    // Still above the fold? Then land the ordinary hidden state.
+    if (fold6Trigger.currentRaw() <= 0) fold6SetMobileLegendVisible(0);
+  };
+  fold6MLegendLeaveRaf = requestAnimationFrame(tick);
+}
 function fold6SetMobileLegendVisible(vis) {
   const inSpan = fold6MLegendInSpan();
   const barT = inSpan <= 0 ? (vis > 0 ? 1 : 0)
                            : Math.max(0, Math.min(1, vis / inSpan));
-  if (barT !== fold6MobileLegendVis) {
+  if (barT > 0) fold6MLegendLeaveCancel();
+  // The sheet is closing (or about to — the branch below starts it), or the
+  // bar is on its way out: the bar's own write waits for them.
+  const closing = barT <= 0 && (fold6MFlyFadeOut || fold6MLegendLeaveRaf ||
+    (fold6MLegendIntroActive && fold6MFlyEnabled() && fold6MLegendOpenWant));
+  if (barT !== fold6MobileLegendVis && !closing) {
     fold6MobileLegendVis = barT;
     fold6MobileLegendEl.style.opacity = String(barT);
     fold6MobileLegendEl.style.pointerEvents = barT > 0.5 ? "auto" : "none";
@@ -4292,6 +4275,9 @@ function fold6FadeOutMLegendFlyIntro() {
     fold6MFlyFadeOut = false;
     fold6EndMLegendIntro();
     fold6MLegendRestRows();
+    // The sheet is shut; now the bar itself leaves — unless the reader has
+    // already turned round and the trigger is running forward again.
+    if (fold6Trigger.target() <= 0) fold6MLegendLeave();
   } });
 }
 

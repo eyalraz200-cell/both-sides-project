@@ -10,8 +10,10 @@ function isEnglish() {
 
 const I18N_EN = {
   // Camps
-  "קואליציית הימין": "The Right-Wing Coalition",
-  "גוש השינוי": "The Change Bloc",
+  // The \n is a line break on the PHONE only (.lang-en .camp-header is
+  // `pre` under 600px); everywhere else it collapses to a space.
+  "קואליציית הימין": "The Right-Wing\nCoalition",
+  "גוש השינוי": "The Change\nBloc",
   // Groups
   "גורמים ערבים ישראלים": "Arab Israeli actors",
   "תנועות התנחלות באיו״ש": "West Bank settler movements",
@@ -55,7 +57,7 @@ const I18N_EN = {
   // Action-type pill tooltips (P9_CATEGORY_DESC, page9.js)
   "הפגנה, עצרת, צעדה או נוכחות מחאתית ללא אלימות מצד המפגינים.": "A protest, rally, march, or other protest presence without violence by participants.",
   "התקפה המונית על קהילה, שכונה או אזור מגורים, הכוללת פגיעה באנשים, ברכוש או במרחב האזרחי.": "A mass attack on a community, neighborhood, or residential area involving harm to people, property, or civilian space.",
-  "לקיחה או החזקה של אדם בלתי מעורב בניגוד לרצונו.": "Taking or holding an uninvolved person against their will.",
+  "לקיחה או החזקה של אדם בניגוד לרצונו.": "Taking or holding a person against their will.",
   "תקיפת אדם באמצעות אבנים, מקלות, סכינים או אמצעים חדים וקהים אחרים.": "Attacking a person with stones, sticks, knives, or other sharp or blunt objects.",
   "תקיפת אדם באמצעות ירי בנשק חם, חומרי נפץ או הצתה.": "Attacking a person using firearms, explosives, or arson.",
   "תקיפת אדם באמצעות מכות, דחיפות, בעיטות או מגע גופני אלים אחר, ללא שימוש בנשק.": "Attacking a person through hitting, pushing, kicking, or other violent physical contact, without a weapon.",

@@ -31,7 +31,7 @@ let page8TitleWasPast = null;
 // harness that swept 0.05-0.95 (2026-09-13); 0.5 is where it stays.
 function page8CheckScroll() {
   const rect = page8TitleEl.getBoundingClientRect();
-  const nowPast = rect.top + rect.height / 2 <= window.innerHeight * foldFracNow("fold11", 0.5);
+  const nowPast = rect.top + rect.height / 2 <= window.innerHeight * foldFracNow("fold11");
   // (The mobile docked-tooltip drop that clears room for the tray band is NOT
   // fired here: per explicit instruction the docked frame keeps the
   // resting spot it has on @fold10 for the whole of @fold11, so the drop to
@@ -52,18 +52,31 @@ function page8CheckScroll() {
   page8TitleWasPast = nowPast;
 }
 
-// ── @fold12 ghost frame (DESKTOP only) ──
+// ── @fold12 ghost frame ──
 // When @fold12's title block crosses 0.75 of the viewport height (its top
-// edge, the desktop house line), a duplicate of its frame fades in at the top
+// edge, the house line), a duplicate of its frame fades in at the top
 // of the screen, at the exact spot the card pins (--card-top) — marking where
 // the title block is headed. It fades back out the moment the real card sticks
-// there (.is-stuck), and on the reverse crossing. Mobile never builds it (the
-// flag below is always false there).
+// there (.is-stuck), and on the reverse crossing. Both breakpoints, each on
+// its own numbers (the fold12Ghost*() readers). On mobile the ghost stays
+// horizontally CENTRED — where the rising card is — and the real card still
+// travels to the right edge once it sticks (--p9-title-flush, style.css).
 // `var` so a manual/ harness can drive these live.
 var FOLD12_GHOST_OPACITY = 0.15;   // manual/-baked 2026-09-28 (the flash's brightest point)
 var FOLD12_GHOST_TEXT    = true;        // false = the empty frame, text hidden
 var FOLD12_GHOST_FILL    = "#fdfcff";   // manual/-baked 2026-09-28
 const FOLD12_GHOST_CARD_FRAC = 0.75;
+// Mobile's own set — matched to desktop for now.
+var FOLD12_GHOST_OPACITY_MOBILE = 0.15;
+var FOLD12_GHOST_TEXT_MOBILE    = true;
+var FOLD12_GHOST_FILL_MOBILE    = "#fdfcff";
+const FOLD12_GHOST_CARD_FRAC_MOBILE = 0.75;
+var FOLD12_GHOST_FLASH_MS_MOBILE = 3000;
+function fold12GhostOpacity()  { return isMobile() ? FOLD12_GHOST_OPACITY_MOBILE  : FOLD12_GHOST_OPACITY; }
+function fold12GhostText()     { return isMobile() ? FOLD12_GHOST_TEXT_MOBILE     : FOLD12_GHOST_TEXT; }
+function fold12GhostFill()     { return isMobile() ? FOLD12_GHOST_FILL_MOBILE     : FOLD12_GHOST_FILL; }
+function fold12GhostCardFrac() { return isMobile() ? FOLD12_GHOST_CARD_FRAC_MOBILE : FOLD12_GHOST_CARD_FRAC; }
+function fold12GhostFlashMs()  { return isMobile() ? FOLD12_GHOST_FLASH_MS_MOBILE : FOLD12_GHOST_FLASH_MS; }
 // Named exception to GROUP_TRANSITION_MS: a plain fade of one frame, not a
 // legend-system beat.
 const FOLD12_GHOST_FADE_MS = 400;
@@ -74,8 +87,9 @@ const FOLD12_GHOST_FADE_MS = 400;
 var FOLD12_GHOST_FLASH_MS = 3000;   // manual/-baked 2026-09-28
 let fold12GhostFlashOn = false, fold12GhostFlashT0 = 0;
 function fold12GhostFlashLevel() {
-  if (prefersReducedMotion() || FOLD12_GHOST_FLASH_MS <= 0) return 1;
-  const phase = ((performance.now() - fold12GhostFlashT0) / FOLD12_GHOST_FLASH_MS) % 1;
+  const flashMs = fold12GhostFlashMs();
+  if (prefersReducedMotion() || flashMs <= 0) return 1;
+  const phase = ((performance.now() - fold12GhostFlashT0) / flashMs) % 1;
   return p9Ease(1 - Math.abs(2 * phase - 1));
 }
 function fold12GhostFlashLoop() {
@@ -107,18 +121,28 @@ function fold12GhostUpdate() {
     requestAnimationFrame(fold12GhostFlashLoop);
   }
   const cs = getComputedStyle(src);
-  s.width      = src.offsetWidth + "px";
+  // Mobile: the stuck card drops its side padding on its way to the right edge
+  // (style.css), so its width is only the ghost's while it is still unstuck —
+  // otherwise the ghost would narrow and re-wrap during its own fade-out.
+  // Mobile's width is rounded UP off the real box: offsetWidth rounds a
+  // fractional fit-content width down, and that lost sliver wrapped the
+  // headline onto a second line.
+  if (!isMobile()) {
+    s.width = src.offsetWidth + "px";
+  } else if (!page9TitleCardEl.classList.contains("is-stuck")) {
+    s.width = Math.ceil(src.getBoundingClientRect().width) + "px";
+  }
   s.whiteSpace = cs.whiteSpace;
   s.top        = (parseFloat(getComputedStyle(page9TitleCardEl).top) || 0) + "px";
-  s.opacity    = t * FOLD12_GHOST_OPACITY * fold12GhostFlashLevel();
-  s.background = FOLD12_GHOST_FILL;
-  s.color      = FOLD12_GHOST_TEXT ? "" : "transparent";
+  s.opacity    = t * fold12GhostOpacity() * fold12GhostFlashLevel();
+  s.background = fold12GhostFill();
+  s.color      = fold12GhostText() ? "" : "transparent";
 }
 const fold12GhostTrigger = makeTrigger(FOLD12_GHOST_FADE_MS, fold12GhostUpdate);
 const checkFold12Ghost = watchFlag(() => {
-  if (isMobile() || !page9TitleCardEl) return false;
+  if (!page9TitleCardEl) return false;
   if (page9TitleCardEl.classList.contains("is-stuck")) return false;
-  return page9TitleCardEl.getBoundingClientRect().top <= window.innerHeight * FOLD12_GHOST_CARD_FRAC;
+  return page9TitleCardEl.getBoundingClientRect().top <= window.innerHeight * fold12GhostCardFrac();
 }, fold12GhostTrigger);
 
 window.addEventListener("scroll", () => {

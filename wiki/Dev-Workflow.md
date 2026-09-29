@@ -417,7 +417,7 @@ made the real device the one place the panel could not reach.
   the in-page panel back.
 - `_debug-panel.html` is scaffolding like the rest — delete it with the last `_debug-*.js`.
 
-**Live right now:** none. On disk but not loaded (re-add its name to the scaffolding block to use it): `_debug-fold-timings-mobile-v3.js` (the panel resolves a harness as `_debug-<title>.js`, so `title` and file name must match — a renamed title with the old file name is silently dropped from the rail) (opening → timeline) — ten sliders, one per animation, each the animation's **full length in ms**; every phase constant inside it scales by the same ratio, and Copy lists the constants each length resolves to. One file per breakpoint, generated from one table; baking a length that differs between them means splitting that constant into a `*_DESKTOP`/`*_MOBILE` pair. The opening plays once, so reload to see it. Every open copy of the page follows the sliders (its `init` adopts any other page's `state` off the harness channel) — the panel tab drives ONE host per title, and with the page open in two places it was moving the copy nobody was watching. · `_debug-hint-band.js` (@fold8, mobile) — the picker's instruction band.
+**Live right now:** `_debug-camp-names-en.js` — loaded by `en/index.html` only, phone only (`manual/`: size, line spacing and gap-to-dots of the English camp names at @fold2). On disk but not loaded (re-add its name to the scaffolding block to use it): `_debug-fold-timings-mobile-v3.js` (the panel resolves a harness as `_debug-<title>.js`, so `title` and file name must match — a renamed title with the old file name is silently dropped from the rail) (opening → timeline) — ten sliders, one per animation, each the animation's **full length in ms**; every phase constant inside it scales by the same ratio, and Copy lists the constants each length resolves to. One file per breakpoint, generated from one table; baking a length that differs between them means splitting that constant into a `*_DESKTOP`/`*_MOBILE` pair. The opening plays once, so reload to see it. Every open copy of the page follows the sliders (its `init` adopts any other page's `state` off the harness channel) — the panel tab drives ONE host per title, and with the page open in two places it was moving the copy nobody was watching. · `_debug-hint-band.js` (@fold8, mobile) — the picker's instruction band.
 A `compare/` mode pair for the placement (`above` the timeline, shipped, vs `below`) driving
 `P7_HINT_PLACE_MOBILE`, and two `manual/` sliders: `P7_HINT_Y_MOBILE` (the hint up/down) and
 `P7_FIELD_Y_MOBILE` (the whole timeline up/down). Both nudges are positive = down.
@@ -503,7 +503,6 @@ is the live one in code:
 | `HOVER_DIM_OPACITY` (the shared hover-dim; `HOVER_DIM_BY_ACTOR` overrides per actor) | 0.27 | `js/core.js` |
 | `FOLD8_TOOLTIP_CLEARANCE_PX` (the hover demo's measured trigger crossing, desktop) | −517 |
 | `FOLD_FRAC_DESKTOP` (desktop trigger line per fold, all 11 keys) | 0.75 | `js/groups.js` |
-| `P7_VERT_SQ_BOOST` (desktop axis length) | 0.88 | `page7.js` |
 | `TOOLTIP_DOCK_BOTTOM_PX` (mobile docked frame's bottom inset) | −18 | `js/fold8-tooltip.js` |
 | `P7_VERT_MOBILE.slotTopPx` (mobile headline slot top) | 78 | `page7.js` |
 | `SBB_TIMELINE_LEFT_PX` (@fold8 outer dot edge, desktop) | 120 | `squareboundingbox.js` |

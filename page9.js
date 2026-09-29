@@ -23,7 +23,7 @@ const P9_CATEGORIES = [
 const P9_CATEGORY_DESC = [
   "הפגנה, עצרת, צעדה או נוכחות מחאתית ללא אלימות מצד המפגינים.",
   "התקפה המונית על קהילה, שכונה או אזור מגורים, הכוללת פגיעה באנשים, ברכוש או במרחב האזרחי.",
-  "לקיחה או החזקה של אדם בלתי מעורב בניגוד לרצונו.",
+  "לקיחה או החזקה של אדם בניגוד לרצונו.",
   "תקיפת אדם באמצעות אבנים, מקלות, סכינים או אמצעים חדים וקהים אחרים.",
   "תקיפת אדם באמצעות ירי בנשק חם, חומרי נפץ או הצתה.",
   "תקיפת אדם באמצעות מכות, דחיפות, בעיטות או מגע גופני אלים אחר, ללא שימוש בנשק.",
@@ -622,10 +622,10 @@ function p9RunAnimLoop() {
 // glide page8's handoff uses. A hidden dot keeps its own slot, so its `from`
 // equals its target and it only shrinks; a restored one has no `from` (it left
 // p9.lastPositions when it shrank away) and so arrives by growing, in place.
-// The same tempo the drop's own reposition phase runs at (STATE1_REPOSITION_MS
+// A touch quicker than the drop's own reposition phase (STATE1_REPOSITION_MS
 // in commitDropState) — this IS that move: the column re-filling itself around
 // dots that left.
-var P9_FILTER_REPACK_MS = 2200;
+var P9_FILTER_REPACK_MS = 1900;
 function p9FilterSnapshot() {
   if (!p9PageVisible() || !p9.lastPositions?.size) return;
   // NOT a plain glide: the shape wanted here is the tier-staggered "existing
@@ -3439,7 +3439,10 @@ function p9BuildPanel() {
 
       const newInLeft  = p9.leftTopOrder.filter(e => CATEGORY_TO_IDX[e.category] === newCatIdx);
       const newInRight = p9.rightTopOrder.filter(e => CATEGORY_TO_IDX[e.category] === newCatIdx);
-      const maxNew     = Math.max(newInLeft.length, newInRight.length, 1);
+      // Counted over the dots actually on screen: a legend-filtered dot is not
+      // drawn, so it must not hold a stagger slot or stretch the cascade.
+      // With no filter active this is the full roster, as before.
+      const maxNew     = Math.max(newInLeft.filter(p9CountsEvent).length, newInRight.filter(p9CountsEvent).length, 1);
 
       // sqrt scale: anchor and larger stay at 4ms/dot; smaller counts get proportionally
       // slower stagger so they don't feel too fast relative to the anchor.
@@ -3464,8 +3467,18 @@ function p9BuildPanel() {
       // drop can see.
       const staggerEvents = [];
       const phase2Start  = wasInterrupting || !needsReposition ? nowMs : nowMs + REPOSITION_MS;
-      newInLeft.forEach( (e, i) => { stagger.set(e, phase2Start + BASE_TRAVEL_MS + effectiveStagger * i); staggerEvents.push(e); });
-      newInRight.forEach((e, i) => { stagger.set(e, phase2Start + BASE_TRAVEL_MS + effectiveStagger * i); staggerEvents.push(e); });
+      // Rank = position among the VISIBLE dots; a filtered-out dot shares the
+      // slot of the visible dot it sits next to instead of taking its own.
+      const setStagger = list => {
+        let rank = 0;
+        list.forEach(e => {
+          stagger.set(e, phase2Start + BASE_TRAVEL_MS + effectiveStagger * rank);
+          staggerEvents.push(e);
+          if (p9CountsEvent(e)) rank++;
+        });
+      };
+      setStagger(newInLeft);
+      setStagger(newInRight);
 
       // How long the new dots alone take to finish arriving, from
       // phase2Start — used both for the overall animation duration below and

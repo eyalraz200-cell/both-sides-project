@@ -311,9 +311,20 @@ function init() {
 // background's actual border-radius clip at every corner. The reduced rx on
 // the inset path puts the stroke's *outer* edge back on radius 8, matching
 // the background's curve exactly.
-const FRAME_STROKE_W_DESKTOP = 2;
-const FRAME_STROKE_W_MOBILE = 2;
-function frameStrokeW() { return isMobile() ? FRAME_STROKE_W_MOBILE : FRAME_STROKE_W_DESKTOP; }
+var FRAME_STROKE_W_DESKTOP = 1.25;   // manual/-baked 2026-09-29; `var` so a harness can drive it
+// How solid the dashed stroke is. Desktop has its own knob; mobile stays at 1.
+var FRAME_STROKE_OPACITY_DESKTOP = 1;
+function frameStrokeOpacity() { return isMobile() ? 1 : FRAME_STROKE_OPACITY_DESKTOP; }
+const FRAME_STROKE_W_MOBILE = 1.25;   // matched to desktop 2026-09-29
+// MOBILE snaps the stroke to a whole number of DEVICE pixels (1.25 CSS px is
+// 3.75 device px on a 3x phone): a fractional stroke is anti-aliased differently
+// on each side of the box, and read as a border thicker along the top and left.
+// Desktop keeps the exact value it was tuned at.
+function frameStrokeW() {
+  if (!isMobile()) return FRAME_STROKE_W_DESKTOP;
+  const dpr = window.devicePixelRatio || 1;
+  return Math.max(1, Math.round(FRAME_STROKE_W_MOBILE * dpr)) / dpr;
+}
 // A 2px-dash/2px-gap pattern only closes cleanly if the outline's perimeter
 // happens to be a whole multiple of the 4px period — otherwise the run that
 // wraps past the path's start point lands on top of the first dash, which
@@ -329,7 +340,11 @@ const _dashLenCache = new WeakMap();
 function fitDashArray(geomEl) {
   let len = 0;
   if (geomEl.getTotalLength) {
-    const key = geomEl.getAttribute ? geomEl.getAttribute('d') : null;
+    // A <rect> has no `d`: key it on its own geometry, or a re-sized or
+    // re-stroked rect reuses a stale perimeter, the period stops closing and two
+    // dashes join into one where the path wraps.
+    const key = !geomEl.getAttribute ? null : geomEl.getAttribute('d') ||
+      ['x', 'y', 'width', 'height', 'rx'].map(a => geomEl.getAttribute(a)).join(' ');
     const hit = _dashLenCache.get(geomEl);
     if (hit && hit.key === key) len = hit.len;
     else { len = geomEl.getTotalLength(); _dashLenCache.set(geomEl, { key, len }); }
@@ -361,9 +376,21 @@ function updateTextCardFrameDashes() {
     // transition, so a mid-stuck re-bake (address-bar resize) froze a stale
     // viewBox in and the dash faded back in stretched after un-sticking.
     textCardFrameResizeObs?.observe(frame, { box: "border-box" }); // re-observe is a no-op
-    const w = frame.offsetWidth, h = frame.offsetHeight;
-    if (w === 0 || h === 0) return;
     const sw = frameStrokeW();
+    // The CSS border has to be the stroke's own width, or the svg (sized off
+    // --frame-border-w) and the rect drawn in it disagree. Mobile's snapped
+    // width is only known here, so it is written inline; desktop uses the
+    // stylesheet's value. Written before measuring — it changes the box.
+    if (isMobile()) frame.style.setProperty("--frame-border-w", sw + "px");
+    else frame.style.removeProperty("--frame-border-w");
+    if (frame.offsetWidth === 0 || frame.offsetHeight === 0) return;
+    // The box's REAL size, fractions included (offsetWidth rounds): a viewBox a
+    // fraction off the box scales the whole drawing and slides the stroke off
+    // one pair of edges. The rect is only trusted while it agrees with the
+    // offset size — under a scale transform it would not, and offset wins.
+    const fr = frame.getBoundingClientRect();
+    const w = Math.abs(fr.width  - frame.offsetWidth)  < 1 ? fr.width  : frame.offsetWidth;
+    const h = Math.abs(fr.height - frame.offsetHeight) < 1 ? fr.height : frame.offsetHeight;
     let svg = frame.querySelector(":scope > svg.text-card-frame-dash");
     let rect;
     if (!svg) {
@@ -381,9 +408,20 @@ function updateTextCardFrameDashes() {
     // Stroke-dependent attrs are rewritten every pass, not only on creation:
     // a resize across the 600px breakpoint must re-stroke an existing rect.
     rect.setAttribute("stroke-width", sw);
+    rect.setAttribute("stroke-opacity", frameStrokeOpacity());
     rect.setAttribute("rx", 8 - sw / 2);
     rect.setAttribute("ry", 8 - sw / 2);
     svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+    // Placed off the border the browser ACTUALLY drew, not off --frame-border-w:
+    // a fractional border width is snapped (1.25px computes to 1px), so the
+    // stylesheet's calc() put the svg a fraction of a px up and to the left of
+    // the box and a fraction too big — the stroke then sat outside the fill
+    // along the top and left and inside it along the bottom and right, which
+    // read as a border thicker on two sides.
+    const bw = parseFloat(getComputedStyle(frame).borderTopWidth) || 0;
+    svg.style.top = svg.style.left = -bw + "px";
+    svg.style.width  = w + "px";
+    svg.style.height = h + "px";
     rect.setAttribute("x", sw / 2);
     rect.setAttribute("y", sw / 2);
     rect.setAttribute("width", Math.max(0, w - sw));

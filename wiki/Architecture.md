@@ -18,7 +18,7 @@ Served at `/en/`. A copy of `index.html` with `<html lang="en" class="lang-en">`
 Hebrew page — there is no second stylesheet or script set. Its canonical / `og:url` point
 at `/en/`, so the @fold14 share row shares the English link.
 
-Both pages carry a **language switch** (`.lang-switch`, fixed in the top-left corner; the dev
+Both pages carry a **language switch** (grey `#8f8f8f` letters, weight 550, no fill, 1px outline; 12px letters on desktop, 13px on the phone; `.lang-switch`, fixed in the top-left corner; the dev
 fold badge sits under it and a bare **F** — or Ctrl+Shift+F — hides/shows the badge, a direct `.layout`
 child): a plain link — «EN» → `en/` on the Hebrew page, «עב» → the root on the English one.
 
@@ -44,6 +44,15 @@ What differs, all gated on `.lang-en` / `isEnglish()` (page7.js):
   left and chevron on the card's right edge; the «Show event scale» button sits over that
   same column, ring first, its ring centred on the swatch line. The note is 270px wide
   (`FOLD6_NOTE_WIDTH_EN`). Swatches and ring centre on Latin ink (`GROUP_LABEL_INK_REF`).
+- **Phone hero title is 24px and subtitle 16px** (`.lang-en .page0-title` /
+  `.page0-subtitle` in the ≤600px block; the Hebrew phone hero is 32px / 18px), each with
+  its own `top`, solved so the last baseline lands on the same
+  line as the Hebrew one. The title carries explicit `<br>`s, so it always breaks
+  «Extremists / on Both / Sides». Desktop keeps the shared 40px.
+- **Phone camp names run on two lines** («The Right-Wing / Coalition», «The Change /
+  Bloc») — the `\n` in the `I18N_EN` string, honoured by `.lang-en .camp-header`'s
+  `pre` under 600px and collapsed to a space everywhere else. The gap under them is
+  `FOLD4_HEADER_GAP_MOBILE_EN_PX` (`fold4HeaderGapMobilePx()`).
 - **Copy is English.** The title blocks, hero and share block are translated in
   `en/index.html` itself. Strings the scripts render (camp headers, group labels, legend
   controls, category pills, the @fold12 subtitle) go through `tr()` in `js/i18n.js` —
@@ -94,7 +103,7 @@ exist as real markup on the page (the `.a11y-only` `<h1>`, the `<meta name="desc
 
 **`.graphic-col` traps z-index.** Anything that must stack above `.text-col` has to be a
 direct `.layout` child, not nested inside `.graphic-col` — that's why the event
-tooltip, the category tooltip, the ACLED note layer, @hidden-hover's fake cursor (`.fold7-cursor`, appended by js/groups.js; z-index **1003 on desktop**, so the title block's 1004 paints in front of it — mobile's hand `.fold7-touch` stays 1006) and **`#groupsOverlay`** live where they
+tooltip, the category tooltip, the ACLED note layer, @hidden-hover's fake cursor (`.fold7-cursor`, appended by js/groups.js; z-index **1003 on desktop — and the phone's hand, `.fold7-touch`, is 1003 too** — so the title block's 1004/1005 paints in front of it — mobile's hand `.fold7-touch` stays 1006) and **`#groupsOverlay`** live where they
 do. The groups moved out so the mobile stack could be **bar → groups → title blocks**; the
 overlay is `position: fixed; inset: 0`, so nothing about where its rows land changed, and it
 sits before `.text-col` in source order so its desktop `z-index: 0` still paints under the
@@ -262,7 +271,7 @@ The dashed white box is a **separate** class, `.text-card-frame`, applied only t
 boxes); it's a transparent CSS border of `--frame-border-w` (**1.25px at both breakpoints**, `manual/`-baked on desktop 2026-09-29 and matched on mobile — the
 1.5/1.25px trial of 2026-09-22 was reverted with the font change) plus an inline
 `<svg class="text-card-frame-dash">` rect drawn against a 1:1 viewBox, stroke
-`frameStrokeW()` (`FRAME_STROKE_W_DESKTOP` / `FRAME_STROKE_W_MOBILE`, both **1.25**; desktop also has `FRAME_STROKE_OPACITY_DESKTOP`, **1**, written as the rect's `stroke-opacity`; `fitDashArray` keys its perimeter cache on a rect's own geometry, so a re-stroked frame re-fits its dashes instead of joining two where the path wraps;
+`frameStrokeW()` (`FRAME_STROKE_W_DESKTOP` / `FRAME_STROKE_W_MOBILE`, both **1.25**; **mobile snaps it to whole device pixels** (`frameStrokeW()`: 4/3px on a 3× phone, 1.5px on 2×) and writes that width inline as `--frame-border-w` on each frame — a fractional stroke anti-aliases differently per side and read as a border thicker along the top and left; **the svg is placed and sized in JS** (`updateTextCardFrameDashes`: inline `top`/`left` = minus the frame's *computed* border width, `width`/`height` and the viewBox = the frame's real fractional size) — the browser snaps a fractional border (1.25px computes to 1px), so the stylesheet's `calc()` off `--frame-border-w` sat the svg a fraction of a px up-left of the box and a fraction too big, and the stroke read thicker along the top and left; desktop also has `FRAME_STROKE_OPACITY_DESKTOP`, **1**, written as the rect's `stroke-opacity`; `fitDashArray` keys its perimeter cache on a rect's own geometry, so a re-stroked frame re-fits its dashes instead of joining two where the path wraps;
 `js/core.js` — each must equal `--frame-border-w` at its breakpoint; the stroke attrs are
 rewritten on every bake so a resize across the breakpoint re-strokes), 2px-dash/2px-gap,
 inset by half the stroke with rx = 8 − half-stroke

@@ -289,7 +289,7 @@ nothing below changes shape; see [Mobile](#mobile).
   by `p9FilterSnapshot`, which `p7FilterCommit` calls at the same moment page7 takes its
   own `from` snapshot — **before** the rebuild and redraw, or `p9.lastPositions` already
   holds the new slots and nothing moves — running the **tier-staggered reposition** branch of `p9PlaceDot` over
-  `P9_FILTER_REPACK_MS` (2200ms, the drop's own `STATE1_REPOSITION_MS`) — the same
+  `P9_FILTER_REPACK_MS` (1900ms, a touch quicker than the drop's own 2200ms `STATE1_REPOSITION_MS`) — the same
   trickle-into-the-freed-slots move a drop uses, not a plain block glide. Leaving
   `plainGlide`/`newEventStagger` off the anim record is what selects it.
   Position never snaps; a restored dot has no `from` and so arrives by growing. The legit grid below the
@@ -489,7 +489,9 @@ column count actually grows (`neededColsNow > prevColsSticky`).
 Arrival timing: `BASE_TRAVEL_MS = 600 * factor`, `ARRIVAL_STAGGER_MS = 4 * factor` per dot,
 sqrt-scaled against `ANCHOR_COUNT = 1880`
 (`effectiveStagger = 4 * max(1, sqrt(1880 / maxNew))`) so a small category still reads as
-a cascade. State 1's make-room wait before the new dots fly is tiered by how many dots the fuller column already holds — `p9RepositionMs(count)` over `P9_REPOSITION_TIERS_DESKTOP` / `_MOBILE` (`{upTo, ms}`, first match wins; ≤500 2200ms, ≤2000 2200ms, ≤5000 1650ms, above 2200ms). Each pill has its own tempo factor, per breakpoint — `P9_ARRIVAL_FACTOR_DESKTOP` / `_MOBILE` behind `p9ArrivalFactor(idx)` (index-aligned with `P9_CATEGORIES`; 1 = base, smaller = faster). Both tables are `[0.4, 1, 1, 0.4, 0.5, 0.5, 1, 0.65, 0.4, 0.75]` — the bigger the pill, the faster it runs.
+a cascade. **`maxNew` and each dot's stagger rank count only the dots on screen**
+(`p9CountsEvent`): a legend-filtered dot holds no stagger slot, so a filtered drop runs
+as long as its visible dots need, not as long as the full category. State 1's make-room wait before the new dots fly is tiered by how many dots the fuller column already holds — `p9RepositionMs(count)` over `P9_REPOSITION_TIERS_DESKTOP` / `_MOBILE` (`{upTo, ms}`, first match wins; ≤500 2200ms, ≤2000 2200ms, ≤5000 1650ms, above 2200ms). Each pill has its own tempo factor, per breakpoint — `P9_ARRIVAL_FACTOR_DESKTOP` / `_MOBILE` behind `p9ArrivalFactor(idx)` (index-aligned with `P9_CATEGORIES`; 1 = base, smaller = faster). Both tables are `[0.4, 1, 1, 0.4, 0.5, 0.5, 1, 0.65, 0.4, 0.75]` — the bigger the pill, the faster it runs.
 In state 2, dots still mid-flight from the interrupted animation are carried forward with
 their **original** arrival times.
 

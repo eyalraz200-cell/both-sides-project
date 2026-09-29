@@ -98,8 +98,6 @@ function p8RunAnimLoop() {
     // continuation flushes when IT lands, on the layer that is actually drawing.
     const p9HasIt = typeof p9 !== "undefined" && p9.anim && p9.anim.plainGlide;
     if (p8PhaseToT === 1 && !p9HasIt && typeof p7ScopeFlushPending === "function") p7ScopeFlushPending();
-    // Mobile: the closed legend's nudge rides the landing (fold11GlideLanded, js/groups.js).
-    if (p8PhaseToT === 1 && typeof fold11GlideLanded === "function") fold11GlideLanded();
   }
 }
 

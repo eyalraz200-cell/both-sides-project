@@ -1182,6 +1182,13 @@ still opening, and the flight aims at the rows' REST positions).
       panel to fly out of. Decreasing-only is binding: riding downward past a
       tap-dismissed demo must not resurrect it, and a hand-opened panel is left alone
       (`fold6MLegendOpenWant` guard).
+    - **The bar holds while the sheet closes, then leaves by fading.** With no arrival span
+      (`FOLD6_MLEGEND_ARRIVE_MS` 0) the bar's opacity is a 0/1 flip, and it used to drop to 0
+      on the frame the trigger got back to 0 — the open sheet vanished at once and its close
+      played invisibly. `fold6SetMobileLegendVisible` now skips the bar's own write while the
+      close is running or about to start, and the close's `onDone` runs `fold6MLegendLeave`:
+      the closed pill fades out over `FOLD6_MLEGEND_LEAVE_MS` (220, `p9Ease`), then the
+      ordinary hidden state lands. Any `vis > 0` cancels the leave and restores the bar.
     - Once `vis` is back at 0 the empty frame **closes** — `fold6FadeOutMLegendFlyIntro`,
       which is just the card's own close (height, then width) with an `onDone` that rests
       the intro state. The close picks up from wherever the card is (a fast flick can
@@ -1235,9 +1242,10 @@ still opening, and the flight aims at the rows' REST positions).
     `!flying` — since the flight starts late, the rows sit at zero progress through the
     opening beat, and on the old test that read as "not flying", so they spent it spelling
     themselves backwards before setting off.
-  - **The camp headers' exit is its own window** on mobile — `FOLD6_HEAD_UNTYPE_AT` (**0**)
-    and `FOLD6_HEAD_UNTYPE_MS` (**500**) — rather than mirroring whenever each camp typed in
-    at `@fold2`. They are the one thing at this fold that still leaves by un-typing.
+  - **The camp headers un-type on the rows' own flight progress** (`e6Fly`, read by
+    `fold6BeatT`, js/update-groups.js), at both breakpoints and in both directions — they
+    lose letters as the rows travel and re-type across the rows' return flight. **Removed — don't reintroduce:**
+    their own window (`FOLD6_HEAD_UNTYPE_AT` / `_MS`).
   - **The flight paints IN FRONT of the legend the whole way**, from one parking layer
     inside `#fold6MobileLegendLayer` after the panel. *Removed — don't reintroduce:*
     `.fold6-mfly-layer-under`, a second layer at z-index 1003 — above the legend's old 1002,
@@ -1271,17 +1279,24 @@ still opening, and the flight aims at the rows' REST positions).
   2026-09-14. The whole hand-off — the six rows flying into the מקרא sheet, which then stays
   open — therefore plays out as @fold5
   comes up rather than while this fold is still centred. Desktop keeps 0.5.
-- **The rows' flight starts late going DOWN, but takes the whole unwind coming BACK**
-  (`fold6MFlyT`, js/update-groups.js). Forward, the flight is the `{fold6MFlyStart(),
-  fold6MFlyLen()}` window on the trigger's raw progress — the sheet opens first, then the
-  rows fly. That window is deliberately **not** mirrored on the reverse: played backwards a
-  late window is an early one, and the rows flew out of the still-closed pill in the first
-  half of the unwind and then sat parked at their `@fold3` spot, mid-screen, for the rest —
-  on a fast scroll that spot is whatever fold the reader has reached (they popped in over
-  `@hidden-acled` and over the hero). Going back the flight is `p7Ease(raw)` over the full unwind,
-  so the rows keep travelling until the trigger lands. Each leg re-bases on wherever the
-  previous one left the rows (`fold6Trigger.target()` flips → capture `raw0, fly0`), so a
-  reversal mid-flight is continuous — position never snaps.
+- **The rows' flight starts late going DOWN; coming BACK it waits for the sheet, then takes
+  the rest of the unwind** (`fold6MFlyT`, js/update-groups.js). Forward, the flight is the
+  `{fold6MFlyStart(), fold6MFlyLen()}` window on the trigger's raw progress — the sheet opens
+  first, then the rows fly. The reverse is **not** that window mirrored (played backwards a
+  late window is an early one, and the rows then sat parked at their `@fold3` spot,
+  mid-screen, for the rest). Instead the reverse leg **holds** the rows in the panel for the
+  share of the trigger the sheet's open takes (`hold` = `(FOLD6_MLEGEND_WIDTH_MS +
+  FOLD6_MLEGEND_OPEN_MS) / fold4GlideMs()`, capped at half the leg, and **zero when the card
+  is already open** — a mid-flight reversal), then flies them over what is left on
+  **`p9Ease`**, so they leave and land gently. While held they are the panel's **own** rows,
+  revealed by the card as it opens; the swap to the flying stand-ins happens at take-off on
+  identical pixels — "landed" is `e6Fly >= 1`, not `e6 >= 1` (`fold6MFlyArrive`,
+  `fold6MFlyPaintClone`). Each leg re-bases on wherever the previous one left the rows
+  (`fold6Trigger.target()` flips → capture `raw0, fly0, hold`), so a reversal mid-flight is
+  continuous — position never snaps. **Removed — don't reintroduce:** the return flight
+  starting on the unwind's first frame (the six rows popped into view over a still-closed
+  pill) and its `p7Ease` curve (an ease-in when reversed — the rows stopped dead at full
+  speed).
 - **The fly targets survive a viewport height change while the panel is closed**
   (`fold6MFlyMeasure`, js/groups.js). The targets are cached per `WxH`; a closed panel cannot
   be re-measured, and returning "no target" there dropped the rows into the no-fly branch,

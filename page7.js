@@ -40,7 +40,7 @@ const P7_MOBILE_FILL      = 0.86;
 // at all, so the floor is where truncation is preferred to invisibility.
 let   P7_MOBILE_SQ_MIN    = 1.25;  // `let` only so a manual/ harness can drive it live
 const P7_MOBILE_SQ_MAX    = 3;     // just under desktop's 3.5
-const P7_MOBILE_GAP_RATIO = 0.45;  // manual/ pick 2026-09-13, tuned with P7_VERT_SQ_BOOST + zoom
+const P7_MOBILE_GAP_RATIO = 0.45;  // the ratio p7SolveMobileFit aims for (manual/ pick 2026-09-13)
 const P7_MOBILE_SQ_STEP   = 0.05;
 let p7MobileSq = P7_MOBILE_SQ_MIN;  // rewritten by p7UpdateLayout
 
@@ -69,7 +69,11 @@ function p7Sq()   { return isMobile() ? p7MobileSq : (p7DesktopSq || P7_SQ); }
 // on whole device pixels; P7_GAP / P7_SQ is the ratio it aims for and the value
 // before the first layout.
 let p7DesktopGapRatio = null;
-function p7GapRatio() { return isMobile() ? P7_MOBILE_GAP_RATIO : (p7DesktopGapRatio || P7_GAP / P7_SQ); }
+// Mobile's is solved the same way (p7SolveMobileFit); P7_MOBILE_GAP_RATIO is its aim.
+let p7MobileGapRatio = null;
+function p7GapRatio() {
+  return isMobile() ? (p7MobileGapRatio || P7_MOBILE_GAP_RATIO) : (p7DesktopGapRatio || P7_GAP / P7_SQ);
+}
 function p7Cell() { return p7Sq() * (1 + p7GapRatio()); }
 // Bounds of the vertical square solve (p7SolveVerticalSq) per breakpoint.
 function p7SqMax()  { return isMobile() ? P7_MOBILE_SQ_MAX  : P7_SQ; }
@@ -438,13 +442,12 @@ const P7_VERT_MOBILE = {
   // continues from this number — the grid top was NOT moved with it, and the
   // slot has clearance to spare, so the two are independent now.
   slotTopPx: 78,
-  // Camera + plaque knobs (see P7_VERT). compare/ pick 2026-09-12, zoom re-tuned
-  // 2026-09-13: a 1.85× field whose fill edge is HELD at 0.6 of the box (the
-  // zoom was picked together with P7_VERT_SQ_BOOST and P7_MOBILE_GAP_RATIO —
-  // change them as a set), and no single top-slot headline —
+  // Camera + plaque knobs (see P7_VERT). compare/ pick 2026-09-12, zoom re-picked
+  // 2026-09-29 with the mobile fit (p7SolveMobileFit): a 3× field whose fill
+  // edge is HELD at 0.6 of the box, and no single top-slot headline —
   // every event's plaque stands beside its own dot ahead of the fill, then flies
   // to sit above the dot when the fill reaches it and fades out 150px later.
-  zoom: 1.85, camera: 'fill', fillAnchorFrac: 0.6, slotFillGapPx: 15, dotGapPx: 6, sideWrapPx: 150, sidePush: false, sidePlace: 'alternate', sidePhase: 'fly', sideLeadPx: 80, sideFlyGapPx: 10, sideFlyFadePx: 150,
+  zoom: 3, camera: 'fill', fillAnchorFrac: 0.6, slotFillGapPx: 15, dotGapPx: 6, sideWrapPx: 150, sidePush: false, sidePlace: 'alternate', sidePhase: 'fly', sideLeadPx: 80, sideFlyGapPx: 10, sideFlyFadePx: 150,
   // The mobile headline is the only copy on a screen that is otherwise a field
   // of small coloured dots, so it gets a black plaque instead of sitting bare on
   // the page: it reads as a label of the axis rather than as body text, and it
@@ -511,9 +514,13 @@ function p7SolveMobileCorridor(W, H) {
 // P7_VERT.daysPerRow is its ceiling and the value before the first layout.
 let p7DesktopDaysPerRow = null;
 let p7FitProbeDpr = null;   // set only while p7FitTable() walks the candidate spans
+// MOBILE solves its own too (p7SolveMobileFit); `daysPerRow / zoom` is only the
+// value before the first layout.
+let p7MobileDaysPerRow = null;
 function p7VertDaysPerRow() {
-  if (!isMobile()) return p7FitProbeDpr || p7DesktopDaysPerRow || p7V().daysPerRow;
-  return p7V().daysPerRow / (p7V().zoom || 1);
+  if (p7FitProbeDpr) return p7FitProbeDpr;
+  if (!isMobile()) return p7DesktopDaysPerRow || p7V().daysPerRow;
+  return p7MobileDaysPerRow || p7V().daysPerRow / (p7V().zoom || 1);
 }
 function p7VertRowPlan(CELL) {
   const minMs = p7DayMs(p7.minDate), maxMs = p7DayMs(p7.maxDate);
@@ -544,50 +551,92 @@ function p7DayMs(dateStr) { return new Date(dateStr + "T00:00:00Z").getTime(); }
 
 function p7VertBandRows(CELL) { return Math.ceil(p7V().bandPx / CELL); }
 
-// Deliberate TRIM of the solve below. The solver returns the largest square that
-// still PACKS, and that square reads too heavy for this field — the dots crowd
-// their own gaps and the camps lose their texture. manual/ pick 2026-09-13
-// (_debug-tl-zoom.js, since deleted): 0.88, alongside zoom 1.85 and gap 0.45,
-// the three tuned together against each other.
-//
-// It is applied on the way OUT of p7SolveVerticalSq, so it deliberately breaks
-// the solver's own fit test — below 1 the grid comes out SHORTER than the box it
-// was solved for, and p7VertTopY's centring takes up the slack. That is the look
-// that was picked, not a rounding artefact.
-//
-// > It was 1.12 (an overshoot) until 2026-09-13, tuned at 390×721 against a
-// > docked tooltip. Same knob, opposite direction — don't assume the name means
-// > it must be > 1.
-//
-// MOBILE ONLY — desktop shares this solver and was never part of either tuning.
-const P7_VERT_SQ_BOOST = 0.88;
-function p7VertSqBoost() { return isMobile() ? P7_VERT_SQ_BOOST : 1; }
-
-// Largest square (≤ P7_SQ, the mobile-style solve) whose grid holds the
-// busier camp once each day's events must sit in that day's rows: a date-
-// driven layout cannot pack as tightly as the old free permutation, and band
-// mode gives whole rows away to the headlines. 6% slack for the jitter spill.
-// The winner is scaled by P7_VERT_SQ_BOOST on the way out.
+// The square, per breakpoint — both solve the span and the gap with it.
 function p7SolveVerticalSq(sideW, sideH, maxEvents) {
-  if (!isMobile()) return p7SolveDesktopFit(sideW, sideH);
-  const gapRatio = p7GapRatio();
-  const bands = p7V().eventMode === "band" ? P7_AXIS_EVENTS.length : 0;
-  const sqMin = p7SqMin();
-  // `zoom` (mobile camera) exists to make the dots BIGGER, so the ceiling scales
-  // with it — capped at P7_MOBILE_SQ_MAX every zoom level solved to the same
-  // square and the field only grew as tall as the row plan's fixed spans.
-  const sqMax = p7SqMax() * (isMobile() ? (p7V().zoom || 1) : 1);
-  for (let sq = sqMax; sq >= sqMin - 1e-9; sq -= p7SqStep()) {
-    const CELL = sq * (1 + gapRatio);
-    const cols = Math.floor(sideW / CELL), rows = Math.floor(sideH / CELL);
-    const cap  = Math.max(1, Math.floor(cols * p7V().fillRatio));
-    const avail = rows - bands * Math.ceil(p7V().bandPx / CELL);
-    // Every fixed-span row, plus the first year's header label above row 0,
-    // must fit the box (so p7VertTopY can centre the axis in it).
-    if (sideH < p7VertRowPlan(CELL).totalRows * CELL + p7VertYearHeaderH()) continue;
-    if (avail * cap >= maxEvents * 1.06) return Math.round(sq * p7VertSqBoost() * 100) / 100;
+  return isMobile() ? p7SolveMobileFit(sideW, sideH) : p7SolveDesktopFit(sideW, sideH);
+}
+
+// ── MOBILE FIT ───────────────────────────────────────────────────────────
+// The desktop fit's three steps (see DESKTOP FIT below), for the phone: the
+// largest cell whose busiest row still fits the camp and whose rows fit the
+// height; snapped DOWN to whole device pixels; then the span with the most rows
+// that still fits, so spare height goes into the axis. manual/ pick 2026-09-29
+// (_debug-mobile-timeline-room.js, since deleted): a field P7_VERT_MOBILE.zoom
+// (3) screens tall, no row allowed to the wall, square never under 1.5.
+//
+// A phone camp is ~160px wide and the busiest single day has 58 events, so the
+// span has to be allowed UNDER one day per row — a day then owns several rows
+// and its events spread over them (p7BuildVerticalLayout spills down), which is
+// how the table counts them.
+const P7_MOBILE_FIT_WALL_ROWS_FRAC = 0;
+const P7_MOBILE_FIT_SQ_MIN = 1.5;        // the scrolling field's smallest square
+// The zoomed-out view has one screen for every event, so its floor is lower:
+// one CSS px is three device px on a phone and still reads as a mark.
+const P7_MOBILE_ZOOMOUT_SQ_MIN = 1;
+const P7_MOBILE_FIT_DAYS_PER_ROW_MIN  = 0.5;
+const P7_MOBILE_FIT_DAYS_PER_ROW_STEP = 0.05;
+let p7MobileFitTableCache = null, p7MobileFitTableKey = "";
+function p7MobileFitTable() {
+  const key = `${p7.leftEvents.length}:${p7.rightEvents.length}:${p7.minDate}:${p7.maxDate}`;
+  if (p7MobileFitTableCache && p7MobileFitTableKey === key) return p7MobileFitTableCache;
+  const minMs = p7DayMs(p7.minDate), maxMs = p7DayMs(p7.maxDate);
+  const nDays = Math.max(1, Math.round((maxMs - minMs) / 86400000) + 1);
+  const days = [p7.leftEvents, p7.rightEvents].map(list => list.map(e =>
+    Math.min(nDays - 1, Math.max(0, Math.round((p7DayMs(e.date) - minMs) / 86400000)))));
+  const table = [];
+  try {
+    for (let dpr = P7_VERT.daysPerRow; dpr >= P7_MOBILE_FIT_DAYS_PER_ROW_MIN - 1e-9; dpr -= P7_MOBILE_FIT_DAYS_PER_ROW_STEP) {
+      p7FitProbeDpr = dpr;
+      const plan = p7VertRowPlan(1);
+      let peak = 0;
+      days.forEach((list) => {
+        const c = new Float64Array(plan.totalRows);
+        for (let i = 0; i < list.length; i++) {
+          const span = Math.max(1, Math.round(plan.rowsOf[list[i]]));
+          const r0 = Math.min(plan.totalRows - 1, Math.floor(plan.rowStart[list[i]]));
+          for (let k = 0; k < span; k++) c[Math.min(plan.totalRows - 1, r0 + k)] += 1 / span;
+        }
+        const sorted = Array.from(c).sort((x, y) => y - x);
+        peak = Math.max(peak, Math.ceil(sorted[Math.min(sorted.length - 1, Math.floor(P7_MOBILE_FIT_WALL_ROWS_FRAC * sorted.length))]));
+      });
+      table.push({ dpr, rows: plan.totalRows, peak });
+    }
+  } finally { p7FitProbeDpr = null; }
+  p7MobileFitTableKey = key;
+  return (p7MobileFitTableCache = table);
+}
+// The solve itself, writing nothing. `sqFloor` is the smallest square allowed:
+// at the floor the rows reach the wall rather than the dots shrinking further.
+function p7MobileFitSolve(sideW, sideH, sqFloor) {
+  const table = p7MobileFitTable();
+  const ratio = P7_MOBILE_GAP_RATIO;
+  const roomH = sideH - p7VertYearHeaderH();
+  const px    = window.devicePixelRatio || 1;
+  let cell = 0, best = null;
+  table.forEach((t) => {
+    const c = Math.min(roomH / t.rows, sideW / (t.peak + 1), P7_MOBILE_SQ_MAX * (1 + ratio));
+    if (c > cell + 1e-9) { cell = c; best = t; }
+  });
+  cell = Math.floor(cell * px + 1e-6) / px;
+  let sq = Math.min(Math.round(cell / (1 + ratio) * px), Math.floor(P7_MOBILE_SQ_MAX * px + 1e-6)) / px;
+  if (sq < sqFloor) {
+    sq   = Math.ceil(sqFloor * px - 1e-6) / px;
+    cell = Math.ceil(sq * (1 + ratio) * px - 1e-6) / px;
   }
-  return Math.round(sqMin * p7VertSqBoost() * 100) / 100;
+  if (sq >= cell) cell = sq + 1 / px;   // a 1x display at the floor: keep one px of gap
+  const fitsH = t => t.rows * cell <= roomH + 1e-6;
+  table.forEach((t) => {
+    if (fitsH(t) && (t.peak + 1) * cell <= sideW + 1e-6 && t.rows > best.rows) best = t;
+  });
+  // At the floor no span may fit the width — the height still has to hold.
+  if (!fitsH(best)) table.forEach((t) => { if (fitsH(t) && (!fitsH(best) || t.rows > best.rows)) best = t; });
+  return { sq, cell, dpr: best.dpr, gapRatio: cell / sq - 1 };
+}
+function p7SolveMobileFit(sideW, sideH) {
+  const fit = p7MobileFitSolve(sideW, sideH, P7_MOBILE_FIT_SQ_MIN);
+  p7MobileDaysPerRow = fit.dpr;
+  p7MobileGapRatio   = fit.gapRatio;
+  return fit.sq;
 }
 
 // ── DESKTOP FIT ──────────────────────────────────────────────────────────
@@ -939,11 +988,11 @@ function p7VertCameraOffset(boxH, len) {
   const V = p7V(), over = len - boxH;
   if (V.camera === 'none' || over <= 0) return 0;
   const frac = p7AxisLaggedFillFrac ?? p7AxisFillFracTarget();
-  // DESKTOP measures the fill edge on the LIVE field, never the one the
+  // The fill edge is measured on the LIVE field, never the one the
   // zoom-out is shrinking: p7VertFieldLen() falls with the beat, which dropped
   // `off` back under the `over` clamp halfway through and moved the live
   // endpoint p7VertTopY lerps from — the field's bottom ran 958 → 1011 → 958.
-  const fieldLen = isMobile() ? p7VertFieldLen() : p7.vert.totalRows * p7.cellBase;
+  const fieldLen = p7.vert.totalRows * p7.cellBase;
   let off;
   if (V.camera === 'pan') off = frac * over;
   else off = p7VertYearHeaderH() + frac * fieldLen - V.fillAnchorFrac * boxH;
@@ -1131,7 +1180,7 @@ function p7DesktopFitView(W, H) {
   // Nothing to zoom out of: the field already fits its page.
   if (!(ky < 1)) return (p7DesktopFitViewCache = null);
   p7DesktopFitViewCache = {
-    key, ky, cell: fit.cell, sq: fit.sq, cols, vert,
+    key, ky, cell: fit.cell, sq: fit.sq, cols, vert, remap: true,
     leftX0: W / 2 - gap / 2 - cols * fit.cell, rightX0: W / 2 + gap / 2,
     top: boxT + Math.max(0, (boxH - len - p7VertYearHeaderH()) / 2),
   };
@@ -1146,7 +1195,7 @@ function p7FitRowOfLiveRow(row, fitVert) {
   // A headline dated past the data is PARKED three rows short of the end
   // (p7BuildVerticalLayout's reachRow), not placed by its date — so it keeps
   // that distance, in rows of the plan it is drawn in.
-  if (Math.abs(row - (v.totalRows - 3)) < 1e-9) return fitVert.totalRows - 3;
+  if (!isMobile() && Math.abs(row - (v.totalRows - 3)) < 1e-9) return fitVert.totalRows - 3;
   let lo = 0, hi = v.nDays - 1;
   while (lo < hi) {
     const mid = (lo + hi + 1) >> 1;
@@ -1155,30 +1204,35 @@ function p7FitRowOfLiveRow(row, fitVert) {
   const f = v.rowsOf[lo] ? Math.min(1, Math.max(0, (row - v.rowStart[lo]) / v.rowsOf[lo])) : 0;
   return fitVert.rowStart[lo] + f * fitVert.rowsOf[lo];
 }
+// MOBILE zooms out to a ONE-SCREEN FIT as well, not to a squash of the tall
+// field: the mobile fit solved against the height the whole-timeline view has
+// (p7ZoomOutAvail), with its own lower floor (P7_MOBILE_ZOOMOUT_SQ_MIN), so the
+// view keeps its rows short of the wall for as long as a legible dot allows.
+// Same result shape as p7DesktopFitView; `remap` tells p7RowY, the hover bulge
+// and the claimed squares that its row plan is not the live one.
 let p7SquashCache = null;
 function p7Squash(W, H) {
   if (!isMobile()) return p7DesktopFitView(W, H);
-  if (!p7VerticalAxis() || !p7.ready || !p7.vert) return null;
+  if (!p7VerticalAxis() || !p7.ready || !p7.vert || !p7.cellBase) return null;
   if (!Number.isFinite(W) || !Number.isFinite(H)) return null;
-  const ky = p7ZoomOutKY(H);
-  if (!(ky < 1)) return null;                       // nothing to squash into
-  const maxEvents = Math.max(p7.leftEvents.length, p7.rightEvents.length);
-  const key = W + "|" + H + "|" + maxEvents + "|" + ky.toFixed(4);
+  const avail = Math.round(p7ZoomOutAvail(H));
+  const liveLen = p7.vert.totalRows * p7.cellBase;
+  if (!(avail > 0) || !(avail < liveLen)) return null;   // nothing to zoom out of
+  const key = [W, H, avail, liveLen, p7.cellBase, p7.leftEvents.length, p7.rightEvents.length,
+               window.devicePixelRatio || 1].join("|");
   if (p7SquashCache && p7SquashCache.key === key) return p7SquashCache;
-
-  const cell  = p7.cellBase * ky;
-  const sq    = p7.sqBase * ky;
-  const outer = sbbTimelineLeftX(W, H), gap = p7CenterGap();
-  const sideW = W / 2 - gap / 2 - outer;
-  const cols  = Math.max(1, Math.floor(sideW / cell));
-  // Same hug-the-corridor rule as p7GridGeometry.
-  const leftX0  = W / 2 - gap / 2 - cols * cell;
-  const rightX0 = W / 2 + gap / 2;
-  // p7BuildVerticalLayout reads p7Cell()/p7Sq() nowhere — it takes CELL — but it
-  // DOES read the row plan through p7VertRowPlan(CELL), and that is date-driven
-  // and zoom-driven only, so the rows come out identical to the live layout.
-  const vert = p7BuildVerticalLayout(p7.rows, cols, cell);
-  p7SquashCache = { key, ky, cell, sq, cols, leftX0, rightX0, vert };
+  const gap   = p7CenterGap();
+  const sideW = W / 2 - gap / 2 - sbbTimelineLeftX(W, H);
+  const fit   = p7MobileFitSolve(sideW, avail + p7VertYearHeaderH(), P7_MOBILE_ZOOMOUT_SQ_MIN);
+  const cols  = Math.max(1, Math.floor(sideW / fit.cell));
+  let vert;
+  try { p7FitProbeDpr = fit.dpr; vert = p7BuildVerticalLayout(Math.floor(avail / fit.cell), cols, fit.cell); }
+  finally { p7FitProbeDpr = null; }
+  p7SquashCache = {
+    key, ky: vert.totalRows * fit.cell / liveLen, cell: fit.cell, sq: fit.sq, cols, vert, remap: true,
+    // Same hug-the-corridor rule as p7GridGeometry.
+    leftX0: W / 2 - gap / 2 - cols * fit.cell, rightX0: W / 2 + gap / 2,
+  };
   return p7SquashCache;
 }
 
@@ -1207,12 +1261,16 @@ function p7ZoomLerp(a, b) { return a + (b - a) * p7ZoomOutT; }
 function p7ZoomOutKY(H) {
   if (!p7.vert || !p7.cellBase) return 1;
   if (!isMobile()) { const fit = p7DesktopFitView(p7.lastW, H); return fit ? fit.ky : 1; }
-  const box  = sbbTimeline(H);
-  const avail = Math.round(H * box.bottom) + p7ZoomOutBottomBonus() - p7ZoomOutFitTop()
-              - p7ZoomOutBottomReserve() - (p7VertYearHeaderH() - P7_VERT_FIRST_EV_HEADROOM_PX * (p7AxisHasMobileAbove() ? 1 : 0));
-  const live  = p7.vert.totalRows * p7.cellBase;
-  if (avail <= 0 || live <= 0) return 1;
-  return Math.min(1, avail / live);
+  // MOBILE: the fitted view's own length (it may stop short of `avail`, since
+  // its pitch is whole device pixels).
+  const view = p7Squash(p7.lastW, H);
+  return view ? Math.min(1, view.ky) : 1;
+}
+// The height the whole-timeline view has for its rows, mobile.
+function p7ZoomOutAvail(H) {
+  const box = sbbTimeline(H);
+  return Math.round(H * box.bottom) + p7ZoomOutBottomBonus() - p7ZoomOutFitTop()
+       - p7ZoomOutBottomReserve() - (p7VertYearHeaderH() - P7_VERT_FIRST_EV_HEADROOM_PX * (p7AxisHasMobileAbove() ? 1 : 0));
 }
 // The live -> squashed y factor for this frame. 1 whenever the beat is idle.
 //
@@ -1359,12 +1417,12 @@ function p7FillEdgeY(H) {
 function p7RowY(row, H) {
   const v = p7.vert;
   if (!v || !v.totalRows) return p7VertTopY(H);
-  // DESKTOP zooms out to a layout with its OWN row plan (p7DesktopFitView), so
+  // The beat zooms out to a layout with its OWN row plan (p7Squash's view), so
   // the mark goes to the row its day has THERE — scaling the live row would
   // leave the year rings and headline dots a few px off the dots beside them.
-  if (p7ZoomOutT && !isMobile()) {
-    const fit = p7DesktopFitView(p7.lastW, p7.lastH);
-    if (fit) return p7VertTopY(H) + p7ZoomLerp(row * p7.cellBase, p7FitRowOfLiveRow(row, fit.vert) * fit.cell);
+  if (p7ZoomOutT) {
+    const fit = p7Squash(p7.lastW, p7.lastH);
+    if (fit && fit.remap) return p7VertTopY(H) + p7ZoomLerp(row * p7.cellBase, p7FitRowOfLiveRow(row, fit.vert) * fit.cell);
   }
   return p7VertTopY(H) + (row / v.totalRows) * p7VertFieldLen();
 }
@@ -1742,7 +1800,7 @@ function p7ShouldRedrawForAnim() { return currentPage === 4 || currentPage === 6
 // one-page view with the field (p7TargetForActorOccurrence).
 let p7ClaimedSyncedZoomT = 0;
 function p7SyncClaimedSquares() {
-  const zoomMoved = !isMobile() && p7ZoomOutT !== p7ClaimedSyncedZoomT;
+  const zoomMoved = p7ZoomOutT !== p7ClaimedSyncedZoomT;
   p7ClaimedSyncedZoomT = p7ZoomOutT;
   if ((p7GridMorph || zoomMoved) && typeof updateGroups === "function") updateGroups();
 }
@@ -2768,7 +2826,14 @@ function p7MorphTotalMs(flat) {
   // The flatten has NO position beat (see p7MorphWindows), so its `fly` is not
   // on screen — counting it left @fold10 holding a finished, motionless field
   // for fly − sizeEnd ms (700 of 1400) before fold11BeatGapMs() let the glide go.
-  return f ? sizeEnd : Math.max(k.fly, sizeEnd);
+  // …unless it interrupted a flight (p7GridMorph.travel, set in p7SizeGridSet):
+  // then the dots really are travelling and the RUNNING morph's clock has to
+  // cover the fly window, or the position is cut off part-way and snaps to its
+  // cell later. Only the running morph — an explicit `flat` (the beat gap) is
+  // still the size clock, so the glide leaves on time and the rest of the
+  // travel plays underneath it (p7GridLiveRect).
+  const travel = flat === undefined && !!(p7GridMorph && p7GridMorph.travel);
+  return (f && !travel) ? sizeEnd : Math.max(k.fly, sizeEnd);
 }
 // The two windows for one tier, in ms, on the ON clock.
 //
@@ -2874,13 +2939,16 @@ function p7SizeGridSet(on, opts) {
   }
   const wasOn = p7Grid.on;
   const sameGrid = on && wasOn;   // only the flatten flag moved
+  // A morph still in the air when this one replaces it: `from` is then a set
+  // of mid-flight positions, so even a flatten has real distance to cover.
+  const inFlight = !!(p7GridMorph && performance.now() - p7GridMorph.start < p7MorphTotalMs());
   p7Grid.on = on;
   p7GridUniform = uniform;
   if (!sameGrid) {
     p7Grid.layout = null;   // repacked from whatever is on screen at this press
     p7Grid.packVis = null;  // back to the on-screen gate — the filter's own pre-claim is stale
   }
-  p7GridMorph = (!instant && from.size) ? { from, start: performance.now(), dir: (on || !wasOn) ? "on" : "off", flat: sameGrid } : null;
+  p7GridMorph = (!instant && from.size) ? { from, start: performance.now(), dir: (on || !wasOn) ? "on" : "off", flat: sameGrid, travel: sameGrid && inFlight } : null;
   p7BulgeT.clear();
   // Drop any open tooltip through the hover layer, not by hand: clearing
   // p7.hoveredEvent directly leaves the tooltip element's .is-visible class on
@@ -3281,7 +3349,7 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
   // neighbours in the tall field — so once the beat is past halfway the bulge
   // is resolved against the fitted cells instead. Mobile's squash keeps the
   // live rows and is left on the live cells.
-  const bulgeFit = !!sqshPos && !isMobile() && p7ZoomOutT >= 0.5;
+  const bulgeFit = !!sqshPos && !!sqsh.remap && p7ZoomOutT >= 0.5;
   const bulges = bulgeFit
     ? p7BulgeList(posMap, sqshPos, events, sqsh.cols, x0, topY, sqsh.cell, SQ)
     : p7BulgeList(posMap, positions, events, cols, x0, topY, CELL, SQ);
@@ -3881,8 +3949,8 @@ function p7TargetForActorOccurrence(actor, n, W, H) {
   // DESKTOP end-of-fill zoom-out: fly to this event's cell in the one-page view
   // with the canvas dots (p7DrawSideSquares' `sqshPos` lerp, same endpoints).
   // p7.SQ already carries the size; the cell is what has to move.
-  const fitView = p7ZoomOutT && !isMobile() ? p7DesktopFitView(p7.lastW, p7.lastH) : null;
-  if (fitView) {
+  const fitView = p7ZoomOutT ? p7Squash(p7.lastW, p7.lastH) : null;
+  if (fitView && fitView.remap) {
     const idx = (resolved.side === "left" ? p7.leftEvents : p7.rightEvents)
       .indexOf(p7EventForActorOccurrence(actor, n));
     const fc = idx >= 0 ? (resolved.side === "left" ? fitView.vert.leftPos : fitView.vert.rightPos)[idx] : -1;

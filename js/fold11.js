@@ -34,20 +34,13 @@
 //     of further scroll. Drives only the extreme dots' morph to freeform
 //     (p9.fold13ExtremeMorphT) and, with it, the camp dividing line's fade-out.
 //
-// Both halves now belong to @fold13 and run BACK TO BACK, not together: the
-// fade is compressed into the first half of the card's rise (FOLD13_FADE_SPAN)
-// so it has finished by the time the card is halfway up, and the spread fires
-// at exactly that point, onto an otherwise-clear screen. The two constants —
-// FOLD13_FADE_SPAN here and checkFold13's frac there — are one decision.
-// How much of the card's rise the fade-out occupies, as a fraction of
-// fold13ScrollT. 0.5 = done by the time the card is halfway up, which is where
-// the freeform spread fires (checkFold13's frac, js/groups.js). The two numbers
-// are one decision — raise this and the fade runs under the spread.
-const FOLD13_FADE_SPAN = 0.5;
-// Desktop derives the span from its own trigger line (FOLD_FRAC_DESKTOP.fold13,
-// js/groups.js) so the two stay one decision: the fade ends where the spread fires.
+// Both halves belong to @fold13 and run BACK TO BACK, not together: the fade
+// occupies the first part of the card's rise and has finished by the time the
+// card reaches its trigger line, where the spread fires onto an otherwise-clear
+// screen. The span is DERIVED from that line (foldFracNow("fold13"),
+// js/groups.js: 0.75 → the first quarter of the rise), so the two cannot drift.
 function fold13FadeSpan() {
-  return isMobile() ? FOLD13_FADE_SPAN : Math.max(0.05, 1 - FOLD_FRAC_DESKTOP.fold13);
+  return Math.max(0.05, 1 - foldFracNow("fold13"));
 }
 let fold13TooltipFaded = false;
 function updateFold13() {
@@ -253,15 +246,17 @@ function p13SyncGateVisibility() {
   checkFold13Peek?.();
 }
 
-// ── @fold13 peek (DESKTOP only) ──
-// Once FOLD13_PEEK_PILLS @dragcards sit in the extreme zone, the closing
+// ── @fold13 peek ──
+// Once fold13PeekPills() @dragcards sit in the extreme zone, the closing
 // statement's title block peeks over the bottom edge — "there is more
 // underneath". It is the REAL card, not a copy. While the page's own scroll has
 // not yet brought it FOLD13_PEEK_PX into view it is HELD: taken out of the flow
 // with position:fixed at (bottom edge − peek), text hidden. The moment its
 // natural place is at or above that line it goes back into the flow and simply
 // scrolls. Position animates (never a snap), both ways: pulling pills back out
-// slides it down again. Mobile never holds it.
+// slides it down again. Both breakpoints, each on its own numbers
+// (fold13PeekPx / fold13PeekPills) — mobile counts tapped pills, and its band
+// sits at the top of the screen, so the bottom edge is free for the peek.
 //
 // Held with position:fixed, NOT a translateY recomputed on scroll: scrolling is
 // painted before the scroll event runs, so a transform chasing it is always a
@@ -269,8 +264,12 @@ function p13SyncGateVisibility() {
 // does not move with the scroll at all, so there is nothing to chase.
 // The wrapper keeps its own solved height (p12SpacingFit), so lifting the card
 // out of the flow moves nothing else.
-var FOLD13_PEEK_PX    = 24;
-var FOLD13_PEEK_PILLS = 3;
+var FOLD13_PEEK_PX_DESKTOP    = 24;
+var FOLD13_PEEK_PX_MOBILE     = 24;
+var FOLD13_PEEK_PILLS_DESKTOP = 3;
+var FOLD13_PEEK_PILLS_MOBILE  = 3;
+function fold13PeekPx()    { return isMobile() ? FOLD13_PEEK_PX_MOBILE : FOLD13_PEEK_PX_DESKTOP; }
+function fold13PeekPills() { return isMobile() ? FOLD13_PEEK_PILLS_MOBILE : FOLD13_PEEK_PILLS_DESKTOP; }
 // Named exception to GROUP_TRANSITION_MS: one small slide, not a legend beat.
 const FOLD13_PEEK_MS  = 500;
 const fold13PeekCardEl = document.querySelector("#page-14 .page12-sticky-center .text-card");
@@ -286,11 +285,11 @@ function fold13PeekRelease() {
 function fold13PeekUpdate() {
   if (!fold13PeekCardEl || !page12StickyEl) return;
   const t = p9Ease(fold13PeekTrigger.currentRaw());
-  if (t <= 0 || isMobile()) { fold13PeekRelease(); return; }
+  if (t <= 0) { fold13PeekRelease(); return; }
   // The card's place in the flow, read off the WRAPPER (which never leaves it).
   const padTop = parseFloat(getComputedStyle(page12StickyEl).paddingTop) || 0;
   const naturalTop = page12StickyEl.getBoundingClientRect().top + padTop;
-  const heldTop = window.innerHeight - FOLD13_PEEK_PX * t;
+  const heldTop = window.innerHeight - fold13PeekPx() * t;
   if (naturalTop <= heldTop) { fold13PeekRelease(); return; }
   const s = fold13PeekCardEl.style;
   if (!fold13PeekHeld) {
@@ -308,10 +307,9 @@ function fold13PeekUpdate() {
 }
 const fold13PeekTrigger = makeTrigger(FOLD13_PEEK_MS, fold13PeekUpdate);
 const checkFold13PeekFlag = watchFlag(() => {
-  if (isMobile()) return false;
   if (typeof page9StickyEl === "undefined" || !page9StickyEl ||
       !page9StickyEl.classList.contains("engaged")) return false;
-  return p9.sides.filter(s => s === "above").length >= FOLD13_PEEK_PILLS;
+  return p9.sides.filter(s => s === "above").length >= fold13PeekPills();
 }, fold13PeekTrigger);
 function checkFold13Peek() { checkFold13PeekFlag(); fold13PeekUpdate(); }
 window.addEventListener("scroll", checkFold13Peek, { passive: true });

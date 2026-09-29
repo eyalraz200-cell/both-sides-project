@@ -126,7 +126,7 @@ pairs stay so either side can be retuned alone): `page0TitleMs()` 1308,
 `page0RowStaggerMs()` 31, `page0PopMs()` 215, `page0LogoFadeMs()` 692 (@fold1, ≈3200ms
 in all), `fold2EntranceMs()` 1600, `fold3EntranceMs()` / `fold3Beats()` (derived from
 `FOLD3_BEAT_MS_DESKTOP`/`_MOBILE` by `fold3BeatsRebuild()`, 1600), `fold4GlideMs()`,
-`fold5SquaresMs()`, `fold6HeadUntypeMs()` 329. Also paired, mobile matched to desktop for now: `fold8TypeMsPerChar()` 9 (the demo tooltip's typewriter, js/fold8-tooltip.js), `p7AxisIntroDuration()` 1750 and `p7AxisIntroDotMs()` 300 (the year-axis wipe, page7.js). **Genuinely different:** `p7AnimTotalMs()` 1400 desktop / 550 mobile and `p7PopMs()` 140 / 40 (a month's cascade — the phone's was tuned faster on purpose). Every fold duration up to @fold8 is a
+`fold5SquaresMs()`. Also paired, mobile matched to desktop for now: `fold8TypeMsPerChar()` 9 (the demo tooltip's typewriter, js/fold8-tooltip.js), `p7AxisIntroDuration()` 1750 and `p7AxisIntroDotMs()` 300 (the year-axis wipe, page7.js). **Genuinely different:** `p7AnimTotalMs()` 1400 desktop / 550 mobile and `p7PopMs()` 140 / 40 (a month's cascade — the phone's was tuned faster on purpose). Every fold duration up to @fold8 is a
 `var` read through a thunk (`makeTrigger(() => xMs(), …)` resolves per frame), so a
 harness can drive it live.
 

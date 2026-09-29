@@ -59,6 +59,26 @@ The per-span table (`p7FitTable()`: rows and busiest-row count) depends on the d
 is built once. `p7DesktopFitSolve(sideW, sideH)` is the solve itself and writes nothing;
 `p7SolveDesktopFit` is the layout's entry point and stores its answer.
 
+### Mobile: the fit
+
+The phone runs the same three steps (`p7SolveVerticalSq` → `p7SolveMobileFit`, page7.js →
+`p7MobileSq`, `p7MobileGapRatio`, `p7MobileDaysPerRow`), solved against `P7_VERT_MOBILE.zoom`
+**3** box heights, so **no row fills to its camp's outer wall** (`P7_MOBILE_FIT_WALL_ROWS_FRAC`
+0) and the square never goes under `P7_MOBILE_FIT_SQ_MIN` **1.5**; at that floor rows reach
+the wall rather than the dots shrinking further. `P7_MOBILE_GAP_RATIO` (0.45) is the ratio the
+whole-device-pixel snap aims for, `P7_MOBILE_SQ_MAX` (3) the ceiling.
+
+A phone camp is about 160px wide and the busiest single day has 58 events, so the span is
+allowed **under one day per row** (`P7_MOBILE_FIT_DAYS_PER_ROW_MIN` 0.5): a day then owns
+several rows and its events spread over them, which is how `p7MobileFitTable()` counts a
+row's load. `p7MobileFitSolve(sideW, sideH, sqFloor)` is the solve itself and writes nothing.
+
+| Viewport | While filling | Zoomed out |
+|---|---|---|
+| 390×844 @3x | 1.67px square, 2.33px pitch, 1.55 days per row, 828 rows (2.9 screens), 0 rows at the wall | 1px, 1.67px pitch, 421 rows, 0 at the wall |
+| 390×721 @3x | 1.67px, 2.67px pitch, 2.2 days per row, 583 rows, 1 / 4 at the wall (the floor binds) | 1px, 1.67px pitch, 347 rows, 0 at the wall |
+| 360×640 @2x | 1.5px, 2px pitch, 583 rows, 0 at the wall | 1px, 1.5px pitch, 310 rows, 1 / 0 at the wall |
+
 ### Desktop: the field is 1.85 pages tall, and zooms out to one page
 
 Desktop runs the same camera mobile does: `P7_VERT.zoom` **1.85**, `camera` **`'fill'`**,
@@ -147,23 +167,8 @@ year's header** (`p7VertYearHeaderH()`: with side years the ring's radius
 digits sit 14px ABOVE row 0 and the line runs up to the ring, so the first headline event
 (2023-01-04, a fraction of a row under row 0) clears the "2023" ring; centred years: 21px digits,
 ring + 6 when on, `yearGapPad` above and below) fit the box (3.3 px at 1440×900; one-week rows needed 183 and 2.9 px,
-which is why 8 days won). **On mobile only**, the solved square is then multiplied by
-`P7_VERT_SQ_BOOST` (**0.88**, `p7VertSqBoost()`): the packed solve reads too heavy for this
-field — the dots crowd their own gaps and the camps lose their texture. Applied on the way
-**out** of the solve, so it deliberately breaks the solver's own fit test; below 1 the grid
-comes out shorter than the box it was solved for and `p7VertTopY`'s centring takes up the
-slack. That is the tuned look, not a rounding artefact; don't reset it to 1.
-
-> It was **1.12** — an overshoot, tuned at 390×721 against the docked tooltip — until
-> 2026-09-13. Same knob, opposite direction: don't assume the name means it must be > 1.
-
-`P7_VERT_SQ_BOOST`, `P7_MOBILE_GAP_RATIO` and `P7_VERT_MOBILE.zoom` were picked **as a set**
-in one manual/ pass (2026-09-13, `_debug-tl-zoom.js`, since deleted) — 0.88 / 0.45 / 1.85.
-They trade against each other (size changes the cell pitch and so the column count and field
-height; gap trades square for space at a near-constant pitch), so re-tune them together
-rather than one at a time.
-Desktop shares the solver and is boosted by 1 (2.18 px / 526 px of axis, top y 124 →
-bottom y 650 at 390×721; 3.2 px at 1440×900, unchanged). **Row 0's y is `p7VertTopY(H)`**: on desktop the whole span
+which is why 8 days won). **Mobile solves its own fit** — see "Mobile: the fit" below.
+**Row 0's y is `p7VertTopY(H)`**: on desktop the whole span
 (header + `totalRows × CELL`) is centred vertically in the box, so the slack left by the
 solved cell size splits evenly above and below rather than pooling at the bottom; the dot
 grids, the axis, the headlines and page8's glide start all read this one origin (mobile:
@@ -1569,6 +1574,15 @@ camps' packs meet on the centre line instead of straddling the corridor.
   room before they inflate (see `P7_MORPH_PUSH_MAX` below); the flatten only
   ever shrinks, so it can never collide and needn't wait. `fold11BeatGapMs()`
   reads `p7MorphTotalMs(true)`.
+- **A flatten that interrupts a flight does travel** (`p7GridMorph.travel`, set
+  in `p7SizeGridSet` when a same-grid morph replaces one still in the air — a
+  quick scroll from @fold9's line to @fold10's). Its `from` is then mid-flight
+  positions, so the **running** morph's clock (`p7MorphTotalMs()` with no
+  argument) covers the fly window, `max(fly, sizeEnd)`, and the position
+  finishes. The beat gap still reads the size clock, so the glide leaves on
+  time and the rest of the travel plays under it (`p7GridLiveRect`). Without
+  this the position stopped part-way, the glide flew from and back to that
+  spot, and the field snapped to its cells when `drawPage7` took over again.
 - **Collision while decoupled** (`P7_MORPH_PUSH`, default on): with one shared
   `t` both packings are gap-exact, so nothing can collide. The moment size
   leads position, dots still at timeline spacing wearing grid sizes overlap
@@ -1859,8 +1873,8 @@ solved wide corridor (`p7SolveMobileCorridor`: widest wrapped headline line at
 `sbbTimelineMobileBottomPx()` in squareboundingbox.js — the axis-clearance row in the
 table below applies only with the vertical path off), 14px year labels (`yearLabelPx`),
 14px titles, and the square solve reusing `p7SolveVerticalSq` with mobile bounds
-(`p7SqMax/p7SqMin/p7SqStep/p7GapRatio`; `p7.vert.overflowRows` counts rows the box can't
-hold), boosted by `P7_VERT_SQ_BOOST` (0.88, `p7VertSqBoost()`, mobile only). The tooltip
+(`p7.vert.overflowRows` counts rows the box can't hold) — now the mobile fit, see
+"Mobile: the fit". The tooltip
 dodge spot follows `sbbTimeline(H).bottom`.
 
 Three **headline placements** exist, switched by `P7_VERT_MOBILE.headline`: `'band'` — a
@@ -2010,8 +2024,8 @@ each event at its true date position on the axis; only the text moves to the cen
 ### The solved square size
 
 *This is the `p7VerticalAxis() === false` path (`p7SolveMobileSq`), not taken while
-`P7_VERT_MOBILE.enabled` is true; mobile's live square is `p7SolveVerticalSq` ×
-`P7_VERT_SQ_BOOST` (0.88), see above.*
+`P7_VERT_MOBILE.enabled` is true; mobile's live square is the mobile fit
+(`p7SolveMobileFit`), see above.*
 
 The mobile square is **not a constant**. A fixed pitch has to be small enough for the
 smallest phone, which leaves every larger one with capacity far above its event count — and
@@ -2089,16 +2103,16 @@ running on every redraw, scroll and pointer event, so the picker's state sync ha
 ### Zoom and camera (mobile) — `zoom`, `camera`, `fillAnchorFrac`
 
 `P7_VERT` keys (base defaults reproduce the one-screen layout exactly; the **mobile pick,
-baked 2026-09-12 in `P7_VERT_MOBILE`, zoom re-tuned 2026-09-13, is `zoom: 1.85,
+baked 2026-09-12 in `P7_VERT_MOBILE`, zoom re-picked 2026-09-29 with the mobile fit, is `zoom: 3,
 camera: 'fill', fillAnchorFrac: 0.6, slotAnchor: 'side', sidePhase: 'fly',
 sidePlace: 'alternate', sidePush: false, sideWrapPx: 150, dotGapPx: 6, sideFlyGapPx: 10,
-sideFlyFadePx: 150`** — a 1.85× field, **298 rows, a 2.38px square and 47 columns** at
-393×852, with the fill edge **held** at 0.6 of the box, and a plaque beside every dot that
+sideFlyFadePx: 150`** — a 3× field, **828 rows, a 1.67px square and 69 columns** at
+390×844, with the fill edge **held** at 0.6 of the box, and a plaque beside every dot that
 flies above it on arrival) let the timeline be **taller than the box** and scroll:
 
 | key | base default | what it does |
 |---|---|---|
-| `zoom` | `1.85` (desktop's own value; mobile sets 1.85 too) | How many boxes tall the field is. It divides the row plan's span (`p7VertDaysPerRow()` = `daysPerRow / zoom`, so 2× has twice the rows and each day's dots spread over twice the rows — the "more spaced" look), and `p7UpdateLayout` / `p7SolveVerticalSq` solve the square against the virtual height `sideH × zoom` with the size ceiling `p7SqMax() × zoom`. The square is then height-bound, not capacity-bound: ~2.9px at 390×844 for every zoom ≥ 1.5 (2.4 at 1×) — with 9k dots in a 161px camp, a bigger square alone could only ever grow √zoom, which is why the row count is what `zoom` drives. |
+| `zoom` | `1.85` (desktop's own value; mobile sets 3) | How many boxes tall the field is: the fits are solved against that many box heights, and they pick the row plan's span (`p7VertDaysPerRow()`) to fill it, so a taller field has more rows and each day's dots spread over more of them. Historically `p7UpdateLayout` / `p7SolveVerticalSq` solve the square against the virtual height `sideH × zoom` with the size ceiling `p7SqMax() × zoom`. The square is then height-bound, not capacity-bound: ~2.9px at 390×844 for every zoom ≥ 1.5 (2.4 at 1×) — with 9k dots in a 161px camp, a bigger square alone could only ever grow √zoom, which is why the row count is what `zoom` drives. |
 | `camera` | `'fill'` (desktop's own value; mobile sets `'fill'` too) | How the over-tall field is placed. `'none'` = today (`p7VertTopY` centres/clamps as before, no clip). `'fill'` = translate so the fill edge sits at `fillAnchorFrac` of the box. `'pan'` = translate by `fillFrac × (len − boxH)`, so the field pans with progress. |
 | `fillAnchorFrac` | `0.6` | Screen position of the fill edge inside the box under `camera:'fill'` (0 = box top, 1 = bottom). |
 | `slotFillGapPx` | `14` | Gap under the fill edge for `slotAnchor:'fill'`. |
@@ -2340,95 +2354,31 @@ With `zoom` above 1 only a box-sized window of the field is ever on screen. When
 reaches the last event there is nothing left to pan toward, so in one beat the field
 compresses to show the whole timeline at once, and @fold9's title block rises over that.
 
-**It re-fits the real layout to a uniformly smaller cell, keeping the row plan.** Not a
-zoom, not a re-solve of the dates. Three mechanisms were tried; the reasons are the design:
+**It zooms out to a one-screen fit, not to a squash of the tall field** — the same rule as
+desktop. `p7Squash(W, H)` returns the mobile fit solved against the height the
+whole-timeline view has (`p7ZoomOutAvail(H)`), with its own lower floor
+(`P7_MOBILE_ZOOMOUT_SQ_MIN` **1**: one CSS px is three device px on a phone and still reads
+as a mark), so the view keeps its rows short of the wall. It has its **own row plan**, so the
+result carries `remap: true` and every dot flies from its cell in the tall field to its cell
+in the view; `p7RowY` carries the axis's marks across by day (`p7FitRowOfLiveRow`), the hover
+bulge counts the view's cells once the beat is past halfway, and the 8 claimed DOM squares
+fly with the field.
 
-| tried | why it's wrong |
-|---|---|
-| **Uniform scale, `cols` fixed** | Each camp narrows from the full 160px of available width to 56px and the square drops to ~1px. A shrunken *picture* of the timeline, not a view of it. |
-| **Re-solve at `zoom: 1`** | Legible dots and full width, but the packer spills dense days into later rows, so **a dot's y stops meaning its date** — the busy camp runs hundreds of px past its own year label. |
-| **Squash y only** | Dates stay put, but the cell goes **anisotropic**: at 393×852 the row pitch falls to 2.2px while the column pitch stays 3.64px, so a flat 1.8px square leaves a **0.4px** vertical gap against a **1.84px** horizontal one. The dots all but touch vertically and the field reads as vertical **bars**. |
+**Removed — don't reintroduce:** the squash (cell and square scaled by `ky` on the live row
+plan, `cols` re-solved) and the earlier attempts it replaced (uniform scale with fixed `cols`,
+y-only squash). A field three screens tall squashed to one ends on dots a third the size, and
+the capacity solve it sat on piled busy stretches into flat blocks against the wall. Also
+gone with it: `P7_VERT_SQ_BOOST` / `p7VertSqBoost()` (the 0.88 trim of the capacity solve).
 
-What ships is the fourth: **cell and square both scale by `p7ZoomOutKY`, and `cols` is
-re-solved against the smaller cell** (`p7Squash`), which repacks the camps back out to the
-full width. Gaps come out equal on both axes. The **row plan is untouched** — same zoom, same
-`daysPerRow`, same row count — so a date maps to the row it always did and every dot stays
-beside its own date; more columns also means *less* spill than the live layout, not more.
+`p7ZoomOutKY(H)` is the view's length over the live field's (`view.ky`), ≤ 1;
+`p7ZoomOutYScale()` lerps 1 → ky. Consumers:
 
-At 393×852: cell 3.64 → **2.2px**, square 2.51 → **1.46px**, gaps even both ways, camps still
-spanning the full width.
-
-**The fit reserves a gap at both ends.** `p7ZoomOutKY` solves against
-`boxBottom − p7ZoomOutFitTop() − p7ZoomOutBottomReserve() − yearHeaderH`. **`p7ZoomOutFitTop()`
-is `max(P7_ZOOMOUT_FIT_TOP_PX (40), hint rule + SBB_TIMELINE_MOBILE_GAP_PX)`** — the flat 40 was
-solved and parked while the hint's rule sat at 42, so the whole-timeline view was quietly clipped
-along its top, in the one state where every row is meant to be on screen at once. The squashed
-end takes **no `p7FieldYOffset`** either: that nudge is a framing choice for the zoomed-IN scrub,
-and the squash is a *fit* — adding it would push the field back through the rule and undo it. The bottom
-reserve has to be asked for explicitly: the box's own bottom is already only
-`SBB_TIMELINE_MOBILE_GAP_PX` above the docked tooltip, and the squash is the one state where
-the field fills its box *exactly*.
-
-**The dots stay; the plaques go.** The axis markers keep their full size right through the
-beat (no `(1 - p7ZoomOutT)` on `markerRadius`) — they are the only handle the whole-timeline
-view has. The plaques still leave (`zoomFade`), so a **tap on an axis dot** is the only way to
-read an event there:
-
-- `p7AxisTapHit` (in `p7InspectInit`) hit-tests `p7.axisEventPositions` on `touchend`, inside
-  `P7_AXIS_TAP_MS` (400) and `P7_AXIS_TAP_SLOP_PX` (12) of travel, with a finger-sized
-  `P7_AXIS_TAP_PAD_PX` (20) around each 4px dot. It never contends with the long-press loupe,
-  which is a *hold* on the timeline squares.
-- It drives the same single hover slot the desktop pointer does, via `p7SetAxisHover` (published
-  by `p7HoverInit`, a different closure). `zoomFade` becomes `Math.max(1 - p7ZoomOutT, st.hoverT)`,
-  so the tapped card — and only that one — overrides the beat's fade.
-- The toggle is judged against `tapWasOpen`, captured at **touchstart**: a tap also emits
-  compatibility mouse events, and the mousemove among them opens the card first, so a touchend
-  comparing against the live value saw "already open" and shut it again, every time.
-- Two clears had to stop firing on mobile: `doHitTest`'s `isMobile()` short-circuit now calls
-  `hideSquare()` rather than `hide()` (it runs after **every redraw**, so it wiped the tap's
-  hover within a frame), and the draw loop's `if (!reached) state.hoverT = 0` exempts the
-  pointed-at event on mobile — by the end of the fill every event has left, so `reached` is
-  false for all of them.
-
-**The squashed view spreads across the whole box, and past it.** `p7ZoomOutBottomReserve()` is
-`P7_ZOOMOUT_FIT_BOTTOM_GAP_PX` = **0** — nothing hangs below the axis end there, so any reserve
-is height the whole-timeline view cannot get back. It also *gains*
-`p7ZoomOutBottomBonus()` — the last `mobileBelow` plaque's overhang, which the box holds back but
-the squashed view never draws — **clamped to the closed מקרא bar**. That bar hugs the bottom of
-the screen at this fold and the full 60px overhang ran the squashed field's end straight into it,
-so the bonus is `min(overhang, H − barH − SBB_TIMELINE_MOBILE_GAP_PX − boxBottom)`, measured off
-the live element (`p7MLegendBarH()`, 0 when the bar is anywhere else). At 393×852 that is **30px**,
-not 60: field end **798** against a bar top of 816 — the same 18px of air the box keeps against
-everything else. The solve opens by it, or the axis end is shaved off exactly where it was gained. Measured at 393×852: field **83 → 798**, between the hint's rule (42) and the מקרא bar (816),
-with `p7ZoomOutFitTop()` 60 and boxBottom 768. The first-event headroom is handed back too: `p7VertYearHeaderDrawH()` fades
-`P7_VERT_FIRST_EV_HEADROOM_PX` out with the beat, so «2023» ends up sitting directly above the
-axis instead of a plaque-sized gap above it. That is a **draw-path** header, deliberately
-separate from `p7VertYearHeaderH()` — the latter feeds `p7SolveVerticalSq`'s fit test and has
-to stay a constant the solve can rely on, or the layout would re-solve differently depending
-on how far the beat had run. Net at 393×852: field 63→692, the full box.
-
-**The squashed view carries no plaques at all** — `zoomFade` (`1 − p7ZoomOutT`) multiplies
-every branch of the `ops` map, pinned entries included, so the cards leave through
-`P7_AXIS_LEAVE_MODE` as the beat runs. At that scale they cover the field they annotate, and
-the point of the beat is the shape of the timeline. So the lowest thing drawn is the axis end
-itself, and the reserve is a plain gap; the last plaque's overhang is reserved by the **box**
-instead (below), for the zoomed-in scrub where the card does render.
-
-
-
-`p7ZoomOutKY(H)` = `(boxBottom − P7_ZOOMOUT_FIT_TOP_PX − yearHeaderH) / (totalRows ×
-cellBase)`, clamped to ≤ 1. `p7Squash(W, H)` caches the squashed layout against it (keyed on
-W/H/event-count/ky); `p7ZoomOutYScale()` lerps 1 → ky and survives as the fallback for when
-that layout can't be built. Consumers:
-
-- **`p7VertFieldLen()`** — the live length under the squash. `p7VertTopY`,
-  `p7VertCameraOffset`, `p7FillEdgeY`, `p7VertOverflows` and `p7RowY` all measure the field
-  through it, so **the axis and the dots compress by exactly the same amount** and stay
-  aligned. `p7RowY` maps row → y as a *fraction* of it rather than `row × CELL`.
+- **`p7VertFieldLen()`** — the live length under the beat, so the axis line ends where the
+  dots do. `p7VertCameraOffset` does **not** read it: the camera measures the fill edge on
+  the live field at both breakpoints, or its own position shifts halfway through the beat.
 - **`destX`/`destY` in `p7DrawSideSquares`** — each dot travels to **its own cell in the
-  squashed layout**. Because the row is identical in both, it only ever moves sideways and
-  up.
-- **`p7.SQ`** — lerps to the squashed square (`sqBase × ky`).
+  view**.
+- **`p7.SQ`** — lerps to the view's square.
 
 `p7.CELL` and `p7.leftX0` are plain reads of the live solve (`p7.cellBase` / `p7.leftX0Base`)
 — they exist as getters only because `p7.SQ` beside them needs to be one.
