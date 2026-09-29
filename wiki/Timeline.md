@@ -56,9 +56,60 @@ the solve runs in three steps:
    width-bound solve leaves over goes into the axis rather than into empty bands around it.
 
 The per-span table (`p7FitTable()`: rows and busiest-row count) depends on the data only and
-is built once. Measured: 1900×990 @2x → 3px square, 4.5px pitch, 6.5 days per row, 200 rows,
-axis 900 of 918px; 1512×982 @2x → 3 / 4 / 5.85 / 221 rows; 1280×720 → 2 / 3 / 6.3 / 205 rows;
-2560×1300 @1x → 3 / 5 / 5.35 / 242 rows. Zero rows at the wall in all of them.
+is built once. `p7DesktopFitSolve(sideW, sideH)` is the solve itself and writes nothing;
+`p7SolveDesktopFit` is the layout's entry point and stores its answer.
+
+### Desktop: the field is 1.85 pages tall, and zooms out to one page
+
+Desktop runs the same camera mobile does: `P7_VERT.zoom` **1.85**, `camera` **`'fill'`**,
+`fillAnchorFrac` **0.6** — the fit above is solved against 1.85 box heights, so the field is
+taller than the page, the filling edge is held at 0.6 of the box and the field scrolls up
+under it (`p7VertCameraOffset`). Drawing is clipped to the box's bottom while the field
+overflows (`p7VertOverflows`, both breakpoints).
+
+`P7_VERT_START_DROP_DESKTOP` (**32**) is the camera's floor on desktop: how many px below the
+box's top the axis begins. At 0 the field's top would start pinned to the box's top and only
+begin to scroll once the filling edge had travelled down to `fillAnchorFrac`; the drop starts
+the field that much lower and it scrolls up from there. Read through `p7VertStartDrop()`.
+
+**On desktop the camera measures the fill edge on the live field, never the shrinking one.**
+`p7VertFieldLen()` falls as the zoom-out runs; reading it inside the camera dropped the offset
+back under its own clamp halfway through the beat and moved the endpoint `p7VertTopY` lerps
+from, so the field's bottom ran 958 → 1011 → 958 (a dip down and back up). Mobile keeps its
+own reading.
+
+**At the end of the fill it zooms out to the whole timeline** — the same beat as mobile
+(`p7ZoomOutSync` → `p7ZoomOutTrigger`, `P7_ZOOMOUT_MS` 600, armed within
+`P7_ZOOMOUT_ARM_ROWS` of the end, reversible). What differs is the view it lands on:
+**desktop zooms out to the one-page fit, not to a squash of the tall field**
+(`p7DesktopFitView(W, H)`, which `p7Squash` returns on desktop). That is the fit solved
+against the box's real height — its own square, pitch and days per row, centred in the box —
+and every dot flies from its cell in the tall field to its cell there.
+
+The two layouts do **not** share a row plan, so `p7RowY` carries the axis's own marks (year
+rings, headline dots, the fill edge) across through `p7FitRowOfLiveRow` — the row the same
+*day* has in the fitted plan — rather than scaling the live row. `p7ZoomOutKY` and
+`p7ZoomOutFitTop` return the fitted view's length ratio and top on desktop, so the axis line
+ends where the dots do. The headline cards stay visible in the zoomed-out view. A headline
+dated past the data is parked three rows short of the end, and keeps that distance in rows
+of the plan it is drawn in.
+
+**The hover bulge counts cells in the layout the dots are standing in.** The push is by cell
+distance from the hovered dot, and a dot's neighbours in the fitted view are not its
+neighbours in the tall field, so once the beat is past halfway (`p7ZoomOutT >= 0.5`)
+`p7DrawSideSquares` resolves the bulge against the fitted cells (`bulgeFit`), desktop only.
+
+**The 8 claimed DOM squares fly with the field**: `p7TargetForActorOccurrence` lerps each to
+its own cell in the fitted view (same endpoints as the canvas dots), and
+`p7SyncClaimedSquares` runs `updateGroups()` on every frame the beat moves, desktop only.
+
+| Viewport | While filling | Zoomed out |
+|---|---|---|
+| 1900×990 @2x | 3.5px square, 5px pitch, 3.85 days per row, 334 rows (1670px) | 3px, 4.5px pitch, 6.5 days per row, 200 rows |
+| 1512×982 @2x | 3.5px, 330 rows | 3px, 4px pitch, 5.85 days per row, 221 rows |
+| 1280×720 @1x | 2px, 396 rows | 2px, 3px pitch, 6.3 days per row, 205 rows |
+
+Zero rows at the wall in every one, filling and zoomed out.
 
 **Mobile** keeps its own solve: the largest square whose grid still holds
 the busier camp once each day's events must sit in that day's rows (6% slack for the jitter
@@ -81,7 +132,7 @@ gaps remain at the edges.
 ### The vertical layout (desktop) — `p7BuildVerticalLayout(rows, cols, CELL, visible?)` → `p7.vert`
 
 Rows are dates, and **every row stands for the same span: `P7_VERT.daysPerRow` days (8), counted afresh from each 1 January** (and from `minDate` for the
-first year). That 8 is mobile's base and desktop's ceiling: the span the plan actually uses is `p7VertDaysPerRow()` = the solved `p7DesktopDaysPerRow` on desktop (see the desktop fit above) and `daysPerRow / zoom` on
+first year). That 8 is mobile's base and desktop's ceiling (desktop's solve is against 1.85 box heights, see above): the span the plan actually uses is `p7VertDaysPerRow()` = the solved `p7DesktopDaysPerRow` on desktop (see the desktop fit above) and `daysPerRow / zoom` on
 mobile (fractional spans are fine — `rowStart` is already fractional within a row); see *Zoom
 and camera* below. Events are bucketed per **day** (`dayOf`, 1279 days for the current data);
 `p7VertRowPlan(CELL)` builds `rowStart[d]` = the year's first row + `floor(k / 8) + (k % 8) / 8`
@@ -2047,8 +2098,8 @@ flies above it on arrival) let the timeline be **taller than the box** and scrol
 
 | key | base default | what it does |
 |---|---|---|
-| `zoom` | `1` | How many boxes tall the field is. It divides the row plan's span (`p7VertDaysPerRow()` = `daysPerRow / zoom`, so 2× has twice the rows and each day's dots spread over twice the rows — the "more spaced" look), and `p7UpdateLayout` / `p7SolveVerticalSq` solve the square against the virtual height `sideH × zoom` with the size ceiling `p7SqMax() × zoom`. The square is then height-bound, not capacity-bound: ~2.9px at 390×844 for every zoom ≥ 1.5 (2.4 at 1×) — with 9k dots in a 161px camp, a bigger square alone could only ever grow √zoom, which is why the row count is what `zoom` drives. |
-| `camera` | `'none'` | How the over-tall field is placed. `'none'` = today (`p7VertTopY` centres/clamps as before, no clip). `'fill'` = translate so the fill edge sits at `fillAnchorFrac` of the box. `'pan'` = translate by `fillFrac × (len − boxH)`, so the field pans with progress. |
+| `zoom` | `1.85` (desktop's own value; mobile sets 1.85 too) | How many boxes tall the field is. It divides the row plan's span (`p7VertDaysPerRow()` = `daysPerRow / zoom`, so 2× has twice the rows and each day's dots spread over twice the rows — the "more spaced" look), and `p7UpdateLayout` / `p7SolveVerticalSq` solve the square against the virtual height `sideH × zoom` with the size ceiling `p7SqMax() × zoom`. The square is then height-bound, not capacity-bound: ~2.9px at 390×844 for every zoom ≥ 1.5 (2.4 at 1×) — with 9k dots in a 161px camp, a bigger square alone could only ever grow √zoom, which is why the row count is what `zoom` drives. |
+| `camera` | `'fill'` (desktop's own value; mobile sets `'fill'` too) | How the over-tall field is placed. `'none'` = today (`p7VertTopY` centres/clamps as before, no clip). `'fill'` = translate so the fill edge sits at `fillAnchorFrac` of the box. `'pan'` = translate by `fillFrac × (len − boxH)`, so the field pans with progress. |
 | `fillAnchorFrac` | `0.6` | Screen position of the fill edge inside the box under `camera:'fill'` (0 = box top, 1 = bottom). |
 | `slotFillGapPx` | `14` | Gap under the fill edge for `slotAnchor:'fill'`. |
 | `dotGapPx` | `6` | Gap between a dot's edge and its card for `slotAnchor:'dot'`; for `'side'`, between the plaque's far edge and the pushed dots. |

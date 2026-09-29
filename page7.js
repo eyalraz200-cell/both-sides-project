@@ -303,8 +303,11 @@ const P7_VERT = {
   // ── Camera (mobile compare/, 2026-09-11 — _debug-mobile-zoom.js drives these) ──
   // zoom: the row plan is solved against `zoom` box heights instead of one, so
   // the square grows and the field runs taller than the box; the box then shows
-  // a window onto it. 1 = the field fits the box (today).
-  zoom: 1,
+  // a window onto it. 1 = the field fits the box.
+  // DESKTOP 1.85 with the 'fill' camera at 0.6 — compare/ pick 2026-09-29
+  // (_debug-desktop-tall-timeline.js, since deleted), the same three numbers
+  // mobile ships. Mobile sets its own in P7_VERT_MOBILE.
+  zoom: 1.85,
   // camera: how the window moves when the field is taller than the box —
   // 'none' (the field's top pins to the box top, the rest hangs below; today) |
   // 'fill' (the fill edge is held at fillAnchorFrac of the box; the field
@@ -312,7 +315,7 @@ const P7_VERT = {
   // bottom in step with the fill fraction). A pure offset inside p7VertTopY,
   // derived from the same LAGGED fill fraction the axis draws with, so the
   // camera and the fill line never disagree. No effect while the field fits.
-  camera: 'none',
+  camera: 'fill',
   fillAnchorFrac: 0.6, // 'fill' camera: the fill edge's resting spot, 0 = box top … 1 = box bottom
   slotFillGapPx: 14,   // slotAnchor 'fill': px between the fill edge and the headline plaque
   eventLine:  false,
@@ -636,6 +639,14 @@ function p7FitTable() {
   return (p7FitTableCache = table);
 }
 function p7SolveDesktopFit(sideW, sideH) {
+  const fit = p7DesktopFitSolve(sideW, sideH);
+  p7DesktopDaysPerRow = fit.dpr;
+  p7DesktopGapRatio   = fit.gapRatio;
+  return fit.sq;
+}
+// The solve itself, writing nothing — the zoomed-out view (p7DesktopFitView)
+// asks it for the ONE-PAGE answer while the tall field's own is in force.
+function p7DesktopFitSolve(sideW, sideH) {
   const table = p7FitTable();
   const ratio = P7_GAP / P7_SQ;
   const roomH = sideH - p7VertYearHeaderH();
@@ -658,9 +669,7 @@ function p7SolveDesktopFit(sideW, sideH) {
   table.forEach((t) => {
     if (t.rows * cell <= roomH + 1e-6 && (t.peak + 1) * cell <= sideW + 1e-6 && t.rows > best.rows) best = t;
   });
-  p7DesktopDaysPerRow = best.dpr;
-  p7DesktopGapRatio   = cell / sq - 1;
-  return sq;
+  return { sq, cell, dpr: best.dpr, gapRatio: cell / sq - 1 };
 }
 
 // `visible` (optional) — the legend filter's predicate. Events it rejects are
@@ -918,14 +927,27 @@ function p7VertFieldLen() {
 // this one offset moves the whole field as a unit. px the field is shifted UP
 // by; 0 whenever it fits the box (`zoom` 1) or camera is 'none'. Stateless —
 // read from the lagged fill fraction so it is the same on every call in a frame.
+// How far DOWN the page the axis begins, desktop only: the camera's floor. At 0
+// the field's top starts pinned to the box's top and only begins to scroll once
+// the filling edge has travelled down to fillAnchorFrac; a drop lets the field
+// start that many px lower and scroll up from there. manual/ pick 2026-09-29
+// at 1900×990 (_debug-axis-start.js, since deleted). Mobile has
+// P7_FIELD_Y_MOBILE for its own framing.
+const P7_VERT_START_DROP_DESKTOP = 32;
+function p7VertStartDrop() { return isMobile() ? 0 : P7_VERT_START_DROP_DESKTOP; }
 function p7VertCameraOffset(boxH, len) {
   const V = p7V(), over = len - boxH;
   if (V.camera === 'none' || over <= 0) return 0;
   const frac = p7AxisLaggedFillFrac ?? p7AxisFillFracTarget();
+  // DESKTOP measures the fill edge on the LIVE field, never the one the
+  // zoom-out is shrinking: p7VertFieldLen() falls with the beat, which dropped
+  // `off` back under the `over` clamp halfway through and moved the live
+  // endpoint p7VertTopY lerps from — the field's bottom ran 958 → 1011 → 958.
+  const fieldLen = isMobile() ? p7VertFieldLen() : p7.vert.totalRows * p7.cellBase;
   let off;
   if (V.camera === 'pan') off = frac * over;
-  else off = p7VertYearHeaderH() + frac * p7VertFieldLen() - V.fillAnchorFrac * boxH;
-  off = Math.max(0, Math.min(over, off));
+  else off = p7VertYearHeaderH() + frac * fieldLen - V.fillAnchorFrac * boxH;
+  off = Math.max(-p7VertStartDrop(), Math.min(over, off));
   // No zoom-out term here. The camera exists only to window an over-tall
   // `zoom > 1` field, and it retires with the squash — but that retirement is
   // p7VertTopY's to run, as one lerp between two fixed endpoints. Doing it here
@@ -1004,6 +1026,11 @@ const P7_ZOOMOUT_FIT_TOP_PX = 40;
 // meant to be on screen at once. SBB_TIMELINE_MOBILE_GAP_PX of air under the
 // rule, the same clearance the box keeps everywhere else.
 function p7ZoomOutFitTop() {
+  // DESKTOP parks the zoomed-out field where the one-page fit centres it.
+  if (!isMobile()) {
+    const fit = p7DesktopFitView(p7.lastW, p7.lastH);
+    return fit ? fit.top : P7_ZOOMOUT_FIT_TOP_PX;
+  }
   const rule = p7HintClipTopY();
   const gap  = typeof SBB_TIMELINE_MOBILE_GAP_PX === "undefined" ? 18 : SBB_TIMELINE_MOBILE_GAP_PX;
   return Math.max(P7_ZOOMOUT_FIT_TOP_PX, rule ? rule + gap : 0);
@@ -1069,9 +1096,69 @@ function p7ZoomOutBottomBonus() {
 // the ROW PLAN is untouched — same zoom, same daysPerRow, same rows — so a date
 // maps to the same row it always did and the dots stay beside their own dates.
 // More columns also means LESS spill than the live layout, not more.
+// ── DESKTOP: the view the beat zooms out TO is the one-page fit ────────────
+// Desktop's field is P7_VERT.zoom pages tall too, but what it zooms out to is
+// NOT a squash of that field. It is the desktop fit solved for ONE page
+// (p7DesktopFitSolve against the box's real height): its own square, pitch and
+// days per row, centred in the box exactly as p7VertTopYLive centres a field
+// that fits. Every dot flies from its cell in the tall field to its cell in
+// that layout (p7DrawSideSquares reads `vert` / `cols` / `cell` off the result,
+// the same fields the mobile squash returns).
+//
+// The two layouts do NOT share a row plan — fewer days per row in the tall one —
+// so a row of one is not a row of the other. p7RowY carries the axis's own marks
+// across through p7FitRowOfLiveRow; `ky` and `top` are what p7ZoomOutKY and
+// p7ZoomOutFitTop hand the rest of the beat, so the axis line ends where the
+// dots do.
+let p7DesktopFitViewCache = null;
+function p7DesktopFitView(W, H) {
+  if (isMobile() || !p7VerticalAxis() || !p7.ready || !p7.vert || !p7.cellBase) return null;
+  if (!Number.isFinite(W) || !Number.isFinite(H)) return null;
+  const key = [W, H, p7.leftEvents.length, p7.rightEvents.length, p7.vert.totalRows, p7.cellBase,
+               window.devicePixelRatio || 1].join("|");
+  if (p7DesktopFitViewCache && p7DesktopFitViewCache.key === key) return p7DesktopFitViewCache;
+  const box  = sbbTimeline(H);
+  const boxT = Math.round(H * box.top), boxH = Math.round(H * box.bottom) - boxT;
+  const gap  = p7CenterGap();
+  const sideW = W / 2 - gap / 2 - sbbTimelineLeftX(W, H);
+  const fit  = p7DesktopFitSolve(sideW, boxH);
+  const cols = Math.max(1, Math.floor(sideW / fit.cell));
+  let vert;
+  try { p7FitProbeDpr = fit.dpr; vert = p7BuildVerticalLayout(Math.floor(boxH / fit.cell), cols, fit.cell); }
+  finally { p7FitProbeDpr = null; }
+  const len = vert.totalRows * fit.cell;
+  const ky  = len / (p7.vert.totalRows * p7.cellBase);
+  // Nothing to zoom out of: the field already fits its page.
+  if (!(ky < 1)) return (p7DesktopFitViewCache = null);
+  p7DesktopFitViewCache = {
+    key, ky, cell: fit.cell, sq: fit.sq, cols, vert,
+    leftX0: W / 2 - gap / 2 - cols * fit.cell, rightX0: W / 2 + gap / 2,
+    top: boxT + Math.max(0, (boxH - len - p7VertYearHeaderH()) / 2),
+  };
+  return p7DesktopFitViewCache;
+}
+// A (fractional) row of the LIVE plan → the row the same DAY has in the fitted
+// one. rowStart is non-decreasing in the day index, so the day is a bisect.
+function p7FitRowOfLiveRow(row, fitVert) {
+  const v = p7.vert;
+  if (row >= v.totalRows) return fitVert.totalRows;
+  if (row <= 0) return 0;
+  // A headline dated past the data is PARKED three rows short of the end
+  // (p7BuildVerticalLayout's reachRow), not placed by its date — so it keeps
+  // that distance, in rows of the plan it is drawn in.
+  if (Math.abs(row - (v.totalRows - 3)) < 1e-9) return fitVert.totalRows - 3;
+  let lo = 0, hi = v.nDays - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (v.rowStart[mid] <= row) lo = mid; else hi = mid - 1;
+  }
+  const f = v.rowsOf[lo] ? Math.min(1, Math.max(0, (row - v.rowStart[lo]) / v.rowsOf[lo])) : 0;
+  return fitVert.rowStart[lo] + f * fitVert.rowsOf[lo];
+}
 let p7SquashCache = null;
 function p7Squash(W, H) {
-  if (!isMobile() || !p7VerticalAxis() || !p7.ready || !p7.vert) return null;
+  if (!isMobile()) return p7DesktopFitView(W, H);
+  if (!p7VerticalAxis() || !p7.ready || !p7.vert) return null;
   if (!Number.isFinite(W) || !Number.isFinite(H)) return null;
   const ky = p7ZoomOutKY(H);
   if (!(ky < 1)) return null;                       // nothing to squash into
@@ -1119,6 +1206,7 @@ function p7ZoomLerp(a, b) { return a + (b - a) * p7ZoomOutT; }
 // layout (campW 160px of 160px available), so x needs nothing done to it.
 function p7ZoomOutKY(H) {
   if (!p7.vert || !p7.cellBase) return 1;
+  if (!isMobile()) { const fit = p7DesktopFitView(p7.lastW, H); return fit ? fit.ky : 1; }
   const box  = sbbTimeline(H);
   const avail = Math.round(H * box.bottom) + p7ZoomOutBottomBonus() - p7ZoomOutFitTop()
               - p7ZoomOutBottomReserve() - (p7VertYearHeaderH() - P7_VERT_FIRST_EV_HEADROOM_PX * (p7AxisHasMobileAbove() ? 1 : 0));
@@ -1161,7 +1249,12 @@ function p7ZoomOutTrigger() {
 // tick), off the SCROLL-derived cursor rather than the lagged fill: the beat is
 // a crossing, and the lag is a trailing visual that would arm it late.
 function p7ZoomOutSync() {
-  if (!isMobile() || !p7VerticalAxis() || !p7.vert) return;
+  if (!p7VerticalAxis() || !p7.vert) return;
+  // Desktop has the beat only while its field is taller than the page.
+  if (!isMobile() && !p7DesktopFitView(p7.lastW, p7.lastH)) {
+    if (p7ZoomOutT) p7ZoomOutTrigger().trigger(0);
+    return;
+  }
   const left = p7.vert.totalRows - p7CurRow();
   if (left <= P7_ZOOMOUT_ARM_ROWS) p7ZoomOutTrigger().trigger(1);
   else if (left > P7_ZOOMOUT_DISARM_ROWS) p7ZoomOutTrigger().trigger(0);
@@ -1185,7 +1278,7 @@ Object.defineProperties(p7, {
 // for the plan): drawing is then clipped so the rows the camera has scrolled
 // past the bottom never paint over the docked tooltip.
 function p7VertOverflows(H) {
-  if (!p7VerticalAxis() || !p7.vert || !p7.CELL || !isMobile()) return false;
+  if (!p7VerticalAxis() || !p7.vert || !p7.CELL) return false;
   const box = sbbTimeline(H);
   return p7VertFieldLen() + p7VertYearHeaderH() > Math.round(H * box.bottom) - Math.round(H * box.top);
 }
@@ -1266,6 +1359,13 @@ function p7FillEdgeY(H) {
 function p7RowY(row, H) {
   const v = p7.vert;
   if (!v || !v.totalRows) return p7VertTopY(H);
+  // DESKTOP zooms out to a layout with its OWN row plan (p7DesktopFitView), so
+  // the mark goes to the row its day has THERE — scaling the live row would
+  // leave the year rings and headline dots a few px off the dots beside them.
+  if (p7ZoomOutT && !isMobile()) {
+    const fit = p7DesktopFitView(p7.lastW, p7.lastH);
+    if (fit) return p7VertTopY(H) + p7ZoomLerp(row * p7.cellBase, p7FitRowOfLiveRow(row, fit.vert) * fit.cell);
+  }
   return p7VertTopY(H) + (row / v.totalRows) * p7VertFieldLen();
 }
 function p7AxisY(dateStr, H) { return p7RowY(p7RowOfDate(dateStr), H); }
@@ -1638,8 +1738,13 @@ function p7ShouldRedrawForAnim() { return currentPage === 4 || currentPage === 6
 // jump to wherever the morph had got to at the next scroll event instead of
 // flying. Only while a grid morph is actually running (updateGroups is not
 // cheap enough to run unconditionally every frame).
+// ...and, on desktop, while the end-of-fill zoom-out is moving: the 8 fly to the
+// one-page view with the field (p7TargetForActorOccurrence).
+let p7ClaimedSyncedZoomT = 0;
 function p7SyncClaimedSquares() {
-  if (p7GridMorph && typeof updateGroups === "function") updateGroups();
+  const zoomMoved = !isMobile() && p7ZoomOutT !== p7ClaimedSyncedZoomT;
+  p7ClaimedSyncedZoomT = p7ZoomOutT;
+  if ((p7GridMorph || zoomMoved) && typeof updateGroups === "function") updateGroups();
 }
 
 function p7StartAnimLoop() {
@@ -3134,7 +3239,6 @@ function p7FilterReset() {
 }
 
 function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, monthEnd, settledCount, posMap) {
-  const bulges = p7BulgeList(posMap, positions, events, cols, x0, topY, CELL, SQ);
   // Hoisted: both read isMobile(), which reads window.innerWidth — a
   // layout-flushing read. Called per dot in the loop below they ran ~4.4k times
   // per frame on a phone and dominated the draw. Per breakpoint, not per square.
@@ -3171,6 +3275,16 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
   const yScale  = p7ZoomOutYScale();
   const sqsh    = p7ZoomOutT ? p7Squash(p7.lastW, p7.lastH) : null;
   const sqshPos = sqsh ? (isLeft ? sqsh.vert.leftPos : sqsh.vert.rightPos) : null;
+  // The hover bulge pushes by CELL distance, so it has to count cells in the
+  // layout the dots are actually standing in. DESKTOP's zoomed-out view is a
+  // different layout (p7DesktopFitView) — a dot's neighbours there are not its
+  // neighbours in the tall field — so once the beat is past halfway the bulge
+  // is resolved against the fitted cells instead. Mobile's squash keeps the
+  // live rows and is left on the live cells.
+  const bulgeFit = !!sqshPos && !isMobile() && p7ZoomOutT >= 0.5;
+  const bulges = bulgeFit
+    ? p7BulgeList(posMap, sqshPos, events, sqsh.cols, x0, topY, sqsh.cell, SQ)
+    : p7BulgeList(posMap, positions, events, cols, x0, topY, CELL, SQ);
   // Mobile squares are ~1.25–3 CSS px (p7SolveMobileSq) sitting at fractional
   // positions, so on a DPR>1 phone every edge lands mid-device-pixel and the
   // canvas antialiases it into a band of partial-alpha pixels. The loupe is a
@@ -3283,7 +3397,9 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
       // slid home over the next 200ms: "the pick moved to a dot far away".
       // Pushed like its neighbours until that push is gone, it arrives with them.
       if (!own || isMob) {
-        const sh = p7BulgeShift(bulges, col, drow);
+        const bc = bulgeFit ? sqshPos[i] : -1;
+        const sh = bc >= 0 ? p7BulgeShift(bulges, bc % sqsh.cols, Math.floor(bc / sqsh.cols))
+                           : p7BulgeShift(bulges, col, drow);
         // MOBILE: whole device pixels only (see p7BulgeHold's note) — the dot
         // keeps its exact rasterised footprint and just moves.
         pushDx = isMob ? q(sh.dx) : sh.dx;
@@ -3762,6 +3878,20 @@ function p7TargetForActorOccurrence(actor, n, W, H) {
   let cx = x0 + col * p7.CELL + p7.SQ / 2;
   let cy = topY + row * p7.CELL + p7.SQ / 2;
   let sq = p7.SQ;
+  // DESKTOP end-of-fill zoom-out: fly to this event's cell in the one-page view
+  // with the canvas dots (p7DrawSideSquares' `sqshPos` lerp, same endpoints).
+  // p7.SQ already carries the size; the cell is what has to move.
+  const fitView = p7ZoomOutT && !isMobile() ? p7DesktopFitView(p7.lastW, p7.lastH) : null;
+  if (fitView) {
+    const idx = (resolved.side === "left" ? p7.leftEvents : p7.rightEvents)
+      .indexOf(p7EventForActorOccurrence(actor, n));
+    const fc = idx >= 0 ? (resolved.side === "left" ? fitView.vert.leftPos : fitView.vert.rightPos)[idx] : -1;
+    if (fc >= 0) {
+      const fx0 = resolved.side === "left" ? fitView.leftX0 : fitView.rightX0;
+      cx = p7ZoomLerp(cx - sq / 2, fx0 + (fc % fitView.cols) * fitView.cell) + sq / 2;
+      cy = p7ZoomLerp(cy - sq / 2, topY + Math.floor(fc / fitView.cols) * fitView.cell) + sq / 2;
+    }
+  }
   // @fold9's size grid. These 8 are DOM squares (js/update-groups.js), not
   // canvas dots — p7DrawSideSquares skips them (p7GetClaimedEvents) — so they
   // only move when this target moves. Without this they stayed parked on their
