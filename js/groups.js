@@ -789,7 +789,7 @@ const acledNoteCardEl     = document.querySelector("#page-5 .text-card");
 // Hoisted above checkFold13 (below), which needs it already resolved at
 // definition time — also reused by p13SyncGateVisibility further down.
 // #page-14 is @fold13, the closing statement — NOT the outro/credits card,
-// which sits behind it at #page-16 (after the @fold14 share block) and shares
+// which sits behind it at #page-17 (after the @fold15 share block) and shares
 // the same wrapper class. @fold13
 // owns the whole hand-off: the scroll GATE, the scroll-linked fade
 // (fold13ScrollT) and the freeform MORPH (checkFold13 below), the last two
@@ -1382,9 +1382,11 @@ function p7SyncHint() {
 // `var` + thunk: a manual/ harness drives it.
 var FOLD13_SPREAD_MS = 1150;   // manual/-baked 2026-09-19
 const fold13Trigger           = makeTrigger(() => FOLD13_SPREAD_MS, (...a) => updateFold13(...a));
-// Duration as a FUNCTION: @fold14's two beats are timed separately
-// (FOLD14_POP_MS + FOLD14_FLY_MS, js/fold11.js) and resolved per frame.
-const fold14PairTrigger       = makeTrigger(() => fold14TotalMs(), (...a) => updateFold14(...a));
+// The pair-off's two beats are two folds: @fold14 pops the newcomers in
+// (fold14PopMs), @fold15 flies the field to the couple slots (FOLD14_FLY_MS,
+// js/fold11.js). Durations resolved per frame.
+const fold14PopTrigger        = makeTrigger(() => fold14PopMs(), (...a) => updateFold14Pop(...a));
+const fold14PairTrigger       = makeTrigger(() => FOLD14_FLY_MS, (...a) => updateFold14(...a));
 let   fold13MorphStarted      = false;
 
 // Watches one title card's top edge for crossing H*frac, firing trigger
@@ -1404,11 +1406,11 @@ let   fold13MorphStarted      = false;
 // matched to desktop on 2026-09-29. `var` so a manual/ harness can drive them.
 var FOLD_FRAC_DESKTOP = {
   fold2: 0.75, fold3: 0.75, fold4: 0.75, fold5: 0.75, fold6: 0.75, fold7: 0.75,
-  fold9: 0.75, fold10: 0.75, fold11: 0.75, fold13: 0.75, fold14: 0.75,
+  fold9: 0.75, fold10: 0.75, fold11: 0.75, fold13: 0.75, fold14: 0.75, fold15: 0.75,
 };   // manual/-baked 2026-09-28
 var FOLD_FRAC_MOBILE = {
   fold2: 0.75, fold3: 0.75, fold4: 0.29, fold5: 0.75, fold6: 0.75, fold7: 0.75,
-  fold9: 0.75, fold10: 0.75, fold11: 0.75, fold13: 0.75, fold14: 0.75,
+  fold9: 0.75, fold10: 0.75, fold11: 0.75, fold13: 0.75, fold14: 0.75, fold15: 0.75,
 };   // fold4: manual/-baked 2026-09-29
 function foldFracNow(key) {
   return (isMobile() ? FOLD_FRAC_MOBILE : FOLD_FRAC_DESKTOP)[key];
@@ -2160,15 +2162,19 @@ function checkFold9FilterFlash() {
 // fold short of here — see p13GateMax/p13GateLocked), so no extra lock check
 // is needed.
 //
-// > Previously watched fold13OutroStickyEl (@fold14's wrapper) at the same
+// > Previously watched fold13OutroStickyEl (@fold15's wrapper) at the same
 // > frac. Don't restore that without also un-compressing the fade.
 const checkFold13 = watchCardThreshold(page12StickyEl, foldFrac("fold13"), fold13Trigger);
 
-// @fold14 — the share block's own card reaching mid-screen pairs the camps off
-// (updateFold14, js/fold11.js). House 0.5 crossing, house tempo; it rides on
-// top of @fold13's spread, which is already fully played by the time this fires.
-const fold14PairCardEl  = document.querySelector("#page-15 .text-card");
-const checkFold14Pair   = watchCardThreshold(fold14PairCardEl, foldFrac("fold14"), fold14PairTrigger);
+// @fold14 — the partner credit card's crossing pops the newcomers in and
+// shrinks the surplus away (updateFold14Pop, js/fold11.js), everything still in
+// @fold13's spread, which is already fully played by the time this fires.
+const fold14PopCardEl   = document.querySelector("#page-15 .text-card");
+const checkFold14Pop    = watchCardThreshold(fold14PopCardEl, foldFrac("fold14"), fold14PopTrigger);
+// @fold15 — the share card's crossing flies the whole field to the couple slots
+// and recolours it (updateFold14, js/fold11.js).
+const fold14PairCardEl  = document.querySelector("#page-16 .text-card");
+const checkFold14Pair   = watchCardThreshold(fold14PairCardEl, foldFrac("fold15"), fold14PairTrigger);
 
 // @fold9's size grid, on the house 0.5 crossing like every other fold — the
 // card reaching mid-screen is the trigger, NOT the IntersectionObserver page
@@ -2437,11 +2443,11 @@ function p7ScopeCancelPending() {
   p7ScopePendingUniform = null;
   if (typeof updateGroups === "function") updateGroups();
 }
-// @fold14's own share card fires the couple pairing (checkFold14Pair ->
-// fold14PairTrigger) on its house 0.5 crossing, like every other fold.
+// @fold14's partner card pops the newcomers in (checkFold14Pop); @fold15's share
+// card flies the couples (checkFold14Pair) — each on its own house crossing.
 
 function checkGroupTriggers() {
-  checkFold2(); checkFold3(); checkFold6(); checkSquaresReveal(); checkAcledNote(); checkMLegendJump(); checkNoteUntype(); checkLegendCollapse(); checkFold7Label(); checkFold7Cursor(); checkFold8SquareDim(); checkFold8Tooltip(); checkFold8DemoGrow(); checkFold9(); checkFold9LegendPeek(); checkFold9Axis(); checkFold9FilterFlash(); checkFold9Fly(); checkFold10Grid(); checkFold11Size(); checkFold13(); checkFold14Pair();
+  checkFold2(); checkFold3(); checkFold6(); checkSquaresReveal(); checkAcledNote(); checkMLegendJump(); checkNoteUntype(); checkLegendCollapse(); checkFold7Label(); checkFold7Cursor(); checkFold8SquareDim(); checkFold8Tooltip(); checkFold8DemoGrow(); checkFold9(); checkFold9LegendPeek(); checkFold9Axis(); checkFold9FilterFlash(); checkFold9Fly(); checkFold10Grid(); checkFold11Size(); checkFold13(); checkFold14Pop(); checkFold14Pair();
 }
 
 // Default (camp-column) swatch size + the swatch-to-label gap

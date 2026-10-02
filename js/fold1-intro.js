@@ -72,13 +72,18 @@ if (page0LogoEl) page0LogoEl.style.opacity = "0";
 page0TitleEl.style.transform = "translateY(100vh)";
 page0SubtitleEl.style.transform = "translateX(-100%) translateY(100vh)";
 
+// Every viewport height in this file is page0BuildHeight() (page1.js), not the
+// live innerHeight: on the phone that is the LARGE viewport, a constant. With
+// the live height, the bar collapsing mid-scroll changed scrollY/H under the
+// lag — the title leapt by scrollY × (growth / old height) and eased back,
+// which read as a jump. On desktop the two are the same number.
 function page0OpacityTarget() {
-  const raw = Math.max(0, Math.min(1, window.scrollY / (window.innerHeight * PAGE0_FADE_VH)));
+  const raw = Math.max(0, Math.min(1, window.scrollY / (page0BuildHeight() * PAGE0_FADE_VH)));
   return 1 - p9Ease(raw);
 }
 
 function page0ScrollFracTarget() {
-  return Math.max(0, Math.min(1, window.scrollY / window.innerHeight));
+  return Math.max(0, Math.min(1, window.scrollY / page0BuildHeight()));
 }
 
 function page0ApplyTitleScrollLag() {
@@ -87,10 +92,10 @@ function page0ApplyTitleScrollLag() {
     page0LaggedScrollFrac = fracTarget;
   } else {
     page0LaggedScrollFrac += (fracTarget - page0LaggedScrollFrac) * PAGE0_SCROLL_LAG_DAMPING;
-    const maxFracGap = PAGE0_SCROLL_LAG_MAX_PX / window.innerHeight;
+    const maxFracGap = PAGE0_SCROLL_LAG_MAX_PX / page0BuildHeight();
     page0LaggedScrollFrac = Math.max(fracTarget - maxFracGap, Math.min(fracTarget + maxFracGap, page0LaggedScrollFrac));
   }
-  const scrollDrivenPx = page0LaggedScrollFrac * window.innerHeight;
+  const scrollDrivenPx = page0LaggedScrollFrac * page0BuildHeight();
   const parallaxPx = page0LaggedScrollFrac * 60;
   // Decay the handover offsets toward 0 on the lag's own tempo, so the
   // catch-up reads as one motion with the lag rather than a second effect.
@@ -110,7 +115,7 @@ function page0ApplyTitleScrollLag() {
 // entrance's current position sits from the driver's, in px, for each
 // element. titleT is the entrance's eased progress on that same frame.
 function page0BeginTitleHandover(titleT) {
-  const vh = window.innerHeight;
+  const vh = page0BuildHeight();
   const entranceTitlePx = (1 - titleT) * vh;
   const entranceSubtitlePx = entranceTitlePx - 107 * (1 - titleT);
   const frac = page0ScrollFracTarget();

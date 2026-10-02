@@ -99,7 +99,7 @@ Two row pairs in the sheet are literal duplicates of one ACLED event and share a
 `row-4132`/`row-4134` (`ISR42882`), `row-8895`/`row-8896` (`PSE46925`). `server.py` reads this
 file for events, but **nothing in the page consumes the geodata** (gitignored, see above).
 
-> **Removed — don't reintroduce:** the @fold14 event map (`map.js`, `map/region.geojson`,
+> **Removed — don't reintroduce:** the @fold16 event map (`map.js`, `map/region.geojson`,
 > `map/event-points.json`), snapshot at commit `834ee0d`; its geodata came from
 > `full_v4.xlsx`'s `latitude`/`longitude` columns.
 

@@ -3,7 +3,7 @@
 Shorthand used in conversation about this project. Several terms collide across files —
 those are called out.
 
-**`@foldN`** — the canonical fold numbering: the visible folds, 1–15, no gaps, as shown on the dev badge. `@fold1`–`@fold5` = `page-0`–`page-4`; `@fold6`–`@fold15` = `page-7`–`page-16`. The hidden sections are `@hidden-acled` (`page-5`) and `@hidden-hover` (`page-6`).
+**`@foldN`** — the canonical fold numbering: the visible folds, 1–16, no gaps, as shown on the dev badge. `@fold1`–`@fold5` = `page-0`–`page-4`; `@fold6`–`@fold16` = `page-7`–`page-17`. The hidden sections are `@hidden-acled` (`page-5`) and `@hidden-hover` (`page-6`).
 Resolve it via [Folds](Folds.md), never by eyeballing an id or a symbol name.
 
 **Title block** — a scrolling section's text content (title, sometimes a legend). In code

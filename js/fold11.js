@@ -1,7 +1,7 @@
 // ── @fold13 animations ───────────────────────────────────────────────────────
 // Throughout this file, #page-14 is @fold13 — the closing statement card; the
-// share block (@fold14, #page-15) and the outro/credits card (@fold15,
-// #page-16) follow it. Every *scroll*
+// share block (@fold15, #page-16) and the outro/credits card (@fold16,
+// #page-17) follow it. Every *scroll*
 // threshold here (gate, hand-off, sticky freeze) is measured off @fold13's
 // offsetTop, so its own height never moves any of them. That height is 150vh
 // (style.css): one viewport to bring the card to centre, then half a viewport
@@ -43,6 +43,9 @@ function fold13FadeSpan() {
   return Math.max(0.05, 1 - foldFracNow("fold13"));
 }
 let fold13TooltipFaded = false;
+// העין השביעית's corner logo link — faded by updateFold13 on desktop.
+const seventhEyeEl = document.querySelector(".seventh-eye");
+
 function updateFold13() {
   const tTrigger = fold13Trigger.currentT();
   // p9Ease (sine in-out), NOT the ease-out cubic this used to be: a curve that
@@ -97,7 +100,7 @@ function updateFold13() {
   // The whole panel is position:fixed (.frozen) from the gate onward and never
   // leaves the screen, so once it is faded it still sat invisibly over the
   // folds behind it — its tray band (pointer-events:auto) ate the hover on
-  // @fold14's share buttons whenever the card scrolled through it. Inert while
+  // @fold15's share buttons whenever the card scrolled through it. Inert while
   // anything is faded; cleared with the rest at eScroll=0.
   page9StickyEl.style.pointerEvents = eScroll > 0 ? "none" : "";
   if (page9HeaderEl)    page9HeaderEl.style.opacity    = opacityVal;
@@ -126,6 +129,14 @@ function updateFold13() {
     fold8TooltipEl.style.opacity = opacityVal;
     fold13TooltipFaded = eScroll > 0;
   }
+  // העין השביעית's corner logo + its «פרויקט בשיתוף» line (.seventh-eye, a
+  // fixed link in the top-right) fade with everything else — DESKTOP ONLY: the
+  // phone already hides it once scrolling starts (.is-scrolled, js/nav.js), and
+  // an inline opacity here would override that class back to visible.
+  if (seventhEyeEl && !isMobile()) {
+    seventhEyeEl.style.opacity       = opacityVal;
+    seventhEyeEl.style.pointerEvents = eScroll > 0 ? "none" : "";
+  }
   // page12TitleCardEl (the fold13 card) stays visible throughout.
   // fold6SquareEls' own opacity (updateGroups) reads p9.fold13OutT just set
   // above to fade a still-legit square out with the rest of the legit grid —
@@ -136,45 +147,42 @@ function updateFold13() {
   draw();
 }
 
-// @fold14 — the camps pair up. A SECOND move on top of @fold13's spread:
-// @fold13's camp-split freeform positions are the from, the couple slots
-// (p12EnsurePairTargets, page12.js) are the to. p9Ease (sine in-out, the house
-// default), fully reversible — scrolling back up walks the couples home and
-// shrinks the filler dots away.
-// TWO BEATS, sliced off the trigger's RAW progress with p9Ease re-applied
-// fresh per window (house convention — never ease an already-eased slice):
-//   pop  [0 … span)  the newcomers grow in on their own camp's side,
-//                    everything still standing in @fold13's spread
-//   fly  [span … 1]  the whole field travels to the couple slots
-// Nothing moves until every newcomer is fully there.
-// The two beats are timed INDEPENDENTLY, in ms: the trigger's duration is their
-// sum (makeTrigger resolves a function duration per frame, so a live edit takes
-// effect on the next crossing) and the split point is pop's share of it. Named
-// exceptions to GROUP_TRANSITION_MS because the beats are deliberately uneven —
-// a quick pop, then a long flight.
+// @fold14 + @fold15 — the camps pair up, in TWO folds. A SECOND move on top of
+// @fold13's spread: @fold13's camp-split freeform positions are the from, the
+// couple slots (p12EnsurePairTargets, page12.js) are the to. p9Ease (sine
+// in-out, the house default), fully reversible — scrolling back up walks the
+// couples home (out of @fold15) and shrinks the filler dots away (out of @fold14).
+//   pop  — @fold14 (the partner credit card's crossing, fold14PopTrigger):
+//          the newcomers grow in on their own camp's side, surplus dots shrink
+//          away, everything still standing in @fold13's spread
+//   fly  — @fold15 (the share card's crossing, fold14PairTrigger): the whole
+//          field travels to the couple slots and recolours
+// Each beat is its own trigger with its own duration, so each is a plain
+// currentT() readout (already p9Ease'd — no slicing). Named exceptions to
+// GROUP_TRANSITION_MS because the beats are deliberately uneven — a quick pop,
+// then a long flight.
 // var, not const: tuned live through a manual/ harness (since removed).
-var FOLD14_POP_MS_DESKTOP = 371;   // manual/-baked 2026-09-19 — beat 1, newcomers grow in
+var FOLD14_POP_MS_DESKTOP = 450;   // nudged slower 2026-10-02 (was 371, manual/-baked 2026-09-19) — @fold14, newcomers grow in
 var FOLD14_POP_MS_MOBILE  = 371;   // matched to desktop for now (explicit instruction); tune on its own later
 function fold14PopMs() { return isMobile() ? FOLD14_POP_MS_MOBILE : FOLD14_POP_MS_DESKTOP; }
-var FOLD14_FLY_MS = 1729;  // beat 2 — the field flies to the couple slots
-function fold14TotalMs() { return fold14PopMs() + FOLD14_FLY_MS; }
-function fold14PopSpan() { return fold14PopMs() / Math.max(1, fold14TotalMs()); }
+var FOLD14_FLY_MS = 1729;  // @fold15 — the field flies to the couple slots
 
-function updateFold14() {
-  // currentRaw, not currentT — currentT is already p9Ease'd, and each beat
-  // below re-eases its own window (never ease an eased slice).
-  const raw = fold14PairTrigger.currentRaw();
-  if (raw > 0 && !fold14PairStarted) {
-    fold14PairStarted = true;
+function updateFold14Pop() {
+  const t = fold14PopTrigger.currentT();
+  if (t > 0 && !fold14PopStarted) {
+    fold14PopStarted = true;
     p12PairTargets = null; // force recompute with current W/H
   }
-  if (raw <= 0) fold14PairStarted = false;
-  const span = fold14PopSpan();
-  p9.fold14PopT  = p9Ease(Math.min(1, raw / span));
-  p9.fold14PairT = p9Ease(Math.max(0, (raw - span) / (1 - span)));
+  if (t <= 0) fold14PopStarted = false;
+  p9.fold14PopT = t;
   draw();
 }
-let fold14PairStarted = false;
+let fold14PopStarted = false;
+
+function updateFold14() {
+  p9.fold14PairT = fold14PairTrigger.currentT();
+  draw();
+}
 
 // The fade-out is the title block's ARRIVAL, not a separate scroll range
 // (explicit instruction): 0 the instant @fold13's card first pokes above the

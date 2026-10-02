@@ -30,6 +30,6 @@ Everything here describes the **project as it is now** — no history narration;
 - Serve with `python3 server.py` → http://localhost:8080 (auto-reload; never kill it as cleanup).
 - Design source of truth: Figma file `QASHSt1u7b6m6ASgrUPswf` ("Design"); pages are revised
   one at a time to pixel parity — only explicitly revised pages match Figma.
-- Fold numbering: **always** resolve `@foldN` via [Folds](Folds.md) — it numbers the visible folds 1–15
+- Fold numbering: **always** resolve `@foldN` via [Folds](Folds.md) — it numbers the visible folds 1–16
   and is not a fixed offset from the HTML ids (hidden sections carry no number).
 

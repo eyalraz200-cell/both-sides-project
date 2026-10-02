@@ -69,7 +69,7 @@ const FOLD_PICKER_SCROLL_MS = 700;
 // CLAUDE.md fold table — not the fold's own on-screen copy. The copy is a
 // paragraph of Hebrew body text: it fills the row, reads as prose rather than a
 // name, and two folds that share a phrasing become indistinguishable in the
-// list. One entry per SECTION (page-0 … page-16), hidden ones included, so the
+// list. One entry per SECTION (page-0 … page-17), hidden ones included, so the
 // row index is the section index — NOT the fold number (foldNumberOf).
 const FOLD_NAMES = [
   "hero / intro",
@@ -87,6 +87,7 @@ const FOLD_NAMES = [
   "bridge glide",
   "drag and drop categorisation",
   "closing statement",
+  "partner credit — joint project with the Seventh Eye",
   "share block + domino pairing",
   "outro / credits",
 ];
@@ -358,3 +359,15 @@ const sectionObserver = new IntersectionObserver(entries => {
 
 sections.forEach(sec => sectionObserver.observe(sec));
 
+// העין השביעית's logo link (.seventh-eye). On the PHONE it sits centred at the
+// top of the hero and fades away once scrolling starts; the class is flipped at
+// every width, but only the 600px block in style.css reacts to it (desktop keeps
+// the logo in its corner on every fold). `var` so a harness can retune it live.
+var SEVENTH_EYE_FADE_SCROLL_PX = 8;   // scrolled further than this = gone
+(function () {
+  const el = document.querySelector(".seventh-eye");
+  if (!el) return;
+  const sync = () => el.classList.toggle("is-scrolled", window.scrollY > SEVENTH_EYE_FADE_SCROLL_PX);
+  window.addEventListener("scroll", sync, { passive: true });
+  sync();
+})();

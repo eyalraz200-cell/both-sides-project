@@ -2296,12 +2296,12 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   padding: 0;
 }
 
-/* @fold13 (the closing statement, #page-14) and @fold15 (the outro/credits
-   card, #page-16). Both share the .page12-sticky-center wrapper below, but
-   only @fold15 actually pins with it — see the override under #page-14. */
+/* @fold13 (the closing statement, #page-14) and @fold16 (the outro/credits
+   card, #page-17). Both share the .page12-sticky-center wrapper below, but
+   only @fold16 actually pins with it — see the override under #page-14. */
 #page-14 {
   /* Was 125vh: 100vh to bring the card up to rest flush at the top, then a
-     quarter viewport of empty run before the next card starts rising. @fold15 (the outro) is a near-full-height
+     quarter viewport of empty run before the next card starts rising. @fold16 (the outro) is a near-full-height
      outro card, not a one-line title, so at the house 100vh its top edge was
      already climbing into view while this card still sat mid-screen — "too
      close behind".
@@ -2323,7 +2323,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    blocks — each centred in a 100vh run — placed after card 1's wrapper, whose
    height is solved to 50vh + half card 1 (p12SpacingFit). So card centres sit
    halfCard, 100vh + halfCard, 200vh + halfCard below the section top, and
-   @fold14's share card 300vh + halfCard: 100vh apart, house rhythm. The gate,
+   @fold15's share card 300vh + halfCard: 100vh apart, house rhythm. The gate,
    fold13ScrollT and .frozen all measure #page-14's offsetTop / the wrapper's
    top, so the extra height moves none of them. Carries the gutter itself
    because #page-14 zeroes the .text-section padding. */
@@ -2343,8 +2343,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   }
 }
 
-/* @fold14 (#page-15, the share block) is an ordinary house fold — 100vh, card
-   centred — see the #page-15 rule further down. Nothing here overrides it. */
+/* @fold15 (#page-16, the share block) is an ordinary house fold — 100vh, card
+   centred — see the #page-16 rule further down. Nothing here overrides it. */
 
 /* Dead-scroll trim between @fold12 and @fold13: @fold13 waits directly under
    @fold12, with no empty run between them (explicit instruction) — at every
@@ -2369,7 +2369,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   box-sizing: border-box;
   /* The shared wrapper is 100vh tall for the outro's sticky centring; here it
      is static and would hold #page-14 open to a full viewport regardless of
-     the section's 45vh, keeping @fold14's share card a screen away. Let it
+     the section's 45vh, keeping @fold15's share card a screen away. Let it
      hold card 1 plus the solved spacing: p12SpacingFit (page12.js) sets its
      height to 50vh + half card 1, which puts card 2's centre (in the first
      .page13-follow) exactly 100vh below card 1's. 50vh is the no-JS fallback.
@@ -2389,7 +2389,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   position: static;
 }
 
-/* The outro (@fold15) is an ordinary title block, but it is the one card that
+/* The outro (@fold16) is an ordinary title block, but it is the one card that
    is near-viewport-tall (100vh − 96px), so centring it in a 100vh section would
    leave only ~50vh of air under the share card — visibly short of the house
    gap. It is placed by its TOP edge instead: p12SpacingFit() (page12.js) sets
@@ -2399,13 +2399,13 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    static wrapper below — a sticky wrapper ignores the padding and re-centres.
    No fixed drawer or map here — see the "Removed — don't reintroduce" note
    in CLAUDE.md / wiki/Folds.md. */
-#page-16 {
+#page-17 {
   min-height: 100vh;
   display: block;
   padding: 0;
 }
 @media (min-width: 601px) {
-  #page-16 .page12-sticky-center {
+  #page-17 .page12-sticky-center {
     position: static;
     height: auto;
   }
@@ -2445,12 +2445,12 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    and below the copy (flex column, centred), so the top and bottom gaps read
    equal. The .text-card wrapper is fit-content so the frame stays centred
    past the 480px --card-w column. */
-#page-16 .text-card {
+#page-17 .text-card {
   width: fit-content;
 }
-#page-16 .text-card-frame {
+#page-17 .text-card-frame {
   width: 520px;
-  height: calc(100vh - 44px);   /* 22px off the screen's top and bottom (picked by eye 2026-09-22, @fold15 harness) */
+  height: calc(100vh - 44px);   /* 22px off the screen's top and bottom (picked by eye 2026-09-22, @fold16 harness) */
   padding: 42px 40px;   /* 42px top and bottom, 40px sides */
   box-sizing: border-box;
   display: flex;
@@ -2461,25 +2461,25 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 
 /* On shorter laptop viewports the card's height (title + body copy) leaves
    almost no gap from the screen's top/bottom edges — the sticky wrapper is a
-   fixed 100vh with no scroll room of its own to compensate (see #page-16's
+   fixed 100vh with no scroll room of its own to compensate (see #page-17's
    min-height comment above), so trim the card's own padding here instead. */
 @media (max-height: 920px) {
-  #page-16 .text-card-frame {
+  #page-17 .text-card-frame {
     padding: 24px 28px;
   }
   /* id-scoped: the base .page12-credits rule sits later in the file */
-  #page-16 .page12-credits {
+  #page-17 .page12-credits {
     margin-top: 9px;
     padding-top: 9px;
   }
 }
 @media (max-height: 820px) {
-  #page-16 .text-card-frame {
+  #page-17 .text-card-frame {
     padding: 18px 22px;
   }
 }
 
-#page-16 .section-title {
+#page-17 .section-title {
   font-size: 36px;   /* desktop; picked by eye 2026-09-22 (was 40) */
   text-align: center;
   line-height: 1.2;
@@ -2495,7 +2495,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 }
 
 .page12-body-heading {
-  /* 600 / 8px picked by eye on desktop 2026-09-22 (@fold15 harness) and
+  /* 600 / 8px picked by eye on desktop 2026-09-22 (@fold16 harness) and
      carried to mobile as-is (was 700 / 12px). */
   font-weight: 600;
   margin-bottom: 8px;
@@ -2518,7 +2518,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 /* Credits under the methodology (teacher review 2026-09-03, K3), kept tight
    on purpose: the card already fills a 900px-tall viewport before this row
    (see the max-height rules above). Same Assistant face as .page12-body. */
-/* @fold14 (#page-15): the share row is its own title block now — a plain
+/* @fold15 (#page-16): the share row is its own title block now — a plain
    .text-card-frame card with the "שתפו" .section-title over the button row,
    centred like every other title fold. */
 .page12-share-card {
@@ -2624,10 +2624,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   opacity: 1;
 }
 
-/* @fold14: an ordinary house fold — one viewport, card centred. With #page-14's three cards spaced 100vh apart and
-   #page-16 centring the outro in its first viewport, the three card centres
+/* @fold15: an ordinary house fold — one viewport, card centred. With #page-14's three cards spaced 100vh apart and
+   #page-17 centring the outro in its first viewport, the three card centres
    sit exactly 100vh apart, like every other consecutive pair. */
-#page-15 {
+#page-16 {
   min-height: 100vh;
   align-items: center;
 }
@@ -3228,10 +3228,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   }
 
   /* The outro card carries its own fixed width instead of --card-w. */
-  #page-16 .text-card {
+  #page-17 .text-card {
     width: var(--card-w);
   }
-  #page-16 .text-card-frame {
+  #page-17 .text-card-frame {
     width: min(450px, 100vw - 48px);
     padding: 24px 22px 28px;
     box-sizing: border-box; /* the phone width is viewport-bound, not padding-bound */
@@ -3241,12 +3241,12 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   /* 40px over 3-4 Hebrew words overflows a 393px card; this is the one
      documented per-page title size (the shared .section-title 20px base is
      untouched — see the hard rule in CLAUDE.md). */
-  #page-16 .section-title {
+  #page-17 .section-title {
     font-size: 26px;      /* desktop's 40→36 step carried over (was 28) */
     margin-bottom: 26px;  /* desktop's 32→42 ratio carried over (was 20) */
   }
 
-  /* The outro (#page-16) is the one fold whose height is set by its own copy,
+  /* The outro (#page-17) is the one fold whose height is set by its own copy,
      not by the canvas: ~1400 characters of methodology text at 16px in a
      ~300px-wide card is taller than a phone viewport no matter how the padding
      is trimmed. So mobile drops the desktop "exactly one viewport" rule (see
@@ -3258,7 +3258,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        - min-height: 100vh is kept so short-content/large-phone cases still
          center the card.
 
-     Scoped to #page-16 on purpose. @fold13's wrapper (#page-14) shares this
+     Scoped to #page-17 on purpose. @fold13's wrapper (#page-14) shares this
      class but must stay sticky and exactly one viewport tall on mobile too:
      p13GateMax() and fold13ScrollT() both measure off #page-14's offsetTop and
      one innerHeight, so letting it grow past 100vh would move the gate line.
@@ -3266,7 +3266,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 
      checkFold13 (watchCardThreshold on #page-14's wrapper at frac 0) is
      unaffected either way — it watches the sticky wrapper, which still pins. */
-  #page-16 .page12-sticky-center {
+  #page-17 .page12-sticky-center {
     height: auto;
     min-height: 100vh;
     /* top is overwritten inline by p12SpacingFit(); the 16px bottom is the air
@@ -3692,13 +3692,15 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        desktop rule). The 50% cancels the viewport height out of the solve, so
        the value holds at any phone height; only the 390px WIDTH it was tuned
        at matters, since that is what fixes the 3-line wrap. */
-    /* + var(--page0-drop): when a phone's bar collapses the viewport grows and
-       the whole hero moves down with it by the growth, so the composition this
-       fold was measured at survives (page0ApplyDrop, page1.js). `50%` has
-       already carried HALF the growth on its own — this is the other half, so
-       the text travels exactly as far as the dot columns, which are absolute px
-       and take the whole delta. 0px everywhere else. */
-    top: calc(50% - 230.1px + var(--page0-drop, 0px)); /* phone harness 2026-09-29: Discordia, last baseline 20px above its dots (was -228.6 / 18.5px Hadassah) */
+    /* --page0-half (page0BuildHeight, page1.js: half the viewport PINNED at
+       first build, the same number the dot columns are built from), not 50%:
+       the title stays
+       put when the bottom bar collapses — the columns are built past the
+       bottom edge (PAGE0_BAR_ALLOWANCE_PX) and the extra dots just emerge
+       from under the bar. --page0-drop is 0 on the phone now (kept for the desktop path);
+       --page0-trim moves the text down with a top-trimmed column
+       (PAGE0_TRIM_MOBILE) so the baseline-to-dot gap below survives. */
+    top: calc(var(--page0-half, 50vh) - 230.1px + var(--page0-drop, 0px) + var(--page0-trim, 0px)); /* phone harness 2026-09-29: Discordia, last baseline 20px above its dots (was -228.6 / 18.5px Hadassah) */
   }
 
   /* The subtitle keeps its 18px and its 125px width here — only the leading and
@@ -3712,7 +3714,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     /* Same trimmed solve as the title: -167.8 puts the last baseline 20.5px
        above its own dot column's top edge. Re-solve this whenever the leading
        above moves — the two are one setting. */
-    top: calc(50% - 165.9px + var(--page0-drop, 0px)); /* re-solved 2026-09-29 for line-height 1.41: last baseline 20.5px above its dots (was -168.8) */
+    top: calc(var(--page0-half, 50vh) - 165.9px + var(--page0-drop, 0px) + var(--page0-trim, 0px)); /* re-solved 2026-09-29 for line-height 1.41: last baseline 20.5px above its dots (was -168.8) */
   }
 
   /* The pinned title card rests 4.4vh (~37px on an 844px phone) from the top
@@ -5126,7 +5128,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 }
 .shk-gate-text { margin: 0; }
 
-/* @fold14's share row is the page's own dark-fill button (.page12-share.is-filled
+/* @fold15's share row is the page's own dark-fill button (.page12-share.is-filled
    — #111 fill, #fff text, #444 on hover, a 1.5px #111 edge), so this is that
    button in a rectangular box rather than a new treatment. The face and size are
    the mini-legend's / .p7-scope-btn's 14px Assistant, which is what everything
@@ -5292,9 +5294,189 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   text-decoration: none;
 }
 @media (min-width: 601px) {
-  .lang-switch { font-size: 12px; }
+  /* 18px puts the button's own 24px box centred on the corner logo's text line
+     (block top 16px + half the 29px lockup = 30.6px). Phone keeps 12px. */
+  .lang-switch { font-size: 12px; top: 18px; }
 }
 .lang-switch:hover { background: #111; color: #fff; }
+
+/* העין השביעית's logo — fixed in the top-RIGHT corner on both pages, a link to
+   the7eye.org.il. The artwork is a MASK (alpha-only PNG), so the mark's colour
+   is plain `background-color` on .seventh-eye-mark; the <a> around it is the
+   optional backing plate. DESKTOP: the wide lockup in the corner with the line
+   «פרויקט בשיתוף» to its right. PHONE: the same lockup centred at the top,
+   line above, fading out on scroll. Every value is a custom property set per
+   breakpoint (phone in the base rule, desktop in the 601px block), so tuning
+   one never moves the other. */
+.seventh-eye {
+  /* PHONE: the wide lockup centred at the top of the screen with the line
+     above it; it fades away once scrolling starts (see the
+     600px block below). */
+  --se-w: 120px;                /* width of the mark; height follows the artwork */
+  --se-top: 8px;
+  --se-right: 12px;             /* desktop only — the phone centres it */
+  --se-color: #393239;          /* העין השביעית's own dark grey */
+  --se-opacity: 1;
+  --se-plate: transparent;      /* backing plate fill */
+  --se-pad: 0px;                /* plate padding around the mark */
+  --se-radius: 0px;
+  /* The «פרויקט בשיתוף» line. */
+  --se-cap-size: 14px;
+  --se-cap-weight: 400;
+  --se-cap-color: #393239;
+  --se-cap-opacity: 1;
+  --se-cap-gap: 8px;            /* between the line and the mark */
+  --se-cap-spacing: 0.04em;     /* letter-spacing */
+  --se-cap-font: 'Assistant', sans-serif;
+  --se-cap-align: center;       /* right | center | left — only matters with --se-dir: column */
+  --se-mark-ml: auto;           /* column only: which edge the mark follows (auto/0, auto/auto, 0/auto) */
+  --se-mark-mr: auto;
+  --se-cap-display: block;      /* none = the line is switched off */
+  --se-dir: column;             /* column = text ABOVE the mark; row = text to its RIGHT */
+  --se-items: stretch;          /* stretch with column, center with row */
+  --se-cap-y: 0px;              /* optical up/down nudge of the line (row layout) */
+  --se-fade-ms: 300ms;          /* phone: how long the scroll fade takes */
+  position: fixed;
+  top: var(--se-top);
+  right: var(--se-right);
+  z-index: 1007;
+  display: flex;
+  /* rtl on the Hebrew page, so `row` puts the text on the mark's right. */
+  direction: rtl;
+  flex-direction: var(--se-dir);
+  align-items: var(--se-items);
+  gap: var(--se-cap-gap);
+  padding: var(--se-pad);
+  background: var(--se-plate);
+  border-radius: var(--se-radius);
+  opacity: var(--se-opacity);
+  line-height: 0;
+  text-decoration: none;
+}
+.seventh-eye-caption {
+  display: var(--se-cap-display);
+  font: var(--se-cap-weight) var(--se-cap-size)/1 var(--se-cap-font);
+  letter-spacing: var(--se-cap-spacing);
+  color: var(--se-cap-color);
+  opacity: var(--se-cap-opacity);
+  text-align: var(--se-cap-align);
+  white-space: nowrap;
+  transform: translateY(var(--se-cap-y));
+}
+/* The WIDE lockup (name beside the eye). */
+.seventh-eye-mark {
+  display: block;
+  margin-left: var(--se-mark-ml);
+  margin-right: var(--se-mark-mr);
+  width: var(--se-w);
+  aspect-ratio: 984 / 239;
+  background-color: var(--se-color);
+  -webkit-mask: url("seventh-eye-logo-wide.png") center / contain no-repeat;
+  mask: url("seventh-eye-logo-wide.png") center / contain no-repeat;
+}
+@media (min-width: 601px) {
+  .seventh-eye {
+    --se-w: 120px;
+    --se-top: 16px;
+    --se-right: 20px;
+    --se-color: #393239;
+    --se-opacity: 1;
+    --se-plate: transparent;
+    --se-pad: 0px;
+    --se-radius: 0px;
+    --se-cap-size: 14px;
+    --se-cap-weight: 300;
+    --se-cap-color: #393239;      /* matches the idle mark; does NOT follow it on hover */
+    --se-cap-opacity: 1;
+    --se-cap-gap: 12px;
+    --se-cap-spacing: 0.04em;
+    --se-cap-font: 'Assistant', sans-serif;
+    --se-cap-align: center;
+    --se-mark-ml: 0;
+    --se-mark-mr: 0;
+    --se-cap-display: block;
+    --se-dir: row;                /* desktop: the line sits to the mark's RIGHT */
+    --se-items: center;
+    /* Optical centring: Assistant's Hebrew letter body (baseline to 0.555em)
+       sits 0.09em below the middle of a line-height-1 box — 1.25px at 14px. */
+    --se-cap-y: -1.25px;
+  }
+}
+/* PHONE: centred instead of cornered (same wide lockup), and gone once the
+   reader scrolls — js/nav.js flips .is-scrolled past SEVENTH_EYE_FADE_SCROLL_PX.
+   A pure state flip, so a CSS transition. Text, not a dot: it may fade. */
+@media (max-width: 600px) {
+  .seventh-eye {
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    transition: opacity var(--se-fade-ms);
+  }
+  .seventh-eye.is-scrolled {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+/* Hover (desktop, real pointers only): the mark alone turns the brand's red;
+   the line beside it keeps its idle colour. A pure state flip, so a CSS
+   transition. */
+@media (min-width: 601px) and (hover: hover) {
+  .seventh-eye-mark { transition: background-color 150ms; }
+  .seventh-eye:hover .seventh-eye-mark { background-color: #EC2A2C; }
+}
+/* English page, DESKTOP: the SAME wide lockup as the Hebrew corner (the
+   artwork the user calls "logo2" — put back 2026-10-02; the cropped stacked
+   mark it briefly wore is removed, don't reintroduce), only reading
+   left-to-right so the line sits to the mark's LEFT. The English phone is the
+   same as the Hebrew phone: the wide lockup, line above, centred. */
+@media (min-width: 601px) {
+  .lang-en .seventh-eye { direction: ltr; }
+}
+
+/* @fold14's title block: «הפרויקט נוצר בשיתוף», then the STACKED artwork (eye
+   above the name, uncropped) on its own line, both centred in the block. A
+   mask, so its colour is --pl-color. Height and gap are set per breakpoint —
+   phone in the base rule, desktop in the 601px block. */
+.partner-title { text-align: center; }
+.partner-logo {
+  --pl-h: 84px;                 /* height of the artwork; width follows it */
+  --pl-gap: 20px;               /* between the text line and the logo */
+  --pl-color: #111111;          /* = .section-title's own colour */
+  --pl-ms: auto;                /* auto / auto = centred; 0 / auto = starts at the text's edge */
+  --pl-me: auto;
+  --pl-opacity: 1;
+  display: block;
+  opacity: var(--pl-opacity);
+  height: var(--pl-h);
+  aspect-ratio: 600 / 788;
+  margin-block-start: var(--pl-gap);
+  margin-inline-start: var(--pl-ms);
+  margin-inline-end: var(--pl-me);
+  background-color: var(--pl-color);
+  -webkit-mask: url("seventh-eye-logo.png") center / contain no-repeat;
+  mask: url("seventh-eye-logo.png") center / contain no-repeat;
+}
+/* The words themselves, in their own span so their opacity (and, if ever
+   tuned, size) can differ from the logo's without touching the frame.
+   --pt-size is UNSET as shipped: the text is the shared .section-title size. */
+.partner-text {
+  font-size: var(--pt-size, inherit);
+  opacity: var(--pt-opacity, 1);
+}
+@media (min-width: 601px) {
+  .partner-logo {
+    --pl-opacity: 1;
+    --pl-h: 100px;
+    --pl-gap: 24px;
+    --pl-color: #111111;
+    --pl-ms: auto;
+    --pl-me: auto;
+  }
+}
+@media (min-width: 601px) and (hover: hover) {
+  .partner-logo { transition: background-color 150ms; }
+  .partner-logo:hover { background-color: #EC2A2C; }
+}
 
 /* English hero text reads left-to-right. Same boxes and positions as the Hebrew
    hero; only the direction, so a word wider than the title's box («Extremists»)
@@ -5349,13 +5531,13 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   content: "Drag extreme action types here";
 }
 
-/* English credits card (@fold15) reads left-to-right. */
+/* English credits card (@fold16) reads left-to-right. */
 /* Only the body copy ranges left — the title and the credits stay centred, as
    on the Hebrew card. */
-.lang-en #page-16 .text-card-frame {
+.lang-en #page-17 .text-card-frame {
   direction: ltr;
 }
-.lang-en #page-16 .page12-body {
+.lang-en #page-17 .page12-body {
   text-align: left;
 }
 
@@ -5401,13 +5583,13 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 @media (max-width: 600px) {
   .lang-en .page0-title {
     font-size: 24px;
-    top: calc(50% - 197.9px + var(--page0-drop, 0px));
+    top: calc(var(--page0-half, 50vh) - 197.9px + var(--page0-drop, 0px) + var(--page0-trim, 0px));
   }
   /* …and the subtitle comes down a step with it: 16px (shared: 18px). `top`
      re-solved the same way, for the same last baseline. */
   .lang-en .page0-subtitle {
     font-size: 16px;
-    top: calc(50% - 154.4px + var(--page0-drop, 0px));
+    top: calc(var(--page0-half, 50vh) - 154.4px + var(--page0-drop, 0px) + var(--page0-trim, 0px));
   }
 }
 

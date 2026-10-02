@@ -1828,15 +1828,15 @@ again to bring it back. Multiple groups can be off at once.
   On @fold13+ the strips are hidden but the legend keeps dimming the filtered
   rows (`filterLives` in `updateGroups`), so it still says which groups are
   missing.
-  - **@fold13/@fold14 (page12.js)** take the filter through `p12Shown(e)`, the
+  - **@fold13/@fold15 (page12.js)** take the filter through `p12Shown(e)`, the
     single predicate both `p12EnsureFreeformTargets` (@fold13's spread) and
-    `p12PairVisible` (@fold14's couples) select on: the category is dropped
+    `p12PairVisible` (@fold15's couples) select on: the category is dropped
     "above" **and** the group isn't filtered out. A hidden dot gets no target, so
     `posOf` returns null and the draw loop skips it — it stays gone rather than
     snapping back at full `SQ`. Both target caches carry a `p12FiltSig()`
     (the sorted `p7FilterOff` keys) in their key, since the layouts *pack* from
     the shown dots. **The filter stops at the real dots — it never touches the
-    colour pools.** @fold14's filler newcomers (`paletteOf`) and the fly-beat
+    colour pools.** @fold15's filler newcomers (`paletteOf`) and the fly-beat
     recolour (`allColors`) draw on the full six-group roster whatever is filtered:
     those dots stand for the camps, not for events, so a filter set back on the
     timeline must not restyle them. Don't "fix" this by filtering either pool.

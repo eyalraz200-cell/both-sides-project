@@ -193,7 +193,9 @@ function buildPage0DotColorSet(counts) {
 // Rebuilds the dot columns (in #page0DotsOverlay, a fixed one-viewport-tall
 // layer — see the comment above) from the current window.innerHeight —
 // re-run on resize (see js/bootstrap.js) since how many dots fit depends on vh.
-/* A PHONE'S BOTTOM/URL BAR COLLAPSES AND THE VIEWPORT GROWS UNDER THE HERO.
+/* DESKTOP ONLY NOW — on the phone the hero is pinned to its first-build height
+   (page0BuildHeight) so a bar collapse changes nothing and delta is 0.
+   A PHONE'S BOTTOM/URL BAR COLLAPSES AND THE VIEWPORT GROWS UNDER THE HERO.
    The columns are built to fill `window.innerHeight` as it was at build time,
    and a height-only resize on mobile deliberately never rebuilds them
    (js/bootstrap.js: the full relayout stalls the main thread hard enough that
@@ -218,6 +220,36 @@ function buildPage0DotColorSet(counts) {
    coordinates, so a transform offset every dot that flew into the camp grids.
    Writing the top (and `anchor.top`, the same number by construction) keeps one
    coordinate space, so nothing downstream needs to know this happened. */
+// PHONE ONLY: dots removed from each column, and which END they leave from.
+// "top" keeps the column's bottom exactly where it is (same distance from the
+// bottom of the screen) and starts the column that many steps lower; "bottom"
+// keeps the start and ends the column higher. 0 = the full column. Desktop
+// never reads these. `var` so a harness can retune them live.
+var PAGE0_TRIM_MOBILE = 1;        // compare/ pick 2026-10-02: the bottom stays put, the columns start one step lower
+var PAGE0_TRIM_FROM_MOBILE = "top";
+function page0Trim() { return isMobile() ? Math.max(0, Math.round(PAGE0_TRIM_MOBILE)) : 0; }
+
+// THE HEIGHT THE HERO IS BUILT FOR. Desktop: the live viewport. PHONE: the
+// viewport as it was at the FIRST build (re-pinned only when the width changes
+// — a rotation), so a bottom-bar collapse changes nothing on the hero: the
+// title keeps its anchor and the columns keep their tops. The columns are
+// built PAGE0_BAR_ALLOWANCE_PX past that bottom edge, so the dots the collapse
+// uncovers are already there — nothing moves, they just appear. (A 100vh/lvh
+// probe was tried for the large height and read the SMALL one on the user's
+// phone, which made page0ApplyDrop drop the dots on the first scroll.)
+const PAGE0_BAR_ALLOWANCE_PX = 160;
+let PAGE0_PIN_VH = 0, PAGE0_PIN_W = 0;
+function page0BuildHeight() {
+  if (!isMobile()) return window.innerHeight;
+  if (!PAGE0_PIN_VH || window.innerWidth !== PAGE0_PIN_W) {
+    PAGE0_PIN_VH = window.innerHeight; PAGE0_PIN_W = window.innerWidth;
+  }
+  // The title and subtitle anchor to this same half-height (style.css), so
+  // text and dots can never disagree about where the middle is.
+  document.documentElement.style.setProperty("--page0-half", `${PAGE0_PIN_VH / 2}px`);
+  return PAGE0_PIN_VH;
+}
+
 let PAGE0_BUILD_VH = 0;   // the innerHeight the columns were last built for
 // TOTAL drop since the build, not the last step's. The dots ACCUMULATE theirs
 // (each call adds to `top`), so the number handed to CSS has to accumulate with
@@ -227,7 +259,8 @@ let PAGE0_DROP_PX = 0;
 
 function page0ApplyDrop() {
   if (!PAGE0_BUILD_VH) return;
-  const delta = window.innerHeight - PAGE0_BUILD_VH;
+  // Zero on the phone by construction (built for the pinned height).
+  const delta = page0BuildHeight() - PAGE0_BUILD_VH;
   if (!delta) return;
   PAGE0_DECORATIVE_DOT_ELS.forEach((d) => {
     d.anchor.top += delta;
@@ -244,7 +277,7 @@ function page0ApplyDrop() {
 }
 
 function buildPage0AllDots() {
-  const vh = window.innerHeight;
+  const vh = page0BuildHeight();
   PAGE0_BUILD_VH = vh;
   // A fresh build already describes the live viewport.
   PAGE0_DROP_PX = 0;
@@ -256,14 +289,27 @@ function buildPage0AllDots() {
   PAGE0_DECORATIVE_DOT_ELS = [];
 
   page0SyncDotCols();
-  const counts = PAGE0_DOT_COLS.map(({ startOffsetY }) => {
-    const firstCenterY = vh / 2 - page0DotBaseOffsetY() + startOffsetY;
-    return Math.max(0, Math.ceil((vh - firstCenterY) / PAGE0_DOT_STEP));
+  // Each column's first dot centre and dot count. The phone's trim (see
+  // PAGE0_TRIM_MOBILE) drops whole lattice steps, so what is left stays on the
+  // same 17px lattice either way.
+  const spans = PAGE0_DOT_COLS.map(({ startOffsetY }) => {
+    let first = vh / 2 - page0DotBaseOffsetY() + startOffsetY;
+    const reach = vh + (isMobile() ? PAGE0_BAR_ALLOWANCE_PX : 0);
+    let n = Math.max(0, Math.ceil((reach - first) / PAGE0_DOT_STEP));
+    const cut = Math.min(page0Trim(), n);
+    n -= cut;
+    if (PAGE0_TRIM_FROM_MOBILE === "top") first += cut * PAGE0_DOT_STEP;
+    return { first, n };
   });
+  const counts = spans.map((sp) => sp.n);
+  // The title and subtitle follow a top-trimmed column down (style.css adds
+  // this to the phone tops), so their measured gap to the first dot survives.
+  const trimPx = PAGE0_TRIM_FROM_MOBILE === "top" ? Math.min(page0Trim(), spans[0].n + page0Trim()) * PAGE0_DOT_STEP : 0;
+  document.documentElement.style.setProperty("--page0-trim", `${isMobile() ? trimPx : 0}px`);
   const colorsByCol = buildPage0DotColorSet(counts);
 
   PAGE0_DOT_COLS.forEach(({ centerX, offsetX, startOffsetY }, colIndex) => {
-    const firstCenterY = vh / 2 - page0DotBaseOffsetY() + startOffsetY;
+    const firstCenterY = spans[colIndex].first;
 
     colorsByCol[colIndex].forEach((color, i) => {
       const centerY = firstCenterY + i * PAGE0_DOT_STEP;

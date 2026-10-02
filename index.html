@@ -17,7 +17,7 @@
   <meta name="description" content="אספנו 10,418 פעולות פוליטיות במרחב הציבורי לאורך ארבע השנים האחרונות. קבעו בעצמכם — מי הם הקיצוניים משני הצדדים? פרויקט אינטראקטיבי מאת איל רז." />
   <link rel="canonical" href="https://eyalraz200-cell.github.io/both-sides-project/" />
   <!-- Open Graph / Twitter card — what WhatsApp, X, Facebook, LinkedIn render when
-       the link is shared (the @fold14 share row relies on this). og:image must be an
+       the link is shared (the @fold15 share row relies on this). og:image must be an
        ABSOLUTE url; og-image-v2.png is a 2400×1260 (2× of the 1200×630 card) shot of _og-card.html.
        Served from GitHub Pages at /both-sides-project/. -->
   <meta property="og:type" content="article" />
@@ -97,6 +97,8 @@
          debug readout, not content. -->
     <!-- Language switch: a plain link to the other language's page. -->
     <a class="lang-switch" href="en/" lang="en" hreflang="en" aria-label="English version">EN</a>
+    <!-- העין השביעית's logo, top-right; a mask-painted link (style.css, .seventh-eye). -->
+    <a class="seventh-eye" href="https://www.the7eye.org.il/" target="_blank" rel="noopener" aria-label="העין השביעית"><span class="seventh-eye-caption">פרויקט בשיתוף</span><span class="seventh-eye-mark" aria-hidden="true"></span></a>
     <div class="fold-number-badge" id="foldNumberBadge" aria-hidden="true"></div>
     <!-- Hover tooltip for the event dots (date + Hebrew description) —
          positioned/shown by p9HoverInit (page9.js), p7HoverInit/p7InspectInit
@@ -241,8 +243,8 @@
       <!-- @fold13 — the closing statement. The scroll gate (p13GateMax) and the
            drag-panel fade-out (fold13ScrollT) key off #page-14, and the
            gate-hidden toggle off its .page12-sticky-center, so this section
-           carries that wrapper; the share block (@fold14, #page-15) and the
-           credits card (@fold15, #page-16) follow it. The extreme dots' morph
+           carries that wrapper; the share block (@fold15, #page-16) and the
+           credits card (@fold16, #page-17) follow it. The extreme dots' morph
            to freeform (checkFold13) is watched on this wrapper at its 0.5
            crossing. This wrapper is made position:static in style.css. -->
       <section class="text-section" data-page="14" id="page-14">
@@ -266,10 +268,19 @@
           </div>
         </div>
       </section>
-      <!-- @fold14 — the share block: its own title block between the closing
+      <!-- @fold14 — the partner credit: an ordinary house fold (100vh, card
+           centred) between the closing statement and the share block. The logo
+           is the same mask artwork as the corner link (.seventh-eye), inline in
+           the title. -->
+      <section class="text-section" data-page="15" id="page-15">
+        <div class="section-text text-card">
+          <h2 class="section-title text-card-frame partner-title"><span class="partner-text">הפרויקט נוצר בשיתוף</span> <a class="partner-logo" href="https://www.the7eye.org.il/" target="_blank" rel="noopener" aria-label="העין השביעית"></a></h2>
+        </div>
+      </section>
+      <!-- @fold15 — the share block: its own title block between the closing
            statement and the outro (moved out of the outro card). The links get
            their real hrefs from p12ShareInit (page12.js) at load. -->
-      <section class="text-section" data-page="15" id="page-15">
+      <section class="text-section" data-page="16" id="page-16">
         <div class="section-text text-card">
           <div class="text-card-frame page12-share-card">
             <h2 class="section-title">שתפו עם אחרים</h2>
@@ -283,8 +294,8 @@
           </div>
         </div>
       </section>
-      <!-- @fold15 — the outro/credits card. -->
-      <section class="text-section" data-page="16" id="page-16">
+      <!-- @fold16 — the outro/credits card. -->
+      <section class="text-section" data-page="17" id="page-17">
         <div class="page12-sticky-center">
           <div class="section-text text-card">
             <div class="text-card-frame page12-card">

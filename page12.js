@@ -5,7 +5,7 @@ let p12FreeformW = 0, p12FreeformH = 0, p12FreeformFiltSig = "";
 // the category was dropped "above" (@fold12's own doing), AND the dot's group
 // isn't filtered out through the mini-legend. The @fold8 filter is SET on the
 // timeline but LIVES from there on — page8.js and page9.js both honour it, so
-// @fold13/@fold14 must too, or a hidden group's dots snap back into the spread.
+// @fold13/@fold15 must too, or a hidden group's dots snap back into the spread.
 function p12Shown(e) {
   const idx = CATEGORY_TO_IDX[e.category];
   if (idx === undefined || p9.sides[idx] !== "above") return false;
@@ -26,6 +26,7 @@ function p12EnsureFreeformTargets(W, H) {
   }
   p12FreeformTargets = new Map();
   p12FreeformW = W; p12FreeformH = H; p12FreeformFiltSig = filtSig;
+  p12FreeformGrid = null;
 
   // Mobile scatters at @fold12's own pitch (p9Metrics: 2px) — the desktop
   // P7_CELL pitch is more than double it and made the spread dots read
@@ -55,13 +56,27 @@ function p12EnsureFreeformTargets(W, H) {
     p12FreeformTargets.set(e, { x: W / 2 + col * CELL, y: row * CELL });
   });
 
+  // The spread's lattice, for @fold14's newcomers (p12EnsurePairTargets): the
+  // SAME cells, the SAME shuffled deal, so a newcomer takes the next free cell
+  // after the real dots' and can never sit on, or against, one of them.
+  p12FreeformGrid = {
+    CELL, rows, total,
+    shuf: [leftShuf, rightShuf],
+    used: [Math.min(total, p7.leftEvents.filter(p12Shown).length),
+           Math.min(total, p7.rightEvents.filter(p12Shown).length)],
+    // cell -> top-left, per half (left grows leftward from W/2, right rightward)
+    pos: [(cell) => ({ px: W / 2 - (Math.floor(cell / rows) + 1) * CELL, py: (cell % rows) * CELL }),
+          (cell) => ({ px: W / 2 +  Math.floor(cell / rows)      * CELL, py: (cell % rows) * CELL })],
+  };
+
   return p12FreeformTargets;
 }
+let p12FreeformGrid = null;
 
 // ---------------------------------------------------------------------------
-// @fold14 — the camps pair up.
+// @fold15 — the camps pair up.
 // @fold13 leaves the extreme dots in a camp-SPLIT spread (above): left events
-// left of W/2, right events right of it. @fold14 dissolves that divide — every
+// left of W/2, right events right of it. @fold15 dissolves that divide — every
 // visible dot couples with a dot from the other camp and the couples share the
 // whole screen. A couple is two dots P12_PAIR_GAP apart, laid out like a
 // domino — most lie flat (left dot, right dot), a share of them stand upright
@@ -90,7 +105,7 @@ let p12PairTargets = null;
 let p12PairW = 0, p12PairH = 0, p12PairGapUsed = 0,
     p12PairSpreadUsed = 0, p12PairMaxUsed = 0, p12PairFiltSig = "";
 
-// Lerp between two "#rrggbb" strings. @fold14's dots do not keep their group
+// Lerp between two "#rrggbb" strings. @fold15's dots do not keep their group
 // colour: they RECOLOUR as they fly (see the fly beat in drawPage12), so the
 // finished field is a mix of all six group colours rather than two camp-shaped
 // blocks of colour. Colour is a "secondary attribute" and may run on its own
@@ -182,23 +197,24 @@ function p12EnsurePairTargets(W, H) {
   const palettes = [paletteOf(p7.leftEvents, 13579),
                     paletteOf(p7.rightEvents, 24680)];
 
-  // WHERE THE NEWCOMERS POP IN: FREE across their own camp's half of the
-  // screen — a hashed x and y anywhere in the half, not a cell in a lattice.
-  // Two earlier tries were both wrong in the same direction, from opposite
-  // ends: hanging each newcomer off an existing dot clumped them around their
-  // hosts (read as "shapes"), and handing each one a whole CELL cell out of a
-  // shuffled list read as a raster — at ~7,100 newcomers over ~11,500 cells
-  // that is 62% occupancy, dense enough that the lattice shows through no
-  // matter how much sub-cell jitter is layered on. Uniform hashed placement has
-  // neither problem: it is spread over the whole half like the grid was, but
-  // nothing lines up, because nothing is snapped to anything.
-  //
-  // The hash is p12Rand(n, salt), never `n * const % const`: modular arithmetic
-  // on a running index walks in lockstep with the slot order and pops the dots
-  // in along diagonals.
-  const halfX0 = [0, W / 2];   // slot 0 = left camp, slot 1 = right camp
-  const halfW  = W / 2 - SQ;   // -SQ so a dot never hangs off its half's far edge
-  const popH   = H - SQ;
+  // WHERE THE NEWCOMERS POP IN: ON THE SPREAD'S OWN LATTICE, SHUFFLED — not
+  // packed, not free (explicit instruction 2026-10-02). @fold13's spread
+  // (p12EnsureFreeformTargets) deals each camp's real dots the first N cells of
+  // a shuffled per-half lattice; a newcomer takes the cells AFTER those, in the
+  // same shuffled order. So every newcomer sits exactly on a cell of the grid
+  // the real dots already stand on (same pitch, same gap — nothing can touch,
+  // let alone overlap), while the cells in use stay scattered. A lattice of its
+  // own, however pitched, is wrong: offset from the spread's it lands newcomers
+  // flush against real dots. Two earlier schemes are also out: hanging each
+  // newcomer off an existing dot clumped them around their hosts ("shapes"),
+  // and uniform hashed placement (free x/y) read as noise. Cells wrap if a half
+  // ever runs out.
+  p12EnsureFreeformTargets(W, H);
+  const grid = p12FreeformGrid;
+  const popPosOf = (i, n) => {
+    const free = Math.max(1, grid.total - grid.used[i]);
+    return grid.pos[i](grid.shuf[i][grid.used[i] + (n % free)]);
+  };
   const nPopped = [0, 0];
 
   // The colour every dot RECOLOURS TO across the fly beat: one of all six group
@@ -245,16 +261,14 @@ function p12EnsurePairTargets(W, H) {
       // A partnerless slot: a newcomer from THAT SLOT'S OWN camp (slot 0 left,
       // slot 1 right) — which is what keeps the newcomers split evenly between
       // the two halves. It pops in at a fixed spot on its camp's half — its
-      // cell in that half's pop grid, plus a hashed jitter inside the cell —
-      // and only then flies to its slot with everything else. Free placement,
-      // not a cell in a lattice — see the note above the halfX0 block.
+      // next free cell of the spread's own lattice (see the popPosOf block) —
+      // and only then flies to its slot with everything else.
       const pal = palettes[i];
       if (!pal.length) continue;
       const n = nPopped[i]++;
       fillers.push({
         x: s.x, y: s.y,
-        px: halfX0[i] + p12Rand(n, 1 + i) * halfW,
-        py: p12Rand(n, 3 + i) * popH,
+        ...popPosOf(i, n),
         color: pal[Math.floor(p12Rand(n, 5 + i) * pal.length)],
         flyC: cols2[i],
       });
@@ -282,16 +296,16 @@ function drawPage12(ctx, W, H) {
   // desktop) — drawing the morph at a hardcoded P9_SQ doubled them on a phone.
   const SQ       = p9Metrics().SQ;
 
-  // @fold14, in two beats (both already eased per-window in updateFold14):
-  // popT — the partner dots grow in beside the lonely dots, everything still
-  // standing in @fold13's spread; then pairT — the whole field flies to the
-  // couple slots. Nothing moves until every newcomer is fully there.
+  // Two beats on two folds (each its own eased trigger, js/fold11.js):
+  // popT (@fold14) — the partner dots grow in and surplus dots shrink away,
+  // everything still standing in @fold13's spread; then pairT (@fold15) — the
+  // whole field flies to the couple slots.
   const popT  = p9.fold14PopT ?? 0;
   const pairT = p9.fold14PairT ?? 0;
   const pairs = (popT > 0 || pairT > 0) ? p12EnsurePairTargets(W, H) : null;
   // Where a dot is right now, mid-morph — the filler's partner is one of these,
   // and the filler has to pop in beside it wherever it happens to be.
-  // Where a dot stands in @fold13's spread alone, with @fold14 not applied —
+  // Where a dot stands in @fold13's spread alone, with @fold15 not applied —
   // the fillers pop in against THIS, so they don't inherit the pair flight.
   // The near end is the dot's LIVE column position — drawPage9 just ran
   // (recordOnly under the spread, see drawBandedCols) and p9.lastPositions is
@@ -377,8 +391,8 @@ function drawPage12(ctx, W, H) {
 // Share row on the @fold13 card (teacher review 2026-09-03, K2). The anchors
 // ship with href="#" and get their real share URLs here, from the page's own
 // location at load; the copy button writes the URL to the clipboard and flips
-// its label for a moment as feedback. The row is @fold14's own title block
-// (#page-15). Runs once from bootstrap (p12ShareInit).
+// its label for a moment as feedback. The row is @fold15's own title block
+// (#page-16). Runs once from bootstrap (p12ShareInit).
 function p12ShareInit() {
   const wrap = document.getElementById("page12Share");
   if (!wrap) return;
@@ -424,8 +438,8 @@ function p12ShareInit() {
   });
 }
 
-// The @fold15 card's height comes from the viewport (100vh − 2×48px, style.css
-// #page-16 .text-card-frame). Its WIDTH is solved here, because CSS can't: a
+// The @fold16 card's height comes from the viewport (100vh − 2×48px, style.css
+// #page-17 .text-card-frame). Its WIDTH is solved here, because CSS can't: a
 // narrower column is a taller one, so the narrowest width at which the copy
 // still clears the bottom padding is also the width that FILLS the card — any
 // wider and the leftover height opens as a void above and below the centred
@@ -434,7 +448,7 @@ function p12ShareInit() {
 const P12_CARD_MIN_W = 320;
 const P12_CARD_MAX_W = 900;
 function p12CardWidthFit() {
-  const f = document.querySelector("#page-16 .text-card-frame");
+  const f = document.querySelector("#page-17 .text-card-frame");
   if (!f) return;
   if (window.innerWidth <= 600) { f.style.removeProperty("width"); return; }  // mobile card is height:auto
   const fits = (w) => {
@@ -450,7 +464,7 @@ function p12CardWidthFit() {
   while (hi - lo > 1) { const mid = Math.round((lo + hi) / 2); if (fits(mid)) hi = mid; else lo = mid; }
   fits(hi);
 }
-// @fold13 → @fold14 spacing, the house rhythm made exact. Every other pair of
+// @fold13 → @fold15 spacing, the house rhythm made exact. Every other pair of
 // title blocks is "card centred in a 100vh section", so consecutive card
 // CENTRES are always exactly 100vh apart. @fold13's card is flush to the top
 // of its section instead (the gate needs that — see #page-14 in style.css), so
@@ -462,20 +476,20 @@ function p12CardWidthFit() {
 // the half-card it ignored.
 // Air left under the outro card once the page is scrolled to its end — matches
 // the 22px the card keeps off the viewport's top and bottom edges (desktop,
-// #page-16 .text-card-frame's height in style.css; the two are one setting).
+// #page-17 .text-card-frame's height in style.css; the two are one setting).
 const P12_OUTRO_END = 22;
 function p12SpacingFit() {
   const H = window.innerHeight;
   // Solved on card 1's WRAPPER now, not the section: the closing statement
   // continues as two 100vh .page13-follow blocks after it, so the wrapper's
   // height is what puts card 2's centre 100vh below card 1's (and, down the
-  // chain, @fold14's share card 100vh below card 3's).
+  // chain, @fold15's share card 100vh below card 3's).
   const sec = document.getElementById("page-14");
   const wrap = sec && sec.querySelector(".page12-sticky-center");
   const card = wrap && wrap.querySelector(".text-card-frame");
   if (card) wrap.style.height = Math.round(H / 2 + card.offsetHeight / 2) + "px";
 
-  // @fold14 → @fold15: the outro card is near-viewport-tall (100vh − 96px), so
+  // @fold15 → @fold16: the outro card is near-viewport-tall (100vh − 96px), so
   // "centred in a 100vh section" reads WRONG — it leaves only 50vh − half the
   // share card + 48px of air above it, well short of the house distance. What
   // reads as the house gap is the air between card EDGES, which for two title
@@ -484,8 +498,8 @@ function p12SpacingFit() {
   // share card into its own section, making the edge-to-edge gap exactly
   // 100vh − share card. The section is then just tall enough to scroll the card
   // to rest with P12_OUTRO_END px under it, and the document ends there.
-  const share = document.querySelector("#page-15 .page12-share-card");
-  const sec15 = document.getElementById("page-16");
+  const share = document.querySelector("#page-16 .page12-share-card");
+  const sec15 = document.getElementById("page-17");
   const outro = sec15 && sec15.querySelector(".text-card-frame");
   if (!share || !outro) return;
   const padTop = Math.round(H / 2 - share.offsetHeight / 2);

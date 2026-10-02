@@ -532,7 +532,15 @@
        and only its state is shown / its commands taken. A host silent for 6 s
        is dropped. */
     H.host = null; H.hostSeen = 0; H.others = {};
-    H.send = function (m) { if (H.host) m.to = H.host; H.ch.postMessage(m); };
+    /* Value changes go to EVERY page running this harness, not only the host:
+       a narrow laptop tab answers before a real phone does and becomes the
+       host, and addressing it alone left the phone showing nothing change —
+       "not connected". Only Copy stays addressed, so one page answers with
+       one payload. The panel still SHOWS the host's state. */
+    H.send = function (m) {
+      if (H.host && m.t === 'btn' && m.name === 'copy') m.to = H.host;
+      H.ch.postMessage(m);
+    };
     H.isHost = function (m) {
       var now = Date.now();
       if (!m.inst) return true;

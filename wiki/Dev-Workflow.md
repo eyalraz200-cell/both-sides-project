@@ -96,7 +96,7 @@ image by URL, so a changed card only reaches already-shared links under a new fi
 `og:image` must be an absolute URL, so the
 tags hardcode the live GitHub Pages base — `https://eyalraz200-cell.github.io/both-sides-project/`.
 If the site ever moves, those four URLs (two per file) are the only things to update; the
-@fold14 share buttons build their URLs from `location.href` (`p12ShareInit`, page12.js) and
+@fold15 share buttons build their URLs from `location.href` (`p12ShareInit`, page12.js) and
 follow the deploy automatically.
 
 `og:description` / `twitter:description` are the **same sentence on both pages**, and it
@@ -330,6 +330,7 @@ for — the **remote panel**:
   a second page was running the same harness, which is what the `drive <id> instead`
   button that appears then already says. No section headings either, over the knobs, the
   toggles or the rail's switches: labelled controls do not need a word above them.
+- **Knob changes reach every page running the harness**, not only the host — a narrow laptop tab answers before a real phone and becomes the host, and commands addressed to it alone left the phone unchanged (it read as "the phone isn't connected"). Only **Copy** is addressed to the host, so one page answers. Enforced on BOTH sides: the panel doesn't address the rest, and the page ignores `to` on everything but Copy (so a panel tab that was never reloaded still drives every page). The panel still shows the host's state.
 - **A knob's `source` is not drawn.** `file:line` under every row made the panel a wall of
   grey code paths. It is for the bake, not the eye — **Copy** still carries it, which is
   where it is read.
@@ -510,7 +511,7 @@ is the live one in code:
 | `P7_INSPECT_SCRIM` / `P7_INSPECT_HOLE_DOTS` (loupe halo-by-subtraction, `p7DrawInspectScrim`) | 0.76 / 1 | `page7.js` |
 | `P7_SCOPE_BTN_GAP` (scope pill above the right-hand legend) | 22 | `js/groups.js` |
 | `PAGE0_CUE_SCALE` / `PAGE0_CUE_DOT_MS` / `PAGE0_CUE_ROW_STAGGER_MS` / `PAGE0_CUE_EXIT_MS` (@fold1 idle scroll cue) | 0.3 / 940 / 22.5 / 260 | `js/fold1-intro.js` |
-| `P12_PAIR_GAP` / `P12_PAIR_SPREAD` / `P12_DOT_COUNT` (@fold14 couples) | 3 / 2.3 / 9250 | `page12.js` |
+| `P12_PAIR_GAP` / `P12_PAIR_SPREAD` / `P12_DOT_COUNT` (@fold15 couples) | 3 / 2.3 / 9250 | `page12.js` |
 | `FOLD3_BEAT_MS` (@fold3's beat windows, absolute ms) | see file | `js/groups.js` |
 | Hero title/subtitle `font-size`, explicit `line-height`, `top: calc(50% - Npx)` | see file | `style.css` |
 | `GROUPS[].color` + `FOLD4_COALITION_ROWS` / `FOLD4_CHANGE_ROWS` (resolve groups by `actor` through `groupByActor()`, which logs an unknown actor; they keyed off a retyped hex until 2026-09-17, where a re-cased colour silently went `undefined`), `FOLD2_GROUP_CELL` (positions), `FOLD2_FILLER_COLORS` (fillers; a group moved onto a filler-override cell evicts it) | see file | `js/groups.js` |

@@ -16,11 +16,13 @@ local Hadassah faces (`@font-face` in `style.css`).
 Served at `/en/`. A copy of `index.html` with `<html lang="en" class="lang-en">` and
 `<base href="../">`, so it loads the **same** `style.css`, scripts and `events.json` as the
 Hebrew page — there is no second stylesheet or script set. Its canonical / `og:url` point
-at `/en/`, so the @fold14 share row shares the English link.
+at `/en/`, so the @fold15 share row shares the English link.
 
-Both pages carry a **language switch** (grey `#8f8f8f` letters, weight 550, filled with the page colour `var(--bg)`, 1px outline; 12px letters on desktop, 13px on the phone; `.lang-switch`, fixed in the top-left corner; the dev
+Both pages carry a **language switch** (grey `#8f8f8f` letters, weight 550, filled with the page colour `var(--bg)`, 1px outline; 12px letters on desktop, 13px on the phone; `.lang-switch`, fixed in the top-left corner, 12px down on the phone and 18px on desktop so its box is centred on the corner logo's text line; the dev
 fold badge sits under it and a bare **F** — or Ctrl+Shift+F — hides/shows the badge, a direct `.layout`
 child): a plain link — «EN» → `en/` on the Hebrew page, «עב» → the root on the English one.
+
+Both pages also carry **העין השביעית's logo** in the top-RIGHT corner (`.seventh-eye`, a fixed link to the7eye.org.il, `z-index: 1007` like the switch; 16px from the top on desktop, 8px on the phone). The artwork is a CSS **mask** (alpha-only PNG) over `.seventh-eye-mark`, so the mark's colour is its `background-color`; the `<a>` is an optional backing plate. Every value is a `--se-*` custom property set **per breakpoint** (phone in the base rule, desktop in the 601px block). **Hebrew page:** the wide lockup (`seventh-eye-logo-wide.png`) with the line «פרויקט בשיתוף» (`.seventh-eye-caption`) to its RIGHT, vertically centred (`--se-dir: row`; `--se-cap-y` is an optical nudge for Assistant's Hebrew letter body) — 120px wide / 14px text; this is the **desktop** layout and it stays on every fold until @fold13, where it fades out with the rest of the screen on the closing card's rise (`updateFold13`, js/fold11.js) and comes back when scrolling up. **Phone (both languages):** the same wide lockup, centred at the top of the screen with the line above it (`--se-dir: column`), 120px wide / 14px text (weight 400), 8px apart; it **fades out once scrolling starts** — `js/nav.js` flips `.is-scrolled` past `SEVENTH_EYE_FADE_SCROLL_PX` (8px) and the 600px block transitions opacity over `--se-fade-ms` (300ms), back in at the top. **English page, desktop:** the same wide lockup, `direction: ltr` so "In partnership with" sits to its LEFT (**removed — don't reintroduce:** the cropped stacked mark, `--se-crop`). Mark and line are both `#393239` at rest; on desktop, hovering turns the **mark only** to `#EC2A2C` over 150ms (`(hover: hover)` pointers). `--se-cap-display: none` switches the line off.
 
 What differs, all gated on `.lang-en` / `isEnglish()` (page7.js):
 
@@ -110,7 +112,7 @@ exist as real markup on the page (the `.a11y-only` `<h1>`, the `<meta name="desc
 ├── #page9CatTooltip      tray-pill tooltip
 ├── #fold6NoteLayer       z-index 2, desktop 1005 (above the 1004 title cards — the note paints in front of whatever it meets) — the ACLED source note is reparented here at init
 ├── #fold6MobileLegendLayer  z-index 3 — the mobile מקרא bar (Groups-and-Legend)
-└── .text-col             NO z-index (see below) — the 16 <section.text-section> scroll drivers (`#page-0` … `#page-16`)
+└── .text-col             NO z-index (see below) — the 18 <section.text-section> scroll drivers (`#page-0` … `#page-17`)
 ```
 
 **`.graphic-col` traps z-index.** Anything that must stack above `.text-col` has to be a
@@ -178,7 +180,7 @@ Two places load order does matter:
 | `page7.js` | The pinned real timeline: per-event square cascade + canvas year axis + hover |
 | `page8.js` | Bridge glide from timeline layout → page9's legit grid |
 | `page9.js` | Drag-and-drop categorization + dot-migration animation |
-| `page12.js` | `drawPage12` outro background; `p12ShareInit` fills **@fold14's** share block (`#page-15`) — not the @fold15 outro card (called from `js/bootstrap.js` after fonts load) |
+| `page12.js` | `drawPage12` outro background; `p12ShareInit` fills **@fold15's** share block (`#page-16`) — not the @fold16 outro card (called from `js/bootstrap.js` after fonts load) |
 | `squareboundingbox.js` | Shared grid geometry (`SBB` — only `.top` is read, `SBB_TIMELINE`, `CENTER_GAP`) |
 | `reload.js` | Dev-only mtime poll → auto page reload |
 | `server.py` | Local dev server + xlsx → `events.json` generation |
@@ -206,7 +208,7 @@ at the end of `style.css`.
   that adds `.shk-gate-seen` to `<html>` before first paint so a returning
   visitor never sees the notice flash. Keep the two key names in sync.
 - **The button is inside the frame**, under the sentence — the notice is one
-  title block, not a card with a control parked below it. It is @fold14's
+  title block, not a card with a control parked below it. It is @fold15's
   dark-fill share button (`.page12-share.is-filled`): `#111` fill, `#fff` text,
   a 1.5px `#111` edge, `#444` on hover over 180ms, set in the 14px Assistant the
   mini-legend and `.p7-scope-btn` use. The `dark` and `min` styles swap it for
@@ -240,11 +242,12 @@ const PAGES = [drawPage1,      // 0  @fold1
                drawPage8,      // 11 @fold11 — the glide plays over it
                drawPage9,      // 12 @fold12 — drag-and-drop
                drawPage12,     // 13 @fold13
-               drawPage12,     // 14 @fold14
-               drawPage12];    // 15 @fold15
+               drawPage12,     // 14 @fold14 — the partner credit
+               drawPage12,     // 15 @fold15
+               drawPage12];    // 16 @fold16
 ```
 
-17 slots, one per `.text-section`, in `js/core.js`.
+18 slots, one per `.text-section`, in `js/core.js`.
 
 `setActivePage(page)` is driven by an `IntersectionObserver` with
 `rootMargin: "-50% 0px -50% 0px"` — i.e. a section becomes current when it crosses the
@@ -302,7 +305,7 @@ while the white fill tracked the real box — fill leaking outside a distorted s
 Naipe Foundry, licensed via Hafontia) — the `_debug-typeface.js` harness pick of 2026-09-27 over
 Hadassah, Days, Fedra Serif Pro and Lava Pro, tuned at 1896×990. **Phone (≤600px): `font: 400 16px/1.5 'Discordia'`** (the phone typeface harness pick of 2026-09-29, over
 Hadassah, Days, Fedra Serif Pro and Lava Pro). No page overrides font-size or weight — with **one named
-exception: @fold15's credits card, `#page-16 .section-title`, is 36px on desktop and 26px under
+exception: @fold16's credits card, `#page-17 .section-title`, is 36px on desktop and 26px under
 the 600px breakpoint** (`style.css`), because it is the piece's closing headline over a
 near-viewport-tall card, not a caption. Any other title that looks differently sized at the same
 viewport width is a regression. The card column `--card-w` is `min(456px, 100vw - 48px)` (456, the
@@ -321,7 +324,7 @@ their column's inner edge (title box 1.5px inside the right column's edge, subti
 **Phone (≤600px block, phone hero harness bake 2026-09-29):** title Discordia 400, 32px/1.45,
 `width: min(185px, 50vw - 20px)`, left +8px, top −230.1px (last baseline 20px above its dots);
 subtitle 125 wide, left −10px, line-height 1.41, top −165.9px (20.5px); the phone keeps the 20px
-column gap; both mobile tops add `var(--page0-drop)`. The tops are solved for each font's metrics,
+column gap; both mobile tops are anchored to **`--page0-half`** (half the viewport height pinned at the hero's first build, `page0BuildHeight()` in page1.js — so the bar collapsing moves nothing) and add `var(--page0-trim)` (the top-trimmed column's offset, `PAGE0_TRIM_MOBILE` in page1.js) plus `var(--page0-drop)` (0 on the phone now). The tops are solved for each font's metrics,
 so re-solve them whenever a face, size or leading changes.
 
 The 600px breakpoint's 16px is a width override applied
@@ -390,7 +393,7 @@ throughout. What the breakpoint actually changes:
 |---|---|---|
 | `--card-w` (`style.css`) | 480px | `min(480px, 100vw - 48px)` |
 | `.text-section` gutter | 48px | 24px |
-| `.section-title` | 20px (`#page-16`: 36px) | 16px (`#page-16`: 26px) |
+| `.section-title` | 20px (`#page-17`: 36px) | 16px (`#page-17`: 26px) |
 | `.page0-title` / `.page0-subtitle` (hero) | title 42px/`1.31`, `top: calc(50% - 276px)`; subtitle 18px/`1.52`, `top: calc(50% - 189.1px)` | title 32px/**`1.45`**, `top: calc(50% - 228.6px)`; subtitle 18px (unchanged) /**`1.465`**, `top: calc(50% - 168.8px)` — baked 2026-09-12. **Mobile overrides the leading too, and must.** `line-height` is unitless, so dropping the title to 32px alone took its leading to 41.92 against the subtitle's unchanged 27.36: the desktop **2:1 nest** (55.02 / 27.36 = 2.011) that locks the two baseline grids fell to 1.532 and the subtitle's lines walked against the title's by ~12.8px per line down the block. The shipped pair is 46.4 / 26.37 = **1.760**, ~6.3px per line — picked by eye against live baseline rulers, not solved to a whole ratio. Each `top` is solved so that text's **last baseline** sits a trimmed gap above its own dot column (title 18.5px, subtitle 20.5px); the `50%` cancels viewport height out, so only the 390px width it was tuned at matters. **Leading and `top` are one setting** — move either and re-solve the other |
 | `.text-card-frame` padding | `21px 29px` | `16px 22px` (holds the 1.38 h:v ratio); exception: @fold12's title frame (`.page9-title-row`) runs `padding-block: 8px` — its single short line read as an oversized fill at 16px. The subtitle's `-8px` margin-top is derived from it (gap − 10) |
 | camp header → top swatch row (`js/update-groups.js`) | `FOLD4_HEADER_GAP` 44 frame-units center-to-center, `H`-scaled | `FOLD4_HEADER_GAP_MOBILE_PX` — a flat **24px visible** gap, measured off the header's rendered height |
@@ -400,7 +403,7 @@ throughout. What the breakpoint actually changes:
 | @fold3 row step (`fold3RowStep`) | 34px flat (`FOLD3_ROW_PITCH_DESKTOP_PX`, inside `updateGroups`) | per row: this row's tallest wrapped label + **13px** (`FOLD3_ROW_LABEL_GAP_PX`), floored at 32 (`FOLD3_MIN_ROW_PITCH_MOBILE_PX`) — equal visible gaps. Both mobile numbers are module-scope `var`s at the top of js/update-groups.js so a manual/ harness can drive them live; the desktop pitch deliberately stays a function-local `const`, so raising the mobile gap cannot reach it |
 | @hidden-hover legend row pitch (`fold6RowPitchPx()`) | 24px | measured — tallest wrapped legend label + 6px |
 | Mini-legend + ACLED note | Six DOM group rows over the canvas; the note sits above their top row | **The legend collapses into the מקרא sheet** — a **full-bleed bottom sheet** (`FOLD6_MLEGEND_POSE = "sheet"`, js/groups.js), not a floating corner card, whose title row is the מקרא button; the six group rows fly into it at `@fold4` and it **closes itself** shortly after they land. The ACLED credit lives **inside** the sheet as a collapsible «איסוף הנתונים» section (`fold6MobileDataHeadEl` / `fold6MobileDataBodyEl`) — **removed, don't reintroduce:** the bare `acleddata.com` link that used to sit in the opposite top-left corner. See [Groups-and-Legend](Groups-and-Legend.md#the-mobile-מקרא-bar) |
-| `#page-16` (@fold15, the credits card) frame / title | sized from the viewport edges: `height: calc(100vh - 44px)` (22px gap top and bottom), width solved in JS by `p12CardWidthFit()` (page12.js, at load, on `document.fonts.ready` and on a debounced resize) — the narrowest width in 320–900px at which the copy still clears the bottom padding, which is also the width that FILLS the fixed height, since a narrower column is a taller one; the CSS `width: 520px` is that answer for a 982px-tall viewport and the fallback if the script never runs. 40px side padding, 42px top/bottom, copy vertically centred in whatever height is left over (`#page-16 .text-card` is `fit-content` so it stays centred) / 36px, 42px under it; the «נתונים ושיטת עבודה» heading (`.page12-body-heading`) is 600 with 8px under it at both widths | `min(450px, 100vw-48px)` border-box, height auto / 26px, 26px under it |
+| `#page-17` (@fold16, the credits card) frame / title | sized from the viewport edges: `height: calc(100vh - 44px)` (22px gap top and bottom), width solved in JS by `p12CardWidthFit()` (page12.js, at load, on `document.fonts.ready` and on a debounced resize) — the narrowest width in 320–900px at which the copy still clears the bottom padding, which is also the width that FILLS the fixed height, since a narrower column is a taller one; the CSS `width: 520px` is that answer for a 982px-tall viewport and the fallback if the script never runs. 40px side padding, 42px top/bottom, copy vertically centred in whatever height is left over (`#page-17 .text-card` is `fit-content` so it stays centred) / 36px, 42px under it; the «נתונים ושיטת עבודה» heading (`.page12-body-heading`) is 600 with 8px under it at both widths | `min(450px, 100vw-48px)` border-box, height auto / 26px, 26px under it |
 
 **The camp gap is the load-bearing one.** `FOLD2_CAMP_CENTER_GAP_PX` (180) puts two 104px
 blocks *plus* @fold3's outward-trailing labels at ~500–600px of required width. Everything
@@ -508,7 +511,7 @@ What holds today:
 - **`index.html` is `lang="he"`** and deliberately has **no root `dir="rtl"`** — the stylesheet declares `direction: rtl`
   per block, and the flex rows that don't (`.page9-zone`, `.page9-tray-row`) would reverse
   their inline order under a root RTL. Setting it is the right end state but needs an
-  eyeball pass over @fold12–@fold15 first; the reason is commented at the `<html>` tag.
+  eyeball pass over @fold12–@fold16 first; the reason is commented at the `<html>` tag.
 - **One `<h1>` per document,** `.a11y-only` (every visible heading is an `<h2>` in a
   scrolling title card).
 - **`.a11y-only`** (`style.css`, next to the `*` reset) is the off-screen utility: a clipped
@@ -530,7 +533,7 @@ What holds today:
 - **@fold12 is keyboard-operable.** Pills are focusable `role="button"` toggles; Enter/Space
   routes through the same `commitDrop`/`commitDropState` the pointer paths use, with an
   `aria-live` announcer and a `:focus-visible` ring — see
-  [Drag-and-Drop](Drag-and-Drop.md#keyboard-path). This is also what makes @fold13–@fold15
+  [Drag-and-Drop](Drag-and-Drop.md#keyboard-path). This is also what makes @fold13–@fold16
   reachable at all without a pointer, since `p13GateLocked()` (`js/fold11.js`) gates
   scrolling on a pill being classified.
 
