@@ -53,9 +53,9 @@ def watch():
         if t > last_modified:
             last_modified = t
 
-EVENTS_XLSX = "full_v4.xlsx"
+EVENTS_XLSX = "events.xlsx"
 
-# full_v4.xlsx has no `side` column — the camp split is derived from main_actor
+# events.xlsx has no `side` column — the camp split is derived from main_actor
 # instead. These two rosters must stay in sync with FOLD4_COALITION_ROWS /
 # FOLD4_CHANGE_ROWS in js/groups.js, which define the same membership by color.
 ACTOR_SIDE = {
@@ -68,14 +68,6 @@ ACTOR_SIDE = {
     "protesters against government": "left",
     "arab israelis":                 "left",
 }
-
-# The crowd-size column lives in a DIFFERENT workbook from EVENTS_XLSX
-# (full_v4.xlsx has no such column), so it is joined in. The only key that
-# survives across the two files is the English `Description` text: joining on
-# (date, main_actor, description) hits only 57%, description alone hits
-# 13,075 / 14,451 (90%). Unmatched rows get crowd = None, which reads as the
-# small/no-halo tier in JS.
-CROWD_XLSX = "Events_with_description_he_medium.xlsx"
 
 # Rows whose ONLY cited source(s) are in this set are dropped from the dataset;
 # rows that also cite any other outlet are kept. Multi-source cells are
@@ -116,26 +108,6 @@ def parse_crowd(raw):
             break
     return best
 
-def load_crowd():
-    """description text -> crowd estimate (int), for the rows that report one."""
-    path = WATCH_DIR / CROWD_XLSX
-    if not path.exists():
-        print(f"  WARNING: {CROWD_XLSX} missing — every event ships crowd=None")
-        return {}
-    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
-    ws = wb.active
-    rows = ws.iter_rows(values_only=True)
-    header = [str(h).strip() if h is not None else "" for h in next(rows)]
-    col = {name: i for i, name in enumerate(header)}
-    out = {}
-    for row in rows:
-        desc = row[col["description"]]
-        n = parse_crowd(row[col["crowd size"]])
-        if desc and n is not None:
-            out[str(desc).strip()[:80]] = n
-    wb.close()
-    return out
-
 def load_events():
     wb = openpyxl.load_workbook(WATCH_DIR / EVENTS_XLSX, read_only=True, data_only=True)
     ws = wb.active
@@ -144,7 +116,6 @@ def load_events():
     col = {name: i for i, name in enumerate(header)}
     events = []
     unknown_actors = set()
-    crowd = load_crowd()
     matched = 0
     sole_dropped = 0
     hidden_dropped = 0
@@ -169,7 +140,8 @@ def load_events():
             continue
         date_str = date.strftime("%Y-%m-%d") if hasattr(date, "strftime") else str(date)[:10]
         desc_en = row[col["Description"]]
-        n = crowd.get(str(desc_en).strip()[:80]) if desc_en else None
+        # `crowd` column: "about 2,000" / "tens of thousands" / blank.
+        n = parse_crowd(row[col["crowd"]]) if "crowd" in col else None
         if n is not None:
             matched += 1
         events.append({
@@ -187,7 +159,7 @@ def load_events():
             # into events-en.json below, which only the English page fetches.
             "descEn": str(desc_en).strip() if desc_en else None,
             # Reported crowd size as an integer estimate, or None when the
-            # source says "no report" / the description didn't join. Drives the
+            # sheet has no figure for the row. Drives the
             # bulge tier on the timeline dots (p7BulgeTier, page7.js).
             "crowd": n,
         })

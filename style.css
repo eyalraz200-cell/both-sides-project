@@ -2311,7 +2311,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      exactly how a 200vh attempt read as "stuck". Height here is spacing only
      while the wrapper is static; sticky turns it into hold time.
      The spacing is SOLVED by p12SpacingFit() (page12.js) on the wrapper as
-     50vh + half card 1, followed by two 100vh .page13-follow blocks — see
+     50vh + half card 1, followed by one 100vh .page13-follow block — see
      there. Don't replace it with a fixed vh: any fixed value is off by the
      half-card it ignores (the fade/gate/freeze all measure offsetTop, not this
      height, so they don't care). */
@@ -2319,11 +2319,11 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   padding: 0;
 }
 
-/* The closing statement's cards 2 and 3 (index.html). Ordinary house title
-   blocks — each centred in a 100vh run — placed after card 1's wrapper, whose
+/* The closing statement's card 2 (index.html). An ordinary house title
+   block — centred in a 100vh run — placed after card 1's wrapper, whose
    height is solved to 50vh + half card 1 (p12SpacingFit). So card centres sit
-   halfCard, 100vh + halfCard, 200vh + halfCard below the section top, and
-   @fold15's share card 300vh + halfCard: 100vh apart, house rhythm. The gate,
+   halfCard and 100vh + halfCard below the section top, and @fold14's partner
+   card 200vh + halfCard: 100vh apart, house rhythm. The gate,
    fold13ScrollT and .frozen all measure #page-14's offsetTop / the wrapper's
    top, so the extra height moves none of them. Carries the gutter itself
    because #page-14 zeroes the .text-section padding. */
@@ -2624,7 +2624,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   opacity: 1;
 }
 
-/* @fold15: an ordinary house fold — one viewport, card centred. With #page-14's three cards spaced 100vh apart and
+/* @fold15: an ordinary house fold — one viewport, card centred. With #page-14's two cards spaced 100vh apart and
    #page-17 centring the outro in its first viewport, the three card centres
    sit exactly 100vh apart, like every other consecutive pair. */
 #page-16 {
@@ -5294,9 +5294,12 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   text-decoration: none;
 }
 @media (min-width: 601px) {
-  /* 18px puts the button's own 24px box centred on the corner logo's text line
-     (block top 16px + half the 29px lockup = 30.6px). Phone keeps 12px. */
-  .lang-switch { font-size: 12px; top: 18px; }
+  /* top 26px puts the button's own 24px box centred on the corner logo's text
+     line (block top 24px + half the 29px lockup = 38.6px). left 24px mirrors
+     the logo's 24px from the right (--se-right) — both moved 20 → 24 on
+     2026-10-02, with the legend columns (FOLD6_LEGEND_INSET_*, js/groups.js)
+     — one shared desktop edge gap. Phone keeps 12px. */
+  .lang-switch { font-size: 12px; top: 26px; left: 24px; }
 }
 .lang-switch:hover { background: #111; color: #fff; }
 
@@ -5377,8 +5380,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 @media (min-width: 601px) {
   .seventh-eye {
     --se-w: 120px;
-    --se-top: 16px;
-    --se-right: 20px;
+    --se-top: 24px;
+    --se-right: 24px;             /* the one desktop edge gap — same as the legend and the EN button */
     --se-color: #393239;
     --se-opacity: 1;
     --se-plate: transparent;

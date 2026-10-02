@@ -988,8 +988,19 @@ function p7VertFieldLen() {
 // P7_FIELD_Y_MOBILE for its own framing.
 const P7_VERT_START_DROP_DESKTOP = 32;
 function p7VertStartDrop() { return isMobile() ? 0 : P7_VERT_START_DROP_DESKTOP; }
+// px between the box's bottom and the zoomed-out fit's last row, desktop; 0
+// on mobile or when nothing fits (then the camera's clamp is the box bottom).
+function p7VertDesktopFitBottomSlack(boxH) {
+  if (isMobile()) return 0;
+  const fit = p7DesktopFitView(p7.lastW, p7.lastH);
+  if (!fit) return 0;
+  const boxT = Math.round(p7.lastH * sbbTimeline(p7.lastH).top);
+  const fitBottom = fit.top + p7VertYearHeaderH() + fit.vert.totalRows * fit.cell;
+  return Math.max(0, boxT + boxH - fitBottom);
+}
 function p7VertCameraOffset(boxH, len) {
-  const V = p7V(), over = len - boxH;
+  const V = p7V();
+  let over = len - boxH;
   if (V.camera === 'none' || over <= 0) return 0;
   const frac = p7AxisLaggedFillFrac ?? p7AxisFillFracTarget();
   // The fill edge is measured on the LIVE field, never the one the
@@ -1000,6 +1011,16 @@ function p7VertCameraOffset(boxH, len) {
   let off;
   if (V.camera === 'pan') off = frac * over;
   else off = p7VertYearHeaderH() + frac * fieldLen - V.fillAnchorFrac * boxH;
+  // DESKTOP: the pan stops where the ZOOMED-OUT fit's field ends, not at the
+  // box's bottom. The fit is centred in the box (p7DesktopFitView `top`), so
+  // its last row sits a centring slack above the box bottom; the camera used
+  // to run the live field all the way down to the box bottom, so the axis
+  // ended lower on the zoomed-in scrub than it does once zoomed out, a hair
+  // off the viewport's edge. Same end on both views, so the zoom-out lerp
+  // leaves the bottom end where it is (2026-10-02). Mobile is untouched.
+  // ADDED to the clamp: a larger offset pans the field further UP, so its
+  // bottom lands the slack above the box bottom.
+  over += p7VertDesktopFitBottomSlack(boxH);
   off = Math.max(-p7VertStartDrop(), Math.min(over, off));
   // No zoom-out term here. The camera exists only to window an over-tall
   // `zoom > 1` field, and it retires with the squash — but that retirement is
@@ -1272,15 +1293,42 @@ function p7ZoomOutKY(H) {
 }
 // The height the whole-timeline view has for its rows, mobile.
 function p7ZoomOutAvail(H) {
-  const box = sbbTimeline(H);
-  return Math.round(H * box.bottom) + p7ZoomOutBottomBonus() - p7ZoomOutFitTop()
+  return p7ZoomOutBottomY(H) - p7ZoomOutFitTop()
        - p7ZoomOutBottomReserve() - (p7VertYearHeaderH() - P7_VERT_FIRST_EV_HEADROOM_PX * (p7AxisHasMobileAbove() ? 1 : 0));
 }
+// Where the whole-timeline view ENDS, in px from the top. Desktop: the box's
+// bottom plus the plaque bonus. MOBILE: exactly SBB_TIMELINE_MOBILE_GAP_PX above
+// the מקרא drawer's top — the same clearance the «2023» header keeps under the
+// rule above it, so the view breathes equally top and bottom (explicit
+// instruction 2026-10-02). The box's own bottom (24px inset + the last plaque's
+// overhang, held back for the zoomed-IN scrub) ended the squashed axis ~50px
+// above the drawer; the squashed view carries no plaques, so none of that
+// reserve is needed here. Falls back to the box when the drawer is off screen.
+function p7ZoomOutBottomY(H) {
+  const box = sbbTimeline(H);
+  const boxBottom = Math.round(H * box.bottom) + p7ZoomOutBottomBonus();
+  if (!isMobile()) return boxBottom;
+  // The drawer's TOP edge, measured — not p7MLegendBarH(): that helper counts
+  // the card only when its bottom sits within 24px of the viewport's bottom,
+  // and on an iPhone the bar rests above the home-indicator inset, so it
+  // reported 0 and the view fell back to the box (axis ending ~40px up).
+  // Only the CLOSED bar (the מקרא button): an open sheet's top is mid-screen,
+  // and re-fitting the view under it would shrink the field every time the
+  // legend opens. The last closed reading stands (p7Squash caches on H/avail).
+  const bar  = document.querySelector(".fold6-mlegend");
+  const card = document.querySelector(".fold6-mlegend-card");
+  if (!bar || bar.classList.contains("is-open")) return p7ZoomOutLastBottomY || boxBottom;
+  const r = card ? card.getBoundingClientRect() : null;
+  if (!r || !r.height || r.top >= H || r.top <= 0) return boxBottom;
+  p7ZoomOutLastBottomY = Math.round(r.top) - (typeof SBB_TIMELINE_MOBILE_GAP_PX === "undefined" ? 18 : SBB_TIMELINE_MOBILE_GAP_PX);
+  return p7ZoomOutLastBottomY;
+}
+let p7ZoomOutLastBottomY = 0;
 // The live -> squashed y factor for this frame. 1 whenever the beat is idle.
 //
-// Solved at p7.lastH — the height the LAYOUT was solved at — and emphatically
-// not at the live window.innerHeight. The dots' squashed positions come from
-// p7Squash(p7.lastW, p7.lastH), and p7.lastH is frozen on purpose: p7UpdateLayout
+// Solved at p7ZoomOutH() — the SAME height every p7Squash caller uses — and
+// never at a height of its own. The dots' squashed positions come from
+// p7Squash(p7.lastW, p7ZoomOutH()), and p7.lastH is frozen on purpose: p7UpdateLayout
 // early-returns on a mobile height-only change so the dots don't resize every
 // time the URL bar slides (the same reasoning as the project's "vh, never dvh"
 // rule). This line was the one reader that never got the memo, and since
@@ -1290,8 +1338,18 @@ function p7ZoomOutAvail(H) {
 // ended at 783 and the dots at 705, a 78px shortfall. Invisible in a headless
 // browser, where the two heights are always equal, and obvious on a phone.
 function p7ZoomOutYScale() {
-  return p7ZoomOutT ? p7ZoomLerp(1, p7ZoomOutKY(p7.lastH || viewportH())) : 1;
+  return p7ZoomOutT ? p7ZoomLerp(1, p7ZoomOutKY(p7ZoomOutH())) : 1;
 }
+// THE ONE HEIGHT the whole-timeline view is solved against, for every reader
+// (p7Squash's callers and the axis scale above — they must agree, see the note
+// above). MOBILE: the LIVE viewport height, not the frozen p7.lastH — the
+// squashed view is a fit to the screen, and with the bottom browser bar
+// collapsed p7.lastH (solved with the bar up) left the axis ending a bar's
+// height too high (2026-10-02). The scrolling layout itself stays frozen at
+// p7.lastH (p7UpdateLayout's height-only early return) so live dots never
+// resize on a bar slide; only this fit tracks the bar. Desktop: p7.lastH, where
+// the two are the same thing.
+function p7ZoomOutH() { return isMobile() ? viewportH() : (p7.lastH || viewportH()); }
 
 // Built on first use, not at parse time: makeTrigger lives in js/groups.js,
 // which project.html loads AFTER this file. Same lazy-resolve-at-call-time rule
@@ -1330,7 +1388,7 @@ Object.defineProperties(p7, {
   CELL:   { get() { return p7.cellBase; } },
   SQ:     { get() {
     if (!p7ZoomOutT) return p7.sqBase;
-    const sq = p7Squash(p7.lastW, p7.lastH);
+    const sq = p7Squash(p7.lastW, p7ZoomOutH());
     return sq ? p7ZoomLerp(p7.sqBase, sq.sq) : p7.sqBase;
   } },
   leftX0: { get() { return p7.leftX0Base; } },
@@ -1425,7 +1483,7 @@ function p7RowY(row, H) {
   // the mark goes to the row its day has THERE — scaling the live row would
   // leave the year rings and headline dots a few px off the dots beside them.
   if (p7ZoomOutT) {
-    const fit = p7Squash(p7.lastW, p7.lastH);
+    const fit = p7Squash(p7.lastW, p7ZoomOutH());
     // The end of the axis is the end of the field, by the field's own sum.
     if (fit && fit.remap && row >= v.totalRows) return p7VertTopY(H) + p7VertFieldLen();
     if (fit && fit.remap) return p7VertTopY(H) + p7ZoomLerp(row * p7.cellBase, p7FitRowOfLiveRow(row, fit.vert) * fit.cell);
@@ -3355,7 +3413,7 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
   // can't be built. Each dot travels from its live cell to its squashed one —
   // the row is the same in both, so it only ever moves sideways and up.
   const yScale  = p7ZoomOutYScale();
-  const sqsh    = p7ZoomOutT ? p7Squash(p7.lastW, p7.lastH) : null;
+  const sqsh    = p7ZoomOutT ? p7Squash(p7.lastW, p7ZoomOutH()) : null;
   const sqshPos = sqsh ? (isLeft ? sqsh.vert.leftPos : sqsh.vert.rightPos) : null;
   // The hover bulge pushes by CELL distance, so it has to count cells in the
   // layout the dots are actually standing in. DESKTOP's zoomed-out view is a
@@ -3963,7 +4021,7 @@ function p7TargetForActorOccurrence(actor, n, W, H) {
   // DESKTOP end-of-fill zoom-out: fly to this event's cell in the one-page view
   // with the canvas dots (p7DrawSideSquares' `sqshPos` lerp, same endpoints).
   // p7.SQ already carries the size; the cell is what has to move.
-  const fitView = p7ZoomOutT ? p7Squash(p7.lastW, p7.lastH) : null;
+  const fitView = p7ZoomOutT ? p7Squash(p7.lastW, p7ZoomOutH()) : null;
   if (fitView && fitView.remap) {
     const idx = (resolved.side === "left" ? p7.leftEvents : p7.rightEvents)
       .indexOf(p7EventForActorOccurrence(actor, n));

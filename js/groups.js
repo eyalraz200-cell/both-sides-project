@@ -29,9 +29,9 @@ const GROUPS_FRAME_H = 982; // Figma frame height the y-coordinates below are au
 // `actor` is the events.json join key — see p7ActorColor in page7.js, which
 // reads this group's `color` directly so the real per-event canvas dots always
 // match this legend, including after a future color edit here. The values are
-// full_v3.xlsx's own lowercase `main_actor` strings, matched verbatim; the
+// events.xlsx's own lowercase `main_actor` strings, matched verbatim; the
 // camp membership they imply is duplicated as ACTOR_SIDE in server.py, which
-// derives each event's `side` from them (full_v3.xlsx has no side column).
+// derives each event's `side` from them (events.xlsx has no side column).
 const GROUPS = [
   { color: "#31CE1C", label: "גורמים ערבים ישראלים",  actor: "arab israelis",
     fold4: { x: 725,  y: 514, swatchFirst: true }, fold6: { x: 31, y: 560 } },
@@ -84,7 +84,7 @@ const GROUPS = [
 // doesn't exist yet at that point.
 buildPage0AllDots();
 
-// Look a group up by its `actor` key — full_v3.xlsx's own `main_actor` string,
+// Look a group up by its `actor` key — events.xlsx's own `main_actor` string,
 // the same key server.py's ACTOR_SIDE is written against. Rosters below used to
 // name their groups by COLOUR and match with `g.color === c`, a case-sensitive
 // string compare against a hand-retyped hex: re-casing or nudging any value in
@@ -2465,7 +2465,7 @@ const LEFT_LEGEND_SWATCH_SIZE = 6, LEFT_LEGEND_LABEL_GAP = 6;
 // rule), plus the row-to-row pitch. GROUPS' per-group fold6.y is now only
 // read for row ORDER (via FOLD6_ROW_FRAME_YS below); the actual spacing all
 // comes from FOLD6_ROW_PITCH, so the three rows can never drift apart.
-const FOLD6_LEGEND_INSET_LEFT = 31, FOLD6_LEGEND_INSET_RIGHT = 31;
+const FOLD6_LEGEND_INSET_LEFT = 24, FOLD6_LEGEND_INSET_RIGHT = 24;   // 2026-10-02: one 24px gap shared with the corner logo (--se-right) and the EN button (was 20)
 // Hover hit box per legend column (see fold6LegendHoverEls). Wide enough to
 // cover the longest label plus its swatch; the pad gives the top/bottom rows
 // and the outer edge a little slack so the labels don't flicker off when the
@@ -2630,7 +2630,7 @@ function typedText(full, t) {
 // hardcoded font sizes above. FOLD6_TOP_ROW is the mini-legend's top-most row
 // of the RIGHT (coalition) column — the column the note hangs below.
 // English page: its own copy (three paragraphs), same ACLED-as-link split.
-const FOLD6_NOTE_TEXT = isEnglish() ? "Event descriptions and dates are sourced from ACLED, an international research organization that tracks and maps protests and political violence based on reports from media outlets and local sources.\nThe dataset includes events from the beginning of 2023 to the present in which Israeli citizens carried out political actions in public spaces in Israel and the Palestinian territories.\nThe assignment of events to groups and political camps, their classification, and severity ranking were defined for this project and are not part of ACLED’s methodology. Events were assigned and classified based on their descriptions using OpenAI models, which were also used to translate them into Hebrew. Apart from translation, the descriptions were not altered." : "תיאורי האירועים ומועדי התרחשותם לקוחים ממאגר ACLED, גוף מחקר בינלאומי המתעד וממפה אירועי מחאה ואלימות פוליטית על בסיס דיווחים מכלי תקשורת וממקורות מקומיים. נכללו אירועים מתחילת 2023 ועד היום, שבהם אזרחי ישראל ביצעו פעולות פוליטיות במרחב הציבורי בישראל ובשטחים.\nשיוך האירועים לקבוצות ולמחנות, סיווגם ומדרג החומרה הוגדרו במסגרת הפרויקט ואינם של ACLED. השיוך והסיווג נעשו על סמך תיאורי האירועים בעזרת מודלי בינה מלאכותית של OpenAI, ששימשו גם לתרגומם לעברית. מלבד התרגום, התיאורים לא שונו.";
+const FOLD6_NOTE_TEXT = isEnglish() ? "Event descriptions and dates are mostly sourced from ACLED, an international research organization that tracks and maps protests and political violence based on reports from media outlets and local sources.\nThe dataset includes events from the beginning of 2023 to the present in which Israeli citizens carried out political actions in public spaces in Israel and the Palestinian territories.\nThe assignment of events to groups and political camps, their classification, and severity ranking were defined for this project and are not part of ACLED’s methodology. Events were assigned and classified based on their descriptions using OpenAI models, which were also used to translate them into Hebrew. Apart from translation, the descriptions were not altered." : "תיאורי האירועים ומועדי התרחשותם לקוחים ברובם ממאגר ACLED, גוף מחקר בינלאומי המתעד וממפה אירועי מחאה ואלימות פוליטית על בסיס דיווחים מכלי תקשורת וממקורות מקומיים. נכללו אירועים מתחילת 2023 ועד היום, שבהם אזרחי ישראל ביצעו פעולות פוליטיות במרחב הציבורי בישראל ובשטחים.\nשיוך האירועים לקבוצות ולמחנות, סיווגם ומדרג החומרה הוגדרו במסגרת הפרויקט ואינם של ACLED. השיוך והסיווג נעשו על סמך תיאורי האירועים בעזרת מודלי בינה מלאכותית של OpenAI, ששימשו גם לתרגומם לעברית. מלבד התרגום, התיאורים לא שונו.";
 // 172, picked in a manual/ harness against the two-paragraph copy on a 982px-tall
 // window, where the copy measures 372px at this width. This is the note's NARROWEST
 // width, not its only one: the note hangs DOWNWARD from a legend block centred

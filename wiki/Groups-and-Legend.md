@@ -62,7 +62,7 @@ panel row with none of them crossing. It is a swap of the shared *order*, **not*
 set of `fold6.y` values — those are the real geometry of the desktop on-canvas mini-legend
 (`fold6RowY`), which this must not touch.
 
-The `actor` values are `full_v3.xlsx`'s own lowercase `main_actor` strings, matched
+The `actor` values are `events.xlsx`'s own lowercase `main_actor` strings, matched
 verbatim. All six are present in the data, so every group appears on the real timeline.
 The camp membership they imply is duplicated as `ACTOR_SIDE` in `server.py`, which
 derives each event's `side` from `main_actor` (the xlsx has no `side` column).
@@ -205,7 +205,7 @@ const CLUSTER_SWATCH_SIZE = 11;  // @fold3 state — declared up with the @fold2
                                  // from it at module scope (TDZ)
 const CLUSTER_LABEL_GAP = 12;
 const LEFT_LEGEND_SWATCH_SIZE = 6, LEFT_LEGEND_LABEL_GAP = 6; // @fold4 state
-const FOLD6_LEGEND_INSET_LEFT = 31, FOLD6_LEGEND_INSET_RIGHT = 31;
+const FOLD6_LEGEND_INSET_LEFT = 24, FOLD6_LEGEND_INSET_RIGHT = 24;   // the one desktop edge gap, shared with the corner logo and the EN button
 const FOLD6_ROW_PITCH = 24;
 ```
 
@@ -236,7 +236,7 @@ airy rows:
 
 | Knob | Desktop | Mobile |
 |---|---|---|
-| edge inset (`fold6LegendInsetLeft/Right()`) | 31 | `FOLD6_LEGEND_INSET_MOBILE` = 12 |
+| edge inset (`fold6LegendInsetLeft/Right()`) | 24 (2026-10-02 — the one desktop edge gap, shared with the corner logo `--se-right` and the EN button) | `FOLD6_LEGEND_INSET_MOBILE` = 12 |
 | label wrap cap (`groupLabelLegendMaxWidth()`) | none (nowrap) | `FOLD6_LABEL_MAX_WIDTH_MOBILE` = 150 (a `var`, harness-drivable; the real panel wrap width the flight uses is measured live by `fold6MFlyMeasure`, ~118 at 390px) |
 | label size (`groupLabelLegendFontSize()`) | 14 | 12 |
 
@@ -456,7 +456,7 @@ which `js/update-groups.js` calls every tick, so a resize across 1550 re-wraps l
 in a `manual/` harness on 2026-09-24. **Those widths are the note's narrowest, not fixed.** On a window too short to hold the note,
 `fold6NoteFitWidth()` (`js/groups.js`, called from `updateGroups`) widens it in
 `FOLD6_NOTE_FIT_STEP` (4px) steps until the card's bottom edge clears the viewport's by
-`FOLD6_NOTE_BOTTOM_GAP` (31px, the legend's side inset), capped at `FOLD6_NOTE_FIT_MAX_W`
+`FOLD6_NOTE_BOTTOM_GAP` (31px), capped at `FOLD6_NOTE_FIT_MAX_W`
 (45% of the viewport width). The anchored edge stays put (right on the Hebrew page, left on
 the English one). The result is cached per viewport size, so it re-measures only on resize.
 **On mobile the note is not positioned at all** — it is reparented into the מקרא

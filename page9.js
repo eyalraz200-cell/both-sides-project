@@ -1,4 +1,4 @@
-// These strings ARE the join key into the data — they must match full_v3.xlsx's
+// These strings ARE the join key into the data — they must match events.xlsx's
 // `event_type` values verbatim (see CATEGORY_TO_IDX below, and load_events in
 // server.py). All 10 of the dataset's event types are represented one-to-one.
 // (הטרדה ואיומים was retired on the v2→v3 dataset: its 104 rows were
@@ -444,7 +444,7 @@ const P9_ZONE_DRAG_BORDER = 2;
 // breathing room on each side so the label isn't flush against the squares.
 const P9_GAP_PADDING = 190;
 
-// Maps an event's `category` (full_v3.xlsx's Hebrew `event_type`, passed
+// Maps an event's `category` (events.xlsx's Hebrew `event_type`, passed
 // through verbatim by server.py) to its P9_CATEGORIES index. Derived rather
 // than hand-written: the pill labels and the data's event types are now the
 // same strings, so a typo can't silently desync the two lists.
@@ -769,7 +769,7 @@ const p9AnimateRightCountPos = makeP9CountPosAnimator();
 // (pink), which sits below arab israelis (green) (explicit instruction,
 // 2026-09-06). This is a *global* ranking,
 // not just "whatever order categories were dropped in".
-// Names are full_v3.xlsx's own lowercase `main_actor` values (see GROUPS).
+// Names are events.xlsx's own lowercase `main_actor` values (see GROUPS).
 const P9_ACTOR_ORDER = [
   "protesters against government",
   "peace movements",
@@ -4127,7 +4127,7 @@ window.addEventListener("resize", () => {
 
 // Hover tooltip for a single event dot — date + Hebrew description. Every
 // event has its own real `descHeMedium` (events.json/server.py, sourced from
-// Events_with_description_he_medium.xlsx), so every dot is hoverable.
+// events.xlsx), so every dot is hoverable.
 function p9HoverInit() {
   const canvasEl  = document.getElementById("canvas");
   const tooltipEl = document.getElementById("page9Tooltip");

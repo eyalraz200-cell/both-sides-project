@@ -101,13 +101,13 @@ would hold scroll where the card never pins and the fold deadlocks.
 2 החזקה בכפייה · 3 תקיפה בנשק קר · 4 תקיפה בנשק חם · 5 תקיפה פיזית ·
 6 הפרות סדר · 7 ניכוס שטח · 8 פגיעה ברכוש · 9 חסימת כביש.
 
-These strings ARE the join key into the data — they must match `full_v3.xlsx`'s
+These strings ARE the join key into the data — they must match `events.xlsx`'s
 `event_type` values verbatim, and all 10 of the dataset's event types are represented
 one-to-one.
 
 > **Removed — don't reintroduce:** `הטרדה ואיומים`. It was retired on the v2→v3 dataset;
 > its 104 rows were hand-reclassified (51 הפגנה לא אלימה, 43 הפרות סדר, 8 חסימת כביש,
-> 1 תקיפה פיזית, 1 תקיפה בנשק חם) and the type no longer exists in `full_v3.xlsx`.
+> 1 תקיפה פיזית, 1 תקיפה בנשק חם) and the type no longer exists in `events.xlsx`.
 > Its tray slot (row 1, col 2) went to תקיפה בנשק חם, which puts row 1 back at 5 columns.
 
 `P9_CATEGORY_DESC` is index-aligned and used only by the tray tooltip.

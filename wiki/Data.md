@@ -39,7 +39,7 @@ back to the Hebrew descriptions.
 
 ## Data licensing — the xlsx are local-only, never committed
 
-Every workbook (`full_v3.xlsx`, `full_v4.xlsx`, `Events_with_description_he_medium.xlsx`,
+Every workbook (`events.xlsx`, the retired copies in `_xlsx-archive/`,
 `archive/combined_V1_hebrew_summaries.xlsx`) and the raw ACLED exports (`raw-*.csv`) contain
 ACLED-licensed rows. ACLED forbids giving the public direct access to its content, so they
 are **gitignored (`*.xlsx`, `raw-*.csv`) and exist only on local disks** — the public repo's
@@ -56,24 +56,23 @@ any other event-level export to the repo.
 
 ## Source of truth: the xlsx
 
-### `Events_with_description_he_medium.xlsx` — the crowd-size column (`CROWD_XLSX`)
+### `events.xlsx` — the ONE workbook (`EVENTS_XLSX`)
 
-`full_v4.xlsx` has no crowd column; the reported figure lives in this second workbook
-(sheet `Sheet1`: side, main actor, event category, description, date, fatalities,
-**crowd size**, description_he_medium — 13,523 rows). `load_crowd()` (`server.py`) joins it
-to the v3 rows on the **first 80 characters of the English `Description`** — the only text
-shared verbatim by both files. About 2,750 of the sheet rows end up with a figure; the rest are
-`null`. If the file is missing the server warns and every `crowd` is `null`.
+Since 2026-10-02 there is a single workbook at the repo root, `events.xlsx` (sheet
+`raw-israel`, 14,456 data rows: 14,451 ACLED rows + 5 hand-added events,
+`row-15392`…`row-15396`, that carry no `acled_id`/geodata). It is the former `full_v4.xlsx`
+with the `crowd` column merged in from the former `Events_with_description_he_medium.xlsx`
+(joined once, on the first 80 characters of the English `Description`; 2,811 rows carry a
+figure). Those two, `full_v3.xlsx` and the 2026-09-27 backup are parked in `_xlsx-archive/`
+(gitignored) and **nothing reads them** — edit `events.xlsx` only, and never reintroduce a
+second workbook as a live dependency.
 
 `parse_crowd(raw)` turns the cell's free text (`crowd size=about 2,000`,
 `…=tens of thousands`, `no report`) into ONE integer estimate: the larger of any number in
 the text and the first word bucket in `CROWD_WORDS` (hundreds of thousands 300,000 · tens
-of thousands 30,000 · thousands 3,000 · hundreds 300 · dozens 50 · tens 30); blank / "no
-report" → `null`. Distribution: < 100 — 837 · 100–999 — 985 · 1k–9,999 — 734 · ≥ 10k — 201.
+of thousands 30,000 · thousands 3,000 · hundreds 300 · dozens 50 · tens 30); blank → `null`. Distribution: < 100 — 837 · 100–999 — 985 · 1k–9,999 — 734 · ≥ 10k — 201.
 
-`full_v4.xlsx` at the repo root (14,456 data rows: 14,451 ACLED rows + 5 hand-added
-events, `row-15392`…`row-15396`, that carry no `acled_id`/geodata). `full_v3.xlsx` is the
-same 10 columns without the geodata and is **no longer read by anything**. Columns:
+Columns:
 
 | Column | Used as |
 |---|---|
@@ -84,12 +83,14 @@ same 10 columns without the geodata and is **no longer read by anything**. Colum
 | `row_id` | `rowId` — the stable per-row handle JS pins to, and what a harness reports back for marking rows in the sheet |
 | `actor_type` | unused by code (hidden column J). Sub-type filled for three groups of rows: `anti judicial reform demonstrators` (2,094) and `anti government protesters` (373) — both `main_actor` `protesters against government` — and `hostage deal protesters` (2,146), whose `main_actor` is `peace movements` (so תומכי עסקת חטופים ומתנגדי המלחמה = left activists + hostage-deal protesters; the sub-type column keeps them distinguishable) |
 | `Description`, `location`, `fatalities` | unused; columns G–J are hidden in the sheet |
+| `data_source` | Column Q. Which dataset the row came from: `acled` (14,451), `manual` (the 5 hand-added rows), `the fortress` (pending import). Not read by the site yet; distinct from `source`, which is the news outlet |
+| `crowd` | Column P. Free text (`about 2,000`, `tens of thousands`) or blank; **read by `load_events()`** via `parse_crowd` |
 | `hidden` | Column O, optional. **Read by `load_events()`**: any non-empty cell keeps the row in the workbook but drops it from `events.json`. Marked rows are also filled yellow in the sheet. Currently 2: `row-7707`, `row-2145` |
 | `source` | `;`-separated outlet names, filled on every row (backfilled from the raw ACLED exports on 2026-09-23). **Read by `load_events()`**: a row whose *only* source(s) are in `SOLE_SOURCE_EXCLUDE` (`server.py`) is dropped. The set is `{plo negotiations affairs department}`: the sheet's largest source (5,056 rows, all settler events), and the 4,036 rows that cite nothing else are excluded; the 1,020 corroborated by another outlet stay. Empty the set to ship every row. Origin split of the 96 outlets: `sources-by-origin.csv` (untracked) |
 
-### `full_v4.xlsx` — the four geodata columns
+### The four geodata columns
 
-`full_v4.xlsx` is `full_v3.xlsx` with four columns appended: `acled_id` (ACLED
+`events.xlsx` carries four geodata columns: `acled_id` (ACLED
 `event_id_cnty`, e.g. `ISR13526`), `latitude`, `longitude`, `geo_precision` (ACLED's 1 =
 named settlement, 2 = nearby stand-in, 3 = region centre only; 11,314 / 3,106 / 31 rows).
 Each row was matched against the raw ACLED exports (`raw-israel.csv`, `raw-palestine .csv`,
@@ -101,7 +102,7 @@ file for events, but **nothing in the page consumes the geodata** (gitignored, s
 
 > **Removed — don't reintroduce:** the @fold16 event map (`map.js`, `map/region.geojson`,
 > `map/event-points.json`), snapshot at commit `834ee0d`; its geodata came from
-> `full_v4.xlsx`'s `latitude`/`longitude` columns.
+> the workbook's `latitude`/`longitude` columns.
 
 **There is no `side` column.** The camp split is derived from `main_actor` via
 `ACTOR_SIDE` in `server.py`, which must stay in sync with `FOLD4_COALITION_ROWS` /

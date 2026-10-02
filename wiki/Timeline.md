@@ -98,6 +98,12 @@ box's top the axis begins. At 0 the field's top would start pinned to the box's 
 begin to scroll once the filling edge had travelled down to `fillAnchorFrac`; the drop starts
 the field that much lower and it scrolls up from there. Read through `p7VertStartDrop()`.
 
+**The camera's ceiling on desktop is the zoomed-out fit's bottom, not the box bottom.** The
+one-page fit is centred in the box (`p7DesktopFitView` `top`), so its last row sits a centring
+slack above the box's bottom; the pan's clamp adds that slack (a larger offset pans the field further up)
+(`p7VertDesktopFitBottomSlack`), so the zoomed-in axis ends at exactly the y the zoomed-out one
+does and the bottom end never moves during the zoom-out. Mobile keeps the box bottom.
+
 **On desktop the camera measures the fill edge on the live field, never the shrinking one.**
 `p7VertFieldLen()` falls as the zoom-out runs; reading it inside the camera dropped the offset
 back under its own clamp halfway through the beat and moved the endpoint `p7VertTopY` lerps
@@ -116,7 +122,7 @@ The two layouts do **not** share a row plan, so `p7RowY` carries the axis's own 
 rings, headline dots, the fill edge) across through `p7FitRowOfLiveRow` — the row the same
 *day* has in the fitted plan — rather than scaling the live row. `p7ZoomOutKY` and
 `p7ZoomOutFitTop` return the fitted view's length ratio and top on desktop, so the axis line
-ends where the dots do. The headline cards stay visible in the zoomed-out view. A headline
+ends where the dots do. The headline cards stay visible in the zoomed-out view. **The height the zoomed-out view is solved against is one helper, `p7ZoomOutH()`** (every `p7Squash` caller and `p7ZoomOutYScale` read it): on **mobile it is the live `viewportH()`**, so with the bottom browser bar collapsed the squashed axis still ends at the screen's bottom reserve (it used to read the frozen `p7.lastH`, solved with the bar up, and ended a bar's height too high); the scrolling layout itself stays frozen at `p7.lastH` (`p7UpdateLayout`'s height-only early return), so live dots never resize on a bar slide. Desktop reads `p7.lastH`, where the two are equal. **Its bottom end on mobile is `p7ZoomOutBottomY(H)` = the closed מקרא button's measured top edge minus `SBB_TIMELINE_MOBILE_GAP_PX` (18)** (measured directly — `p7MLegendBarH()` reports 0 when the bar rests above an iPhone's home-indicator inset; while the sheet is open the last closed reading stands) — the same clearance the «2023» header keeps under the hint rule, so the squashed view breathes equally top and bottom; the box's own bottom (24px inset + plaque overhang) is only the fallback when the drawer is off screen. Desktop keeps the box bottom plus the plaque bonus. A headline
 dated past the data is parked three rows short of the end, and keeps that distance in rows
 of the plan it is drawn in.
 

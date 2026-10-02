@@ -481,9 +481,9 @@ const P12_OUTRO_END = 22;
 function p12SpacingFit() {
   const H = window.innerHeight;
   // Solved on card 1's WRAPPER now, not the section: the closing statement
-  // continues as two 100vh .page13-follow blocks after it, so the wrapper's
+  // continues as one 100vh .page13-follow block after it, so the wrapper's
   // height is what puts card 2's centre 100vh below card 1's (and, down the
-  // chain, @fold15's share card 100vh below card 3's).
+  // chain, @fold14's partner card 100vh below card 2's).
   const sec = document.getElementById("page-14");
   const wrap = sec && sec.querySelector(".page12-sticky-center");
   const card = wrap && wrap.querySelector(".text-card-frame");
