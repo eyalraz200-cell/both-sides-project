@@ -1,0 +1,723 @@
+[
+ {
+  "id": "html:11",
+  "kind": "html",
+  "he": "  <title>קיצוניים משני הצדדים</title>",
+  "en": "  <title>Extremists on Both Sides</title>",
+  "ar": "  <title>متطرفون من الجانبين</title>"
+ },
+ {
+  "id": "html:17",
+  "kind": "html",
+  "he": "  <meta name=\"description\" content=\"אספנו 10,418 פעולות פוליטיות במרחב הציבורי לאורך ארבע השנים האחרונות. קבעו בעצמכם — מי הם הקיצוניים משני הצדדים? פרויקט אינטראקטיבי מאת איל רז.\" />",
+  "en": "  <meta name=\"description\" content=\"We collected 14,456 political actions carried out in public space over the past four years. Decide for yourself — who are the extremists on both sides? An interactive project by Eyal Raz.\" />",
+  "ar": "  <meta name=\"description\" content=\"جمعنا 10,418 تحركًا سياسيًا في الحيز العام على مدى السنوات الأربع الأخيرة. قرروا بأنفسكم — من هم المتطرفون من الجانبين؟ مشروع تفاعلي من إعداد إيال راز.\" />"
+ },
+ {
+  "id": "html:25",
+  "kind": "html",
+  "he": "  <meta property=\"og:title\" content=\"קיצוניים משני הצדדים\" />",
+  "en": "  <meta property=\"og:title\" content=\"Extremists on Both Sides\" />",
+  "ar": "  <meta property=\"og:title\" content=\"متطرفون من الجانبين\" />"
+ },
+ {
+  "id": "html:26",
+  "kind": "html",
+  "he": "  <meta property=\"og:description\" content=\"אספנו 10,418 פעולות פוליטיות במרחב הציבורי לאורך ארבע השנים האחרונות. קבעו בעצמכם - מי הם הקיצוניים משני הצדדים?&#10;פרויקט אינטראקטיבי מאת איל רז.\" />",
+  "en": "  <meta property=\"og:description\" content=\"We collected 14,456 political actions carried out in public space over the past four years. Decide for yourself - who are the extremists on both sides?&#10;An interactive project by Eyal Raz.\" />",
+  "ar": "  <meta property=\"og:description\" content=\"جمعنا 10,418 تحركًا سياسيًا في الحيز العام على مدى السنوات الأربع الأخيرة. قرروا بأنفسكم - من هم المتطرفون من الجانبين؟&#10;مشروع تفاعلي من إعداد إيال راز.\" />"
+ },
+ {
+  "id": "html:31",
+  "kind": "html",
+  "he": "  <meta property=\"og:image:alt\" content=\"קיצוניים משני הצדדים — ניתוח הפעילות של המחנות הפוליטיים בישראל\" />",
+  "en": "  <meta property=\"og:image:alt\" content=\"Extremists on Both Sides — An analysis of political activity across Israel’s political camps\" />",
+  "ar": "  <meta property=\"og:image:alt\" content=\"متطرفون من الجانبين — تحليل نشاط المعسكرات السياسية في إسرائيل\" />"
+ },
+ {
+  "id": "html:33",
+  "kind": "html",
+  "he": "  <meta name=\"twitter:title\" content=\"קיצוניים משני הצדדים\" />",
+  "en": "  <meta name=\"twitter:title\" content=\"Extremists on Both Sides\" />",
+  "ar": "  <meta name=\"twitter:title\" content=\"متطرفون من الجانبين\" />"
+ },
+ {
+  "id": "html:34",
+  "kind": "html",
+  "he": "  <meta name=\"twitter:description\" content=\"אספנו 10,418 פעולות פוליטיות במרחב הציבורי לאורך ארבע השנים האחרונות. קבעו בעצמכם - מי הם הקיצוניים משני הצדדים?&#10;פרויקט אינטראקטיבי מאת איל רז.\" />",
+  "en": "  <meta name=\"twitter:description\" content=\"We collected 14,456 political actions carried out in public space over the past four years. Decide for yourself - who are the extremists on both sides?&#10;An interactive project by Eyal Raz.\" />",
+  "ar": "  <meta name=\"twitter:description\" content=\"جمعنا 10,418 تحركًا سياسيًا في الحيز العام على مدى السنوات الأربع الأخيرة. قرروا بأنفسكم - من هم المتطرفون من الجانبين؟&#10;مشروع تفاعلي من إعداد إيال راز.\" />"
+ },
+ {
+  "id": "html:55",
+  "kind": "html",
+  "he": "  <h1 class=\"a11y-only\">אירועים קיצוניים — שני הצדדים</h1>",
+  "en": "  <h1 class=\"a11y-only\">Extremists on Both Sides</h1>",
+  "ar": "  <h1 class=\"a11y-only\">أحداث متطرفة — الجانبان</h1>"
+ },
+ {
+  "id": "html:62",
+  "kind": "html",
+  "he": "              aria-label=\"הדמיה גרפית של אירועי מחאה בישראל, לפי מחנה, קבוצה ותאריך\"></canvas>",
+  "en": "              aria-label=\"A visualisation of protest events in Israel, by camp, group and date\"></canvas>",
+  "ar": "              aria-label=\"تمثيل مرئي لأحداث احتجاجية في إسرائيل، بحسب المعسكر والمجموعة والتاريخ\"></canvas>"
+ },
+ {
+  "id": "html:69",
+  "kind": "html",
+  "he": "      <section id=\"canvasA11ySummary\" class=\"a11y-only\" aria-label=\"תיאור מילולי של הנתונים\"></section>",
+  "en": "      <section id=\"canvasA11ySummary\" class=\"a11y-only\" aria-label=\"Text description of the data\"></section>",
+  "ar": "      <section id=\"canvasA11ySummary\" class=\"a11y-only\" aria-label=\"وصف نصي للبيانات\"></section>"
+ },
+ {
+  "id": "html:102",
+  "kind": "html",
+  "he": "    <a class=\"seventh-eye\" href=\"https://www.the7eye.org.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"העין השביעית\"><span class=\"seventh-eye-caption\">פרויקט בשיתוף</span><span class=\"seventh-eye-mark\" aria-hidden=\"true\"></span></a>",
+  "en": "    <a class=\"seventh-eye\" href=\"https://www.the7eye.org.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"The Seventh Eye\"><span class=\"seventh-eye-caption\">In partnership with</span><span class=\"seventh-eye-mark\" aria-hidden=\"true\"></span></a>",
+  "ar": "    <a class=\"seventh-eye\" href=\"https://www.the7eye.org.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"العين السابعة\"><span class=\"seventh-eye-caption\">مشروع بالشراكة مع</span><span class=\"seventh-eye-mark\" aria-hidden=\"true\"></span></a>"
+ },
+ {
+  "id": "html:145",
+  "kind": "html",
+  "he": "          <h2 class=\"page0-title\">קיצוניים משני הצדדים</h2>",
+  "en": "          <h2 class=\"page0-title\">Extremists<br />on Both<br />Sides</h2>",
+  "ar": "          <h2 class=\"page0-title\">متطرفون<br />من<br />الجانبين</h2>"
+ },
+ {
+  "id": "html:146",
+  "kind": "html",
+  "he": "          <p class=\"page0-subtitle\">ניתוח<br />הפעילות של<br />המחנות הפוליטיים<br />בישראל</p>",
+  "en": "          <p class=\"page0-subtitle\">An analysis of<br />political activity<br />across Israel’s<br />political camps</p>",
+  "ar": "          <p class=\"page0-subtitle\">تحليل نشاط<br />المعسكرات<br />السياسية<br />في إسرائيل</p>"
+ },
+ {
+  "id": "html:151",
+  "kind": "html",
+  "he": "          <h2 class=\"section-title text-card-frame\">בשנים האחרונות התגבשו בקרב אזרחי ישראל שני מחנות פוליטיים מנוגדים, המורכבים מקבוצות בעלות עמדות ומטרות פוליטיות שונות.</h2>",
+  "en": "          <h2 class=\"section-title text-card-frame\">In recent years, Israeli citizens have become divided into two opposing political camps, made up of groups with different political positions and goals.</h2>",
+  "ar": "          <h2 class=\"section-title text-card-frame\">في السنوات الأخيرة، تبلور في أوساط مواطني إسرائيل معسكران سياسيان متعارضان، يتكوّنان من مجموعات ذات مواقف وأهداف سياسية مختلفة.</h2>"
+ },
+ {
+  "id": "html:156",
+  "kind": "html",
+  "he": "          <h2 class=\"section-title text-card-frame\">בשני המחנות קיימות קבוצות המביאות את מאבקיהן ועמדותיהן דרך פעילות פוליטית פיזית במרחב הציבורי. אנו נתמקד בהן בלבד.</h2>",
+  "en": "          <h2 class=\"section-title text-card-frame\">Both camps include groups that bring their political causes into the public sphere through on-the-ground action. This project focuses exclusively on those groups.</h2>",
+  "ar": "          <h2 class=\"section-title text-card-frame\">في كلا المعسكرين توجد مجموعات تطرح قضاياها ومواقفها عبر نشاط سياسي ميداني في الحيز العام. سنركز عليها وحدها.</h2>"
+ },
+ {
+  "id": "html:161",
+  "kind": "html",
+  "he": "          <h2 class=\"section-title text-card-frame\">בשל פעילותן בשטח, קבוצות אלה נתפסות לרוב כקצוות הפוליטיים הקיצוניים של שני המחנות.</h2>",
+  "en": "          <h2 class=\"section-title text-card-frame\">Because of their on-the-ground activity, these groups are often seen as representing the political extremes of the two camps.</h2>",
+  "ar": "          <h2 class=\"section-title text-card-frame\">بسبب نشاطها الميداني، يُنظر إلى هذه المجموعات غالبًا على أنها الأطراف السياسية المتطرفة في المعسكرين.</h2>"
+ },
+ {
+  "id": "html:166",
+  "kind": "html",
+  "he": "          <h2 class=\"section-title text-card-frame\">כל ריבוע מייצג פעולה פוליטית פיזית של אחת הקבוצות. <span class=\"copy-desktop\">ריחוף עם העכבר חושף את פרטי האירוע ואת היקף גודלו.</span><span class=\"copy-mobile\">לחיצה ממושכת על ריבוע חושפת את פרטי האירוע ואת היקף גודלו.</span></h2>",
+  "en": "          <h2 class=\"section-title text-card-frame\">Each square represents a physical political action carried out by one of the groups. <span class=\"copy-desktop\">Hover over a square to view the event description and scale.</span><span class=\"copy-mobile\">Press and hold a square to view the event description and scale.</span></h2>",
+  "ar": "          <h2 class=\"section-title text-card-frame\">يمثل كل مربع تحركًا سياسيًا ميدانيًا نفذته إحدى المجموعات. <span class=\"copy-desktop\">مرّروا مؤشر الفأرة فوق مربع لعرض تفاصيل الحدث وحجمه.</span><span class=\"copy-mobile\">اضغطوا مطولًا على مربع لعرض تفاصيل الحدث وحجمه.</span></h2>"
+ },
+ {
+  "id": "html:186",
+  "kind": "html",
+  "he": "          <h2 class=\"section-title text-card-frame\">תיאורי האירועים ומועדי התרחשותם לקוחים ברובם ממאגר <a class=\"latin-acronym card-link\" href=\"https://acleddata.com/\" target=\"_blank\" rel=\"noopener\">ACLED</a>, גוף מחקר בינלאומי. שיוך האירועים לקבוצות, סיווגם ותרגומם לעברית נעשו בעזרת מודלים של <span class=\"latin-acronym\">OpenAI</span>.<span class=\"copy-mobile\"> פרטים במקרא.</span></h2>",
+  "en": "          <h2 class=\"section-title text-card-frame\">The event descriptions and dates are mostly sourced from <a class=\"latin-acronym card-link\" href=\"https://acleddata.com/\" target=\"_blank\" rel=\"noopener\">ACLED</a>, an international research organization. Events were assigned to groups and classified with the help of <span class=\"latin-acronym\">OpenAI</span> models.<span class=\"copy-mobile\"> See the legend for details.</span></h2>",
+  "ar": "          <h2 class=\"section-title text-card-frame\">تأتي أوصاف الأحداث ومواعيد وقوعها في معظمها من قاعدة بيانات <a class=\"latin-acronym card-link\" href=\"https://acleddata.com/\" target=\"_blank\" rel=\"noopener\">ACLED</a>، وهي جهة بحثية دولية. وقد جرى إسناد الأحداث إلى المجموعات وتصنيفها وترجمتها إلى العبرية بمساعدة نماذج <span class=\"latin-acronym\">OpenAI</span>.<span class=\"copy-mobile\"> التفاصيل في وسيلة الإيضاح.</span></h2>"
+ },
+ {
+  "id": "html:191",
+  "kind": "html",
+  "he": "          <h2 class=\"section-title text-card-frame\">האירועים המוצגים התרחשו מתחילת 2023 ועד היום.<br>ניתן לסנן קבוצות באמצעות המקרא.</h2>",
+  "en": "          <h2 class=\"section-title text-card-frame\">The events shown took place from the beginning of 2023 to the present day.<br>Groups can be filtered using the legend.</h2>",
+  "ar": "          <h2 class=\"section-title text-card-frame\">وقعت الأحداث المعروضة منذ بداية 2023 وحتى اليوم.<br>يمكن تصفية المجموعات باستخدام وسيلة الإيضاح.</h2>"
+ },
+ {
+  "id": "html:200",
+  "kind": "html",
+  "he": "          <h2 class=\"section-title text-card-frame\">המחנות נבדלים במספר הפעולות שביצעו, אך פעולה אחת עשויה להתבצע בידי אדם יחיד, ואחרת בהשתתפות מאות אלפי אנשים.</h2>",
+  "en": "          <h2 class=\"section-title text-card-frame\">The camps differ in the number of actions they carried out, but those actions vary greatly in scale: some involve a single person, while others involve hundreds of thousands of participants.</h2>",
+  "ar": "          <h2 class=\"section-title text-card-frame\">يختلف المعسكران في عدد التحركات التي نفذاها، لكن تحركًا واحدًا قد ينفذه شخص واحد، وآخر قد يشارك فيه مئات الآلاف من الأشخاص.</h2>"
+ },
+ {
+  "id": "html:212",
+  "kind": "html",
+  "he": "          <h2 class=\"section-title text-card-frame\">לצורך ההשוואה המספרית, כל הריבועים יוצגו בגודל אחיד.<br>ניתן להציג את גודל האירועים באמצעות הכפתור במקרא.</h2>",
+  "en": "          <h2 class=\"section-title text-card-frame\">For a numerical comparison, all squares are shown at the same size.<br>Use the button in the legend to display each event according to its scale.</h2>",
+  "ar": "          <h2 class=\"section-title text-card-frame\">لأغراض المقارنة العددية، تُعرض كل المربعات بحجم موحد.<br>يمكن عرض حجم الأحداث باستخدام الزر في وسيلة الإيضاح.</h2>"
+ },
+ {
+  "id": "html:217",
+  "kind": "html",
+  "he": "          <h2 class=\"section-title text-card-frame\">פעולות פוליטיות נבדלות זו מזו במטרה, באמצעים ובאופן הפעולה. אבל הגבול בין פעולה לגיטימית לפעולה קיצונית אינו תמיד מוסכם.</h2>",
+  "en": "          <h2 class=\"section-title text-card-frame\">Political actions vary in their goals, methods, and tactics. But there is not always agreement on where the line between legitimate and extreme action lies.</h2>",
+  "ar": "          <h2 class=\"section-title text-card-frame\">تختلف التحركات السياسية في أهدافها ووسائلها وأساليب عملها. لكن الحد الفاصل بين تحرك مشروع وتحرك متطرف ليس محل اتفاق دائمًا.</h2>"
+ },
+ {
+  "id": "html:228",
+  "kind": "html",
+  "he": "            <h2 class=\"section-title text-card-frame\"><span class=\"copy-desktop\">מה נחשב בעיניכם לפעולה לגיטימית, ומה לפעולה קיצונית?</span><span class=\"copy-mobile\">מהי פעולה קיצונית בעיניכם?</span></h2>",
+  "en": "            <h2 class=\"section-title text-card-frame\"><span class=\"copy-desktop\">What do you consider a legitimate action, and what do you consider an extreme one?</span><span class=\"copy-mobile\">What is an extreme action to you?</span></h2>",
+  "ar": "            <h2 class=\"section-title text-card-frame\"><span class=\"copy-desktop\">ما الذي تعدّونه تحركًا مشروعًا، وما الذي تعدّونه تحركًا متطرفًا؟</span><span class=\"copy-mobile\">ما الذي يُعدّ تحركًا متطرفًا في نظركم؟</span></h2>"
+ },
+ {
+  "id": "html:229",
+  "kind": "html",
+  "he": "            <p class=\"page9-header-subtitle\">גררו סוגי פעולות הנחשבות קיצוניות בעיניכם</p>",
+  "en": "            <p class=\"page9-header-subtitle\">Drag the types of action you consider extreme</p>",
+  "ar": "            <p class=\"page9-header-subtitle\">اسحبوا أنواع التحركات التي ترونها متطرفة</p>"
+ },
+ {
+  "id": "html:238",
+  "kind": "html",
+  "he": "            <p class=\"page9-tray-title\">סוגי פעולות</p>",
+  "en": "            <p class=\"page9-tray-title\">Action types</p>",
+  "ar": "            <p class=\"page9-tray-title\">أنواع التحركات</p>"
+ },
+ {
+  "id": "html:254",
+  "kind": "html",
+  "he": "            <h2 class=\"section-title text-card-frame\">בשנים האחרונות נשחקו נורמות ונחצו גבולות במאבקים הפוליטיים בישראל.&#x200F;</h2>",
+  "en": "            <h2 class=\"section-title text-card-frame\">In recent years, norms have eroded and lines have been crossed in Israel’s political struggles.</h2>",
+  "ar": "            <h2 class=\"section-title text-card-frame\">في السنوات الأخيرة، شهدت الصراعات السياسية في إسرائيل تآكلًا في الأعراف وتجاوزًا للحدود.&#x200F;</h2>"
+ },
+ {
+  "id": "html:263",
+  "kind": "html",
+  "he": "            <h2 class=\"section-title text-card-frame\">לקראת הבחירות, חשוב לדרוש ממי שמבקשים את אמוננו להציב גבולות להקצנה - גם במחנה שלהם.&#x200F;</h2>",
+  "en": "            <h2 class=\"section-title text-card-frame\">Ahead of the election, it is important to demand that those who ask for our trust set limits on extremism – in their own camp too.</h2>",
+  "ar": "            <h2 class=\"section-title text-card-frame\">قبيل الانتخابات، من المهم أن نطالب الذين يطلبون ثقتنا بأن يضعوا حدودًا للتطرف - في معسكرهم أيضًا.&#x200F;</h2>"
+ },
+ {
+  "id": "html:273",
+  "kind": "html",
+  "he": "          <h2 class=\"section-title text-card-frame partner-title\"><span class=\"partner-text\">הפרויקט נוצר בשיתוף</span> <a class=\"partner-logo\" href=\"https://www.the7eye.org.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"העין השביעית\"></a></h2>",
+  "en": "          <h2 class=\"section-title text-card-frame partner-title\"><span class=\"partner-text\">This project was created in collaboration with</span> <a class=\"partner-logo\" href=\"https://www.the7eye.org.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"The Seventh Eye\"></a></h2>",
+  "ar": "          <h2 class=\"section-title text-card-frame partner-title\"><span class=\"partner-text\">أُنجز المشروع بالتعاون مع</span> <a class=\"partner-logo\" href=\"https://www.the7eye.org.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"العين السابعة\"></a></h2>"
+ },
+ {
+  "id": "html:282",
+  "kind": "html",
+  "he": "            <h2 class=\"section-title\">שתפו עם אחרים</h2>",
+  "en": "            <h2 class=\"section-title\">Share with others</h2>",
+  "ar": "            <h2 class=\"section-title\">شارِكوه مع الآخرين</h2>"
+ },
+ {
+  "id": "html:288",
+  "kind": "html",
+  "he": "              <button class=\"page12-share-btn\" type=\"button\" data-share=\"copy\" data-tip=\"העתקת קישור\" aria-label=\"העתקת קישור\"><svg class=\"page12-share-ico-link\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M10 14a4.5 4.5 0 0 0 6.4 0l3.3-3.3a4.5 4.5 0 0 0-6.4-6.4L12 5.6M14 10a4.5 4.5 0 0 0-6.4 0l-3.3 3.3a4.5 4.5 0 0 0 6.4 6.4l1.3-1.3\"/></svg><svg class=\"page12-share-ico-done\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M5 12.5l4.5 4.5L19 7.5\"/></svg></button>",
+  "en": "              <button class=\"page12-share-btn\" type=\"button\" data-share=\"copy\" data-tip=\"Copy link\" aria-label=\"Copy link\"><svg class=\"page12-share-ico-link\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M10 14a4.5 4.5 0 0 0 6.4 0l3.3-3.3a4.5 4.5 0 0 0-6.4-6.4L12 5.6M14 10a4.5 4.5 0 0 0-6.4 0l-3.3 3.3a4.5 4.5 0 0 0 6.4 6.4l1.3-1.3\"/></svg><svg class=\"page12-share-ico-done\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M5 12.5l4.5 4.5L19 7.5\"/></svg></button>",
+  "ar": "              <button class=\"page12-share-btn\" type=\"button\" data-share=\"copy\" data-tip=\"نسخ الرابط\" aria-label=\"نسخ الرابط\"><svg class=\"page12-share-ico-link\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M10 14a4.5 4.5 0 0 0 6.4 0l3.3-3.3a4.5 4.5 0 0 0-6.4-6.4L12 5.6M14 10a4.5 4.5 0 0 0-6.4 0l-3.3 3.3a4.5 4.5 0 0 0 6.4 6.4l1.3-1.3\"/></svg><svg class=\"page12-share-ico-done\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M5 12.5l4.5 4.5L19 7.5\"/></svg></button>"
+ },
+ {
+  "id": "html:298",
+  "kind": "html",
+  "he": "              <h2 class=\"section-title page12-title\">קיצוניים משני הצדדים</h2>",
+  "en": "              <h2 class=\"section-title page12-title\">Extremists on Both Sides</h2>",
+  "ar": "              <h2 class=\"section-title page12-title\">متطرفون من الجانبين</h2>"
+ },
+ {
+  "id": "html:300",
+  "kind": "html",
+  "he": "                <p class=\"page12-body-heading\">נתונים ושיטת עבודה</p>",
+  "en": "                <p class=\"page12-body-heading\">Data &amp; Methodology</p>",
+  "ar": "                <p class=\"page12-body-heading\">البيانات والمنهجية</p>"
+ },
+ {
+  "id": "html:301",
+  "kind": "html",
+  "he": "                <p>המאגר שמאחורי הפרויקט נבנה מתוך אירועים פוליטיים מתועדים שבהם היו מעורבים אזרחי מדינת ישראל, שהתרחשו בישראל ובשטחים מאז תחילת 2023. נכללו בו רק פעולות שהתרחשו פיזית במרחב הציבורי או בשטח: הפגנות, חסימות כבישים, עימותים, תקיפות, הטרדות, פגיעה ברכוש, ניכוס שטח ואירועים דומים. אמירות, פוסטים, הצהרות או עמדות פוליטיות שלא לוו בפעולה ממשית לא נכללו בניתוח.</p>",
+  "en": "                <p>The dataset behind this project was built from documented political events involving Israeli citizens that took place in Israel and the Palestinian territories from the beginning of 2023 onward. It includes only actions that physically took place in public spaces or on the ground: protests, roadblocks, clashes, assaults, harassment, property damage, land seizure, and similar events. Statements, posts, declarations, or political positions that were not accompanied by direct action were not included in the analysis.</p>",
+  "ar": "                <p>بُنيت قاعدة البيانات التي يستند إليها المشروع من أحداث سياسية موثقة كان مواطنو دولة إسرائيل طرفًا فيها، ووقعت في إسرائيل والأراضي المحتلة منذ بداية 2023. ولم تُدرج فيها إلا تحركات وقعت فعليًا في الحيز العام أو في الميدان: مظاهرات، إغلاق طرق، مواجهات، اعتداءات، مضايقات، إضرار بالممتلكات، استيلاء على أراضٍ وأحداث مماثلة. ولم تُدرج في التحليل أقوال أو منشورات أو تصريحات أو مواقف سياسية لم تكن مصحوبة بتحرك فعلي.</p>"
+ },
+ {
+  "id": "html:302",
+  "kind": "html",
+  "he": "                <p>תיאורי האירועים ומועדי התרחשותם לקוחים ברובם ממאגר <a class=\"card-link\" href=\"https://acleddata.com/\" target=\"_blank\" rel=\"noopener\">ACLED</a>. שיוך האירועים לקבוצות וסיווגם נעשו במסגרת הפרויקט בעזרת מודלי בינה מלאכותית של OpenAI, שניתחו את תיאורי האירועים לפי הנחיות וקטגוריות שהוגדרו מראש. המודלים שימשו גם לתרגום התיאורים לעברית. מלבד התרגום, לא נעשו שינויים בתיאורי האירועים.</p>",
+  "en": "                <p>Event descriptions and dates are mostly sourced from <a class=\"card-link\" href=\"https://acleddata.com/\" target=\"_blank\" rel=\"noopener\">ACLED</a>. Events were assigned to groups and classified as part of this project using OpenAI models, which analyzed the event descriptions according to predefined instructions and categories. The models were also used to translate the descriptions into Hebrew. Apart from translation, the event descriptions were not altered.</p>",
+  "ar": "                <p>تأتي أوصاف الأحداث ومواعيد وقوعها في معظمها من قاعدة بيانات <a class=\"card-link\" href=\"https://acleddata.com/\" target=\"_blank\" rel=\"noopener\">ACLED</a>. وقد جرى إسناد الأحداث إلى المجموعات وتصنيفها ضمن المشروع بمساعدة نماذج ذكاء اصطناعي من OpenAI، حللت أوصاف الأحداث وفق تعليمات وفئات محددة مسبقًا. واستخدمت النماذج أيضًا لترجمة الأوصاف إلى العبرية. وباستثناء الترجمة، لم تُجر أي تغييرات على أوصاف الأحداث.</p>"
+ },
+ {
+  "id": "html:303",
+  "kind": "html",
+  "he": "                <p>החלוקה לקבוצות פוליטיות נועדה לאפשר השוואה בין דפוסי פעולה של מחנות שונים, אך היא אינה מניחה שכל חברי הקבוצה פועלים באותו אופן או מחזיקים באותן עמדות. במקרים שבהם היו מעורבים כמה גורמים, האירוע שויך לקבוצה שהובילה את הפעולה המרכזית או הייתה מזוהה איתה באופן הברור ביותר.</p>",
+  "en": "                <p>The division into political groups is intended to enable comparison between the patterns of action of different camps. It does not imply that all members of a group act in the same way or hold the same views. When several actors were involved, the event was assigned to the group that led the main action or was most clearly associated with it.</p>",
+  "ar": "                <p>تهدف التقسيمة إلى مجموعات سياسية إلى إتاحة المقارنة بين أنماط التحرك لدى معسكرات مختلفة، لكنها لا تفترض أن جميع أفراد المجموعة يتصرفون بالطريقة نفسها أو يتبنون المواقف نفسها. في الحالات التي شاركت فيها عدة جهات، أُسند الحدث إلى المجموعة التي قادت التحرك الرئيسي أو ارتبطت به بأوضح صورة.</p>"
+ },
+ {
+  "id": "html:304",
+  "kind": "html",
+  "he": "                <p>כדי לאפשר השוואה עקבית בין קבוצות שונות, כל האירועים הותאמו למערכת קטגוריות אחידה של סוגי פעולה, ובהן הפגנות, חסימות כבישים, הפרות סדר, פגיעה ברכוש, ניכוס שטח, תקיפות פיזיות, החזקה בכפייה, שימוש בנשק ופוגרומים. לצד הסיווג נקבע גם מדרג אנליטי בין הקטגוריות, בהסתמך על CAMEO / Goldstein Scale של <a class=\"card-link\" href=\"https://gdeltproject.org/\" target=\"_blank\" rel=\"noopener\">GDELT</a> ועל Crime Severity Score של ה־<a class=\"card-link\" href=\"https://www.ons.gov.uk/\" target=\"_blank\" rel=\"noopener\">ONS</a> הבריטי. במקרים שבהם אירוע כלל כמה סוגי פעולה, נבחרה הקטגוריה בעלת הדירוג הגבוה יותר במדרג.</p>",
+  "en": "                <p>To enable consistent comparison across different groups, all events were mapped onto a common set of action categories, including protests, roadblocks, public disorder, property damage, land seizure, physical assault, forced confinement, use of weapons, and pogroms. The categories were also placed on an analytical severity scale, drawing on <a class=\"card-link\" href=\"https://gdeltproject.org/\" target=\"_blank\" rel=\"noopener\">GDELT</a>’s CAMEO / Goldstein Scale and the UK <a class=\"card-link\" href=\"https://www.ons.gov.uk/\" target=\"_blank\" rel=\"noopener\">ONS</a> Crime Severity Score. When an event included more than one type of action, it was assigned the category with the higher severity ranking.</p>",
+  "ar": "                <p>لإتاحة مقارنة متسقة بين مجموعات مختلفة، جرت مواءمة جميع الأحداث مع نظام فئات موحد لأنواع التحركات، منها المظاهرات، وإغلاق الطرق، والإخلال بالنظام العام، والإضرار بالممتلكات، والاستيلاء على أراضٍ، والاعتداءات الجسدية، والاحتجاز القسري، واستخدام السلاح، والبوغرومات. وإلى جانب التصنيف حُدد أيضًا تدرج تحليلي بين الفئات، استنادًا إلى CAMEO / Goldstein Scale لـ <a class=\"card-link\" href=\"https://gdeltproject.org/\" target=\"_blank\" rel=\"noopener\">GDELT</a> وإلى Crime Severity Score لـ<a class=\"card-link\" href=\"https://www.ons.gov.uk/\" target=\"_blank\" rel=\"noopener\">ONS</a> البريطاني. وفي الحالات التي شمل فيها حدث أكثر من نوع واحد من التحركات، اختيرت الفئة ذات المرتبة الأعلى في التدرج.</p>"
+ },
+ {
+  "id": "html:305",
+  "kind": "html",
+  "he": "                <p>חשוב לציין: סיווג של אירועים פוליטיים אינו תמיד חד־משמעי. אותו אירוע יכול לכלול כמה גורמים, כמה מטרות וכמה רמות חומרה. הסיווגים נועדו ליצור בסיס השוואה ברור ככל האפשר - לא לתאר כל אירוע על כל מורכבותו, אלא לזהות את דפוסי הפעולה הרחבים שמופיעים לאורך זמן.</p>",
+  "en": "                <p>It is important to note that classifying political events is not always clear-cut. A single event may involve several actors, goals, and levels of severity. The classifications are intended to provide as clear a basis for comparison as possible — not to capture every event in all its complexity, but to identify broader patterns of action over time.</p>",
+  "ar": "                <p>من المهم الإشارة إلى أن تصنيف الأحداث السياسية ليس دائمًا واضحًا لا لبس فيه. فقد يشمل الحدث نفسه عدة جهات، وعدة أهداف، وعدة مستويات من الخطورة. وتهدف التصنيفات إلى إنشاء أساس للمقارنة يكون واضحًا قدر الإمكان - لا إلى وصف كل حدث بكل تعقيداته، بل إلى تحديد أنماط التحرك الواسعة التي تظهر بمرور الوقت.</p>"
+ },
+ {
+  "id": "html:307",
+  "kind": "html",
+  "he": "              <p class=\"page12-credits\">מחקר, עיצוב ופיתוח: איל רז (<a href=\"https://eyalraz.com/\" target=\"_blank\" rel=\"noopener\">eyalraz.com</a>)<br>הנחיה: מושון זר־אביב, רקפת כנען<br>תודה למכללת שנקר - הנדסה, עיצוב ואמנות<br>מקור הנתונים: <a href=\"https://acleddata.com/\" target=\"_blank\" rel=\"noopener\">acleddata.com</a></p>",
+  "en": "              <p class=\"page12-credits\">Research, design, and development: Eyal Raz (<a href=\"https://eyalraz.com/\" target=\"_blank\" rel=\"noopener\">eyalraz.com</a>)<br>Advisors: Mushon Zer-Aviv, Rakefet Canaan<br>Thanks to Shenkar College of Engineering, Design and Art<br>Data source: <a href=\"https://acleddata.com/\" target=\"_blank\" rel=\"noopener\">acleddata.com</a></p>",
+  "ar": "              <p class=\"page12-credits\">البحث والتصميم والتطوير: إيال راز (<a href=\"https://eyalraz.com/\" target=\"_blank\" rel=\"noopener\">eyalraz.com</a>)<br>إشراف: موشون زر-أفيف، راكيفت كنعان<br>شكرًا لكلية شنكار - الهندسة والتصميم والفنون<br>مصدر البيانات: <a href=\"https://acleddata.com/\" target=\"_blank\" rel=\"noopener\">acleddata.com</a></p>"
+ },
+ {
+  "id": "html:342",
+  "kind": "html",
+  "he": "        <h2 class=\"section-title shk-gate-text\" id=\"shkGateText\">הפרויקט נמצא בתהליך עבודה, אנא הימנעו מהפצתו בשלב זה, תודה.</h2>",
+  "en": "        <h2 class=\"section-title shk-gate-text\" id=\"shkGateText\">This project is a work in progress. Please do not share it at this stage, thank you.</h2>",
+  "ar": "        <h2 class=\"section-title shk-gate-text\" id=\"shkGateText\">لا يزال المشروع قيد العمل، يرجى الامتناع عن تداوله في هذه المرحلة، شكرًا.</h2>"
+ },
+ {
+  "id": "html:345",
+  "kind": "html",
+  "he": "        <button type=\"button\" class=\"shk-gate-btn\" id=\"shkGateBtn\">הבנתי, להמשך הפרויקט</button>",
+  "en": "        <button type=\"button\" class=\"shk-gate-btn\" id=\"shkGateBtn\">Got it, continue to the project</button>",
+  "ar": "        <button type=\"button\" class=\"shk-gate-btn\" id=\"shkGateBtn\">فهمت، المتابعة إلى المشروع</button>"
+ },
+ {
+  "id": "js:40",
+  "kind": "js",
+  "he": "קואליציית הימין",
+  "en": "The Right-Wing\nCoalition",
+  "ar": "ائتلاف اليمين"
+ },
+ {
+  "id": "js:41",
+  "kind": "js",
+  "he": "גוש השינוי",
+  "en": "The Change\nBloc",
+  "ar": "كتلة التغيير"
+ },
+ {
+  "id": "js:42",
+  "kind": "js",
+  "he": "גורמים ערבים ישראלים",
+  "en": "Arab Israeli actors",
+  "ar": "فاعلون عرب من مواطني إسرائيل"
+ },
+ {
+  "id": "js:43",
+  "kind": "js",
+  "he": "תנועות התנחלות באיו״ש",
+  "en": "West Bank settler movements",
+  "ar": "حركات المستوطنين في الضفة الغربية"
+ },
+ {
+  "id": "js:44",
+  "kind": "js",
+  "he": "קבוצות ימין לאומיות",
+  "en": "Nationalist right-wing groups",
+  "ar": "مجموعات يمينية قومية"
+ },
+ {
+  "id": "js:45",
+  "kind": "js",
+  "he": "מתנגדי הרפורמה המשפטית ומדיניות הממשלה",
+  "en": "Coalition policy and judicial overhaul opponents",
+  "ar": "معارضو التعديلات القضائية وسياسة الحكومة"
+ },
+ {
+  "id": "js:46",
+  "kind": "js",
+  "he": "מתנגדי הרפורמה ומדיניות הממשלה",
+  "en": "Coalition policy and judicial overhaul opponents",
+  "ar": "معارضو التعديلات القضائية وسياسة الحكومة"
+ },
+ {
+  "id": "js:47",
+  "kind": "js",
+  "he": "תומכי עסקת חטופים ומתנגדי המלחמה",
+  "en": "Hostage deal supporters and Gaza war opponents",
+  "ar": "مؤيدو صفقة الرهائن ومعارضو الحرب في غزة"
+ },
+ {
+  "id": "js:48",
+  "kind": "js",
+  "he": "מפגינים חרדים",
+  "en": "Haredi Jewish protesters",
+  "ar": "متظاهرون من اليهود الحريديم"
+ },
+ {
+  "id": "js:49",
+  "kind": "js",
+  "he": "מקרא",
+  "en": "Legend",
+  "ar": "مفتاح الرموز"
+ },
+ {
+  "id": "js:50",
+  "kind": "js",
+  "he": "סגירת המקרא",
+  "en": "Close the legend",
+  "ar": "إغلاق مفتاح الرموز"
+ },
+ {
+  "id": "js:51",
+  "kind": "js",
+  "he": "איסוף הנתונים",
+  "en": "Data collection",
+  "ar": "جمع البيانات"
+ },
+ {
+  "id": "js:52",
+  "kind": "js",
+  "he": "הצגת גודל האירועים",
+  "en": "Show event scale",
+  "ar": "عرض حجم الأحداث"
+ },
+ {
+  "id": "js:53",
+  "kind": "js",
+  "he": "גררו סוגי פעולות הנחשבות קיצוניות בעיניכם",
+  "en": "Drag the types of action you consider extreme",
+  "ar": "اسحبوا أنواع التحركات التي ترونها متطرفة"
+ },
+ {
+  "id": "js:54",
+  "kind": "js",
+  "he": "סמנו פעולות הנחשבות לקיצוניות בעיניכם",
+  "en": "Mark the actions you consider extreme",
+  "ar": "حددوا التحركات التي ترونها متطرفة"
+ },
+ {
+  "id": "js:55",
+  "kind": "js",
+  "he": "העתקת קישור",
+  "en": "Copy link",
+  "ar": "نسخ الرابط"
+ },
+ {
+  "id": "js:56",
+  "kind": "js",
+  "he": "הקישור הועתק",
+  "en": "Link copied",
+  "ar": "تم نسخ الرابط"
+ },
+ {
+  "id": "js:57",
+  "kind": "js",
+  "he": "העתיקו את הקישור:",
+  "en": "Copy the link:",
+  "ar": "انسخوا الرابط:"
+ },
+ {
+  "id": "js:58",
+  "kind": "js",
+  "he": "הכרזת הרפורמה",
+  "en": "Judicial Overhaul",
+  "ar": "التعديلات القضائية"
+ },
+ {
+  "id": "js:59",
+  "kind": "js",
+  "he": "הכרזת הרפורמה המשפטית",
+  "en": "Judicial Overhaul",
+  "ar": "الإعلان عن خطة التعديلات القضائية"
+ },
+ {
+  "id": "js:60",
+  "kind": "js",
+  "he": "הפיגוע בעלי",
+  "en": "Eli Terror Attack",
+  "ar": "الهجوم في عيلي"
+ },
+ {
+  "id": "js:61",
+  "kind": "js",
+  "he": "ביטול עילת הסבירות",
+  "en": "Judicial Review Law",
+  "ar": "إلغاء معيار المعقولية"
+ },
+ {
+  "id": "js:62",
+  "kind": "js",
+  "he": "מתקפת 7 באוקטובר",
+  "en": "October 7 Attack",
+  "ar": "هجوم 7 أكتوبر"
+ },
+ {
+  "id": "js:63",
+  "kind": "js",
+  "he": "מות ששת החטופים",
+  "en": "Six Hostages Killed",
+  "ar": "مقتل الرهائن الستة"
+ },
+ {
+  "id": "js:64",
+  "kind": "js",
+  "he": "חידוש הלחימה בעזה",
+  "en": "Gaza War Resumes",
+  "ar": "استئناف القتال في غزة"
+ },
+ {
+  "id": "js:65",
+  "kind": "js",
+  "he": "מבצע ״עם כלביא״",
+  "en": "Rising Lion",
+  "ar": "«الأسد الصاعد»"
+ },
+ {
+  "id": "js:66",
+  "kind": "js",
+  "he": "שחרור החטופים מעזה",
+  "en": "Hostages Released",
+  "ar": "إطلاق سراح الرهائن"
+ },
+ {
+  "id": "js:67",
+  "kind": "js",
+  "he": "התפזרות הכנסת ה-25",
+  "en": "Knesset Dissolved",
+  "ar": "حلّ الكنيست الـ25"
+ },
+ {
+  "id": "js:68",
+  "kind": "js",
+  "he": "הצגת תוכניתו של שר המשפטים יריב לוין לשינויים במערכת המשפט.",
+  "en": "Justice Minister Yariv Levin presents his plan to overhaul Israel’s judicial system.",
+  "ar": "عرض وزير العدل ياريف ليفين خطته لإجراء تغييرات في المنظومة القضائية."
+ },
+ {
+  "id": "js:69",
+  "kind": "js",
+  "he": "פיגוע ירי סמוך ליישוב עלי, שבו נהרגו ארבעה ישראלים.",
+  "en": "A shooting attack near the settlement of Eli kills four Israelis.",
+  "ar": "هجوم بإطلاق النار قرب مستوطنة عيلي، قُتل فيه أربعة إسرائيليين."
+ },
+ {
+  "id": "js:70",
+  "kind": "js",
+  "he": "אישור התיקון שמנע ביקורת שיפוטית על סבירות החלטות הממשלה והשרים.",
+  "en": "An amendment is passed barring courts from reviewing the reasonableness of government and ministerial decisions.",
+  "ar": "إقرار التعديل الذي منع الرقابة القضائية على مدى معقولية قرارات الحكومة والوزراء."
+ },
+ {
+  "id": "js:71",
+  "kind": "js",
+  "he": "מתקפה בהובלת חמאס על יישובים ובסיסים בדרום ישראל, שכללה הרג וחטיפת אזרחים ואנשי ביטחון.",
+  "en": "A Hamas-led attack on communities and military bases in southern Israel includes killings and the abduction of civilians and security personnel.",
+  "ar": "هجوم قادته حماس على بلدات وقواعد عسكرية في جنوب إسرائيل، شمل قتل وخطف مدنيين وأفراد أمن."
+ },
+ {
+  "id": "js:72",
+  "kind": "js",
+  "he": "הודעת צה״ל על חילוץ גופותיהם של שישה חטופים שנרצחו בשבי ברפיח.",
+  "en": "The IDF announces the recovery of the bodies of six hostages killed in captivity in Rafah.",
+  "ar": "إعلان الجيش الإسرائيلي عن انتشال جثث ستة رهائن قُتلوا في الأسر في رفح."
+ },
+ {
+  "id": "js:73",
+  "kind": "js",
+  "he": "חידוש התקיפות הישראליות הנרחבות בעזה לאחר כחודשיים של הפסקת אש.",
+  "en": "Israel resumes large-scale strikes in Gaza after nearly two months of ceasefire.",
+  "ar": "استئناف الضربات الإسرائيلية الواسعة في غزة بعد نحو شهرين من وقف إطلاق النار."
+ },
+ {
+  "id": "js:74",
+  "kind": "js",
+  "he": "פתיחת המבצע הישראלי נגד מטרות גרעין וצבא באיראן, ובעקבותיו ירי איראני לעבר ישראל.",
+  "en": "Israel launches an operation against nuclear and military targets in Iran, followed by Iranian fire toward Israel.",
+  "ar": "بدء العملية الإسرائيلية ضد أهداف نووية وعسكرية في إيران، أعقبه إطلاق نيران إيرانية باتجاه إسرائيل."
+ },
+ {
+  "id": "js:75",
+  "kind": "js",
+  "he": "שחרור עשרים החטופים החיים שנותרו בעזה במסגרת הסכם הפסקת אש.",
+  "en": "The 20 remaining living hostages in Gaza are released as part of a ceasefire agreement.",
+  "ar": "إطلاق سراح الرهائن العشرين الأحياء المتبقين في غزة ضمن اتفاق لوقف إطلاق النار."
+ },
+ {
+  "id": "js:76",
+  "kind": "js",
+  "he": "אישור התפזרות הכנסת לקראת הבחירות באוקטובר.",
+  "en": "The 25th Knesset dissolves ahead of the October election.",
+  "ar": "إقرار حلّ الكنيست تمهيدًا للانتخابات في أكتوبر."
+ },
+ {
+  "id": "js:77",
+  "kind": "js",
+  "he": "הפגנה, עצרת, צעדה או נוכחות מחאתית ללא אלימות מצד המפגינים.",
+  "en": "A protest, rally, march, or other protest presence without violence by participants.",
+  "ar": "مظاهرة أو تجمع أو مسيرة أو حضور احتجاجي من دون عنف من جانب المتظاهرين."
+ },
+ {
+  "id": "js:78",
+  "kind": "js",
+  "he": "התקפה המונית על קהילה, שכונה או אזור מגורים, הכוללת פגיעה באנשים, ברכוש או במרחב האזרחי.",
+  "en": "A mass attack on a community, neighborhood, or residential area involving harm to people, property, or civilian space.",
+  "ar": "هجوم جماعي على تجمع سكاني أو حي أو منطقة سكنية، يشمل إلحاق أذى بأشخاص أو بممتلكات أو بالحيز المدني."
+ },
+ {
+  "id": "js:79",
+  "kind": "js",
+  "he": "לקיחה או החזקה של אדם בניגוד לרצונו.",
+  "en": "Taking or holding a person against their will.",
+  "ar": "أخذ شخص أو احتجازه خلافًا لإرادته."
+ },
+ {
+  "id": "js:80",
+  "kind": "js",
+  "he": "תקיפת אדם באמצעות אבנים, מקלות, סכינים או אמצעים חדים וקהים אחרים.",
+  "en": "Attacking a person with stones, sticks, knives, or other sharp or blunt objects.",
+  "ar": "الاعتداء على شخص بالحجارة أو العصي أو السكاكين أو أدوات حادة أو راضّة أخرى."
+ },
+ {
+  "id": "js:81",
+  "kind": "js",
+  "he": "תקיפת אדם באמצעות ירי בנשק חם, חומרי נפץ או הצתה.",
+  "en": "Attacking a person using firearms, explosives, or arson.",
+  "ar": "الاعتداء على شخص بإطلاق النار من سلاح ناري أو بمواد متفجرة أو بإضرام النار."
+ },
+ {
+  "id": "js:82",
+  "kind": "js",
+  "he": "תקיפת אדם באמצעות מכות, דחיפות, בעיטות או מגע גופני אלים אחר, ללא שימוש בנשק.",
+  "en": "Attacking a person through hitting, pushing, kicking, or other violent physical contact, without a weapon.",
+  "ar": "الاعتداء على شخص بالضرب أو الدفع أو الركل أو أي تلامس جسدي عنيف آخر، من دون استخدام سلاح."
+ },
+ {
+  "id": "js:83",
+  "kind": "js",
+  "he": "עימותים, התפרעויות, או פעולות שמפרות את הסדר הציבורי.",
+  "en": "Clashes, riots, or other actions that disrupt public order.",
+  "ar": "اشتباكات أو أعمال شغب أو أعمال تخلّ بالنظام العام."
+ },
+ {
+  "id": "js:84",
+  "kind": "js",
+  "he": "ביסוס שליטה בשטח שאינו שייך לקבוצה הפועלת, באמצעות גידור, עיבוד, בנייה, הצבת מבנים או הקמת מאחז.",
+  "en": "Establishing control over land through fencing, cultivation, construction, placing structures, or establishing an outpost.",
+  "ar": "بسط السيطرة على أرض لا تعود إلى المجموعة المنفذة، عبر تسييجها أو زراعتها أو البناء عليها أو وضع منشآت فيها أو إقامة بؤرة استيطانية."
+ },
+ {
+  "id": "js:85",
+  "kind": "js",
+  "he": "גרימת נזק למבנים, כלי רכב, תשתיות, שטחים חקלאיים או רכוש אחר.",
+  "en": "Damaging buildings, vehicles, infrastructure, farmland, or other property.",
+  "ar": "إلحاق أضرار بمبانٍ أو مركبات أو بنى تحتية أو أراضٍ زراعية أو ممتلكات أخرى."
+ },
+ {
+  "id": "js:86",
+  "kind": "js",
+  "he": "חסימה של כבישים, צמתים או דרכי גישה כחלק ממחאה או עימות.",
+  "en": "Blocking roads, intersections, or access routes as part of a protest or confrontation.",
+  "ar": "إغلاق طرق أو تقاطعات أو مسالك وصول في إطار احتجاج أو مواجهة."
+ },
+ {
+  "id": "js:87",
+  "kind": "js",
+  "he": "אירועים",
+  "en": "events",
+  "ar": "أحداث"
+ },
+ {
+  "id": "js:88",
+  "kind": "js",
+  "he": "עוד",
+  "en": "More",
+  "ar": "أكثر"
+ },
+ {
+  "id": "js:89",
+  "kind": "js",
+  "he": "פחות",
+  "en": "Less",
+  "ar": "أقل"
+ },
+ {
+  "id": "js:90",
+  "kind": "js",
+  "he": "לחצו והחזיקו על נקודה להצגת פרטי האירוע",
+  "en": "Press and hold a dot to see the event details",
+  "ar": "اضغطوا مطوّلًا على نقطة لعرض تفاصيل الحدث"
+ },
+ {
+  "id": "js:91",
+  "kind": "js",
+  "he": "הפגנה לא אלימה",
+  "en": "Non-violent protest",
+  "ar": "احتجاج غير عنيف"
+ },
+ {
+  "id": "js:92",
+  "kind": "js",
+  "he": "חסימת כביש",
+  "en": "Road blockade",
+  "ar": "إغلاق طريق"
+ },
+ {
+  "id": "js:93",
+  "kind": "js",
+  "he": "הפרות סדר",
+  "en": "Public disorder",
+  "ar": "إخلال بالنظام العام"
+ },
+ {
+  "id": "js:94",
+  "kind": "js",
+  "he": "הטרדה ואיומים",
+  "en": "Harassment and threats",
+  "ar": "مضايقات وتهديدات"
+ },
+ {
+  "id": "js:95",
+  "kind": "js",
+  "he": "החזקה בכפייה",
+  "en": "Forced confinement",
+  "ar": "احتجاز قسري"
+ },
+ {
+  "id": "js:96",
+  "kind": "js",
+  "he": "תקיפה פיזית",
+  "en": "Physical assault",
+  "ar": "اعتداء جسدي"
+ },
+ {
+  "id": "js:97",
+  "kind": "js",
+  "he": "תקיפה בנשק קר",
+  "en": "Melee weapon attack",
+  "ar": "اعتداء بسلاح أبيض"
+ },
+ {
+  "id": "js:98",
+  "kind": "js",
+  "he": "תקיפה בנשק חם",
+  "en": "Firearm attack",
+  "ar": "اعتداء بسلاح ناري"
+ },
+ {
+  "id": "js:99",
+  "kind": "js",
+  "he": "פגיעה ברכוש",
+  "en": "Property damage",
+  "ar": "إضرار بالممتلكات"
+ },
+ {
+  "id": "js:100",
+  "kind": "js",
+  "he": "ניכוס שטח",
+  "en": "Land seizure",
+  "ar": "استيلاء على أرض"
+ },
+ {
+  "id": "js:101",
+  "kind": "js",
+  "he": "פוגרום",
+  "en": "Pogrom",
+  "ar": "بوغروم"
+ },
+ {
+  "id": "js:fold6-note",
+  "kind": "js",
+  "he": "תיאורי האירועים ומועדי התרחשותם לקוחים ברובם ממאגר ACLED, גוף מחקר בינלאומי המתעד וממפה אירועי מחאה ואלימות פוליטית על בסיס דיווחים מכלי תקשורת וממקורות מקומיים. נכללו אירועים מתחילת 2023 ועד היום, שבהם אזרחי ישראל ביצעו פעולות פוליטיות במרחב הציבורי בישראל ובשטחים.\\nשיוך האירועים לקבוצות ולמחנות, סיווגם ומדרג החומרה הוגדרו במסגרת הפרויקט ואינם של ACLED. השיוך והסיווג נעשו על סמך תיאורי האירועים בעזרת מודלי בינה מלאכותית של OpenAI, ששימשו גם לתרגומם לעברית. מלבד התרגום, התיאורים לא שונו.",
+  "en": "Event descriptions and dates are mostly sourced from ACLED, an international research organization that tracks and maps protests and political violence based on reports from media outlets and local sources.\\nThe dataset includes events from the beginning of 2023 to the present in which Israeli citizens carried out political actions in public spaces in Israel and the Palestinian territories.\\nThe assignment of events to groups and political camps, their classification, and severity ranking were defined for this project and are not part of ACLED’s methodology. Events were assigned and classified based on their descriptions using OpenAI models, which were also used to translate them into Hebrew. Apart from translation, the descriptions were not altered.",
+  "ar": "أوصاف الأحداث وتواريخ وقوعها مأخوذة في معظمها من قاعدة بيانات ACLED، الجهة البحثية الدولية التي توثّق وترسم خرائط لأحداث الاحتجاج والعنف السياسي استنادًا إلى تقارير وسائل إعلام ومصادر محلية. شملت البيانات أحداثًا منذ بداية 2023 وحتى اليوم، نفّذ فيها مواطنو إسرائيل أعمالًا سياسية في الحيز العام في إسرائيل والأراضي المحتلة.\\nأما إسناد الأحداث إلى المجموعات والمعسكرات، وتصنيفها وترتيبها بحسب درجة الخطورة، فقد حُدِّد كل ذلك في إطار المشروع، وليس صادرًا عن ACLED. جرى الإسناد والتصنيف استنادًا إلى أوصاف الأحداث بمساعدة نماذج ذكاء اصطناعي من OpenAI، استُخدمت أيضًا لترجمة هذه الأوصاف إلى العبرية. وباستثناء الترجمة، لم تُغيَّر الأوصاف."
+ }
+]

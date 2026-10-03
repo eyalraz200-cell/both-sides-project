@@ -54,6 +54,24 @@ under ACLED's "cannot be reverse-engineered" condition is **pending ACLED's writ
 if they refuse, the follow-up is a private backend or a description-less dataset. Never add
 any other event-level export to the repo.
 
+## Classification pipeline (`0N_*.py`, OpenAI Batch API)
+
+Four standalone scripts at the repo root, each `submit <xlsx>` → `status` → `download`
+(writes `<name> - <step>.xlsx` next to the source; copy it back over `events.xlsx` by hand).
+Run in this order on new rows:
+
+| Step | Writes | Rows it touches |
+|---|---|---|
+| `01_identify_main_actor.py` | `main_actor` (+ certainty / needs_review / reason) | every row with a `Description` — run it only on a sheet of NEW rows |
+| `04_split_subactions.py` | rewrites `Description` + `crowd` on the parent (originals kept in `description_original` / `crowd_total`), APPENDS one child row per extra action (`split_from` = parent `row_id`, fresh `row-N`), blanks `event_type` / `description_he_medium` on both and sets `reclassify = yes` | ACLED/manual rows whose text holds a second action by a subset of the main actor (two crowd figures, or "some / a group / dozens of the protesters"); never Fortress rows, hidden rows or PLO-only rows |
+| `02_classify_event_type_no_intimidation.py` | `event_type` (+ certainty / needs_review / reason) | rows with a BLANK `event_type`, or `reclassify = yes`. **Rows with a date in `event_type_hand` are skipped** unless `reclassify = yes` |
+| `03_translate_hebrew_and_date.py` | `date`, `description_he_medium`; clears `reclassify` | rows with no Hebrew yet, or `reclassify = yes` |
+
+The prompts in 01 and 02 carry the hand-review rules of 2026-10-03 (see the `main_actor`
+and `event_type` rows in the column table below). `crowd` after step 04 is the size of the
+group that performed THAT event's action ("dozens" for the roadblock, "about 40,000" for the
+rally it split from); a subset described only as "some" / "a group" gets a blank crowd.
+
 ## Source of truth: the xlsx
 
 ### `events.xlsx` — the ONE workbook (`EVENTS_XLSX`)
@@ -76,16 +94,18 @@ Columns:
 
 | Column | Used as |
 |---|---|
-| `main_actor` | `actor` — lowercase strings matched verbatim by `GROUPS` |
-| `event_type` | `category` — Hebrew, 10 distinct values = `P9_CATEGORIES` one-to-one |
+| `main_actor` | `actor` — lowercase strings matched verbatim by `GROUPS`. **Hand overrides:** 7 pre-Oct-7 joint Arab-Jewish / left protests were moved `peace movements` → `arab israelis` on 2026-09-27 (the pink group starts 7 Oct 2023), and a 2026-10-03 review moved ~30 more (anti-aid / anti-deal rows out of `peace movements` into `right wing protesters`, October Council and anti-Iran-war rows into `protesters against government`, Jewish nationalist violence in Jerusalem out of `settlers`). The rules are in `01_identify_main_actor.py`'s prompt. Every hand-set row carries its date in `main_actor_hand`; a classifier rerun must skip those rows |
+| `event_type` | `category` — Hebrew, 10 distinct values = `P9_CATEGORIES` one-to-one. **Hand overrides live only in this column** — the 2026-09-17 reclassification of 8 rows out of פוגרום (`row-7660`, `8108`, `8242`, `8717`, `9457`, `9715`, `12865`, `14679`; see commit `d43fcc3`) was lost once when the dataset moved to `full_v4.xlsx` and re-applied on 2026-10-03. A second hand pass on 2026-10-03 changed 63 more rows after an outlier review (stones at houses → נשק קר, "armed" without use → פיזית, eggs/smoke/objects → הפרות סדר, crowd + violence + fire → פוגרום, tear-gas launchers → נשק חם, etc. — the rules now live in `02_classify_event_type_no_intimidation.py`'s prompt). **Every hand-set row carries the date in column `event_type_hand`**; a classifier rerun must skip those rows |
 | `date` | `date` |
 | `description_he_medium` | `descHeMedium` (2 rows empty → `null`) |
 | `row_id` | `rowId` — the stable per-row handle JS pins to, and what a harness reports back for marking rows in the sheet |
 | `actor_type` | unused by code (hidden column J). Sub-type filled for three groups of rows: `anti judicial reform demonstrators` (2,094) and `anti government protesters` (373) — both `main_actor` `protesters against government` — and `hostage deal protesters` (2,146), whose `main_actor` is `peace movements` (so תומכי עסקת חטופים ומתנגדי המלחמה = left activists + hostage-deal protesters; the sub-type column keeps them distinguishable) |
 | `Description`, `location`, `fatalities` | unused; columns G–J are hidden in the sheet |
-| `data_source` | Column Q. Which dataset the row came from: `acled` (14,451), `manual` (the 5 hand-added rows), `the fortress` (pending import). Not read by the site yet; distinct from `source`, which is the news outlet |
+| `data_source` | Column Q. Which dataset the row came from: `acled` (14,451), `manual` (the 5 hand-added rows), `the fortress` (3,778 rows, `row-15397`…`row-19174`, appended 2026-10-02 from `tiud-events-2026-09-29.xlsx` — a Hebrew settler-violence log, 2023-10-06 → 2026-09-28; `main_actor` was assigned by hand on 2026-10-02 — 3,746 `settlers`, 22 `right wing protesters` (aid-convoy blockades, Flag March assaults, Old City / al-Aqsa incidents), 10 `not relevant` (army- or state-led rows); 46 judgment calls carry `yes` in `main_actor_needs_review`, column U. `event_type` is still blank so the rows ship with `category: null`. **Deduped against ACLED on 2026-10-03** by reading every pair within ±1 day (see `_dedupe/`, gitignored): 1,416 rows are `sure` duplicates of an ACLED event, 342 `unsure`, 2,020 have no ACLED counterpart. **ACLED wins:** every `sure` Fortress row carries `dup of row-N` in its `hidden` column, so `load_events()` drops it; the `unsure` ones stay live pending review.) Not read by the site yet; distinct from `source`, which is the news outlet |
+| `acled_duplicate_of`, `acled_match`, `dedupe_note` | Columns V–X, Fortress rows only: the `row_id` of the ACLED row describing the same incident, `sure` / `unsure`, and the reader's one-line reason. The note also lists sibling Fortress rows that matched the same ACLED event — the Fortress sheet has ~145 internal duplicates (371 rows) |
+| `fortress_id`, `fortress_categories`, `fortress_links` | Columns R–T, Fortress rows only: the log's own row number (never confuse with `row_id`), its `·`-separated tags (25 distinct, multi-label), and its source URLs |
 | `crowd` | Column P. Free text (`about 2,000`, `tens of thousands`) or blank; **read by `load_events()`** via `parse_crowd` |
-| `hidden` | Column O, optional. **Read by `load_events()`**: any non-empty cell keeps the row in the workbook but drops it from `events.json`. Marked rows are also filled yellow in the sheet. Currently 2: `row-7707`, `row-2145` |
+| `hidden` | Column O, optional. **Read by `load_events()`**: any non-empty cell keeps the row in the workbook but drops it from `events.json`. Marked rows are also filled yellow in the sheet. 2 hand-marked (`row-7707`, `row-2145`) plus the 1,416 Fortress rows that duplicate an ACLED event (`dup of row-N`) |
 | `source` | `;`-separated outlet names, filled on every row (backfilled from the raw ACLED exports on 2026-09-23). **Read by `load_events()`**: a row whose *only* source(s) are in `SOLE_SOURCE_EXCLUDE` (`server.py`) is dropped. The set is `{plo negotiations affairs department}`: the sheet's largest source (5,056 rows, all settler events), and the 4,036 rows that cite nothing else are excluded; the 1,020 corroborated by another outlet stay. Empty the set to ship every row. Origin split of the 96 outlets: `sources-by-origin.csv` (untracked) |
 
 ### The four geodata columns

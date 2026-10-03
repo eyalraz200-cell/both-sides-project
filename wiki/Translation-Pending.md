@@ -1,4 +1,8 @@
-# Translation pending — Hebrew changed, English not yet
+# Translation pending — Hebrew changed, English (and Arabic) not yet
+
+> **Arabic** (`ar/index.html`, `I18N_AR`) is regenerated wholesale by `translate_ui_ar.py` —
+> a pending row here means the Arabic is stale too, and clears for Arabic by re-running the script
+> (see [Architecture](Architecture.md), «Arabic version»).
 
 The Hebrew page is where copy gets written first. This file is the **ledger of Hebrew
 strings that have changed and whose English counterpart has not caught up yet**, so nothing

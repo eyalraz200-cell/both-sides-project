@@ -199,47 +199,6 @@ Before answering, verify:
 4. Does the actor fit one of the six project categories?
 5. If the evidence is genuinely ambiguous, did I mark it for review?
 
-
-
-SUPPLEMENTARY RULES (from the 2026-10-03 hand review — these override the definitions above where they conflict)
-
-RIGHT WING PROTESTERS by demand, not by label:
-A protest whose demand is to CONTINUE or RESUME a war, to REJECT a ceasefire or a hostage
-deal, to BLOCK humanitarian aid, or to defend soldiers / "Jewish prisoners" against the
-state is right wing protesters — even when the text only says "residents", "reservists",
-"mothers of soldiers", "injured soldiers", "bereaved families", "Israelis". The demand
-defines the camp. "Family members of hostages" taking part in an anti-aid or anti-deal
-protest does not make it peace movements.
-
-JEWISH NATIONALIST VIOLENCE OUTSIDE THE SETTLEMENTS:
-Jews attacking Arabs inside Israel or in Jerusalem neighbourhoods (teens beating an Arab
-bus driver, football fans attacking Arab drivers, a bus riot chanting "death to Arabs")
-are right wing protesters, not settlers. Settlers is for the settlement movement acting
-in the West Bank — including Israelis from inside Israel who raid a West Bank village,
-and including the settlement movement's own activism wherever it happens (Nachala,
-Hilltop Youth, Gaza/Lebanon "resettlement" marches and crossings, protests to free
-detained settlers).
-
-PROTESTERS AGAINST GOVERNMENT, specific cases:
-- October Council / demands for a state commission of inquiry into 7 October.
-- Protests against the war with Iran (2026).
-- Brothers and Sisters in Arms / reservist protests against the government (draft
-  exemption, corruption) that are not pro-war.
-- Protests defending the Attorney General, the courts, or against a minister's conduct.
-
-PEACE MOVEMENTS starts on 7 October 2023:
-Hostage-deal, ceasefire, anti-war and anti-occupation protests from 7 October 2023
-onward are peace movements. Before that date the category is not used — earlier
-anti-occupation / joint Arab-Jewish solidarity protests were hand-labelled and must be
-left as they are.
-
-HAREDI JEWS is for Haredi collective action only (draft, autopsies, light rail,
-Sabbath, "unkosher" stores). Chabad / messianic / religious-Zionist protests are right
-wing protesters.
-
-NOT RELEVANT also covers: labor disputes and municipal-merger protests by workers of a
-settlement council; local residents protesting crime, infrastructure or services with
-no political demand.
 """
 
 SCHEMA = {'type': 'object', 'properties': {'main_actor': {'type': 'string', 'enum': ['settlers', 'protesters against government', 'arab israelis', 'haredi jews', 'right wing protesters', 'peace movements', 'not relevant']}, 'certainty': {'type': 'string', 'enum': ['high', 'medium', 'low']}, 'needs_review': {'type': 'string', 'enum': ['yes', 'no']}, 'reason': {'type': 'string'}}, 'required': ['main_actor', 'certainty', 'needs_review', 'reason'], 'additionalProperties': False}
@@ -389,7 +348,7 @@ def command_submit(filename):
     batch_dir = base / BATCH_DIR
     batch_dir.mkdir(exist_ok=True)
 
-    wb = load_workbook(source)  # full load: ws.cell() is O(1); read_only made it O(rows) per call
+    wb = load_workbook(source, read_only=True, data_only=False)
     try:
         ws = wb.active
         jobs = build_jobs(ws)

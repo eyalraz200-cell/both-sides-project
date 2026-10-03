@@ -45,6 +45,8 @@ the project itself now. `project.html` is only a redirect stub to the root so ol
 | `page12.js` | `drawPage12` (@fold13's freeform spread) + `p12ShareInit` |
 | `squareboundingbox.js` | Shared grid-geometry constants (`SBB`, `SBB_TIMELINE`, `CENTER_GAP`) |
 | `reload.js` | Dev-only mtime poll → auto page reload |
+| `translate_ui_ar.py` | Generates `ar/index.html` + `I18N_AR` (js/i18n.js) from the Hebrew/English pair via OpenAI — never hand-edit `ar/index.html`; see [Architecture](wiki/Architecture.md) |
+| `01_…`, `02_…`, `03_…`, `04_…` `.py` | The OpenAI Batch classification pipeline (actor → split sub-actions → event type → Hebrew). Order, row selection and the hand-override rules are in [Data](wiki/Data.md); **never re-run 02 over rows that carry a date in `event_type_hand`** |
 | `server.py` | Local dev server + `events.xlsx`→`events.json` generation (derives `side` from `main_actor`; drops rows whose only source is in `SOLE_SOURCE_EXCLUDE`) |
 
 `main.js` and the `main_*` scratch files do not exist; don't recreate them.

@@ -25,8 +25,7 @@ You are classifying the TYPE OF EVENT.
 You receive exactly three pieces of information:
 
 1. MAIN ACTOR — the actor already identified as responsible for the event.
-2. EVENT DESCRIPTION — the original description of what happened (English, or Hebrew for rows
-   imported from a Hebrew source log; classify Hebrew text by the same rules).
+2. EVENT DESCRIPTION — the original description of what happened.
 3. CURRENT EVENT TYPE — may be blank and is supplied only as context.
 
 The MAIN ACTOR value is authoritative.
@@ -229,22 +228,14 @@ or
 - חסימת כביש
 
 STONE RULE:
-Throwing stones at a person, at a vehicle, OR AT A HOUSE / BUILDING / SHOP is NOT פגיעה ברכוש.
-It is תקיפה בנשק קר — even when nobody is reported hit and even outside the West Bank
-(stones at an apartment, an office window, a home: still תקיפה בנשק קר).
+Throwing stones at a person OR at a vehicle is NOT פגיעה ברכוש.
+It is תקיפה בנשק קר.
 
 ARSON RULE:
 Deliberately burning an EMPTY building, EMPTY vehicle, field, crop, or other property, with no people directly endangered, is פגיעה ברכוש.
 
 THEFT RULE:
 Theft, looting, or taking property may be classified as פגיעה ברכוש even when the item is not physically damaged.
-
-LIVESTOCK RULE:
-Killing, injuring, stealing, or running over animals is פגיעה ברכוש.
-
-INJURY RULE:
-If the MAIN ACTOR's property destruction injured a person (someone inside the house that
-was destroyed, someone hurt "during the attack"), the event is at least תקיפה פיזית.
 
 
 5. ניכוס שטח
@@ -296,20 +287,6 @@ Do NOT infer תקיפה פיזית merely because:
 
 In those ambiguous cases, prefer הפרות סדר.
 
-"ATTACKED RESIDENTS" RULE:
-"Attacked residents / civilians / farmers / shepherds" with no mechanism given IS
-תקיפה פיזית (people were the target). "Attacked the village / the community / houses"
-with no mechanism and no people mentioned is הפרות סדר.
-
-INCURSION RULE:
-Settlers who enter a Palestinian village (with or without army escort) and clashes
-follow are הפרות סדר, never הפגנה לא אלימה — even when the description only says the
-Palestinians rioted.
-
-SYMBOLIC CROSSING RULE:
-Crossing into Gaza / breaking through a crossing to plant trees or "start a settlement"
-as a protest stunt is הפרות סדר, not ניכוס שטח.
-
 
 7. החזקה בכפייה
 
@@ -323,11 +300,6 @@ The MAIN ACTOR successfully:
 The person must actually be taken or held.
 
 An ATTEMPTED kidnapping or attempted abduction that fails is NOT החזקה בכפייה.
-
-Seizing someone briefly and marching or handing them over to soldiers / police is NOT
-החזקה בכפייה — classify the assault that came with it (usually תקיפה פיזית). Use
-החזקה בכפייה only when the person was held for a sustained period (hours or more) or
-taken away to another location and kept there.
 
 Classify an unsuccessful attempt according to what the MAIN ACTOR actually did.
 
@@ -348,23 +320,13 @@ This includes:
 - rocks
 
 STONE RULE:
-Throwing stones at PEOPLE, VEHICLES, OR HOUSES / BUILDINGS is always תקיפה בנשק קר.
-If the main actor's stones injured anyone, it is at least תקיפה בנשק קר regardless of
-what else the description calls property damage.
+Throwing stones at PEOPLE OR VEHICLES is always תקיפה בנשק קר.
 
 Also classify the following as תקיפה בנשק קר ONLY when they are clearly directed at people:
 - thrown bottles
 - stun grenades
 - firecrackers
 - fireworks
-- pepper spray, taser (an irritant or shock device used on a person)
-- a firearm used as a club (rifle butt, pistol whip) — not fired, so a blunt object
-
-NOT תקיפה בנשק קר, even when thrown at people (classify as הפרות סדר unless something
-more severe applies):
-- eggs
-- smoke grenades
-- "objects" / "various objects" with nothing more specific
 
 Examples:
 - bottle thrown at a person -> תקיפה בנשק קר
@@ -383,11 +345,7 @@ UNSPECIFIED OBJECT RULE:
 "Threw objects" or "objects were thrown" is NOT enough for תקיפה בנשק קר unless the object and relevant target are identified.
 
 RAMMING RULE:
-Any vehicle (car, truck, motorcycle, ATV, tractor, bulldozer) deliberately driven at a
-person OR at an occupied vehicle is תקיפה בנשק קר. An ATTEMPT with no contact is still
-תקיפה בנשק קר. Running over livestock is פגיעה ברכוש (animals are property).
-A passing driver who hits demonstrators is a secondary actor — it never classifies the
-demonstrators' event.
+A vehicle deliberately used to ram or attempt to ram a person is treated as תקיפה בנשק קר.
 
 
 9. תקיפה בנשק חם
@@ -413,20 +371,6 @@ GRENADE RULE:
 FIREARM-THREAT RULE:
 Pointing or aiming a firearm directly at a person as a threat is תקיפה בנשק חם even if no shot is fired.
 
-"ARMED" RULE:
-Being described as "armed" is NOT enough. If the armed actors did not fire, point, or
-strike with the weapon, classify the act they actually performed ("armed settlers attacked
-civilians, injuring 2" -> תקיפה פיזית).
-
-FIRE-AT-HOUSES RULE:
-Live fire toward inhabited houses, tents, or a village is תקיפה בנשק חם even when no
-individual is named as the target.
-
-CHEMICAL RULE:
-Acid, chlorine, an unidentified gas or liquid sprayed or poured on people or into an
-occupied dwelling, and TEAR GAS CANISTERS FIRED from a launcher are תקיפה בנשק חם.
-Hand-held pepper spray and tasers stay תקיפה בנשק קר.
-
 ARSON RULE:
 Ordinary deliberate arson is תקיפה בנשק חם ONLY when:
 - people are inside the targeted building or vehicle
@@ -447,26 +391,19 @@ Use פוגרום only when the MAIN ACTOR is explicitly a LARGE CROWD, MOB, MASS
 
 and the attack includes violence against people, homes, vehicles, businesses, or the civilian environment.
 
-פוגרום requires ALL THREE, performed by the MAIN ACTOR:
-1. A CROWD — "dozens", "tens", "hundreds", "thousands", or a number of 20 or more.
-   (12 attackers, "a group", "several settlers" is NOT a crowd.)
-2. VIOLENCE AGAINST PEOPLE — beatings, stone-throwing at people or inhabited houses,
-   gunfire, pepper spray — with victims present.
-3. FIRE OR GUNFIRE AGAINST THE COMMUNITY — houses, tents, vehicles, fields, buildings
-   set on fire, or live fire into the village.
+A pogrom requires clear evidence of MASS COLLECTIVE VIOLENCE.
 
-All three during a raid on a village, community, neighbourhood or farm = פוגרום
-(e.g. 20 settlers beat residents injuring 2 AND burn 7 vehicles -> פוגרום).
+Do NOT infer a pogrom merely because:
+- many homes were damaged
+- an attack was very severe
+- several locations were attacked
+- many victims were affected
 
-NOT a pogrom:
-- a crowd that only burns EMPTY property with nobody attacked -> פגיעה ברכוש
-- a crowd that only beats or stones people with no fire -> תקיפה פיזית / תקיפה בנשק קר
-- a mass march or demonstration in a city that turns violent (a flag march where
-  marchers beat passers-by) -> classify the violence itself
-- "attacked a community" with no mechanism -> הפרות סדר
-- a small group however violent
+There must be evidence that a large crowd, mob, or mass group carried out the attack.
 
-When all three conditions hold, פוגרום is the answer (it is top of the hierarchy).
+Two attackers or a small group is NOT a pogrom.
+
+If the description clearly establishes a large attacking mob and satisfies the definition above, פוגרום overrides the other categories.
 
 
 SEVERITY HIERARCHY
@@ -492,7 +429,7 @@ Before returning the category, verify:
 1. Am I classifying an action performed by the supplied MAIN ACTOR?
 2. Did I accidentally use an action performed by a secondary actor?
 3. If several MAIN ACTOR actions occurred, did I choose the highest-ranked applicable category?
-4. Did I apply the special rules for threats/intimidation, stones (incl. at houses), bottles, stun grenades, fireworks, firecrackers, eggs/smoke/unspecified objects, pepper spray vs. chemicals vs. tear-gas launchers, "armed" without use, fire at houses, arson, injuries from property destruction, livestock, protest barriers, land appropriation vs. symbolic crossings, incursions into villages, brief seizure vs. sustained holding, ramming, and the three-part pogrom test?
+4. Did I apply the special rules for threats/intimidation, stones, bottles, stun grenades, fireworks, firecrackers, arson, protest barriers, land appropriation, attempted kidnapping, ramming, and pogroms?
 
 Return exactly one allowed event type.
 
@@ -622,11 +559,6 @@ def build_jobs(ws):
     actor_col = find_col(headers, ["main_actor", "main actor"], required=True)
     desc_col = find_col(headers, ["Description", "description"], required=True)
     current_col = find_col(headers, ["event_type", "event type"], required=False)
-    hand_col = find_col(headers, ["event_type_hand"], required=False)
-    recl_col = find_col(headers, ["reclassify"], required=False)
-    he_col = find_col(headers, ["description_he_medium"], required=False)
-    tags_col = find_col(headers, ["fortress_categories"], required=False)
-    hidden_col = find_col(headers, ["hidden"], required=False)
 
     jobs = []
     for excel_row in range(2, ws.max_row + 1):
@@ -634,21 +566,7 @@ def build_jobs(ws):
         actor = norm(ws.cell(excel_row, actor_col).value)
         description = norm(ws.cell(excel_row, desc_col).value)
         current = norm(ws.cell(excel_row, current_col).value) if current_col else ""
-        # Rows imported from a Hebrew log (the Fortress) have no English Description;
-        # their text is in description_he_medium, and their own tags help as context.
-        if not description and he_col:
-            description = norm(ws.cell(excel_row, he_col).value)
-        tags = norm(ws.cell(excel_row, tags_col).value) if tags_col else ""
-        if not actor or not description or actor == "not relevant":
-            continue
-        if hidden_col and norm(ws.cell(excel_row, hidden_col).value):
-            continue                      # hidden rows (ACLED duplicates etc.) never ship
-        # ROW SELECTION: classify only rows that still need a type — blank event_type,
-        # or reclassify = yes (set by 04 after a split). A row with a date in
-        # event_type_hand is a hand decision and is never re-run unless reclassify says so.
-        recl = norm(ws.cell(excel_row, recl_col).value).lower() == "yes" if recl_col else False
-        hand = norm(ws.cell(excel_row, hand_col).value) if hand_col else ""
-        if not recl and (current or hand):
+        if not actor or not description:
             continue
         cid = row_id or f"excel-row-{excel_row}"
         jobs.append({
@@ -658,8 +576,7 @@ def build_jobs(ws):
             "user_text": (
                 f"MAIN ACTOR:\n{actor}\n\n"
                 f"CURRENT EVENT TYPE:\n{current or '(blank)'}\n\n"
-                + (f"SOURCE TAGS (the original log's own labels, context only):\n{tags}\n\n" if tags else "")
-                + f"EVENT DESCRIPTION:\n{description}"
+                f"EVENT DESCRIPTION:\n{description}"
             ),
         })
 
@@ -673,7 +590,7 @@ def command_submit(filename):
     batch_dir = base / BATCH_DIR
     batch_dir.mkdir(exist_ok=True)
 
-    wb = load_workbook(source)  # full load: ws.cell() is O(1); read_only made it O(rows) per call
+    wb = load_workbook(source, read_only=True, data_only=False)
     try:
         ws = wb.active
         jobs = build_jobs(ws)

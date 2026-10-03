@@ -341,6 +341,8 @@ def build_jobs(ws):
     actor_col = find_col(headers, ["main_actor", "main actor"], required=False)
     event_col = find_col(headers, ["event_type", "event type"], required=False)
     desc_col = find_col(headers, ["Description", "description"], required=True)
+    he_col = find_col(headers, ["description_he_medium"], required=False)
+    recl_col = find_col(headers, ["reclassify"], required=False)
 
     jobs = []
     for excel_row in range(2, ws.max_row + 1):
@@ -349,6 +351,11 @@ def build_jobs(ws):
         event_type = norm(ws.cell(excel_row, event_col).value) if event_col else ""
         description = norm(ws.cell(excel_row, desc_col).value)
         if not description:
+            continue
+        # ROW SELECTION: translate only rows with no Hebrew yet, or reclassify = yes
+        # (set by 04 after a split; 03 is the last step, so download clears it).
+        recl = norm(ws.cell(excel_row, recl_col).value).lower() == "yes" if recl_col else False
+        if not recl and he_col and norm(ws.cell(excel_row, he_col).value):
             continue
         clean = remove_leading_event_date(description)
         dt = extract_leading_date(description)
@@ -378,7 +385,7 @@ def command_submit(filename):
     batch_dir = base / BATCH_DIR
     batch_dir.mkdir(exist_ok=True)
 
-    wb = load_workbook(source, read_only=True, data_only=False)
+    wb = load_workbook(source)  # full load: ws.cell() is O(1); read_only made it O(rows) per call
     try:
         ws = wb.active
         jobs = build_jobs(ws)
@@ -530,6 +537,7 @@ def command_download():
         ws = wb.active
         date_col = find_or_add_col(ws, "date")
         he_col = find_or_add_col(ws, "description_he_medium")
+        recl_col = find_or_add_col(ws, "reclassify")
 
         for cid, job in state["jobs"].items():
             row = job["excel_row"]
@@ -542,6 +550,7 @@ def command_download():
                 ws.cell(row, date_col).number_format = "DD/MM/YYYY"
             summary = strip_leading_hebrew_date(result["description_he_medium"])
             ws.cell(row, he_col, summary)
+            ws.cell(row, recl_col, None)
 
         output = source.parent / (source.stem + " - date hebrew" + source.suffix)
         wb.save(output)

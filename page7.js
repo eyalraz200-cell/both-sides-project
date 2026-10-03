@@ -4387,7 +4387,7 @@ function drawPage7(ctx, W, H) {
 
   if (!p7.ready) {
     ctx.fillStyle = "#111";
-    ctx.font = "16px 'Assistant', sans-serif";
+    ctx.font = "16px " + CANVAS_FACE;
     ctx.textAlign    = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("טוען נתונים...", W / 2, H / 2);
@@ -4999,8 +4999,8 @@ function p7AxisLeaveApply(ctx, op, dotX, dotY) {
   ctx.translate(-dotX, -dotY);
 }
 const P7_AXIS_EVENT_LABEL_OFFSET = 34; // px above the axis line (lifted to give date room below)
-const P7_AXIS_EVENT_FONT         = "500 14px 'Assistant', sans-serif";
-const P7_AXIS_DATE_FONT          = "400 14px 'Assistant', sans-serif";
+const P7_AXIS_EVENT_FONT         = "500 14px " + CANVAS_FACE;
+const P7_AXIS_DATE_FONT          = "400 14px " + CANVAS_FACE;
 const P7_AXIS_DATE_OFFSET        = 18;  // px above the label baseline
 const P7_AXIS_EVENT_LINE_HEIGHT  = 19;  // px between wrapped title lines
 
@@ -5008,8 +5008,8 @@ const P7_AXIS_EVENT_LINE_HEIGHT  = 19;  // px between wrapped title lines
 // toward the grid, whose bottom is set to clear a 3-line block
 // (SBB_TIMELINE_MOBILE_AXIS_CLEAR_PX).
 const P7_AXIS_EVENT_LABEL_OFFSET_MOBILE = 36;
-const P7_AXIS_EVENT_FONT_MOBILE         = "500 14px 'Assistant', sans-serif";
-const P7_AXIS_DATE_FONT_MOBILE          = "400 14px 'Assistant', sans-serif";
+const P7_AXIS_EVENT_FONT_MOBILE         = "500 14px " + CANVAS_FACE;
+const P7_AXIS_DATE_FONT_MOBILE          = "400 14px " + CANVAS_FACE;
 const P7_AXIS_DATE_OFFSET_MOBILE        = 16;
 const P7_AXIS_EVENT_LINE_HEIGHT_MOBILE  = 18;
 // Every title gets a cap on mobile (desktop leaves them all uncapped). It used
@@ -5021,7 +5021,7 @@ const P7_AXIS_EVENT_MAXWIDTH_MOBILE     = 220;
 
 function p7AxisEventFont()       { return isMobile() ? P7_AXIS_EVENT_FONT_MOBILE : P7_AXIS_EVENT_FONT; }
 // The vertical (desktop) headline faces come from P7_VERT.type instead.
-function p7VertFont(t)           { return `${t.weight} ${t.size}px 'Assistant', sans-serif`; }
+function p7VertFont(t)           { return `${t.weight} ${t.size}px ${CANVAS_FACE}`; }
 // Draw one headline line so its INK (cap/Hebrew letter height, measured on a
 // fixed reference so lines don't jitter with descenders) is centred in its
 // line box — with textBaseline 'top' the glyphs sit high in the box and the
@@ -5785,7 +5785,7 @@ function p7DrawYearAxis(ctx, W, H) {
   // start — but, like the line, stays faint until scroll actually reaches it,
   // then switches to the darker color. In state3, every label (reached or not)
   // drops to the same faint alpha as the dimmed axis event label/date.
-  ctx.font = `${isMobile() ? 14 : 18}px 'Assistant', sans-serif`;
+  ctx.font = `${isMobile() ? 14 : 18}px ${CANVAS_FACE}`;
   ctx.textAlign    = "center";
   ctx.textBaseline = "top";
   const labelY = axisY + P7_AXIS_MARKER_RADIUS + p7AxisYearLabelOffset();
@@ -6036,7 +6036,7 @@ function p7DrawYearAxisVertical(ctx, W, H) {
   });
 
   // Year rings + labels. A tick is reached once the fill edge is past its row.
-  ctx.font = `${p7V().yearLabelWeight || 400} ${p7V().yearLabelPx}px 'Assistant', sans-serif`;
+  ctx.font = `${p7V().yearLabelWeight || 400} ${p7V().yearLabelPx}px ${CANVAS_FACE}`;
   ctx.textAlign = "center";
   // measureText's ink boxes are relative to the CURRENT baseline — measure
   // under 'alphabetic' (under 'top' the first label's ascent came back wrong

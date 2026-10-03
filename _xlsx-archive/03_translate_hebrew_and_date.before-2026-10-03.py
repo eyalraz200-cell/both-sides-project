@@ -16,234 +16,209 @@ REASONING_EFFORT = "medium"
 CHUNK_SIZE = 250
 MAX_ACTIVE_BATCHES = 2
 
-STATE_FILE = "main_actor_state.json"
-BATCH_DIR = "main_actor_batches"
+STATE_FILE = "date_hebrew_state.json"
+BATCH_DIR = "date_hebrew_batches"
 
 INSTRUCTIONS = r"""
-You are identifying the MAIN ACTOR responsible for the central political action described in an event.
+You are translating and editing an English political-event description into concise, natural Hebrew for a data-journalism table.
 
 You receive:
-EVENT DESCRIPTION — the original event description.
+- MAIN ACTOR — context only.
+- EVENT TYPE — context only.
+- ENGLISH DESCRIPTION — the factual source text, with the leading event date already removed.
 
-Your task is to assign exactly one MAIN ACTOR from the allowed list.
+The English description is authoritative.
+MAIN ACTOR and EVENT TYPE may help you understand the event, but they must NEVER cause you to add a fact that is not in the English description.
 
-ALLOWED MAIN ACTORS
 
-1. settlers
-2. protesters against government
-3. arab israelis
-4. haredi jews
-5. right wing protesters
-6. peace movements
-7. not relevant
+OUTPUT GOAL
 
+Produce `description_he_medium`: a concise Hebrew factual summary of the event.
 
-CORE MAIN-ACTOR RULE
+The Hebrew should read like a professionally edited table entry, not like a literal machine translation.
 
-The MAIN ACTOR is the group that INITIATES or PERFORMS the central action of the event.
 
-Do NOT classify according to:
-- the first group mentioned
-- the group most frequently mentioned
-- the victim
-- the group being protested against
-- police or military responding to another actor
-- a secondary participant whose action is not the central action
+MANDATORY STYLE
 
-If several actors appear, identify who performs the central action described in the record.
+- Write in natural, fluent Hebrew.
+- Use PAST TENSE.
+- Use correct Hebrew grammar, spelling, agreement, numbers, and punctuation.
+- Do NOT include the event date.
+- Do NOT begin with a date or Hebrew month.
+- Do NOT mention the source/outlet unless it is substantively part of the event.
+- Do NOT explain, interpret, editorialize, or add context.
+- Do NOT use present tense to narrate the event.
+- Do NOT invent motives, identities, outcomes, or causal relationships.
 
 
-ACTOR DEFINITIONS
+WHAT TO PRESERVE
 
+Preserve the central factual information:
+- who acted
+- what they did
+- where it happened
+- meaningful participant numbers
+- injuries, arrests, detentions, or other important consequences
+- the stated political demand/motive when it is central to understanding the action
+- specific place names when useful
 
-1. settlers
+Specific local place names may remain when they add useful information.
+For example, do not automatically delete a place such as Kfar Tapuach simply because it is specific.
 
-Israeli settlers, settler activists, settler groups, or settlement movements acting as the central actor.
+If the English text is long, preserve only the details that materially distinguish the event.
 
-This includes, when explicitly attributed to them:
-- settler demonstrations
-- attacks by settlers
-- establishment or expansion of outposts
-- land seizure or cultivation by settlers
-- settler marches
-- settler road blockades
-- settler actions against Palestinians or Israeli authorities
 
-Do not infer "settlers" merely from a West Bank location.
-The acting group must be identified as settlers or clearly described as a settler group.
+WHAT TO REMOVE OR COMPRESS
 
+Usually remove or compress:
+- the opening date
+- repetitive wording
+- administrative geographic parentheticals
+- redundant descriptions of the same action
+- long lists of organizations when they are not essential
+- long lists of speakers or participants unless they materially distinguish the event
+- explanatory background already obvious from the event
+- source-like hedging or repetitive reporting language
 
-2. protesters against government
+Do not mechanically preserve every sentence.
 
-Use this umbrella category for Israeli protesters whose central political action is directed against the government or its policies, including:
 
-- anti-judicial-reform / anti-judicial-overhaul demonstrators
-- anti-government protesters
-- protests calling for the government's resignation or elections
-- hostage-deal / hostage-release protesters when the action is directed at the government or demands government action
-- Kaplan protest movement and closely related protest groups
-- protests combining these causes
+LENGTH / COMPRESSION
 
-This category deliberately combines the former labels:
-- anti judicial reform demonstrators
-- anti government protesters
-- hostage deal protesters
+The Hebrew MUST become progressively more compressed as the English source becomes longer.
 
-Do not use it merely because someone criticizes a specific policy.
-There must be a recognizable anti-government, judicial-overhaul, elections, or hostage-deal protest context.
+Use these approximate targets:
 
+SHORT source (up to ~250 English characters):
+- usually about 60–130 Hebrew characters
+- preserve most useful concrete details
 
-3. arab israelis
+MEDIUM source (~251–500 characters):
+- usually about 100–190 Hebrew characters
+- summarize; do not translate sentence by sentence
 
-Arab citizens or residents of Israel acting collectively in an Israeli political or civic context.
+LONG source (~501–900 characters):
+- usually about 140–260 Hebrew characters
+- keep the central action plus only the most useful secondary details
 
-Use only when the description establishes that the central actors are Arab Israelis / Israeli Arabs / Arab citizens or residents of Israel.
+VERY LONG source (over ~900 characters):
+- usually about 180–320 Hebrew characters
+- strongly compress; do not reproduce the structure of the original
 
-Do NOT use for:
-- Palestinians in the West Bank
-- Palestinians in Gaza
-- Palestinian residents when Israeli citizenship/residency context is not established
-- a location that is Arab-majority without evidence about who acted
+These are guides, not quotas.
+Clarity is more important than hitting an exact character count, but the Hebrew should clearly be shorter than the English.
 
-If identity is ambiguous, prefer not relevant rather than infer.
 
+EXAMPLES OF THE DESIRED STYLE
 
-4. haredi jews
+English:
+"On 22 April 2023, at least 10,000 to about 28,000 protested in Netanya against the Netanyahu-led coalition's proposed judicial overhaul legislation. Former head of the Shin Bet Carmi Gillon spoke at the protest. Dozens of women dressed as 'handmaids' from Building an Alternative were present at the protest, in addition to health workers."
 
-Haredi / ultra-Orthodox Jews acting collectively as the central actor.
+Good Hebrew:
+"בין 10,000 ל־28,000 מפגינים מחו בנתניה נגד הרפורמה המשפטית. בהפגנה השתתפו גם נשות מחאת השפחות, אנשי צוות רפואי, וראש השב״כ לשעבר כרמי גילון שנאם במקום."
 
-Examples include:
-- demonstrations against military conscription
-- religious protests
-- Haredi road blockades
-- Haredi clashes or political demonstrations
+English:
+"On 27 May 2023, about 76,000 to 135,000 protested in Tel Aviv city against the Netanyahu-led coalition's proposed judicial overhaul legislation. Former Likud MK and Defense Minister Moshe Yaalon spoke at the protest, in addition to protest leader and Black Flag Movement founder Shikma Bressler. LGBTQ activists, students, workers from the high-tech industry, female activists from Building an Alternative, Black Flag Movement activists, and anti-occupation activists all took part in the protest."
 
-Do not use merely because an event occurred in a Haredi neighborhood.
+Good Hebrew:
+"בין 76,000 ל־135,000 מפגינים מחו בתל אביב נגד הרפורמה המשפטית. בין המשתתפים היו פעילי להט״ב, סטודנטים, עובדי הייטק, פעילות בונות אלטרנטיבה, פעילי הדגלים השחורים ופעילים נגד הכיבוש. משה יעלון ושקמה ברסלר נאמו בהפגנה."
 
 
-5. right wing protesters
+FINAL COPY-EDIT
 
-Israeli right-wing / nationalist protesters acting collectively in a political demonstration or direct action.
+Before returning:
+1. Check that there is no date at the beginning.
+2. Check that the narration is in past tense.
+3. Check Hebrew gender/number agreement.
+4. Remove unnecessary repetition.
+5. Make sure the Hebrew is shorter than the English source.
+6. Make sure no factual detail was invented.
 
-Examples include:
-- pro-judicial-reform demonstrations
-- nationalist/right-wing demonstrations
-- protests opposing government concessions from the right
-- right-wing road blockades
-- protests identified explicitly with right-wing organizations or causes
-
-Do not classify settlers here when settlers themselves are the central actor.
-Use settlers for explicitly settler-led actions.
-
-
-6. peace movements
-
-Israeli peace, anti-occupation, coexistence, or similar organized left-wing movements acting as the central actor.
-
-Examples include explicitly identified:
-- peace organizations
-- anti-occupation activists
-- coexistence movements
-- Israeli groups protesting settlement activity or occupation
-
-Do not use this category simply because a protest is left-wing.
-Anti-government / judicial-overhaul / hostage-deal protests belong under protesters against government when that is their central context.
-
-
-7. not relevant
-
-Use not relevant when the central actor is outside the six project actor categories.
-
-This includes:
-- Palestinian actors in the West Bank or Gaza
-- security forces acting alone
-- police or military operations
-- ordinary crime
-- personal disputes
-- accidents
-- labor disputes or local protests unrelated to the project categories
-- foreign actors
-- events where the relevant actor is only a victim or secondary participant
-- events with insufficient evidence to identify one of the allowed project actors
-
-
-SECURITY-FORCES RULE
-
-Police, IDF, Border Police, or other security forces do NOT become the MAIN ACTOR merely because they:
-- disperse a protest
-- arrest protesters
-- use force after a protest action
-- respond to stones, roadblocks, riots, or attacks
-
-Classify according to the actor responsible for the central initiating action.
-
-If the description is centrally about an independent police/military/security-force action, return not relevant.
-
-
-MULTIPLE-ACTOR RULE
-
-If several project actors are present:
-- identify which group performed the central action
-- do not merge categories
-- do not choose a group merely because its action was more severe
-- if the description genuinely does not establish a central actor, return not relevant with low certainty and needs_review = yes
-
-
-FINAL CHECK
-
-Before answering, verify:
-
-1. Who actually performed the central action?
-2. Did I accidentally classify the victim or responder?
-3. Did I infer identity from location alone?
-4. Does the actor fit one of the six project categories?
-5. If the evidence is genuinely ambiguous, did I mark it for review?
-
-
-
-SUPPLEMENTARY RULES (from the 2026-10-03 hand review — these override the definitions above where they conflict)
-
-RIGHT WING PROTESTERS by demand, not by label:
-A protest whose demand is to CONTINUE or RESUME a war, to REJECT a ceasefire or a hostage
-deal, to BLOCK humanitarian aid, or to defend soldiers / "Jewish prisoners" against the
-state is right wing protesters — even when the text only says "residents", "reservists",
-"mothers of soldiers", "injured soldiers", "bereaved families", "Israelis". The demand
-defines the camp. "Family members of hostages" taking part in an anti-aid or anti-deal
-protest does not make it peace movements.
-
-JEWISH NATIONALIST VIOLENCE OUTSIDE THE SETTLEMENTS:
-Jews attacking Arabs inside Israel or in Jerusalem neighbourhoods (teens beating an Arab
-bus driver, football fans attacking Arab drivers, a bus riot chanting "death to Arabs")
-are right wing protesters, not settlers. Settlers is for the settlement movement acting
-in the West Bank — including Israelis from inside Israel who raid a West Bank village,
-and including the settlement movement's own activism wherever it happens (Nachala,
-Hilltop Youth, Gaza/Lebanon "resettlement" marches and crossings, protests to free
-detained settlers).
-
-PROTESTERS AGAINST GOVERNMENT, specific cases:
-- October Council / demands for a state commission of inquiry into 7 October.
-- Protests against the war with Iran (2026).
-- Brothers and Sisters in Arms / reservist protests against the government (draft
-  exemption, corruption) that are not pro-war.
-- Protests defending the Attorney General, the courts, or against a minister's conduct.
-
-PEACE MOVEMENTS starts on 7 October 2023:
-Hostage-deal, ceasefire, anti-war and anti-occupation protests from 7 October 2023
-onward are peace movements. Before that date the category is not used — earlier
-anti-occupation / joint Arab-Jewish solidarity protests were hand-labelled and must be
-left as they are.
-
-HAREDI JEWS is for Haredi collective action only (draft, autopsies, light rail,
-Sabbath, "unkosher" stores). Chabad / messianic / religious-Zionist protests are right
-wing protesters.
-
-NOT RELEVANT also covers: labor disputes and municipal-merger protests by workers of a
-settlement council; local residents protesting crime, infrastructure or services with
-no political demand.
 """
 
-SCHEMA = {'type': 'object', 'properties': {'main_actor': {'type': 'string', 'enum': ['settlers', 'protesters against government', 'arab israelis', 'haredi jews', 'right wing protesters', 'peace movements', 'not relevant']}, 'certainty': {'type': 'string', 'enum': ['high', 'medium', 'low']}, 'needs_review': {'type': 'string', 'enum': ['yes', 'no']}, 'reason': {'type': 'string'}}, 'required': ['main_actor', 'certainty', 'needs_review', 'reason'], 'additionalProperties': False}
+SCHEMA = {'type': 'object', 'properties': {'description_he_medium': {'type': 'string'}}, 'required': ['description_he_medium'], 'additionalProperties': False}
 
+
+import re
+from datetime import datetime
+
+MONTHS = {
+    "january":1, "february":2, "march":3, "april":4,
+    "may":5, "june":6, "july":7, "august":8,
+    "september":9, "october":10, "november":11, "december":12,
+}
+
+def extract_leading_date(description):
+    text = description.strip()
+    month_names = "|".join(MONTHS.keys())
+    m = re.search(
+        rf"(?i)\b(\d{{1,2}})(?:st|nd|rd|th)?\s+({month_names})\s+(20\d{{2}})\b",
+        text[:220],
+    )
+    if not m:
+        return None
+    try:
+        return datetime(
+            int(m.group(3)), MONTHS[m.group(2).lower()], int(m.group(1))
+        )
+    except ValueError:
+        return None
+
+def remove_leading_event_date(description):
+    text = description.strip()
+    month = (
+        r"(?:January|February|March|April|May|June|"
+        r"July|August|September|October|November|December)"
+    )
+    patterns = [
+        rf"(?i)^\s*(?:On|Around|About|Approximately|During|Early on|Late on)?\s*"
+        rf"\d{{1,2}}(?:st|nd|rd|th)?\s*[-–]\s*\d{{1,2}}(?:st|nd|rd|th)?\s+"
+        rf"{month}\s+20\d{{2}}\s*[,;:.-]?\s*",
+        rf"(?i)^\s*(?:On|Around|About|Approximately|During|Early on|Late on)?\s*"
+        rf"\d{{1,2}}(?:st|nd|rd|th)?\s+{month}\s+20\d{{2}}\s*[,;:.-]?\s*",
+        rf"(?i)^\s*(?:Between|From)\s+\d{{1,2}}(?:st|nd|rd|th)?\s+"
+        rf"(?:and|to|-|–)\s+\d{{1,2}}(?:st|nd|rd|th)?\s+"
+        rf"{month}\s+20\d{{2}}\s*[,;:.-]?\s*",
+    ]
+    for p in patterns:
+        cleaned = re.sub(p, "", text, count=1).strip()
+        if cleaned != text:
+            return cleaned
+    return text
+
+def length_bin(text):
+    n = len(text)
+    if n <= 250:
+        return "short"
+    if n <= 500:
+        return "medium"
+    if n <= 900:
+        return "long"
+    return "very_long"
+
+def strip_leading_hebrew_date(summary):
+    months = (
+        r"ינואר|פברואר|מרץ|אפריל|מאי|יוני|יולי|"
+        r"אוגוסט|ספטמבר|אוקטובר|נובמבר|דצמבר"
+    )
+    patterns = [
+        rf"^\s*(?:ביום\s+)?(?:ב[־-]?)?\d{{1,2}}\s+"
+        rf"(?:ב[־-]?)?(?:{months})(?:\s+20\d{{2}})?\s*[,;:.\-–—]?\s*",
+        rf"^\s*(?:בחודש\s+)?(?:ב[־-]?)?(?:{months})(?:\s+20\d{{2}})?"
+        rf"\s*[,;:.\-–—]?\s*",
+        r"^\s*(?:בשנת\s+|ב[־-]?)?20\d{2}\s*[,;:.\-–—]?\s*",
+    ]
+    cleaned = summary.strip()
+    for _ in range(2):
+        before = cleaned
+        for p in patterns:
+            candidate = re.sub(p, "", cleaned, count=1).strip()
+            if candidate != cleaned:
+                cleaned = candidate
+                break
+        if cleaned == before:
+            break
+    return cleaned
 
 
 def norm(v):
@@ -300,7 +275,7 @@ def request_body(user_text):
         "text": {
             "format": {
                 "type": "json_schema",
-                "name": "main_actor_result",
+                "name": "date_hebrew_result",
                 "strict": True,
                 "schema": SCHEMA,
             }
@@ -363,20 +338,34 @@ def submit_pending(client, base, state):
 def build_jobs(ws):
     headers = [c.value for c in ws[1]]
     row_id_col = find_col(headers, ["row_id", "row id"], required=False)
+    actor_col = find_col(headers, ["main_actor", "main actor"], required=False)
+    event_col = find_col(headers, ["event_type", "event type"], required=False)
     desc_col = find_col(headers, ["Description", "description"], required=True)
 
     jobs = []
     for excel_row in range(2, ws.max_row + 1):
         row_id = norm(ws.cell(excel_row, row_id_col).value) if row_id_col else ""
+        actor = norm(ws.cell(excel_row, actor_col).value) if actor_col else ""
+        event_type = norm(ws.cell(excel_row, event_col).value) if event_col else ""
         description = norm(ws.cell(excel_row, desc_col).value)
         if not description:
             continue
+        clean = remove_leading_event_date(description)
+        dt = extract_leading_date(description)
         cid = row_id or f"excel-row-{excel_row}"
         jobs.append({
             "custom_id": cid,
             "excel_row": excel_row,
             "row_id": row_id,
-            "user_text": f"EVENT DESCRIPTION:\n{description}",
+            "date_iso": dt.date().isoformat() if dt else "",
+            "source_length": len(description),
+            "length_bin": length_bin(description),
+            "user_text": (
+                f"MAIN ACTOR:\n{actor or '(not supplied)'}\n\n"
+                f"EVENT TYPE:\n{event_type or '(not supplied)'}\n\n"
+                f"SOURCE LENGTH CLASS:\n{length_bin(description)}\n\n"
+                f"ENGLISH DESCRIPTION:\n{clean}"
+            ),
         })
 
     return jobs
@@ -389,7 +378,7 @@ def command_submit(filename):
     batch_dir = base / BATCH_DIR
     batch_dir.mkdir(exist_ok=True)
 
-    wb = load_workbook(source)  # full load: ws.cell() is O(1); read_only made it O(rows) per call
+    wb = load_workbook(source, read_only=True, data_only=False)
     try:
         ws = wb.active
         jobs = build_jobs(ws)
@@ -400,7 +389,7 @@ def command_submit(filename):
     for start in range(0, len(jobs), CHUNK_SIZE):
         part = jobs[start:start + CHUNK_SIZE]
         number = len(chunks) + 1
-        jsonl = batch_dir / f"main_actor_{number:03d}.jsonl"
+        jsonl = batch_dir / f"date_hebrew_{number:03d}.jsonl"
         with jsonl.open("w", encoding="utf-8") as f:
             for job in part:
                 req = {
@@ -539,22 +528,22 @@ def command_download():
     wb = load_workbook(source)
     try:
         ws = wb.active
-        actor_col = find_or_add_col(ws, "main_actor")
-        certainty_col = find_or_add_col(ws, "main_actor_certainty")
-        review_col = find_or_add_col(ws, "main_actor_needs_review")
-        reason_col = find_or_add_col(ws, "main_actor_reason")
+        date_col = find_or_add_col(ws, "date")
+        he_col = find_or_add_col(ws, "description_he_medium")
 
         for cid, job in state["jobs"].items():
             row = job["excel_row"]
             result = results.get(cid)
             if not result:
                 continue
-            ws.cell(row, actor_col, result["main_actor"])
-            ws.cell(row, certainty_col, result["certainty"])
-            ws.cell(row, review_col, result["needs_review"])
-            ws.cell(row, reason_col, result["reason"])
+            if job.get("date_iso"):
+                dt = datetime.strptime(job["date_iso"], "%Y-%m-%d")
+                ws.cell(row, date_col, dt)
+                ws.cell(row, date_col).number_format = "DD/MM/YYYY"
+            summary = strip_leading_hebrew_date(result["description_he_medium"])
+            ws.cell(row, he_col, summary)
 
-        output = source.parent / (source.stem + " - actors" + source.suffix)
+        output = source.parent / (source.stem + " - date hebrew" + source.suffix)
         wb.save(output)
     finally:
         wb.close()

@@ -1067,13 +1067,12 @@ function updateGroups() {
       // the ring stays put while the characters grow leftward (RTL).
       p7ScopeBtnEl.textContent = typedText(P7_SCOPE_BTN_LABEL, typeT);
       p7ScopeBtnEl.style.setProperty("--p7-scope-ring-t", String(ringT));
-      // The ring is centered on the label's INK, not on its line box — same
-      // correction (and same measurement) the legend rows use for their
-      // swatches. 14 is .p7-scope-btn's own font-size.
-      // …minus P7_SCOPE_RING_DY (js/groups.js): the var is applied as
+      // The ring is centered on the label's INK, not on its line box —
+      // measured off this label's own text (p7ScopeRingInk, js/groups.js),
+      // whole pixels. …minus P7_SCOPE_RING_DY: the var is applied as
       // translateY(-ink), so a positive DY (down) comes OFF the ink lift.
       p7ScopeBtnEl.style.setProperty(
-        "--p7-scope-ring-ink", `${groupLabelInkShift(14) - (P7_SCOPE_RING_DY || 0)}px`);
+        "--p7-scope-ring-ink", `${p7ScopeRingInk() - (P7_SCOPE_RING_DY || 0)}px`);
       const right = W - fold6LegendInsetRight();
       const btnW = p7ScopeBtnEl.offsetWidth;
       const btnH = p7ScopeBtnEl.offsetHeight;

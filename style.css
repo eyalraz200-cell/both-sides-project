@@ -5272,36 +5272,131 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   text-align: left;
 }
 
-/* Language switch (both pages) — a plain link to the other language's url.
-   Top-left corner; the dev fold badge and its picker hang BELOW it (see the
-   end of this file). Above the mobile legend layer (1006), below the gate. */
-.lang-switch {
+/* Language switch (all three pages) — ONE button, globe + the current
+   language's letters, that opens a drop-down of the three languages
+   (js/lang-switch.js). #langWrap carries the corner position AND the card:
+   the look is the legend's «איסוף הנתונים» note card — the same tint over the
+   page paper, 16px corners — and when open the card simply grows to hold the
+   rows (compare/ pick 2026-10-03 over an outlined box, a bare glyph, and a
+   darkened-page dialog). Top-left corner; the dev fold badge and its picker
+   hang BELOW it (see the end of this file). Above the mobile legend layer
+   (1006), below the gate. */
+.lang-wrap {
   position: fixed;
   top: 12px;
   left: 12px;
   z-index: 1007;
-  /* Look baked from the lang-button manual/ harness, 2026-09-29: grey letters
-     on a fill in the PAGE's own colour (var(--bg) — solid, so nothing scrolling
-     under the button shows through it), weight 550. Colours, weight, outline,
-     padding and corners are shared by both breakpoints; only the letter SIZE is
-     per breakpoint — 13px here (phone), 12px on desktop below. */
-  font: 550 13px/1 'Assistant', sans-serif;
-  color: #8f8f8f;
-  background: var(--bg);
-  border: 1px solid rgba(0, 0, 0, 0.25);
-  border-radius: 4px;
-  padding: 5px 8px;
-  text-decoration: none;
+  direction: ltr;
+  border-radius: 16px;
+  /* OPAQUE, like .fold6-note-card: the tint over --bg, so nothing scrolling
+     under the card shows through it. */
+  background: linear-gradient(rgba(0, 0, 0, 0.035), rgba(0, 0, 0, 0.035)), var(--bg);
 }
+/* The card's TOP edge sits on the corner logo's top edge (--se-top on
+   .seventh-eye: 8px phone, 24px desktop) — explicit instruction 2026-10-03.
+   left 24px on desktop mirrors the logo's 24px from the right (--se-right) —
+   both moved 20 → 24 on 2026-10-02, with the legend columns
+   (FOLD6_LEGEND_INSET_*, js/groups.js) — one shared desktop edge gap. */
+.lang-wrap { top: 8px; }
 @media (min-width: 601px) {
-  /* top 26px puts the button's own 24px box centred on the corner logo's text
-     line (block top 24px + half the 29px lockup = 38.6px). left 24px mirrors
-     the logo's 24px from the right (--se-right) — both moved 20 → 24 on
-     2026-10-02, with the legend columns (FOLD6_LEGEND_INSET_*, js/groups.js)
-     — one shared desktop edge gap. Phone keeps 12px. */
-  .lang-switch { font-size: 12px; top: 26px; left: 24px; }
+  .lang-wrap { top: 24px; left: 24px; }
 }
-.lang-switch:hover { background: #111; color: #fff; }
+.lang-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  cursor: pointer;
+  /* The note title's own type: 14px Assistant 600 in its #767676 grey
+     (.fold6-note-title); 13px on the phone, where the old letters were 13. */
+  font: 600 13px/1 'Assistant', sans-serif;
+  color: #767676;
+  background: transparent;
+  border: 0;
+  border-radius: 16px;
+  padding: 7px 12px;
+  transition: color 180ms ease;
+}
+@media (min-width: 601px) { .lang-switch { font-size: 12px; } }
+.lang-switch:hover, .is-open > .lang-switch { color: #111; }
+.lang-switch-globe { width: 14px; height: 14px; display: block; }
+.lang-switch-code { display: block; line-height: 1; }
+/* PHONE: the globe alone. AFTER the base rule above — same specificity, so
+   source order is what makes it win. */
+@media (max-width: 600px) {
+  /* 6px around a 16px globe — manual/-baked 2026-10-03. No pressed look on a
+     tap (explicit instruction): no tap highlight, and the colour change is
+     desktop's hover only, so a touch leaves the glyph as it was. */
+  .lang-switch { padding: 6px; gap: 0; -webkit-tap-highlight-color: transparent; }
+  .lang-switch:hover, .is-open > .lang-switch { color: #767676; }
+  .lang-switch-globe { width: 16px; height: 16px; }
+  .lang-switch-code { display: none; }   /* phone: the globe alone */
+}
+
+/* The rows sit INSIDE the same card, in flow, so the card expands around them.
+   Each row is the «הצגת גודל האירועים» control (.p7-scope-btn): 14px Assistant
+   at rgba(0,0,0,.81), an empty 10px ring 8px before it that FILLS dark for the
+   current language — no tick, no bold. Hover darkens the ring's edge exactly
+   as the scope button's does, but WITHOUT its 3.5px swell (explicit
+   instruction): the ring stays 10px. */
+/* The card GROWS around the rows rather than snapping open — the 0fr → 1fr
+   grid trick, 180ms (the scope button's own flip tempo), both breakpoints.
+   js/lang-switch.js never sets `hidden` (it would cut the transition);
+   aria-hidden + visibility carry the closed state. */
+.lang-menu {
+  display: grid;
+  /* BOTH axes collapse: a 0fr row alone still lends the card the widest row's
+     width, so a closed card sat as wide as «العربية». */
+  grid-template-rows: 0fr;
+  grid-template-columns: 0fr;
+  padding: 0;
+  visibility: hidden;
+  transition: grid-template-rows 180ms ease, grid-template-columns 180ms ease,
+              padding 180ms ease, visibility 0s 180ms;
+}
+.lang-menu[hidden] { display: grid; }
+.lang-menu-rows { overflow: hidden; min-height: 0; min-width: 0; }
+.lang-wrap.is-open .lang-menu {
+  grid-template-rows: 1fr;
+  grid-template-columns: 1fr;
+  padding: 0 0 6px;
+  visibility: visible;
+  transition: grid-template-rows 180ms ease, grid-template-columns 180ms ease,
+              padding 180ms ease;
+}
+.lang-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* The ring's centre sits on the globe's: desktop globe 14px behind 12px of
+     padding → centre 19px, so the 10px ring starts 14px in. */
+  padding: 6px 12px 6px 14px;
+  font: 14px/17px 'Assistant', sans-serif;
+  color: rgba(0, 0, 0, 0.81);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.lang-menu-row[lang="ar"] { font-family: 'IBM Plex Sans Arabic', 'Assistant', sans-serif; }
+.lang-menu-row::before {
+  content: "";
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  background: transparent;
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+.lang-menu-row:hover::before { border-color: rgba(0, 0, 0, 0.75); }
+.lang-menu-row.is-current::before {
+  background-color: rgba(0, 0, 0, 0.81);
+  border-color: rgba(0, 0, 0, 0.81);
+}
+/* PHONE: 16px globe behind 6px → centre 14px, so the ring starts 9px in.
+   AFTER the base row rule — same specificity, source order decides. */
+@media (max-width: 600px) {
+  .lang-menu-row { padding-left: 9px; }
+}
 
 /* העין השביעית's logo — fixed in the top-RIGHT corner on both pages, a link to
    the7eye.org.il. The artwork is a MASK (alpha-only PNG), so the mark's colour
@@ -5668,4 +5763,35 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   .lang-en #page9ZoneBelow {
     padding-inline: 12px;
   }
+}
+
+/* ── Arabic version (ar/index.html, <html class="lang-ar">) ──────────────────
+   Shares the Hebrew page's RTL layout entirely; only the faces change, because
+   Discordia / Hadassah / Assistant carry no Arabic glyphs. Both are Google
+   Fonts, linked from ar/index.html (translate_ui_ar.py writes the <link>):
+   Beiruti stands in wherever the Hebrew page uses Discordia (title blocks and
+   the hero title), IBM Plex Sans Arabic wherever it uses Assistant. Sizes and
+   weights stay the shared rules'. */
+.lang-ar .section-title,
+.lang-ar .page0-title {
+  font-family: 'Beiruti', 'Discordia', serif;
+}
+.lang-ar .page0-subtitle,
+.lang-ar .text-card,
+.lang-ar .page12-body,
+.lang-ar .page12-credits,
+.lang-ar .page9-header-subtitle,
+.lang-ar .page9-tray-title,
+.lang-ar .page9-pill,
+.lang-ar .page9-pill-ghost,
+.lang-ar .page9-tooltip,
+.lang-ar .page9-cat-tooltip-desc,
+.lang-ar .fold6-note,
+.lang-ar .fold6-mlegend-row,
+.lang-ar .p7-scope-btn,
+.lang-ar .shk-gate-btn,
+.lang-ar .seventh-eye-caption,
+.lang-ar .camp-header,
+.lang-ar .group-label {
+  font-family: 'IBM Plex Sans Arabic', 'Assistant', sans-serif;
 }

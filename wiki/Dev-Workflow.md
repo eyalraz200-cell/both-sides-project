@@ -88,7 +88,7 @@ Don't remove the gate.
 Both entry points carry `og:*` + `twitter:*` meta tags in `<head>` so WhatsApp/X/Facebook
 render a preview card. There is one card per language, both **2400×1260** (2× of the
 1200×630 card): `og-image-v2.png` (Hebrew, `index.html`) and `og-image-en.png` (English,
-`en/index.html`). Both are headless shots of the artboard `_og-card.html` — the title in
+`en/index.html`; the Arabic page `ar/index.html` reuses `og-image-v2.png` until an Arabic card is shot). Both are headless shots of the artboard `_og-card.html` — the title in
 Discordia Regular on a dashed plate over two dot columns — at `?bare=1` (Hebrew) and
 `?bare=1&lang=en` (English, where the plate hugs the wider title). Reshoot with a headless
 Chromium at `--window-size=1200,630 --force-device-scale-factor=2`. Platforms cache the

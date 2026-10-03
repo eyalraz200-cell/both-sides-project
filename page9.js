@@ -2120,7 +2120,7 @@ function drawPage9(ctx, W, H) {
   // never re-flows the whole grid.
   let gapWidth;
   if (mobile) {
-    ctx.font = "400 13px 'Assistant', sans-serif"; // the mobile count-label font
+    ctx.font = "400 13px " + CANVAS_FACE; // the mobile count-label font
     const wordW  = ctx.measureText("אירועים").width;
     const halfL  = Math.max(wordW, ctx.measureText(String(p9.leftTopOrder.length)).width)  / 2;
     const halfR  = Math.max(wordW, ctx.measureText(String(p9.rightTopOrder.length)).width) / 2;
@@ -2814,8 +2814,8 @@ function drawPage9(ctx, W, H) {
       // 13px on mobile per explicit request (tried 14, settled on 13) — the
       // bare number is the column's only caption there, and 12px read too
       // small at arm's length.
-      ctx.font         = mobile ? "400 13px 'Assistant', sans-serif"
-                                : "400 12px 'Assistant', sans-serif";
+      ctx.font         = mobile ? "400 13px " + CANVAS_FACE
+                                : "400 12px " + CANVAS_FACE;
       ctx.textBaseline = "alphabetic";
       ctx.fillStyle    = `rgba(17,17,17,${p9CountLabelAlpha * (1 - (p9.fold13OutT ?? 0))})`;
 

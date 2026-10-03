@@ -21,3 +21,13 @@ shots/
 *.xlsx
 _debug-misclassified.json
 _debug-fonts/
+_dedupe/
+.env
+event_type_batches/
+event_type_state.json
+main_actor_batches/
+main_actor_state.json
+date_hebrew_batches/
+date_hebrew_state.json
+split_batches/
+split_state.json

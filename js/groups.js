@@ -520,7 +520,7 @@ const groupLabelInkCtx = document.createElement("canvas").getContext("2d");
 function groupLabelInkShift(fontSize) {
   const key = fontSize.toFixed(2);
   if (groupLabelInkShifts[key] == null) {
-    groupLabelInkCtx.font = `${fontSize}px 'Assistant', sans-serif`;
+    groupLabelInkCtx.font = `${fontSize}px ${CANVAS_FACE}`;
     const m = groupLabelInkCtx.measureText(GROUP_LABEL_INK_REF);
     // Both pairs are distances from the baseline; the ink center and the box
     // center are each their own midpoint, and we want the gap between them.
@@ -2347,7 +2347,23 @@ var P7_SCOPE_HOVER_FORCE = false;
 // Vertical nudge of the ring against the label, in px, positive = DOWN. Sits on
 // top of the ink correction (groupLabelInkShift) that centres it on the letters'
 // ink rather than the line box. `var` — a manual/ harness drives it.
-var P7_SCOPE_RING_DY = -1.5;   // manual/-baked 2026-09-16
+var P7_SCOPE_RING_DY = 0;      // was -1.5 (manual/-baked 2026-09-16) against the shared reference string; the ring now measures its own label, so no nudge
+// The ring's ink lift, measured off the scope label ITSELF (not the legend's
+// shared reference string — "Haxeo" / «אבגדהוזחט» put the English ring at
+// cap-mid, well above a mostly-lowercase label). Same maths as
+// groupLabelInkShift, rounded to a whole pixel so the 10px ring with its 1px
+// border lands on the pixel grid instead of blurring across two rows.
+let p7ScopeRingInkCache = null;
+function p7ScopeRingInk() {
+  if (p7ScopeRingInkCache == null) {
+    groupLabelInkCtx.font = "14px " + CANVAS_FACE;
+    const m = groupLabelInkCtx.measureText(P7_SCOPE_BTN_LABEL);
+    const inkCenter = (m.actualBoundingBoxDescent - m.actualBoundingBoxAscent) / 2;
+    const boxCenter = (m.fontBoundingBoxDescent - m.fontBoundingBoxAscent) / 2;
+    p7ScopeRingInkCache = Math.round(boxCenter - inkCenter);
+  }
+  return p7ScopeRingInkCache;
+}
 const P7_SCOPE_HOVER_MS = 180;
 const p7ScopeHoverTrigger = makeTrigger(P7_SCOPE_HOVER_MS, (...a) => updateGroups(...a));
 const p7ScopeOnTrigger    = makeTrigger(P7_SCOPE_HOVER_MS, (...a) => updateGroups(...a));
@@ -2630,7 +2646,7 @@ function typedText(full, t) {
 // hardcoded font sizes above. FOLD6_TOP_ROW is the mini-legend's top-most row
 // of the RIGHT (coalition) column — the column the note hangs below.
 // English page: its own copy (three paragraphs), same ACLED-as-link split.
-const FOLD6_NOTE_TEXT = isEnglish() ? "Event descriptions and dates are mostly sourced from ACLED, an international research organization that tracks and maps protests and political violence based on reports from media outlets and local sources.\nThe dataset includes events from the beginning of 2023 to the present in which Israeli citizens carried out political actions in public spaces in Israel and the Palestinian territories.\nThe assignment of events to groups and political camps, their classification, and severity ranking were defined for this project and are not part of ACLED’s methodology. Events were assigned and classified based on their descriptions using OpenAI models, which were also used to translate them into Hebrew. Apart from translation, the descriptions were not altered." : "תיאורי האירועים ומועדי התרחשותם לקוחים ברובם ממאגר ACLED, גוף מחקר בינלאומי המתעד וממפה אירועי מחאה ואלימות פוליטית על בסיס דיווחים מכלי תקשורת וממקורות מקומיים. נכללו אירועים מתחילת 2023 ועד היום, שבהם אזרחי ישראל ביצעו פעולות פוליטיות במרחב הציבורי בישראל ובשטחים.\nשיוך האירועים לקבוצות ולמחנות, סיווגם ומדרג החומרה הוגדרו במסגרת הפרויקט ואינם של ACLED. השיוך והסיווג נעשו על סמך תיאורי האירועים בעזרת מודלי בינה מלאכותית של OpenAI, ששימשו גם לתרגומם לעברית. מלבד התרגום, התיאורים לא שונו.";
+const FOLD6_NOTE_TEXT = isEnglish() ? "Event descriptions and dates are mostly sourced from ACLED, an international research organization that tracks and maps protests and political violence based on reports from media outlets and local sources.\nThe dataset includes events from the beginning of 2023 to the present in which Israeli citizens carried out political actions in public spaces in Israel and the Palestinian territories.\nThe assignment of events to groups and political camps, their classification, and severity ranking were defined for this project and are not part of ACLED’s methodology. Events were assigned and classified based on their descriptions using OpenAI models, which were also used to translate them into Hebrew. Apart from translation, the descriptions were not altered." : tr("תיאורי האירועים ומועדי התרחשותם לקוחים ברובם ממאגר ACLED, גוף מחקר בינלאומי המתעד וממפה אירועי מחאה ואלימות פוליטית על בסיס דיווחים מכלי תקשורת וממקורות מקומיים. נכללו אירועים מתחילת 2023 ועד היום, שבהם אזרחי ישראל ביצעו פעולות פוליטיות במרחב הציבורי בישראל ובשטחים.\nשיוך האירועים לקבוצות ולמחנות, סיווגם ומדרג החומרה הוגדרו במסגרת הפרויקט ואינם של ACLED. השיוך והסיווג נעשו על סמך תיאורי האירועים בעזרת מודלי בינה מלאכותית של OpenAI, ששימשו גם לתרגומם לעברית. מלבד התרגום, התיאורים לא שונו.");
 // 172, picked in a manual/ harness against the two-paragraph copy on a 982px-tall
 // window, where the copy measures 372px at this width. This is the note's NARROWEST
 // width, not its only one: the note hangs DOWNWARD from a legend block centred

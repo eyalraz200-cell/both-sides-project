@@ -11,6 +11,54 @@ local Hadassah faces (`@font-face` in `style.css`).
 > used to front the project behind a `.shk-cta-button`. The root URL is the project now; `project.html` is a redirect stub to the root that
 > keeps old shared links alive — never put content in it.
 
+## Arabic version — `ar/index.html`
+
+Served at `/ar/`. **Generated, not hand-edited:** `translate_ui_ar.py` (repo root) builds it
+from `index.html` — the page is a copy with `<html lang="ar" class="lang-ar">`, `<base
+href="../">`, Arabic copy on every line that differs between the Hebrew and English pages,
+canonical / `og:url` at `/ar/`, Beiruti + IBM Plex Sans Arabic linked from Google Fonts, and the
+Hebrew page's og image (no Arabic share card has been shot yet — see
+[Dev-Workflow](Dev-Workflow.md)). The same run fills `I18N_AR` in `js/i18n.js` (between the
+`I18N_AR_START` / `I18N_AR_END` markers), keyed by the Hebrew string like `I18N_EN`; `tr()`
+picks the map by the page class (`isArabic()`). The @fold6 ACLED note (`FOLD6_NOTE_TEXT`,
+js/groups.js) is wrapped in `tr()` so the Arabic lives in that map too. The raw result is
+kept in `ar_translations.json`; `--apply ar_translations.json` re-applies it without the API.
+
+**How it translates:** every string goes to OpenAI (`gpt-5.5-pro`, high reasoning) as a
+Hebrew/English PAIR — the Hebrew is authoritative, the English a second reading of the
+meaning — with a project brief and neutrality rules (balanced Arabic news-desk terminology,
+one word for «קיצוני» — متطرف — throughout, formal plural address). The HTML items go out as
+whole lines and come back with the Hebrew line's markup verbatim.
+
+**Layout:** none of its own. Arabic is RTL, so the page runs on the Hebrew code path
+(`isEnglish()` is false everywhere); the only `.lang-ar` CSS is the font family, because
+Discordia / Hadassah / Assistant carry no Arabic glyphs: **Beiruti** wherever the Hebrew
+page uses Discordia (`.section-title`, the hero title), **IBM Plex Sans Arabic** wherever it
+uses Assistant (both Google Fonts, foot of `style.css`). Canvas-drawn text still uses the
+Hebrew faces (falls back to the system Arabic font).
+
+**Hero line breaks** match the Hebrew's at both breakpoints — title 3 lines, subtitle 4 —
+by explicit `<br />`s in `ar_translations.json` (one word per title line, «متطرفون / من /
+الجانبين»; subtitle «تحليل نشاط / المعسكرات / السياسية / في إسرائيل»), measured in the
+Arabic faces against the shared 185px / 139px (desktop) and 175px / 125px (phone) boxes. The
+Hebrew `top` solves (3-line title, 4-line subtitle) therefore hold unchanged. A different
+Arabic wording means re-measuring the lines, not re-tuning `top`.
+
+**Axis-event titles (desktop):** the side cards' corridor is 100px at 14px type, so the four
+Arabic titles that overran it were shortened to one line — «التعديلات القضائية», «الهجوم في
+عيلي», «الأسد الصاعد», «إطلاق سراح الرهائن» (measured in IBM Plex Sans Arabic 500 14px: 81 /
+70 / 74 / 92px). The phone's cap is 220px, so `labelMobile` keeps the long form. Canvas text on
+the Arabic page draws in IBM Plex Sans Arabic through `CANVAS_FACE` (js/i18n.js) — every
+`ctx.font` that used to name Assistant goes through it.
+
+**Language menu:** the generated page gets `is-current` on its own row and `../` hrefs to the
+other two (`HEAD_PATCHES` in the script). Lines are re-applied by **content**, so an unrelated
+edit elsewhere in `index.html` doesn't break `--apply`. The 10,418 event descriptions are **not** translated — the
+Arabic tooltip shows the Hebrew `descHeMedium`.
+
+**After a Hebrew copy change** the Arabic page is stale until the script is re-run — log it in
+[Translation-Pending](Translation-Pending.md) like the English.
+
 ## English version — `en/index.html`
 
 Served at `/en/`. A copy of `index.html` with `<html lang="en" class="lang-en">` and
@@ -18,9 +66,7 @@ Served at `/en/`. A copy of `index.html` with `<html lang="en" class="lang-en">`
 Hebrew page — there is no second stylesheet or script set. Its canonical / `og:url` point
 at `/en/`, so the @fold15 share row shares the English link.
 
-Both pages carry a **language switch** (grey `#8f8f8f` letters, weight 550, filled with the page colour `var(--bg)`, 1px outline; 12px letters on desktop, 13px on the phone; `.lang-switch`, fixed in the top-left corner, 12px down and in on the phone, 26px down / 24px in on desktop so its box is centred on the corner logo's text line and mirrors the logo's inset; the dev
-fold badge sits under it and a bare **F** — or Ctrl+Shift+F — hides/shows the badge, a direct `.layout`
-child): a plain link — «EN» → `en/` on the Hebrew page, «עב» → the root on the English one.
+All three pages carry a **language switch**: ONE button in the top-left corner (`#langWrap` → `.lang-switch`, a globe glyph + the current language's letters — «עב» / «EN» / «ع»; fixed, its TOP edge on the corner logo's top edge — 8px down / 12px in on the phone, where it is the globe alone (the letters are hidden), a 16px glyph with 6px around it (manual/-baked 2026-10-03), no tap highlight and no colour change on touch; 24px down / 24px in on desktop, globe + letters. At both breakpoints the card GROWS open over 180ms (grid-rows 0fr→1fr; `aria-hidden` + visibility instead of `hidden`, which would cut the transition); z-index 1007, above the mobile legend layer, below the gate). Clicking it opens a drop-down of the three languages (`#langMenu`, rows «עברית» / «English» / «العربية»; `js/lang-switch.js` — click outside or Escape closes). The look is the legend note's card (compare/ pick 2026-10-03 over an outlined box, a bare glyph and a darkened-page dialog): the tint over `--bg`, 16px corners, the note title's 600 `#767676` type (13px phone / 12px desktop), no chevron; the rows sit INSIDE the card, which grows around them. Each row is styled as the «הצגת גודל האירועים» control: 14px Assistant at rgba(0,0,0,.81) with a 10px empty ring that fills dark for the current language and darkens its edge on hover — but never swells. The hrefs are `./`, `en/`, `ar/` on every page (the subpages carry `<base href="../">`).
 
 Both pages also carry **העין השביעית's logo** in the top-RIGHT corner (`.seventh-eye`, a fixed link to the7eye.org.il, `z-index: 1007` like the switch; 24px from the top and right on desktop, 8px from the top on the phone). **The desktop edge gap is one number, 20px** (compare/-baked 2026-10-02): the logo's `--se-right`, the EN button's `left` and the legend columns' `FOLD6_LEGEND_INSET_LEFT/RIGHT` (js/groups.js — the ACLED note follows the right column) all sit 20px off their edge. The artwork is a CSS **mask** (alpha-only PNG) over `.seventh-eye-mark`, so the mark's colour is its `background-color`; the `<a>` is an optional backing plate. Every value is a `--se-*` custom property set **per breakpoint** (phone in the base rule, desktop in the 601px block). **Hebrew page:** the wide lockup (`seventh-eye-logo-wide.png`) with the line «פרויקט בשיתוף» (`.seventh-eye-caption`) to its RIGHT, vertically centred (`--se-dir: row`; `--se-cap-y` is an optical nudge for Assistant's Hebrew letter body) — 120px wide / 14px text; this is the **desktop** layout and it stays on every fold until @fold13, where it fades out with the rest of the screen on the closing card's rise (`updateFold13`, js/fold11.js) and comes back when scrolling up. **Phone (both languages):** the same wide lockup, centred at the top of the screen with the line above it (`--se-dir: column`), 120px wide / 14px text (weight 400), 8px apart; it **fades out once scrolling starts** — `js/nav.js` flips `.is-scrolled` past `SEVENTH_EYE_FADE_SCROLL_PX` (8px) and the 600px block transitions opacity over `--se-fade-ms` (300ms), back in at the top. **English page, desktop:** the same wide lockup, `direction: ltr` so "In partnership with" sits to its LEFT (**removed — don't reintroduce:** the cropped stacked mark, `--se-crop`). Mark and line are both `#393239` at rest; on desktop, hovering turns the **mark only** to `#EC2A2C` over 150ms (`(hover: hover)` pointers). `--se-cap-display: none` switches the line off.
 

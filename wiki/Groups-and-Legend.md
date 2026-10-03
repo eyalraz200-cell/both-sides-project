@@ -298,8 +298,11 @@ LEFT_LEGEND_SWATCH_SIZE / 2`), which puts the button's `left` at that x minus it
 plus `P7_SCOPE_RING_PX / 2` (10px, js/groups.js — must stay in step with the `::before`'s
 `width`, which is `box-sizing: border-box` because the `*` reset doesn't reach pseudo-elements).
 The ring itself is centered on the label's **ink**, not its line box: `--p7-scope-ring-ink`
-is `groupLabelInkShift(14)`, the same measurement the legend rows use for their swatches,
-applied as a `translateY` alongside the pop's `scale`. And because the label TYPES in, the
+is `p7ScopeRingInk()` (js/groups.js) — the same maths as `groupLabelInkShift`, but measured
+off the scope label's **own** text (the legend's shared reference strings put the English
+ring at cap-mid, above a mostly-lowercase label) and **rounded to whole pixels** so the
+10px ring with its 1px border sits on the pixel grid — applied as a `translateY` alongside
+the pop's `scale`. And because the label TYPES in, the
 button pins `line-height: 17px` / `min-height: 25px` — without it an empty box measures short
 and the placement (which subtracts `btnH`) jerked the control 5px upward on the first typed
 character. Vertically, `P7_SCOPE_BTN_GAP` (22px) above the **top**
@@ -320,7 +323,7 @@ change, the button is placed off the ring's box) and the label darkens from 0.81
 `p7ScopeHoverTrigger` (enter/leave) and `p7ScopeOnTrigger` (flipped where `is-on` is decided),
 `P7_SCOPE_HOVER_MS` 180 — the look is `max(hover, pressed)`, so a pressed button keeps it after
 the pointer leaves and hovering a pressed one changes nothing. `P7_SCOPE_HOVER_FORCE` holds it
-for a harness. Values (manual/-baked 2026-09-16): grow **3.5**px, text alpha **1**; `P7_SCOPE_RING_DY` **-1.5**px lifts the ring against the label (px, + = down), on top of the ink correction. The ring's scale rides a
+for a harness. Values (manual/-baked 2026-09-16): grow **3.5**px, text alpha **1**; `P7_SCOPE_RING_DY` is **0** (px, + = down; a manual nudge on top of the ink correction, retired 2026-10-02 once the ring measured its own label). The ring's scale rides a
 `--p7-scope-ring-t` custom property written per frame (hence no CSS transition on the
 transform), and the typed label is measured *before* the button's right-edge placement each
 frame, so the ring holds still while the characters grow leftward. The accessible name comes
