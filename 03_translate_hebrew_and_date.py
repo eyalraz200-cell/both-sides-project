@@ -134,6 +134,13 @@ Before returning:
 5. Make sure the Hebrew is shorter than the English source.
 6. Make sure no factual detail was invented.
 
+
+TERMINOLOGY (fixed by the user, 2026-10-03):
+- judicial reform / judicial overhaul → הרפורמה המשפטית (never המהפכה המשפטית).
+- draft dodgers / draft evaders / deserters (Haredi) → עריקים; draft evasion → עריקות; "evaded the draft" → ערק מהשירות. Never משתמטים / השתמטות.
+- Quotations inside the Hebrew use ״ (U+05F4), never the ASCII " character.
+- Arab citizens of Israel: ערבים ישראלים (two words, no maqaf), never ערבים־ישראלים.
+- Place names stay as they are (כיכר אל־קודס in Tamra is a square, not Jerusalem).
 """
 
 SCHEMA = {'type': 'object', 'properties': {'description_he_medium': {'type': 'string'}}, 'required': ['description_he_medium'], 'additionalProperties': False}
@@ -550,7 +557,7 @@ def command_download():
                 ws.cell(row, date_col).number_format = "DD/MM/YYYY"
             summary = strip_leading_hebrew_date(result["description_he_medium"])
             ws.cell(row, he_col, summary)
-            ws.cell(row, recl_col, None)
+            setattr(ws.cell(row, recl_col), 'value', None)
 
         output = source.parent / (source.stem + " - date hebrew" + source.suffix)
         wb.save(output)

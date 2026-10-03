@@ -45,6 +45,7 @@ function fold13FadeSpan() {
 let fold13TooltipFaded = false;
 // העין השביעית's corner logo link — faded by updateFold13 on desktop.
 const seventhEyeEl = document.querySelector(".seventh-eye");
+const langWrapEl    = document.getElementById("langWrap"); // the language switch card
 
 function updateFold13() {
   const tTrigger = fold13Trigger.currentT();
@@ -136,6 +137,13 @@ function updateFold13() {
   if (seventhEyeEl && !isMobile()) {
     seventhEyeEl.style.opacity       = opacityVal;
     seventhEyeEl.style.pointerEvents = eScroll > 0 ? "none" : "";
+  }
+  // The language switch (#langWrap, fixed top-left on BOTH breakpoints — nothing
+  // else ever hides it) fades with the rest of the chrome; pointer-events off
+  // while faded so a tap on the empty corner can't open the menu.
+  if (langWrapEl) {
+    langWrapEl.style.opacity       = opacityVal;
+    langWrapEl.style.pointerEvents = eScroll > 0 ? "none" : "";
   }
   // page12TitleCardEl (the fold13 card) stays visible throughout.
   // fold6SquareEls' own opacity (updateGroups) reads p9.fold13OutT just set

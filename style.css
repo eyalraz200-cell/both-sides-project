@@ -48,8 +48,8 @@
 body {
   background: var(--bg);
   /* No text selection — the page is read and scrolled, and a drag must not paint
-     a highlight over the artwork. One exception: the title blocks' own text on
-     desktop (see the foot of this file). */
+     a highlight over the artwork. No exceptions — not even the title blocks'
+     text (explicit instruction 2026-10-03). */
   -webkit-user-select: none;
   user-select: none;
 }
@@ -5372,10 +5372,14 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      padding → centre 19px, so the 10px ring starts 14px in. */
   padding: 6px 12px 6px 14px;
   font: 14px/17px 'Assistant', sans-serif;
-  color: rgba(0, 0, 0, 0.81);
+  /* Lighter than the scope button's .81 at rest, black on hover — the label
+     darkens with its ring (explicit instruction, 2026-10-03). */
+  color: rgba(0, 0, 0, 0.6);
   text-decoration: none;
   white-space: nowrap;
+  transition: color 180ms ease;
 }
+.lang-menu-row:hover { color: #000; }
 .lang-menu-row[lang="ar"] { font-family: 'IBM Plex Sans Arabic', 'Assistant', sans-serif; }
 .lang-menu-row::before {
   content: "";
@@ -5391,6 +5395,15 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 .lang-menu-row.is-current::before {
   background-color: rgba(0, 0, 0, 0.81);
   border-color: rgba(0, 0, 0, 0.81);
+}
+/* The CURRENT language reads black at rest and is not a choice: no hover, no
+   pointer, no click (it would only reload the page) — explicit instruction
+   2026-10-03. Keyboard reaches it too, so js/lang-switch.js moves focus to
+   the first OTHER row. */
+.lang-menu-row.is-current {
+  color: #000;
+  pointer-events: none;
+  cursor: default;
 }
 /* PHONE: 16px globe behind 6px → centre 14px, so the ring starts 9px in.
    AFTER the base row rule — same specificity, source order decides. */
@@ -5585,15 +5598,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   direction: ltr;
 }
 
-/* Title-block text CAN be highlighted — the one exception to body's
-   `user-select: none`. Desktop only: on a phone a press on a card is the
-   press-and-hold gesture, and the ≤600px block keeps selection off there. */
-@media (min-width: 601px) {
-  .text-card-frame.section-title {
-    -webkit-user-select: text;
-    user-select: text;
-  }
-}
+/* Removed — don't reintroduce: a desktop `user-select: text` exception for the
+   title blocks. Nothing on the page is selectable (explicit instruction
+   2026-10-03); body's `user-select: none` is the whole rule. */
 
 /* English pills read left-to-right: the grip handle leads on the LEFT, label
    after it. Set on the pill itself (and the drag ghost, which lives on <body>),
@@ -5775,6 +5782,15 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 .lang-ar .section-title,
 .lang-ar .page0-title {
   font-family: 'Beiruti', 'Discordia', serif;
+}
+/* Optical size match: Discordia's Hebrew letters stand 0.68em tall, Beiruti's
+   Arabic body 0.39em with alefs at 0.63em (measured with fontTools), so at the
+   shared 18.5px / 16px the Arabic titles read ~13% smaller. 21px / 18px lands
+   them at the same visual size — the one language-gated exception to the
+   .section-title single-size rule (#page-17 stays its own 36/26 exception). */
+.lang-ar .section-title { font-size: 21px; }
+@media (max-width: 600px) {
+  .lang-ar .section-title { font-size: 18px; }
 }
 .lang-ar .page0-subtitle,
 .lang-ar .text-card,

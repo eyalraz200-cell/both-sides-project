@@ -3746,8 +3746,10 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
 }
 
 // The one reader for an event's tooltip description. Hebrew page: the Hebrew
-// text. English page (en/index.html, <html class="lang-en">): ACLED's English
-// original, falling back to the Hebrew if events-en.json didn't load.
+// text. English page (en/index.html, <html class="lang-en">): the English line
+// from events-en.json; Arabic page (ar/, <html class="lang-ar">): the Arabic
+// line from events-ar.json. Both fall back to the Hebrew if their file didn't
+// load or has no entry for the row.
 function p7EventDesc(ev) {
   return (ev && (ev.descEn || ev.descHeMedium)) || "";
 }
@@ -3769,15 +3771,21 @@ function p7StripLeadingDate(text) {
   return p7StripLeadingDate(rest.charAt(0).toUpperCase() + rest.slice(1));
 }
 
-// English page only: events-en.json is a { rowId: description } map, written by
-// server.py next to events.json.
+// Translated pages only: events-en.json / events-ar.json are { rowId: description }
+// maps written by server.py next to events.json. Either lands in `descEn` (the
+// "not Hebrew" slot p7EventDesc reads). Only the English text carries ACLED's
+// leading date, so only it is stripped.
 async function p7LoadEnglishDescs(data) {
-  if (!isEnglish()) return;
+  const file = isEnglish() ? "events-en.json" : isArabic() ? "events-ar.json" : null;
+  if (!file) return;
   try {
-    const en = await (await fetch("events-en.json")).json();
-    for (const e of data) e.descEn = p7StripLeadingDate(en[e.rowId]) || null;
+    const map = await (await fetch(file)).json();
+    for (const e of data) {
+      const t = map[e.rowId];
+      e.descEn = (isEnglish() ? p7StripLeadingDate(t) : t) || null;
+    }
   } catch (err) {
-    console.error("Failed to load English descriptions:", err);
+    console.error("Failed to load translated descriptions:", err);
   }
 }
 

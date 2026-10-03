@@ -77,6 +77,12 @@ ACTOR_SIDE = {
 # stay. Empty the set to ship every row.
 SOLE_SOURCE_EXCLUDE = {"plo negotiations affairs department"}
 
+# The timeline ends where the ACLED data ends, for now: rows dated after the
+# latest `data_source == "acled"` row are dropped (The Fortress keeps posting
+# weeks past ACLED's last export, which left a tail of fortress-only dots on the
+# axis). Set to False to ship every row again.
+CUT_AFTER_LAST_ACLED = True
+
 # "crowd size=about 2,000" / "…=tens of thousands" → one integer ESTIMATE.
 # The estimate is what ships; the small/medium/large cutoffs are a JS-side
 # decision (P7_BULGE_CUTS, page7.js) so they can be retuned without a server
@@ -122,6 +128,16 @@ def load_events():
     # Optional `hidden` column: any non-empty cell keeps the row in the workbook
     # but out of the project. Absent in older copies of the sheet, hence .get().
     hidden_col = col.get("hidden")
+    rows = list(rows)
+    # Last ACLED-sourced date (see CUT_AFTER_LAST_ACLED).
+    last_acled = ""
+    if CUT_AFTER_LAST_ACLED and "data_source" in col:
+        for row in rows:
+            d = row[col["date"]]
+            if d is not None and str(row[col["data_source"]] or "").strip().lower() == "acled":
+                ds = d.strftime("%Y-%m-%d") if hasattr(d, "strftime") else str(d)[:10]
+                last_acled = max(last_acled, ds)
+    tail_dropped = 0
     for row in rows:
         actor = row[col["main_actor"]]
         date  = row[col["date"]]
@@ -139,7 +155,13 @@ def load_events():
             unknown_actors.add(actor)
             continue
         date_str = date.strftime("%Y-%m-%d") if hasattr(date, "strftime") else str(date)[:10]
-        desc_en = row[col["Description"]]
+        if last_acled and date_str > last_acled:
+            tail_dropped += 1
+            continue
+        # Shipped English: the short line from step 07 when present, else ACLED's
+        # full Description (which stays in the sheet for the classifiers).
+        desc_en = (row[col["description_en_short"]] if "description_en_short" in col else None) or row[col["Description"]]
+        desc_ar = row[col["description_ar"]] if "description_ar" in col else None
         # `crowd` column: "about 2,000" / "tens of thousands" / blank.
         n = parse_crowd(row[col["crowd"]]) if "crowd" in col else None
         if n is not None:
@@ -158,6 +180,9 @@ def load_events():
             # ACLED's own English text. NOT shipped in events.json — split off
             # into events-en.json below, which only the English page fetches.
             "descEn": str(desc_en).strip() if desc_en else None,
+            # Arabic translation (column `description_ar`, step 07). Same split:
+            # events-ar.json, fetched only by ar/index.html.
+            "descAr": str(desc_ar).strip() if desc_ar else None,
             # Reported crowd size as an integer estimate, or None when the
             # sheet has no figure for the row. Drives the
             # bulge tier on the timeline dots (p7BulgeTier, page7.js).
@@ -168,6 +193,8 @@ def load_events():
     print(f"  crowd size: {matched}/{len(events)} events carry a reported figure")
     print(f"  dropped {sole_dropped} rows whose only source is in SOLE_SOURCE_EXCLUDE")
     print(f"  dropped {hidden_dropped} rows marked in the `hidden` column")
+    if last_acled:
+        print(f"  dropped {tail_dropped} rows dated after the last ACLED event ({last_acled})")
 
     if unknown_actors:
         print(f"  WARNING: dropped rows with unmapped main_actor: {sorted(unknown_actors)}")
@@ -181,6 +208,9 @@ if (WATCH_DIR / EVENTS_XLSX).exists():
     # page7.js). Kept out of events.json so the Hebrew page's payload is unchanged.
     EVENTS_EN_JSON = json.dumps(
         {e["rowId"]: e.pop("descEn") for e in _events}, ensure_ascii=False
+    ).encode()
+    EVENTS_AR_JSON = json.dumps(
+        {e["rowId"]: e.pop("descAr") for e in _events}, ensure_ascii=False
     ).encode()
     EVENTS_JSON = json.dumps(_events, ensure_ascii=False).encode()
     _EVENTS_FROM_XLSX = True
@@ -208,6 +238,10 @@ def _sync_static_events():
     if not en_path.exists() or en_path.read_bytes() != EVENTS_EN_JSON:
         en_path.write_bytes(EVENTS_EN_JSON)
         print("  events-en.json rewritten from the xlsx")
+    ar_path = WATCH_DIR / "events-ar.json"
+    if not ar_path.exists() or ar_path.read_bytes() != EVENTS_AR_JSON:
+        ar_path.write_bytes(EVENTS_AR_JSON)
+        print("  events-ar.json rewritten from the xlsx")
 
 _sync_static_events()
 

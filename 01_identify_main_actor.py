@@ -240,6 +240,21 @@ wing protesters.
 NOT RELEVANT also covers: labor disputes and municipal-merger protests by workers of a
 settlement council; local residents protesting crime, infrastructure or services with
 no political demand.
+
+ARMY ACTS (hand review of the Fortress log, 2026-10-03):
+An act carried out by soldiers, Border Police, a regional-defence (גמ״ר / hagmar) soldier, the Civil
+Administration, a regional-council inspector or a settlement guard / security officer acting with
+soldiers is `not relevant` — even when settlers are present, escort them, or asked for it
+("soldiers accompanied by settlers dismantled a tent", "security forces ordered the family to leave
+after settlers complained", "masked soldiers expelled a shepherd", "a hagmar soldier shot ...").
+A settlement security coordinator (רבש״ץ) who himself shoots or attacks, without soldiers, is `settlers`.
+A fire or attack whose perpetrator is not named at all ("a fire broke out in a house") is `not relevant`.
+Unattributed killings during clashes in a village that settlers entered stay `settlers`.
+
+INPUT LANGUAGE: the description may be a Hebrew line from a settler-violence log instead of ACLED
+English; apply the same rules. Such lines are settler events unless they fit ARMY ACTS above or
+name Jewish right-wing activists outside the West Bank (aid-convoy blockades, Flag March, Old City,
+al-Aqsa) — those are `right wing protesters`.
 """
 
 SCHEMA = {'type': 'object', 'properties': {'main_actor': {'type': 'string', 'enum': ['settlers', 'protesters against government', 'arab israelis', 'haredi jews', 'right wing protesters', 'peace movements', 'not relevant']}, 'certainty': {'type': 'string', 'enum': ['high', 'medium', 'low']}, 'needs_review': {'type': 'string', 'enum': ['yes', 'no']}, 'reason': {'type': 'string'}}, 'required': ['main_actor', 'certainty', 'needs_review', 'reason'], 'additionalProperties': False}
@@ -364,11 +379,21 @@ def build_jobs(ws):
     headers = [c.value for c in ws[1]]
     row_id_col = find_col(headers, ["row_id", "row id"], required=False)
     desc_col = find_col(headers, ["Description", "description"], required=True)
+    he_col = find_col(headers, ["description_he_medium"], required=False)
+    actor_col = find_col(headers, ["main_actor"], required=False)
+    hand_col = find_col(headers, ["main_actor_hand"], required=False)
+    hidden_col = find_col(headers, ["hidden"], required=False)
 
     jobs = []
     for excel_row in range(2, ws.max_row + 1):
-        row_id = norm(ws.cell(excel_row, row_id_col).value) if row_id_col else ""
-        description = norm(ws.cell(excel_row, desc_col).value)
+        g = lambda c: norm(ws.cell(excel_row, c).value) if c else ""
+        row_id = g(row_id_col)
+        # ROW SELECTION (loop-safe): only rows with no main_actor yet, never a
+        # hand-set row (date in main_actor_hand), never a hidden row. Rows from a
+        # Hebrew log have no English Description — their Hebrew line is sent.
+        if g(actor_col) or g(hand_col) or g(hidden_col):
+            continue
+        description = g(desc_col) or g(he_col)
         if not description:
             continue
         cid = row_id or f"excel-row-{excel_row}"

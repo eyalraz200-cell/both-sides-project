@@ -262,6 +262,10 @@ Examples:
 There must be a genuine territorial-control purpose.
 
 Do NOT use ניכוס שטח for:
+- GRAZING INCURSIONS: settlers bringing herds onto Palestinian land, grazing sheep /
+  cattle / camels in fields or between houses, however often it recurs -> הפרות סדר
+  (or פגיעה ברכוש only if crops are explicitly destroyed, תקיפה פיזית if people are
+  attacked). ניכוס שטח needs a tent, caravan, fence, outpost, ploughing or structures.
 - a protest encampment
 - a symbolic "democracy outpost"
 - tents erected temporarily for a demonstration
@@ -295,6 +299,30 @@ Do NOT infer תקיפה פיזית merely because:
 - violence occurred without identifying what the MAIN ACTOR did
 
 In those ambiguous cases, prefer הפרות סדר.
+
+HAND-REVIEW RULES (Fortress log, 2026-10-03):
+- Taking over an inhabited house while the family is inside -> החזקה בכפייה.
+- Arson of houses, structures, vehicles or between houses (fire SET, not gunfire) -> פגיעה ברכוש,
+  never תקיפה בנשק חם (that is for live fire only).
+- "מטען" on an aid truck / convoy means CARGO, not an explosive: dumping or throwing the cargo is
+  פגיעה ברכוש.
+- Waste, rubbish or "objects" thrown at a house -> הפרות סדר.
+- A flag raised on a hill, with nothing built -> הפרות סדר (not ניכוס שטח).
+- A record where settlers entered and people were killed or wounded by gunfire, and the SOURCE TAGS
+  include "ירי לעבר אזרחים" or "הריגה" -> תקיפה בנשק חם, even if the text does not name the shooter.
+  Without such tags, unattributed gunfire during "clashes" or "an exchange of fire" stays הפרות סדר.
+- A herd brought near houses or into a yard, a minor leading goats from an outpost -> הפרות סדר.
+
+PASSIVE-VOICE RULE (source logs written from the victims' side):
+"A Palestinian was attacked / shot / run over", "stones were thrown", "a house was set on
+fire" with no attacker named means the MAIN ACTOR did it — classify the act, do not
+drop to a lower category because the sentence has no subject. A settlement security
+guard, security coordinator (רבש"ץ) or "settlers in uniform" count as the main actor.
+
+DISPLACEMENT-OUTCOME RULE:
+"The family left / the community was displaced after repeated attacks" with no concrete
+act described in THIS record is הפרות סדר. Forcing someone out of their house and
+settlers moving in is ניכוס שטח.
 
 "ATTACKED RESIDENTS" RULE:
 "Attacked residents / civilians / farmers / shepherds" with no mechanism given IS
@@ -501,6 +529,13 @@ Return exactly one allowed event type.
 SCHEMA = {'type': 'object', 'properties': {'event_type': {'type': 'string', 'enum': ['הפגנה לא אלימה', 'חסימת כביש', 'הפרות סדר', 'פגיעה ברכוש', 'ניכוס שטח', 'תקיפה פיזית', 'החזקה בכפייה', 'תקיפה בנשק קר', 'תקיפה בנשק חם', 'פוגרום']}, 'certainty': {'type': 'string', 'enum': ['high', 'medium', 'low']}, 'needs_review': {'type': 'string', 'enum': ['yes', 'no']}, 'reason': {'type': 'string'}}, 'required': ['event_type', 'certainty', 'needs_review', 'reason'], 'additionalProperties': False}
 
 
+
+def xl_safe(v):
+    """Strip control characters Excel refuses (openpyxl raises IllegalCharacterError)."""
+    if not isinstance(v, str):
+        return v
+    from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
+    return ILLEGAL_CHARACTERS_RE.sub("", v)
 
 def norm(v):
     return "" if v is None else str(v).strip()

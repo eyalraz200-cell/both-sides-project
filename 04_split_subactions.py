@@ -67,9 +67,12 @@ For every event:
   traffic on Ayalon Highway ..."). Do not repeat the subset action inside the main event.
   Police response belongs to the event it responded to.
 - `crowd_text`: the size of THIS event's group, in the source's own words: "about 40,000",
-  "dozens", "hundreds", "about 200". If the text only says "some", "a group", "several",
-  "a number of", "part of" with no figure, write "unspecified". For the main event with a
-  blank CROWD and no figure in the text, write "".
+  "dozens", "hundreds", "about 200". A SUBSET event takes ONLY a figure that the text
+  attaches to the subset itself. If the subset is "some protesters", "demonstrators",
+  "a group", "several", "a women's group", "activists", "part of the crowd" — anything
+  without its own number — write "unspecified". NEVER copy the main event's figure or the
+  CROWD field into a subset event. For the main event with a blank CROWD and no figure in
+  the text, write "".
 - `is_primary`: true for the main action, false for every subset event.
 
 Never change the MAIN ACTOR. Never classify the event type — that is done later.
@@ -112,6 +115,7 @@ m.request_body = request_body
 # subset wording. Everything else is left untouched (and costs nothing).
 SUB = re.compile(r"\b(some|a group|a number|several|a few|dozens|hundreds|tens|part|\d+)\s+of (the )?(protesters|demonstrators|activists|rioters|them|settlers|participants|marchers)|following the (main )?(protest|demonstration|rally)|after the (main )?(protest|demonstration|rally)|toward the end of the (protest|demonstration)|(separately|meanwhile|later),? (dozens|hundreds|some|a group|several)|(dozens|hundreds|some|several) (then |also |later )?(blocked|marched|clashed|set fire|lit|broke)", re.I)
 NUM = re.compile(r"\b(dozens|hundreds|thousands|tens of thousands|about [\d,]+|around [\d,]+|at least [\d,]+|over [\d,]+)\b", re.I)
+ACT = re.compile(r"\b(blocked|block traffic|clashed|broke through|set (fire|tires)|lit (a |)(bonfire|fire|tires)|burned tires|chained|stormed|broke into|threw)\b", re.I)
 SOLE_SOURCE_EXCLUDE = {"plo negotiations affairs department"}
 
 def build_jobs(ws):
@@ -129,7 +133,12 @@ def build_jobs(ws):
         if not actor or actor == "not relevant" or not desc: continue
         srcs = {s.strip().lower() for s in g(c_src).split(";") if s.strip()}
         if srcs and srcs <= SOLE_SOURCE_EXCLUDE: continue           # never shipped
-        if not (SUB.search(desc) or len({x.lower() for x in NUM.findall(desc)}) >= 2): continue
+        # Second-pass gate (2026-10-03): any protest row above הפגנה לא אלימה with a crowd
+        # figure and a sub-action verb, plus the original subset-wording / two-figures test.
+        above = g(c_type) not in ("", "הפגנה לא אלימה")
+        if not (SUB.search(desc) or len({x.lower() for x in NUM.findall(desc)}) >= 2
+                or (above and NUM.search(desc) and ACT.search(desc))): continue
+        if g(c_split) or (col("description_original") and g(col("description_original"))): continue   # already split once
         jobs.append({
             "custom_id": g(c_id) or f"excel-row-{r}", "excel_row": r, "row_id": g(c_id),
             "user_text": (f"MAIN ACTOR:\n{actor}\n\nCURRENT EVENT TYPE:\n{g(c_type) or '(blank)'}\n\n"
@@ -172,8 +181,8 @@ def command_download():
                 ws.cell(r, c["crowd_total"], ws.cell(r, c["crowd"]).value)
             ws.cell(r, c["Description"], primary["description_en"])
             ws.cell(r, c["crowd"], primary["crowd_text"] or None)
-            ws.cell(r, c["event_type"], None); ws.cell(r, c["description_he_medium"], None)
-            ws.cell(r, c["event_type_hand"], None); ws.cell(r, c["reclassify"], "yes"); ws.cell(r, c["split_reason"], res.get("reason"))
+            setattr(ws.cell(r, c["event_type"]), 'value', None); setattr(ws.cell(r, c["description_he_medium"]), 'value', None)
+            setattr(ws.cell(r, c["event_type_hand"]), 'value', None); ws.cell(r, c["reclassify"], "yes"); ws.cell(r, c["split_reason"], res.get("reason"))
             parents += 1
             for s in subs:
                 nr = ws.max_row + 1
@@ -182,10 +191,10 @@ def command_download():
                 ws.cell(nr, c["row_id"], f"row-{next_id}"); next_id += 1
                 ws.cell(nr, c["Description"], s["description_en"])
                 ws.cell(nr, c["crowd"], None if s["crowd_text"] in ("", "unspecified") else s["crowd_text"])
-                ws.cell(nr, c["crowd_total"], None); ws.cell(nr, c["description_original"], None)
+                setattr(ws.cell(nr, c["crowd_total"]), 'value', None); setattr(ws.cell(nr, c["description_original"]), 'value', None)
                 ws.cell(nr, c["split_from"], job["row_id"]); ws.cell(nr, c["reclassify"], "yes")
                 for k in ("event_type", "description_he_medium", "event_type_hand", "main_actor_hand", "split_reason"):
-                    ws.cell(nr, c[k], None)
+                    setattr(ws.cell(nr, c[k]), 'value', None)
                 children += 1
         out = source.parent / (source.stem + " - split" + source.suffix); wb.save(out)
     finally:

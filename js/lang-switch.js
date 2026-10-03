@@ -21,8 +21,10 @@
     menu.setAttribute("aria-hidden", on ? "false" : "true");
     btn.setAttribute("aria-expanded", on ? "true" : "false");
     if (on) {
-      const cur = menu.querySelector(".lang-menu-row.is-current") || menu.querySelector(".lang-menu-row");
-      cur?.focus({ preventScroll: true });
+      // The current language's row is not selectable (pointer-events: none,
+      // style.css), so focus lands on the first OTHER language.
+      const first = menu.querySelector(".lang-menu-row:not(.is-current)") || menu.querySelector(".lang-menu-row");
+      first?.focus({ preventScroll: true });
     }
   }
 

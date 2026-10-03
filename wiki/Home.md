@@ -18,7 +18,7 @@ Everything here describes the **project as it is now** — no history narration;
 | [Groups-and-Legend](Groups-and-Legend.md) | `GROUPS` roster, camp columns, the persistent mini-legend, camp headers |
 | [Timeline](Timeline.md) | The pinned real timeline (`page7.js`): square cascade + canvas year axis |
 | [Drag-and-Drop](Drag-and-Drop.md) | Page-9 categorization panel, drop animation states |
-| [Data](Data.md) | `events.json`, the xlsx source, category/actor mappings |
+| [Data](Data.md) · [Data-Todo](Data-Todo.md) | `events.json`, the xlsx source, category/actor mappings |
 | [Dev-Workflow](Dev-Workflow.md) | Running the project, harness (`manual/`/`compare/`) convention, verification habits |
 | [Translation-Pending](Translation-Pending.md) | Hebrew copy that has changed and whose English / Arabic has not caught up, and the three surfaces English copy lives in |
 | [Glossary](Glossary.md) | Shared shorthand terms (@legend, @dragcards, axis events, state 1/2…) |

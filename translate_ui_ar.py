@@ -195,12 +195,12 @@ def js_str(s):
 HEAD_PATCHES = [
     # Language menu (js/lang-switch.js): the Hebrew row is current on index.html;
     # the Arabic page marks its own row and reaches the others through ../.
-    ('<a class="lang-menu-row is-current" role="menuitemradio" aria-checked="true" href="./" lang="he" hreflang="he">',
+    ('<a class="lang-menu-row is-current" role="menuitemradio" aria-checked="true" aria-disabled="true" tabindex="-1" href="./" lang="he" hreflang="he">',
      '<a class="lang-menu-row" role="menuitemradio" aria-checked="false" href="../" lang="he" hreflang="he">'),
     ('<a class="lang-menu-row" role="menuitemradio" aria-checked="false" href="en/" lang="en" hreflang="en">',
      '<a class="lang-menu-row" role="menuitemradio" aria-checked="false" href="../en/" lang="en" hreflang="en">'),
     ('<a class="lang-menu-row" role="menuitemradio" aria-checked="false" href="ar/" lang="ar" hreflang="ar">',
-     '<a class="lang-menu-row is-current" role="menuitemradio" aria-checked="true" href="./" lang="ar" hreflang="ar">'),
+     '<a class="lang-menu-row is-current" role="menuitemradio" aria-checked="true" aria-disabled="true" tabindex="-1" href="./" lang="ar" hreflang="ar">'),
     ('<link rel="stylesheet" href="style.css"', '<link rel="preconnect" href="https://fonts.googleapis.com" />\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />\n<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Beiruti:wght@400&family=IBM+Plex+Sans+Arabic:wght@300;400;500;700&display=swap" />\n<link rel="stylesheet" href="style.css"'),
     ('<html lang="he">', '<html lang="ar" class="lang-ar">\n<!-- Arabic version. Every relative url (css, scripts, events.json) resolves\n     against the site root, so this page shares all of them with index.html. -->\n<base href="../" />'),
     ('<meta property="og:locale" content="he_IL" />', '<meta property="og:locale" content="ar_AR" />'),

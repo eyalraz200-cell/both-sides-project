@@ -16,6 +16,7 @@ row. An empty table below means the two languages agree.
 | Changed | Where the Hebrew lives | What the English needs | Noted |
 |---|---|---|---|
 | The phone's title for the first axis event is now «הכרזת הרפורמה המשפטית» (desktop keeps «הכרזת הרפורמה») | `labelMobile` on the 2023-01-04 entry of `P7_AXIS_EVENTS_ALL`, `page7.js` | `I18N_EN` has the new key, but it still maps to the old English, "Judicial Overhaul". Decide whether the phone's English title should change to match. | 2026-09-29 |
+| @fold13 closing line now ends «…להציב גבולות להקצנה - גם מהמחנה אותו הם מייצגים.» (was «גם במחנה שלהם») | second `.text-card-frame` title of `#page-14`, `index.html` | `en/index.html` still says "in their own camp" — reword to "including the camp they represent"; `ar/index.html` needs a `translate_ui_ar.py` re-run. | 2026-10-03 |
 
 ## The three surfaces English copy lives in
 
