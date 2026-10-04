@@ -106,8 +106,11 @@
      line in Assistant under the Discordia title. Sizes tuned by eye against
      the WhatsApp preview (2026-10-04). */
   #plate .partner { display: flex; align-items: center; gap: 18px;
-    font: 500 44px 'Assistant', sans-serif; line-height: 1; color: var(--ink); opacity: .6; white-space: nowrap; }
-  #plate .partner img { height: 58px; display: block; }
+    font: 400 44px 'Assistant', sans-serif; line-height: 1; color: var(--ink); opacity: .6; white-space: nowrap; }
+  /* Assistant's line box sits its letters ~4px below the box centre, so the
+     words are lifted to share the eye's optical centre line. */
+  #plate .partner span { position: relative; top: -4px; }
+  #plate .partner img { height: 68px; display: block; }
 </style>
 </head>
 <body>
