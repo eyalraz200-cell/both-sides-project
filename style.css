@@ -47,9 +47,8 @@
 
 body {
   background: var(--bg);
-  /* Text is selectable (explicit instruction 2026-10-04). Only the gesture
-     surfaces opt out: the drag tray and pills, and on mobile the folds whose
-     press-and-hold opens the loupe. */
+  /* All text is selectable (explicit instruction 2026-10-04). Only the canvas
+     (no text) opts out on mobile. */
 }
 
 /* The fold badge — the current @foldN as a bare number, small, top-left.
@@ -475,8 +474,6 @@ body {
      raise handles + the Copy bar over the gesture. The title card is in
      .text-col, outside this, so it stays selectable. */
   -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
 }
 
 /* Switched to fixed once the user scrolls into @fold13 (#page-14), keeping
@@ -1600,8 +1597,6 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      summons. Same suppression the graphic column already carries for the
      @fold8 loupe. */
   -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
 }
 
 /* Matches Figma's text-box-trim:trim-both/text-box-edge:cap_alphabetic on this
@@ -3587,15 +3582,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      the scroll column's transparent section is what the finger actually
      touches, so suppressing it on the canvas alone is never enough. */
   .graphic-col,
-  #canvas,
-  #page-4,
-  #page-6,
-  #page-7,
-  #page-8,
-  #page-9,
-  #page-10,
-  #page-11,
-  #page-13 {
+  #canvas {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;

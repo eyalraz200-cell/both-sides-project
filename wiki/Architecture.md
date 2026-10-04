@@ -323,7 +323,7 @@ rAF-throttled behind passive `scroll` listeners (`page7Ticking` and friends).
 
 ## Title blocks
 
-Text is selectable everywhere (no `user-select` on `body`). Only gesture surfaces opt out with `user-select: none`: page9's drag tray and pills, and on mobile the canvas plus the press-and-hold folds (`#page-4`, `#page-6`…`#page-11`, `#page-13`), where a long-press opens the loupe instead of a selection. **Removed — don't reintroduce:** the body-wide `user-select: none`.
+All text is selectable, at both breakpoints, pills and title cards included. The only `user-select: none` left is mobile's `.graphic-col` / `#canvas`, which hold no text. **Removed — don't reintroduce:** the body-wide `user-select: none`.
 
 Each scrolling section's text is a `.section-text.text-card` — a normal-flow, 480px-wide,
 horizontally centered block that scrolls with the page (nothing pins). Visibility is an
