@@ -412,7 +412,7 @@ def flags_write(entry):
     if not isinstance(rows, list):
         return 0
     FLAGS.write_text(json.dumps(
-        {"when": time.strftime("%Y-%m-%d %H:%M"), "rows": rows},
+        {"when": time.strftime("%Y-%m-%d %H:%M:%S"), "rows": rows},
         ensure_ascii=False, indent=1) + "\n")
     return len(rows)
 

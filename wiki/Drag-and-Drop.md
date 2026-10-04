@@ -224,6 +224,14 @@ don't hoist across separate classic scripts. Same reason for `p9SyncSubtitle`.
 
 ### Keyboard path
 
+**Arrow keys walk the dots** (`p9KeyStep`, page9.js): ← → step along a row, ↑ ↓ along a
+column, by handing `onMove` a synthetic pointer at the next dot's centre so the hover,
+tooltip and dimming are the ordinary ones. The *choice* of next dot is made on
+`p9.restPositions` — every dot's resting cell, recorded by `drawPage9` before the hover
+bulge grows the hovered dot and shoves its neighbours — while the synthetic pointer aims
+at `p9.lastPositions`, the drawn position. Choosing on the drawn positions let the bulge
+bend the row the arrows were walking.
+
 A third gesture, alongside drag and click: the pills are **focusable** (`tabIndex = 0`,
 `role="button"`, `aria-pressed`) and **Enter/Space toggles** the focused pill between the
 two zones. They stay `<div>`s — a real `<button>` brings baseline styling and an implicit

@@ -312,6 +312,17 @@ HAND-REVIEW RULES (Fortress log, 2026-10-03):
   include "ירי לעבר אזרחים" or "הריגה" -> תקיפה בנשק חם, even if the text does not name the shooter.
   Without such tags, unattributed gunfire during "clashes" or "an exchange of fire" stays הפרות סדר.
 - A herd brought near houses or into a yard, a minor leading goats from an outpost -> הפרות סדר.
+- Protesters who BLOCK a road AND clash with police, light bonfires or set up barricades
+  -> הפרות סדר (not חסימת כביש), even when the police also used force. Blocking alone, or
+  blocking with arrests only, stays חסימת כביש.
+- Protesters who CLASHED WITH POLICE ("clashed with police", "scuffled with officers",
+  "confrontations with police") -> הפרות סדר, with or without a road block. Arrests, detentions or
+  police dispersal ALONE, with no clash described, do not raise the category.
+- Levelling / bulldozing Palestinian land to pave or open a road for a settlement or outpost
+  -> ניכוס שטח (the land is taken), even when a water line or crops are destroyed on the way.
+- Protesters who "clashed with counter-protesters", with no violent act described for the
+  MAIN ACTOR themselves -> הפגנה לא אלימה. Only an act the main actor did (hit, threw, pushed)
+  raises it.
 
 PASSIVE-VOICE RULE (source logs written from the victims' side):
 "A Palestinian was attacked / shot / run over", "stones were thrown", "a house was set on
@@ -356,6 +367,10 @@ Seizing someone briefly and marching or handing them over to soldiers / police i
 החזקה בכפייה — classify the assault that came with it (usually תקיפה פיזית). Use
 החזקה בכפייה only when the person was held for a sustained period (hours or more) or
 taken away to another location and kept there.
+A completed ABDUCTION / KIDNAPPING ("kidnapped two young men, assaulted them and released
+them") is החזקה בכפייה even when the victims were released soon after. Detaining people IN
+PLACE — stopping, binding hands, blindfolding, questioning, beating — and then letting them go,
+with no taking away, is תקיפה פיזית (or the weapon category if one was used).
 
 Classify an unsuccessful attempt according to what the MAIN ACTOR actually did.
 
@@ -476,15 +491,17 @@ Use פוגרום only when the MAIN ACTOR is explicitly a LARGE CROWD, MOB, MASS
 and the attack includes violence against people, homes, vehicles, businesses, or the civilian environment.
 
 פוגרום requires ALL THREE, performed by the MAIN ACTOR:
-1. A CROWD — "dozens", "tens", "hundreds", "thousands", or a number of 20 or more.
-   (12 attackers, "a group", "several settlers" is NOT a crowd.)
+1. A CROWD OF 30 OR MORE — "dozens", "hundreds", "thousands", or a stated number of 30+.
+   (15 or 20 attackers, "tens", "a group", "several settlers", or NO size stated at all is
+   NOT a crowd for this purpose — hand rule 2026-10-04.)
 2. VIOLENCE AGAINST PEOPLE — beatings, stone-throwing at people or inhabited houses,
    gunfire, pepper spray — with victims present.
 3. FIRE OR GUNFIRE AGAINST THE COMMUNITY — houses, tents, vehicles, fields, buildings
    set on fire, or live fire into the village.
 
 All three during a raid on a village, community, neighbourhood or farm = פוגרום
-(e.g. 20 settlers beat residents injuring 2 AND burn 7 vehicles -> פוגרום).
+(e.g. 50 settlers beat residents injuring 2 AND burn 7 vehicles -> פוגרום; the same by
+20 settlers -> תקיפה פיזית, by a crowd of unstated size -> classify the acts themselves).
 
 NOT a pogrom:
 - a crowd that only burns EMPTY property with nobody attacked -> פגיעה ברכוש
@@ -492,7 +509,7 @@ NOT a pogrom:
 - a mass march or demonstration in a city that turns violent (a flag march where
   marchers beat passers-by) -> classify the violence itself
 - "attacked a community" with no mechanism -> הפרות סדר
-- a small group however violent
+- a small group (under 30) however violent, or a raid whose size is not stated
 
 When all three conditions hold, פוגרום is the answer (it is top of the hierarchy).
 

@@ -546,6 +546,10 @@ const p9 = {
   // renders, since p7.leftEvents/rightEvents are loaded once and only filtered/
   // reordered, never recreated).
   lastPositions: new Map(),
+  // Same keys, but each dot's RESTING cell centre — the hover bulge's push is
+  // not in it. The arrow keys (p9KeyStep) walk this one, so a grown dot and
+  // its shoved neighbours don't bend the row they step along.
+  restPositions: new Map(),
   // { from: Map, start: timestamp, duration } while a category is moving between
   // extreme/legit; null when at rest.
   anim: null,
@@ -2160,6 +2164,7 @@ function drawPage9(ctx, W, H) {
   // straight there. Color is invariant per event (actor-based) so only position
   // and the extreme/legit opacity need to move.
   const posMap = new Map();
+  const restMap = new Map();   // resting cells, no bulge (p9.restPositions)
   // orderIndex/orderCount: this dot's position within the column it's being
   // drawn into right now (drawBandedCols passes its own forEach index/
   // orderArr.length; callers that don't care — legit dots, which never hit
@@ -2581,6 +2586,7 @@ function drawPage9(ctx, W, H) {
       let y = scopeBox.anchorY - (r + n) * cell;
       let size = tiered ? n * cell - gapPx : undefined;
       let isOwn = false;
+      restMap.set(e, { x, y, sq: size ?? SQ });   // before the bulge moves it
       if (bulges.length) {
         const own = bulges.find(b => b.ev === e);
         if (own) { size = own.size; x -= own.push; y -= own.push; isOwn = true; }   // grow about the cell centre
@@ -2705,6 +2711,7 @@ function drawPage9(ctx, W, H) {
         }
       }
       // The strip's hover bulge (p9LegitBulges, built once per frame below).
+      restMap.set(e, { x: pos.x, y: pos.y, sq: sqHere });   // before the bulge moves it
       const lb = p9LegitBulgeApply(e, pos.x, pos.y, sqHere, legitGeom, legitBulges);
       if (lb) { pos = { x: lb.x, y: lb.y }; sqHere = lb.sq; }
       // Offscreen dots are still PUT ON RECORD, only not painted. The legit
@@ -2949,6 +2956,7 @@ function drawPage9(ctx, W, H) {
   }
 
   p9.lastPositions = posMap;
+  p9.restPositions = restMap;
 
   // The picker's cue on this fold is the picked dot's own GROWTH plus the dim
   // around it (p9.pickDimT / p9PickSq above), the same shape @fold8 uses.
@@ -4448,10 +4456,17 @@ function p9HoverInit() {
       x: pos.x + (pos.sq || 0) / 2,
       y: pos.y + (pos.sq || 0) / 2,
     });
+    // CHOOSE on the resting layout, AIM at the drawn one. The hovered dot is
+    // grown and its neighbours shoved aside (p9BulgeT), so measured on the
+    // drawn positions "the next one along the row" is whichever dot the push
+    // happened to leave nearest — and the arrows wander. The resting map
+    // (p9.restPositions, same keys) keeps the rows straight; the synthetic
+    // pointer still goes to the drawn centre so the hit-test lands on it.
+    const restOf = (ev) => (p9.restPositions && p9.restPositions.get(ev)) || p9.lastPositions.get(ev);
 
     // With nothing hovered yet, start from the dot nearest the middle of the
     // canvas rather than an arbitrary end of the data.
-    const from = p9.hoveredEvent && p9.lastPositions.get(p9.hoveredEvent);
+    const from = p9.hoveredEvent && restOf(p9.hoveredEvent);
     let origin;
     if (from) origin = centreOf(from);
     else {
@@ -4460,9 +4475,9 @@ function p9HoverInit() {
     }
 
     let best = null, bestD = Infinity;
-    p9.lastPositions.forEach((pos, ev) => {
+    p9.lastPositions.forEach((drawn, ev) => {
       if (ev === p9.hoveredEvent) return;
-      const c = centreOf(pos);
+      const c = centreOf(restOf(ev));
       const ax = c.x - origin.x, ay = c.y - origin.y;
       const along  = ax * dx + ay * dy;          // distance in the pressed direction
       const across = Math.abs(ax * dy + ay * dx); // drift perpendicular to it
@@ -4470,7 +4485,7 @@ function p9HoverInit() {
       if (!from && along === 0) return;
       if (across > along) return;                 // more sideways than forward
       const d = along + across * 2;               // prefer straight ahead
-      if (d < bestD) { bestD = d; best = { ev, c }; }
+      if (d < bestD) { bestD = d; best = { ev, c: centreOf(drawn) }; }
     });
     return best;
   }
