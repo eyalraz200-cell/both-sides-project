@@ -14,7 +14,7 @@ from openpyxl import load_workbook
 MODEL = "gpt-5.6-terra"
 REASONING_EFFORT = "medium"
 CHUNK_SIZE = 250
-MAX_ACTIVE_BATCHES = 2
+MAX_ACTIVE_BATCHES = 8
 
 STATE_FILE = "event_type_state.json"
 BATCH_DIR = "event_type_batches"
@@ -727,7 +727,13 @@ def build_jobs(ws):
         # event_type_hand is a hand decision and is never re-run unless reclassify says so.
         recl = norm(ws.cell(excel_row, recl_col).value).lower() == "yes" if recl_col else False
         hand = norm(ws.cell(excel_row, hand_col).value) if hand_col else ""
-        if not recl and (current or hand):
+        # RERUN_ALL=1: the full second pass — every row that already has a type is
+        # re-sent too, EXCEPT hand-set ones. download keeps the old value in
+        # event_type_prev so the changes can be reviewed before shipping.
+        if os.getenv("RERUN_ALL") == "1":
+            if hand and not recl:
+                continue
+        elif not recl and (current or hand):
             continue
         cid = row_id or f"excel-row-{excel_row}"
         jobs.append({
@@ -907,11 +913,15 @@ def command_download():
         review_col = find_or_add_col(ws, "event_type_needs_review")
         reason_col = find_or_add_col(ws, "event_type_reason")
 
+        prev_col = find_or_add_col(ws, "event_type_prev")
         for cid, job in state["jobs"].items():
             row = job["excel_row"]
             result = results.get(cid)
             if not result:
                 continue
+            old = ws.cell(row, type_col).value
+            if old and old != result["event_type"]:
+                ws.cell(row, prev_col, old)       # kept for review; blank when unchanged
             ws.cell(row, type_col, result["event_type"])
             ws.cell(row, certainty_col, result["certainty"])
             ws.cell(row, review_col, result["needs_review"])

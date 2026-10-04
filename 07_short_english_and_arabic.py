@@ -57,6 +57,8 @@ ARABIC (`description_ar`)
   the Hebrew says so; Arab citizens of
   Israel (ערבים ישראלים) = المواطنون العرب في إسرائيل; the West Bank = الضفة الغربية; Jerusalem =
   القدس; the Temple Mount / al-Aqsa compound = المسجد الأقصى; Knesset = الكنيست.
+- Detention/abduction verbs follow the Hebrew: החזיקו בכפייה = احتجزوا بالقوة; חטפו = اختطفوا;
+  לקחו בכפייה = اقتادوا بالقوة.
 - Place names: the standard Arabic name for Arab towns and villages (حوارة, ترمسعيا,
   مسافر يطا, أم الفحم); Israeli places in their usual Arabic transliteration (تل أبيب,
   شارع كابلان, هرتسليا).

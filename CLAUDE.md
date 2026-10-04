@@ -47,6 +47,7 @@ the project itself now. `project.html` is only a redirect stub to the root so ol
 | `reload.js` | Dev-only mtime poll → auto page reload |
 | `translate_ui_ar.py` | Generates `ar/index.html` + `I18N_AR` (js/i18n.js) from the Hebrew/English pair via OpenAI — never hand-edit `ar/index.html`; see [Architecture](wiki/Architecture.md) |
 | `01_…` … `07_…` `.py` | The OpenAI Batch classification pipeline (actor → split sub-actions → event type → Hebrew → crowd size → Fortress descriptions → short English + Arabic). Order, row selection and the hand-override rules are in [Data](wiki/Data.md); **never re-run 02 over rows that carry a date in `event_type_hand`** |
+| `methodology.html` + `build_methodology.py` | The full public methodology page (Hebrew, static, self-styled); the script injects the seven `0N_*.py` prompts verbatim into its appendix — **run it after every prompt edit**. See [Data](wiki/Data.md) |
 | `server.py` | Local dev server + `events.xlsx`→`events.json` generation (derives `side` from `main_actor`; drops rows whose only source is in `SOLE_SOURCE_EXCLUDE`) |
 
 `main.js` and the `main_*` scratch files do not exist; don't recreate them.

@@ -31,6 +31,7 @@ const I18N_EN = {
   "מקרא": "Legend",
   "סגירת המקרא": "Close the legend",
   "איסוף הנתונים": "Data collection",
+  "לשיטת העבודה המלאה": "Full methodology",
   "הצגת גודל האירועים": "Show event scale",
   // @fold12
   "גררו סוגי פעולות הנחשבות קיצוניות בעיניכם": "Drag the types of action you consider extreme",

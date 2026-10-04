@@ -127,12 +127,20 @@ What differs, all gated on `.lang-en` / `isEnglish()` (page7.js):
 
 **A markup change to `index.html` must be repeated in `en/index.html`.**
 
+## `methodology.html` — the full methodology page
+
+A second, static HTML page at the root: the complete methodology write-up (sources, filters,
+grouping, classification, crowd, translation, dedupe, review, limits, prompts). Hebrew,
+`dir="rtl"`, self-contained styles, no JS. Documented in [Data](Data.md#the-methodology-page--methodologyhtml);
+regenerate its prompt appendix with `python3 build_methodology.py`. Linked from the legend
+note and the @fold16 credits; `en/` and `ar/` reach it through their `<base href="../">`.
+
 ## Search / discoverability
 
 The site is served by GitHub Pages at `https://eyalraz200-cell.github.io/both-sides-project/`
 (no `CNAME`). The page carries a `<title>`, a `<meta name="description">`, a
 self-referencing absolute `<link rel="canonical">`, the OG/Twitter card set, a favicon and
-`lang="he"`. `robots.txt` (allow-all + the `Sitemap:` line) and `sitemap.xml` (both URLs)
+`lang="he"`. `robots.txt` (allow-all + the `Sitemap:` line) and `sitemap.xml` (the root and `methodology.html`)
 sit at the repo root; `index.html` also carries a JSON-LD `NewsArticle` block whose
 headline, author and date **mirror the visible `<h1>` and `.shk-byline`** — change one and
 change the other, or the markup contradicts the page.

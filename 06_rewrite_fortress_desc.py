@@ -54,8 +54,22 @@ RULES FOR THE HEBREW (`description_he`)
    word פלסטיני where the original says "תושבים" and the place is a Palestinian village.
 6. Numbers as digits with the Hebrew prefix glued ("כ־80", "ארבעה כלי רכב" may stay as a
    word). Use ־ (maqaf) and ״ as the dataset does.
-7. Settlement re-establishment / outpost rows ("ההתנחלות גנים … הוקמה מחדש"): subject is
+7. TERMINOLOGY (user's choices, 2026-10-03): Arab citizens of Israel = ערבים ישראלים (two words,
+   no maqaf); Haredi draft refusers = עריקים / עריקות (never משתמטים); the judicial overhaul =
+   הרפורמה המשפטית; quotations inside Hebrew use ״, never the ASCII " character.
+8. Settlement re-establishment / outpost rows ("ההתנחלות גנים … הוקמה מחדש"): subject is
    "מתנחלים ישראלים הקימו מחדש את …".
+
+ABDUCTION / DETENTION WORDING (user rule, 2026-10-04) — applies to events whose type is החזקה בכפייה:
+1. "detained" / "held" / "seized and held" -> החזיקו בכפייה (NEVER עיכבו). Match grammar:
+   "detained him" -> החזיקו אותו בכפייה; "detained a shepherd" -> החזיקו בכפייה רועה; a single
+   settler -> החזיק בכפייה.
+2. "abducted" / "kidnapped" -> חטפו ONLY when the text says WHERE they were taken (to an outpost,
+   to a settlement, into a vehicle, to the hills) or HOW (forced into a car, tied up and dragged
+   away). Otherwise -> לקחו בכפייה ("abducted two Palestinians from Jit" -> לקחו בכפייה שני
+   פלסטינים מג'ית). Match number and gender (לקח / לקחו, חטף / חטפו).
+Arabic follows the Hebrew: החזיקו בכפייה = احتجزوا بالقوة; חטפו = اختطفوا; לקחו בכפייה = اقتادوا بالقوة.
+
 
 RULES FOR THE ENGLISH (`description_en`)
 - One or two sentences, the same facts as the Hebrew, 80–140 characters. Do NOT start with

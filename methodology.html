@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>שיטת העבודה — קיצוניים משני הצדדים</title>
+  <meta name="description" content="המתודולוגיה המלאה של הפרויקט קיצוניים משני הצדדים: מקורות הנתונים, כללי הסינון, שיוך לקבוצות, סיווג סוגי הפעולה, הערכת גודל הקהל, תרגום ועריכה, איתור כפילויות, והנחיות המודלים במלואן." />
+  <link rel="canonical" href="https://eyalraz200-cell.github.io/both-sides-project/methodology.html" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg?v=2" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300..800&display=swap" rel="stylesheet" />
+  <style>
+    /* Self-contained on purpose: style.css is the scrollytelling page's sheet and
+       carries thousands of lines of canvas-era rules. This page shares only the
+       tokens that matter — the background, the Discordia title face, Assistant body. */
+    @font-face {
+      font-family: 'Discordia';
+      font-weight: 400;
+      src: url('fonts/Discordia-Regular.otf') format('opentype');
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root { --bg: #FDFCFF; --ink: #111; --muted: rgba(0,0,0,0.6); --rule: rgba(0,0,0,0.15); }
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font: 400 17px/1.65 'Assistant', sans-serif;
+      direction: rtl;
+      text-align: right;
+    }
+    main { max-width: 680px; margin: 0 auto; padding: 56px 24px 96px; }
+    .back { font-size: 14px; color: var(--muted); text-decoration: none; }
+    .back:hover { text-decoration: underline; }
+    h1 { font: 400 36px/1.2 'Discordia', 'Assistant', sans-serif; margin: 28px 0 6px; }
+    .lede { font-size: 18px; color: var(--muted); margin-bottom: 40px; }
+    h2 { font: 600 22px/1.3 'Assistant', sans-serif; margin: 48px 0 12px; padding-top: 24px; border-top: 1px solid var(--rule); }
+    h3 { font: 600 17px/1.4 'Assistant', sans-serif; margin: 24px 0 6px; }
+    p, li { text-wrap: pretty; }
+    p { margin-bottom: 12px; }
+    ul, ol { margin: 0 0 12px 0; padding-right: 22px; }
+    li { margin-bottom: 6px; }
+    a { color: inherit; text-decoration: underline; text-underline-offset: 0.12em; text-decoration-thickness: 1px; }
+    a:hover { text-decoration-thickness: 2px; }
+    .latin { direction: ltr; unicode-bidi: isolate; }
+    table { border-collapse: collapse; width: 100%; margin: 12px 0 18px; font-size: 15px; }
+    th, td { text-align: right; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--rule); }
+    th { font-weight: 600; }
+    td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .swatch { display: inline-block; width: 10px; height: 10px; margin-inline-end: 6px; vertical-align: -1px; }
+    .note { font-size: 15px; color: var(--muted); }
+    .toc { font-size: 15px; columns: 2; column-gap: 24px; margin-bottom: 8px; }
+    .toc li { break-inside: avoid; }
+    /* The prompts are English, quoted verbatim: LTR blocks inside the RTL page. */
+    details { margin: 10px 0 18px; border: 1px solid var(--rule); border-radius: 4px; }
+    summary { cursor: pointer; padding: 10px 14px; font-weight: 600; }
+    summary .note { font-weight: 400; margin-inline-start: 8px; }
+    pre {
+      direction: ltr; text-align: left; unicode-bidi: isolate;
+      font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre-wrap; overflow-wrap: anywhere;
+      padding: 14px 16px; border-top: 1px solid var(--rule);
+      background: rgb(247, 246, 251);
+    }
+    @media (max-width: 600px) {
+      body { font-size: 16px; }
+      main { padding: 32px 16px 72px; }
+      h1 { font-size: 28px; }
+      .toc { columns: 1; }
+      table { font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <a class="back" href="./">← לפרויקט</a>
+  <h1>שיטת העבודה</h1>
+  <p class="lede">איך נבנה מאגר האירועים שמאחורי «קיצוניים משני הצדדים»: מניין הגיעו הנתונים, מה נכלל ומה הושמט, איך שויך כל אירוע לקבוצה ולסוג פעולה, ואילו החלטות התקבלו בידי אדם ואילו בעזרת מודלי שפה.</p>
+
+  <ol class="toc">
+    <li><a href="#scope">מה נמדד</a></li>
+    <li><a href="#sources">מקורות הנתונים</a></li>
+    <li><a href="#filters">מה הושמט מהמאגר</a></li>
+    <li><a href="#groups">שיוך לקבוצות ולמחנות</a></li>
+    <li><a href="#split">פיצול אירועים מורכבים</a></li>
+    <li><a href="#types">סיווג סוגי הפעולה ומדרג החומרה</a></li>
+    <li><a href="#crowd">הערכת גודל הקהל</a></li>
+    <li><a href="#text">תיאורי האירועים: עברית, אנגלית וערבית</a></li>
+    <li><a href="#dedupe">איתור כפילויות</a></li>
+    <li><a href="#review">בדיקה אנושית ותיקונים ידניים</a></li>
+    <li><a href="#tools">הכלים</a></li>
+    <li><a href="#limits">מגבלות</a></li>
+    <li><a href="#prompts">נספח: הנחיות המודלים במלואן</a></li>
+  </ol>
+
+  <h2 id="scope">1. מה נמדד</h2>
+  <p>המאגר כולל <strong>פעולות פוליטיות פיזיות</strong> שביצעו אזרחי ישראל במרחב הציבורי, בישראל ובשטחים, מ־1 בינואר 2023 ועד היום. «פיזיות» פירושו שמשהו קרה בשטח: הפגנה, חסימת כביש, עימות, תקיפה, פגיעה ברכוש, תפיסת קרקע וכדומה. אמירות, פוסטים, הצהרות או עמדות שלא לוו בפעולה ממשית אינם במאגר.</p>
+  <p>יחידת המדידה היא <strong>אירוע</strong>: פעולה אחת, בתאריך אחד, במקום אחד, של קבוצה אחת. כל אירוע נושא תאריך, קבוצה (ומחנה), סוג פעולה, הערכת גודל קהל ותיאור קצר בעברית, באנגלית ובערבית. כל ריבוע באתר הוא אירוע אחד.</p>
+  <p>נכון ל־4 באוקטובר 2026 המאגר המוצג מונה <strong>12,053 אירועים</strong>: 5,552 של גוש השינוי ו־6,501 של קואליציית הימין, מ־1 בינואר 2023 ועד 3 ביולי 2026.</p>
+
+  <h2 id="sources">2. מקורות הנתונים</h2>
+  <h3>ACLED</h3>
+  <p>רוב האירועים לקוחים מ־<a href="https://acleddata.com/" target="_blank" rel="noopener"><span class="latin">ACLED</span></a> (<span class="latin">Armed Conflict Location &amp; Event Data</span>), גוף מחקר בינלאומי המתעד וממפה אירועי מחאה ואלימות פוליטית ברחבי העולם, על בסיס דיווחים מכלי תקשורת וממקורות מקומיים. כל רשומה של <span class="latin">ACLED</span> כוללת תאריך, מיקום, תיאור באנגלית, סוג אירוע לפי המתודולוגיה של <span class="latin">ACLED</span> עצמו, ורשימת המקורות שעליהם הרשומה מתבססת.</p>
+  <p>נמשכו כל הרשומות של <span class="latin">ACLED</span> לישראל ולשטחים מתחילת 2023: 14,451 רשומות. מהן נבחרו רק אלה שבהן הפועל המרכזי הוא אחת משש הקבוצות שבפרויקט (ראו סעיף 4). הסיווג של <span class="latin">ACLED</span> לסוגי אירועים לא שימש את הפרויקט: הקטגוריות, מדרג החומרה והשיוך לקבוצות ולמחנות הוגדרו כולם במסגרת הפרויקט ואינם של <span class="latin">ACLED</span>.</p>
+  <p>בהתאם לתנאי השימוש של <span class="latin">ACLED</span>, הנתונים הגולמיים אינם מתפרסמים; האתר מציג רק את שכבת הניתוח שנבנתה עליהם. ציטוט: <span class="latin">ACLED, accessed on 10 July 2026. www.acleddata.com</span>.</p>
+
+  <h3>המבצר</h3>
+  <p>מקור משלים לרשומות <span class="latin">ACLED</span>, המכסה אירועי מתנחלים בלבד: יומן אלימות המתנחלים של <strong>המבצר</strong>, רשימה בעברית של אירועים בגדה המערבית מ־6 באוקטובר 2023 ועד 28 בספטמבר 2026, עם מיקום, תיוג ואסמכתאות לכל שורה. היומן נוסף למאגר ב־2 באוקטובר 2026, 3,778 שורות. שורותיו תומצתו במקור בשפה קצרה («בתים הותקפו»); הן נוסחו מחדש בסגנון של שאר המאגר (ראו סעיף 8), והאירועים שכבר הופיעו ב־<span class="latin">ACLED</span> הוסרו (ראו סעיף 9).</p>
+
+  <h3>אירועים שנוספו ידנית</h3>
+  <p>חמישה אירועים נוספו ידנית, ללא מזהה <span class="latin">ACLED</span>, מתוך דיווחים חדשותיים.</p>
+
+  <h3>איך מקורות נזכרים באתר</h3>
+  <p>לכל שורה שמור שדה <span class="latin">data_source</span> (<span class="latin">acled</span> / <span class="latin">the fortress</span> / <span class="latin">manual</span>) ושדה <span class="latin">source</span> עם שמות כלי התקשורת שעליהם הסתמך המקור. השדות אינם מוצגים באתר, אבל הם קובעים מה נכלל (סעיף 3).</p>
+
+  <h2 id="filters">3. מה הושמט מהמאגר</h2>
+  <p>ארבעה כללי סינון חלים על כל שורה לפני שהיא מגיעה לאתר:</p>
+  <ol>
+    <li><strong>פועל מרכזי שאינו אחת משש הקבוצות.</strong> אירועים שבהם הפועל המרכזי הוא פלסטינים בגדה או בעזה, כוחות הביטחון לבדם, פשיעה רגילה, סכסוכים אישיים או גורמים זרים מסומנים <span class="latin">not relevant</span> ואינם במאגר. גם פעולה שביצעו חיילים, שוטרים או כוחות ביטחון, אפילו בנוכחות מתנחלים או לבקשתם, נחשבת פעולה של המדינה ואינה נכללת.</li>
+    <li><strong>מקור יחיד: המחלקה לענייני משא ומתן של אש״ף.</strong> המקור הגדול ביותר ברשומות <span class="latin">ACLED</span> לישראל הוא <span class="latin">PLO Negotiations Affairs Department</span>, שמדווח על אירועי מתנחלים, 5,056 רשומות. גוף זה הוא צד מעורב בסכסוך, ולכן <strong>רשומה שהמקור הזה הוא המקור היחיד שלה אינה נכללת</strong>: 4,036 רשומות הושמטו. 1,020 רשומות שאותו מקור מופיע בהן לצד כלי תקשורת אחר נשארו.</li>
+    <li><strong>כפילויות.</strong> אירוע שמופיע הן ביומן המבצר הן ב־<span class="latin">ACLED</span> נספר פעם אחת, לפי הרשומה של <span class="latin">ACLED</span>. פירוט בסעיף 9.</li>
+    <li><strong>קצה ציר הזמן.</strong> הציר מסתיים בתאריך האירוע האחרון של <span class="latin">ACLED</span> (כיום 3 ביולי 2026). יומן המבצר ממשיך שבועות אחדים אחרי הייצוא האחרון של <span class="latin">ACLED</span>, ואירועים אלה (633 כיום) מעובדים אך מוסתרים זמנית, כדי שלא יוצג זנב שבו רק קבוצה אחת מתועדת. ייצוא חדש של <span class="latin">ACLED</span> מקדים את הקצה מעצמו.</li>
+  </ol>
+  <p>בנוסף, שתי רשומות של <span class="latin">ACLED</span> הוסתרו ידנית אחרי בדיקה, ו־87 שורות של המבצר שתיארו פעמיים את אותו אירוע הוסתרו גם הן (סעיף 9).</p>
+
+  <h2 id="groups">4. שיוך לקבוצות ולמחנות</h2>
+  <p>לכל אירוע משויך <strong>פועל מרכזי</strong> אחד: הקבוצה שיזמה או ביצעה את הפעולה המרכזית המתוארת ברשומה. לא הקבוצה שהוזכרה ראשונה, לא הנפגעים, לא הקבוצה שנגדה הפגינו, ולא המשטרה או הצבא שהגיבו. שש הקבוצות, בשני מחנות:</p>
+  <table>
+    <tr><th>מחנה</th><th>קבוצה</th><th>מפתח בנתונים</th><th>אירועים</th></tr>
+    <tr><td rowspan="3">קואליציית הימין</td><td><span class="swatch" style="background:#F9B624"></span>תנועות התנחלות באיו״ש</td><td class="latin">settlers</td><td class="num">5,828</td></tr>
+    <tr><td><span class="swatch" style="background:#454545"></span>מפגינים חרדים</td><td class="latin">haredi jews</td><td class="num">384</td></tr>
+    <tr><td><span class="swatch" style="background:#F024FF"></span>קבוצות ימין לאומיות</td><td class="latin">right wing protesters</td><td class="num">289</td></tr>
+    <tr><td rowspan="3">גוש השינוי</td><td><span class="swatch" style="background:#6B89FF"></span>מתנגדי הרפורמה המשפטית ומדיניות הממשלה</td><td class="latin">protesters against government</td><td class="num">2,627</td></tr>
+    <tr><td><span class="swatch" style="background:#FF1A94"></span>תומכי עסקת חטופים ומתנגדי המלחמה</td><td class="latin">peace movements</td><td class="num">2,380</td></tr>
+    <tr><td><span class="swatch" style="background:#31CE1C"></span>גורמים ערבים ישראלים</td><td class="latin">arab israelis</td><td class="num">545</td></tr>
+  </table>
+  <p>השיוך נעשה בידי מודל שפה שקרא את תיאור האירוע באנגלית (או בעברית, ליומן המבצר) לפי הנחיה כתובה (נספח, הנחיה 1). עיקרי ההנחיה:</p>
+  <ul>
+    <li><strong>הדרישה קובעת את המחנה, לא הכינוי.</strong> הפגנה שדרישתה להמשיך במלחמה, לסרב להפסקת אש או לעסקה, לחסום סיוע הומניטרי או להגן על חיילים מפני המדינה היא «קבוצות ימין לאומיות», גם כשהטקסט אומר רק «תושבים», «מילואימניקים», «משפחות שכולות».</li>
+    <li><strong>תנועות ההתנחלות</strong> הן תנועת ההתנחלות הפועלת בגדה (כולל ישראלים מתוך ישראל שפושטים על כפר בגדה, וכולל אקטיביזם של התנועה בכל מקום: נחלה, נוער הגבעות, מצעדי «התיישבות» בעזה ובלבנון). אלימות לאומנית יהודית בתוך ישראל ובירושלים, כמו תקיפת נהג אוטובוס ערבי, היא «קבוצות ימין לאומיות».</li>
+    <li><strong>מתנגדי הרפורמה ומדיניות הממשלה</strong> מאחדים את מתנגדי הרפורמה המשפטית, מפגינים נגד הממשלה, מועצת אוקטובר, מפגינים נגד המלחמה באיראן (2026), אחים לנשק ומפגינים להגנת היועצת המשפטית ובתי המשפט. בנתונים נשמר גם תת־סוג (מפגיני רפורמה / נגד הממשלה / עסקת חטופים) שאינו מוצג.</li>
+    <li><strong>תומכי עסקת חטופים ומתנגדי המלחמה</strong> מתחילים ב־7 באוקטובר 2023. לפני כן הקטגוריה אינה בשימוש; הפגנות נגד הכיבוש והפגנות סולידריות יהודיות־ערביות מלפני התאריך הזה שויכו ידנית ל«גורמים ערבים ישראלים». האירוע הראשון של הקבוצה הוא מ־14 באוקטובר 2023.</li>
+    <li><strong>מפגינים חרדים</strong> הם פעולה קולקטיבית חרדית בלבד (גיוס, נתיחות, רכבת קלה, שבת). הפגנות של חב״ד, משיחיים או הציונות הדתית הן «קבוצות ימין לאומיות».</li>
+    <li><strong>גורמים ערבים ישראלים</strong> הם ערבים אזרחי ישראל או תושביה הפועלים יחד בהקשר פוליטי או אזרחי ישראלי, ורק כשהתיאור קובע זאת. מיקום ביישוב ערבי לבדו אינו ראיה.</li>
+    <li><strong>פעולות של הצבא</strong> אינן נכללות גם כשמתנחלים נוכחים. המבחן הוא מי פעל: מתנחלים שפעלו יחד עם חיילים, או מתנחלים שפעלו ואחר כך חיילים עשו דבר נפרד, נשארים «תנועות התנחלות»; חיילים שפעלו לבדם או הובילו, ו«חיילים שהתושבים מזהים כמתנחלים», אינם במאגר. רבש״ץ שיורה בעצמו, בלי חיילים, הוא «תנועות התנחלות».</li>
+  </ul>
+  <p>לצד השיוך המודל מחזיר דרגת ביטחון, דגל «דורש בדיקה» והנמקה קצרה. השורות שסומנו נבדקו בידי אדם (סעיף 10). הכללים לעיל, רובם תוצאה של אותה בדיקה, נוספו להנחיה כדי שריצות עתידיות יחזרו על ההחלטות.</p>
+  <p>שיוך הקבוצה למחנה הוא טבלה קבועה: שלוש הקבוצות הראשונות לקואליציית הימין, שלוש האחרונות לגוש השינוי.</p>
+
+  <h2 id="split">5. פיצול אירועים מורכבים</h2>
+  <p>רשומה של <span class="latin">ACLED</span> מתארת לא פעם שתי פעולות שונות של אותו ציבור: «כ־40,000 הפגינו בתל אביב… עשרות חסמו את איילון». הפגנה וחסימת כביש הן שני סוגי פעולה שונים, בשני סדרי גודל שונים, ולכן רשומות כאלה <strong>פוצלו לאירוע אחד לכל פעולה</strong> (נספח, הנחיה 4):</p>
+  <ul>
+    <li>מפצלים רק כשתת־קבוצה של אותו פועל מרכזי עושה דבר נפרד, המסומן בגודל משלו («עשרות», «כ־200», «חלק מהמפגינים») או בזמן ומקום אחרים באותו יום.</li>
+    <li>לא מפצלים כשכל הקהל עשה את הדבר («אלפים חסמו»), וכשהפעולה הנוספת היא של גורם משני: משטרה, חיילים, נהגים, מפגיני־נגד, פלסטינים שהשיבו למתנחלים. לאלה לא נוצר אירוע לעולם.</li>
+    <li>האירוע הראשי שומר את גודל הקהל הכולל; אירוע התת־קבוצה מקבל רק גודל שהטקסט מצמיד לתת־הקבוצה עצמה, ואם אין כזה, «לא צוין». התיאור המקורי נשמר בשדה נפרד, וכל חצי מתואר כך שיעמוד בפני עצמו.</li>
+  </ul>
+  <p>שני סבבי פיצול נערכו (האחרון ב־3 באוקטובר 2026, 70 רשומות → 84 אירועי־בת). האירועים החדשים עברו אחר כך סיווג ותרגום כמו כל שורה.</p>
+
+  <h2 id="types">6. סיווג סוגי הפעולה ומדרג החומרה</h2>
+  <p>כל אירוע סווג לאחד מ־10 סוגי פעולה, המסודרים במדרג חומרה. כשהפועל המרכזי ביצע באותו אירוע כמה פעולות, האירוע מסווג לפי <strong>הפעולה הגבוהה ביותר במדרג</strong> שהוא עצמו ביצע. פעולות של גורם משני (משטרה שפיזרה, חיילים שירו) אינן משפיעות על הסיווג גם כשהן חמורות יותר.</p>
+  <table>
+    <tr><th>#</th><th>סוג פעולה</th><th>בקצרה</th><th>אירועים</th></tr>
+    <tr><td class="num">1</td><td>הפגנה לא אלימה</td><td>הפגנה, עצרת, מצעד או משמרת שבהם הפועל המרכזי לא עשה דבר חמור יותר. סיסמאות, קריאות גנאי ודיבור מסית אינם מעלים את הסיווג.</td><td class="num">4,821</td></tr>
+    <tr><td class="num">2</td><td>חסימת כביש</td><td>חסימת כביש, צומת, כניסה או נתיב גישה כחלק ממחאה.</td><td class="num">1,052</td></tr>
+    <tr><td class="num">3</td><td>הפרות סדר</td><td>התפרעות, עימותים עם המשטרה, הפרת סדר ציבורי, איומים ישירים ללא פעולה ממשית, חדירת מתנחלים לכפר. גם «פרצו עימותים» ו«נזרקו חפצים» בלי שתיאור קובע מה הפועל עשה.</td><td class="num">917</td></tr>
+    <tr><td class="num">4</td><td>פגיעה ברכוש</td><td>נזק מכוון, הצתה של מבנה או רכב ריקים, גניבה, ביזה, פגיעה בבעלי חיים ובגידולים.</td><td class="num">1,893</td></tr>
+    <tr><td class="num">5</td><td>ניכוס שטח</td><td>הקמת מאחז, גידור, חריש, הצבת מבנים או סלילת דרך לשם שליטה בקרקע. הכנסת עדרים לבדה אינה ניכוס.</td><td class="num">591</td></tr>
+    <tr><td class="num">6</td><td>תקיפה פיזית</td><td>אלימות גופנית ישירה ללא נשק, המתוארת במפורש: היכו, דחפו, בעטו. «עימותים» לבדם אינם תקיפה.</td><td class="num">1,105</td></tr>
+    <tr><td class="num">7</td><td>החזקה בכפייה</td><td>חטיפה או החזקה של אדם למשך זמן או הוצאתו למקום אחר. עצירה במקום והכאה היא תקיפה, לא החזקה.</td><td class="num">30</td></tr>
+    <tr><td class="num">8</td><td>תקיפה בנשק קר</td><td>סכין, אלה, מוט, אבנים לעבר אנשים, רכבים או בתים, בקבוקים לעבר אנשים, גז פלפל, דריסה או ניסיון דריסה.</td><td class="num">1,143</td></tr>
+    <tr><td class="num">9</td><td>תקיפה בנשק חם</td><td>ירי, כיוון נשק, רימון, מטען, בקבוק תבערה, זיקוקים ואבוקות שנורו לעבר אנשים, ירי לעבר בתים מיושבים, הצתה כשאנשים בפנים.</td><td class="num">486</td></tr>
+    <tr><td class="num">10</td><td>פוגרום</td><td>קהל של 30 ומעלה שתוקף יישוב ובו גם אלימות נגד אנשים גם הצתה או ירי לעבר הקהילה. חסר אחד משלושת התנאים, מסווגים את המעשים עצמם.</td><td class="num">15</td></tr>
+  </table>
+  <p>המדרג נקבע במסגרת הפרויקט בהישען על שני מדרגים מקובלים: <a href="https://gdeltproject.org/" target="_blank" rel="noopener"><span class="latin">CAMEO / Goldstein Scale</span></a> של <span class="latin">GDELT</span> לדירוג אירועים פוליטיים, ו־<a href="https://www.ons.gov.uk/" target="_blank" rel="noopener"><span class="latin">Crime Severity Score</span></a> של משרד הסטטיסטיקה הבריטי (<span class="latin">ONS</span>). הסיווג עצמו נעשה בידי מודל שפה לפי הנחיה (נספח, הנחיה 2), שמקבלת את הפועל המרכזי כנתון ומסווגת את פעולותיו בלבד.</p>
+  <p>ההנחיה מפרטת עשרות כללי קצה שהתבררו בבדיקה ידנית. כמה דוגמאות לגבולות שנקבעו:</p>
+  <ul>
+    <li>אין קטגוריית «הטרדה ואיומים». איומים מסווגים לפי מה שנעשה בפועל: דיבור בלבד בהפגנה נשאר הפגנה; איום ישיר ומכוון כלפי אדם או קהילה הוא הפרות סדר; איום דרך פעולה (חסימה, נזק, תקיפה) מסווג לפי הפעולה.</li>
+    <li>אבנים לעבר אנשים, רכבים או בתים הן תמיד נשק קר, גם בלי נפגעים. ביצים, רימוני עשן ו«חפצים» הם הפרות סדר.</li>
+    <li>כל דבר שבוער או מתפוצץ ונורה או מושלך <em>לעבר אדם</em>, זיקוק, אבוקה, בקבוק תבערה, הוא נשק חם. זיקוקים שהופעלו במהלך התפרעות בלי יעד הם הפרות סדר.</li>
+    <li>«חמושים» לבדו אינו מספיק: אם לא ירו, כיוונו או היכו בנשק, מסווגים את מה שעשו.</li>
+    <li>הסרת שלט, הפלת מחסום זמני או פירוק חסימה אינם פגיעה ברכוש אלא חלק מההפגנה או מהעימות.</li>
+    <li>מאהל מחאה, «מאחז דמוקרטיה», חציה סמלית לעזה כדי «להקים התנחלות» אינם ניכוס שטח אלא פעולת מחאה.</li>
+    <li>ביומנים שנכתבו מצד הנפגעים («פלסטיני הותקף», «בית הוצת») ההיעדר של נושא תחבירי אינו מוריד את הסיווג: הפועל המרכזי עשה זאת.</li>
+    <li>פוגרום דורש קהל של 30 ומעלה (סף שהועלה מ־20 ב־4 באוקטובר 2026; «15 מתנחלים», «קבוצה» או גודל לא מצוין אינם קהל), אלימות נגד אנשים, ואש או ירי לעבר הקהילה. כל השלושה יחד.</li>
+  </ul>
+  <p>גם כאן המודל מחזיר דרגת ביטחון, דגל לבדיקה והנמקה בעברית, הנשמרת לצד כל שורה.</p>
+
+  <h2 id="crowd">7. הערכת גודל הקהל</h2>
+  <p>לכל אירוע שדה גודל קהל: כמה אנשים השתתפו <em>בצד הפועל המרכזי</em>. חלק מהרשומות הגיעו עם הערכה; לשאר הופק השדה בידי מודל שקרא את התיאור לפי הנחיה (נספח, הנחיה 5). הכללים:</p>
+  <ul>
+    <li>נספרים רק המשתתפים בצד הפועל: המפגינים, המתנחלים, התוקפים. לא שוטרים, לא נפגעים, לא עצורים, לא מפגיני־נגד, ולא מספרים אחרים בטקסט (קברים, רכבים, עצים, ימי מלחמה).</li>
+    <li>הערך נשמר באוצר המילים של המקור: «about 2,000», «dozens», «tens of thousands», «3». כשיש שתי הערכות לאותו קהל (משטרה ומארגנים) נלקחת הגבוהה.</li>
+    <li>כשאין בטקסט דבר על גודל הקבוצה, הערך הוא «no report», במפורש. אין ניחוש לפי סוג האירוע: פוגרום או מצעד בלי גודל נשארים ללא דיווח.</li>
+  </ul>
+  <p>לצורך ההצגה הערך הטקסטואלי מומר למספר אחד: המספר הגדול ביותר בטקסט, או אמצע התחום של מילת הגודל: «hundreds of thousands» 300,000 · «tens of thousands» 30,000 · «thousands» 3,000 · «hundreds» 300 · «dozens» 50 · «tens» 30. «dozens to hundreds» מתפרש לקצה הגבוה, כי כל מספר במאגר הוא הערכת־חסר של עד ראייה. באתר המספר קובע את גודל הריבוע בשלוש דרגות; הספים הם החלטת תצוגה ולא חלק מהנתון. כיום יש הערכת גודל ל־3,602 מתוך 12,053 האירועים; לשאר אין דיווח.</p>
+
+  <h2 id="text">8. תיאורי האירועים: עברית, אנגלית וערבית</h2>
+  <p>הטקסט המוצג בריחוף מעל ריבוע הוא תיאור קצר של האירוע. <strong>העברית היא טקסט הייחוס</strong>; האנגלית והערבית נגזרות ממנה.</p>
+  <h3>עברית מתוך רשומות ACLED</h3>
+  <p>התיאור של <span class="latin">ACLED</span> תורגם ונערך לעברית בידי מודל לפי הנחיה (נספח, הנחיה 3): עבר, בלי התאריך בפתיחה, בלי שם המקור, בלי הסבר או פרשנות, ובלי להוסיף דבר שאינו באנגלית. נשמרים מי פעל, מה עשה, היכן, כמה, ומה התוצאה (פצועים, עצורים) והדרישה הפוליטית כשהיא מרכזית. ככל שהמקור ארוך יותר הדחיסה חזקה יותר: רשומה של 250 תווים באנגלית הופכת ל־60–130 תווים בעברית, ורשומה של 900 תווים ל־180–320. רשימות ארוכות של ארגונים ונואמים מתומצתות. מלבד התרגום והקיצור, לא שונה דבר בעובדות.</p>
+  <p>מינוח שנקבע ידנית: «הרפורמה המשפטית» (לא «המהפכה»); «עריקים» ו«עריקות» לחרדים המשתמטים משירות; «ערבים ישראלים» בשתי מילים; מירכאות עבריות (״); שמות מקומות נשארים כפי שהם.</p>
+  <h3>עברית מתוך יומן המבצר</h3>
+  <p>שורות היומן נכתבו במקור בלשון מקוצרת ולעתים סבילה («בתים הותקפו»). כל שורה נוסחה מחדש בידי מודל (נספח, הנחיה 6) בסגנון של שאר המאגר: משפט או שניים בעבר, 70–110 תווים, הפועל כנושא מפורש בתחילת המשפט («מתנחלים ישראלים תקפו…»), שם המקום בתוך המשפט, וכל עובדה מהמקור נשמרת (מספרים, נשק, מסכות, לילה, תוצאה) בלי להוסיף דבר. השורה המקורית נשמרת בשדה נפרד. באותה קריאה נכתב גם תיאור אנגלי קצר, כי ליומן אין אנגלית.</p>
+  <h3>אנגלית</h3>
+  <p>התיאורים המקוריים של <span class="latin">ACLED</span> ארוכים, לעתים כמה משפטים של רקע, נואמים והצהרות משטרה. לעמוד האנגלי נכתב לכל אירוע <strong>תיאור אנגלי קצר שהוא תרגום של השורה העברית, עובדה מול עובדה</strong> (נספח, הנחיה 7): מי, מה, היכן, כמה, תוצאה. דבר שאינו בעברית אינו נכנס, גם אם המקור האנגלי מכיל אותו. האורך מוגבל ל־1.4 מאורך העברית ולא יותר מ־360 תווים; כדי להתאים, מצמצמים ניסוח, לא עובדות. שמות מקומות ואנשים נלקחים מהאנגלית המקורית ולא מתורגמים חזרה. התיאור המקורי של <span class="latin">ACLED</span> נשמר בנתונים ומשמש את שלבי הסיווג, אך אינו מוצג.</p>
+  <h3>ערבית</h3>
+  <p>הערבית היא תרגום נאמן של השורה העברית לערבית ספרותית בלשון חדשותית נייטרלית, באותן מגבלות אורך, עם מילון מונחים קבוע (מסתוטנון למתנחלים, אל־תעדילאת אל־קדאא׳יה לרפורמה המשפטית, אל־מח׳תטפון לחטופים, אל־מואטנון אל־ערב פי אסראא׳יל לערבים ישראלים) ושמות מקומות בשמם הערבי התקני. המודל אינו מוסיף מילה שהעברית אינה מצדיקה.</p>
+  <p>תווית הממשק (כותרות, מקרא, קטגוריות) תורגמה בנפרד, גם היא בעזרת מודל, וכמה מונחים נקבעו ידנית.</p>
+
+  <h2 id="dedupe">9. איתור כפילויות</h2>
+  <h3>המבצר מול ACLED</h3>
+  <p>יומן המבצר ו־<span class="latin">ACLED</span> מתעדים במידה רבה את אותם אירועים. כדי שאירוע לא ייספר פעמיים, <strong>כל שורה של המבצר הושוותה לכל רשומת <span class="latin">ACLED</span> באותו מקום, בטווח של יום אחד לכל כיוון</strong>, וקוראים (מודלי שפה) קבעו לכל צמד: אותו אירוע בוודאות (<span class="latin">sure</span>), לא בטוח, או שונה. התוצאה בקריאה הראשונה (3 באוקטובר 2026): 1,416 שורות כפולות בוודאות, 342 לא בטוחות, 2,020 ללא מקבילה. ה־342 נקראו שנית בידי 12 קוראים, שהונחו להעדיף «אותו אירוע» כשהמקום והמעשה מתלכדים ושום פרט לא סותר: 293 נקבעו כפולות, 38 שונות, 11 נותרו לא בטוחות והוכרעו ידנית (5 כפולות, 6 שונות). סך הכול 1,714 שורות של המבצר הוכרו כמתארות אירוע שכבר ב־<span class="latin">ACLED</span>.</p>
+  <p><strong>ברירת המחדל: <span class="latin">ACLED</span> מנצח.</strong> השורה הכפולה של המבצר מוסתרת, ובשדה שלה נשמר מזהה רשומת <span class="latin">ACLED</span> המקבילה והנימוק של הקוראים. שורות שנקבעו «שונות» נשארות במאגר.</p>
+  <h3>כפילויות בתוך המבצר</h3>
+  <p>היומן עצמו מתאר לעתים אירוע אחד בשתי שורות. שורות המבצר שנותרו קובצו לפי מקום ויום (±1), 273 קבוצות, ונקראו בידי שישה קוראים: 63 קבוצות כפולות, 87 שורות הוסתרו, והשורה המפורטת ביותר בכל קבוצה נשמרה (4 באוקטובר 2026).</p>
+  <h3>כפילויות בתוך ACLED</h3>
+  <p>שני צמדי רשומות של <span class="latin">ACLED</span> חולקים מזהה אירוע אחד ונספרים כיום פעמיים; הם מסומנים לטיפול.</p>
+
+  <h2 id="review">10. בדיקה אנושית ותיקונים ידניים</h2>
+  <p>המודלים לא עבדו לבדם. כל שלב לווה בבדיקות מדגמיות ובסבבי תיקון, והחלטות נשמרות בשלוש שכבות:</p>
+  <ol>
+    <li><strong>תיקון ידני בשורה</strong>, עם חותמת תאריך בעמודה נפרדת (<span class="latin">main_actor_hand</span>, <span class="latin">event_type_hand</span>, <span class="latin">description_hand</span>). ריצה חוזרת של המודל לעולם אינה דורסת שורה חתומה.</li>
+    <li><strong>כלל בהנחיה.</strong> כל החלטה ידנית שניתן לנסח ככלל נוספה להנחיה המתאימה, כדי שהמודל יחזור עליה בשורות הבאות. הכללים המתוארכים בנספח («hand rule 2026-10-04») הם אלה.</li>
+    <li><strong>ריצה חוזרת.</strong> אחרי שהכללים מתעדכנים, המודל מורץ שוב על השורות הלא־חתומות. ריצה כזאת של סיווג סוגי הפעולה על רשומות <span class="latin">ACLED</span> המקוריות עם ההנחיה המעודכנת מתוכננת כשלב אחרון.</li>
+  </ol>
+  <p>סבבי הבדיקה העיקריים:</p>
+  <ul>
+    <li>שיוך הקבוצה: כ־40 שורות הועברו ידנית (ספטמבר–אוקטובר 2026): הפגנות סולידריות מלפני 7 באוקטובר ל«גורמים ערבים ישראלים»; הפגנות נגד סיוע ונגד עסקה מ«תומכי עסקת חטופים» ל«קבוצות ימין לאומיות»; מועצת אוקטובר ומתנגדי המלחמה באיראן ל«מתנגדי הרפורמה ומדיניות הממשלה»; אלימות לאומנית בירושלים מ«תנועות התנחלות» ל«קבוצות ימין לאומיות». ביומן המבצר שויכו כל 3,778 השורות ידנית לקבוצה; 70 שורות שסומנו כגבוליות הוכרעו בנפרד.</li>
+    <li>סוג הפעולה: 8 שורות הורדו מ«פוגרום» (ספטמבר 2026); 63 שורות תוקנו אחרי בדיקת חריגים (אבנים לבתים → נשק קר, «חמושים» ללא שימוש → פיזית, ביצים ועשן → הפרות סדר); 172 חדירות עדרים הורדו מ«ניכוס שטח» ל«הפרות סדר»; 190 רשומות מדגמיות הורצו חיות לבדיקת ההנחיה; ושלושה סבבי «סימון ריבועים» באתר עצמו (4 באוקטובר 2026) שבהם האירועים הבולטים נבדקו אחד אחד והולידו את כללי הפוגרום, העימותים והאש־לעבר־אנשים.</li>
+    <li>תיאורים: בדיקה מדגמית של העברית, מעבר מינוח, ובדיקה מדגמית של השורות שנוסחו מחדש מהמבצר.</li>
+  </ul>
+
+  <h2 id="tools">11. הכלים</h2>
+  <p>הנתונים שמורים בגיליון אחד, שורה לאירוע. שבעה תסריטים, אחד לכל שלב, שולחים את השורות הרלוונטיות למודלי השפה של <span class="latin">OpenAI</span> דרך ממשק האצווה (<span class="latin">Batch API</span>) וכותבים את התשובות חזרה לגיליון. סדר הריצה על שורות חדשות: שיוך פועל מרכזי (1) → פיצול (4) → סוג פעולה (2) → עברית (3) → גודל קהל (5) → ניסוח מחדש של שורות המבצר (6) → אנגלית קצרה וערבית (7). כל שלב מדלג על שורות שלא יוצגו (למשל שורות שמקורן היחיד הוא אש״ף) ועל שורות חתומות ידנית. תוצאת המודל נשמרת תמיד לצד הנמקתו, כדי שאפשר יהיה לבדוק אותה.</p>
+  <p>הקובץ שהאתר קורא נגזר מהגיליון בכל הפעלה של השרת המקומי: שם נגזר המחנה מהקבוצה, מופעלים כללי הסינון (סעיף 3) ומומר גודל הקהל למספר. האתר עצמו כתוב ב־<span class="latin">HTML</span>, <span class="latin">CSS</span> ו־<span class="latin">JavaScript</span> ללא תלויות, ומוגש כקבצים סטטיים.</p>
+
+  <h2 id="limits">12. מגבלות</h2>
+  <ul>
+    <li><strong>הנתונים הם מה שדווח.</strong> <span class="latin">ACLED</span> ויומן המבצר מתעדים אירועים שהגיעו לכלי תקשורת או למקורות מקומיים. אירועים שלא דווחו אינם במאגר, והכיסוי אינו אחיד בין אזורים, תקופות וקבוצות. יומן המבצר מכסה קבוצה אחת בלבד, ולכן הוא מרחיב את כיסוי אותה קבוצה יותר מאשר של האחרות; הסרת הכפילויות מרככת זאת אך אינה מבטלת.</li>
+    <li><strong>הקבוצה אינה הציבור.</strong> החלוקה לשש קבוצות ולשני מחנות נועדה לאפשר השוואה בין דפוסי פעולה. היא אינה מניחה שכל חברי קבוצה פועלים באותו אופן או מחזיקים באותן עמדות, ואירוע משויך לקבוצה שהובילה את הפעולה המרכזית גם כשהשתתפו בו גורמים נוספים.</li>
+    <li><strong>סיווג אינו חד־משמעי.</strong> אותו אירוע יכול לכלול כמה פעולות, כמה מטרות וכמה רמות חומרה. הסיווג לקטגוריה אחת לפי הפעולה החמורה ביותר הוא הכרעה מכוונת, שנועדה לזהות דפוסים רחבים לאורך זמן ולא לתאר כל אירוע במלוא מורכבותו.</li>
+    <li><strong>גודל הקהל חסר ברוב האירועים</strong> ומבוסס על הערכות של עדים וכתבים; הערכת המארגנים נבחרה כשהיו שתיים.</li>
+    <li><strong>המודלים טועים.</strong> השיוך, הסיווג, הערכת הגודל והתרגום נעשו בידי מודלי שפה. הבדיקות המדגמיות והתיקונים הידניים צמצמו את השגיאות אך לא ביערו אותן, ושורה שלא נבדקה ידנית עשויה להיות מסווגת לא נכון. הנמקת המודל שמורה לכל שורה כדי שאפשר יהיה לערער עליה.</li>
+    <li><strong>המאגר מתעדכן.</strong> הספירות בעמוד זה נכונות לתאריך הנקוב בראשו ומשתנות עם כל ייצוא חדש של <span class="latin">ACLED</span> ושל יומן המבצר.</li>
+  </ul>
+
+  <h2 id="prompts">נספח: הנחיות המודלים במלואן</h2>
+  <p>ההנחיות המלאות שניתנו למודלים, באנגלית, כפי שהן בקוד הפרויקט ברגע כתיבת העמוד. כללים המסומנים בתאריך נוספו בעקבות בדיקה ידנית. המודל: <span class="latin">gpt-5.6-terra</span> של <span class="latin">OpenAI</span>, דרך <span class="latin">Batch API</span>.</p>
+
+  <details id="prompt-01"><summary>הנחיה 1: שיוך הפועל המרכזי <span class="note latin">01_identify_main_actor.py</span></summary>
+<!-- prompt:01_identify_main_actor.py --><pre>You are identifying the MAIN ACTOR responsible for the central political action described in an event.
+
+You receive:
+EVENT DESCRIPTION — the original event description.
+
+Your task is to assign exactly one MAIN ACTOR from the allowed list.
+
+ALLOWED MAIN ACTORS
+
+1. settlers
+2. protesters against government
+3. arab israelis
+4. haredi jews
+5. right wing protesters
+6. peace movements
+7. not relevant
+
+
+CORE MAIN-ACTOR RULE
+
+The MAIN ACTOR is the group that INITIATES or PERFORMS the central action of the event.
+
+Do NOT classify according to:
+- the first group mentioned
+- the group most frequently mentioned
+- the victim
+- the group being protested against
+- police or military responding to another actor
+- a secondary participant whose action is not the central action
+
+If several actors appear, identify who performs the central action described in the record.
+
+
+ACTOR DEFINITIONS
+
+
+1. settlers
+
+Israeli settlers, settler activists, settler groups, or settlement movements acting as the central actor.
+
+This includes, when explicitly attributed to them:
+- settler demonstrations
+- attacks by settlers
+- establishment or expansion of outposts
+- land seizure or cultivation by settlers
+- settler marches
+- settler road blockades
+- settler actions against Palestinians or Israeli authorities
+
+Do not infer &quot;settlers&quot; merely from a West Bank location.
+The acting group must be identified as settlers or clearly described as a settler group.
+
+
+2. protesters against government
+
+Use this umbrella category for Israeli protesters whose central political action is directed against the government or its policies, including:
+
+- anti-judicial-reform / anti-judicial-overhaul demonstrators
+- anti-government protesters
+- protests calling for the government&#x27;s resignation or elections
+- hostage-deal / hostage-release protesters when the action is directed at the government or demands government action
+- Kaplan protest movement and closely related protest groups
+- protests combining these causes
+
+This category deliberately combines the former labels:
+- anti judicial reform demonstrators
+- anti government protesters
+- hostage deal protesters
+
+Do not use it merely because someone criticizes a specific policy.
+There must be a recognizable anti-government, judicial-overhaul, elections, or hostage-deal protest context.
+
+
+3. arab israelis
+
+Arab citizens or residents of Israel acting collectively in an Israeli political or civic context.
+
+Use only when the description establishes that the central actors are Arab Israelis / Israeli Arabs / Arab citizens or residents of Israel.
+
+Do NOT use for:
+- Palestinians in the West Bank
+- Palestinians in Gaza
+- Palestinian residents when Israeli citizenship/residency context is not established
+- a location that is Arab-majority without evidence about who acted
+
+If identity is ambiguous, prefer not relevant rather than infer.
+
+
+4. haredi jews
+
+Haredi / ultra-Orthodox Jews acting collectively as the central actor.
+
+Examples include:
+- demonstrations against military conscription
+- religious protests
+- Haredi road blockades
+- Haredi clashes or political demonstrations
+
+Do not use merely because an event occurred in a Haredi neighborhood.
+
+
+5. right wing protesters
+
+Israeli right-wing / nationalist protesters acting collectively in a political demonstration or direct action.
+
+Examples include:
+- pro-judicial-reform demonstrations
+- nationalist/right-wing demonstrations
+- protests opposing government concessions from the right
+- right-wing road blockades
+- protests identified explicitly with right-wing organizations or causes
+
+Do not classify settlers here when settlers themselves are the central actor.
+Use settlers for explicitly settler-led actions.
+
+
+6. peace movements
+
+Israeli peace, anti-occupation, coexistence, or similar organized left-wing movements acting as the central actor.
+
+Examples include explicitly identified:
+- peace organizations
+- anti-occupation activists
+- coexistence movements
+- Israeli groups protesting settlement activity or occupation
+
+Do not use this category simply because a protest is left-wing.
+Anti-government / judicial-overhaul / hostage-deal protests belong under protesters against government when that is their central context.
+
+
+7. not relevant
+
+Use not relevant when the central actor is outside the six project actor categories.
+
+This includes:
+- Palestinian actors in the West Bank or Gaza
+- security forces acting alone
+- police or military operations
+- ordinary crime
+- personal disputes
+- accidents
+- labor disputes or local protests unrelated to the project categories
+- foreign actors
+- events where the relevant actor is only a victim or secondary participant
+- events with insufficient evidence to identify one of the allowed project actors
+
+
+SECURITY-FORCES RULE
+
+Police, IDF, Border Police, or other security forces do NOT become the MAIN ACTOR merely because they:
+- disperse a protest
+- arrest protesters
+- use force after a protest action
+- respond to stones, roadblocks, riots, or attacks
+
+Classify according to the actor responsible for the central initiating action.
+
+If the description is centrally about an independent police/military/security-force action, return not relevant.
+
+
+MULTIPLE-ACTOR RULE
+
+If several project actors are present:
+- identify which group performed the central action
+- do not merge categories
+- do not choose a group merely because its action was more severe
+- if the description genuinely does not establish a central actor, return not relevant with low certainty and needs_review = yes
+
+
+FINAL CHECK
+
+Before answering, verify:
+
+1. Who actually performed the central action?
+2. Did I accidentally classify the victim or responder?
+3. Did I infer identity from location alone?
+4. Does the actor fit one of the six project categories?
+5. If the evidence is genuinely ambiguous, did I mark it for review?
+
+
+
+SUPPLEMENTARY RULES (from the 2026-10-03 hand review — these override the definitions above where they conflict)
+
+RIGHT WING PROTESTERS by demand, not by label:
+A protest whose demand is to CONTINUE or RESUME a war, to REJECT a ceasefire or a hostage
+deal, to BLOCK humanitarian aid, or to defend soldiers / &quot;Jewish prisoners&quot; against the
+state is right wing protesters — even when the text only says &quot;residents&quot;, &quot;reservists&quot;,
+&quot;mothers of soldiers&quot;, &quot;injured soldiers&quot;, &quot;bereaved families&quot;, &quot;Israelis&quot;. The demand
+defines the camp. &quot;Family members of hostages&quot; taking part in an anti-aid or anti-deal
+protest does not make it peace movements.
+
+JEWISH NATIONALIST VIOLENCE OUTSIDE THE SETTLEMENTS:
+Jews attacking Arabs inside Israel or in Jerusalem neighbourhoods (teens beating an Arab
+bus driver, football fans attacking Arab drivers, a bus riot chanting &quot;death to Arabs&quot;)
+are right wing protesters, not settlers. Settlers is for the settlement movement acting
+in the West Bank — including Israelis from inside Israel who raid a West Bank village,
+and including the settlement movement&#x27;s own activism wherever it happens (Nachala,
+Hilltop Youth, Gaza/Lebanon &quot;resettlement&quot; marches and crossings, protests to free
+detained settlers).
+
+PROTESTERS AGAINST GOVERNMENT, specific cases:
+- October Council / demands for a state commission of inquiry into 7 October.
+- Protests against the war with Iran (2026).
+- Brothers and Sisters in Arms / reservist protests against the government (draft
+  exemption, corruption) that are not pro-war.
+- Protests defending the Attorney General, the courts, or against a minister&#x27;s conduct.
+
+PEACE MOVEMENTS starts on 7 October 2023:
+Hostage-deal, ceasefire, anti-war and anti-occupation protests from 7 October 2023
+onward are peace movements. Before that date the category is not used — earlier
+anti-occupation / joint Arab-Jewish solidarity protests were hand-labelled and must be
+left as they are.
+
+HAREDI JEWS is for Haredi collective action only (draft, autopsies, light rail,
+Sabbath, &quot;unkosher&quot; stores). Chabad / messianic / religious-Zionist protests are right
+wing protesters.
+
+NOT RELEVANT also covers: labor disputes and municipal-merger protests by workers of a
+settlement council; local residents protesting crime, infrastructure or services with
+no political demand.
+
+ARMY ACTS (hand review of the Fortress log, 2026-10-03):
+An act carried out by soldiers, Border Police, a regional-defence (גמ״ר / hagmar) soldier, the Civil
+Administration, a regional-council inspector or a settlement guard / security officer acting with
+soldiers is `not relevant` — even when settlers are present, escort them, or asked for it
+(&quot;soldiers accompanied by settlers dismantled a tent&quot;, &quot;security forces ordered the family to leave
+after settlers complained&quot;, &quot;masked soldiers expelled a shepherd&quot;, &quot;a hagmar soldier shot ...&quot;).
+A settlement security coordinator (רבש״ץ) who himself shoots or attacks, without soldiers, is `settlers`.
+REFINED (2026-10-03): the test is WHO ACTED.
+- Settlers acting together with soldiers (&quot;settlers and two soldiers beat residents&quot;, &quot;settlers
+  escorted by soldiers expelled harvesters&quot;) -&gt; `settlers`.
+- Settlers act, then soldiers do something separate (&quot;settlers attacked a farmer; soldiers arrested
+  him&quot;) -&gt; `settlers` (classify by the settlers&#x27; act only).
+- A settlement guard / security guard acting ALONE (no soldiers) -&gt; `settlers`.
+- Soldiers acting alone or leading, soldiers + a guard without settlers, and &quot;soldiers whom
+  residents recognise as settlers&quot; -&gt; `not relevant`.
+A fire or attack whose perpetrator is not named at all (&quot;a fire broke out in a house&quot;) is `not relevant`.
+Unattributed killings during clashes in a village that settlers entered stay `settlers`.
+
+INPUT LANGUAGE: the description may be a Hebrew line from a settler-violence log instead of ACLED
+English; apply the same rules. Such lines are settler events unless they fit ARMY ACTS above or
+name Jewish right-wing activists outside the West Bank (aid-convoy blockades, Flag March, Old City,
+al-Aqsa) — those are `right wing protesters`.</pre><!-- /prompt --></details>
+
+  <details id="prompt-04"><summary>הנחיה 4: פיצול אירועים מורכבים <span class="note latin">04_split_subactions.py</span></summary>
+<!-- prompt:04_split_subactions.py --><pre>You split a political-event record into ONE EVENT PER DISTINCT ACTION when the record
+describes a subset of the MAIN ACTOR doing something separate from the main crowd.
+
+You receive: MAIN ACTOR, CURRENT EVENT TYPE, CROWD (the whole-event figure, may be blank),
+and the ENGLISH DESCRIPTION (starts with the date).
+
+WHEN TO SPLIT
+Split when the description contains BOTH:
+(a) a main action by the whole crowd (a rally, march, demonstration, raid), AND
+(b) a different action by a SUBSET of that same MAIN ACTOR, marked by its own size
+    (&quot;dozens&quot;, &quot;hundreds&quot;, &quot;about 200&quot;, &quot;some protesters&quot;, &quot;a group of&quot;, &quot;several&quot;,
+    &quot;a number of&quot;, &quot;part of the crowd&quot;) or by a different time/place the same day
+    (&quot;following the main demonstration&quot;, &quot;later&quot;, &quot;toward the end&quot;, &quot;separately&quot;).
+Typical: &quot;about 40,000 protested in Tel Aviv ... dozens blocked the Ayalon Highway.&quot;
+         &quot;hundreds marched ... several protesters set tires on fire.&quot;
+         &quot;hundreds of settlers demonstrated ... some of them threw stones at cars.&quot;
+Also split when two clearly separate actions by the same actor at different places are
+packed into one record (&quot;protests took place in X and in Y ...&quot;) ONLY if each has its own
+size or location detail; otherwise keep one event.
+
+WHEN NOT TO SPLIT
+- The whole crowd did it (&quot;thousands blocked traffic&quot;, &quot;hundreds clashed with police&quot;).
+- The extra action is by a SECONDARY ACTOR: police, soldiers, passing drivers, passers-by,
+  counter-protesters, Palestinians repelling settlers, &quot;a rioter&quot; who attacked the
+  protesters. Never create an event for them.
+- Background sentences (what the protest was about, who spoke, context of the week).
+- Only one action is described, however long the text.
+
+OUTPUT
+`split`: &quot;yes&quot; or &quot;no&quot;.
+`events`: 1 to 3 events. If split = &quot;no&quot;, exactly one event: the original description
+unchanged (copy it verbatim) and crowd_text = CROWD as given (or &quot;&quot; if blank).
+If split = &quot;yes&quot;: the FIRST event is the main action with the whole-event crowd
+(crowd_text = CROWD if given, else the main figure in the text); each further event is
+one subset action.
+
+For every event:
+- `description_en`: a self-contained English description in ACLED&#x27;s register, starting
+  &quot;On &lt;date&gt;, ...&quot; exactly as the original does. Keep ACLED&#x27;s own wording and facts;
+  move sentences, do not invent. The main event keeps the context (what the protest was
+  about, organisers, speakers). The subset event gets a short context clause so it stands
+  alone (&quot;Following the main anti-overhaul demonstration in Tel Aviv, dozens blocked
+  traffic on Ayalon Highway ...&quot;). Do not repeat the subset action inside the main event.
+  Police response belongs to the event it responded to.
+- `crowd_text`: the size of THIS event&#x27;s group, in the source&#x27;s own words: &quot;about 40,000&quot;,
+  &quot;dozens&quot;, &quot;hundreds&quot;, &quot;about 200&quot;. A SUBSET event takes ONLY a figure that the text
+  attaches to the subset itself. If the subset is &quot;some protesters&quot;, &quot;demonstrators&quot;,
+  &quot;a group&quot;, &quot;several&quot;, &quot;a women&#x27;s group&quot;, &quot;activists&quot;, &quot;part of the crowd&quot; — anything
+  without its own number — write &quot;unspecified&quot;. NEVER copy the main event&#x27;s figure or the
+  CROWD field into a subset event. For the main event with a blank CROWD and no figure in
+  the text, write &quot;&quot;.
+- `is_primary`: true for the main action, false for every subset event.
+
+Never change the MAIN ACTOR. Never classify the event type — that is done later.
+Do not add, soften or sharpen any fact.</pre><!-- /prompt --></details>
+
+  <details id="prompt-02"><summary>הנחיה 2: סיווג סוג הפעולה <span class="note latin">02_classify_event_type_no_intimidation.py</span></summary>
+<!-- prompt:02_classify_event_type_no_intimidation.py --><pre>You are classifying the TYPE OF EVENT.
+
+You receive exactly three pieces of information:
+
+1. MAIN ACTOR — the actor already identified as responsible for the event.
+2. EVENT DESCRIPTION — the original description of what happened (English, or Hebrew for rows
+   imported from a Hebrew source log; classify Hebrew text by the same rules).
+3. CURRENT EVENT TYPE — may be blank and is supplied only as context.
+
+The MAIN ACTOR value is authoritative.
+
+Do NOT:
+- infer a different main actor
+- rename the main actor
+- substitute another actor category
+- classify according to a secondary actor
+
+Your task is to classify ONLY the actions performed by the supplied MAIN ACTOR.
+
+
+CRITICAL MAIN-ACTOR RULE
+
+A description may mention several actors performing different actions.
+
+Ignore actions performed by secondary actors when choosing the event type.
+
+Even if a secondary actor performs a more violent or more severe action, that action must NOT determine the classification.
+
+Examples:
+
+- MAIN ACTOR = protesters against government.
+  Protesters block a road. Police later use force to disperse them.
+  -&gt; חסימת כביש
+
+- MAIN ACTOR = settlers.
+  Settlers throw stones at vehicles. Soldiers later fire shots.
+  -&gt; תקיפה בנשק קר
+
+- MAIN ACTOR = haredi jews.
+  Haredi protesters demonstrate. Police later use force.
+  -&gt; הפגנה לא אלימה, unless the Haredi protesters themselves performed a more severe action.
+
+Severity is applied ONLY among actions performed by the MAIN ACTOR.
+
+
+ALLOWED EVENT TYPES
+
+1. הפגנה לא אלימה
+2. חסימת כביש
+3. הפרות סדר
+4. פגיעה ברכוש
+5. ניכוס שטח
+6. תקיפה פיזית
+7. החזקה בכפייה
+8. תקיפה בנשק קר
+9. תקיפה בנשק חם
+10. פוגרום
+
+
+1. הפגנה לא אלימה
+
+A demonstration, rally, march, vigil, protest gathering, or protest presence in which the MAIN ACTOR does not perform any more severe action.
+
+Use this only when the MAIN ACTOR itself does not:
+- block roads
+- riot or engage in disorder
+- damage or steal property
+- appropriate land
+- physically attack people
+- forcibly hold people
+- use a weapon
+
+Speech by itself does NOT escalate the event.
+
+The following, by themselves, may remain הפגנה לא אלימה:
+- slogans
+- insults
+- hostile chants
+- racist chants
+- calling someone a traitor
+- inflammatory political speech
+- generalized chants such as &quot;death to...&quot; when they are slogans rather than a direct targeted threat or attack
+
+Statements alone are not a separate event type.
+
+
+2. חסימת כביש
+
+The MAIN ACTOR blocks a:
+- road
+- highway
+- intersection
+- junction
+- entrance
+- access road
+- traffic route
+
+as part of a protest or confrontation.
+
+A symbolic protest camp, tent, structure, or &quot;outpost&quot; whose purpose is protest or road obstruction is NOT ניכוס שטח.
+
+If its purpose is to obstruct traffic or access, classify it as חסימת כביש.
+
+If intimidation or threats occur during an event whose central concrete action is blocking traffic/access, the road-blocking action remains חסימת כביש unless the MAIN ACTOR also performs a more severe concrete action.
+
+
+3. הפרות סדר
+
+The MAIN ACTOR participates in:
+- riots
+- clashes
+- violent disorder
+- disruptive confrontations
+- public disorder
+
+Use this when the conduct goes beyond a peaceful demonstration but does not meet a more severe category.
+
+Generic wording such as:
+- &quot;clashes occurred&quot;
+- &quot;fighting broke out&quot;
+- &quot;people were injured&quot;
+- &quot;objects were thrown&quot;
+
+does NOT by itself prove a physical or armed attack by the MAIN ACTOR.
+
+If the description does not explicitly establish a more severe action by the MAIN ACTOR, use הפרות סדר.
+
+Throwing or igniting:
+- fireworks
+- firecrackers
+- stun grenades
+- bottles
+- tires
+- bins
+- miscellaneous objects
+
+without a clearly identified human target should normally be classified as הפרות סדר, unless another rule below applies.
+
+Burning tires, bins, or similar objects as a protest tactic is not automatically פגיעה ברכוש.
+If done to block a road -&gt; חסימת כביש.
+If done as part of disorder -&gt; הפרות סדר.
+
+
+THREATS / INTIMIDATION RULE — THERE IS NO SEPARATE INTIMIDATION CATEGORY
+
+Do NOT output &quot;הטרדה ואיומים&quot;. It is not an allowed category.
+
+Classify intimidation according to what the MAIN ACTOR actually did:
+
+A. Speech-only protest rhetoric
+Insults, hostile slogans, racist chants, political abuse, or generalized threatening rhetoric during an otherwise peaceful demonstration:
+-&gt; הפגנה לא אלימה
+
+B. Direct targeted intimidation without a more concrete action
+Explicit threats directed at an identifiable person/community, coercive intimidation, following/stalking, chasing someone in order to intimidate them, sustained menacing conduct, or threatening presence that goes beyond ordinary protest speech:
+-&gt; הפרות סדר
+
+Examples:
+- directly threatening residents that they will be harmed if they do not leave -&gt; הפרות סדר
+- repeatedly following and intimidating a journalist -&gt; הפרות סדר
+- surrounding a person in a menacing confrontation without touching them -&gt; הפרות סדר
+
+C. Intimidation through a concrete action
+If the intimidation is carried out through another category, classify the concrete action:
+- blocking a road/access -&gt; חסימת כביש
+- damaging property -&gt; פגיעה ברכוש
+- taking over land -&gt; ניכוס שטח
+- hitting/pushing/spitting or other direct bodily attack -&gt; תקיפה פיזית
+- forcibly holding someone -&gt; החזקה בכפייה
+- threatening/attacking a person with a cold weapon -&gt; תקיפה בנשק קר
+- pointing/using a firearm, explosive, Molotov cocktail, or other hot weapon directly at people -&gt; תקיפה בנשק חם
+
+The existence of fear, intimidation, or threats does not override a more specific concrete action.
+
+
+4. פגיעה ברכוש
+
+The MAIN ACTOR intentionally damages, destroys, steals, loots, or takes property.
+
+This includes:
+- homes
+- vehicles
+- businesses
+- equipment
+- infrastructure
+- agricultural property
+- crops
+- privately owned objects
+- theft
+- looting
+- taking property
+
+IMPORTANT EXCLUSIONS:
+
+Do NOT classify an action as פגיעה ברכוש merely because the MAIN ACTOR:
+- removes or destroys a protest sign
+- tears down a banner
+- moves or knocks over a temporary barrier
+- removes a barricade
+- dismantles a temporary roadblock
+- moves a checkpoint barrier
+- damages another temporary public-order object
+
+When these actions are part of a protest or confrontation, classify the broader conduct instead, usually:
+- הפרות סדר
+or
+- חסימת כביש
+
+STONE RULE:
+Throwing stones at a person, at a vehicle, OR AT A HOUSE / BUILDING / SHOP is NOT פגיעה ברכוש.
+It is תקיפה בנשק קר — even when nobody is reported hit and even outside the West Bank
+(stones at an apartment, an office window, a home: still תקיפה בנשק קר).
+
+ARSON RULE:
+Deliberately burning an EMPTY building, EMPTY vehicle, field, crop, or other property, with no people directly endangered, is פגיעה ברכוש.
+
+THEFT RULE:
+Theft, looting, or taking property may be classified as פגיעה ברכוש even when the item is not physically damaged.
+
+LIVESTOCK RULE:
+Killing, injuring, stealing, or running over animals is פגיעה ברכוש.
+
+INJURY RULE:
+If the MAIN ACTOR&#x27;s property destruction injured a person (someone inside the house that
+was destroyed, someone hurt &quot;during the attack&quot;), the event is at least תקיפה פיזית.
+
+
+5. ניכוס שטח
+
+Use this ONLY when the MAIN ACTOR is actually establishing or expanding territorial control over land that does not belong to the acting group.
+
+Examples:
+- establishing a permanent or territorial outpost
+- fencing off land
+- taking over land
+- cultivating land in order to establish control
+- constructing or placing structures to establish territorial possession
+- expanding control over a plot or area
+
+There must be a genuine territorial-control purpose.
+
+Do NOT use ניכוס שטח for:
+- GRAZING INCURSIONS: settlers bringing herds onto Palestinian land, grazing sheep /
+  cattle / camels in fields or between houses, however often it recurs -&gt; הפרות סדר
+  (or פגיעה ברכוש only if crops are explicitly destroyed, תקיפה פיזית if people are
+  attacked). ניכוס שטח needs a tent, caravan, fence, outpost, ploughing or structures.
+- a protest encampment
+- a symbolic &quot;democracy outpost&quot;
+- tents erected temporarily for a demonstration
+- occupying a road as a protest tactic
+- blocking access
+- temporary protest structures
+
+Those should be classified according to the protest action, usually חסימת כביש, הפרות סדר, or הפגנה לא אלימה.
+
+
+6. תקיפה פיזית
+
+The MAIN ACTOR explicitly performs direct bodily violence against a person WITHOUT a weapon.
+
+Examples:
+- punches
+- kicks
+- pushes
+- shoves
+- strikes with bare hands
+- spits directly on a person
+- physically beats someone without a weapon
+
+The physical attack must be explicitly attributed to the MAIN ACTOR.
+
+Do NOT infer תקיפה פיזית merely because:
+- &quot;a fight broke out&quot;
+- &quot;clashes occurred&quot;
+- &quot;a confrontation occurred&quot;
+- someone was injured
+- violence occurred without identifying what the MAIN ACTOR did
+
+In those ambiguous cases, prefer הפרות סדר.
+
+HAND-REVIEW RULES (Fortress log, 2026-10-03):
+- Taking over an inhabited house while the family is inside -&gt; החזקה בכפייה.
+- Arson of houses, structures, vehicles or between houses (fire SET, not gunfire) -&gt; פגיעה ברכוש,
+  never תקיפה בנשק חם (that is for live fire only).
+- &quot;מטען&quot; on an aid truck / convoy means CARGO, not an explosive: dumping or throwing the cargo is
+  פגיעה ברכוש.
+- Waste, rubbish or &quot;objects&quot; thrown at a house -&gt; הפרות סדר.
+- A flag raised on a hill, with nothing built -&gt; הפרות סדר (not ניכוס שטח).
+- A record where settlers entered and people were killed or wounded by gunfire, and the SOURCE TAGS
+  include &quot;ירי לעבר אזרחים&quot; or &quot;הריגה&quot; -&gt; תקיפה בנשק חם, even if the text does not name the shooter.
+  Without such tags, unattributed gunfire during &quot;clashes&quot; or &quot;an exchange of fire&quot; stays הפרות סדר.
+- A herd brought near houses or into a yard, a minor leading goats from an outpost -&gt; הפרות סדר.
+- Protesters who BLOCK a road AND clash with police, light bonfires or set up barricades
+  -&gt; הפרות סדר (not חסימת כביש), even when the police also used force. Blocking alone, or
+  blocking with arrests only, stays חסימת כביש.
+- Protesters who CLASHED WITH POLICE (&quot;clashed with police&quot;, &quot;scuffled with officers&quot;,
+  &quot;confrontations with police&quot;) -&gt; הפרות סדר, with or without a road block. Arrests, detentions or
+  police dispersal ALONE, with no clash described, do not raise the category.
+- Levelling / bulldozing Palestinian land to pave or open a road for a settlement or outpost
+  -&gt; ניכוס שטח (the land is taken), even when a water line or crops are destroyed on the way.
+- עימותים / &quot;confrontations&quot; / &quot;scuffles&quot; / &quot;heated arguments that turned physical&quot; / &quot;minor
+  shoving&quot; are NOT תקיפה פיזית. תקיפה פיזית needs a DESCRIBED assault by the main actor on a
+  named target (&quot;beat a man&quot;, &quot;pushed the officer to the ground&quot;, &quot;kicked him&quot;). A protest
+  with confrontations and nothing more described is הפרות סדר — whether or not anyone was
+  arrested, and whatever the arrest was &quot;on suspicion of&quot;.
+- When the PROTESTERS were the ones attacked (rioters / passers-by / counter-protesters hit
+  them), classify the protesters&#x27; own conduct only (usually הפגנה לא אלימה).
+- One participant&#x27;s act inside a mass demonstration (&quot;a protester slapped an MK&quot;) does not
+  make the crowd&#x27;s event an assault -&gt; הפרות סדר at most.
+- Protesters who &quot;clashed with counter-protesters&quot;, with no violent act described for the
+  MAIN ACTOR themselves -&gt; הפגנה לא אלימה. Only an act the main actor did (hit, threw, pushed)
+  raises it.
+
+PASSIVE-VOICE RULE (source logs written from the victims&#x27; side):
+&quot;A Palestinian was attacked / shot / run over&quot;, &quot;stones were thrown&quot;, &quot;a house was set on
+fire&quot; with no attacker named means the MAIN ACTOR did it — classify the act, do not
+drop to a lower category because the sentence has no subject. A settlement security
+guard, security coordinator (רבש&quot;ץ) or &quot;settlers in uniform&quot; count as the main actor.
+
+DISPLACEMENT-OUTCOME RULE:
+&quot;The family left / the community was displaced after repeated attacks&quot; with no concrete
+act described in THIS record is הפרות סדר. Forcing someone out of their house and
+settlers moving in is ניכוס שטח.
+
+&quot;ATTACKED RESIDENTS&quot; RULE:
+&quot;Attacked residents / civilians / farmers / shepherds&quot; with no mechanism given IS
+תקיפה פיזית (people were the target). &quot;Attacked the village / the community / houses&quot;
+with no mechanism and no people mentioned is הפרות סדר.
+
+INCURSION RULE:
+Settlers who enter a Palestinian village (with or without army escort) and clashes
+follow are הפרות סדר, never הפגנה לא אלימה — even when the description only says the
+Palestinians rioted.
+
+SYMBOLIC CROSSING RULE:
+Crossing into Gaza / breaking through a crossing to plant trees or &quot;start a settlement&quot;
+as a protest stunt is הפרות סדר, not ניכוס שטח.
+
+
+7. החזקה בכפייה
+
+The MAIN ACTOR successfully:
+- abducts
+- kidnaps
+- captures
+- forcibly detains
+- holds a person against their will
+
+The person must actually be taken or held.
+
+An ATTEMPTED kidnapping or attempted abduction that fails is NOT החזקה בכפייה.
+
+Seizing someone briefly and marching or handing them over to soldiers / police is NOT
+החזקה בכפייה — classify the assault that came with it (usually תקיפה פיזית). Use
+החזקה בכפייה only when the person was held for a sustained period (hours or more) or
+taken away to another location and kept there.
+A completed ABDUCTION / KIDNAPPING (&quot;kidnapped two young men, assaulted them and released
+them&quot;) is החזקה בכפייה even when the victims were released soon after. Detaining people IN
+PLACE — stopping, binding hands, blindfolding, questioning, beating — and then letting them go,
+with no taking away, is תקיפה פיזית (or the weapon category if one was used).
+
+Classify an unsuccessful attempt according to what the MAIN ACTOR actually did.
+
+
+8. תקיפה בנשק קר
+
+The MAIN ACTOR attacks or directly threatens a person using a cold weapon, dangerous hand-held object, or specified lower-level projectile.
+
+This includes:
+- knife
+- blade
+- club
+- stick
+- metal bar
+- blunt object
+- sharp object
+- stones
+- rocks
+
+STONE RULE:
+Throwing stones at PEOPLE, VEHICLES, OR HOUSES / BUILDINGS is always תקיפה בנשק קר.
+If the main actor&#x27;s stones injured anyone, it is at least תקיפה בנשק קר regardless of
+what else the description calls property damage.
+
+Also classify the following as תקיפה בנשק קר ONLY when they are clearly directed at people:
+- thrown bottles
+- stun grenades
+- pepper spray, taser (an irritant or shock device used on a person)
+(NOT fireworks, firecrackers or burning objects aimed at people — those are תקיפה בנשק חם,
+see the FIRE AT PEOPLE rule below.)
+- a firearm used as a club (rifle butt, pistol whip) — not fired, so a blunt object
+
+NOT תקיפה בנשק קר, even when thrown at people (classify as הפרות סדר unless something
+more severe applies):
+- eggs
+- smoke grenades
+- &quot;objects&quot; / &quot;various objects&quot; with nothing more specific
+
+Examples:
+- bottle thrown at a person -&gt; תקיפה בנשק קר
+- stun grenade thrown toward people -&gt; תקיפה בנשק קר
+- fireworks fired directly at people -&gt; תקיפה בנשק חם (hand rule 2026-10-04)
+- firecrackers thrown at people -&gt; תקיפה בנשק חם
+- a burning torch / flare / Molotov cocktail thrown at a person -&gt; תקיפה בנשק חם
+- knife brandished directly at a person as a threat -&gt; תקיפה בנשק קר
+
+But:
+- fireworks simply set off during disorder -&gt; הפרות סדר
+- firecrackers thrown with no identified human target -&gt; הפרות סדר
+
+FIRE AT PEOPLE RULE (hand review 2026-10-04):
+Anything that burns or explodes, LAUNCHED OR THROWN AT A PERSON — a firework, a firecracker,
+a flare, a burning torch, a Molotov cocktail — is תקיפה בנשק חם, the same class as gunfire,
+whether or not it hit. Fireworks fired DURING A RIOT OR CLASH WITH POLICE (&quot;threw stones and
+fireworks and clashed with police&quot;, &quot;threw stones at officers, fired fireworks&quot;) count as aimed
+at the police -&gt; תקיפה בנשק חם. Only fireworks set off with no confrontation around them
+(&quot;fireworks were set off during the celebration / while chasing people out&quot;) stay as they are.
+- stun grenade used with no identified human target -&gt; הפרות סדר
+- bottles thrown generically during clashes with no clear human target -&gt; הפרות סדר
+
+UNSPECIFIED OBJECT RULE:
+&quot;Threw objects&quot; or &quot;objects were thrown&quot; is NOT enough for תקיפה בנשק קר unless the object and relevant target are identified.
+
+RAMMING RULE:
+Any vehicle (car, truck, motorcycle, ATV, tractor, bulldozer) deliberately driven at a
+person OR at an occupied vehicle is תקיפה בנשק קר. An ATTEMPT with no contact is still
+תקיפה בנשק קר. Running over livestock is פגיעה ברכוש (animals are property).
+A passing driver who hits demonstrators is a secondary actor — it never classifies the
+demonstrators&#x27; event.
+
+
+9. תקיפה בנשק חם
+
+The MAIN ACTOR attacks or directly threatens people using:
+
+- firearm
+- handgun
+- rifle
+- gunfire
+- live ammunition
+- fragmentation grenade
+- explosive grenade
+- explosive device
+- bomb
+- serious explosive material
+- Molotov cocktail / firebomb
+
+GRENADE RULE:
+- fragmentation grenade / explosive grenade / ordinary lethal grenade -&gt; תקיפה בנשק חם
+- stun grenade -&gt; תקיפה בנשק קר only when directed at people; otherwise usually הפרות סדר
+
+FIREARM-THREAT RULE:
+Pointing or aiming a firearm directly at a person as a threat is תקיפה בנשק חם even if no shot is fired.
+
+&quot;ARMED&quot; RULE:
+Being described as &quot;armed&quot; is NOT enough. If the armed actors did not fire, point, or
+strike with the weapon, classify the act they actually performed (&quot;armed settlers attacked
+civilians, injuring 2&quot; -&gt; תקיפה פיזית).
+
+FIRE-AT-HOUSES RULE:
+Live fire toward inhabited houses, tents, or a village is תקיפה בנשק חם even when no
+individual is named as the target.
+
+CHEMICAL RULE:
+Acid, chlorine, an unidentified gas or liquid sprayed or poured on people or into an
+occupied dwelling, and TEAR GAS CANISTERS FIRED from a launcher are תקיפה בנשק חם.
+Hand-held pepper spray and tasers stay תקיפה בנשק קר.
+
+ARSON RULE:
+Ordinary deliberate arson is תקיפה בנשק חם ONLY when:
+- people are inside the targeted building or vehicle
+OR
+- the fire is directly used to attack or endanger people
+
+If an empty building, empty vehicle, field, crop, or property is burned without people directly endangered -&gt; פגיעה ברכוש.
+
+
+10. פוגרום
+
+Use פוגרום only when the MAIN ACTOR is explicitly a LARGE CROWD, MOB, MASS GATHERING, or similarly large collective that attacks:
+- a community
+- neighborhood
+- village
+- residential area
+- civilian population
+
+and the attack includes violence against people, homes, vehicles, businesses, or the civilian environment.
+
+פוגרום requires ALL THREE, performed by the MAIN ACTOR:
+1. A CROWD OF 30 OR MORE — &quot;dozens&quot;, &quot;hundreds&quot;, &quot;thousands&quot;, or a stated number of 30+.
+   (15 or 20 attackers, &quot;tens&quot;, &quot;a group&quot;, &quot;several settlers&quot;, or NO size stated at all is
+   NOT a crowd for this purpose — hand rule 2026-10-04.)
+2. VIOLENCE AGAINST PEOPLE — beatings, stone-throwing at people or inhabited houses,
+   gunfire, pepper spray — with victims present.
+3. FIRE OR GUNFIRE AGAINST THE COMMUNITY — houses, tents, vehicles, fields, buildings
+   set on fire, or live fire into the village.
+
+All three during a raid on a village, community, neighbourhood or farm = פוגרום
+(e.g. 50 settlers beat residents injuring 2 AND burn 7 vehicles -&gt; פוגרום; the same by
+20 settlers -&gt; תקיפה פיזית, by a crowd of unstated size -&gt; classify the acts themselves).
+
+NOT a pogrom:
+- a crowd that only burns EMPTY property with nobody attacked -&gt; פגיעה ברכוש
+- a crowd that only beats or stones people with no fire -&gt; תקיפה פיזית / תקיפה בנשק קר
+- a mass march or demonstration in a city that turns violent (a flag march where
+  marchers beat passers-by) -&gt; classify the violence itself
+- &quot;attacked a community&quot; with no mechanism -&gt; הפרות סדר
+- a small group (under 30) however violent, or a raid whose size is not stated
+
+When all three conditions hold, פוגרום is the answer (it is top of the hierarchy).
+
+
+SEVERITY HIERARCHY
+
+If the MAIN ACTOR performs more than one applicable action, classify the event according to the highest-ranked action performed BY THAT MAIN ACTOR:
+
+1 — הפגנה לא אלימה
+2 — חסימת כביש
+3 — הפרות סדר
+4 — פגיעה ברכוש
+5 — ניכוס שטח
+6 — תקיפה פיזית
+7 — החזקה בכפייה
+8 — תקיפה בנשק קר
+9 — תקיפה בנשק חם
+10 — פוגרום
+
+
+FINAL CHECK BEFORE ANSWERING
+
+Before returning the category, verify:
+
+1. Am I classifying an action performed by the supplied MAIN ACTOR?
+2. Did I accidentally use an action performed by a secondary actor?
+3. If several MAIN ACTOR actions occurred, did I choose the highest-ranked applicable category?
+4. Did I apply the special rules for threats/intimidation, stones (incl. at houses), bottles, stun grenades, fireworks, firecrackers, eggs/smoke/unspecified objects, pepper spray vs. chemicals vs. tear-gas launchers, &quot;armed&quot; without use, fire at houses, arson, injuries from property destruction, livestock, protest barriers, land appropriation vs. symbolic crossings, incursions into villages, brief seizure vs. sustained holding, ramming, and the three-part pogrom test?
+
+Return exactly one allowed event type.</pre><!-- /prompt --></details>
+
+  <details id="prompt-03"><summary>הנחיה 3: תרגום ועריכה לעברית <span class="note latin">03_translate_hebrew_and_date.py</span></summary>
+<!-- prompt:03_translate_hebrew_and_date.py --><pre>You are translating and editing an English political-event description into concise, natural Hebrew for a data-journalism table.
+
+You receive:
+- MAIN ACTOR — context only.
+- EVENT TYPE — context only.
+- ENGLISH DESCRIPTION — the factual source text, with the leading event date already removed.
+
+The English description is authoritative.
+MAIN ACTOR and EVENT TYPE may help you understand the event, but they must NEVER cause you to add a fact that is not in the English description.
+
+
+OUTPUT GOAL
+
+Produce `description_he_medium`: a concise Hebrew factual summary of the event.
+
+The Hebrew should read like a professionally edited table entry, not like a literal machine translation.
+
+
+MANDATORY STYLE
+
+- Write in natural, fluent Hebrew.
+- Use PAST TENSE.
+- Use correct Hebrew grammar, spelling, agreement, numbers, and punctuation.
+- Do NOT include the event date.
+- Do NOT begin with a date or Hebrew month.
+- Do NOT mention the source/outlet unless it is substantively part of the event.
+- Do NOT explain, interpret, editorialize, or add context.
+- Do NOT use present tense to narrate the event.
+- Do NOT invent motives, identities, outcomes, or causal relationships.
+
+
+WHAT TO PRESERVE
+
+Preserve the central factual information:
+- who acted
+- what they did
+- where it happened
+- meaningful participant numbers
+- injuries, arrests, detentions, or other important consequences
+- the stated political demand/motive when it is central to understanding the action
+- specific place names when useful
+
+Specific local place names may remain when they add useful information.
+For example, do not automatically delete a place such as Kfar Tapuach simply because it is specific.
+
+If the English text is long, preserve only the details that materially distinguish the event.
+
+
+WHAT TO REMOVE OR COMPRESS
+
+Usually remove or compress:
+- the opening date
+- repetitive wording
+- administrative geographic parentheticals
+- redundant descriptions of the same action
+- long lists of organizations when they are not essential
+- long lists of speakers or participants unless they materially distinguish the event
+- explanatory background already obvious from the event
+- source-like hedging or repetitive reporting language
+
+Do not mechanically preserve every sentence.
+
+
+LENGTH / COMPRESSION
+
+The Hebrew MUST become progressively more compressed as the English source becomes longer.
+
+Use these approximate targets:
+
+SHORT source (up to ~250 English characters):
+- usually about 60–130 Hebrew characters
+- preserve most useful concrete details
+
+MEDIUM source (~251–500 characters):
+- usually about 100–190 Hebrew characters
+- summarize; do not translate sentence by sentence
+
+LONG source (~501–900 characters):
+- usually about 140–260 Hebrew characters
+- keep the central action plus only the most useful secondary details
+
+VERY LONG source (over ~900 characters):
+- usually about 180–320 Hebrew characters
+- strongly compress; do not reproduce the structure of the original
+
+These are guides, not quotas.
+Clarity is more important than hitting an exact character count, but the Hebrew should clearly be shorter than the English.
+
+
+EXAMPLES OF THE DESIRED STYLE
+
+English:
+&quot;On 22 April 2023, at least 10,000 to about 28,000 protested in Netanya against the Netanyahu-led coalition&#x27;s proposed judicial overhaul legislation. Former head of the Shin Bet Carmi Gillon spoke at the protest. Dozens of women dressed as &#x27;handmaids&#x27; from Building an Alternative were present at the protest, in addition to health workers.&quot;
+
+Good Hebrew:
+&quot;בין 10,000 ל־28,000 מפגינים מחו בנתניה נגד הרפורמה המשפטית. בהפגנה השתתפו גם נשות מחאת השפחות, אנשי צוות רפואי, וראש השב״כ לשעבר כרמי גילון שנאם במקום.&quot;
+
+English:
+&quot;On 27 May 2023, about 76,000 to 135,000 protested in Tel Aviv city against the Netanyahu-led coalition&#x27;s proposed judicial overhaul legislation. Former Likud MK and Defense Minister Moshe Yaalon spoke at the protest, in addition to protest leader and Black Flag Movement founder Shikma Bressler. LGBTQ activists, students, workers from the high-tech industry, female activists from Building an Alternative, Black Flag Movement activists, and anti-occupation activists all took part in the protest.&quot;
+
+Good Hebrew:
+&quot;בין 76,000 ל־135,000 מפגינים מחו בתל אביב נגד הרפורמה המשפטית. בין המשתתפים היו פעילי להט״ב, סטודנטים, עובדי הייטק, פעילות בונות אלטרנטיבה, פעילי הדגלים השחורים ופעילים נגד הכיבוש. משה יעלון ושקמה ברסלר נאמו בהפגנה.&quot;
+
+
+FINAL COPY-EDIT
+
+Before returning:
+1. Check that there is no date at the beginning.
+2. Check that the narration is in past tense.
+3. Check Hebrew gender/number agreement.
+4. Remove unnecessary repetition.
+5. Make sure the Hebrew is shorter than the English source.
+6. Make sure no factual detail was invented.
+
+
+TERMINOLOGY (fixed by the user, 2026-10-03):
+- judicial reform / judicial overhaul → הרפורמה המשפטית (never המהפכה המשפטית).
+- draft dodgers / draft evaders / deserters (Haredi) → עריקים; draft evasion → עריקות; &quot;evaded the draft&quot; → ערק מהשירות. Never משתמטים / השתמטות.
+- Quotations inside the Hebrew use ״ (U+05F4), never the ASCII &quot; character.
+- Arab citizens of Israel: ערבים ישראלים (two words, no maqaf), never ערבים־ישראלים.
+- Place names stay as they are (כיכר אל־קודס in Tamra is a square, not Jerusalem).</pre><!-- /prompt --></details>
+
+  <details id="prompt-05"><summary>הנחיה 5: הערכת גודל הקהל <span class="note latin">05_extract_crowd.py</span></summary>
+<!-- prompt:05_extract_crowd.py --><pre>You read one political-event record and report HOW MANY PEOPLE TOOK PART ON THE MAIN
+ACTOR&#x27;S SIDE. Nothing else.
+
+You receive the MAIN ACTOR (the group whose action the record is about) and the EVENT
+DESCRIPTION, in English or in Hebrew.
+
+WHAT COUNTS
+Only the participants on the MAIN ACTOR&#x27;s side: the protesters, marchers, settlers,
+attackers, activists who did the thing. If the record names them in numbers or in a size
+word, report that.
+
+WHAT NEVER COUNTS
+- Police, soldiers, Border Police, security forces, guards.
+- Counter-protesters, bystanders, drivers, residents who were attacked, victims, the
+  injured, the arrested, the dead.
+- Objects and other quantities: graves, cars, trees, sheep, houses, tents, kilometres,
+  road numbers, days of war, number of hostages, ages, dates, money.
+- Figures for a DIFFERENT event mentioned as context (&quot;a week after 100,000 marched...&quot;,
+  &quot;the weekly rally, which usually draws thousands&quot;). Only this event&#x27;s own crowd.
+- A reporter&#x27;s or organiser&#x27;s claim about a different place or the whole country when
+  the record is about one location — unless that total is the only figure given for
+  this event.
+
+HOW TO WRITE IT — use the sheet&#x27;s own vocabulary, exactly these forms:
+- A figure: &quot;about 2,000&quot;, &quot;at least 1,000&quot;, &quot;over 500&quot;, &quot;about 40&quot; — keep the record&#x27;s
+  own qualifier (about / around / some / an estimated → &quot;about&quot;; at least / more than /
+  over → &quot;at least&quot;). Thousands separated with a comma. A bare figure with no qualifier
+  (&quot;200 settlers&quot;) → &quot;about 200&quot;.
+- A size word: &quot;tens&quot;, &quot;dozens&quot;, &quot;hundreds&quot;, &quot;thousands&quot;, &quot;tens of thousands&quot;,
+  &quot;hundreds of thousands&quot;. A range in words → &quot;dozens to hundreds&quot;,
+  &quot;hundreds to thousands&quot;.
+- A small exact count of named individuals: &quot;2&quot; (two settlers), &quot;3&quot;, &quot;1&quot; (a single
+  assailant, a lone driver, one activist).
+- Hebrew size words map the same way: עשרות → dozens, מאות → hundreds, אלפים →
+  thousands, רבבות / עשרות אלפים → tens of thousands, כמה / מספר (without a number)
+  → no report, קבוצה → no report.
+- NOTHING in the text about the size of the main actor&#x27;s group (&quot;protesters&quot;,
+  &quot;settlers&quot;, &quot;a group&quot;, &quot;some activists&quot;, &quot;demonstrators blocked the road&quot;, &quot;residents
+  marched&quot;) → write exactly &quot;no report&quot;.
+
+When the record gives two figures for the same crowd (police estimate vs organisers),
+take the organisers&#x27; / larger one. When it gives one figure for the whole crowd and a
+smaller one for a subset (&quot;thousands marched; dozens blocked the road&quot;) and the record
+is about the whole event, report the whole crowd&#x27;s figure. If the record is clearly ONLY
+about the subset action (it opens with &quot;Following the main demonstration, dozens blocked...&quot;),
+report the subset&#x27;s figure.
+
+Do not guess from the kind of event. A pogrom, a raid or a march with no stated size is
+&quot;no report&quot;. Do not round a size word up or down into a number.
+
+`reason`: one short sentence quoting the words the figure came from, or &quot;no size given&quot;.</pre><!-- /prompt --></details>
+
+  <details id="prompt-06"><summary>הנחיה 6: ניסוח מחדש של שורות המבצר <span class="note latin">06_rewrite_fortress_desc.py</span></summary>
+<!-- prompt:06_rewrite_fortress_desc.py --><pre>You rewrite one line from a Hebrew settler-violence log so it reads like the other events
+in a dataset whose Hebrew descriptions were derived from ACLED. You write the Hebrew line
+and a short English line with the same facts.
+
+You receive: MAIN ACTOR, DATE, PLACE (the log&#x27;s location cell — a Palestinian village,
+town, area or a settlement/outpost), SOURCE TAGS (the log&#x27;s own labels), EVENT TYPE
+(already decided — do not contradict it), and the ORIGINAL LINE.
+
+TARGET REGISTER (examples of the dataset&#x27;s Hebrew):
+- מתנחלים ישראלים תקפו רועה צאן פלסטיני בוואדי קלט בעת שרעה את צאנו, וגנבו ממנו 250 כבשים.
+- מתנחלים ישראלים הציבו קרוואן על אדמה בבעלות פלסטינית בכפר קוסרא.
+- חמישה מתנחלים מיצהר הציתו וכרתו כ־80 עצי זית באדמות פלסטיניות באזור אל־מיאדין בבורין.
+- מתנחלים ישראלים תקפו בגז פלפל שני פלסטינים באזור שיב אל־ביר בבית פוריכ, וגרמו להם לכוויות.
+
+RULES FOR THE HEBREW (`description_he`)
+1. One or two sentences, past tense, 70–110 characters. Never shorter than the original.
+2. The ACTOR is the grammatical subject and is named explicitly, at the start: &quot;מתנחלים
+   ישראלים&quot;, &quot;מתנחלים חמושים&quot;, &quot;מתנחל&quot;, &quot;פעילי ימין&quot; (MAIN ACTOR = right wing protesters),
+   &quot;מתנחלים מהמאחז הסמוך&quot; if the original says so. Turn passive originals (&quot;בית נפרץ ורכוש
+   נגנב&quot;, &quot;בתים הותקפו&quot;) into active: &quot;מתנחלים ישראלים פרצו לבית בכפר … וגנבו רכוש&quot;.
+   If the original names a different perpetrator (soldiers, security coordinator), keep it.
+3. Name the PLACE in the sentence, with the right preposition: &quot;בכפר X&quot;, &quot;ליד X&quot;, &quot;באדמות X&quot;,
+   &quot;בח&#x27;רבת X&quot;, &quot;במאחז X&quot;. Keep the log&#x27;s Arabic transliteration exactly as given. If the
+   PLACE is a settlement/outpost, say the settlers came from it or acted near it.
+4. Keep EVERY fact of the original: numbers (vehicles, sheep, trees, injured), weapons,
+   masks, night-time, outcome (injuries, displacement, theft). Add NOTHING the original and
+   the tags do not say — no motive, no &quot;according to reports&quot;, no colour.
+5. Palestinian victims are &quot;פלסטינים&quot; / &quot;תושבים פלסטיניים&quot; / &quot;רועה צאן פלסטיני&quot;. Add the
+   word פלסטיני where the original says &quot;תושבים&quot; and the place is a Palestinian village.
+6. Numbers as digits with the Hebrew prefix glued (&quot;כ־80&quot;, &quot;ארבעה כלי רכב&quot; may stay as a
+   word). Use ־ (maqaf) and ״ as the dataset does.
+7. Settlement re-establishment / outpost rows (&quot;ההתנחלות גנים … הוקמה מחדש&quot;): subject is
+   &quot;מתנחלים ישראלים הקימו מחדש את …&quot;.
+
+RULES FOR THE ENGLISH (`description_en`)
+- One or two sentences, the same facts as the Hebrew, 80–140 characters. Do NOT start with
+  the date. ACLED&#x27;s vocabulary: &quot;Israeli settlers&quot;, &quot;Palestinian residents&quot;, &quot;Palestinian-
+  owned&quot;, &quot;outpost&quot;, &quot;Khirbet …&quot;, &quot;al-…&quot;. Transliterate the place conventionally.
+- No hedging, no additions.
+
+`note`: &quot;&quot; normally; a short English remark only if the original is unclear or contradicts
+its tags.</pre><!-- /prompt --></details>
+
+  <details id="prompt-07"><summary>הנחיה 7: אנגלית קצרה וערבית <span class="note latin">07_short_english_and_arabic.py</span></summary>
+<!-- prompt:07_short_english_and_arabic.py --><pre>You write two lines for one event in a dataset of Israeli political events: a SHORT
+ENGLISH line and an ARABIC line. Both must carry exactly the facts of the HEBREW line,
+which is the reference text shown on the site.
+
+You receive the HEBREW line and, for context only, the ORIGINAL ENGLISH notes (ACLED&#x27;s,
+often long, starting with the date) — or &quot;(none)&quot;.
+
+SHORT ENGLISH (`description_en`)
+- A translation of the HEBREW line, fact for fact: who, what, where, how many, outcome.
+  NOTHING that is not in the Hebrew — not even if the original English has it (background,
+  quotes, police statements, organisers, &quot;according to reports&quot;). The original English is
+  only a spelling reference.
+- LENGTH: you are told the Hebrew line&#x27;s length in characters. The English must be at most
+  1.4 × that length, and NEVER over 360 characters (the longest Hebrew line is 342). Shorter is
+  fine if no fact is lost; to fit, use tighter wording, never drop a fact.
+- Never start with the date or with an ACLED tag (&quot;Property destruction:&quot;). Start with
+  the actor: &quot;Hundreds of anti-overhaul protesters ...&quot;, &quot;Israeli settlers ...&quot;.
+- Place and person names ALWAYS from the ORIGINAL ENGLISH when it names them — never guess a
+  different village. Spellings and terms from the ORIGINAL ENGLISH where it has them (&quot;Huwara&quot;, &quot;Masafer Yatta&quot;,
+  &quot;Kaplan Street&quot;, &quot;Ayalon Highway&quot;, &quot;judicial overhaul&quot;, &quot;Palestinian-owned&quot;).
+
+ARABIC (`description_ar`)
+- Modern Standard Arabic, neutral news register (as in Arab48 / Al Jazeera news copy).
+- A faithful translation of the HEBREW line — same facts, same order. Do not add or
+  soften anything. Length: at most 1.4 × the Hebrew line&#x27;s length, never over 360 characters.
+- Terms (always these): settlers = مستوطنون; Israeli settlers = مستوطنون إسرائيليون; the judicial
+  overhaul / reform = التعديلات القضائية; Haredim = الحريديم; Haredi draft refusers (עריקים) =
+  المتهربون من التجنيد; the hostages (החטופים) = المختطفون — add &quot;في غزة&quot; or &quot;لدى حماس&quot; ONLY when
+  the Hebrew says so; Arab citizens of
+  Israel (ערבים ישראלים) = المواطنون العرب في إسرائيل; the West Bank = الضفة الغربية; Jerusalem =
+  القدس; the Temple Mount / al-Aqsa compound = المسجد الأقصى; Knesset = الكنيست.
+- Place names: the standard Arabic name for Arab towns and villages (حوارة, ترمسعيا,
+  مسافر يطا, أم الفحم); Israeli places in their usual Arabic transliteration (تل أبيب,
+  شارع كابلان, هرتسليا).
+- Numbers in Western digits (200, 10,000).
+- NEVER add a word the Hebrew does not justify: no &quot;Israeli&quot;, &quot;in Gaza&quot;, &quot;Palestinian&quot; unless it is there.
+
+Return both fields; `note` is &quot;&quot; unless the Hebrew is unclear or contradicts the English.</pre><!-- /prompt --></details>
+
+  <p class="note" style="margin-top:40px">מחקר, עיצוב ופיתוח: איל רז. הפרויקט נוצר בשיתוף העין השביעית. <a href="./">חזרה לפרויקט</a></p>
+</main>
+</body>
+</html>

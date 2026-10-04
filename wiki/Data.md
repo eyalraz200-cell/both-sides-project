@@ -15,8 +15,8 @@ One object per event:
 | `descHeMedium` | Per-event Hebrew description, shown in the hover tooltip |
 | `crowd` | Integer crowd estimate or `null` — from the **crowd size** column of a *second* workbook, see below. Drives the @fold8 hover bulge tier (`p7BulgeTier`, [Timeline](Timeline.md#the-hover-bulge--p7bulgetick--p7bulgelist--p7bulgeshift-page7js)) |
 
-Committed dataset (`events.json` at the repo root, `crowd` field included): **12,401
-events — 5,551 left, 6,850 right**, from **2023-01-01** to **2026-07-03** — the sheet rows
+Committed dataset (`events.json` at the repo root, `crowd` field included): **12,053
+events — 5,552 left, 6,501 right** (2026-10-04), from **2023-01-01** to **2026-07-03** — the sheet rows
 minus the 4,036 dropped by `SOLE_SOURCE_EXCLUDE`, the 1,418 marked in the `hidden` column,
 and the 633 dated after the last ACLED event (`CUT_AFTER_LAST_ACLED`, all below).
 
@@ -56,10 +56,28 @@ A clone without the workbooks still runs: `server.py` serves the committed `even
 unchanged and skips `_sync_static_events()`.
 
 `events.json` (date, actor, side, category, `descHeMedium`, crowd, rowId per event) is the
-**single committed derivative**, because GitHub Pages needs it client-side. Its acceptability
-under ACLED's "cannot be reverse-engineered" condition is **pending ACLED's written answer**;
-if they refuse, the follow-up is a private backend or a description-less dataset. Never add
-any other event-level export to the repo.
+**single committed derivative**, because GitHub Pages needs it client-side. ACLED's EULA
+(acleddata.com/eula, read 2026-10-04) permits publishing "Derivative Materials" that are
+transformative and cannot be reverse-engineered into the source, and needs no prior approval;
+the attribution policy requires naming ACLED, disclosing the manipulation, not attributing the
+analysis to ACLED, and the citation form `ACLED, accessed on 10 July 2026. www.acleddata.com`
+(the raw exports' date). `methodology.html` carries all of that. Never add any other
+event-level export to the repo.
+
+## The methodology page — `methodology.html`
+
+The full public write-up of everything on this page, in Hebrew, served at the site root
+(`/methodology.html`, linked from the legend note's last line — `FOLD6_NOTE_MORE_TEXT`,
+js/groups.js, desktop and the mobile מקרא card alike — and from the @fold16 credits card).
+It is the **fourth and longest** of the four methodology tiers (@fold6 card → legend note →
+@fold16 credits → this page); each tier adds only what the one before left out. Self-contained
+(own `<style>`, Discordia title + Assistant body, `dir="rtl"`), no scripts.
+
+Its appendix quotes the seven `0N_*.py` prompts **verbatim**: `python3 build_methodology.py`
+rewrites each `<!-- prompt:0N_name.py --><pre>…</pre><!-- /prompt -->` block from the script's
+`INSTRUCTIONS` string. **Run it after every prompt edit** and commit the page with the script,
+or the public appendix lies about what the model was told. The prose (counts, dates, review
+rounds) is hand-written — update it when this page's facts change.
 
 ## Classification pipeline (`0N_*.py`, OpenAI Batch API)
 

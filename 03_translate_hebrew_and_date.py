@@ -140,6 +140,16 @@ TERMINOLOGY (fixed by the user, 2026-10-03):
 - draft dodgers / draft evaders / deserters (Haredi) → עריקים; draft evasion → עריקות; "evaded the draft" → ערק מהשירות. Never משתמטים / השתמטות.
 - Quotations inside the Hebrew use ״ (U+05F4), never the ASCII " character.
 - Arab citizens of Israel: ערבים ישראלים (two words, no maqaf), never ערבים־ישראלים.
+- ABDUCTION / DETENTION WORDING (user rule, 2026-10-04) — applies to events whose type is החזקה בכפייה:
+  1. "detained" / "held" / "seized and held" -> החזיקו בכפייה (NEVER עיכבו). Match grammar:
+     "detained him" -> החזיקו אותו בכפייה; "detained a shepherd" -> החזיקו בכפייה רועה; a single
+     settler -> החזיק בכפייה.
+  2. "abducted" / "kidnapped" -> חטפו ONLY when the text says WHERE they were taken (to an outpost,
+     to a settlement, into a vehicle, to the hills) or HOW (forced into a car, tied up and dragged
+     away). Otherwise -> לקחו בכפייה ("abducted two Palestinians from Jit" -> לקחו בכפייה שני
+     פלסטינים מג'ית). Match number and gender (לקח / לקחו, חטף / חטפו).
+  Arabic follows the Hebrew: החזיקו בכפייה = احتجزوا بالقوة; חטפו = اختطفوا; לקחו בכפייה = اقتادوا بالقوة.
+  
 - Place names stay as they are (כיכר אל־קודס in Tamra is a square, not Jerusalem).
 """
 

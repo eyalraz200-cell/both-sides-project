@@ -2700,6 +2700,9 @@ function fold6NoteWidth() {
 // so the divider's ink-top math below keeps working unchanged — only the
 // weight separates them.
 const FOLD6_NOTE_TITLE_TEXT = tr("איסוף הנתונים");
+// The note's last line: a link to methodology.html, the full write-up every
+// methodology surface on the site (this note, the @fold16 credits) points to.
+const FOLD6_NOTE_MORE_TEXT = tr("לשיטת העבודה המלאה");
 const FOLD6_NOTE_TITLE_GAP = 4;   // px between the title's box and the note's
 // Divider (faint hairline) sits between the last row and the note. The two
 // gaps are EQUAL on purpose — that's what keeps the divider in the middle of
@@ -2789,11 +2792,11 @@ const fold6NoteTitleEl = document.createElement("div");
 fold6NoteTitleEl.className = "fold6-note-title";
 const fold6NoteSegments = (() => {
   const [before, after] = fold6NoteSplitOnAcled();
-  const mk = (tag, text, cls) => {
+  const mk = (tag, text, cls, href) => {
     const el = document.createElement(tag);
     if (cls) el.className = cls;
     if (tag === "a") {
-      el.href = "https://acleddata.com/";
+      el.href = href;
       el.target = "_blank";
       el.rel = "noopener";
     }
@@ -2802,13 +2805,18 @@ const fold6NoteSegments = (() => {
   };
   // The title is the FIRST segment, so the whole block types as one continuous
   // stream — heading first, then the note under it — rather than two things
-  // typing at once.
+  // typing at once. The LAST segment is the «full methodology» link on its own
+  // line (the "\n" span — the note is white-space: pre-line), pointing at
+  // methodology.html; en/ and ar/ reach it through their <base href="../">.
   return [
     fold8SetupTypewriter(fold6NoteTitleEl, FOLD6_NOTE_TITLE_TEXT),
-    mk("span", before), mk("a", "ACLED", "fold6-note-link"), mk("span", after),
+    mk("span", before), mk("a", "ACLED", "fold6-note-link", "https://acleddata.com/"), mk("span", after),
+    mk("span", "\n"), mk("a", FOLD6_NOTE_MORE_TEXT, "fold6-note-link", "methodology.html"),
   ];
 })();
-const FOLD6_NOTE_CHAR_COUNT = FOLD6_NOTE_TITLE_TEXT.length + FOLD6_NOTE_TEXT.length;
+// Every typed character, title included — the segments' own lengths, so a
+// segment added above (the methodology link) is counted by construction.
+const FOLD6_NOTE_CHAR_COUNT = fold6NoteSegments.reduce((n, seg) => n + seg.fullText.length, 0);
 // Two counts, not one: the title (segment 0) and the body (the rest) are fed
 // separately, because the later un-type takes only the body — the title STAYS
 // (explicit instruction). The initial reveal still reads as one stream: the
@@ -3132,6 +3140,14 @@ fold6MobileDataBodyEl.className = "fold6-mlegend-data-body";
   link.rel = "noopener";
   link.textContent = "ACLED";
   inner.append(before, link, after);
+  // Same «full methodology» link as the desktop note, as its own line.
+  const more = document.createElement("a");
+  more.className = "fold6-note-link";
+  more.href = "methodology.html";
+  more.target = "_blank";
+  more.rel = "noopener";
+  more.textContent = FOLD6_NOTE_MORE_TEXT;
+  inner.append("\n", more);
   fold6MobileDataBodyEl.appendChild(inner);
 }
 /* ONE CARD ROUND BOTH (explicit instruction — "when the card is expanded, the
