@@ -248,6 +248,14 @@ soldiers is `not relevant` — even when settlers are present, escort them, or a
 ("soldiers accompanied by settlers dismantled a tent", "security forces ordered the family to leave
 after settlers complained", "masked soldiers expelled a shepherd", "a hagmar soldier shot ...").
 A settlement security coordinator (רבש״ץ) who himself shoots or attacks, without soldiers, is `settlers`.
+REFINED (2026-10-03): the test is WHO ACTED.
+- Settlers acting together with soldiers ("settlers and two soldiers beat residents", "settlers
+  escorted by soldiers expelled harvesters") -> `settlers`.
+- Settlers act, then soldiers do something separate ("settlers attacked a farmer; soldiers arrested
+  him") -> `settlers` (classify by the settlers' act only).
+- A settlement guard / security guard acting ALONE (no soldiers) -> `settlers`.
+- Soldiers acting alone or leading, soldiers + a guard without settlers, and "soldiers whom
+  residents recognise as settlers" -> `not relevant`.
 A fire or attack whose perpetrator is not named at all ("a fire broke out in a house") is `not relevant`.
 Unattributed killings during clashes in a village that settlers entered stay `settlers`.
 

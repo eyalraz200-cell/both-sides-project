@@ -18,15 +18,15 @@ date; the rules behind each one live in [Data](Data.md).
       accident of a missing column. Today: actor/date/type/desc complete; crowd known on
       ~3,000 of ~12,400.
 - [x] Crowd for the rest — `05_extract_crowd.py`, 2026-10-03: 4,697 rows sent, 817 new figures (479 ACLED, 338 Fortress), 3,880 `no report`, 9,439 cue-less ACLED blanks marked `no report` by rule. Every live row now has a deliberate crowd value.
-- [ ] **Fortress Hebrew** is the log's terse line ("בתים הותקפו"). Rewrite every Fortress row in
+- [x] **Fortress Hebrew** is the log's terse line ("בתים הותקפו"). Rewrite every Fortress row in
       the ACLED-derived Hebrew register: past tense, the actor named explicitly ("מתנחלים תקפו
       בתים ב…"), place kept, same length as the ACLED Hebrew rows.
       → `06_rewrite_fortress_desc.py`, queued 2026-10-03 behind the crowd run (2,352 rows); writes
       the English line in the same call. Then: sample review, restart, commit.
-- [ ] **English is far too long** (ACLED's full notes) — step 07 submitted 2026-10-03 (14,718 rows, with Arabic); Fortress rows follow after step 06. Shorten every English description to the
+- [x] **English is far too long** — step 07 done 2026-10-04: every shipping row has `description_en_short` (median 1.35× its Hebrew, max 380 chars). Shorten every English description to the
       Hebrew length — same facts as the Hebrew, nothing more.
-- [ ] **Fortress → English**: the English page shows Hebrew tooltips for Fortress rows — covered by step 06 above.
-- [ ] **Arabic for every event** — server writes `events-ar.json`, page7 loads it on ar/ (wired 2026-10-03); text from step 07.
+- [x] **Fortress → English**: the English page shows Hebrew tooltips for Fortress rows — covered by step 06 above.
+- [x] **Arabic for every event** — `description_ar` on every shipping row (step 07, 2026-10-04); server writes `events-ar.json`, page7 loads it on ar/. Two Fortress rows flagged in `description_note` for an ambiguous Huwara/Hawara.
 - [x] Hebrew terminology pass (2026-10-03, user's calls): משתמטים/השתמטות → עריקים/עריקות everywhere; ASCII `"` → ״; המהפכה המשפטית → הרפורמה המשפטית (both translated ACLED's "overhaul"); כיכר אל־קודס (Tamra) kept — a place name. ערבים־ישראלים → ערבים ישראלים.
 
 ## Classification
@@ -36,7 +36,7 @@ date; the rules behind each one live in [Data](Data.md).
 - [x] The 342 `unsure` Fortress↔ACLED pairs — second reading 2026-10-03 (`_dedupe/pass2/`): 298 sure (hidden `dup of row-N`), 44 distinct (stay live); the last 11 decided by the user.
 - [ ] Internal Fortress duplicates among the non-ACLED rows (same incident, two sources; the
       four-village "wave of attacks" rows).
-- [x] Flagged Fortress rows (2026-10-03): 55 settled by the existing rules, 15 by the user. User rule: an act done by soldiers, a regional-defence (גמ״ר) soldier or a settlement guard — even with settlers along or at their request — is `not relevant` (army act, off the site); a רבש״ץ who shoots stays `settlers`.
+- [x] Flagged Fortress rows (2026-10-03): 55 settled by the existing rules, 15 by the user. User rule: an act done by soldiers, a regional-defence (גמ״ר) soldier or a settlement guard — even with settlers along or at their request — is `not relevant` (army act, off the site); a רבש״ץ who shoots stays `settlers`. Refined the same day: settlers WITH soldiers, settlers-then-soldiers, and a guard alone stay `settlers`; "soldiers known as settlers" are `not relevant` (10 rows).
 
 ## Methodology copy (its own task)
 - [ ] The @fold6 card («תיאורי האירועים … לקוחים ברובם ממאגר ACLED…»), the legend note

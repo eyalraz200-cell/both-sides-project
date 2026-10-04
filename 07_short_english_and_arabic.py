@@ -23,6 +23,7 @@ m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 m.STATE_FILE = "short_en_ar_state.json"
 m.BATCH_DIR = "short_en_ar_batches"
 m.REASONING_EFFORT = "low"
+m.MAX_ACTIVE_BATCHES = 8          # big run; each batch is small (250 short calls)
 
 m.INSTRUCTIONS = r"""
 You write two lines for one event in a dataset of Israeli political events: a SHORT
@@ -42,7 +43,8 @@ SHORT ENGLISH (`description_en`)
   fine if no fact is lost; to fit, use tighter wording, never drop a fact.
 - Never start with the date or with an ACLED tag ("Property destruction:"). Start with
   the actor: "Hundreds of anti-overhaul protesters ...", "Israeli settlers ...".
-- Spellings and terms from the ORIGINAL ENGLISH where it has them ("Huwara", "Masafer Yatta",
+- Place and person names ALWAYS from the ORIGINAL ENGLISH when it names them — never guess a
+  different village. Spellings and terms from the ORIGINAL ENGLISH where it has them ("Huwara", "Masafer Yatta",
   "Kaplan Street", "Ayalon Highway", "judicial overhaul", "Palestinian-owned").
 
 ARABIC (`description_ar`)
@@ -84,20 +86,25 @@ def request_body(user_text):
 m.request_body = request_body
 
 
+SOLE_SOURCE_EXCLUDE = {"plo negotiations affairs department"}   # same set as server.py: never shipped
+
 def build_jobs(ws):
     headers = [c.value for c in ws[1]]
     col = lambda *names, req=False: m.find_col(headers, list(names), required=req)
     c_id, c_actor, c_he, c_en = col("row_id"), col("main_actor", req=True), col("description_he_medium", req=True), col("Description")
     c_ar, c_hid, c_ds, c_orig, c_hand = col("description_ar"), col("hidden"), col("data_source"), col("description_he_original"), col("description_hand")
     c_note = col("description_note")
+    c_src = m.find_col(headers, ["source"], required=False)
     jobs = []
     for r in range(2, ws.max_row + 1):
         g = lambda c: m.norm(ws.cell(r, c).value) if c else ""
+        srcs = {x.strip().lower() for x in g(c_src).split(";") if x.strip()}
+        if srcs and srcs <= SOLE_SOURCE_EXCLUDE: continue
         actor = g(c_actor)
         if not actor or actor == "not relevant" or g(c_hid) or g(c_hand): continue
         if g(c_ar) or not g(c_he): continue
         if g(c_ds) == "the fortress" and not g(c_orig): continue     # wait for step 06
-        en = g(c_en) if g(c_ds) != "the fortress" else ""
+        en = g(c_en)        # ACLED: the full notes; Fortress: step 06's English (place spellings)
         hint = ""
         note = m.norm(ws.cell(r, c_note).value) if c_note else ""
         if note.startswith("too long"):

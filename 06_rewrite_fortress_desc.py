@@ -82,10 +82,12 @@ _orig_request_body = m.request_body
 def request_body(user_text):
     b = _orig_request_body(user_text)
     b["text"]["format"]["name"] = "fortress_desc"
-    b["max_output_tokens"] = 700
+    b["max_output_tokens"] = 2500
     return b
 m.request_body = request_body
 
+
+SOLE_SOURCE_EXCLUDE = {"plo negotiations affairs department"}   # same set as server.py: never shipped
 
 def build_jobs(ws):
     headers = [c.value for c in ws[1]]
@@ -93,9 +95,12 @@ def build_jobs(ws):
     c_id, c_actor, c_he = col("row_id"), col("main_actor", req=True), col("description_he_medium", req=True)
     c_date, c_loc, c_tags, c_type = col("date"), col("location"), col("fortress_categories"), col("event_type")
     c_ds, c_hid, c_orig, c_hand = col("data_source"), col("hidden"), col("description_he_original"), col("description_hand")
+    c_src = m.find_col(headers, ["source"], required=False)
     jobs = []
     for r in range(2, ws.max_row + 1):
         g = lambda c: m.norm(ws.cell(r, c).value) if c else ""
+        srcs = {x.strip().lower() for x in g(c_src).split(";") if x.strip()}
+        if srcs and srcs <= SOLE_SOURCE_EXCLUDE: continue
         actor = g(c_actor)
         if g(c_ds) != "the fortress" or not actor or actor == "not relevant" or g(c_hid): continue
         if g(c_orig) or g(c_hand) or not g(c_he): continue

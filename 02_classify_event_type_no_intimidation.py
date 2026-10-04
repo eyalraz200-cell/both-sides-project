@@ -652,6 +652,13 @@ def submit_pending(client, base, state):
     return n
 
 def build_jobs(ws):
+    _h = [c.value for c in ws[1]]
+    _src = find_col(_h, ["source"], required=False)
+    PLO_ONLY = {"plo negotiations affairs department"}     # server.py SOLE_SOURCE_EXCLUDE: never shipped
+    def _plo_only(row):
+        if not _src: return False
+        s = {x.strip().lower() for x in norm(ws.cell(row, _src).value).split(";") if x.strip()}
+        return bool(s) and s <= PLO_ONLY
     headers = [c.value for c in ws[1]]
     row_id_col = find_col(headers, ["row_id", "row id"], required=False)
     actor_col = find_col(headers, ["main_actor", "main actor"], required=True)
@@ -665,6 +672,8 @@ def build_jobs(ws):
 
     jobs = []
     for excel_row in range(2, ws.max_row + 1):
+        if _plo_only(excel_row):
+            continue
         row_id = norm(ws.cell(excel_row, row_id_col).value) if row_id_col else ""
         actor = norm(ws.cell(excel_row, actor_col).value)
         description = norm(ws.cell(excel_row, desc_col).value)

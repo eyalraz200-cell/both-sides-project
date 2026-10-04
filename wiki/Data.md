@@ -65,7 +65,7 @@ any other event-level export to the repo.
 
 Seven standalone scripts at the repo root, each `submit <xlsx>` → `status` → `download`
 (writes `<name> - <step>.xlsx` next to the source; copy it back over `events.xlsx` by hand).
-Run in this order on new rows:
+Run in this order on new rows (every step skips rows whose only source is in `SOLE_SOURCE_EXCLUDE` — they never ship, so they are never paid for):
 
 | Step | Writes | Rows it touches |
 |---|---|---|
