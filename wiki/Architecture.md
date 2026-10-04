@@ -323,7 +323,7 @@ rAF-throttled behind passive `scroll` listeners (`page7Ticking` and friends).
 
 ## Title blocks
 
-All text is selectable, at both breakpoints, pills and title cards included. The only `user-select: none` left is mobile's `.graphic-col` / `#canvas`, which hold no text. **Removed — don't reintroduce:** the body-wide `user-select: none`.
+All text is selectable at both breakpoints except page9's drag pills (`.page9-pill`, `user-select: none` so a press-and-hold picks the pill up). Mobile's `.graphic-col` / `#canvas` also opt out; they hold no text. Canvas-drawn text (the axis cards, year labels) and the mini-legend's group names are not selectable — the names sit under `.text-col` and the legend's hover/click strips. **Removed — don't reintroduce:** the body-wide `user-select: none`.
 
 Each scrolling section's text is a `.section-text.text-card` — a normal-flow, 480px-wide,
 horizontally centered block that scrolls with the page (nothing pins). Visibility is an

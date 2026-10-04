@@ -1597,6 +1597,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      summons. Same suppression the graphic column already carries for the
      @fold8 loupe. */
   -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Matches Figma's text-box-trim:trim-both/text-box-edge:cap_alphabetic on this
