@@ -78,7 +78,7 @@
     box-sizing: border-box;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 28px;
-    padding: 42px 66px 38px;
+    padding: 43px 66px 39px;
     background: var(--paper);
     border: var(--frame-border-w) solid transparent;
     border-radius: var(--cardr);
@@ -110,7 +110,9 @@
   /* Assistant's line box sits its letters ~4px below the box centre, so the
      words are lifted to share the eye's optical centre line. */
   #plate .partner span { position: relative; top: -4px; }
-  #plate .partner img { height: 76px; display: block; }
+  /* Tuned by eye: the Hebrew line reads 7px right of true centre. */
+  html[lang="he"] #plate .partner { transform: translateX(7px); }
+  #plate .partner img { height: 72px; display: block; }
 </style>
 </head>
 <body>
@@ -279,7 +281,7 @@ window.OG_PRESETS = {
   A: { label: 'A · 360-4558', dot: 11, pitch: 28, colgap: 43.5, cardw: 621, cardr: 24, fs: 56 },
   /* B as TUNED on 2026-09-17 (pitch 25->24, card 621->702); A, C and D are
      still the raw measurements off the Figma exports. */
-  B: { label: 'B · 360-4146', dot: 9,  pitch: 24, colgap: 34,   cardw: 702, cardr: 24, fs: 56 },
+  B: { label: 'B · 360-4146', dot: 9,  pitch: 24, colgap: 34,   cardw: 745, cardr: 24, fs: 60 },
   C: { label: 'C · 360-3093', dot: 7,  pitch: 21, colgap: 29,   cardw: 621, cardr: 24, fs: 56 },
   D: { label: 'D · 360-3939', dot: 13, pitch: 31, colgap: 52,   cardw: 728, cardr: 8,  fs: 59 }
 };
