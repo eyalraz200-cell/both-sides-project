@@ -33,6 +33,8 @@ date; the rules behind each one live in [Data](Data.md).
 - [x] Commit `events.json` / `events-en.json` + today's scripts, server and wiki (site is stale).
 - [x] Prompt check before the rerun (2026-10-04): 190 stratified ACLED rows run live; user ruled on block+clash, police clashes, counter-protesters, abduction vs in-place detention, road paving — all in the 02 prompt.
 - [x] Dot flagging round 1 (2026-10-04): pogrom crowd threshold raised to 30+ (a stated 15/20 or no size is not a crowd); 5 live pogroms reclassified by hand (rows 8668, 9523, 11015, 13442, 18628). 20 pogroms remain.
+- [x] Dot flagging round 2 (2026-10-04): עימותים / confrontations / scuffles without a described assault are הפרות סדר, not תקיפה פיזית; protesters who were attacked keep their own conduct; one participant's act ≠ the crowd's. 7 rows set by hand (13, 42, 1253, 1707, 3253, 4630, 4667).
+- [x] Dot flagging round 3 (2026-10-04): fireworks, firecrackers, flares, torches or Molotovs launched/thrown AT A PERSON are תקיפה בנשק חם (were קר); rows 19276, 19391 set by hand; fireworks fired during a riot/clash with police count as at them — rows 940, 948, 954, 955, 2245, 6317, 19195 → חם; 4773 (set off while chasing people) stays קר.
 - [ ] **Last step, after everything else:** rerun step 02 over the original ACLED rows with the
       new prompt, hand-set rows skipped — the 63 hand fixes covered only what the review surfaced.
 - [x] The 342 `unsure` Fortress↔ACLED pairs — second reading 2026-10-03 (`_dedupe/pass2/`): 298 sure (hidden `dup of row-N`), 44 distinct (stay live); the last 11 decided by the user.

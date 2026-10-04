@@ -263,7 +263,7 @@
   "kind": "html",
   "he": "                <p>כדי לאפשר השוואה עקבית בין קבוצות שונות, כל האירועים הותאמו למערכת קטגוריות אחידה של סוגי פעולה, ובהן הפגנות, חסימות כבישים, הפרות סדר, פגיעה ברכוש, ניכוס שטח, תקיפות פיזיות, החזקה בכפייה, שימוש בנשק ופוגרומים. לצד הסיווג נקבע גם מדרג אנליטי בין הקטגוריות, בהסתמך על CAMEO / Goldstein Scale של <a class=\"card-link\" href=\"https://gdeltproject.org/\" target=\"_blank\" rel=\"noopener\">GDELT</a> ועל Crime Severity Score של ה־<a class=\"card-link\" href=\"https://www.ons.gov.uk/\" target=\"_blank\" rel=\"noopener\">ONS</a> הבריטי. במקרים שבהם אירוע כלל כמה סוגי פעולה, נבחרה הקטגוריה בעלת הדירוג הגבוה יותר במדרג.</p>",
   "en": "                <p>To enable consistent comparison across different groups, all events were mapped onto a common set of action categories, including protests, roadblocks, public disorder, property damage, land seizure, physical assault, forced confinement, use of weapons, and pogroms. The categories were also placed on an analytical severity scale, drawing on <a class=\"card-link\" href=\"https://gdeltproject.org/\" target=\"_blank\" rel=\"noopener\">GDELT</a>’s CAMEO / Goldstein Scale and the UK <a class=\"card-link\" href=\"https://www.ons.gov.uk/\" target=\"_blank\" rel=\"noopener\">ONS</a> Crime Severity Score. When an event included more than one type of action, it was assigned the category with the higher severity ranking.</p>",
-  "ar": "                <p>لإتاحة مقارنة متسقة بين مجموعات مختلفة، جرت مواءمة جميع الأحداث مع نظام فئات موحد لأنواع التحركات، منها المظاهرات، وإغلاق الطرق، والإخلال بالنظام العام، والإضرار بالممتلكات، والاستيلاء على أراضٍ، والاعتداءات الجسدية، والاحتجاز القسري، واستخدام السلاح، والبوغرومات. وإلى جانب التصنيف حُدد أيضًا تدرج تحليلي بين الفئات، استنادًا إلى CAMEO / Goldstein Scale لـ <a class=\"card-link\" href=\"https://gdeltproject.org/\" target=\"_blank\" rel=\"noopener\">GDELT</a> وإلى Crime Severity Score لـ<a class=\"card-link\" href=\"https://www.ons.gov.uk/\" target=\"_blank\" rel=\"noopener\">ONS</a> البريطاني. وفي الحالات التي شمل فيها حدث أكثر من نوع واحد من التحركات، اختيرت الفئة ذات المرتبة الأعلى في التدرج.</p>"
+  "ar": "                <p>لإتاحة مقارنة متسقة بين مجموعات مختلفة، جرت مواءمة جميع الأحداث مع نظام فئات موحد لأنواع التحركات، منها المظاهرات، وإغلاق الطرق، والإخلال بالنظام العام، والإضرار بالممتلكات، والاستيلاء على أراضٍ، والاعتداءات الجسدية، والاحتجاز القسري، واستخدام السلاح، وأعمال الشغب. وإلى جانب التصنيف حُدد أيضًا تدرج تحليلي بين الفئات، استنادًا إلى CAMEO / Goldstein Scale لـ <a class=\"card-link\" href=\"https://gdeltproject.org/\" target=\"_blank\" rel=\"noopener\">GDELT</a> وإلى Crime Severity Score لـ<a class=\"card-link\" href=\"https://www.ons.gov.uk/\" target=\"_blank\" rel=\"noopener\">ONS</a> البريطاني. وفي الحالات التي شمل فيها حدث أكثر من نوع واحد من التحركات، اختيرت الفئة ذات المرتبة الأعلى في التدرج.</p>"
  },
  {
   "id": "html:316",
@@ -312,7 +312,7 @@
   "kind": "js",
   "he": "גורמים ערבים ישראלים",
   "en": "Arab Israeli actors",
-  "ar": "فاعلون عرب من مواطني إسرائيل"
+  "ar": "عناصر من مواطني إسرائيل العرب"
  },
  {
   "id": "js:45",
@@ -599,7 +599,7 @@
   "kind": "js",
   "he": "עימותים, התפרעויות, או פעולות שמפרות את הסדר הציבורי.",
   "en": "Clashes, riots, or other actions that disrupt public order.",
-  "ar": "اشتباكات أو أعمال شغب أو أعمال تخلّ بالنظام العام."
+  "ar": "اشتباكات أو اضطرابات أو أعمال تخلّ بالنظام العام."
  },
  {
   "id": "js:86",
@@ -655,7 +655,7 @@
   "kind": "js",
   "he": "הפגנה לא אלימה",
   "en": "Non-violent protest",
-  "ar": "احتجاج غير عنيف"
+  "ar": "مظاهرة سلمية"
  },
  {
   "id": "js:94",
@@ -725,7 +725,7 @@
   "kind": "js",
   "he": "פוגרום",
   "en": "Pogrom",
-  "ar": "بوغروم"
+  "ar": "أعمال شغب"
  },
  {
   "id": "js:fold6-note",

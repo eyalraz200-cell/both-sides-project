@@ -3,6 +3,11 @@
 > **Arabic** (`ar/index.html`, `I18N_AR`) is regenerated wholesale by `translate_ui_ar.py` —
 > a pending row here means the Arabic is stale too, and clears for Arabic by re-running the script
 > (see [Architecture](Architecture.md), «Arabic version»).
+>
+> **Hand-set Arabic words (2026-10-04) — a fresh API run would overwrite them; re-apply after one:**
+> group גורמים ערבים ישראלים → «عناصر من مواطني إسرائيل العرب» (Arabic only; Hebrew unchanged); הפגנה לא אלימה → «مظاهرة سلمية»; פוגרום → «أعمال شغب» (label; «وأعمال الشغب» in the methodology list), and the הפרות סדר
+> description uses «اضطرابات», not «أعمال شغب», so the two categories don't share a word.
+> `--apply ar_translations.json` keeps them; they're already in that file.
 
 The Hebrew page is where copy gets written first. This file is the **ledger of Hebrew
 strings that have changed and whose English counterpart has not caught up yet**, so nothing

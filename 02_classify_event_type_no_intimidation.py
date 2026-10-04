@@ -320,6 +320,15 @@ HAND-REVIEW RULES (Fortress log, 2026-10-03):
   police dispersal ALONE, with no clash described, do not raise the category.
 - Levelling / bulldozing Palestinian land to pave or open a road for a settlement or outpost
   -> ניכוס שטח (the land is taken), even when a water line or crops are destroyed on the way.
+- עימותים / "confrontations" / "scuffles" / "heated arguments that turned physical" / "minor
+  shoving" are NOT תקיפה פיזית. תקיפה פיזית needs a DESCRIBED assault by the main actor on a
+  named target ("beat a man", "pushed the officer to the ground", "kicked him"). A protest
+  with confrontations and nothing more described is הפרות סדר — whether or not anyone was
+  arrested, and whatever the arrest was "on suspicion of".
+- When the PROTESTERS were the ones attacked (rioters / passers-by / counter-protesters hit
+  them), classify the protesters' own conduct only (usually הפגנה לא אלימה).
+- One participant's act inside a mass demonstration ("a protester slapped an MK") does not
+  make the crowd's event an assault -> הפרות סדר at most.
 - Protesters who "clashed with counter-protesters", with no violent act described for the
   MAIN ACTOR themselves -> הפגנה לא אלימה. Only an act the main actor did (hit, threw, pushed)
   raises it.
@@ -398,9 +407,9 @@ what else the description calls property damage.
 Also classify the following as תקיפה בנשק קר ONLY when they are clearly directed at people:
 - thrown bottles
 - stun grenades
-- firecrackers
-- fireworks
 - pepper spray, taser (an irritant or shock device used on a person)
+(NOT fireworks, firecrackers or burning objects aimed at people — those are תקיפה בנשק חם,
+see the FIRE AT PEOPLE rule below.)
 - a firearm used as a club (rifle butt, pistol whip) — not fired, so a blunt object
 
 NOT תקיפה בנשק קר, even when thrown at people (classify as הפרות סדר unless something
@@ -412,13 +421,22 @@ more severe applies):
 Examples:
 - bottle thrown at a person -> תקיפה בנשק קר
 - stun grenade thrown toward people -> תקיפה בנשק קר
-- fireworks fired directly at people -> תקיפה בנשק קר
-- firecrackers thrown at people -> תקיפה בנשק קר
+- fireworks fired directly at people -> תקיפה בנשק חם (hand rule 2026-10-04)
+- firecrackers thrown at people -> תקיפה בנשק חם
+- a burning torch / flare / Molotov cocktail thrown at a person -> תקיפה בנשק חם
 - knife brandished directly at a person as a threat -> תקיפה בנשק קר
 
 But:
 - fireworks simply set off during disorder -> הפרות סדר
 - firecrackers thrown with no identified human target -> הפרות סדר
+
+FIRE AT PEOPLE RULE (hand review 2026-10-04):
+Anything that burns or explodes, LAUNCHED OR THROWN AT A PERSON — a firework, a firecracker,
+a flare, a burning torch, a Molotov cocktail — is תקיפה בנשק חם, the same class as gunfire,
+whether or not it hit. Fireworks fired DURING A RIOT OR CLASH WITH POLICE ("threw stones and
+fireworks and clashed with police", "threw stones at officers, fired fireworks") count as aimed
+at the police -> תקיפה בנשק חם. Only fireworks set off with no confrontation around them
+("fireworks were set off during the celebration / while chasing people out") stay as they are.
 - stun grenade used with no identified human target -> הפרות סדר
 - bottles thrown generically during clashes with no clear human target -> הפרות סדר
 
