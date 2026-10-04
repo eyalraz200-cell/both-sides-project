@@ -47,11 +47,9 @@
 
 body {
   background: var(--bg);
-  /* No text selection — the page is read and scrolled, and a drag must not paint
-     a highlight over the artwork. No exceptions — not even the title blocks'
-     text (explicit instruction 2026-10-03). */
-  -webkit-user-select: none;
-  user-select: none;
+  /* Text is selectable (explicit instruction 2026-10-04). Only the gesture
+     surfaces opt out: the drag tray and pills, and on mobile the folds whose
+     press-and-hold opens the loupe. */
 }
 
 /* The fold badge — the current @foldN as a bare number, small, top-left.
@@ -5598,9 +5596,6 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   direction: ltr;
 }
 
-/* Removed — don't reintroduce: a desktop `user-select: text` exception for the
-   title blocks. Nothing on the page is selectable (explicit instruction
-   2026-10-03); body's `user-select: none` is the whole rule. */
 
 /* English pills read left-to-right: the grip handle leads on the LEFT, label
    after it. Set on the pill itself (and the drag ghost, which lives on <body>),
