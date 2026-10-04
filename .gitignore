@@ -39,3 +39,6 @@ fortress_desc_batches/
 fortress_desc_state.json
 short_en_ar_batches/
 short_en_ar_state.json
+
+# Harness scaffolding — local only, never on the site.
+_debug-*
