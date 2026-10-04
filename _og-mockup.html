@@ -28,11 +28,13 @@
     transform-origin: top left; position: absolute; top: 0; left: 0; }
 
   /* ---- WhatsApp: the card sits in a chat bubble, cropped to ~1.91:1 ---- */
-  .wa { width: 330px; background: #075E54; padding: 18px 14px; border-radius: 10px; }
+  /* Sized to how big it LOOKS on a phone held next to a laptop, not its CSS
+     width there: a ~260pt preview on a ~150pt/in phone is ~216px on a laptop. */
+  .wa { width: 246px; background: #075E54; padding: 18px 14px; border-radius: 10px; }
   .wa-bub { background: #DCF8C6; border-radius: 8px; padding: 5px 5px 7px;
     color: #111; direction: rtl; }
-  .wa .shot { width: 300px; height: 157px; border-radius: 5px; }
-  .wa .shot iframe { transform: scale(.25); }
+  .wa .shot { width: 216px; height: 113px; border-radius: 5px; }
+  .wa .shot iframe { transform: scale(.18); }
   .wa-t { font-size: 13px; font-weight: 600; margin: 6px 4px 1px; line-height: 1.25; }
   .wa-d { font-size: 12px; color: #4a5a4a; margin: 0 4px; line-height: 1.3;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
@@ -180,6 +182,5 @@ fetch('index.html').then(function (r) { return r.text(); }).then(function (html)
 </script>
   <!-- SCAFFOLDING — one harness, driving all four embedded cards. -->
   <script src="_debug-bus.js"></script>
-  <script src="_debug-ogcard.js"></script>
 </body>
 </html>

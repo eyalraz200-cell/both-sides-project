@@ -8,6 +8,7 @@
      1200x630 (2x for the committed png). Delete once the card is chosen and
      og-image-v2.png is baked — unless it earns its keep as the thing that can
      re-shoot the card when the palette changes. -->
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300..800&display=swap" rel="stylesheet" />
 <style>
   /* Discordia — the site's desktop title face (style.css). Regular only. */
   @font-face {
@@ -75,8 +76,9 @@
     transform: translate(-50%, -50%);
     width: var(--cardw);
     box-sizing: border-box;
-    display: flex; align-items: center; justify-content: center;
-    padding: 47px 66px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 28px;
+    padding: 42px 66px 38px;
     background: var(--paper);
     border: var(--frame-border-w) solid transparent;
     border-radius: var(--cardr);
@@ -100,6 +102,12 @@
     color: var(--ink);
     white-space: nowrap;
   }
+  /* Partner credit — «פרויקט בשיתוף» + העין השביעית's wordmark, a secondary
+     line in Assistant under the Discordia title. Sizes tuned by eye against
+     the WhatsApp preview (2026-10-04). */
+  #plate .partner { display: flex; align-items: center; gap: 18px;
+    font: 500 44px 'Assistant', sans-serif; line-height: 1; color: var(--ink); opacity: .6; white-space: nowrap; }
+  #plate .partner img { height: 58px; display: block; }
 </style>
 </head>
 <body>
@@ -110,6 +118,7 @@
     <div id="plate">
       <svg class="plate-dash" aria-hidden="true"><rect/></svg>
       <h1>קיצוניים משני הצדדים</h1>
+      <div class="partner"><span>פרויקט בשיתוף</span><img src="seventh-eye-logo-wide.png" alt="העין השביעית"></div>
     </div>
   </div>
   <!-- ?lang=en — the English card (og-image-en.png, used by en/index.html).
@@ -119,6 +128,7 @@
     document.documentElement.lang = 'en';
     document.documentElement.dir = 'ltr';
     document.querySelector('#plate h1').textContent = 'Extremists on Both Sides';
+    document.querySelector('#plate .partner span').textContent = 'A project in partnership with';
     /* The English title is wider than --cardw allows, so the plate hugs the
        text instead, with the side margin the Hebrew title ends up with. */
     var enPlate = document.getElementById('plate');
@@ -311,7 +321,6 @@ window.OG_CHOSEN = Object.assign({ palette: 'project', fw: 400, extras: 4,
   <script>
   if (!/[?&]bare=1/.test(location.search)) {
     document.write('<script src="_debug-bus.js"><\/script>');
-    document.write('<script src="_debug-ogcard.js"><\/script>');
   }
   </script>
 </body>

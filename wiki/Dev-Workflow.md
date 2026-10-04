@@ -87,12 +87,12 @@ Don't remove the gate.
 
 Both entry points carry `og:*` + `twitter:*` meta tags in `<head>` so WhatsApp/X/Facebook
 render a preview card. There is one card per language, both **2400×1260** (2× of the
-1200×630 card): `og-image-v2.png` (Hebrew, `index.html`) and `og-image-en.png` (English,
-`en/index.html`; the Arabic page `ar/index.html` reuses `og-image-v2.png` until an Arabic card is shot). Both are headless shots of the artboard `_og-card.html` — the title in
-Discordia Regular on a dashed plate over two dot columns — at `?bare=1` (Hebrew) and
+1200×630 card): `og-image-v3.png` (Hebrew, `index.html`) and `og-image-en-v2.png` (English,
+`en/index.html`; the Arabic page `ar/index.html` reuses `og-image-v3.png` until an Arabic card is shot). Both are headless shots of the artboard `_og-card.html` — the title in
+Discordia Regular on a dashed plate over two dot columns, with a secondary line in Assistant — «פרויקט בשיתוף» / "A project in partnership with" — and העין השביעית's wordmark (`seventh-eye-logo-wide.png`) under it; the description text also credits the partnership — at `?bare=1` (Hebrew) and
 `?bare=1&lang=en` (English, where the plate hugs the wider title). Reshoot with a headless
 Chromium at `--window-size=1200,630 --force-device-scale-factor=2`. Platforms cache the
-image by URL, so a changed card only reaches already-shared links under a new filename (hence the `-v2`; bump it again on the next change).
+image by URL, so a changed card only reaches already-shared links under a new filename (hence the version suffix; bump it again on the next change).
 `og:image` must be an absolute URL, so the
 tags hardcode the live GitHub Pages base — `https://eyalraz200-cell.github.io/both-sides-project/`.
 If the site ever moves, those four URLs (two per file) are the only things to update; the
