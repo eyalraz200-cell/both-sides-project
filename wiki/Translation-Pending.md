@@ -24,8 +24,8 @@ row. An empty table below means the two languages agree.
 | @fold13 closing line now ends «…להציב גבולות להקצנה - גם מהמחנה אותו הם מייצגים.» (was «גם במחנה שלהם») | second `.text-card-frame` title of `#page-14`, `index.html` | `en/index.html` still says "in their own camp" — reword to "including the camp they represent"; `ar/index.html` needs a `translate_ui_ar.py` re-run. | 2026-10-03 |
 | New legend-note last line «לשיטת העבודה המלאה» (link to `methodology.html`) | `FOLD6_NOTE_MORE_TEXT`, `js/groups.js` | `I18N_EN` has "Full methodology"; `ar/` needs a `translate_ui_ar.py` re-run. | 2026-10-04 |
 | @fold16 credits paragraph rewritten to seven lines (ליווי, הנחייה והכוונה / ייעוץ עיתונאי אורן פרסיקו / תודה לרקפת כנען / תודה לשנקר (link) / תודה לצוות המבצר (link) + names / «מסד נתונים: ACLED, המבצר») | `.page12-credits`, `index.html` | `en/index.html` updated by hand ("Fortress" for המבצר — confirm). `ar/index.html` needs a `translate_ui_ar.py` re-run. | 2026-10-04 |
-| @fold16 credits: a closing paragraph linking «שיטת העבודה המלאה» | `#page-17 .page12-body`, `index.html` | `en/index.html` needs it; `ar/` re-run. | 2026-10-04 |
-| New page `methodology.html` (Hebrew only) | repo root | An English page (`en/methodology.html`? or one bilingual page) is undecided; until then en/ and ar/ link to the Hebrew page. | 2026-10-04 |
+| @fold16 credits: a closing paragraph linking «שיטת העבודה המלאה» | `#page-17 .page12-body`, `index.html` | `en/index.html` has it (links `en/methodology.html`); `ar/` re-run. | 2026-10-04 |
+| `methodology.html` has twins, `en/methodology.html` and `ar/methodology.html` (2026-10-05) | repo root | A Hebrew edit to `methodology.html` must be mirrored by hand in both; only the prompt appendix is shared, via `build_methodology.py`. `ar/index.html`'s credits card still lacks the «منهجية العمل الكاملة» link — needs a `translate_ui_ar.py` re-run (never hand-edit that file). | 2026-10-05 |
 
 ## The three surfaces English copy lives in
 

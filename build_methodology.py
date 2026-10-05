@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Inject the seven pipeline prompts into methodology.html, verbatim.
+"""Inject the seven pipeline prompts into methodology.html and en/methodology.html, verbatim.
 
 methodology.html carries one marker pair per script:
     <!-- prompt:0N_name.py --><pre>…</pre><!-- /prompt -->
@@ -12,7 +12,7 @@ import html
 import re
 import sys
 
-PAGE = "methodology.html"
+PAGES = ["methodology.html", "en/methodology.html", "ar/methodology.html"]
 MARK = re.compile(r"(<!-- prompt:([^ ]+?) -->)(.*?)(<!-- /prompt -->)", re.S)
 
 
@@ -25,6 +25,11 @@ def read_prompt(path):
 
 
 def main():
+    for page_path in PAGES:
+        build(page_path)
+
+
+def build(PAGE):
     page = open(PAGE, encoding="utf-8").read()
     n = 0
 

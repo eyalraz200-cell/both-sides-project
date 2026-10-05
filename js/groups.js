@@ -2703,6 +2703,9 @@ const FOLD6_NOTE_TITLE_TEXT = tr("איסוף הנתונים");
 // The note's last line: a link to methodology.html, the full write-up every
 // methodology surface on the site (this note, the @fold16 credits) points to.
 const FOLD6_NOTE_MORE_TEXT = tr("לשיטת העבודה המלאה");
+// Each language links its own page. Relative to
+// the <base href="../"> the en/ and ar/ pages carry, so both resolve from the root.
+const FOLD6_NOTE_MORE_HREF = isEnglish() ? "en/methodology.html" : isArabic() ? "ar/methodology.html" : "methodology.html";
 const FOLD6_NOTE_TITLE_GAP = 4;   // px between the title's box and the note's
 // Divider (faint hairline) sits between the last row and the note. The two
 // gaps are EQUAL on purpose — that's what keeps the divider in the middle of
@@ -2811,7 +2814,7 @@ const fold6NoteSegments = (() => {
   return [
     fold8SetupTypewriter(fold6NoteTitleEl, FOLD6_NOTE_TITLE_TEXT),
     mk("span", before), mk("a", "ACLED", "fold6-note-link", "https://acleddata.com/"), mk("span", after),
-    mk("span", "\n"), mk("a", FOLD6_NOTE_MORE_TEXT, "fold6-note-link", "methodology.html"),
+    mk("span", "\n"), mk("a", FOLD6_NOTE_MORE_TEXT, "fold6-note-link", FOLD6_NOTE_MORE_HREF),
   ];
 })();
 // Every typed character, title included — the segments' own lengths, so a
@@ -3143,7 +3146,7 @@ fold6MobileDataBodyEl.className = "fold6-mlegend-data-body";
   // Same «full methodology» link as the desktop note, as its own line.
   const more = document.createElement("a");
   more.className = "fold6-note-link";
-  more.href = "methodology.html";
+  more.href = FOLD6_NOTE_MORE_HREF;
   more.target = "_blank";
   more.rel = "noopener";
   more.textContent = FOLD6_NOTE_MORE_TEXT;

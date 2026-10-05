@@ -66,6 +66,8 @@ event-level export to the repo.
 
 ## The methodology page — `methodology.html`
 
+**Twins: `en/methodology.html` and `ar/methodology.html`**, hand translations using each site's own group and category names (`I18N_EN` / `I18N_AR` — the Arabic פוגרום label is «أعمال شغب», with «بوغروم» named once in the definition). Each language's legend note links its own page (`FOLD6_NOTE_MORE_HREF`); the English credits link too. Hebrew edits must be mirrored by hand. `build_methodology.py` fills all three appendices.
+
 The full public write-up of everything on this page, in Hebrew, served at the site root
 (`/methodology.html`, linked from the legend note's last line — `FOLD6_NOTE_MORE_TEXT`,
 js/groups.js, desktop and the mobile מקרא card alike — and from the @fold16 credits card).
