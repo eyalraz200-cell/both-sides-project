@@ -30,20 +30,22 @@ date; the rules behind each one live in [Data](Data.md).
 - [x] Hebrew terminology pass (2026-10-03, user's calls): משתמטים/השתמטות → עריקים/עריקות everywhere; ASCII `"` → ״; המהפכה המשפטית → הרפורמה המשפטית (both translated ACLED's "overhaul"); כיכר אל־קודס (Tamra) kept — a place name. ערבים־ישראלים → ערבים ישראלים.
 
 ## Classification
+- [ ] **244 Fortress rows un-hidden (2026-10-04)**: they were hidden as `dup of row-N`, but row-N is an ACLED row that never ships (PLO-only or hidden), so the event vanished from both sources. Rule now: a Fortress duplicate is hidden only when its ACLED match ships. The note is in `dedupe_note` («kept 2026-10-04»); backup in `_xlsx-archive/`. They need step 02 (164 rows), 05 (164), 06 (all 244) and 07 (all 244); `server.py` holds back any row with no `event_type` or an un-rewritten Fortress line, so they ship by themselves once processed. Restart + commit `events.json` after.
 - [x] Commit `events.json` / `events-en.json` + today's scripts, server and wiki (site is stale).
 - [x] Prompt check before the rerun (2026-10-04): 190 stratified ACLED rows run live; user ruled on block+clash, police clashes, counter-protesters, abduction vs in-place detention, road paving — all in the 02 prompt.
 - [x] Dot flagging round 1 (2026-10-04): pogrom crowd threshold raised to 30+ (a stated 15/20 or no size is not a crowd); 5 live pogroms reclassified by hand (rows 8668, 9523, 11015, 13442, 18628). 20 pogroms remain.
 - [x] Dot flagging round 2 (2026-10-04): עימותים / confrontations / scuffles without a described assault are הפרות סדר, not תקיפה פיזית; protesters who were attacked keep their own conduct; one participant's act ≠ the crowd's. 7 rows set by hand (13, 42, 1253, 1707, 3253, 4630, 4667).
 - [x] Dot flagging round 3 (2026-10-04): fireworks, firecrackers, flares, torches or Molotovs launched/thrown AT A PERSON are תקיפה בנשק חם (were קר); rows 19276, 19391 set by hand; fireworks fired during a riot/clash with police count as at them — rows 940, 948, 954, 955, 2245, 6317, 19195 → חם; 4773 (set off while chasing people) stays קר.
 - [x] Abduction wording (2026-10-04): in החזקה בכפייה events, detained → החזיקו בכפייה (never עיכבו); abducted → חטפו only when the place or manner is given, else לקחו בכפייה. 36 of 40 Hebrew + Arabic lines updated; rule in 03, 06 and 07 prompts.
-- [ ] **Last step, after everything else:** rerun step 02 over the original ACLED rows with the
-      new prompt, hand-set rows skipped — the 63 hand fixes covered only what the review surfaced.
+- [x] Pogrom standard (2026-10-04): big crowd with stated size + Palestinians hurt/killed by the main actor + named fire + concrete detail, all four; 22 pogroms reclassified by hand, 16 kept and stamped. In the 02 prompt.
+- [x] 244 un-hidden Fortress rows whose ACLED twin was PLO-only (2026-10-05): switched to the ACLED rows instead — 230 ACLED rows marked `corroborated_by`, now ship and went through steps 02, 05 and 07; the 244 Fortress copies are hidden again as their duplicates. Site 12,053 → 12,283; methodology counts updated.
+- [x] **Second pass of step 02** (2026-10-04, `RERUN_ALL=1`): 12,332 rows re-sent; old value kept in `event_type_prev` where it changed. Review: bulldozing without a road is פגיעה ברכוש, Molotovs at inhabited houses / fire on an occupied car are תקיפה בנשק חם — prompt fixed, 116 rows re-run, 3 set by hand.
 - [x] The 342 `unsure` Fortress↔ACLED pairs — second reading 2026-10-03 (`_dedupe/pass2/`): 298 sure (hidden `dup of row-N`), 44 distinct (stay live); the last 11 decided by the user.
 - [x] Internal Fortress duplicates (2026-10-04, `_dedupe/fint/`): live Fortress rows grouped by place ±1 day (273 groups), read by 6 readers — 63 duplicate sets, 87 rows hidden as `fortress dup of row-N` (most detailed row kept).
 - [x] Flagged Fortress rows (2026-10-03): 55 settled by the existing rules, 15 by the user. User rule: an act done by soldiers, a regional-defence (גמ״ר) soldier or a settlement guard — even with settlers along or at their request — is `not relevant` (army act, off the site); a רבש״ץ who shoots stays `settlers`. Refined the same day: settlers WITH soldiers, settlers-then-soldiers, and a guard alone stay `settlers`; "soldiers known as settlers" are `not relevant` (10 rows).
 
 ## Methodology copy (its own task)
-- [x] `methodology.html` — the full write-up, prompts injected by `build_methodology.py`; linked from the legend note and the @fold16 credits (2026-10-04). The credits card now also names the PLO sole-source exclusion.
+- [x] `methodology.html` — the full write-up, prompts injected by `build_methodology.py`; linked from the legend note and the @fold16 credits (2026-10-04).
 - [ ] The @fold6 card («תיאורי האירועים … לקוחים ברובם ממאגר ACLED…»), the legend note
       (`FOLD6_NOTE_TEXT`, js/groups.js) and the @fold16 credits still describe an ACLED-only
       dataset. Rewrite to name the Fortress log as the second source, say that its lines were

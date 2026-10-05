@@ -74,7 +74,8 @@ ACTOR_SIDE = {
 # ";"-separated, matched lowercase. The PLO Negotiations Affairs Department is
 # the sheet's largest source (5,056 rows, all settler events); the 4,036 rows
 # that cite nothing else are dropped, the 1,020 corroborated by another outlet
-# stay. Empty the set to ship every row.
+# stay, and so do sole-source rows that a Fortress row corroborates (column
+# `corroborated_by`, 230 rows since 2026-10-05). Empty the set to ship every row.
 SOLE_SOURCE_EXCLUDE = {"plo negotiations affairs department"}
 
 # The timeline ends where the ACLED data ends, for now: rows dated after the
@@ -138,6 +139,7 @@ def load_events():
                 ds = d.strftime("%Y-%m-%d") if hasattr(d, "strftime") else str(d)[:10]
                 last_acled = max(last_acled, ds)
     tail_dropped = 0
+    pending = 0
     for row in rows:
         actor = row[col["main_actor"]]
         date  = row[col["date"]]
@@ -147,8 +149,21 @@ def load_events():
             hidden_dropped += 1
             continue
         sources = {x.strip().lower() for x in str(row[col["source"]] or "").split(";") if x.strip()}
-        if sources and sources <= SOLE_SOURCE_EXCLUDE:
+        # A sole-source row ships after all when an independent log corroborates
+        # it: `corroborated_by` names the Fortress row(s) that describe the same
+        # incident (those are hidden as its duplicates, so the event shows once).
+        corroborated = "corroborated_by" in col and str(row[col["corroborated_by"]] or "").strip()
+        if sources and sources <= SOLE_SOURCE_EXCLUDE and not corroborated:
             sole_dropped += 1
+            continue
+        # Not yet through the pipeline: no action type, or a Fortress row whose
+        # line has not been rewritten by step 06 (description_he_original blank).
+        # Such rows wait in the sheet and ship by themselves once processed.
+        src = str(row[col["data_source"]] or "").strip().lower() if "data_source" in col else ""
+        if not str(row[col["event_type"]] or "").strip() or (
+                src == "the fortress" and "description_he_original" in col
+                and not str(row[col["description_he_original"]] or "").strip()):
+            pending += 1
             continue
         side = ACTOR_SIDE.get(str(actor).strip().lower())
         if side is None:
@@ -193,6 +208,7 @@ def load_events():
     print(f"  crowd size: {matched}/{len(events)} events carry a reported figure")
     print(f"  dropped {sole_dropped} rows whose only source is in SOLE_SOURCE_EXCLUDE")
     print(f"  dropped {hidden_dropped} rows marked in the `hidden` column")
+    print(f"  held back {pending} rows still waiting on the pipeline (no event_type / Fortress line not rewritten)")
     if last_acled:
         print(f"  dropped {tail_dropped} rows dated after the last ACLED event ({last_acled})")
 

@@ -1734,10 +1734,13 @@ function p9ScopeSolveCols(visList, colsMin, colsMax, rowsMax) {
   // width would only shrink the blocks further than needed.
   if (cap < P9_SCOPE_TIER_CAP) return { cols: wide, layout: packAt(wide) };
   let lo = Math.max(1, colsMin), hi = Math.max(lo, colsMax), best = null;
-  // Mobile: a trial width narrower than the biggest block clamps that block
-  // down to the width (p9PackColumns), so "narrowest that fits" always won by
-  // shrinking the tiers away. Never try narrower than the widest block.
-  if (isMobile()) {
+  // A trial width narrower than the biggest block clamps that block down to
+  // the width (p9PackColumns), so "narrowest that fits" won by shrinking the
+  // tiers away — on desktop that only showed with a SMALL category alone in
+  // the extreme zone (the 15 פוגרום dots solved to one column and every block
+  // to one cell, so the size toggle did nothing). Never try narrower than the
+  // widest block, at both breakpoints.
+  {
     let widest = 1;
     for (const e of visList) widest = Math.max(widest, p9ScopeCellsFor(e, Infinity, cap));
     lo = Math.min(hi, Math.max(lo, widest));

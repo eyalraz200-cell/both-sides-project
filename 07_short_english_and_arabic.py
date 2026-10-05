@@ -97,11 +97,12 @@ def build_jobs(ws):
     c_ar, c_hid, c_ds, c_orig, c_hand = col("description_ar"), col("hidden"), col("data_source"), col("description_he_original"), col("description_hand")
     c_note = col("description_note")
     c_src = m.find_col(headers, ["source"], required=False)
+    c_corr = m.find_col(headers, ["corroborated_by"], required=False)
     jobs = []
     for r in range(2, ws.max_row + 1):
         g = lambda c: m.norm(ws.cell(r, c).value) if c else ""
         srcs = {x.strip().lower() for x in g(c_src).split(";") if x.strip()}
-        if srcs and srcs <= SOLE_SOURCE_EXCLUDE: continue
+        if srcs and srcs <= SOLE_SOURCE_EXCLUDE and not g(c_corr): continue   # corroborated rows ship
         actor = g(c_actor)
         if not actor or actor == "not relevant" or g(c_hid) or g(c_hand): continue
         if g(c_ar) or not g(c_he): continue

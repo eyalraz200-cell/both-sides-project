@@ -387,7 +387,10 @@ republished from `drawPage9` when the line moves. Only on @fold12
   pitch, but only as far as the pack actually needs: `p9ScopeSolveCols` binary
   searches for the **fewest** columns whose rows still fit under the ceiling
   (rows fall monotonically as columns are added, so ~log2 packs, and the result
-  is cached). Each side solves its own width, so the sparser right column
+  is cached). **The search never goes narrower than the widest block**, at both
+  breakpoints: a trial width under it clamps that block down to the width, so a small
+  category alone in the extreme zone (the 15 פוגרום dots) solved to one column and the
+  size toggle did nothing. Each side solves its own width, so the sparser right column
   usually stays at its native `p9.extremeColsSticky` and never widens at all.
   `p9ScopeBox` only sets the *ceiling* on that search — how wide a side could
   get while keeping `P9_SCOPE_WIDEN_MARGIN` (8px) clear of the viewport edge,
@@ -469,12 +472,10 @@ republished from `drawPage9` when the line moves. Only on @fold12
 - **Mobile.** The desktop pill is hidden under 600px; the same toggle is a row in the
   מקרא panel (`fold6MobileScopeEl`, js/groups.js), and `p9ScopeSet` / `p9ScopeTiered`
   run on both breakpoints.
-  Mobile tiers differ in three ways (all `isMobile()`-gated, desktop untouched):
+  Mobile tiers differ in two ways (both `isMobile()`-gated, desktop untouched):
   **the pitch grows** — `p9ScopeMobileCell` picks the largest `P9_SCOPE_CELL_STEPS_M`
   multiple of `P9_CELL_M` at which both camps pack uncapped into their room and the column
-  height, and the in-block gap scales with it; **the column search never goes narrower
-  than the widest block** (`p9ScopeSolveCols`), which used to clamp the tiers away; and
-  **the centre gap** drops to `P9_EXTREME_GAP_TIERED_M` (16px) plus the count-label
+  height, and the in-block gap scales with it; and **the centre gap** drops to `P9_EXTREME_GAP_TIERED_M` (16px) plus the count-label
   clearance, measured off the last drawn columns (`p9.scopeStats`).
 
 ## Dot migration — the two states

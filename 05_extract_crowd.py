@@ -112,11 +112,12 @@ def build_jobs(ws):
     c_desc, c_he, c_crowd, c_hid = col("Description", req=True), col("description_he_medium"), col("crowd"), col("hidden")
     c_ds, c_split, c_orig = col("data_source"), col("split_from"), col("description_original")
     c_src = m.find_col(headers, ["source"], required=False)
+    c_corr = m.find_col(headers, ["corroborated_by"], required=False)
     jobs = []
     for r in range(2, ws.max_row + 1):
         g = lambda c: m.norm(ws.cell(r, c).value) if c else ""
         srcs = {x.strip().lower() for x in g(c_src).split(";") if x.strip()}
-        if srcs and srcs <= SOLE_SOURCE_EXCLUDE: continue
+        if srcs and srcs <= SOLE_SOURCE_EXCLUDE and not g(c_corr): continue   # corroborated rows ship
         actor = g(c_actor)
         if not actor or actor == "not relevant" or g(c_hid): continue
         if g(c_crowd): continue                       # already has a figure (or "no report")

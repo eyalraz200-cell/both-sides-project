@@ -356,8 +356,10 @@ def build_jobs(ws):
     _h = [c.value for c in ws[1]]
     _src = find_col(_h, ["source"], required=False)
     PLO_ONLY = {"plo negotiations affairs department"}     # server.py SOLE_SOURCE_EXCLUDE: never shipped
+    _corr = find_col(_h, ["corroborated_by"], required=False)
     def _plo_only(row):
         if not _src: return False
+        if _corr and norm(ws.cell(row, _corr).value): return False   # corroborated by the Fortress log: ships
         s = {x.strip().lower() for x in norm(ws.cell(row, _src).value).split(";") if x.strip()}
         return bool(s) and s <= PLO_ONLY
     headers = [c.value for c in ws[1]]

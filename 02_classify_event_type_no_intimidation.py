@@ -320,6 +320,10 @@ HAND-REVIEW RULES (Fortress log, 2026-10-03):
   police dispersal ALONE, with no clash described, do not raise the category.
 - Levelling / bulldozing Palestinian land to pave or open a road for a settlement or outpost
   -> ניכוס שטח (the land is taken), even when a water line or crops are destroyed on the way.
+  Bulldozing, levelling or uprooting land with NO road, outpost, fence or structure stated
+  -> פגיעה ברכוש (it destroys the land, it does not take it).
+- Molotov cocktails thrown at INHABITED houses, and setting fire to an OCCUPIED vehicle (people
+  inside), are תקיפה בנשק חם — fire aimed at people. Arson of empty property stays פגיעה ברכוש.
 - עימותים / "confrontations" / "scuffles" / "heated arguments that turned physical" / "minor
   shoving" are NOT תקיפה פיזית. תקיפה פיזית needs a DESCRIBED assault by the main actor on a
   named target ("beat a man", "pushed the officer to the ground", "kicked him"). A protest
@@ -508,16 +512,19 @@ Use פוגרום only when the MAIN ACTOR is explicitly a LARGE CROWD, MOB, MASS
 
 and the attack includes violence against people, homes, vehicles, businesses, or the civilian environment.
 
-פוגרום requires ALL THREE, performed by the MAIN ACTOR:
+פוגרום requires ALL FOUR, performed by the MAIN ACTOR and EACH STATED EXPLICITLY in the text
+(hand rule 2026-10-04 — a pogrom is a very heavy accusation; if any element has to be
+inferred, it is not a pogrom):
 1. A CROWD OF 30 OR MORE — "dozens", "hundreds", "thousands", or a stated number of 30+.
    (15 or 20 attackers, "tens", "a group", "several settlers", or NO size stated at all is
    NOT a crowd for this purpose — hand rule 2026-10-04.)
 2. VIOLENCE AGAINST PEOPLE — beatings, stone-throwing at people or inhabited houses,
    gunfire, pepper spray — with victims present.
-3. FIRE OR GUNFIRE AGAINST THE COMMUNITY — houses, tents, vehicles, fields, buildings
-   set on fire, or live fire into the village.
+3. FIRE — houses, tents, vehicles, fields or buildings in the community SET ON FIRE.
+4. PROPERTY DESTROYED — the fire or other acts damaged or destroyed homes, vehicles,
+   businesses or crops (stated, not assumed).
 
-All three during a raid on a village, community, neighbourhood or farm = פוגרום
+All four during a raid on a village, community, neighbourhood or farm = פוגרום
 (e.g. 50 settlers beat residents injuring 2 AND burn 7 vehicles -> פוגרום; the same by
 20 settlers -> תקיפה פיזית, by a crowd of unstated size -> classify the acts themselves).
 
@@ -529,7 +536,18 @@ NOT a pogrom:
 - "attacked a community" with no mechanism -> הפרות סדר
 - a small group (under 30) however violent, or a raid whose size is not stated
 
-When all three conditions hold, פוגרום is the answer (it is top of the hierarchy).
+When all four conditions hold, פוגרום is the answer (it is top of the hierarchy).
+
+POGROM STANDARD (user, 2026-10-04 — a pogrom is a very heavy accusation; when in doubt, it is
+NOT a pogrom). ALL of these must be stated in the text itself:
+- a crowd of 30+ with its size given (no stated size = not a pogrom, however severe);
+- Palestinians injured or killed BY THE MAIN ACTOR (injuries caused only by soldiers/police, or
+  only settlers hurt, do not count; "no casualties" rules it out);
+- fire set to homes, vehicles, structures or fields — named, not just "set fire to property";
+- enough concrete detail to judge (a one-line "wave of attacks including arson, stones and
+  assaults" with no specifics is NOT enough).
+Missing any one -> classify the most serious act described (gunfire -> תקיפה בנשק חם, stones or
+clubs at people -> תקיפה בנשק קר, beatings -> תקיפה פיזית, arson of property -> פגיעה ברכוש).
 
 
 SEVERITY HIERARCHY
@@ -555,7 +573,7 @@ Before returning the category, verify:
 1. Am I classifying an action performed by the supplied MAIN ACTOR?
 2. Did I accidentally use an action performed by a secondary actor?
 3. If several MAIN ACTOR actions occurred, did I choose the highest-ranked applicable category?
-4. Did I apply the special rules for threats/intimidation, stones (incl. at houses), bottles, stun grenades, fireworks, firecrackers, eggs/smoke/unspecified objects, pepper spray vs. chemicals vs. tear-gas launchers, "armed" without use, fire at houses, arson, injuries from property destruction, livestock, protest barriers, land appropriation vs. symbolic crossings, incursions into villages, brief seizure vs. sustained holding, ramming, and the three-part pogrom test?
+4. Did I apply the special rules for threats/intimidation, stones (incl. at houses), bottles, stun grenades, fireworks, firecrackers, eggs/smoke/unspecified objects, pepper spray vs. chemicals vs. tear-gas launchers, "armed" without use, fire at houses, arson, injuries from property destruction, livestock, protest barriers, land appropriation vs. symbolic crossings, incursions into villages, brief seizure vs. sustained holding, ramming, and the four-part pogrom test?
 
 Return exactly one allowed event type.
 
@@ -690,8 +708,10 @@ def build_jobs(ws):
     _h = [c.value for c in ws[1]]
     _src = find_col(_h, ["source"], required=False)
     PLO_ONLY = {"plo negotiations affairs department"}     # server.py SOLE_SOURCE_EXCLUDE: never shipped
+    _corr = find_col(_h, ["corroborated_by"], required=False)
     def _plo_only(row):
         if not _src: return False
+        if _corr and norm(ws.cell(row, _corr).value): return False   # corroborated by the Fortress log: ships
         s = {x.strip().lower() for x in norm(ws.cell(row, _src).value).split(";") if x.strip()}
         return bool(s) and s <= PLO_ONLY
     headers = [c.value for c in ws[1]]
