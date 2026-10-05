@@ -46,11 +46,6 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- The page's one h1. Every visible heading is an <h2> inside a scrolling
-       title card, so without this the document has no top-level heading and
-       its outline starts at level 2. Off-screen, not display:none — the latter
-       is skipped by screen readers too. -->
-  <h1 class="a11y-only">אירועים קיצוניים — שני הצדדים</h1>
   <div class="layout">
     <div class="graphic-col">
       <!-- The whole visualisation is painted here, so to assistive tech the
@@ -88,6 +83,10 @@
          changes nothing about where anything lands. It stays BEFORE .text-col in
          source order, which is what keeps its desktop z-index: 0 painting under
          the title cards exactly as it did from inside .graphic-col. -->
+    <!-- aria-hidden: the six group rows here are visual only. Their names reach
+         assistive tech through the legend FILTER buttons (.fold6-legend-filter,
+         js/groups.js), which live outside this overlay, and through
+         #canvasA11ySummary. -->
     <div class="groups-overlay" id="groupsOverlay" aria-hidden="true"></div>
     <!-- Dev aid: the current @foldN, the number alone, top-left. Ctrl+Shift+F
          hides/shows it (js/nav.js). A direct .layout child for the same reason
@@ -97,18 +96,21 @@
          that opens a drop-down of the three languages — js/lang-switch.js. The
          look is the legend note's card (compare/ pick 2026-10-03) and the rows
          wear the «הצגת גודל האירועים» ring. -->
-    <div class="lang-wrap" id="langWrap">
-      <button type="button" class="lang-switch" id="langSwitch" aria-haspopup="menu" aria-expanded="false" aria-controls="langMenu" aria-label="בחירת שפה"><svg class="lang-switch-globe" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/><ellipse cx="8" cy="8" rx="2.8" ry="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M1.5 8h13M2.6 5h10.8M2.6 11h10.8" fill="none" stroke="currentColor" stroke-width="1.2"/></svg><span class="lang-switch-code">עב</span></button>
-      <div class="lang-menu" id="langMenu" role="menu" hidden>
+    <!-- A disclosure, not an ARIA menu: a button + a list of links. The <nav>
+         IS the positioned card (.lang-wrap), so the landmark adds no box. The
+         button's aria-label starts with its visible letters (WCAG 2.5.3). -->
+    <nav class="lang-wrap" id="langWrap" aria-label="שפה">
+      <button type="button" class="lang-switch" id="langSwitch" aria-expanded="false" aria-controls="langMenu" aria-label="עב – בחירת שפה"><svg class="lang-switch-globe" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/><ellipse cx="8" cy="8" rx="2.8" ry="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M1.5 8h13M2.6 5h10.8M2.6 11h10.8" fill="none" stroke="currentColor" stroke-width="1.2"/></svg><span class="lang-switch-code">עב</span></button>
+      <div class="lang-menu" id="langMenu" hidden>
         <div class="lang-menu-rows">
-        <a class="lang-menu-row is-current" role="menuitemradio" aria-checked="true" aria-disabled="true" tabindex="-1" href="./" lang="he" hreflang="he">עברית</a>
-        <a class="lang-menu-row" role="menuitemradio" aria-checked="false" href="en/" lang="en" hreflang="en">English</a>
-        <a class="lang-menu-row" role="menuitemradio" aria-checked="false" href="ar/" lang="ar" hreflang="ar">العربية</a>
+        <a class="lang-menu-row is-current" aria-current="page" tabindex="-1" href="./" lang="he" hreflang="he">עברית</a>
+        <a class="lang-menu-row" href="en/" lang="en" hreflang="en">English</a>
+        <a class="lang-menu-row" href="ar/" lang="ar" hreflang="ar">العربية</a>
         </div>
       </div>
-    </div>
+    </nav>
     <!-- העין השביעית's logo, top-right; a mask-painted link (style.css, .seventh-eye). -->
-    <a class="seventh-eye" href="https://www.the7eye.org.il/" target="_blank" rel="noopener" aria-label="העין השביעית"><span class="seventh-eye-caption">פרויקט בשיתוף</span><span class="seventh-eye-mark" aria-hidden="true"></span></a>
+    <a class="seventh-eye" href="https://www.the7eye.org.il/" target="_blank" rel="noopener" aria-label="פרויקט בשיתוף העין השביעית"><span class="seventh-eye-caption">פרויקט בשיתוף</span><span class="seventh-eye-mark" aria-hidden="true"></span></a>
     <div class="fold-number-badge" id="foldNumberBadge" aria-hidden="true"></div>
     <!-- Hover tooltip for the event dots (date + Hebrew description) —
          positioned/shown by p9HoverInit (page9.js), p7HoverInit/p7InspectInit
@@ -140,18 +142,22 @@
          .layout child, not nested in .graphic-col, so its z-index actually
          stacks above .text-col instead of losing to it regardless of its
          own z-index (.graphic-col traps any z-index inside it). Without
-         this, the ACLED link inside the note was unclickable. -->
-    <div class="fold6-note-layer" id="fold6NoteLayer" aria-hidden="true"></div>
+         this, the ACLED link inside the note was unclickable.
+         NOT aria-hidden: the note's text and its three links are real content.
+         Its decorative pieces (card, rule) carry aria-hidden themselves, and the
+         layer is `inert` whenever the note isn't on screen (js/groups.js,
+         fold6NoteLayerSyncInert), so its links are never invisible tab stops. -->
+    <div class="fold6-note-layer" id="fold6NoteLayer"></div>
     <!-- Mobile-only מקרא legend bar (js/groups.js builds its contents). It gets
          its OWN layer rather than sharing #fold6NoteLayer above, because that
-         one is aria-hidden and pointer-events:none — correct for a decorative
-         credit line, fatal for a button that has to be tappable and reachable
+         one is pointer-events:none — fine for a credit line, fatal for a button that has to be tappable and reachable
          by assistive tech. Same direct-.layout-child trick for the z-index. -->
     <div class="fold6-mlegend-layer" id="fold6MobileLegendLayer"></div>
-    <div class="text-col" id="textCol">
+    <!-- <main>: the scrolling story is the page's main landmark. -->
+    <main class="text-col" id="textCol">
       <section class="text-section" data-page="0" id="page-0">
         <div class="page0-overlay">
-          <h2 class="page0-title">קיצוניים משני הצדדים</h2>
+          <h1 class="page0-title">קיצוניים משני הצדדים</h1>
           <p class="page0-subtitle">ניתוח<br />הפעילות של<br />המחנות הפוליטיים<br />בישראל</p>
         </div>
       </section>
@@ -306,7 +312,7 @@
             <div class="text-card-frame page12-card">
               <h2 class="section-title page12-title">קיצוניים משני הצדדים</h2>
               <div class="page12-body" dir="rtl">
-                <p class="page12-body-heading">נתונים ושיטת עבודה</p>
+                <p class="page12-body-heading" role="heading" aria-level="3">נתונים ושיטת עבודה</p>
                 <p>המאגר שמאחורי הפרויקט כולל פעולות פוליטיות שביצעו אזרחי ישראל במרחב הציבורי, בישראל ובשטחים, מתחילת 2023: הפגנות, חסימות כבישים, עימותים, תקיפות, פגיעה ברכוש, ניכוס שטח ופעולות דומות. אמירות, פוסטים והצהרות שלא לוו בפעולה בשטח לא נכללו.</p>
                 <p>תיאורי האירועים ומועדיהם לקוחים ממאגר <a class="card-link" href="https://acleddata.com/" target="_blank" rel="noopener">ACLED</a>, גוף מחקר בינלאומי המתעד מחאה ואלימות פוליטית על בסיס דיווחי תקשורת ומקורות מקומיים, ומיומן אלימות המתנחלים של ״המבצר״; אירוע שמופיע בשני המקורות נספר פעם אחת. השיוך לקבוצה, סיווג הפעולה והערכת גודל הקהל הופקו מתוך התיאורים במסגרת הפרויקט. התיאורים נערכו וקוצרו, ותיאורי ACLED תורגמו לעברית, תוך שמירה על העובדות ועל ההקשר שבו התרחשו האירועים.</p>
                 <p>כל אירוע שויך לקבוצה שביצעה את הפעולה המרכזית בו, לא לנפגעים ולא לכוחות הביטחון שהגיבו. כשהקבוצה ביצעה כמה פעולות, האירוע סווג לפי הפעולה החמורה ביותר, במדרג של עשרה סוגי פעולה שנבנה במסגרת הפרויקט בהסתמך על מדדי חומרה קיימים. השיוך, הסיווג והתרגום נעשו בעזרת מודלי שפה של OpenAI, לפי הנחיות שנכתבו לפרויקט ושוכללו בסבבים רבים של בדיקה ותיקון ידני.</p>
@@ -318,7 +324,7 @@
             </div>
           </div>
       </section>
-    </div>
+    </main>
   </div>
 
   <script src="js/i18n.js"></script>

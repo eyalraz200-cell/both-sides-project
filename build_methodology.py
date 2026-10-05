@@ -3,7 +3,7 @@
 ar/methodology.html, verbatim.
 
 Each of the three pages carries one marker pair per script:
-    <!-- prompt:0N_name.py --><pre>…</pre><!-- /prompt -->
+    <!-- prompt:0N_name.py --><pre lang="en" dir="ltr">…</pre><!-- /prompt -->
 This rewrites what sits between each pair with the HTML-escaped INSTRUCTIONS
 string read from that script, so the public appendix can never drift from the
 prompts actually sent. Run after any 0N_*.py prompt edit:
@@ -37,7 +37,8 @@ def build(PAGE):
     def sub(m):
         nonlocal n
         n += 1
-        return f"{m.group(1)}<pre>{html.escape(read_prompt(m.group(2)))}</pre>{m.group(4)}"
+        # lang/dir: the prompts are English inside a Hebrew/Arabic page (WCAG 3.1.2).
+        return f'{m.group(1)}<pre lang="en" dir="ltr">{html.escape(read_prompt(m.group(2)))}</pre>{m.group(4)}'
 
     out = MARK.sub(sub, page)
     if out != page:

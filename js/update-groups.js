@@ -991,11 +991,18 @@ function updateGroups() {
       el.style.top = `${fold6RowY(g, H) - hoverTop - pitch / 2}px`;
       el.style.height = `${pitch}px`;
       el.style.display = canFilter ? "block" : "none";
+      // A tab stop only while it can filter (display:none already drops it
+      // from the order; this keeps the attribute honest too).
+      const ti = canFilter ? 0 : -1;
+      if (el.tabIndex !== ti) el.tabIndex = ti;
       // The dim outlives the click target: on @fold13+ the filter is still in
       // force, so the legend must keep saying which groups are missing.
       const off = filterLives && p7FilterOff.has(g.actor);
       const item = groupItems[gi];
       if (item) item.el.classList.toggle("is-filtered-off", !!off);
+      // aria-pressed = the group is shown (see fold6LegendFilterEl).
+      const pressed = off ? "false" : "true";
+      if (el.getAttribute("aria-pressed") !== pressed) el.setAttribute("aria-pressed", pressed);
     });
   } else {
     fold6LegendHoverEls.forEach((el) => { el.style.display = "none"; });
@@ -1018,6 +1025,8 @@ function updateGroups() {
       r.row.classList.toggle("is-armed", mArmed);
       r.row.classList.toggle("is-filtered-off", !!(mLives && p7FilterOff.has(r.g.actor)));
     });
+    // …and the same state for assistive tech + the rows' tab stops.
+    fold6MLegendRowsSyncA11y();
   }
 
   // ── The «הצגת גודל האירועים» toggle ───────────────────────────────────────────

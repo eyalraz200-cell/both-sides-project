@@ -395,6 +395,9 @@ function updateTextCardFrameDashes() {
     if (!svg) {
       svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       svg.setAttribute("class", "text-card-frame-dash");
+      // Pure decoration (the dashed frame): out of the a11y tree, never a tab stop.
+      svg.setAttribute("aria-hidden", "true");
+      svg.setAttribute("focusable", "false");
       rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
       rect.setAttribute("fill", "none");
       rect.setAttribute("stroke", "#000");

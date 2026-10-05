@@ -3178,6 +3178,30 @@ function p9SyncLayoutV2Class() {
   return true; // changed — caller re-measures
 }
 
+// The page's one polite live region (visually hidden, .a11y-only). Created on
+// first use and shared: @fold12's pill announcements and arrow-key stepping
+// (below), @fold13's scroll-gate hint (js/fold11.js) and the share row's «link
+// copied» (page12.js) all write here through p9Announce, so a screen reader
+// hears one queue rather than several regions talking over each other.
+let p9LiveEl = null;
+function p9LiveRegion() {
+  if (p9LiveEl) return p9LiveEl;
+  p9LiveEl = document.createElement("div");
+  p9LiveEl.className = "a11y-only";
+  p9LiveEl.setAttribute("aria-live", "polite");
+  p9LiveEl.setAttribute("aria-atomic", "true");
+  document.body.appendChild(p9LiveEl);
+  return p9LiveEl;
+}
+// Writing the same text twice is not a change, so a repeat (a second «link
+// copied») would go unannounced — clear first and write on the next tick.
+function p9Announce(msg) {
+  const el = p9LiveRegion();
+  if (el.textContent !== msg) { el.textContent = msg; return; }
+  el.textContent = "";
+  setTimeout(() => { el.textContent = msg; }, 50);
+}
+
 function p9BuildPanel() {
   const zoneAbove   = document.getElementById("page9ZoneAbove");
   const zoneBelow   = document.getElementById("page9ZoneBelow");
@@ -3200,11 +3224,7 @@ function p9BuildPanel() {
 
   // Off-screen announcer: the visible result of a classification is a canvas
   // animation and a count, neither of which is in the accessibility tree.
-  const liveEl = document.createElement("div");
-  liveEl.className = "a11y-only";
-  liveEl.setAttribute("aria-live", "polite");
-  liveEl.setAttribute("aria-atomic", "true");
-  document.body.appendChild(liveEl);
+  p9LiveRegion();
 
   // Reads the pill's CURRENT placement rather than p9.sides, so it is correct
   // the instant it's called from placePillInZone / the mobile class toggle —
@@ -3219,11 +3239,26 @@ function p9BuildPanel() {
     const extreme = pillIsExtreme(pill);
     pill.setAttribute("aria-pressed", extreme ? "true" : "false");
     const label = pill.querySelector(".page9-pill-label")?.textContent || "";
-    const total = Array.from(document.querySelectorAll(".page9-pill"))
-      .filter(pillIsExtreme).length;
-    liveEl.textContent =
+    const extremePills = Array.from(document.querySelectorAll(".page9-pill"))
+      .filter(pillIsExtreme);
+    const total = extremePills.length;
+    // The per-camp counts the canvas draws over the two columns (the «N
+    // אירועים» labels — canvas-only, so absent from the a11y tree). Counted off
+    // the pills' NEW placement rather than p9ExtremeCountsNow()/p9.sides: this
+    // runs before commitDropState writes the side, and the drawn label is
+    // still mid count-up then anyway. Same legend-filter rule as the canvas
+    // (p9CountsEvent). left = גוש השינוי, right = קואליציית הימין (ACTOR_SIDE).
+    const extremeIdx = new Set(extremePills.map(p => Number(p.dataset.idx)));
+    const countSide = evs => (evs || []).filter(e =>
+      extremeIdx.has(CATEGORY_TO_IDX[e.category]) && p9CountsEvent(e)).length;
+    const counts = p7.ready
+      ? " " + trf("אירועים שסווגו כקיצוניים — גוש השינוי: {l}, קואליציית הימין: {r}.",
+                  { l: countSide(p7.leftEvents), r: countSide(p7.rightEvents) })
+      : "";
+    p9Announce(
       `${label} — ${tr(extreme ? "סווגה כפעולה קיצונית" : "הוחזרה לפעולות לגיטימיות")}. ` +
-      trf("{total} מתוך {n} מסווגות כקיצוניות.", { total, n: P9_CATEGORIES.length });
+      trf("{total} מתוך {n} מסווגות כקיצוניות.", { total, n: P9_CATEGORIES.length }) +
+      counts);
   }
 
   function resolveDropTarget(x, y) {
@@ -3617,6 +3652,17 @@ function p9BuildPanel() {
     pill.tabIndex = 0;
     pill.setAttribute("role", "button");
     pill.setAttribute("aria-pressed", "false");
+    // Explicit name: computed from content it would read the ⓘ's «i» and the
+    // ✕ glyph into it («הפגנה לא אלימהi×»). The category description is the
+    // pill's DESCRIPTION, from an off-screen twin of the tooltip text (the
+    // tooltip itself is aria-hidden and only holds one pill's text at a time).
+    pill.setAttribute("aria-label", tr(label));
+    const descA11y = document.createElement("span");
+    descA11y.id          = `p9PillDesc${idx}`;
+    descA11y.className   = "a11y-only";
+    descA11y.textContent = tr(P9_CATEGORY_DESC[idx]);
+    document.body.appendChild(descA11y);
+    pill.setAttribute("aria-describedby", descA11y.id);
 
     // Permanent column within its own tray row (see P9_TRAY_GRID/trayRows
     // above) — applies only while the pill is actually inside its row
@@ -3705,7 +3751,12 @@ function p9BuildPanel() {
     infoEl.type        = "button";
     infoEl.className   = "page9-pill-info";
     infoEl.textContent = "i";
-    infoEl.setAttribute("aria-label", trf("מידע על {label}", { label: tr(label) }));
+    // Out of the tab order and the a11y tree: a real button nested in the
+    // role=button pill is nested-interactive, and everything it reveals is
+    // already the pill's aria-describedby (above). It stays a <button> so
+    // mouse/touch taps keep working exactly as before.
+    infoEl.tabIndex = -1;
+    infoEl.setAttribute("aria-hidden", "true");
     pill.appendChild(infoEl);
 
     // DECORATIVE ✕ for a dropped (extreme) pill — currently PARKED and never
@@ -4537,7 +4588,16 @@ function p9HoverInit() {
     p9.hoveredEvent = null;
     const rect = canvasEl.getBoundingClientRect();
     onMove({ clientX: rect.left + next.c.x, clientY: rect.top + next.c.y });
+    // The tooltip is canvas-adjacent and aria-hidden, so say the dot out loud:
+    // the same date + description it shows, from the same accessors. Debounced
+    // so a held arrow key announces where it STOPS, not every dot it passes.
+    clearTimeout(p9KeyAnnounceTimer);
+    p9KeyAnnounceTimer = setTimeout(() => {
+      const ev = p9.hoveredEvent;
+      if (ev) p9Announce(`${p7FormatDateDMY(ev.date)} — ${p7EventDesc(ev)}`);
+    }, 250);
   });
+  let p9KeyAnnounceTimer = 0;
 
   window.addEventListener("pointermove", onMove);
   window.addEventListener("scroll", () => { if (!p9HoverPageOk()) hide(); }, { passive: true });
@@ -4605,13 +4665,45 @@ function p9CategoryTooltipInit() {
   // must close it.
   let openInfoPill = null;
 
+  // ── Hoverable (WCAG 1.4.13) ──
+  // The box is pointer-events:none (style.css) so it never blocks the drop zone
+  // it hangs over, which means the pointer can't "enter" it as an element.
+  // Instead, while it is up, a pointer that leaves the pill is tested against
+  // the box's own rect — grown by the GAP toward the pill, so crossing the gap
+  // between them doesn't count as leaving — and the tooltip only closes once
+  // the pointer is outside BOTH. Desktop only; mobile's is ⓘ-driven.
+  let hoverPill = null;
+  function overTooltip(x, y) {
+    if (!tooltipEl.classList.contains("is-visible")) return false;
+    const r = tooltipEl.getBoundingClientRect();
+    return x >= r.left - GAP && x <= r.right + GAP &&
+           y >= r.top - GAP && y <= r.bottom + GAP;
+  }
+  function overPill(x, y) {
+    if (!hoverPill || !hoverPill.isConnected) return false;
+    const r = hoverPill.getBoundingClientRect();
+    return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+  }
+  function onLingerMove(e) {
+    if (overPill(e.clientX, e.clientY) || overTooltip(e.clientX, e.clientY)) return;
+    stopLinger();
+    hide();
+  }
+  function startLinger() { window.addEventListener("pointermove", onLingerMove); }
+  function stopLinger() {
+    window.removeEventListener("pointermove", onLingerMove);
+    hoverPill = null;
+  }
+
   zoneBelow.addEventListener("pointerover", e => {
     // Mobile drives the tooltip from the ⓘ button alone. Without this guard a
     // classify-tap also fires pointerover and would raise the tooltip as a
     // side effect of tapping anywhere on the pill.
     if (isMobile()) return;
     const pill = e.target.closest(".page9-pill");
-    if (pill && zoneBelow.contains(pill)) show(pill); else hide();
+    if (pill && zoneBelow.contains(pill)) { stopLinger(); hoverPill = pill; show(pill); }
+    else if (!overTooltip(e.clientX, e.clientY)) { stopLinger(); hide(); }
+    else startLinger();
   });
   // Desktop only, for the same reason as the pointerover guard above — and one
   // sharper one. A touch pointer is destroyed at pointerup, which fires
@@ -4620,7 +4712,48 @@ function p9CategoryTooltipInit() {
   // close branch never saw an open tooltip and every second tap re-opened
   // instead of closing. On touch there is no "left the tray" to detect anyway —
   // the ⓘ, an outside tap and a tray scroll are what dismiss it.
-  zoneBelow.addEventListener("pointerleave", () => { if (!isMobile()) hide(); });
+  zoneBelow.addEventListener("pointerleave", e => {
+    if (isMobile()) return;
+    // Heading onto the box itself keeps it open (see "Hoverable" above).
+    if (hoverPill && overTooltip(e.clientX, e.clientY)) { startLinger(); return; }
+    stopLinger();
+    hide();
+  });
+
+  // ── Keyboard (WCAG 2.1.1) ──
+  // Tabbing onto a tray pill shows the same tooltip the pointer does. Only for
+  // KEYBOARD focus (:focus-visible): a mouse press focuses the pill too, and
+  // must not raise a tooltip of its own. A pill in the extreme zone gets none
+  // (the tooltip is tray-only, see this function's header) — which also
+  // closes it the moment Enter moves the focused pill up there.
+  // focusPill: the pill whose tooltip focus raised — the only kind focus
+  // takes down again, so a mouse/touch-raised one (incl. mobile's ⓘ, whose
+  // tap also moves focus) is never closed by these handlers.
+  let focusPill = null;
+  panel.addEventListener("focusin", e => {
+    const pill = e.target.closest?.(".page9-pill");
+    if (pill && e.target === pill && zoneBelow.contains(pill) &&
+        pill.matches(":focus-visible")) {
+      focusPill = pill;
+      show(pill);
+    } else if (focusPill) {
+      focusPill = null;
+      hide();
+    }
+  });
+  panel.addEventListener("focusout", e => {
+    if (!focusPill || e.target !== focusPill) return;
+    // Focus moving to another tray pill re-raises it in that pill's focusin.
+    focusPill = null;
+    if (!hoverPill) hide();
+  });
+  // Escape dismisses it from anywhere (WCAG 1.4.13 "dismissible"), pointer- or
+  // focus-raised alike.
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Escape" || !tooltipEl.classList.contains("is-visible")) return;
+    stopLinger();
+    hide();
+  });
 
   // Capture phase, and stopPropagation: the button is a child of the pill, so a
   // bubbling listener would run only AFTER the pill's own click handler had

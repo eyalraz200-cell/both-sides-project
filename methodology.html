@@ -54,7 +54,8 @@
     details { margin: 10px 0 18px; border: 1px solid var(--rule); border-radius: 4px; }
     .plink { font-size: 14px; color: var(--muted); margin-inline-start: 4px; white-space: nowrap; }
     summary { cursor: pointer; padding: 10px 14px; font-weight: 600; }
-    summary .note { font-weight: 400; margin-inline-start: 8px; }
+    /* overflow-wrap: the script filenames are one unbroken token and ran past a 320px screen. */
+    summary .note { font-weight: 400; margin-inline-start: 8px; overflow-wrap: anywhere; }
     pre {
       direction: ltr; text-align: left; unicode-bidi: isolate;
       font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -203,7 +204,7 @@
   <p>ההנחיות המלאות שניתנו למודלים, באנגלית, כפי שהן בקוד הפרויקט. הנספח מתעדכן בכל שינוי בהנחיות. כללים המסומנים בתאריך נוספו בעקבות בדיקה ידנית. ההנחיות ממוספרות לפי שם הקובץ בקוד, ולא לפי סדר הריצה; סדר הריצה הוא 1, 4, 2, 3, 5, 6, 7, כמפורט ב<a href="#ai">שימוש במודלי שפה</a>. המודל: <span class="latin">gpt-5.6-terra</span> של <span class="latin">OpenAI</span>, דרך <span class="latin">Batch API</span>.</p>
 
   <details id="prompt-01"><summary>הנחיה 1: שיוך הפועל המרכזי <span class="note latin">01_identify_main_actor.py</span></summary>
-<!-- prompt:01_identify_main_actor.py --><pre>You are identifying the MAIN ACTOR responsible for the central political action described in an event.
+<!-- prompt:01_identify_main_actor.py --><pre lang="en" dir="ltr">You are identifying the MAIN ACTOR responsible for the central political action described in an event.
 
 You receive:
 EVENT DESCRIPTION — the original event description.
@@ -451,7 +452,7 @@ name Jewish right-wing activists outside the West Bank (aid-convoy blockades, Fl
 al-Aqsa) — those are `right wing protesters`.</pre><!-- /prompt --></details>
 
   <details id="prompt-02"><summary>הנחיה 2: סיווג סוג הפעולה <span class="note latin">02_classify_event_type_no_intimidation.py</span></summary>
-<!-- prompt:02_classify_event_type_no_intimidation.py --><pre>You are classifying the TYPE OF EVENT.
+<!-- prompt:02_classify_event_type_no_intimidation.py --><pre lang="en" dir="ltr">You are classifying the TYPE OF EVENT.
 
 You receive exactly three pieces of information:
 
@@ -1009,7 +1010,7 @@ Before returning the category, verify:
 Return exactly one allowed event type.</pre><!-- /prompt --></details>
 
   <details id="prompt-03"><summary>הנחיה 3: תרגום ועריכה לעברית <span class="note latin">03_translate_hebrew_and_date.py</span></summary>
-<!-- prompt:03_translate_hebrew_and_date.py --><pre>You are translating and editing an English political-event description into concise, natural Hebrew for a data-journalism table.
+<!-- prompt:03_translate_hebrew_and_date.py --><pre lang="en" dir="ltr">You are translating and editing an English political-event description into concise, natural Hebrew for a data-journalism table.
 
 You receive:
 - MAIN ACTOR — context only.
@@ -1142,7 +1143,7 @@ TERMINOLOGY (fixed by the user, 2026-10-03):
 - Place names stay as they are (כיכר אל־קודס in Tamra is a square, not Jerusalem).</pre><!-- /prompt --></details>
 
   <details id="prompt-04"><summary>הנחיה 4: פיצול אירועים מורכבים <span class="note latin">04_split_subactions.py</span></summary>
-<!-- prompt:04_split_subactions.py --><pre>You split a political-event record into ONE EVENT PER DISTINCT ACTION when the record
+<!-- prompt:04_split_subactions.py --><pre lang="en" dir="ltr">You split a political-event record into ONE EVENT PER DISTINCT ACTION when the record
 describes a subset of the MAIN ACTOR doing something separate from the main crowd.
 
 You receive: MAIN ACTOR, CURRENT EVENT TYPE, CROWD (the whole-event figure, may be blank),
@@ -1199,7 +1200,7 @@ Never change the MAIN ACTOR. Never classify the event type — that is done late
 Do not add, soften or sharpen any fact.</pre><!-- /prompt --></details>
 
   <details id="prompt-05"><summary>הנחיה 5: הערכת גודל הקהל <span class="note latin">05_extract_crowd.py</span></summary>
-<!-- prompt:05_extract_crowd.py --><pre>You read one political-event record and report HOW MANY PEOPLE TOOK PART ON THE MAIN
+<!-- prompt:05_extract_crowd.py --><pre lang="en" dir="ltr">You read one political-event record and report HOW MANY PEOPLE TOOK PART ON THE MAIN
 ACTOR&#x27;S SIDE. Nothing else.
 
 You receive the MAIN ACTOR (the group whose action the record is about) and the EVENT
@@ -1252,7 +1253,7 @@ Do not guess from the kind of event. A pogrom, a raid or a march with no stated 
 `reason`: one short sentence quoting the words the figure came from, or &quot;no size given&quot;.</pre><!-- /prompt --></details>
 
   <details id="prompt-06"><summary>הנחיה 6: ניסוח מחדש של שורות המבצר <span class="note latin">06_rewrite_fortress_desc.py</span></summary>
-<!-- prompt:06_rewrite_fortress_desc.py --><pre>You rewrite one line from a Hebrew settler-violence log so it reads like the other events
+<!-- prompt:06_rewrite_fortress_desc.py --><pre lang="en" dir="ltr">You rewrite one line from a Hebrew settler-violence log so it reads like the other events
 in a dataset whose Hebrew descriptions were derived from ACLED. You write the Hebrew line
 and a short English line with the same facts.
 
@@ -1310,7 +1311,7 @@ RULES FOR THE ENGLISH (`description_en`)
 its tags.</pre><!-- /prompt --></details>
 
   <details id="prompt-07"><summary>הנחיה 7: אנגלית קצרה וערבית <span class="note latin">07_short_english_and_arabic.py</span></summary>
-<!-- prompt:07_short_english_and_arabic.py --><pre>You write two lines for one event in a dataset of Israeli political events: a SHORT
+<!-- prompt:07_short_english_and_arabic.py --><pre lang="en" dir="ltr">You write two lines for one event in a dataset of Israeli political events: a SHORT
 ENGLISH line and an ARABIC line. Both must carry exactly the facts of the HEBREW line,
 which is the reference text shown on the site.
 

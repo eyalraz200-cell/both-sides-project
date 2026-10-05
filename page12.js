@@ -427,6 +427,9 @@ function p12ShareInit() {
       const done = () => {
         el.dataset.tip = tr("הקישור הועתק");
         el.classList.add("is-copied");
+        // The swap above is CSS-only (::after + a glyph change) — tell a
+        // screen reader too, through page9.js's shared polite live region.
+        if (typeof p9Announce === "function") p9Announce(tr("הקישור הועתק"));
         setTimeout(() => { el.dataset.tip = label; el.classList.remove("is-copied"); }, 1600);
       };
       if (navigator.clipboard && navigator.clipboard.writeText) {

@@ -50,11 +50,6 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- The page's one h1. Every visible heading is an <h2> inside a scrolling
-       title card, so without this the document has no top-level heading and
-       its outline starts at level 2. Off-screen, not display:none — the latter
-       is skipped by screen readers too. -->
-  <h1 class="a11y-only">أحداث متطرفة — كلا الجانبين</h1>
   <div class="layout">
     <div class="graphic-col">
       <!-- The whole visualisation is painted here, so to assistive tech the
@@ -92,6 +87,10 @@
          changes nothing about where anything lands. It stays BEFORE .text-col in
          source order, which is what keeps its desktop z-index: 0 painting under
          the title cards exactly as it did from inside .graphic-col. -->
+    <!-- aria-hidden: the six group rows here are visual only. Their names reach
+         assistive tech through the legend FILTER buttons (.fold6-legend-filter,
+         js/groups.js), which live outside this overlay, and through
+         #canvasA11ySummary. -->
     <div class="groups-overlay" id="groupsOverlay" aria-hidden="true"></div>
     <!-- Dev aid: the current @foldN, the number alone, top-left. Ctrl+Shift+F
          hides/shows it (js/nav.js). A direct .layout child for the same reason
@@ -101,18 +100,21 @@
          that opens a drop-down of the three languages — js/lang-switch.js. The
          look is the legend note's card (compare/ pick 2026-10-03) and the rows
          wear the «הצגת גודל האירועים» ring. -->
-    <div class="lang-wrap" id="langWrap">
-      <button type="button" class="lang-switch" id="langSwitch" aria-haspopup="menu" aria-expanded="false" aria-controls="langMenu" aria-label="اختيار اللغة"><svg class="lang-switch-globe" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/><ellipse cx="8" cy="8" rx="2.8" ry="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M1.5 8h13M2.6 5h10.8M2.6 11h10.8" fill="none" stroke="currentColor" stroke-width="1.2"/></svg><span class="lang-switch-code">عر</span></button>
-      <div class="lang-menu" id="langMenu" role="menu" hidden>
+    <!-- A disclosure, not an ARIA menu: a button + a list of links. The <nav>
+         IS the positioned card (.lang-wrap), so the landmark adds no box. The
+         button's aria-label starts with its visible letters (WCAG 2.5.3). -->
+    <nav class="lang-wrap" id="langWrap" aria-label="اللغة">
+      <button type="button" class="lang-switch" id="langSwitch" aria-expanded="false" aria-controls="langMenu" aria-label="عر – اختيار اللغة"><svg class="lang-switch-globe" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/><ellipse cx="8" cy="8" rx="2.8" ry="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M1.5 8h13M2.6 5h10.8M2.6 11h10.8" fill="none" stroke="currentColor" stroke-width="1.2"/></svg><span class="lang-switch-code">عر</span></button>
+      <div class="lang-menu" id="langMenu" hidden>
         <div class="lang-menu-rows">
-        <a class="lang-menu-row" role="menuitemradio" aria-checked="false" href="./" lang="he" hreflang="he">עברית</a>
-        <a class="lang-menu-row" role="menuitemradio" aria-checked="false" href="en/" lang="en" hreflang="en">English</a>
-        <a class="lang-menu-row is-current" role="menuitemradio" aria-checked="true" aria-disabled="true" tabindex="-1" href="ar/" lang="ar" hreflang="ar">العربية</a>
+        <a class="lang-menu-row" href="./" lang="he" hreflang="he">עברית</a>
+        <a class="lang-menu-row" href="en/" lang="en" hreflang="en">English</a>
+        <a class="lang-menu-row is-current" aria-current="page" tabindex="-1" href="ar/" lang="ar" hreflang="ar">العربية</a>
         </div>
       </div>
-    </div>
+    </nav>
     <!-- העין השביעית's logo, top-right; a mask-painted link (style.css, .seventh-eye). -->
-    <a class="seventh-eye" href="https://www.the7eye.org.il/" target="_blank" rel="noopener" aria-label="العين السابعة"><span class="seventh-eye-caption">مشروع بالشراكة مع</span><span class="seventh-eye-mark" aria-hidden="true"></span></a>
+    <a class="seventh-eye" href="https://www.the7eye.org.il/" target="_blank" rel="noopener" aria-label="مشروع بالشراكة مع العين السابعة"><span class="seventh-eye-caption">مشروع بالشراكة مع</span><span class="seventh-eye-mark" aria-hidden="true"></span></a>
     <div class="fold-number-badge" id="foldNumberBadge" aria-hidden="true"></div>
     <!-- Hover tooltip for the event dots (date + Hebrew description) —
          positioned/shown by p9HoverInit (page9.js), p7HoverInit/p7InspectInit
@@ -144,18 +146,22 @@
          .layout child, not nested in .graphic-col, so its z-index actually
          stacks above .text-col instead of losing to it regardless of its
          own z-index (.graphic-col traps any z-index inside it). Without
-         this, the ACLED link inside the note was unclickable. -->
-    <div class="fold6-note-layer" id="fold6NoteLayer" aria-hidden="true"></div>
+         this, the ACLED link inside the note was unclickable.
+         NOT aria-hidden: the note's text and its three links are real content.
+         Its decorative pieces (card, rule) carry aria-hidden themselves, and the
+         layer is `inert` whenever the note isn't on screen (js/groups.js,
+         fold6NoteLayerSyncInert), so its links are never invisible tab stops. -->
+    <div class="fold6-note-layer" id="fold6NoteLayer"></div>
     <!-- Mobile-only מקרא legend bar (js/groups.js builds its contents). It gets
          its OWN layer rather than sharing #fold6NoteLayer above, because that
-         one is aria-hidden and pointer-events:none — correct for a decorative
-         credit line, fatal for a button that has to be tappable and reachable
+         one is pointer-events:none — fine for a credit line, fatal for a button that has to be tappable and reachable
          by assistive tech. Same direct-.layout-child trick for the z-index. -->
     <div class="fold6-mlegend-layer" id="fold6MobileLegendLayer"></div>
-    <div class="text-col" id="textCol">
+    <!-- <main>: the scrolling story is the page's main landmark. -->
+    <main class="text-col" id="textCol">
       <section class="text-section" data-page="0" id="page-0">
         <div class="page0-overlay">
-          <h2 class="page0-title">متطرفون<br />من<br />الجانبين</h2>
+          <h1 class="page0-title">متطرفون<br />من<br />الجانبين</h1>
           <p class="page0-subtitle">تحليل نشاط<br />المعسكرات<br />السياسية<br />في إسرائيل</p>
         </div>
       </section>
@@ -196,7 +202,7 @@
       </section>
       <section class="text-section" data-page="7" id="page-7">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">أوصاف الأحداث وتواريخها مأخوذة أساسًا من قاعدة بيانات <a class="latin-acronym card-link" href="https://acleddata.com/" target="_blank" rel="noopener">ACLED</a>، وهي مؤسسة بحثية دولية، وجزئيًا من قاعدة بيانات <a class="card-link" href="https://www.zman.co.il/726358/" target="_blank" rel="noopener">«هاميفتسار»</a>. وجرى الإسناد والتصنيف والتحرير والترجمة ضمن المشروع باستخدام نماذج لغوية من <span class="latin-acronym">OpenAI</span>.<span class="copy-mobile"> للتفاصيل، انظر مفتاح الرموز.</span></h2>
+          <h2 class="section-title text-card-frame">أوصاف الأحداث وتواريخها مأخوذة أساسًا من قاعدة بيانات <a class="latin-acronym card-link" href="https://acleddata.com/" target="_blank" rel="noopener">ACLED</a>، وهي مؤسسة بحثية دولية، وجزئيًا من قاعدة بيانات <a class="card-link" href="https://www.zman.co.il/726358/" target="_blank" rel="noopener">«الحصن»</a>. وجرى الإسناد والتصنيف والتحرير والترجمة ضمن المشروع باستخدام نماذج لغوية من <span class="latin-acronym">OpenAI</span>.<span class="copy-mobile"> للتفاصيل، انظر مفتاح الرموز.</span></h2>
         </div>
       </section>
       <section class="text-section" data-page="8" id="page-8">
@@ -310,19 +316,19 @@
             <div class="text-card-frame page12-card">
               <h2 class="section-title page12-title">متطرفون من الجانبين</h2>
               <div class="page12-body" dir="rtl">
-                <p class="page12-body-heading">البيانات والمنهجية</p>
+                <p class="page12-body-heading" role="heading" aria-level="3">البيانات والمنهجية</p>
                 <p>تشمل قاعدة البيانات التي يستند إليها المشروع أفعالًا سياسية نفّذها مواطنون إسرائيليون في الحيّز العام، في إسرائيل والأراضي المحتلة، منذ بداية عام 2023: المظاهرات، وإغلاق الطرق، والمواجهات، والاعتداءات، والإضرار بالممتلكات، والاستيلاء على الأراضي، وأفعال مشابهة. ولا تشمل الأقوال والمنشورات والتصريحات التي لم يرافقها فعل على الأرض.</p>
-                <p>أوصاف الأحداث وتواريخها مأخوذة من <a class="card-link" href="https://acleddata.com/" target="_blank" rel="noopener">ACLED</a>، وهي مؤسسة بحثية دولية توثّق الاحتجاج والعنف السياسي بالاستناد إلى تقارير وسائل الإعلام والمصادر المحلية، ومن سجل عنف المستوطنين التابع لـ«هاميفتسار»؛ ويُحتسب الحدث الوارد في المصدرين مرة واحدة. واستُخلص إسناد الأحداث إلى المجموعات، وتصنيف الأفعال، وتقدير أعداد المشاركين من الأوصاف ضمن المشروع. وقد حُرّرت الأوصاف واختُصرت، وتُرجمت أوصاف ACLED إلى العبرية، مع الحفاظ على الوقائع وعلى السياق الذي وقعت فيه الأحداث. وتُرجمت الأوصاف العربية المعروضة هنا من النسخ العبرية المحرّرة.</p>
+                <p>أوصاف الأحداث وتواريخها مأخوذة من <a class="card-link" href="https://acleddata.com/" target="_blank" rel="noopener">ACLED</a>، وهي مؤسسة بحثية دولية توثّق الاحتجاج والعنف السياسي بالاستناد إلى تقارير وسائل الإعلام والمصادر المحلية، ومن سجل عنف المستوطنين التابع لـ«الحصن»؛ ويُحتسب الحدث الوارد في المصدرين مرة واحدة. واستُخلص إسناد الأحداث إلى المجموعات، وتصنيف الأفعال، وتقدير أعداد المشاركين من الأوصاف ضمن المشروع. وقد حُرّرت الأوصاف واختُصرت، وتُرجمت أوصاف ACLED إلى العبرية، مع الحفاظ على الوقائع وعلى السياق الذي وقعت فيه الأحداث. وتُرجمت الأوصاف العربية المعروضة هنا من النسخ العبرية المحرّرة.</p>
                 <p>أُسند كل حدث إلى المجموعة التي نفّذت الفعل الرئيسي فيه، لا إلى المتضرّرين ولا إلى قوات الأمن التي استجابت له. وعندما نفّذت المجموعة عدة أفعال، صُنّف الحدث بحسب الفعل الأشد خطورة، وفق سلّم من عشرة أنواع من الأفعال بُني ضمن المشروع بالاستناد إلى مؤشرات خطورة قائمة. وجرى الإسناد والتصنيف والترجمة باستخدام نماذج لغوية من OpenAI، وفق تعليمات كُتبت للمشروع وجرى تحسينها عبر جولات عديدة من المراجعة والتصحيح اليدوي.</p>
                 <p>يهدف التقسيم إلى مجموعات سياسية إلى إتاحة المقارنة بين أنماط الأفعال لدى المعسكرات المختلفة، لكنه لا يفترض أن جميع أفراد المجموعة يتصرّفون بالطريقة نفسها أو يحملون المواقف ذاتها. وتجدر الإشارة أيضًا إلى أن قاعدة البيانات تعكس ما جرى الإبلاغ عنه، لا كل ما وقع، وأن تصنيف الأحداث السياسية ليس واضحًا دائمًا.</p>
                 <p><a class="card-link" href="ar/methodology.html" target="_blank" rel="noopener">منهجية العمل الكاملة</a>: المصادر، وقواعد الاختيار، والتصنيف، والترجمة، ورصد التكرار، والتعليمات الكاملة للنماذج.</p>
               </div>
-              <p class="page12-credits">بحث، تصميم وتطوير: إيال راز (<a href="https://eyalraz.com/" target="_blank" rel="noopener">eyalraz.com</a>)<br>مرافقة وإرشاد وتوجيه: موشون زير-أفيف<br>استشارة صحفية: أورن بيرسيكو<br>الشكر إلى راكيفت كنعان، مدرسة شنكار للاتصال البصري، <a href="https://www.shenkar.ac.il/" target="_blank" rel="noopener">شنكار - هندسة. تصميم. فن.</a><br>الشكر إلى فريق <a href="https://www.zman.co.il/fortress/" target="_blank" rel="noopener">هاميفتسار</a> · عنات سرغوستي، ميكي روزنتال، أمير شبرلينغ، رونيت أنتلر وآخرين<br>قاعدة البيانات: <a href="https://acleddata.com/" target="_blank" rel="noopener">ACLED</a>، <a href="https://www.zman.co.il/fortress/" target="_blank" rel="noopener">هاميفتسار</a></p>
+              <p class="page12-credits">بحث، تصميم وتطوير: إيال راز (<a href="https://eyalraz.com/" target="_blank" rel="noopener">eyalraz.com</a>)<br>مرافقة وإرشاد وتوجيه: موشون زير-أفيف<br>استشارة صحفية: أورن بيرسيكو<br>الشكر إلى راكيفت كنعان، مدرسة شنكار للاتصال البصري، <a href="https://www.shenkar.ac.il/" target="_blank" rel="noopener">شنكار - هندسة. تصميم. فن.</a><br>الشكر إلى فريق <a href="https://www.zman.co.il/fortress/" target="_blank" rel="noopener">الحصن</a> · عنات سرغوستي، ميكي روزنتال، أمير شبرلينغ، رونيت أنتلر وآخرين<br>قاعدة البيانات: <a href="https://acleddata.com/" target="_blank" rel="noopener">ACLED</a>، <a href="https://www.zman.co.il/fortress/" target="_blank" rel="noopener">الحصن</a></p>
               </div>
             </div>
           </div>
       </section>
-    </div>
+    </main>
   </div>
 
   <script src="js/i18n.js"></script>

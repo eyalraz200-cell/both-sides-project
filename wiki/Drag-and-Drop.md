@@ -245,12 +245,24 @@ is no second writer of `p9.sides`.
 
 Two supporting pieces:
 
-- **`syncPillA11y(pill)`** keeps `aria-pressed` current and writes an off-screen
-  `aria-live="polite"` announcer (`.a11y-only`, appended to `<body>` in `p9BuildPanel`) —
-  the visible result of a classification is a canvas animation and a count, neither of
-  which is in the accessibility tree. It reads the pill's **current placement**, not
-  `p9.sides`, so it's correct when called from `placePillInZone` (every desktop path) and
-  from the mobile in-place class toggle, both of which run before `commitDropState`.
+- **`syncPillA11y(pill)`** keeps `aria-pressed` current and announces through
+  **`p9Announce(msg)`** — the page's one `aria-live="polite"` region (`.a11y-only`, created
+  once by `p9LiveRegion()` and appended to `<body>`; @fold13's gate hint in `js/fold11.js` and
+  the share row's «הקישור הועתק» in page12.js write to the same region). The visible result of a
+  classification is a canvas animation and a count, neither of which is in the accessibility
+  tree, so the line is «‹pill› — סווגה כפעולה קיצונית. N מתוך 10 מסווגות כקיצוניות.» plus the
+  canvas's per-camp counts: «אירועים שסווגו כקיצוניים — גוש השינוי: {l}, קואליציית הימין: {r}.»
+  (left side = גוש השינוי, legend filter respected via `p9CountsEvent`). Everything is read
+  off the pills' **current placement**, not `p9.sides`, so it's correct when called from
+  `placePillInZone` (every desktop path) and from the mobile in-place class toggle, both of
+  which run before `commitDropState`. `p9Announce` re-writes on the next tick when the text
+  is unchanged, so a repeat is still announced.
+- **Pill name and description.** Each pill carries an explicit `aria-label` (its `tr()`
+  category) so the name never picks up the ⓘ's «i» or the ✕ glyph, and `aria-describedby`
+  pointing at an off-screen `.a11y-only` span (`#p9PillDescN`, in `<body>`) holding its
+  `P9_CATEGORY_DESC`. The ⓘ `<button>` is `tabindex="-1"` + `aria-hidden="true"` — out of the
+  tab order and the tree (no nested-interactive), still tappable; the ✕ and ✓ spans are
+  `aria-hidden`.
 - **`pill.focus()`** after the desktop commit: `commitDrop` re-parents the pill between
   zones, and moving a focused element drops focus to `<body>` in some browsers, which would
   reset the tab order after every classification.
@@ -261,7 +273,11 @@ border or box-shadow, because the tray's grid tracks are baked from measured pil
 
 **This is what unlocks @fold13.** `p13GateLocked()` (`js/fold11.js`) blocks scrolling until a
 pill is classified; without the keyboard path @fold12–@fold13 would be unreachable without a
-pointer.
+pointer. While locked, `p13SyncGateInert()` sets `inert` on every section past the gate
+(`#page-14`–`#page-17`, @fold13–@fold16) so Tab and a screen reader can't reach what scrolling
+can't; it clears on unlock. The fixed corner chrome (`.seventh-eye`, `#langWrap`) is page-wide
+and stays reachable. The first blocked scroll key (↓ / PageDown / End / Space) of a lock writes
+«כדי להמשיך, סווגו לפחות סוג פעולה אחד כקיצוני.» to the live region (once per lock).
 
 ## Canvas rendering — `drawPage9`
 
@@ -622,6 +638,9 @@ pointer and the keyboard can never drift apart.
   `!p9.anim`), and returning BEFORE `preventDefault()` would let the browser scroll ~20px a press
   and carry the reader out of the fold into @fold13's fade mid-flight. Idle, it calls
   `preventDefault()` only once it has a dot to move to.
+- **Each step is announced** — «date — description», the same two accessors the tooltip uses
+  (`p7FormatDateDMY`, `p7EventDesc`) — through `p9Announce`, debounced 250ms so a held key
+  speaks only the dot it stops on.
 
 **Dot hover** (`p9HoverInit`): live on every fold the grids are drawn on — `p9HoverPageOk()`:
 @fold12 always, **@fold10 and @fold11 once the bridge glide has landed** (`p8CurrentT() >= 1` —
@@ -732,6 +751,16 @@ over pill hover.
 
 The `pointerover` half is **desktop-only** (`if (isMobile()) return;`). On mobile the same
 `show()`/`hide()` pair is driven by a per-pill **ⓘ button** instead — see below.
+
+Accessibility (WCAG 1.4.13 / 2.1.1), no change to its look or placement:
+- **Hoverable.** The box stays `pointer-events: none`, so leaving the pill doesn't close it if
+  the pointer is over the box's rect (grown by the 10px `GAP`): a window `pointermove` then
+  watches, and it closes only once the pointer is outside both pill and box.
+- **Keyboard focus raises it.** `focusin` on a tray pill shows it when the focus is
+  `:focus-visible` (a mouse press doesn't); `focusout`, or focus landing anywhere else, takes a
+  focus-raised one down. Only a focus-raised tooltip is closed by focus, so mobile's ⓘ taps
+  behave as before. A pill moved to the extreme zone by Enter loses it (tray-only).
+- **Escape** dismisses it from anywhere.
 
 ## Desktop layout V2
 

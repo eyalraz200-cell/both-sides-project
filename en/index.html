@@ -49,11 +49,6 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- The page's one h1. Every visible heading is an <h2> inside a scrolling
-       title card, so without this the document has no top-level heading and
-       its outline starts at level 2. Off-screen, not display:none — the latter
-       is skipped by screen readers too. -->
-  <h1 class="a11y-only">Extreme Events — Both Sides</h1>
   <div class="layout">
     <div class="graphic-col">
       <!-- The whole visualisation is painted here, so to assistive tech the
@@ -91,6 +86,10 @@
          changes nothing about where anything lands. It stays BEFORE .text-col in
          source order, which is what keeps its desktop z-index: 0 painting under
          the title cards exactly as it did from inside .graphic-col. -->
+    <!-- aria-hidden: the six group rows here are visual only. Their names reach
+         assistive tech through the legend FILTER buttons (.fold6-legend-filter,
+         js/groups.js), which live outside this overlay, and through
+         #canvasA11ySummary. -->
     <div class="groups-overlay" id="groupsOverlay" aria-hidden="true"></div>
     <!-- Dev aid: the current @foldN, the number alone, top-left. Ctrl+Shift+F
          hides/shows it (js/nav.js). A direct .layout child for the same reason
@@ -100,18 +99,21 @@
          that opens a drop-down of the three languages — js/lang-switch.js. The
          look is the legend note's card (compare/ pick 2026-10-03) and the rows
          wear the «הצגת גודל האירועים» ring. -->
-    <div class="lang-wrap" id="langWrap">
-      <button type="button" class="lang-switch" id="langSwitch" aria-haspopup="menu" aria-expanded="false" aria-controls="langMenu" aria-label="Choose a language"><svg class="lang-switch-globe" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/><ellipse cx="8" cy="8" rx="2.8" ry="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M1.5 8h13M2.6 5h10.8M2.6 11h10.8" fill="none" stroke="currentColor" stroke-width="1.2"/></svg><span class="lang-switch-code">EN</span></button>
-      <div class="lang-menu" id="langMenu" role="menu" hidden>
+    <!-- A disclosure, not an ARIA menu: a button + a list of links. The <nav>
+         IS the positioned card (.lang-wrap), so the landmark adds no box. The
+         button's aria-label starts with its visible letters (WCAG 2.5.3). -->
+    <nav class="lang-wrap" id="langWrap" aria-label="Language">
+      <button type="button" class="lang-switch" id="langSwitch" aria-expanded="false" aria-controls="langMenu" aria-label="EN – Choose a language"><svg class="lang-switch-globe" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/><ellipse cx="8" cy="8" rx="2.8" ry="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M1.5 8h13M2.6 5h10.8M2.6 11h10.8" fill="none" stroke="currentColor" stroke-width="1.2"/></svg><span class="lang-switch-code">EN</span></button>
+      <div class="lang-menu" id="langMenu" hidden>
         <div class="lang-menu-rows">
-        <a class="lang-menu-row" role="menuitemradio" aria-checked="false" href="./" lang="he" hreflang="he">עברית</a>
-        <a class="lang-menu-row is-current" role="menuitemradio" aria-checked="true" aria-disabled="true" tabindex="-1" href="en/" lang="en" hreflang="en">English</a>
-        <a class="lang-menu-row" role="menuitemradio" aria-checked="false" href="ar/" lang="ar" hreflang="ar">العربية</a>
+        <a class="lang-menu-row" href="./" lang="he" hreflang="he">עברית</a>
+        <a class="lang-menu-row is-current" aria-current="page" tabindex="-1" href="en/" lang="en" hreflang="en">English</a>
+        <a class="lang-menu-row" href="ar/" lang="ar" hreflang="ar">العربية</a>
         </div>
       </div>
-    </div>
+    </nav>
     <!-- העין השביעית's logo, top-right; a mask-painted link (style.css, .seventh-eye). -->
-    <a class="seventh-eye" href="https://www.the7eye.org.il/" target="_blank" rel="noopener" aria-label="The Seventh Eye"><span class="seventh-eye-caption">In partnership with</span><span class="seventh-eye-mark" aria-hidden="true"></span></a>
+    <a class="seventh-eye" href="https://www.the7eye.org.il/" target="_blank" rel="noopener" aria-label="In partnership with The Seventh Eye"><span class="seventh-eye-caption">In partnership with</span><span class="seventh-eye-mark" aria-hidden="true"></span></a>
     <div class="fold-number-badge" id="foldNumberBadge" aria-hidden="true"></div>
     <!-- Hover tooltip for the event dots (date + Hebrew description) —
          positioned/shown by p9HoverInit (page9.js), p7HoverInit/p7InspectInit
@@ -143,18 +145,22 @@
          .layout child, not nested in .graphic-col, so its z-index actually
          stacks above .text-col instead of losing to it regardless of its
          own z-index (.graphic-col traps any z-index inside it). Without
-         this, the ACLED link inside the note was unclickable. -->
-    <div class="fold6-note-layer" id="fold6NoteLayer" aria-hidden="true"></div>
+         this, the ACLED link inside the note was unclickable.
+         NOT aria-hidden: the note's text and its three links are real content.
+         Its decorative pieces (card, rule) carry aria-hidden themselves, and the
+         layer is `inert` whenever the note isn't on screen (js/groups.js,
+         fold6NoteLayerSyncInert), so its links are never invisible tab stops. -->
+    <div class="fold6-note-layer" id="fold6NoteLayer"></div>
     <!-- Mobile-only מקרא legend bar (js/groups.js builds its contents). It gets
          its OWN layer rather than sharing #fold6NoteLayer above, because that
-         one is aria-hidden and pointer-events:none — correct for a decorative
-         credit line, fatal for a button that has to be tappable and reachable
+         one is pointer-events:none — fine for a credit line, fatal for a button that has to be tappable and reachable
          by assistive tech. Same direct-.layout-child trick for the z-index. -->
     <div class="fold6-mlegend-layer" id="fold6MobileLegendLayer"></div>
-    <div class="text-col" id="textCol">
+    <!-- <main>: the scrolling story is the page's main landmark. -->
+    <main class="text-col" id="textCol">
       <section class="text-section" data-page="0" id="page-0">
         <div class="page0-overlay">
-          <h2 class="page0-title">Extremists<br />on Both<br />Sides</h2>
+          <h1 class="page0-title">Extremists<br />on Both<br />Sides</h1>
           <p class="page0-subtitle">An analysis of<br />political activity<br />across Israel’s<br />political camps</p>
         </div>
       </section>
@@ -195,7 +201,7 @@
       </section>
       <section class="text-section" data-page="7" id="page-7">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">The event descriptions and dates come mainly from <a class="latin-acronym card-link" href="https://acleddata.com/" target="_blank" rel="noopener">ACLED</a>, an international research organization, and partly from the <a class="card-link" href="https://www.zman.co.il/726358/" target="_blank" rel="noopener">HaMivtzar</a> database. Assignment, classification, editing, and translation were carried out as part of the project using <span class="latin-acronym">OpenAI</span> language models.<span class="copy-mobile"> See the legend for details.</span></h2>
+          <h2 class="section-title text-card-frame">The event descriptions and dates come mainly from <a class="latin-acronym card-link" href="https://acleddata.com/" target="_blank" rel="noopener">ACLED</a>, an international research organization, and partly from the <a class="card-link" href="https://www.zman.co.il/726358/" target="_blank" rel="noopener">Fortress</a> database. Assignment, classification, editing, and translation were carried out as part of the project using <span class="latin-acronym">OpenAI</span> language models.<span class="copy-mobile"> See the legend for details.</span></h2>
         </div>
       </section>
       <section class="text-section" data-page="8" id="page-8">
@@ -309,19 +315,19 @@
             <div class="text-card-frame page12-card">
               <h2 class="section-title page12-title">Extremists on Both Sides</h2>
               <div class="page12-body" dir="ltr">
-                <p class="page12-body-heading">Data &amp; Methodology</p>
+                <p class="page12-body-heading" role="heading" aria-level="3">Data &amp; Methodology</p>
                 <p>The dataset behind this project covers political actions carried out by Israeli citizens in public spaces, in Israel and the occupied territories, from the beginning of 2023: demonstrations, roadblocks, clashes, assaults, property damage, land seizure, and similar actions. Remarks, posts, and statements unaccompanied by action on the ground are not included.</p>
-                <p>Event descriptions and dates are taken from <a class="card-link" href="https://acleddata.com/" target="_blank" rel="noopener">ACLED</a>, an international research organization that documents protest and political violence based on reports from media outlets and local sources, and from HaMivtzar's settler violence log; an event appearing in both sources is counted once. Group assignments, action classifications, and crowd-size estimates were derived from the descriptions as part of this project. The descriptions were edited and shortened, and ACLED descriptions were translated into Hebrew, preserving the facts and the context in which the events took place. The English descriptions shown here were translated from the edited Hebrew versions.</p>
+                <p>Event descriptions and dates are taken from <a class="card-link" href="https://acleddata.com/" target="_blank" rel="noopener">ACLED</a>, an international research organization that documents protest and political violence based on reports from media outlets and local sources, and from Fortress's settler violence log; an event appearing in both sources is counted once. Group assignments, action classifications, and crowd-size estimates were derived from the descriptions as part of this project. The descriptions were edited and shortened, and ACLED descriptions were translated into Hebrew, preserving the facts and the context in which the events took place. The English descriptions shown here were translated from the edited Hebrew versions.</p>
                 <p>Each event was assigned to the group that carried out its central action, not to those harmed or to the security forces that responded. When the group carried out several actions, the event was classified by the most severe one, using a severity ranking of ten action types built for the project with reference to existing severity indices. Assignment, classification, and translation were carried out with OpenAI language models, following instructions written for the project and refined over many rounds of review and manual correction.</p>
                 <p>The division into political groups is intended to enable comparison between the patterns of action of different camps. It does not imply that all members of a group act in the same way or hold the same views. The dataset also reflects what was reported, not everything that happened, and classifying political events is not always clear-cut.</p>
                 <p><a class="card-link" href="en/methodology.html" target="_blank" rel="noopener">Full methodology</a>: sources, selection rules, classification, translation, duplicate detection, and the complete model instructions.</p>
               </div>
-              <p class="page12-credits">Research, design, and development: Eyal Raz (<a href="https://eyalraz.com/" target="_blank" rel="noopener">eyalraz.com</a>)<br>Mentorship and guidance: Mushon Zer-Aviv<br>Journalistic advisor: Oren Persico<br>Thanks to Rakefet Canaan, the Shenkar School of Visual Communication, <a href="https://www.shenkar.ac.il/" target="_blank" rel="noopener">Shenkar - Engineering. Design. Art.</a><br>Thanks to the <a href="https://www.zman.co.il/fortress/" target="_blank" rel="noopener">HaMivtzar</a> team · Anat Saragusti, Miki Rosenthal, Amir Sperling, Ronit Antler and others<br>Database: <a href="https://acleddata.com/" target="_blank" rel="noopener">ACLED</a>, <a href="https://www.zman.co.il/fortress/" target="_blank" rel="noopener">HaMivtzar</a></p>
+              <p class="page12-credits">Research, design, and development: Eyal Raz (<a href="https://eyalraz.com/" target="_blank" rel="noopener">eyalraz.com</a>)<br>Mentorship and guidance: Mushon Zer-Aviv<br>Journalistic advisor: Oren Persico<br>Thanks to Rakefet Canaan, the Shenkar School of Visual Communication, <a href="https://www.shenkar.ac.il/" target="_blank" rel="noopener">Shenkar - Engineering. Design. Art.</a><br>Thanks to the <a href="https://www.zman.co.il/fortress/" target="_blank" rel="noopener">Fortress</a> team · Anat Saragusti, Miki Rosenthal, Amir Sperling, Ronit Antler and others<br>Database: <a href="https://acleddata.com/" target="_blank" rel="noopener">ACLED</a>, <a href="https://www.zman.co.il/fortress/" target="_blank" rel="noopener">Fortress</a></p>
               </div>
             </div>
           </div>
       </section>
-    </div>
+    </main>
   </div>
 
   <script src="js/i18n.js"></script>

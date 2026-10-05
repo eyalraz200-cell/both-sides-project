@@ -200,12 +200,12 @@ HEAD_PATCHES = [
     # the Arabic page marks its own row. Hrefs stay root-relative (./, en/, ar/):
     # <base href="../"> already resolves them from the site root, so ../ would
     # climb ABOVE the site (a 404 on GitHub Pages' /both-sides-project/).
-    ('<a class="lang-menu-row is-current" role="menuitemradio" aria-checked="true" aria-disabled="true" tabindex="-1" href="./" lang="he" hreflang="he">',
-     '<a class="lang-menu-row" role="menuitemradio" aria-checked="false" href="./" lang="he" hreflang="he">'),
-    ('<a class="lang-menu-row" role="menuitemradio" aria-checked="false" href="en/" lang="en" hreflang="en">',
-     '<a class="lang-menu-row" role="menuitemradio" aria-checked="false" href="en/" lang="en" hreflang="en">'),
-    ('<a class="lang-menu-row" role="menuitemradio" aria-checked="false" href="ar/" lang="ar" hreflang="ar">',
-     '<a class="lang-menu-row is-current" role="menuitemradio" aria-checked="true" aria-disabled="true" tabindex="-1" href="ar/" lang="ar" hreflang="ar">'),
+    # A disclosure of plain links (not an ARIA menu): the current one carries
+    # aria-current="page" + tabindex="-1".
+    ('<a class="lang-menu-row is-current" aria-current="page" tabindex="-1" href="./" lang="he" hreflang="he">',
+     '<a class="lang-menu-row" href="./" lang="he" hreflang="he">'),
+    ('<a class="lang-menu-row" href="ar/" lang="ar" hreflang="ar">',
+     '<a class="lang-menu-row is-current" aria-current="page" tabindex="-1" href="ar/" lang="ar" hreflang="ar">'),
     # index.html already preconnects to both Google Fonts hosts (for Assistant),
     # so only the Arabic faces' stylesheet is added.
     ('<link rel="stylesheet" href="style.css"', '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Beiruti:wght@400&family=IBM+Plex+Sans+Arabic:wght@300;400;500;700&display=swap" />\n  <link rel="stylesheet" href="style.css"'),

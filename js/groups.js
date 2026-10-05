@@ -1043,6 +1043,12 @@ function fold6DotHover(actor) {
 // reads it so its scheduled collapse never yanks the labels out from under a
 // real hover that arrived mid-demo.
 let fold6LegendPointerOver = false;
+// KEYBOARD focus on a filter strip (fold6LegendFilterEl, :focus-visible only)
+// opens the labels exactly as the pointer does — on the collapsed timeline
+// legend the labels are otherwise only there on hover. Read wherever the
+// pointer flag is, through fold6LegendEngaged().
+let fold6LegendKeyFocus = false;
+function fold6LegendEngaged() { return fold6LegendPointerOver || fold6LegendKeyFocus; }
 // Hovering a legend ROW highlights that group's dots on the canvas — the rest
 // dim to hoverDim(actor), the same floor a hovered dot uses — on a short ramp.
 // Lowest priority of the dim rules: a hovered dot (page7 / page9) or a hovered
@@ -1062,7 +1068,7 @@ function fold6LegendHoverDimT() { return fold6LegendHoverDimTrigger.currentT(); 
 // and from fold6DotHover, so a dot picked up inside the box drops the legend
 // and letting go of it (still inside the box) brings the legend back.
 function fold6LegendHoverSync() {
-  const want = fold6LegendPointerOver && !fold6DotHoverActor ? 1 : 0;
+  const want = fold6LegendEngaged() && !fold6DotHoverActor ? 1 : 0;
   // The GROUP ROWS only (explicit instruction). Hovering the legend opens all
   // six labels together — never one row on its own — and deliberately leaves
   // the ACLED note alone: the note has its own hover zone below the rows and
@@ -1075,7 +1081,7 @@ function fold6LegendHoverSync() {
   // held back too while the pointer is inside a hover box, and released —
   // the row types in — the moment it leaves with the dot still hovered.
   if (fold6DotHoverActor) {
-    fold6DotHoverTrigger(fold6DotHoverActor).trigger(fold6LegendPointerOver ? 0 : 1);
+    fold6DotHoverTrigger(fold6DotHoverActor).trigger(fold6LegendEngaged() ? 0 : 1);
   }
 }
 const fold6LegendHoverEls = [0, 1].map(() => {
@@ -1083,7 +1089,14 @@ const fold6LegendHoverEls = [0, 1].map(() => {
   el.className = "fold6-legend-hover";
   el.addEventListener("mouseenter", () => { fold6LegendPointerOver = true;  fold6LegendHoverSync(); });
   el.addEventListener("mouseleave", () => { fold6LegendPointerOver = false; fold6LegendHoverSync(); });
-  document.querySelector(".layout").appendChild(el);
+  // BEFORE .text-col, not appended after it: the filter strips inside are tab
+  // stops, and after the story column a keyboard user on the timeline would
+  // Tab through every card link (each one scrolling the page away) before
+  // reaching them. Paint order is unchanged — z-index 3 outranks everything in
+  // .text-col's auto layer either way, and the only other z-index 3 element
+  // (.p7-scope-btn) is moved the same way, after these.
+  const layout = document.querySelector(".layout");
+  layout.insertBefore(el, document.getElementById("textCol"));
   return el;
 });
 
@@ -1098,52 +1111,84 @@ function fold6LegendFilterEl(g) {
   if (el) return el;
   el = document.createElement("div");
   el.className = "fold6-legend-filter";
+  // A toggle button for assistive tech and the keyboard: named after its group,
+  // aria-pressed = the group is SHOWN (the Highcharts legend convention), so
+  // filtering it out un-presses it. updateGroups keeps aria-pressed and the
+  // tabindex (0 only while the strip can filter) in step every frame.
+  el.setAttribute("role", "button");
+  el.setAttribute("aria-label", tr(g.label));
+  el.setAttribute("aria-pressed", "true");
+  el.tabIndex = -1;
+  el.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    e.preventDefault();   // Space would scroll the page
+    if (!e.repeat) fold6LegendFilterActivate(g);
+  });
+  // Keyboard focus shows what hover shows: every label types in (as hovering
+  // the column box does) and this row gets the hover look. :focus-visible only,
+  // so a mouse click — which also focuses the strip — changes nothing.
+  el.addEventListener("focus", () => {
+    if (!el.matches(":focus-visible")) return;
+    fold6LegendKeyFocus = true;
+    fold6LegendHoverSync();
+    fold6LegendFilterHoverOn(g);
+  });
+  el.addEventListener("blur", () => {
+    if (!fold6LegendKeyFocus) return;
+    fold6LegendKeyFocus = false;
+    fold6LegendHoverSync();
+    fold6LegendFilterHoverOff(g);
+  });
   // The row says it is clickable on hover (style.css .is-filter-hover): its
   // label lifts to black and its swatch grows, the other rows step back. Class
   // flips only — the per-frame inline writes never touch these properties.
-  el.addEventListener("mouseenter", () => {
-    const item = groupItems[GROUPS.indexOf(g)];
-    if (item) item.el.classList.add("is-filter-hover");
-    groupsOverlayEl.classList.add("is-filter-hover-any");
-    // …and the group's DOTS light up: every other dot on the canvas dims to
-    // the hover floor, exactly as it does around a hovered dot — unless the
-    // group is filtered OUT (its dots are gone; dimming everyone else for a
-    // group that isn't there reads as a glitch, explicit instruction).
-    if (typeof p7FilterOff !== "undefined" && p7FilterOff.has(g.actor)) return;
-    fold6LegendHoverActor = g.actor;
-    fold6LegendHoverDimTrigger.trigger(1);
-  });
-  el.addEventListener("mouseleave", () => {
-    const item = groupItems[GROUPS.indexOf(g)];
-    if (item) item.el.classList.remove("is-filter-hover");
-    groupsOverlayEl.classList.remove("is-filter-hover-any");
-    // The actor is kept through the fade-out so its dots stay bright while
-    // the rest come back up (same idea as page9's hoverDimCategoryIdx).
-    fold6LegendHoverDimTrigger.trigger(0);
-  });
-  el.addEventListener("click", () => {
-    // Clickable on @fold8 and @fold9 (page7.js draws them itself, so the
-    // toggle gets its full shrink-then-fly) and on @fold11, where page8's glide
-    // scales the dot in place off p7FilterSizeFactor — size only, no re-pack.
-    // @fold12 does the same through p9PlaceDot, on frames from p9FilterKick.
-    // @fold13+ inherits the filter but can't change it.
-    if (typeof p7FilterToggle !== "function") return;
-    // …and on @fold7 from its crossing on (fold9FilterOpen): the card says the
-    // legend filters, so the rows answer from the moment it says so.
-    if (currentPage !== 9 && currentPage !== 10 && currentPage !== 11 && currentPage !== 12 && currentPage !== 13
-        && !fold9FilterOpen()) return;
-    p7FilterToggle(g.actor);
-    // Just filtered OUT under the pointer: the row highlight goes with it.
-    if (p7FilterOff.has(g.actor) && fold6LegendHoverActor === g.actor) fold6LegendHoverDimTrigger.trigger(0);
-    // Frames for @fold12's canvas and, on every fold, the 8 claimed DOM
-    // squares — see p9FilterKick.
-    if (typeof p9FilterKick === "function") p9FilterKick();
-    updateGroups();
-  });
+  el.addEventListener("mouseenter", () => fold6LegendFilterHoverOn(g));
+  el.addEventListener("mouseleave", () => fold6LegendFilterHoverOff(g));
+  el.addEventListener("click", () => fold6LegendFilterActivate(g));
   const box = fold6LegendHoverEls[FOLD4_COALITION_ROWS.includes(g) ? 1 : 0];
   box.appendChild(el);
   fold6LegendFilterEls.set(g, el);
   return el;
+}
+function fold6LegendFilterHoverOn(g) {
+  const item = groupItems[GROUPS.indexOf(g)];
+  if (item) item.el.classList.add("is-filter-hover");
+  groupsOverlayEl.classList.add("is-filter-hover-any");
+  // …and the group's DOTS light up: every other dot on the canvas dims to
+  // the hover floor, exactly as it does around a hovered dot — unless the
+  // group is filtered OUT (its dots are gone; dimming everyone else for a
+  // group that isn't there reads as a glitch, explicit instruction).
+  if (typeof p7FilterOff !== "undefined" && p7FilterOff.has(g.actor)) return;
+  fold6LegendHoverActor = g.actor;
+  fold6LegendHoverDimTrigger.trigger(1);
+}
+function fold6LegendFilterHoverOff(g) {
+  const item = groupItems[GROUPS.indexOf(g)];
+  if (item) item.el.classList.remove("is-filter-hover");
+  groupsOverlayEl.classList.remove("is-filter-hover-any");
+  // The actor is kept through the fade-out so its dots stay bright while
+  // the rest come back up (same idea as page9's hoverDimCategoryIdx).
+  fold6LegendHoverDimTrigger.trigger(0);
+}
+// The one toggle path — a click and Enter/Space both land here.
+function fold6LegendFilterActivate(g) {
+  // Clickable on @fold8 and @fold9 (page7.js draws them itself, so the
+  // toggle gets its full shrink-then-fly) and on @fold11, where page8's glide
+  // scales the dot in place off p7FilterSizeFactor — size only, no re-pack.
+  // @fold12 does the same through p9PlaceDot, on frames from p9FilterKick.
+  // @fold13+ inherits the filter but can't change it.
+  if (typeof p7FilterToggle !== "function") return;
+  // …and on @fold7 from its crossing on (fold9FilterOpen): the card says the
+  // legend filters, so the rows answer from the moment it says so.
+  if (currentPage !== 9 && currentPage !== 10 && currentPage !== 11 && currentPage !== 12 && currentPage !== 13
+      && !fold9FilterOpen()) return;
+  p7FilterToggle(g.actor);
+  // Just filtered OUT under the pointer: the row highlight goes with it.
+  if (p7FilterOff.has(g.actor) && fold6LegendHoverActor === g.actor) fold6LegendHoverDimTrigger.trigger(0);
+  // Frames for @fold12's canvas and, on every fold, the 8 claimed DOM
+  // squares — see p9FilterKick.
+  if (typeof p9FilterKick === "function") p9FilterKick();
+  updateGroups();
 }
 // Grey squares grow-in (@fold5, #page-4) and the ACLED bottom-legend note
 // fade-in (@hidden-acled, #page-5) — see squaresRevealCardEl / acledNoteCardEl above.
@@ -2069,7 +2114,7 @@ function fold9LegendPeek(target) {
   clearTimeout(fold9PeekTimer);
   fold9PeekTimer = null;
   if (isMobile()) return;              // no hover state to demonstrate
-  if (fold6LegendPointerOver) return;  // the real thing is happening; don't touch
+  if (fold6LegendEngaged()) return;  // the real thing is happening; don't touch
   if (target < 1) {                    // scrolling back up cancels the peek
     fold6LabelHoverTrigger.trigger(0);
     return;
@@ -2078,7 +2123,7 @@ function fold9LegendPeek(target) {
   // Hold starts after the type-in has landed, not at the crossing.
   fold9PeekTimer = setTimeout(() => {
     fold9PeekTimer = null;
-    if (fold6LegendPointerOver) return;
+    if (fold6LegendEngaged()) return;
     fold6LabelHoverTrigger.trigger(0);
   }, FOLD6_LABEL_HOVER_MS + FOLD9_LEGEND_PEEK_HOLD_MS);
 }
@@ -2418,7 +2463,11 @@ function p7ScopeToggle() {
   }
   if (typeof updateGroups === "function") updateGroups();
 }
-(document.querySelector(".layout") || document.body).appendChild(p7ScopeBtnEl);
+// Before .text-col, like the legend hover boxes (fold6LegendHoverEls): a tab
+// stop that sits after the story column is unreachable from the timeline
+// without Tabbing through — and scrolling to — every card link first. Same
+// z-index 3 as those boxes and still after them, so nothing repaints.
+document.querySelector(".layout").insertBefore(p7ScopeBtnEl, document.getElementById("textCol"));
 // A press made while page8's glide is in the air — the `uniform` value it asked
 // for, or null. Flushed by page8.js the frame the glide lands; dropped by its
 // reverse. Read by updateGroups so the button shows pressed right away.
@@ -2640,7 +2689,7 @@ function typedText(full, t) {
 // hardcoded font sizes above. FOLD6_TOP_ROW is the mini-legend's top-most row
 // of the RIGHT (coalition) column — the column the note hangs below.
 // English page: its own copy (three paragraphs), same ACLED-as-link split.
-const FOLD6_NOTE_TEXT = isEnglish() ? "The project covers political actions carried out by Israeli citizens in public spaces, in Israel and the occupied territories, from the beginning of 2023. Most event descriptions and dates come from ACLED, an international research organization that documents and maps protest and political violence based on reports from media outlets and local sources. The HaMivtzar (“The Fortress”) database served as a supplementary source. The descriptions were edited and shortened while preserving the facts and context, and ACLED descriptions were translated into Hebrew; the English descriptions were translated from the edited Hebrew. Events were assigned to groups and political camps, actions were classified, and participant numbers were estimated as part of the project, based on the descriptions and using OpenAI language models. The project is responsible for this analysis, which was not produced on behalf of the data providers." : tr("הפרויקט כולל פעולות פוליטיות שביצעו אזרחי ישראל במרחב הציבורי, בישראל ובשטחים, מתחילת 2023. מרבית תיאורי האירועים ומועדיהם לקוחים ממאגר ACLED, גוף מחקר בינלאומי המתעד וממפה מחאה ואלימות פוליטית על בסיס דיווחי תקשורת ומקורות מקומיים. מאגר ״המבצר״ שימש מקור משלים. התיאורים נערכו וקוצרו תוך שמירה על העובדות וההקשר, ותיאורי ACLED תורגמו לעברית. שיוך האירועים לקבוצות ולמחנות, סיווג הפעולות והערכת מספר המשתתפים נעשו במסגרת הפרויקט על סמך התיאורים ובעזרת מודלי שפה של OpenAI. ניתוח זה הוא באחריות הפרויקט ואינו מטעם מקורות הנתונים.");
+const FOLD6_NOTE_TEXT = isEnglish() ? "The project covers political actions carried out by Israeli citizens in public spaces, in Israel and the occupied territories, from the beginning of 2023. Most event descriptions and dates come from ACLED, an international research organization that documents and maps protest and political violence based on reports from media outlets and local sources. The Fortress database served as a supplementary source. The descriptions were edited and shortened while preserving the facts and context, and ACLED descriptions were translated into Hebrew; the English descriptions were translated from the edited Hebrew. Events were assigned to groups and political camps, actions were classified, and participant numbers were estimated as part of the project, based on the descriptions and using OpenAI language models. The project is responsible for this analysis, which was not produced on behalf of the data providers." : tr("הפרויקט כולל פעולות פוליטיות שביצעו אזרחי ישראל במרחב הציבורי, בישראל ובשטחים, מתחילת 2023. מרבית תיאורי האירועים ומועדיהם לקוחים ממאגר ACLED, גוף מחקר בינלאומי המתעד וממפה מחאה ואלימות פוליטית על בסיס דיווחי תקשורת ומקורות מקומיים. מאגר ״המבצר״ שימש מקור משלים. התיאורים נערכו וקוצרו תוך שמירה על העובדות וההקשר, ותיאורי ACLED תורגמו לעברית. שיוך האירועים לקבוצות ולמחנות, סיווג הפעולות והערכת מספר המשתתפים נעשו במסגרת הפרויקט על סמך התיאורים ובעזרת מודלי שפה של OpenAI. ניתוח זה הוא באחריות הפרויקט ואינו מטעם מקורות הנתונים.");
 // 172, picked in a manual/ harness against the two-paragraph copy on a 982px-tall
 // window, where the copy measures 372px at this width. This is the note's NARROWEST
 // width, not its only one: the note hangs DOWNWARD from a legend block centred
@@ -2778,7 +2827,7 @@ function fold6NoteSplitOnAcled() {
 // The second source is a link too: the FIRST mention of the Fortress after the
 // ACLED link (its name per language). Splits the text after the ACLED link into
 // [before Fortress, after Fortress]; no mention → [whole, ""].
-const FOLD6_NOTE_FORTRESS_NAME = isEnglish() ? "HaMivtzar" : isArabic() ? "هاميفتسار" : "המבצר";
+const FOLD6_NOTE_FORTRESS_NAME = isEnglish() ? "Fortress" : isArabic() ? "الحصن" : "המבצר";
 const FOLD6_NOTE_FORTRESS_HREF = "https://www.zman.co.il/726358/";
 function fold6NoteSplitOnFortress(text) {
   const i = text.indexOf(FOLD6_NOTE_FORTRESS_NAME);
@@ -2839,6 +2888,13 @@ function fold6UpdateNoteTypewriter(titleCount, bodyCount) {
     const n = Math.max(0, Math.min(seg.fullText.length, left));
     fold8UpdateTypewriter(seg, n);
     left -= n;
+    // A link with not one character typed is invisible: out of the tab order
+    // until it starts to show. tabIndex only, so the pointer path is untouched.
+    const a = seg.revealed.parentElement;
+    if (a && a.tagName === "A") {
+      const ti = n > 0 ? 0 : -1;
+      if (a.tabIndex !== ti) a.tabIndex = ti;
+    }
   }
 }
 const FOLD6_NOTE_TITLE_LEN = FOLD6_NOTE_TITLE_TEXT.length;
@@ -2861,6 +2917,7 @@ const fold6NoteLayerEl = document.getElementById("fold6NoteLayer");
 // order is paint order — no z-index needed).
 const fold6NoteCardEl = document.createElement("div");
 fold6NoteCardEl.className = "fold6-note-card";
+fold6NoteCardEl.setAttribute("aria-hidden", "true");   // decorative skin
 fold6NoteLayerEl.appendChild(fold6NoteCardEl);
 fold6NoteLayerEl.appendChild(fold6NoteEl);
 fold6NoteLayerEl.appendChild(fold6NoteTitleEl);
@@ -2928,7 +2985,28 @@ fold6RowMeasureEl.textContent = groupLabelText(FOLD6_TOP_ROW);
 groupsOverlayEl.appendChild(fold6RowMeasureEl);
 const fold6NoteRuleEl = document.createElement("div");
 fold6NoteRuleEl.className = "fold6-note-rule";
+fold6NoteRuleEl.setAttribute("aria-hidden", "true");   // decorative hairline
 fold6NoteLayerEl.appendChild(fold6NoteRuleEl);
+// The layer is exposed to assistive tech (the note's text and its three links
+// are content), so whenever the note is NOT on screen the layer is `inert` —
+// otherwise its links are tab stops at opacity 0. "Not on screen" is any of:
+// the note un-revealed (its own inline opacity 0, updateGroups), hidden (mobile),
+// or the whole layer faded out with the legend at @fold13 (inline opacity on
+// the layer, written by js/fold11.js). Those writes come from two files on
+// their own schedules, so this watches the attributes themselves rather than
+// trusting a call order. `inert` changes no pixel.
+function fold6NoteLayerSyncInert() {
+  const shown = !fold6NoteEl.hidden
+    && fold6NoteEl.style.opacity !== "0"
+    && parseFloat(fold6NoteLayerEl.style.opacity || "1") > 0;
+  if (fold6NoteLayerEl.inert === shown) fold6NoteLayerEl.inert = !shown;
+}
+fold6NoteLayerEl.inert = true;
+{
+  const mo = new MutationObserver(fold6NoteLayerSyncInert);
+  mo.observe(fold6NoteLayerEl, { attributes: true, attributeFilter: ["style"] });
+  mo.observe(fold6NoteEl, { attributes: true, attributeFilter: ["style", "hidden"] });
+}
 // Hovering the note block itself types the body back in — and ONLY the body
 // (explicit instruction). The note and the group rows are two independent
 // hover zones now: this one opens the note and leaves the six labels closed,
@@ -2963,8 +3041,8 @@ fold6NoteLayerEl.appendChild(fold6NoteRuleEl);
    was closed.
 
    The bar lives in its own layer rather than in #fold6NoteLayer because it must
-   be reachable by assistive tech and by taps — that layer is aria-hidden and
-   pointer-events:none, both correct for a decorative credit line. */
+   be reachable by taps at all times — that layer is pointer-events:none and
+   goes inert whenever the note is off screen (fold6NoteLayerSyncInert). */
 const fold6MobileLegendLayerEl = document.getElementById("fold6MobileLegendLayer");
 // The page behind the open legend is dimmed (chosen in a compare/ pass against
 // a plain black veil and a backdrop blur). The tint is a DARKENED PAGE GROUND,
@@ -3058,6 +3136,21 @@ const fold6MobileCampHeadEls = {};
   campRowOrder(camp, true).forEach((g) => {
     const row = document.createElement("div");
     row.className = "fold6-mlegend-row";
+    // A toggle button for assistive tech and the keyboard, the twin of the
+    // desktop strips (fold6LegendFilterEl): named after its group, aria-pressed
+    // = the group is SHOWN. aria-disabled + tabindex -1 except while the sheet is
+    // open on a fold that answers a tap — fold6MLegendRowsSyncA11y keeps all
+    // three in step. Enter/Space run the same fold6MLegendRowTap a tap does.
+    row.setAttribute("role", "button");
+    row.setAttribute("aria-label", tr(g.labelMobile || g.label));
+    row.setAttribute("aria-pressed", "true");
+    row.setAttribute("aria-disabled", "true");
+    row.tabIndex = -1;
+    row.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault();   // Space would scroll the page
+      if (!e.repeat && fold6MLegendOpenWant) fold6MLegendRowTap(row);
+    });
     const swatch = document.createElement("span");
     swatch.className = "fold6-mlegend-swatch";
     swatch.style.background = g.color;
@@ -3742,9 +3835,30 @@ function fold6MLegendPaintCard(raw) {
   fold6MobilePanelEl.style.pointerEvents = hT < 1 ? "none" : "";
 }
 
+// The rows' ARIA state + tab stop, off the same conditions the classes use
+// (updateGroups: .is-armed @fold8…@fold12, .is-filtered-off). Called from
+// updateGroups every frame and whenever the sheet opens or closes, since the
+// sheet can change without a scroll.
+function fold6MLegendRowsSyncA11y() {
+  if (typeof fold6MobileRowEls === "undefined") return;
+  const live = typeof p7FilterOff !== "undefined";
+  const armed = live && currentPage >= 9 && currentPage <= 13;
+  const usable = armed && fold6MLegendOpenWant;
+  fold6MobileRowEls.forEach((r) => {
+    if (!r.row) return;
+    const shown = String(!(live && currentPage >= 9 && p7FilterOff.has(r.g.actor)));
+    if (r.row.getAttribute("aria-pressed") !== shown) r.row.setAttribute("aria-pressed", shown);
+    const dis = String(!armed);
+    if (r.row.getAttribute("aria-disabled") !== dis) r.row.setAttribute("aria-disabled", dis);
+    const ti = usable ? 0 : -1;
+    if (r.row.tabIndex !== ti) r.row.tabIndex = ti;
+  });
+}
+
 function fold6SetMobileLegendOpen(open, opts) {
   const instant = !!(opts && opts.instant);
   fold6MLegendOpenWant = open;
+  fold6MLegendRowsSyncA11y();
   fold6MLegendOpenDone = (opts && opts.onDone) || null;
   fold6MobileLegendBtnEl.setAttribute("aria-expanded", String(open));
   if (open) {

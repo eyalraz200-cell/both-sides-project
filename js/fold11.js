@@ -256,8 +256,29 @@ function p13GateMax() {
 // were never registered and @fold13 could be scrolled past with no pill dropped.
 let p13TouchBlockOn = false;
 
+// Everything past the gate — @fold13's own #page-14 (its card is the
+// gate-hidden one) through @fold16's #page-17. While locked it can't be scrolled
+// to, so it must not be reachable by Tab or a screen reader's virtual cursor
+// either (the share row and the credits links would otherwise take focus
+// off-screen, WCAG 2.4.3 / 2.4.11). `inert` is behaviour-only: no paint change.
+// The fixed corner chrome (.seventh-eye, #langWrap) is page-wide, not these
+// folds', and stays reachable.
+const P13_GATED_SECTION_IDS = ["page-14", "page-15", "page-16", "page-17"];
+// One «classify something to go on» hint per lock — reset on unlock, so a
+// reader who pulls every pill back out hears it again at the next blocked key.
+let p13GateHintSaid = false;
+function p13SyncGateInert() {
+  const locked = p13GateLocked();
+  for (const id of P13_GATED_SECTION_IDS) {
+    const el = document.getElementById(id);
+    if (el) el.inert = locked;
+  }
+  if (!locked) p13GateHintSaid = false;
+}
+
 function p13SyncGateVisibility() {
   if (page12StickyEl) page12StickyEl.classList.toggle("gate-hidden", p13GateLocked());
+  p13SyncGateInert();
   p13SyncTouchBlock?.();
   checkFold13Peek?.();
 }
@@ -356,6 +377,12 @@ window.addEventListener("keydown", (e) => {
   if (["ArrowDown", "PageDown", "End", " "].includes(e.key) &&
       window.scrollY >= p13GateMax() - 1) {
     e.preventDefault();
+    // Nothing visible happens at the gate, so say why (p9Announce: page9.js's
+    // shared polite live region).
+    if (!p13GateHintSaid && typeof p9Announce === "function") {
+      p13GateHintSaid = true;
+      p9Announce(tr("כדי להמשיך, סווגו לפחות סוג פעולה אחד כקיצוני."));
+    }
   }
 });
 

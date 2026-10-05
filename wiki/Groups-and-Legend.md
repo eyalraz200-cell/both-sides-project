@@ -752,7 +752,8 @@ still opening, and the flight aims at the rows' REST positions).
 
 - It lives in its **own** layer, `#fold6MobileLegendLayer` (a direct `.layout` child, like
   `#fold6NoteLayer` and `#page9CatTooltip`). It is *not* in `#fold6NoteLayer`: that one is
-  `aria-hidden` + `pointer-events: none`, which a button cannot be. The layer passes clicks
+  `pointer-events: none` and `inert` whenever the note is off screen, which a button that
+  must always answer cannot be. The layer passes clicks
   through; only `.fold6-mlegend` takes pointer events, and only once `updateGroups` has
   faded it past halfway.
 - **Stacking — the mobile stack, bottom to top** (explicit instruction, style.css's ≤600px
@@ -1342,6 +1343,21 @@ Dots enter and leave by **size**, never opacity — the project-wide rule is [An
 On the real timeline (@fold8) each legend row is also a **filter toggle** (`.fold6-legend-filter` strips, built by `fold6LegendFilterEl(g)` and positioned per frame by `updateGroups`; desktop only): click it and that group leaves the graph by size, and the filter stays in force through every later fold.
 Mechanics, hover/filtered-off styling and how the 8 claimed squares follow it: [Timeline](Timeline.md#the-legend-filter-fold8-both-breakpoints--p7filtertoggle-page7js).
 
+**Keyboard / assistive tech.** Each strip is a `role="button"` toggle named after its group
+(`aria-label = tr(g.label)`), `aria-pressed="true"` while the group is **shown** (filtered
+out → `"false"`; the Highcharts legend convention), and a tab stop (`tabindex=0`) only while
+it can filter — `updateGroups` writes both every frame from the same `canFilter` / `off` it
+uses for `display` and `.is-filtered-off`. Enter/Space run `fold6LegendFilterActivate(g)`,
+the one path a click also takes. Keyboard focus (`:focus-visible` only — a mouse click also
+focuses the strip and must change nothing) does what hover does: `fold6LegendKeyFocus`
+opens every label through `fold6LegendHoverSync` (read via `fold6LegendEngaged()`, which the
+@fold6 peek also honours) and the row gets `.is-filter-hover`; the strip shows a
+`:focus-visible` ring. The hover boxes are inserted before `.text-col` so a keyboard user on
+the timeline reaches the strips right after the language switch and the corner logo, rather
+than after every card link (each of which would scroll the page away). `#groupsOverlay`
+itself stays `aria-hidden` — its rows are visual only; their names reach AT through these
+strips.
+
 ## The מקרא sheet's gesture (mobile)
 
 One pointer pass on the whole bar is **both** the drag and the tap — they cannot be
@@ -1372,6 +1388,12 @@ same folds (`currentPage` 9–13, i.e. @fold8–@fold12), then `p9FilterKick()` 
 shrink, the re-pack, the fly, @fold9's grid repack) is breakpoint-agnostic. `p7.vert` still
 gates it: with no vertical layout there is nothing to re-pack.
 
+Each row is also a `role="button"` toggle for the keyboard: `aria-label` = its group,
+`aria-pressed` = the group is shown, `aria-disabled` off the armed state, and `tabindex=0`
+only while the sheet is open on an armed fold — `fold6MLegendRowsSyncA11y()`, run by
+`updateGroups` and by `fold6SetMobileLegendOpen`. Enter/Space call `fold6MLegendRowTap`.
+`:focus-visible` ring only.
+
 `updateGroups` writes two classes onto each card, off the same conditions the desktop
 strips use so the breakpoints can never disagree:
 
@@ -1380,3 +1402,5 @@ strips use so the breakpoints can never disagree:
 | `.is-armed` | this fold will answer a tap (@fold8…@fold12) — `cursor: pointer`, nothing else, since a phone has no hover |
 | `.is-filtered-off` | this group is out. **Outlives** the armed state: past @fold12 the filter still applies, so the panel keeps saying which groups are missing even though tapping can no longer change it. 0.28, matching `.group-item.is-filtered-off` exactly |
 | `.is-pressed` | the finger is on it. Written on **pointerdown** by the sheet's own pointer handler (js/groups.js), no transition, `#d2d2d2`; gone the moment the gesture turns into a drag of the sheet (`FOLD6_MLEGEND_DRAG_SLOP_PX`) or on release. It exists because the real state can only be decided at pointerup — the same gesture may be a drag — so without it a row answered only after the finger lifted plus a 140ms fade, which read as a slow button. `fold6MLegendRowTap` also writes `.is-filtered-off` itself on the tap, rather than waiting for `updateGroups()` (once per frame, so its own call can be re-queued to the next) |
+
+**English page, mobile מקרא sheet:** mirrored for left-to-right — the ACLED card's chevron sits on the heading's RIGHT edge, and the «Show event size» row puts its ring first, then the label, both ranged LEFT (`.lang-en .fold6-mlegend-data-head` / `.lang-en .fold6-mlegend-scope`, style.css).

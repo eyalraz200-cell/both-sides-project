@@ -100,7 +100,7 @@ Served at `/en/`. A copy of `index.html` with `<html lang="en" class="lang-en">`
 Hebrew page — there is no second stylesheet or script set. Its canonical / `og:url` point
 at `/en/`, so the @fold15 share row shares the English link.
 
-All three pages carry a **language switch**: ONE button in the top-left corner (`#langWrap` → `.lang-switch`, a globe glyph + the current language's letters — «עב» / «EN» / «ع»; fixed, its TOP edge on the corner logo's top edge — 8px down / 12px in on the phone, where it is the globe alone (the letters are hidden), a 16px glyph with 6px around it (manual/-baked 2026-10-03), no tap highlight and no colour change on touch; 24px down / 24px in on desktop, globe + letters. At both breakpoints the card GROWS open over 180ms (grid-rows 0fr→1fr; `aria-hidden` + visibility instead of `hidden`, which would cut the transition); z-index 1007, above the mobile legend layer, below the gate). Clicking it opens a drop-down of the three languages (`#langMenu`, rows «עברית» / «English» / «العربية»; `js/lang-switch.js` — click outside or Escape closes). The look is the legend note's card (compare/ pick 2026-10-03 over an outlined box, a bare glyph and a darkened-page dialog): the tint over `--bg`, 16px corners, the note title's 600 `#767676` type (13px phone / 12px desktop), no chevron; the rows sit INSIDE the card, which grows around them. Each row is styled as the «הצגת גודל האירועים» control: 14px Assistant at rgba(0,0,0,.6), black on hover (180ms), with a 10px empty ring that fills dark for the current language and darkens its edge on hover — but never swells. The current language's row is black at rest and **not selectable** (`pointer-events: none`, `aria-disabled`, `tabindex=-1`); opening the menu focuses the first other row. The hrefs are `./`, `en/`, `ar/` on every page (the subpages carry `<base href="../">`).
+All three pages carry a **language switch**: ONE button in the top-left corner (`#langWrap` → `.lang-switch`, a globe glyph + the current language's letters — «עב» / «EN» / «ع»; fixed, its TOP edge on the corner logo's top edge — 8px down / 12px in on the phone, where it is the globe alone (the letters are hidden), a 16px glyph with 6px around it (manual/-baked 2026-10-03), no tap highlight and no colour change on touch; 24px down / 24px in on desktop, globe + letters. At both breakpoints the card GROWS open over 180ms (grid-rows 0fr→1fr; `aria-hidden` + visibility instead of `hidden`, which would cut the transition); z-index 1007, above the mobile legend layer, below the gate). Clicking it opens a drop-down of the three languages (`#langMenu`, rows «עברית» / «English» / «العربية»; `js/lang-switch.js` — click outside or Escape closes). The look is the legend note's card (compare/ pick 2026-10-03 over an outlined box, a bare glyph and a darkened-page dialog): the tint over `--bg`, 16px corners, the note title's 600 `#767676` type (13px phone / 12px desktop), no chevron; the rows sit INSIDE the card, which grows around them. Each row is styled as the «הצגת גודל האירועים» control: 14px Assistant at rgba(0,0,0,.6), black on hover (180ms), with a 10px empty ring that fills dark for the current language and darkens its edge on hover — but never swells. The current language's row is black at rest and **not selectable** (`pointer-events: none`, `aria-current="page"`, `tabindex=-1`); opening the menu focuses the first other row. **Semantics: a disclosure, not an ARIA menu** — `#langWrap` is itself a `<nav>` (localized `aria-label`: «שפה» / «Language» / «اللغة»; being the positioned card, it adds no box), the button carries `aria-expanded` + `aria-controls` and an `aria-label` that STARTS with its visible letters («עב – בחירת שפה» / «EN – Choose a language» / «عر – اختيار اللغة», WCAG 2.5.3), and the rows are plain links. Focus leaving the switch closes it (`focusout`; a press inside the card or a window blur doesn't). The hrefs are `./`, `en/`, `ar/` on every page (the subpages carry `<base href="../">`).
 
 All three pages also carry **העין השביעית's logo** in the top-RIGHT corner (`.seventh-eye`, a fixed link to the7eye.org.il, `z-index: 1007` like the switch; 24px from the top and right on desktop, 8px from the top on the phone). **The desktop edge gap is one number, 24px**: the logo's `--se-right`, the language switch's `left` (`.lang-wrap`) and the legend columns' `FOLD6_LEGEND_INSET_LEFT/RIGHT` (js/groups.js — the ACLED note follows the right column) all sit 24px off their edge. The artwork is a CSS **mask** (alpha-only PNG) over `.seventh-eye-mark`, so the mark's colour is its `background-color`; the `<a>` is an optional backing plate. Every value is a `--se-*` custom property set **per breakpoint** (phone in the base rule, desktop in the 601px block). **Hebrew page:** the wide lockup (`seventh-eye-logo-wide.png`) with the line «פרויקט בשיתוף» (`.seventh-eye-caption`) to its RIGHT, vertically centred (`--se-dir: row`; `--se-cap-y` is an optical nudge for Assistant's Hebrew letter body) — 120px wide / 14px text; this is the **desktop** layout and it stays on every fold until @fold13, where it fades out with the rest of the screen on the closing card's rise (`updateFold13`, js/fold11.js) and comes back when scrolling up. **Phone (both languages):** the same wide lockup, centred at the top of the screen with the line above it (`--se-dir: column`), 120px wide / 14px text (weight 400), 8px apart; it **fades out once scrolling starts** — `js/nav.js` flips `.is-scrolled` past `SEVENTH_EYE_FADE_SCROLL_PX` (8px) and the 600px block transitions opacity over `--se-fade-ms` (300ms), back in at the top. **English page, desktop:** the same wide lockup, `direction: ltr` so "In partnership with" sits to its LEFT (**removed — don't reintroduce:** the cropped stacked mark, `--se-crop`). Mark and line are both `#393239` at rest; on desktop, hovering turns the **mark only** to `#EC2A2C` over 150ms (`(hover: hover)` pointers). `--se-cap-display: none` switches the line off.
 
@@ -186,7 +186,7 @@ Two things that are easy to get wrong here:
 
 `index.html` is a canvas app: a crawler sees its ~16 `.section-title` scroll cards and
 nothing else, since all 12,283 events are painted. Anything that must be findable has to
-exist as real markup on the page (the `.a11y-only` `<h1>`, the `<meta name="description">`).
+exist as real markup on the page (the hero `<h1>`, the `<meta name="description">`).
 
 ## `index.html`'s layout
 
@@ -201,9 +201,11 @@ exist as real markup on the page (the `.a11y-only` `<h1>`, the `<meta name="desc
 ├── .seventh-eye          z-index 1007 — העין השביעית's corner logo link
 ├── #page9Tooltip         shared event tooltip (page7 + page9 + @fold5's phase-2 demo)
 ├── #page9CatTooltip      tray-pill tooltip
+├── .fold6-legend-hover ×2  z-index 3 — the desktop legend hover boxes + filter strips (js/groups.js); inserted BEFORE .text-col so the strips come early in the tab order
+├── .p7-scope-btn         z-index 3 — «הצגת גודל האירועים» (desktop); also before .text-col, after the boxes
 ├── #fold6NoteLayer       z-index 2, desktop 1005 (above the 1004 title cards — the note paints in front of whatever it meets) — the ACLED source note is reparented here at init
 ├── #fold6MobileLegendLayer  z-index 5, mobile 1006 — the mobile מקרא bar (Groups-and-Legend)
-└── .text-col             NO z-index (see below) — the 18 <section.text-section> scroll drivers (`#page-0` … `#page-17`)
+└── main.text-col        NO z-index (see below) — the page's `<main>` landmark; the 18 <section.text-section> scroll drivers (`#page-0` … `#page-17`)
 ```
 
 **`.graphic-col` traps z-index.** Anything that must stack above `.text-col` has to be a
@@ -601,8 +603,24 @@ What holds today:
   per block, and the flex rows that don't (`.page9-zone`, `.page9-tray-row`) would reverse
   their inline order under a root RTL. Setting it is the right end state but needs an
   eyeball pass over @fold12–@fold16 first; the reason is commented at the `<html>` tag.
-- **One `<h1>` per document,** `.a11y-only` (every visible heading is an `<h2>` in a
-  scrolling title card).
+- **One `<h1>` per document: the visible hero title** (`h1.page0-title`, @fold1). Every
+  other visible heading is an `<h2>` in a scrolling title card; @fold16's «נתונים ושיטת
+  עבודה» is a `<p class="page12-body-heading" role="heading" aria-level="3">` (a real `<h3>`
+  would pick up UA/heading styles and lose `.page12-body p`'s). `.page0-title` sets font,
+  line-height and margin itself, so the tag carries no style. No hidden `.a11y-only` `<h1>`.
+- **Landmarks:** `<main class="text-col">` (the story) and `<nav class="lang-wrap">` (the
+  language switch). No skip link — only the switch and the corner logo precede `<main>`.
+- **Focus rings:** every control that zeroes its outline (`all: unset`, `outline: none`)
+  keeps one on `:focus-visible` only (`outline: 2px solid var(--ink)`, `currentColor` where
+  the control sits on a dark ground — the ⓘ on an extreme pill, the dev fold picker), so a
+  mouse or a tap never draws a ring.
+- **Hidden means hidden.** `#fold6NoteLayer` is exposed (the note text + its three links)
+  but `inert` whenever the note is off screen (`fold6NoteLayerSyncInert`, js/groups.js — a
+  MutationObserver on the note's and the layer's inline `opacity`/`hidden`, since two files
+  write them), and a note link with no character typed yet is `tabindex=-1`. Its card and
+  rule are `aria-hidden`. `.p7-scope-btn[hidden]` is `display: none` (its own
+  `display: flex` used to beat the UA rule). The dashed card frame SVG
+  (`.text-card-frame-dash`, js/core.js) is `aria-hidden` + `focusable="false"`.
 - **`.a11y-only`** (`style.css`, next to the `*` reset) is the off-screen utility: a clipped
   1px box, **not** `display: none`/`visibility: hidden`, which would drop the element from
   the accessibility tree too.

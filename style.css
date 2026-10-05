@@ -164,6 +164,12 @@ body {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
+/* `all: unset` above also drops the UA focus ring — put a keyboard one back
+   (currentColor: the picker is dark, --ink would vanish on it). */
+.fold-picker-row:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -2px;
+}
 .fold-picker-row.is-current {
   color: #fff;
   background: rgba(255, 255, 255, 0.14);
@@ -3026,6 +3032,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   min-height: 25px;        /* the 17px line box + 4px padding, top and bottom */
   transition: color var(--ui-fade-ms) ease;
 }
+/* `display: flex` above beats the UA's [hidden] rule, so the "hidden" button
+   used to stay laid out at opacity 0 — an invisible tab stop and click target
+   before @fold10. updateGroups writes `hidden` every frame; this makes it real. */
+.p7-scope-btn[hidden] { display: none; }
 /* The ring: an empty 10px circle that simply FILLS dark when the crowd sizes
    are showing — no tick inside it. At 10px a checkmark is a smudge, so the
    fill alone carries the on/off state. */
@@ -3839,11 +3849,18 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     -webkit-tap-highlight-color: transparent;
   }
   .page9-pill .page9-pill-info:focus,
-  .page9-pill .page9-pill-info:focus-visible,
   .page9-pill .page9-pill-info:active {
-    outline: none;
     background: none;
     opacity: 0.75;
+  }
+  .page9-pill .page9-pill-info:focus:not(:focus-visible),
+  .page9-pill .page9-pill-info:active:not(:focus-visible) { outline: none; }
+  /* KEYBOARD focus still gets a ring (a tap never matches :focus-visible).
+     currentColor, not --ink: the ⓘ inherits the pill's ink, which turns white
+     on a dark .is-extreme pill, where an --ink ring would vanish. */
+  .page9-pill .page9-pill-info:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
   }
   /* Invisible tap-target extender: a finger landing near the 18px ⓘ should
      open the tooltip, not classify the pill. The pseudo-element is part of the
@@ -4634,9 +4651,13 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        should flash. */
     -webkit-tap-highlight-color: transparent;
   }
-  .fold6-mlegend-btn:focus,
-  .fold6-mlegend-btn:focus-visible {
+  .fold6-mlegend-btn:focus:not(:focus-visible) {
     outline: none;
+  }
+  /* Keyboard focus only — a tap never matches :focus-visible. */
+  .fold6-mlegend-btn:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
   }
   /* Removed — don't reintroduce: the grab handle, a 28×1.5px #d4d3d8 pill on
      ::before, centred 4px above the button's box. The floating card carries the
@@ -4676,8 +4697,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     opacity: 0;
     -webkit-tap-highlight-color: transparent;
   }
-  .fold6-mlegend-close:focus,
-  .fold6-mlegend-close:focus-visible { outline: none; }
+  .fold6-mlegend-close:focus:not(:focus-visible) { outline: none; }
+  .fold6-mlegend-close:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   /* The glyph is a pseudo-element rather than text content so nothing can
      select it and no font fallback can swap it for a different-looking ×. */
   .fold6-mlegend-close::before {
@@ -4939,6 +4960,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      cursor and the dim say so — no hover treatment, since there is no hover on
      a phone and the sheet is dragged by the same finger that taps. */
   .fold6-mlegend-row.is-armed { cursor: pointer; }
+  /* The rows are role="button" toggles for the keyboard too (Enter/Space,
+     js/groups.js); a tap never matches :focus-visible. */
+  .fold6-mlegend-row:focus:not(:focus-visible) { outline: none; }
+  .fold6-mlegend-row:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   /* Filtered out. Matches .group-item.is-filtered-off's own 0.28 so the two
      breakpoints read identically, and transitions for the same reason that one
      does — it is a pure state flip, not a per-frame JS repaint. */
@@ -5026,6 +5051,14 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   left: 0;
   right: 0;
   cursor: pointer;
+}
+/* The strips are role="button" toggles (Enter/Space, js/groups.js). The strip
+   itself is invisible, so its ring is the only mark of keyboard focus; a mouse
+   click never matches :focus-visible, so nothing changes for the pointer. */
+.fold6-legend-filter:focus:not(:focus-visible) { outline: none; }
+.fold6-legend-filter:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
 /* A group filtered out of the timeline. Set on .group-item, which never
    receives an inline opacity, so this can't be fought by the per-frame writes;
@@ -5558,6 +5591,19 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   .lang-en .fold6-mlegend-data-body p {
     direction: ltr;
     text-align: left;
+  }
+  /* The ACLED heading's chevron moves to the RIGHT edge — the room it sits in
+     moves with it. */
+  .lang-en .fold6-mlegend-data-head {
+    padding: 0 26px 0 0;
+  }
+  .lang-en .fold6-mlegend-data-head::after {
+    left: auto;
+    right: 0;
+  }
+  /* «Show event size»: ring then label, both on the LEFT. */
+  .lang-en .fold6-mlegend-scope {
+    flex-direction: row;
   }
   /* @fold12: the ghost title block, the stuck title and the action prompt all
      range LEFT. The stuck title travels to the LEFT edge, so the measured flush
