@@ -47,8 +47,16 @@
 
 body {
   background: var(--bg);
-  /* All text is selectable (explicit instruction 2026-10-04). Only the canvas
-     (no text) opts out on mobile. */
+}
+/* NO text selection anywhere on the story pages (explicit instruction
+   2026-10-05) — every element, with !important so no later rule switches it
+   back on, plus no iOS long-press callout. The methodology pages
+   (methodology.html and its en/ ar/ twins) never load this file, so they stay
+   selectable. */
+*, *::before, *::after {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none;
 }
 
 /* The fold badge — the current @foldN as a bare number, small, top-left.
