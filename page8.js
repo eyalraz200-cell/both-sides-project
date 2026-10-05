@@ -225,7 +225,7 @@ function drawPage8(ctx, W, H) {
 
       let x = fromX + (target.x - fromX) * ease;
       let y = fromY + (target.y - fromY) * ease;
-      if (typeof p7FilterSizeFactor === "function") filtF = p7FilterSizeFactor(e, y);
+      if (typeof p7FilterSizeFactor === "function") filtF = p7FilterSizeFactor(e, y, true);
       if (filtF <= 0.002) return;
       // Shrink each dot from the (now enlarged) real-timeline square size (p7.SQ)
       // down to page9's legit-grid size (P9_SQ) across the glide, so the dots

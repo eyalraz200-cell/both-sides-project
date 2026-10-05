@@ -2204,7 +2204,7 @@ function drawPage9(ctx, W, H) {
     // restoring) first, so the dot shrinks away in place instead of blinking
     // out; `filtF` scales its size at the fillRect below. The columns don't
     // re-pack around it — same size-only answer @fold11 gives.
-    const filtF = typeof p7FilterSizeFactor === "function" ? p7FilterSizeFactor(e, targetY) : 1;
+    const filtF = typeof p7FilterSizeFactor === "function" ? p7FilterSizeFactor(e, targetY, true) : 1;
     if (filtF <= 0.002) return;
     let drawX = targetX, drawY = targetY, drawAlpha = targetAlpha;
     // The animated CENTRE. null until an animation sets it; the corner is

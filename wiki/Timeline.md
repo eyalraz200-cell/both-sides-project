@@ -1726,12 +1726,12 @@ again to bring it back. Multiple groups can be off at once.
 - **The flight — shrink first, then fly.** `p7FilterCommit(restoring)` snapshots
   every square's current centre and size from `p7.lastPositions`, re-packs, and
   blends from that snapshot over two **sequential** windows: size over
-  `P7_FILTER_SHRINK_MS` (380 ms) and position over `P7_FILTER_FLY_MS` (900 ms)
+  `P7_FILTER_SHRINK_MS` (380 ms) and position over `p7FilterFlyMs()` — `P7_FILTER_FLY_MS` (550 ms) on @fold8's timeline, `P7_FILTER_FLY_MS_GRID` (750 ms) while @fold9's size grid is on
   starting where the first ends, both `p9Ease` (`p7FilterChannels()`). So the
   filtered-out dots shrink away first and the survivors only close the gap once
   it is empty. Bringing a group back runs the two beats in the other
   **order** — fly first, then grow — but each channel keeps its own duration
-  wherever it lands (grow is always the 380 ms beat, the flight always the 900 ms
+  wherever it lands (grow is always the 380 ms beat, the flight always its fold's fly time
   one). Swapping tempos along with order makes the return read as a slow detached
   pop.
   - **The toggled group's size beat cascades.** Each of its dots starts its
@@ -1740,14 +1740,14 @@ again to bring it back. Multiple groups can be off at once.
     corridor — centre out to the sides (`p7FilterCascadeDelayX`) — except while @fold9's size grid is on (`p7Grid.on`), which is drawn by the same loop but cascades top/bottom like the later folds. On the later
     folds (page8, page9, the 8 claimed DOM squares) callers pass the dot's y into
     `p7FilterSizeFactor(ev, y)` — top→bottom filtering out, bottom→top bringing a
-    group back (`p7FilterCascadeDelay`). The fly window and the
+    group back (`p7FilterCascadeDelay`). page8 and page9 also pass `sizeOnly` (3rd arg): nothing flies on those folds, so a returning group grows from the click on the cascade alone instead of sitting out the flight window first (that wait read as the click lagging on @fold12). The fly window and the
     morph's total length (`p7FilterMorphMs`, `p7FilterMorphDur`) carry the extra
-    350 ms, so on a removal the gap closes once the last dot is gone.
+    350 ms. On a removal on @fold8 the flight does **not** wait for the cascade: it starts at 60% of the first dot's shrink (`P7_FILTER_SHRINK_MS * 0.6`), overlapping the tail — waiting for the last dot left a dead half-second. @fold9's size grid (`p7Grid.on`) keeps that pause on purpose: its flight starts after the whole cascade (`SHRINK + CASCADE`).
   - **The solo case skips the flight.** `p7FilterSoloOnSide(actor)` asks whether
     the toggled group is the only *visible* group of its camp (counted off
     `p7FilterOff` as it stands after the toggle, ignoring `actor` itself). If so
     no dot on that camp has anywhere to fly — nothing closes ranks, nothing opens
-    a space — and the 900 ms position window is pure dead time before the size
+    a space — and the position window is pure dead time before the size
     beat. `p7FilterCommit` stores `skipFly` on the morph; `p7FilterChannels`
     then runs position alongside the size cascade from t=0, and
     `p7FilterMorphDur()` shortens the morph's life to `P7_FILTER_SHRINK_MS` + `P7_FILTER_CASCADE_MS` so

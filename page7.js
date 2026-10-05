@@ -3204,14 +3204,20 @@ const p7FilterGhosts = new Map();
 // arrive at a spot that has already been opened for them.
 // `var`: a manual/ harness drives them — the total is read live for that reason.
 var P7_FILTER_SHRINK_MS = 380;
-var P7_FILTER_FLY_MS = 900;
+// The flight is per fold: @fold8's timeline flies at 550ms, @fold9's size grid
+// (p7Grid.on) at 750ms — its big blocks read rushed at the timeline's pace.
+var P7_FILTER_FLY_MS = 550;
+var P7_FILTER_FLY_MS_GRID = 750;
+function p7FilterFlyMs() {
+  return (typeof p7Grid !== "undefined" && p7Grid.on) ? P7_FILTER_FLY_MS_GRID : P7_FILTER_FLY_MS;
+}
 // The toggled group's dots don't shrink/grow all at once: each starts its size
 // beat up to this many ms late, so the group leaves and arrives as a fast
 // cascade — on the timeline from the corridor out to the sides
 // (p7FilterCascadeDelayX), on the later folds top→bottom when filtering out and
 // bottom→top when bringing a group back (p7FilterCascadeDelay).
 var P7_FILTER_CASCADE_MS = 350;
-function p7FilterMorphMs() { return P7_FILTER_SHRINK_MS + P7_FILTER_CASCADE_MS + P7_FILTER_FLY_MS; }
+function p7FilterMorphMs() { return P7_FILTER_SHRINK_MS + P7_FILTER_CASCADE_MS + p7FilterFlyMs(); }
 function p7FilterCascadeDelay(cy) {
   const H = p7.lastH || window.innerHeight || 1;
   const f = Math.min(1, Math.max(0, cy / H));
@@ -3224,14 +3230,14 @@ function p7FilterCascadeDelayX(cx) {
 // Size channel and position channel, run back to back. Each channel keeps its
 // OWN duration wherever it lands in the order — a size change is a short beat
 // and a flight is a long one, so swapping the order must not also swap the
-// tempos: a grow stretched over the flight's 900ms reads as a slow, detached
+// tempos: a grow stretched over the flight's 550ms reads as a slow, detached
 // pop rather than a square appearing.
 function p7FilterChannels(delay = 0) {
   if (!p7FilterMorph) return { size: 1, pos: 1 };
   const e = performance.now() - p7FilterMorph.start;
   const win = (start, len) => p9Ease(Math.min(1, Math.max(0, (e - start) / len)));
   // Nothing on this camp has to CLOSE RANKS (see p7FilterSoloOnSide): the flight
-  // is a no-op, so charging its 900ms is dead time the user just waits through.
+  // is a no-op, so charging its 550ms is dead time the user just waits through.
   // Collapse the two beats onto one short window instead of dropping the
   // position channel — a dot's own destination can still differ from where it
   // stands (the filtered layout re-indexes it), and position never snaps.
@@ -3241,9 +3247,15 @@ function p7FilterChannels(delay = 0) {
   }
   return p7FilterMorph.restoring
     // Bringing a group back: the space opens first, then the dots grow into it.
-    ? { pos: win(0, P7_FILTER_FLY_MS), size: win(P7_FILTER_FLY_MS + delay, P7_FILTER_SHRINK_MS) }
+    ? { pos: win(0, p7FilterFlyMs()), size: win(p7FilterFlyMs() + delay, P7_FILTER_SHRINK_MS) }
     // Filtering out: the dots shrink away first, then the gap closes.
-    : { size: win(delay, P7_FILTER_SHRINK_MS), pos: win(P7_FILTER_SHRINK_MS + P7_FILTER_CASCADE_MS, P7_FILTER_FLY_MS) };
+    : { size: win(delay, P7_FILTER_SHRINK_MS),
+        // @fold8: the flight starts 60% into the first dot's shrink, not after
+        // the last's — waiting out the whole cascade read as a dead half-second
+        // there. @fold9's size grid keeps the pause on purpose: the gap is seen
+        // empty before it closes.
+        pos: win(p7Grid.on ? P7_FILTER_SHRINK_MS + P7_FILTER_CASCADE_MS : P7_FILTER_SHRINK_MS * 0.6,
+                 p7FilterFlyMs()) };
 }
 function p7FilterActive()      { return p7FilterOff.size > 0; }
 function p7FilterHiddenEv(ev)  { return p7FilterOff.has(ev.actor); }
@@ -3263,10 +3275,16 @@ function p7FilterMorphToggled(ev) {
   return m.actors ? m.actors.has(ev.actor) : m.actor === ev.actor;
 }
 // `y` (optional): the dot's y on screen, for the top↔bottom cascade.
-function p7FilterSizeFactor(ev, y) {
+// `sizeOnly`: the caller's fold answers a toggle with size alone (page8's glide,
+// page9's columns — nothing re-packs), so a group coming back must not sit out
+// the flight window first: it grows from the click, on the cascade only.
+function p7FilterSizeFactor(ev, y, sizeOnly) {
   const hidden = p7FilterActive() && p7FilterHiddenEv(ev);
   if (!p7FilterMorphActive() || !p7FilterMorphToggled(ev)) return hidden ? 0 : 1;
-  const t = p7FilterChannels(y == null ? 0 : p7FilterCascadeDelay(y)).size;
+  const delay = y == null ? 0 : p7FilterCascadeDelay(y);
+  const t = sizeOnly
+    ? p9Ease(Math.min(1, Math.max(0, (performance.now() - p7FilterMorph.start - delay) / P7_FILTER_SHRINK_MS)))
+    : p7FilterChannels(delay).size;
   return p7FilterMorph.restoring ? t : 1 - t;
 }
 function p7FilterMorphDur(m) {
