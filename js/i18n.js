@@ -81,7 +81,7 @@ const I18N_EN = {
   "טוען נתונים...": "Loading data...",
   "תיאור מילולי של הנתונים": "Text description of the data",
   "פעולות מתועדות": "documented actions",
-  "הפרויקט מציג {n} פעולות פוליטיות מתועדות שהתרחשו במרחב הציבורי בישראל ובשטחים, בין {from} ל־{to}. תיאורי האירועים ומועדיהם לקוחים ממאגר ACLED ומיומן אלימות המתנחלים של ״המבצר״. כל ריבוע בהדמיה מייצג פעולה אחת, וצבעו מציין את הקבוצה שביצעה אותה.": "The project shows {n} documented political actions that took place in public space in Israel and the occupied territories, between {from} and {to}. Event descriptions and dates are taken from ACLED and from Fortress's settler violence log. Each square in the visualization is one action, and its color marks the group that carried it out.",
+  "הפרויקט מציג {n} פעולות פוליטיות מתועדות שהתרחשו במרחב הציבורי בישראל ובשטחים, בין {from} ל־{to}. תיאורי האירועים ומועדיהם לקוחים ממאגר ACLED ומיומן אלימות המתנחלים של ״המבצר״. כל ריבוע בהדמיה מייצג פעולה אחת, וצבעו מציין את הקבוצה שביצעה אותה.": "The project shows {n} documented political actions that took place in public space in Israel and the occupied territories, between {from} and {to}. Event descriptions and dates are taken from ACLED and from “Fortress”'s settler violence log. Each square in the visualization is one action, and its color marks the group that carried it out.",
   "חלוקה למחנות ולקבוצות": "By camp and group",
   "חלוקה לפי סוג הפעולה": "By type of action",
   "סווגה כפעולה קיצונית": "marked as an extreme action",
