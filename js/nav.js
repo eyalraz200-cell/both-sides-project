@@ -61,7 +61,7 @@ if (foldNumberBadge) {
 //
 // It is built from the sections themselves — number plus that fold's own title,
 // with the `.copy-desktop` half of any breakpoint-split headline stripped out —
-// so it cannot drift out of step with project.html the way a hand-written list
+// so it cannot drift out of step with index.html the way a hand-written list
 // would.
 const FOLD_PICKER_SCROLL_MS = 700;
 

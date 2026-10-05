@@ -109,7 +109,7 @@ function updateFold13() {
   if (page9ZoneWrapEl)  page9ZoneWrapEl.style.opacity  = opacityVal;
   groupsOverlayEl.style.opacity = opacityVal;
   // fold6NoteLayerEl (the ACLED source-credit note) lives outside
-  // groupsOverlayEl now (see project.html) so it needs the same fade
+  // groupsOverlayEl now (see index.html) so it needs the same fade
   // explicitly — otherwise it stays visible through @fold13 while the rest
   // of the legend fades out.
   fold6NoteLayerEl.style.opacity = opacityVal;

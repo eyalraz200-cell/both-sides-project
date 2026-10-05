@@ -37,7 +37,6 @@ const I18N_EN = {
   "גררו סוגי פעולות הנחשבות קיצוניות בעיניכם": "Drag the types of action you consider extreme",
   "סמנו פעולות הנחשבות לקיצוניות בעיניכם": "Mark the actions you consider extreme",
   // Share row
-  "העתקת קישור": "Copy link",
   "הקישור הועתק": "Link copied",
   "העתיקו את הקישור:": "Copy the link:",
   // Timeline axis events — labels
@@ -63,20 +62,32 @@ const I18N_EN = {
   "אישור התפזרות הכנסת לקראת הבחירות באוקטובר.": "The 25th Knesset dissolves ahead of the October election.",
   // Action-type pill tooltips (P9_CATEGORY_DESC, page9.js)
   "הפגנה, עצרת, צעדה או נוכחות מחאתית ללא אלימות מצד המפגינים.": "A protest, rally, march, or other protest presence without violence by participants.",
-  "התקפה המונית על קהילה, שכונה או אזור מגורים, הכוללת פגיעה באנשים, ברכוש או במרחב האזרחי.": "A mass attack on a community, neighborhood, or residential area involving harm to people, property, or civilian space.",
+  "התקפה של עשרות אנשים ומעלה על קהילה או אזור מגורים, הכוללת אלימות שגרמה לפצועים או להרוגים, הצתה והרס רכוש.": "An attack by a crowd of dozens or more on a community or residential area, involving violence that injured or killed people, arson, and the destruction of property.",
   "לקיחה או החזקה של אדם בניגוד לרצונו.": "Taking or holding a person against their will.",
-  "תקיפת אדם באמצעות אבנים, מקלות, סכינים או אמצעים חדים וקהים אחרים.": "Attacking a person with stones, sticks, knives, or other sharp or blunt objects.",
-  "תקיפת אדם באמצעות ירי בנשק חם, חומרי נפץ או הצתה.": "Attacking a person using firearms, explosives, or arson.",
+  "תקיפת אדם באמצעות אבנים, מקלות, סכינים או אמצעים חדים וקהים אחרים, דריסה או ניסיון דריסה, וכן יידוי אבנים לעבר בתים וכלי רכב.": "Attacking a person with stones, sticks, knives, or other sharp or blunt objects, or by ramming or attempting to ram them with a vehicle; also throwing stones at houses or vehicles.",
+  "תקיפת אדם באמצעות ירי בנשק חם, חומרי נפץ, בקבוקי תבערה, או הצתת בית או רכב שיש בהם אנשים.": "Attacking a person using firearms, explosives, or Molotov cocktails, or by setting fire to an occupied house or vehicle.",
   "תקיפת אדם באמצעות מכות, דחיפות, בעיטות או מגע גופני אלים אחר, ללא שימוש בנשק.": "Attacking a person through hitting, pushing, kicking, or other violent physical contact, without a weapon.",
   "עימותים, התפרעויות, או פעולות שמפרות את הסדר הציבורי.": "Clashes, riots, or other actions that disrupt public order.",
   "ביסוס שליטה בשטח שאינו שייך לקבוצה הפועלת, באמצעות גידור, עיבוד, בנייה, הצבת מבנים או הקמת מאחז.": "Establishing control over land through fencing, cultivation, construction, placing structures, or establishing an outpost.",
-  "גרימת נזק למבנים, כלי רכב, תשתיות, שטחים חקלאיים או רכוש אחר.": "Damaging buildings, vehicles, infrastructure, farmland, or other property.",
+  "גרימת נזק למבנים, כלי רכב, תשתיות, שטחים חקלאיים או רכוש אחר, כולל הצתה של רכוש שאין בו אנשים.": "Damaging buildings, vehicles, infrastructure, farmland, or other property, including setting fire to property with no one inside.",
   "חסימה של כבישים, צמתים או דרכי גישה כחלק ממחאה או עימות.": "Blocking roads, intersections, or access routes as part of a protest or confrontation.",
   // Small UI words
   "אירועים": "events",
   "עוד": "More",
   "פחות": "Less",
   "לחצו והחזיקו על נקודה להצגת פרטי האירוע": "Press and hold a dot to see the event details",
+  // Screen-reader text and canvas messages. {n}-style slots are filled by
+  // trf() below, so the word order is each language's own.
+  "טוען נתונים...": "Loading data...",
+  "תיאור מילולי של הנתונים": "Text description of the data",
+  "פעולות מתועדות": "documented actions",
+  "הפרויקט מציג {n} פעולות פוליטיות מתועדות שהתרחשו במרחב הציבורי בישראל ובשטחים, בין {from} ל־{to}. תיאורי האירועים ומועדיהם לקוחים ממאגר ACLED ומיומן אלימות המתנחלים של ״המבצר״. כל ריבוע בהדמיה מייצג פעולה אחת, וצבעו מציין את הקבוצה שביצעה אותה.": "The project shows {n} documented political actions that took place in public space in Israel and the occupied territories, between {from} and {to}. Event descriptions and dates are taken from ACLED and from HaMivtzar's settler violence log. Each square in the visualization is one action, and its color marks the group that carried it out.",
+  "חלוקה למחנות ולקבוצות": "By camp and group",
+  "חלוקה לפי סוג הפעולה": "By type of action",
+  "סווגה כפעולה קיצונית": "marked as an extreme action",
+  "הוחזרה לפעולות לגיטימיות": "returned to legitimate actions",
+  "{total} מתוך {n} מסווגות כקיצוניות.": "{total} of {n} marked as extreme.",
+  "מידע על {label}": "About {label}",
   // Action types
   "הפגנה לא אלימה": "Non-violent protest",
   "חסימת כביש": "Road blockade",
@@ -112,7 +123,6 @@ const I18N_AR = {
   "הצגת גודל האירועים": "عرض حجم الأحداث",
   "גררו סוגי פעולות הנחשבות קיצוניות בעיניכם": "اسحبوا أنواع التحركات التي ترونها متطرفة",
   "סמנו פעולות הנחשבות לקיצוניות בעיניכם": "حددوا التحركات التي ترونها متطرفة",
-  "העתקת קישור": "نسخ الرابط",
   "הקישור הועתק": "تم نسخ الرابط",
   "העתיקו את הקישור:": "انسخوا الرابط:",
   "הכרזת הרפורמה": "التعديلات القضائية",
@@ -135,19 +145,29 @@ const I18N_AR = {
   "שחרור עשרים החטופים החיים שנותרו בעזה במסגרת הסכם הפסקת אש.": "إطلاق سراح الرهائن العشرين الأحياء المتبقين في غزة ضمن اتفاق لوقف إطلاق النار.",
   "אישור התפזרות הכנסת לקראת הבחירות באוקטובר.": "إقرار حلّ الكنيست تمهيدًا للانتخابات في أكتوبر.",
   "הפגנה, עצרת, צעדה או נוכחות מחאתית ללא אלימות מצד המפגינים.": "مظاهرة أو تجمع أو مسيرة أو حضور احتجاجي من دون عنف من جانب المتظاهرين.",
-  "התקפה המונית על קהילה, שכונה או אזור מגורים, הכוללת פגיעה באנשים, ברכוש או במרחב האזרחי.": "هجوم جماعي على تجمع سكاني أو حي أو منطقة سكنية، يشمل إلحاق أذى بأشخاص أو بممتلكات أو بالحيز المدني.",
+  "התקפה של עשרות אנשים ומעלה על קהילה או אזור מגורים, הכוללת אלימות שגרמה לפצועים או להרוגים, הצתה והרס רכוש.": "هجوم يشنّه حشد من عشرات الأشخاص أو أكثر على تجمع سكاني أو منطقة سكنية، يشمل عنفًا أسفر عن جرحى أو قتلى، وإضرام نار، وتدمير ممتلكات.",
   "לקיחה או החזקה של אדם בניגוד לרצונו.": "أخذ شخص أو احتجازه خلافًا لإرادته.",
-  "תקיפת אדם באמצעות אבנים, מקלות, סכינים או אמצעים חדים וקהים אחרים.": "الاعتداء على شخص بالحجارة أو العصي أو السكاكين أو أدوات حادة أو راضّة أخرى.",
-  "תקיפת אדם באמצעות ירי בנשק חם, חומרי נפץ או הצתה.": "الاعتداء على شخص بإطلاق النار من سلاح ناري أو بمواد متفجرة أو بإضرام النار.",
+  "תקיפת אדם באמצעות אבנים, מקלות, סכינים או אמצעים חדים וקהים אחרים, דריסה או ניסיון דריסה, וכן יידוי אבנים לעבר בתים וכלי רכב.": "الاعتداء على شخص بالحجارة أو العصي أو السكاكين أو أدوات حادة أو راضّة أخرى، أو بالدهس أو محاولة الدهس، وكذلك رشق المنازل والمركبات بالحجارة.",
+  "תקיפת אדם באמצעות ירי בנשק חם, חומרי נפץ, בקבוקי תבערה, או הצתת בית או רכב שיש בהם אנשים.": "الاعتداء على شخص بإطلاق النار من سلاح ناري أو بمواد متفجرة أو بزجاجات حارقة، أو بإضرام النار في منزل أو مركبة فيهما أشخاص.",
   "תקיפת אדם באמצעות מכות, דחיפות, בעיטות או מגע גופני אלים אחר, ללא שימוש בנשק.": "الاعتداء على شخص بالضرب أو الدفع أو الركل أو أي تلامس جسدي عنيف آخر، من دون استخدام سلاح.",
   "עימותים, התפרעויות, או פעולות שמפרות את הסדר הציבורי.": "اشتباكات أو اضطرابات أو أعمال تخلّ بالنظام العام.",
   "ביסוס שליטה בשטח שאינו שייך לקבוצה הפועלת, באמצעות גידור, עיבוד, בנייה, הצבת מבנים או הקמת מאחז.": "بسط السيطرة على أرض لا تعود إلى المجموعة المنفذة، عبر تسييجها أو زراعتها أو البناء عليها أو وضع منشآت فيها أو إقامة بؤرة استيطانية.",
-  "גרימת נזק למבנים, כלי רכב, תשתיות, שטחים חקלאיים או רכוש אחר.": "إلحاق أضرار بمبانٍ أو مركبات أو بنى تحتية أو أراضٍ زراعية أو ممتلكات أخرى.",
+  "גרימת נזק למבנים, כלי רכב, תשתיות, שטחים חקלאיים או רכוש אחר, כולל הצתה של רכוש שאין בו אנשים.": "إلحاق أضرار بمبانٍ أو مركبات أو بنى تحتية أو أراضٍ زراعية أو ممتلكات أخرى، بما في ذلك إحراق ممتلكات لا يوجد فيها أحد.",
   "חסימה של כבישים, צמתים או דרכי גישה כחלק ממחאה או עימות.": "إغلاق طرق أو تقاطعات أو مسالك وصول في إطار احتجاج أو مواجهة.",
   "אירועים": "أحداث",
   "עוד": "أكثر",
   "פחות": "أقل",
   "לחצו והחזיקו על נקודה להצגת פרטי האירוע": "اضغطوا مطوّلًا على نقطة لعرض تفاصيل الحدث",
+  "טוען נתונים...": "جارٍ تحميل البيانات...",
+  "תיאור מילולי של הנתונים": "وصف نصي للبيانات",
+  "פעולות מתועדות": "تحركًا موثّقًا",
+  "הפרויקט מציג {n} פעולות פוליטיות מתועדות שהתרחשו במרחב הציבורי בישראל ובשטחים, בין {from} ל־{to}. תיאורי האירועים ומועדיהם לקוחים ממאגר ACLED ומיומן אלימות המתנחלים של ״המבצר״. כל ריבוע בהדמיה מייצג פעולה אחת, וצבעו מציין את הקבוצה שביצעה אותה.": "يعرض المشروع {n} تحركًا سياسيًا موثّقًا في الحيّز العام، في إسرائيل والأراضي المحتلة، بين {from} و{to}. أوصاف الأحداث وتواريخها مأخوذة من ACLED ومن سجل عنف المستوطنين التابع لـ«هاميفتسار». يمثل كل مربع في التصوير البياني تحركًا واحدًا، ويدل لونه على المجموعة التي نفذته.",
+  "חלוקה למחנות ולקבוצות": "حسب المعسكر والمجموعة",
+  "חלוקה לפי סוג הפעולה": "حسب نوع التحرك",
+  "סווגה כפעולה קיצונית": "صُنّف تحركًا متطرفًا",
+  "הוחזרה לפעולות לגיטימיות": "أُعيد إلى التحركات المشروعة",
+  "{total} מתוך {n} מסווגות כקיצוניות.": "{total} من أصل {n} مصنّفة متطرفة.",
+  "מידע על {label}": "معلومات عن {label}",
   "הפגנה לא אלימה": "مظاهرة سلمية",
   "חסימת כביש": "إغلاق طريق",
   "הפרות סדר": "إخلال بالنظام العام",
@@ -173,4 +193,10 @@ const CANVAS_FACE = isArabic() ? "'IBM Plex Sans Arabic', 'Assistant', sans-seri
 function tr(s) {
   const map = isEnglish() ? I18N_EN : isArabic() ? I18N_AR : null;
   return (map && map[s]) || s;
+}
+// tr() for a sentence with slots: the KEY is the Hebrew with {name} slots
+// («{total} מתוך {n} …»), each language places them where its grammar wants,
+// and the values are filled in after the lookup.
+function trf(s, vars) {
+  return tr(s).replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
 }

@@ -80,17 +80,18 @@ Use this umbrella category for Israeli protesters whose central political action
 - anti-judicial-reform / anti-judicial-overhaul demonstrators
 - anti-government protesters
 - protests calling for the government's resignation or elections
-- hostage-deal / hostage-release protesters when the action is directed at the government or demands government action
 - Kaplan protest movement and closely related protest groups
 - protests combining these causes
 
-This category deliberately combines the former labels:
+This category combines the former labels:
 - anti judicial reform demonstrators
 - anti government protesters
-- hostage deal protesters
+
+Hostage-deal / hostage-release protests are NOT this category: from 7 October 2023 they are
+peace movements (category 6), even when the demand is addressed to the government.
 
 Do not use it merely because someone criticizes a specific policy.
-There must be a recognizable anti-government, judicial-overhaul, elections, or hostage-deal protest context.
+There must be a recognizable anti-government, judicial-overhaul or elections protest context.
 
 
 3. arab israelis
@@ -98,6 +99,8 @@ There must be a recognizable anti-government, judicial-overhaul, elections, or h
 Arab citizens or residents of Israel acting collectively in an Israeli political or civic context.
 
 Use only when the description establishes that the central actors are Arab Israelis / Israeli Arabs / Arab citizens or residents of Israel.
+Exception: anti-occupation, coexistence and joint Jewish-Arab protests dated BEFORE 7 October 2023
+are arab israelis too (peace movements is not used before that date — see category 6).
 
 Do NOT use for:
 - Palestinians in the West Bank
@@ -138,16 +141,17 @@ Use settlers for explicitly settler-led actions.
 
 6. peace movements
 
-Israeli peace, anti-occupation, coexistence, or similar organized left-wing movements acting as the central actor.
-
-Examples include explicitly identified:
-- peace organizations
-- anti-occupation activists
-- coexistence movements
+Used ONLY for events on or after 7 October 2023. From that date it covers:
+- hostage-deal / hostage-release protesters (including when the demand is addressed to the government)
+- ceasefire and anti-war protests
+- peace organizations, coexistence movements, anti-occupation activists
 - Israeli groups protesting settlement activity or occupation
 
 Do not use this category simply because a protest is left-wing.
-Anti-government / judicial-overhaul / hostage-deal protests belong under protesters against government when that is their central context.
+Anti-government / judicial-overhaul / elections protests belong under protesters against government.
+
+Before 7 October 2023 this category is not used: anti-occupation, coexistence and joint
+Jewish-Arab protests from before that date are arab israelis.
 
 
 7. not relevant
@@ -201,7 +205,7 @@ Before answering, verify:
 
 
 
-SUPPLEMENTARY RULES (from the 2026-10-03 hand review — these override the definitions above where they conflict)
+SUPPLEMENTARY RULES (from the 2026-10-03 hand review)
 
 RIGHT WING PROTESTERS by demand, not by label:
 A protest whose demand is to CONTINUE or RESUME a war, to REJECT a ceasefire or a hostage
@@ -229,9 +233,8 @@ PROTESTERS AGAINST GOVERNMENT, specific cases:
 
 PEACE MOVEMENTS starts on 7 October 2023:
 Hostage-deal, ceasefire, anti-war and anti-occupation protests from 7 October 2023
-onward are peace movements. Before that date the category is not used — earlier
-anti-occupation / joint Arab-Jewish solidarity protests were hand-labelled and must be
-left as they are.
+onward are peace movements. Before that date the category is not used — anti-occupation
+and joint Jewish-Arab solidarity protests dated before 7 October 2023 are arab israelis.
 
 HAREDI JEWS is for Haredi collective action only (draft, autopsies, light rail,
 Sabbath, "unkosher" stores). Chabad / messianic / religious-Zionist protests are right
@@ -264,6 +267,8 @@ English; apply the same rules. Such lines are settler events unless they fit ARM
 name Jewish right-wing activists outside the West Bank (aid-convoy blockades, Flag March, Old City,
 al-Aqsa) — those are `right wing protesters`.
 """
+
+SOLE_SOURCE_EXCLUDE = {"plo negotiations affairs department"}   # same set as server.py: never shipped
 
 SCHEMA = {'type': 'object', 'properties': {'main_actor': {'type': 'string', 'enum': ['settlers', 'protesters against government', 'arab israelis', 'haredi jews', 'right wing protesters', 'peace movements', 'not relevant']}, 'certainty': {'type': 'string', 'enum': ['high', 'medium', 'low']}, 'needs_review': {'type': 'string', 'enum': ['yes', 'no']}, 'reason': {'type': 'string'}}, 'required': ['main_actor', 'certainty', 'needs_review', 'reason'], 'additionalProperties': False}
 
@@ -388,28 +393,38 @@ def build_jobs(ws):
     row_id_col = find_col(headers, ["row_id", "row id"], required=False)
     desc_col = find_col(headers, ["Description", "description"], required=True)
     he_col = find_col(headers, ["description_he_medium"], required=False)
+    date_col = find_col(headers, ["date", "event_date"], required=False)
     actor_col = find_col(headers, ["main_actor"], required=False)
     hand_col = find_col(headers, ["main_actor_hand"], required=False)
     hidden_col = find_col(headers, ["hidden"], required=False)
+    c_src = find_col(headers, ["source"], required=False)
+    c_corr = find_col(headers, ["corroborated_by"], required=False)
 
     jobs = []
     for excel_row in range(2, ws.max_row + 1):
         g = lambda c: norm(ws.cell(excel_row, c).value) if c else ""
         row_id = g(row_id_col)
         # ROW SELECTION (loop-safe): only rows with no main_actor yet, never a
-        # hand-set row (date in main_actor_hand), never a hidden row. Rows from a
-        # Hebrew log have no English Description — their Hebrew line is sent.
+        # hand-set row (date in main_actor_hand), never a hidden row, never a row
+        # whose only source is in SOLE_SOURCE_EXCLUDE (unless corroborated_by is
+        # filled — those ship). Rows from a Hebrew log have no English
+        # Description — their Hebrew line is sent.
+        srcs = {x.strip().lower() for x in g(c_src).split(";") if x.strip()}
+        if srcs and srcs <= SOLE_SOURCE_EXCLUDE and not g(c_corr): continue   # corroborated rows ship
         if g(actor_col) or g(hand_col) or g(hidden_col):
             continue
         description = g(desc_col) or g(he_col)
         if not description:
             continue
         cid = row_id or f"excel-row-{excel_row}"
+        # The date goes in on its own line: the 7-Oct-2023 rule (peace movements
+        # vs arab israelis) needs it, and a Hebrew-log line may not state one.
+        date = g(date_col)[:10]
         jobs.append({
             "custom_id": cid,
             "excel_row": excel_row,
             "row_id": row_id,
-            "user_text": f"EVENT DESCRIPTION:\n{description}",
+            "user_text": (f"EVENT DATE: {date}\n" if date else "") + f"EVENT DESCRIPTION:\n{description}",
         })
 
     return jobs

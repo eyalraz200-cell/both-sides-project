@@ -22,14 +22,14 @@ const P9_CATEGORIES = [
 // worded) category headings they were sourced from.
 const P9_CATEGORY_DESC = [
   "הפגנה, עצרת, צעדה או נוכחות מחאתית ללא אלימות מצד המפגינים.",
-  "התקפה המונית על קהילה, שכונה או אזור מגורים, הכוללת פגיעה באנשים, ברכוש או במרחב האזרחי.",
+  "התקפה של עשרות אנשים ומעלה על קהילה או אזור מגורים, הכוללת אלימות שגרמה לפצועים או להרוגים, הצתה והרס רכוש.",
   "לקיחה או החזקה של אדם בניגוד לרצונו.",
-  "תקיפת אדם באמצעות אבנים, מקלות, סכינים או אמצעים חדים וקהים אחרים.",
-  "תקיפת אדם באמצעות ירי בנשק חם, חומרי נפץ או הצתה.",
+  "תקיפת אדם באמצעות אבנים, מקלות, סכינים או אמצעים חדים וקהים אחרים, דריסה או ניסיון דריסה, וכן יידוי אבנים לעבר בתים וכלי רכב.",
+  "תקיפת אדם באמצעות ירי בנשק חם, חומרי נפץ, בקבוקי תבערה, או הצתת בית או רכב שיש בהם אנשים.",
   "תקיפת אדם באמצעות מכות, דחיפות, בעיטות או מגע גופני אלים אחר, ללא שימוש בנשק.",
   "עימותים, התפרעויות, או פעולות שמפרות את הסדר הציבורי.",
   "ביסוס שליטה בשטח שאינו שייך לקבוצה הפועלת, באמצעות גידור, עיבוד, בנייה, הצבת מבנים או הקמת מאחז.",
-  "גרימת נזק למבנים, כלי רכב, תשתיות, שטחים חקלאיים או רכוש אחר.",
+  "גרימת נזק למבנים, כלי רכב, תשתיות, שטחים חקלאיים או רכוש אחר, כולל הצתה של רכוש שאין בו אנשים.",
   "חסימה של כבישים, צמתים או דרכי גישה כחלק ממחאה או עימות.",
 ];
 
@@ -882,7 +882,7 @@ const LEGIT_LINE_PAD = 2;
 // itself uses (legendRow, js/update-groups.js) — and within one camp the three
 // y values are distinct, so it's a total order per side.
 // Built lazily, NOT at load time: GROUPS lives in js/groups.js, a *later*
-// <script> in project.html, so it doesn't exist yet while page9.js is running.
+// <script> in index.html, so it doesn't exist yet while page9.js is running.
 let p9BarActorRank = null;
 function p9BarActorRankOf(actor) {
   if (!p9BarActorRank) p9BarActorRank = new Map(GROUPS.map(g => [g.actor, g.fold6.y]));
@@ -1809,9 +1809,14 @@ function p9ScopeSideUi(W, centerX, rightX0) {
   return { left, right };
 }
 
+// MOBILE: the extreme columns stand this many px clear of the divider. With
+// the anchor ON midY the bottom row's one-gap clearance was eaten by the 1px
+// line centred there, and the dots read as touching it (2026-10-05).
+const P9_COL_LINE_PAD_M = 2;
 function p9ScopeBox(W, H, colsTotal, topY, midY, centerX, rightX0, CELL) {
-  const box = { cols: colsTotal, colsMax: colsTotal, cellPx: CELL, topY, anchorY: midY };
-  box.rowsMax = Math.max(1, Math.floor((midY - topY) / CELL));
+  const anchorY = midY - (isMobile() ? P9_COL_LINE_PAD_M : 0);
+  const box = { cols: colsTotal, colsMax: colsTotal, cellPx: CELL, topY, anchorY };
+  box.rowsMax = Math.max(1, Math.floor((anchorY - topY) / CELL));
   if (!p9ScopeTiered()) return box;
   if (isMobile()) {
     const ui = p9ScopeSideUi(W, centerX, rightX0);
@@ -1827,7 +1832,7 @@ function p9ScopeBox(W, H, colsTotal, topY, midY, centerX, rightX0, CELL) {
       : CELL;
     box.cellPx = cell;
     box.cols = Math.max(1, Math.ceil(colsTotal * CELL / cell));
-    box.rowsMax = Math.max(1, Math.floor((midY - topY) / cell));
+    box.rowsMax = Math.max(1, Math.floor((anchorY - topY) / cell));
     box.colsMax = Math.max(box.cols, Math.floor(Math.min(leftRoom, rightRoom) / cell));
     box.colsMaxLeft  = Math.max(box.cols, Math.floor(leftRoom / cell));
     box.colsMaxRight = Math.max(box.cols, Math.floor(rightRoom / cell));
@@ -2199,7 +2204,7 @@ function drawPage9(ctx, W, H) {
     // restoring) first, so the dot shrinks away in place instead of blinking
     // out; `filtF` scales its size at the fillRect below. The columns don't
     // re-pack around it — same size-only answer @fold11 gives.
-    const filtF = typeof p7FilterSizeFactor === "function" ? p7FilterSizeFactor(e) : 1;
+    const filtF = typeof p7FilterSizeFactor === "function" ? p7FilterSizeFactor(e, targetY) : 1;
     if (filtF <= 0.002) return;
     let drawX = targetX, drawY = targetY, drawAlpha = targetAlpha;
     // The animated CENTRE. null until an animation sets it; the corner is
@@ -2410,9 +2415,21 @@ function drawPage9(ctx, W, H) {
         // Never below the dot's own size: with the tiers on it may already be
         // drawn larger than its pick size.
         const grown = sq + (Math.max(sq, p9PickSq(e)) - sq) * p9Ease(bulge.t);
+        const restY = drawY;
         drawX -= (grown - sq) / 2;
         drawY -= (grown - sq) / 2;
         sq = grown;
+        // MOBILE: keep the grown pick off the divider, as desktop's hover does
+        // (p9LegitBulgeApply's clamp): a legit dot never rises above the strip's
+        // top, an extreme dot never sinks past the line.
+        if (isMobile()) {
+          if (restY >= midY) {
+            const top = p9LegitGeometry(W, H).gridTopY;
+            if (drawY < top) drawY = top;
+          } else if (drawY + sq > midY - 1) {
+            drawY = midY - 1 - sq;
+          }
+        }
       }
     }
 
@@ -2602,9 +2619,9 @@ function drawPage9(ctx, W, H) {
         // strip's gridTopY clamp (p9LegitBulgeApply). The grown dot keeps its
         // bottom edge on the resting bottom row's line (one gap above midY) and
         // grows UPWARD past that; a neighbour shoved downward is held on that
-        // same line instead of dipping under it. Mobile's picker bulge keeps its
-        // own path.
-        if (!mobile) {
+        // same line instead of dipping under it. Both breakpoints (mobile's
+        // picker bulge rides this path too, explicit ask 2026-10-05).
+        {
           const floor = scopeBox.anchorY - gapPx - (size ?? SQ);
           if (y > floor) y = floor;
         }
@@ -2627,7 +2644,7 @@ function drawPage9(ctx, W, H) {
       }
       // The hovered dot paints LAST so the neighbours held on the divider line
       // never cover it (same deferred pattern as drawJumbledBot).
-      if (isOwn && !mobile) { deferred = [e, x, y, i, size]; return; }
+      if (isOwn) { deferred = [e, x, y, i, size]; return; }
       p9PlaceDot(e, x, y, targetAlpha, i, visN, lowRankCount, size, morphing);
     });
     if (deferred) p9PlaceDot(deferred[0], deferred[1], deferred[2], targetAlpha, deferred[3], visN, lowRankCount, deferred[4], morphing);
@@ -3204,11 +3221,9 @@ function p9BuildPanel() {
     const label = pill.querySelector(".page9-pill-label")?.textContent || "";
     const total = Array.from(document.querySelectorAll(".page9-pill"))
       .filter(pillIsExtreme).length;
-    liveEl.textContent = isEnglish()
-      ? `${label} — ${extreme ? "marked as an extreme action" : "returned to legitimate actions"}. ` +
-        `${total} of ${P9_CATEGORIES.length} marked as extreme.`
-      : `${label} — ${extreme ? "סווגה כפעולה קיצונית" : "הוחזרה לפעולות לגיטימיות"}. ` +
-      `${total} מתוך ${P9_CATEGORIES.length} מסווגות כקיצוניות.`;
+    liveEl.textContent =
+      `${label} — ${tr(extreme ? "סווגה כפעולה קיצונית" : "הוחזרה לפעולות לגיטימיות")}. ` +
+      trf("{total} מתוך {n} מסווגות כקיצוניות.", { total, n: P9_CATEGORIES.length });
   }
 
   function resolveDropTarget(x, y) {
@@ -3690,7 +3705,7 @@ function p9BuildPanel() {
     infoEl.type        = "button";
     infoEl.className   = "page9-pill-info";
     infoEl.textContent = "i";
-    infoEl.setAttribute("aria-label", isEnglish() ? `About ${tr(label)}` : `מידע על ${label}`);
+    infoEl.setAttribute("aria-label", trf("מידע על {label}", { label: tr(label) }));
     pill.appendChild(infoEl);
 
     // DECORATIVE ✕ for a dropped (extreme) pill — currently PARKED and never
@@ -4082,7 +4097,7 @@ function p9BuildPanel() {
   }
   // Deferred to DOMContentLoaded, not run inline: the measure now branches on
   // isMobile(), which lives in js/core.js — a *later* <script> in
-  // project.html. Function declarations don't hoist across separate classic
+  // index.html. Function declarations don't hoist across separate classic
   // scripts, so calling it during page9.js's own top-level run would throw.
   // The variant class has to land BEFORE the first measure — the V2 CSS is
   // what decides the tray's height/width, which the measure then reads back.

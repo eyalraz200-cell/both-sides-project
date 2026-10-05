@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # Both Sides project — Arabic UI translation (ar/index.html + I18N_AR).
 #
-# Scope: the page copy and the UI strings only — NOT the 10,418 event descriptions
-# (events.json stays Hebrew/English; see wiki/Data.md).
+# Scope: the page copy and the UI strings only. The over 12,000 event descriptions
+# are translated by pipeline step 07 (07_short_english_and_arabic.py → the xlsx's
+# `description_ar` → events-ar.json; see wiki/Data.md), not here.
 #
 # Every string goes to OpenAI as a Hebrew/English PAIR: the Hebrew is the
 # authoritative text (it is the key everywhere), the English is the published
@@ -55,7 +56,7 @@ You are translating the user-facing text of an interactive data-journalism websi
 ABOUT THE PROJECT
 
 A scroll-driven visualisation by an Israeli designer, published with the media-criticism
-outlet "The Seventh Eye" (העין השביעית). It maps 10,418 documented political actions
+outlet "The Seventh Eye" (העין השביעית). It maps over 12,000 documented political actions
 carried out in public space, from the beginning of 2023 to today, by Israeli citizens in
 Israel and the occupied territories. Each action is one square on screen. The actions
 are grouped into two opposing camps, three groups each:
@@ -114,6 +115,8 @@ Rules:
   data-tip="…"). Never add, drop or reorder tags. Keep dir="rtl" as is.
 - Items of kind "js" are plain strings. A literal "\n" (backslash-n, two characters)
   is a line break marker in the source: keep it where the sentence breaks, as "\n".
+  A {name} in braces ({n}, {total}, {label}, {from}, {to}) is a slot the page fills with
+  a number, date or label: keep every slot verbatim, placed where Arabic grammar wants it.
 - Return every id you were given, each exactly once.
 """
 
@@ -203,11 +206,15 @@ HEAD_PATCHES = [
      '<a class="lang-menu-row" role="menuitemradio" aria-checked="false" href="en/" lang="en" hreflang="en">'),
     ('<a class="lang-menu-row" role="menuitemradio" aria-checked="false" href="ar/" lang="ar" hreflang="ar">',
      '<a class="lang-menu-row is-current" role="menuitemradio" aria-checked="true" aria-disabled="true" tabindex="-1" href="ar/" lang="ar" hreflang="ar">'),
-    ('<link rel="stylesheet" href="style.css"', '<link rel="preconnect" href="https://fonts.googleapis.com" />\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />\n<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Beiruti:wght@400&family=IBM+Plex+Sans+Arabic:wght@300;400;500;700&display=swap" />\n<link rel="stylesheet" href="style.css"'),
+    # index.html already preconnects to both Google Fonts hosts (for Assistant),
+    # so only the Arabic faces' stylesheet is added.
+    ('<link rel="stylesheet" href="style.css"', '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Beiruti:wght@400&family=IBM+Plex+Sans+Arabic:wght@300;400;500;700&display=swap" />\n  <link rel="stylesheet" href="style.css"'),
     ('<html lang="he">', '<html lang="ar" class="lang-ar">\n<!-- Arabic version. Every relative url (css, scripts, events.json) resolves\n     against the site root, so this page shares all of them with index.html. -->\n<base href="../" />'),
     ('<meta property="og:locale" content="he_IL" />', '<meta property="og:locale" content="ar_AR" />'),
-    ('href="https://eyalraz200-cell.github.io/both-sides-project/"', 'href="https://eyalraz200-cell.github.io/both-sides-project/ar/"'),
-    ('content="https://eyalraz200-cell.github.io/both-sides-project/"', 'content="https://eyalraz200-cell.github.io/both-sides-project/ar/"'),
+    # canonical only — the hreflang alternates (he / en / ar / x-default) are the
+    # same absolute urls on all three pages and pass through unchanged.
+    ('<link rel="canonical" href="https://eyalraz200-cell.github.io/both-sides-project/"', '<link rel="canonical" href="https://eyalraz200-cell.github.io/both-sides-project/ar/"'),
+    ('<meta property="og:url" content="https://eyalraz200-cell.github.io/both-sides-project/"', '<meta property="og:url" content="https://eyalraz200-cell.github.io/both-sides-project/ar/"'),
 ]
 
 

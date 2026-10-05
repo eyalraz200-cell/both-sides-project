@@ -280,20 +280,6 @@
   "ar": "              <p class=\"page12-credits\">بحث، تصميم وتطوير: إيال راز (<a href=\"https://eyalraz.com/\" target=\"_blank\" rel=\"noopener\">eyalraz.com</a>)<br>مرافقة وإرشاد وتوجيه: موشون زير-أفيف<br>استشارة صحفية: أورن بيرسيكو<br>الشكر إلى راكيفت كنعان<br>الشكر إلى <a href=\"https://www.shenkar.ac.il/\" target=\"_blank\" rel=\"noopener\">شنكار – هندسة. تصميم. فن.</a><br>الشكر إلى فريق <a href=\"https://www.zman.co.il/fortress/\" target=\"_blank\" rel=\"noopener\">هاميفتسار</a> · عنات سرغوستي، ميكي روزنتال، أمير شبرلينغ، رونيت أنتلر وآخرين<br>قاعدة البيانات: <a href=\"https://acleddata.com/\" target=\"_blank\" rel=\"noopener\">ACLED</a>، <a href=\"https://www.zman.co.il/fortress/\" target=\"_blank\" rel=\"noopener\">هاميفتسار</a></p>"
  },
  {
-  "id": "html:353",
-  "kind": "html",
-  "he": "        <h2 class=\"section-title shk-gate-text\" id=\"shkGateText\">הפרויקט נמצא בתהליך עבודה, אנא הימנעו מהפצתו בשלב זה, תודה.</h2>",
-  "en": "        <h2 class=\"section-title shk-gate-text\" id=\"shkGateText\">This project is a work in progress. Please do not share it at this stage, thank you.</h2>",
-  "ar": "        <h2 class=\"section-title shk-gate-text\" id=\"shkGateText\">لا يزال المشروع قيد العمل، يرجى الامتناع عن تداوله في هذه المرحلة، شكرًا.</h2>"
- },
- {
-  "id": "html:356",
-  "kind": "html",
-  "he": "        <button type=\"button\" class=\"shk-gate-btn\" id=\"shkGateBtn\">הבנתי, להמשך הפרויקט</button>",
-  "en": "        <button type=\"button\" class=\"shk-gate-btn\" id=\"shkGateBtn\">Got it, continue to the project</button>",
-  "ar": "        <button type=\"button\" class=\"shk-gate-btn\" id=\"shkGateBtn\">فهمت، المتابعة إلى المشروع</button>"
- },
- {
   "id": "js:42",
   "kind": "js",
   "he": "קואליציית הימין",

@@ -6,6 +6,8 @@ __pycache__/
 # Large local-only assets — screen recordings and the raw ACLED exports the
 # xlsx is built from. Kept out of history for size; they live on disk only.
 *.mov
+# Meeting transcripts name third parties — local only.
+*.vtt
 raw-*.csv
 *.MP4
 *.mp4
@@ -31,8 +33,6 @@ date_hebrew_batches/
 date_hebrew_state.json
 split_batches/
 split_state.json
-crowd_batches/
-crowd_state.json
 crowd_batches/
 crowd_state.json
 fortress_desc_batches/

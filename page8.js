@@ -194,8 +194,8 @@ function drawPage8(ctx, W, H) {
       // survivors do NOT close ranks here — the glide's destination is page9's
       // legit grid, which is index-based — so this fold answers a toggle with
       // size only. Position, as ever, never snaps.
-      const filtF = typeof p7FilterSizeFactor === "function" ? p7FilterSizeFactor(e) : 1;
-      if (filtF <= 0.002) return;
+      let filtF = typeof p7FilterSizeFactor === "function" ? p7FilterSizeFactor(e) : 1;
+      if (filtF <= 0.002 && !(typeof p7FilterMorphActive === "function" && p7FilterMorphActive())) return;
       const cell = positions[i];
       const col  = cell % cols;
       const row  = Math.floor(cell / cols);
@@ -225,6 +225,8 @@ function drawPage8(ctx, W, H) {
 
       let x = fromX + (target.x - fromX) * ease;
       let y = fromY + (target.y - fromY) * ease;
+      if (typeof p7FilterSizeFactor === "function") filtF = p7FilterSizeFactor(e, y);
+      if (filtF <= 0.002) return;
       // Shrink each dot from the (now enlarged) real-timeline square size (p7.SQ)
       // down to page9's legit-grid size (P9_SQ) across the glide, so the dots
       // visibly get smaller on the way into @fold13 and land at exactly the size

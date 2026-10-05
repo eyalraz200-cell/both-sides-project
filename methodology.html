@@ -115,7 +115,7 @@
   <p>הסרת כפילויות מונעת ספירה חוזרת של אותו אירוע, אך אינה מתקנת פערים בהיקף התיעוד בין המקורות והקבוצות.</p>
 
   <h2 id="ai">שימוש במודלי שפה ובדיקה אנושית</h2>
-  <p>רוב העיבוד נעשה בעזרת מודל השפה <span class="latin">gpt-5.6-terra</span> של <span class="latin">OpenAI</span>, דרך ממשק האצווה שלה (<span class="latin">Batch API</span>). המודל עבד על סמך תיאורי האירועים בלבד, כפי שהופיעו במקורות: הוא לא חיפש מידע נוסף ולא נעזר במקורות אחרים. המודל שימש בשבעה שלבים, שכל אחד מהם מקבל הנחיה כתובה משלו:</p>
+  <p>רוב העיבוד נעשה בעזרת מודל השפה <span class="latin">gpt-5.6-terra</span> של <span class="latin">OpenAI</span>, דרך ממשק האצווה שלה (<span class="latin">Batch API</span>). המודל עבד על סמך תיאורי האירועים בלבד, כפי שהופיעו במקורות: הוא לא חיפש מידע נוסף ולא נעזר במקורות אחרים. ברשומות ״המבצר״ קיבל המודל, לצד התיאור, גם את התגיות שהיומן עצמו הצמיד לרשומה (בשלב סיווג סוג הפעולה), ואת התגיות ושם המקום (בשלב הניסוח מחדש). המודל שימש בשבעה שלבים, שכל אחד מהם מקבל הנחיה כתובה משלו:</p>
   <ol>
     <li>שיוך האירוע לקבוצה <a class="plink" href="#prompt-01">הנחיה</a></li>
     <li>פיצול רשומות שבהן חלק מהקהל ביצע פעולה נפרדת <a class="plink" href="#prompt-04">הנחיה</a></li>
@@ -127,7 +127,7 @@
   </ol>
   <p>מודלי שפה שימשו גם להשוואת רשומות ״המבצר״ מול <span class="latin">ACLED</span> באיתור הכפילויות, ולתרגום ממשק האתר לערבית.</p>
   <p>בשלבי השיוך והסיווג התבקש המודל לצרף לתשובה הנמקה קצרה, הערכת ביטחון וסימון למקרים הדורשים בדיקה; אלה נשמרו לצד הרשומה. בשלב מספר המשתתפים צורף ציטוט המילים שמהן נלקח המספר.</p>
-  <p>ההנחיות לא נכתבו פעם אחת: הן התגבשו בתהליך איטרטיבי של סבבים רבים. אחרי כל ריצה נבדקו המקרים המסומנים, מדגמים של השאר ומקרים חריגים; שיוכים, סיווגים ותיאורים שגויים תוקנו ידנית, והחלטות שניתן היה להפוך לכלל נוספו להנחיה לפני הריצה הבאה. תיקונים ידניים נשמרו בנפרד, כך שריצות חוזרות אינן דורסות אותם.</p>
+  <p>ההנחיות לא נכתבו פעם אחת: הן התגבשו בתהליך איטרטיבי של סבבים רבים. אחרי כל ריצה נבדקו המקרים המסומנים, מדגמים של השאר ומקרים חריגים; שיוכים, סיווגים ותיאורים שגויים תוקנו ידנית, והחלטות שניתן היה להפוך לכלל נוספו להנחיה לפני הריצה הבאה. רשומה שתוקנה ידנית מסומנת בתאריך התיקון, וריצות חוזרות של אותו שלב מדלגות עליה, כך שאינן דורסות את התיקון.</p>
   <p>הבדיקות אינן שקולות לבדיקה ידנית מלאה של כל אירוע, וייתכנו טעויות גם לאחר סבבי התיקון. ההנחיות המלאות מופיעות בנספח.</p>
 
   <h2 id="groups">שיוך לקבוצות ולמחנות</h2>
@@ -158,14 +158,14 @@
     <tr><th>#</th><th>סוג פעולה</th><th>בקצרה</th><th>אירועים</th></tr>
     <tr><td class="num">1</td><td>הפגנה לא אלימה</td><td>הפגנה, עצרת, מצעד או משמרת ללא פעולה חמורה יותר. סיסמאות וקריאות גנאי אינן מעלות את הסיווג.</td><td class="num">4,845</td></tr>
     <tr><td class="num">2</td><td>חסימת כביש</td><td>חסימת כביש, צומת, כניסה או נתיב גישה כחלק ממחאה.</td><td class="num">1,007</td></tr>
-    <tr><td class="num">3</td><td>הפרות סדר</td><td>התפרעות, עימותים, איומים ישירים ללא פעולה ממשית, חדירה לכפר.</td><td class="num">1,035</td></tr>
+    <tr><td class="num">3</td><td>הפרות סדר</td><td>התפרעות, עימותים, איומים ישירים ללא פעולה ממשית, חדירה לכפר שבעקבותיה פרצו עימותים.</td><td class="num">1,035</td></tr>
     <tr><td class="num">4</td><td>פגיעה ברכוש</td><td>נזק מכוון, הצתת מבנה או רכב ריקים, גניבה, פגיעה בבעלי חיים ובגידולים.</td><td class="num">1,748</td></tr>
     <tr><td class="num">5</td><td>ניכוס שטח</td><td>הקמת מאחז, גידור, חריש או הצבת מבנים לשם שליטה בקרקע.</td><td class="num">587</td></tr>
     <tr><td class="num">6</td><td>תקיפה פיזית</td><td>אלימות גופנית ישירה ללא נשק, המתוארת במפורש.</td><td class="num">1,140</td></tr>
     <tr><td class="num">7</td><td>החזקה בכפייה</td><td>חטיפה, החזקת אדם או העברתו למקום אחר בניגוד לרצונו.</td><td class="num">32</td></tr>
     <tr><td class="num">8</td><td>תקיפה בנשק קר</td><td>סכין, אלה או גז פלפל נגד אנשים; אבנים לעבר אנשים, רכבים או בתים; דריסה.</td><td class="num">1,364</td></tr>
-    <tr><td class="num">9</td><td>תקיפה בנשק חם</td><td>ירי או כיוון נשק, רימון, מטען, בקבוק תבערה, זיקוקים לעבר אנשים.</td><td class="num">510</td></tr>
-    <tr><td class="num">10</td><td>פוגרום</td><td>קהל של 30 ומעלה שתוקף יישוב, באלימות נגד אנשים, ומצית והורס רכוש.</td><td class="num">15</td></tr>
+    <tr><td class="num">9</td><td>תקיפה בנשק חם</td><td>ירי או כיוון נשק, רימון רסס או נפץ (רימון הלם לעבר אנשים הוא נשק קר), מטען, בקבוק תבערה, זיקוקים לעבר אנשים.</td><td class="num">510</td></tr>
+    <tr><td class="num">10</td><td>פוגרום</td><td>קהל של 30 ומעלה, שגודלו מצוין, שתוקף יישוב, פוצע או הורג פלסטינים ומצית בתים, רכבים, מבנים או שדות.</td><td class="num">15</td></tr>
   </table>
   <p>כאשר אירוע כלל כמה סוגי פעולה, נבחר הסוג הגבוה ביותר במדרג שביצע הגורם המרכזי. פעולות של גורמים אחרים אינן קובעות את הסיווג, גם אם היו חמורות יותר.</p>
   <p>המדרג נבנה במסגרת הפרויקט תוך הסתייעות ב־<a href="https://gdeltproject.org/" target="_blank" rel="noopener"><span class="latin">CAMEO</span></a> ובסולם <span class="latin">Goldstein</span> לדירוג אירועים פוליטיים, ובמדד חומרת הפשיעה של משרד הסטטיסטיקה הבריטי, <a href="https://www.ons.gov.uk/" target="_blank" rel="noopener"><span class="latin">ONS</span></a>. הקטגוריות, סדרן והכללים המפורטים הם החלטות של הפרויקט, ואינם העתק של אחד המדדים.</p>
@@ -178,13 +178,13 @@
     <li>״עימותים״ ללא תקיפה מתוארת הם הפרות סדר, לא תקיפה פיזית.</li>
     <li>הכנסת עדרים לאדמה או מאהל מחאה אינם ניכוס שטח.</li>
   </ul>
-  <p>גם המונח ״פוגרום״ משמש כאן לפי הגדרה תפעולית שנקבעה לפרויקט: מתקפה על יישוב של קהל המונה לפחות 30 משתתפים, הכוללת אלימות נגד אנשים, והצתה והשחתה של רכוש. בשל חומרת המונח, כל אחד מהתנאים צריך להופיע במפורש בתיאור; כאשר התיאור אינו מבסס את כולם, האירוע מסווג לפי המעשים המתועדים בו. אין בכך קביעה לגבי השימוש במונח בהקשרים אחרים.</p>
+  <p>גם המונח ״פוגרום״ משמש כאן לפי הגדרה תפעולית שנקבעה לפרויקט: מתקפה על יישוב של קהל שגודלו מצוין בתיאור ומונה לפחות 30 משתתפים, שבמהלכה פצעו או הרגו התוקפים עצמם פלסטינים, והציתו בתים, רכבים, מבנים או שדות שמפורטים בתיאור. פגיעות שגרמו חיילים או שוטרים אינן נספרות. בשל חומרת המונח, כל אחד מהתנאים צריך להופיע במפורש בתיאור, לצד פרטים מוחשיים שמאפשרים לשפוט את האירוע; כאשר התיאור אינו מבסס את כולם, האירוע מסווג לפי המעשים המתועדים בו. אין בכך קביעה לגבי השימוש במונח בהקשרים אחרים.</p>
   <p>ההגדרות המלאות וכללי הסיווג מופיעים בנספח. <a class="plink" href="#prompt-02">להנחיה המלאה</a></p>
 
   <h2 id="crowd">מספר המשתתפים</h2>
   <p>מספר המשתתפים נלקח מתיאור האירוע, כאשר הופיע בו דיווח מתאים. נספרים המשתתפים בצד הגורם המרכזי בלבד, ולא כוחות ביטחון, נפגעים או מפגיני־נגד.</p>
   <p>כאשר נמסרו כמה הערכות לאותו קהל, נבחרה הגבוהה שבהן. כשלא הופיע מידע על גודל הקבוצה, הנתון סומן כחסר ולא הוערך על סמך סוג האירוע.</p>
-  <p>ביטויים כלליים כגון ״עשרות״ או ״אלפים״ הומרו לערכים קבועים לצורכי התצוגה (עשרות: 50, מאות: 300, אלפים: 3,000, עשרות אלפים: 30,000, מאות אלפים: 300,000). ההמרה נעשית בקוד האתר, לא בידי המודל. אלה ערכי ייצוג, ולא ספירה מדויקת. באתר גודל הריבוע נקבע לפי שש דרגות: עד 99 משתתפים, 100–2,499, 2,500–25,099, 25,100–99,999, 100,000–249,999, ו־250,000 ומעלה. אירוע ללא דיווח על גודל מוצג בדרגה הקטנה ביותר; גודל הריבוע במקרה זה אינו מעיד על מספר המשתתפים.</p>
+  <p>ביטויים כלליים כגון ״עשרות״ או ״אלפים״ הומרו לערכים קבועים לצורכי התצוגה (עשרות: 50, מאות: 300, אלפים: 3,000, עשרות אלפים: 30,000, מאות אלפים: 300,000). כשהמקור האנגלי נוקט <span class="latin">tens</span> ולא <span class="latin">dozens</span>, הערך הוא 30, וערך זה אינו עומד ברף הקהל שבהגדרת הפוגרום. טווח, כמו ״עשרות עד מאות״, מומר לקצהו העליון. ההמרה נעשית בקוד האתר, לא בידי המודל. אלה ערכי ייצוג, ולא ספירה מדויקת. באתר גודל הריבוע נקבע לפי שש דרגות: עד 99 משתתפים, 100–2,499, 2,500–25,099, 25,100–99,999, 100,000–249,999, ו־250,000 ומעלה. אירוע ללא דיווח על גודל מוצג בדרגה הקטנה ביותר; גודל הריבוע במקרה זה אינו מעיד על מספר המשתתפים.</p>
   <p>מידע על מספר המשתתפים קיים ב־3,604 מתוך 12,283 האירועים. <a class="plink" href="#prompt-05">להנחיה המלאה</a></p>
 
   <h2 id="text">תרגום ועריכת התיאורים</h2>
@@ -200,7 +200,7 @@
   <p><strong>מספר אירועים אינו מספר משתתפים או נפגעים.</strong> פעולה של אדם יחיד והפגנה המונית יכולות להיות מיוצגות כל אחת בריבוע אחד. גם אירועים מאותו סוג עשויים להיות שונים מאוד בהיקפם.</p>
   <p><strong>עיבוד באמצעות מודלי שפה עלול לכלול שגיאות.</strong> השיוך, הסיווג, חילוץ מספר המשתתפים והתרגום עשויים להיות שגויים. הבדיקות האנושיות נועדו לצמצם טעויות, אך אינן מבטיחות את היעדרן.</p>
   <h2 id="prompts">נספח: הנחיות העיבוד</h2>
-  <p>ההנחיות המלאות שניתנו למודלים, באנגלית, כפי שהן בקוד הפרויקט. הנספח מתעדכן בכל שינוי בהנחיות. כללים המסומנים בתאריך נוספו בעקבות בדיקה ידנית. המודל: <span class="latin">gpt-5.6-terra</span> של <span class="latin">OpenAI</span>, דרך <span class="latin">Batch API</span>.</p>
+  <p>ההנחיות המלאות שניתנו למודלים, באנגלית, כפי שהן בקוד הפרויקט. הנספח מתעדכן בכל שינוי בהנחיות. כללים המסומנים בתאריך נוספו בעקבות בדיקה ידנית. ההנחיות ממוספרות לפי שם הקובץ בקוד, ולא לפי סדר הריצה; סדר הריצה הוא 1, 4, 2, 3, 5, 6, 7, כמפורט ב<a href="#ai">שימוש במודלי שפה</a>. המודל: <span class="latin">gpt-5.6-terra</span> של <span class="latin">OpenAI</span>, דרך <span class="latin">Batch API</span>.</p>
 
   <details id="prompt-01"><summary>הנחיה 1: שיוך הפועל המרכזי <span class="note latin">01_identify_main_actor.py</span></summary>
 <!-- prompt:01_identify_main_actor.py --><pre>You are identifying the MAIN ACTOR responsible for the central political action described in an event.
@@ -263,17 +263,18 @@ Use this umbrella category for Israeli protesters whose central political action
 - anti-judicial-reform / anti-judicial-overhaul demonstrators
 - anti-government protesters
 - protests calling for the government&#x27;s resignation or elections
-- hostage-deal / hostage-release protesters when the action is directed at the government or demands government action
 - Kaplan protest movement and closely related protest groups
 - protests combining these causes
 
-This category deliberately combines the former labels:
+This category combines the former labels:
 - anti judicial reform demonstrators
 - anti government protesters
-- hostage deal protesters
+
+Hostage-deal / hostage-release protests are NOT this category: from 7 October 2023 they are
+peace movements (category 6), even when the demand is addressed to the government.
 
 Do not use it merely because someone criticizes a specific policy.
-There must be a recognizable anti-government, judicial-overhaul, elections, or hostage-deal protest context.
+There must be a recognizable anti-government, judicial-overhaul or elections protest context.
 
 
 3. arab israelis
@@ -281,6 +282,8 @@ There must be a recognizable anti-government, judicial-overhaul, elections, or h
 Arab citizens or residents of Israel acting collectively in an Israeli political or civic context.
 
 Use only when the description establishes that the central actors are Arab Israelis / Israeli Arabs / Arab citizens or residents of Israel.
+Exception: anti-occupation, coexistence and joint Jewish-Arab protests dated BEFORE 7 October 2023
+are arab israelis too (peace movements is not used before that date — see category 6).
 
 Do NOT use for:
 - Palestinians in the West Bank
@@ -321,16 +324,17 @@ Use settlers for explicitly settler-led actions.
 
 6. peace movements
 
-Israeli peace, anti-occupation, coexistence, or similar organized left-wing movements acting as the central actor.
-
-Examples include explicitly identified:
-- peace organizations
-- anti-occupation activists
-- coexistence movements
+Used ONLY for events on or after 7 October 2023. From that date it covers:
+- hostage-deal / hostage-release protesters (including when the demand is addressed to the government)
+- ceasefire and anti-war protests
+- peace organizations, coexistence movements, anti-occupation activists
 - Israeli groups protesting settlement activity or occupation
 
 Do not use this category simply because a protest is left-wing.
-Anti-government / judicial-overhaul / hostage-deal protests belong under protesters against government when that is their central context.
+Anti-government / judicial-overhaul / elections protests belong under protesters against government.
+
+Before 7 October 2023 this category is not used: anti-occupation, coexistence and joint
+Jewish-Arab protests from before that date are arab israelis.
 
 
 7. not relevant
@@ -384,7 +388,7 @@ Before answering, verify:
 
 
 
-SUPPLEMENTARY RULES (from the 2026-10-03 hand review — these override the definitions above where they conflict)
+SUPPLEMENTARY RULES (from the 2026-10-03 hand review)
 
 RIGHT WING PROTESTERS by demand, not by label:
 A protest whose demand is to CONTINUE or RESUME a war, to REJECT a ceasefire or a hostage
@@ -412,9 +416,8 @@ PROTESTERS AGAINST GOVERNMENT, specific cases:
 
 PEACE MOVEMENTS starts on 7 October 2023:
 Hostage-deal, ceasefire, anti-war and anti-occupation protests from 7 October 2023
-onward are peace movements. Before that date the category is not used — earlier
-anti-occupation / joint Arab-Jewish solidarity protests were hand-labelled and must be
-left as they are.
+onward are peace movements. Before that date the category is not used — anti-occupation
+and joint Jewish-Arab solidarity protests dated before 7 October 2023 are arab israelis.
 
 HAREDI JEWS is for Haredi collective action only (draft, autopsies, light rail,
 Sabbath, &quot;unkosher&quot; stores). Chabad / messianic / religious-Zionist protests are right
@@ -730,8 +733,10 @@ In those ambiguous cases, prefer הפרות סדר.
 
 HAND-REVIEW RULES (Fortress log, 2026-10-03):
 - Taking over an inhabited house while the family is inside -&gt; החזקה בכפייה.
-- Arson of houses, structures, vehicles or between houses (fire SET, not gunfire) -&gt; פגיעה ברכוש,
-  never תקיפה בנשק חם (that is for live fire only).
+- Arson of houses, structures, vehicles or between houses (fire SET, not gunfire) with nobody
+  inside or directly endangered -&gt; פגיעה ברכוש. Fire set to an INHABITED house or an OCCUPIED
+  vehicle, a Molotov thrown at people or houses with people in them, and fireworks thrown at
+  people are תקיפה בנשק חם — see the ARSON RULE and FIRE AT PEOPLE RULE in section 9.
 - &quot;מטען&quot; on an aid truck / convoy means CARGO, not an explosive: dumping or throwing the cargo is
   פגיעה ברכוש.
 - Waste, rubbish or &quot;objects&quot; thrown at a house -&gt; הפרות סדר.
@@ -769,7 +774,7 @@ PASSIVE-VOICE RULE (source logs written from the victims&#x27; side):
 &quot;A Palestinian was attacked / shot / run over&quot;, &quot;stones were thrown&quot;, &quot;a house was set on
 fire&quot; with no attacker named means the MAIN ACTOR did it — classify the act, do not
 drop to a lower category because the sentence has no subject. A settlement security
-guard, security coordinator (רבש&quot;ץ) or &quot;settlers in uniform&quot; count as the main actor.
+guard, security coordinator (רבש״ץ) or &quot;settlers in uniform&quot; count as the main actor.
 
 DISPLACEMENT-OUTCOME RULE:
 &quot;The family left / the community was displaced after repeated attacks&quot; with no concrete
@@ -867,8 +872,11 @@ Anything that burns or explodes, LAUNCHED OR THROWN AT A PERSON — a firework, 
 a flare, a burning torch, a Molotov cocktail — is תקיפה בנשק חם, the same class as gunfire,
 whether or not it hit. Fireworks fired DURING A RIOT OR CLASH WITH POLICE (&quot;threw stones and
 fireworks and clashed with police&quot;, &quot;threw stones at officers, fired fireworks&quot;) count as aimed
-at the police -&gt; תקיפה בנשק חם. Only fireworks set off with no confrontation around them
-(&quot;fireworks were set off during the celebration / while chasing people out&quot;) stay as they are.
+at the police -&gt; תקיפה בנשק חם. Fireworks set off with no person named as their target and no
+clash with police around them (&quot;set off fireworks near the synagogue&quot;, &quot;fireworks during the
+celebration&quot;, &quot;set off fireworks while chasing people out&quot;) are NOT a hot-weapon attack: the
+fireworks count as הפרות סדר, and the event is classified by the main actor&#x27;s other acts (if the
+same crowd also threw stones at people or buildings -&gt; תקיפה בנשק קר).
 - stun grenade used with no identified human target -&gt; הפרות סדר
 - bottles thrown generically during clashes with no clear human target -&gt; הפרות סדר
 
@@ -940,42 +948,37 @@ Use פוגרום only when the MAIN ACTOR is explicitly a LARGE CROWD, MOB, MASS
 
 and the attack includes violence against people, homes, vehicles, businesses, or the civilian environment.
 
-פוגרום requires ALL FOUR, performed by the MAIN ACTOR and EACH STATED EXPLICITLY in the text
-(hand rule 2026-10-04 — a pogrom is a very heavy accusation; if any element has to be
-inferred, it is not a pogrom):
-1. A CROWD OF 30 OR MORE — &quot;dozens&quot;, &quot;hundreds&quot;, &quot;thousands&quot;, or a stated number of 30+.
-   (15 or 20 attackers, &quot;tens&quot;, &quot;a group&quot;, &quot;several settlers&quot;, or NO size stated at all is
-   NOT a crowd for this purpose — hand rule 2026-10-04.)
-2. VIOLENCE AGAINST PEOPLE — beatings, stone-throwing at people or inhabited houses,
-   gunfire, pepper spray — with victims present.
-3. FIRE — houses, tents, vehicles, fields or buildings in the community SET ON FIRE.
-4. PROPERTY DESTROYED — the fire or other acts damaged or destroyed homes, vehicles,
-   businesses or crops (stated, not assumed).
+פוגרום requires ALL FOUR of the following, performed by the MAIN ACTOR and EACH STATED
+EXPLICITLY in the text (hand rule 2026-10-04 — a pogrom is a very heavy accusation; if any
+element has to be inferred, or when in doubt, it is NOT a pogrom):
+1. A CROWD OF 30 OR MORE, WITH ITS SIZE GIVEN — &quot;dozens&quot;, &quot;hundreds&quot;, &quot;thousands&quot;, or a stated
+   number of 30+. 15 or 20 attackers, &quot;tens&quot;, &quot;a group&quot;, &quot;several settlers&quot;, or NO size stated
+   at all is NOT a crowd for this purpose — however severe the attack. (&quot;Tens&quot; is read as 30
+   when crowd sizes are counted, but it does NOT meet the pogrom crowd bar.)
+2. PALESTINIANS INJURED OR KILLED BY THE MAIN ACTOR — stated in the text. Injuries caused only by
+   soldiers or police, or only the attackers hurt, do not count; &quot;no casualties&quot; rules it out.
+   Beatings, stones or gunfire with no injury stated do not meet this element.
+3. FIRE, NAMED — homes, tents, vehicles, structures or fields in the community SET ON FIRE,
+   with what burned named (not just &quot;set fire to property&quot;).
+4. CONCRETE DETAIL — enough specifics to judge the event (a one-line &quot;wave of attacks including
+   arson, stones and assaults&quot; with no specifics is NOT enough).
 
 All four during a raid on a village, community, neighbourhood or farm = פוגרום
 (e.g. 50 settlers beat residents injuring 2 AND burn 7 vehicles -&gt; פוגרום; the same by
-20 settlers -&gt; תקיפה פיזית, by a crowd of unstated size -&gt; classify the acts themselves).
+20 settlers -&gt; classify the acts themselves, by a crowd of unstated size -&gt; classify the acts
+themselves).
 
 NOT a pogrom:
-- a crowd that only burns EMPTY property with nobody attacked -&gt; פגיעה ברכוש
+- a crowd that only burns EMPTY property with nobody hurt -&gt; פגיעה ברכוש
 - a crowd that only beats or stones people with no fire -&gt; תקיפה פיזית / תקיפה בנשק קר
 - a mass march or demonstration in a city that turns violent (a flag march where
   marchers beat passers-by) -&gt; classify the violence itself
 - &quot;attacked a community&quot; with no mechanism -&gt; הפרות סדר
-- a small group (under 30) however violent, or a raid whose size is not stated
+- a small group (under 30) however violent, or a raid whose size is not stated, or &quot;tens&quot;
 
-When all four conditions hold, פוגרום is the answer (it is top of the hierarchy).
-
-POGROM STANDARD (user, 2026-10-04 — a pogrom is a very heavy accusation; when in doubt, it is
-NOT a pogrom). ALL of these must be stated in the text itself:
-- a crowd of 30+ with its size given (no stated size = not a pogrom, however severe);
-- Palestinians injured or killed BY THE MAIN ACTOR (injuries caused only by soldiers/police, or
-  only settlers hurt, do not count; &quot;no casualties&quot; rules it out);
-- fire set to homes, vehicles, structures or fields — named, not just &quot;set fire to property&quot;;
-- enough concrete detail to judge (a one-line &quot;wave of attacks including arson, stones and
-  assaults&quot; with no specifics is NOT enough).
-Missing any one -&gt; classify the most serious act described (gunfire -&gt; תקיפה בנשק חם, stones or
-clubs at people -&gt; תקיפה בנשק קר, beatings -&gt; תקיפה פיזית, arson of property -&gt; פגיעה ברכוש).
+Missing any one element -&gt; classify the most serious act described (gunfire -&gt; תקיפה בנשק חם,
+stones or clubs at people -&gt; תקיפה בנשק קר, beatings -&gt; תקיפה פיזית, arson of property -&gt;
+פגיעה ברכוש). When all four hold, פוגרום is the answer (it is top of the hierarchy).
 
 
 SEVERITY HIERARCHY
@@ -1001,7 +1004,7 @@ Before returning the category, verify:
 1. Am I classifying an action performed by the supplied MAIN ACTOR?
 2. Did I accidentally use an action performed by a secondary actor?
 3. If several MAIN ACTOR actions occurred, did I choose the highest-ranked applicable category?
-4. Did I apply the special rules for threats/intimidation, stones (incl. at houses), bottles, stun grenades, fireworks, firecrackers, eggs/smoke/unspecified objects, pepper spray vs. chemicals vs. tear-gas launchers, &quot;armed&quot; without use, fire at houses, arson, injuries from property destruction, livestock, protest barriers, land appropriation vs. symbolic crossings, incursions into villages, brief seizure vs. sustained holding, ramming, and the four-part pogrom test?
+4. Did I apply the special rules for threats/intimidation, stones (incl. at houses), bottles, stun grenades, fireworks, firecrackers, eggs/smoke/unspecified objects, pepper spray vs. chemicals vs. tear-gas launchers, &quot;armed&quot; without use, fire at houses, arson, injuries from property destruction, livestock, protest barriers, land appropriation vs. symbolic crossings, incursions into villages, brief seizure vs. sustained holding, ramming, and the four-part pogrom test (stated crowd of 30+, Palestinians injured/killed by the main actor, named fire, concrete detail)?
 
 Return exactly one allowed event type.</pre><!-- /prompt --></details>
 

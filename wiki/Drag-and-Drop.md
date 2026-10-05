@@ -9,17 +9,17 @@ the matching event dots migrate above the divider line.
 
 ## Layout
 
-`<section class="text-section page9-panel" data-page="12" id="page-13">`, `min-height: 200vh`
+`<section class="text-section page9-panel" data-page="13" id="page-13">`, `min-height: 200vh`
 = 100vh scrolling title row + 100vh sticky panel on mobile. **Desktop trims it to 150vh
 (`.page9-title-row` 50vh + `.page9-sticky` 100vh).** The panel engages when the title card
-sticks; the @fold13 gate is one viewport before `#page-14`, so with a 100vh row the card
-stuck ~42vh in and the gate sat at 100vh — ~55vh of pinned, engaged, motionless panel before
-the closing card could start rising. With the 50vh row the card centres 21vh in, sticks ~17vh
-in, and the gate is at 50vh. The trim comes off the **row, not the sticky**: the sticky must
-keep its full 100vh so it reaches `top: 0` at exactly the scroll position `.frozen` swaps it
-to fixed — a 50vh sticky was still mid-viewport at that moment and everything positioned
-inside it (the header) jumped to the top. The gate must stay *after* the stick point, or it
-would hold scroll where the card never pins and the fold deadlocks.
+sticks; the @fold13 gate is one viewport before `#page-14`. With the 50vh row the card
+centres 21vh in, sticks ~17vh in, and the gate is at 50vh — a 100vh row would leave ~55vh
+of pinned, engaged, motionless panel before the closing card could start rising. The trim
+comes off the **row, not the sticky**: the sticky must keep its full 100vh so it reaches
+`top: 0` at exactly the scroll position `.frozen` swaps it to fixed — a shorter sticky is
+still mid-viewport at that moment and everything positioned inside it (the header) jumps
+to the top. The gate must stay *after* the stick point, or it would hold scroll where the
+card never pins and the fold deadlocks.
 
 - `.page9-title-row` — the normal scrolling title card plus `.page9-header-subtitle` (desktop: weight 400, `rgba(0,0,0,0.35)`; mobile is 500 / `rgba(0,0,0,0.25)`, the base rule; the empty zone hint is `rgba(0,0,0,0.25)` on desktop, 0.5 on mobile)
   — whose text is set from JS (`p9SyncSubtitle`, re-run on resize), because the gesture it
@@ -51,23 +51,23 @@ would hold scroll where the card never pins and the fold deadlocks.
 - `.page9-tray` — `position: fixed; bottom: 0`, slides up from `translateY(100%)` under
   `.engaged` over `0.85s cubic-bezier(0.22, 1, 0.36, 1)`. Holds `.page9-tray-title`
   ("סוגי פעולות") and `#page9ZoneBelow`, whose two `.page9-tray-row` grids are built in
-  JS. On mobile it is instead a **band at `top: 116px`**, under the title card and above the
+  JS. On mobile it is instead a **band at `top: 96px`** (= `P9_TRAY_TOP_M`), under the title card and above the
   docked tooltip frame (which drops clear of it on this same fold's stick,
   `p9TooltipDropTrigger`), appearing in place rather than sliding, with `.page9-tray-title` hidden and a rule on
   its bottom edge only; the two wrappers are `display: contents` and
   `#page9ZoneBelow` is one `nowrap`, horizontally-scrolling flex row of all 10 pills, one pill
-  tall — see [Folds](Folds.md#fold13s-tray-on-mobile). The flex row follows the **desktop
+  tall — see [Folds](Folds.md#fold12s-tray-on-mobile). The flex row follows the **desktop
   reading order**, not `data-idx` DOM order: each pill carries an inline `order` set from
   `P9_TRAY_GRID_V2`'s single-row column (p9BuildPanel) — inert in both desktop grids, where
   every pill is explicitly placed.
 - **The grip handle is collapsed until `.engaged`** (desktop V2 only). In the tray it sits at
   `width: 0; margin-inline-end: -6px; overflow: hidden; transform: scale(0)` and `.engaged`
-  restores `8px` / `0` / `scale(1)` on the pill's own pop clock. All **three** properties are
-  needed: `scale(0)` is paint-time only and would leave the 8px grid box in the flex line, and
+  restores `7px` / `0` / `scale(1)` on the pill's own pop clock. All **three** properties are
+  needed: `scale(0)` is paint-time only and would leave the 7px grid box in the flex line, and
   a zero-width handle still draws the pill's own 6px flex `gap` — hence the negative margin.
   Because `p9MeasureTrayLayout` bakes fixed pixel column tracks and runs while `.engaged` is
   off, it holds `.page9-measuring-handles` on the panel across its width reads (same lifetime
-  as its measurement `nowrap`) so the tracks reserve the handle's 14px; without it the pills
+  as its measurement `nowrap`) so the tracks reserve the handle's 7px; without it the pills
   overflow their tracks the moment @fold12 pops the dots in and the labels wrap.
   **Mobile collapses its own two affordances the same way** — `.page9-pill-info` and
   `.page9-pill-check`, ≤600px block, same three properties: at @fold11 the pill **fits its
@@ -91,7 +91,7 @@ would hold scroll where the card never pins and the fold deadlocks.
 
   Mobile's tray is a horizontally-scrolling flex row with no baked tracks, so it needs no
   `.page9-measuring-handles` equivalent.
-- Pills are built in JS: `div.page9-pill[data-idx]` > `span.page9-handle` (6 grip dots) +
+- Pills are built in JS: `div.page9-pill[data-idx]` > `span.page9-handle` (6 grip-dot spans; desktop V2 hides the last two — a 2×2 grip) +
   `span.page9-pill-label`. Dropped pills lose their border/background and take
   `width: var(--page9-max-pill-width)` with 1px hairline separators via `::before`/`::after`.
 
@@ -163,7 +163,7 @@ Two things it must keep doing:
   a 123px track) and the hole stops matching the pill that left.
 
 **Desktop only, and it cannot be otherwise:** under 600px a pill never leaves the tray —
-it takes `.is-extreme` in place (`p9SyncExtremeOrder`) — so no cell is ever vacated.
+it takes `.is-extreme` in place (the mobile tap handler in `p9BuildPanel`) — so no cell is ever vacated.
 Not to be confused with `.page9-pill-ghost`, which is the clone that follows the cursor
 *during* a drag; the vacancy is what stays behind *after* the drop lands.
 
@@ -218,7 +218,7 @@ by tray position instead of drop order. `commitDropState` is the only writer of 
 
 `p9MeasureTrayLayout()` (run at `DOMContentLoaded` and again on `document.fonts.ready`)
 sets `p9.maxPillWidth`, per-row `gridTemplateColumns`, row heights, and the three CSS vars.
-It is deferred rather than called inline because it now branches on `isMobile()`, which
+It is deferred rather than called inline because it branches on `isMobile()`, which
 lives in `js/core.js` — a *later* `<script>` than `page9.js`, and function declarations
 don't hoist across separate classic scripts. Same reason for `p9SyncSubtitle`.
 
@@ -229,8 +229,8 @@ column, by handing `onMove` a synthetic pointer at the next dot's centre so the 
 tooltip and dimming are the ordinary ones. The *choice* of next dot is made on
 `p9.restPositions` — every dot's resting cell, recorded by `drawPage9` before the hover
 bulge grows the hovered dot and shoves its neighbours — while the synthetic pointer aims
-at `p9.lastPositions`, the drawn position. Choosing on the drawn positions let the bulge
-bend the row the arrows were walking.
+at `p9.lastPositions`, the drawn position. Choosing on the drawn positions would let the
+bulge bend the row the arrows are walking.
 
 A third gesture, alongside drag and click: the pills are **focusable** (`tabIndex = 0`,
 `role="button"`, `aria-pressed`) and **Enter/Space toggles** the focused pill between the
@@ -260,7 +260,7 @@ border or box-shadow, because the tray's grid tracks are baked from measured pil
 (`p9MeasureTrayLayout`) and a focus style that changed the box would reflow the row.
 
 **This is what unlocks @fold13.** `p13GateLocked()` (`js/fold11.js`) blocks scrolling until a
-pill is classified; before the keyboard path existed, folds 12-13 were unreachable without a
+pill is classified; without the keyboard path @fold12–@fold13 would be unreachable without a
 pointer.
 
 ## Canvas rendering — `drawPage9`
@@ -297,14 +297,14 @@ nothing below changes shape; see [Mobile](#mobile).
   by `p9FilterSnapshot`, which `p7FilterCommit` calls at the same moment page7 takes its
   own `from` snapshot — **before** the rebuild and redraw, or `p9.lastPositions` already
   holds the new slots and nothing moves — running the **tier-staggered reposition** branch of `p9PlaceDot` over
-  `P9_FILTER_REPACK_MS` (1900ms, a touch quicker than the drop's own 2200ms `STATE1_REPOSITION_MS`) — the same
+  `P9_FILTER_REPACK_MS` (1900ms, a touch quicker than most of the drop's own reposition tiers, `p9RepositionMs()`) — the same
   trickle-into-the-freed-slots move a drop uses, not a plain block glide. Leaving
   `plainGlide`/`newEventStagger` off the anim record is what selects it.
   Position never snaps; a restored dot has no `from` and so arrives by growing. The legit grid below the
   line is untouched by this — it stays on its fixed shuffle and answers the filter by size
   alone.
 - Dot color is `p7ActorColor(e.actor)` and is invariant per event — only position and
-  alpha ever animate.
+  size ever animate (`p9PlaceDot` lerps both).
 - **Count labels**: `"אירועים"` and the number are two separate `fillText` calls
   (`P9_EVENTS_GAP` 4) to dodge bidi reordering. Positions glide over `P9_COUNT_POS_MS`
   500; visibility crossfades over `P9_COUNT_LABEL_FADE_MS` 400 at the 0↔nonzero boundary.
@@ -362,7 +362,7 @@ can't hold that (~29k cells of blocks for ~17k visible cells at 1440×900), so i
 `"rise"` — every legit dot tiers, packed from the divider down in
 legit-rank order (`p9PackColumns`, columns from the centre out); the divider rises
 until the pack fits, up to `P9_LEGIT_RISE_MAX_FRAC` (0.4) of H, then the big tiers
-cap; `P9_LEGIT_RISE_PAD` under it. `"pitch"` (**picked**) — every legit dot tiers, on its own ladder `P9_LEGIT_TIER_CELLS` (1, 2, 3, 6, **7, 9** — the two biggest tiers reduced from 9, 14; the extreme columns keep the full ladder), in a seeded **shuffled** order so the pack never bands by group (the whole camp is shuffled once, `p9.legitMixOrder`, then filtered to the current legit dots — a drop only removes dots from the order, it never reshuffles it). **Mobile** has its own room modes (`P9_LEGIT_ROOM_M`, **shipped `"band"`**, picked on a compare/ harness since removed): the phone's strip is 54px at a 1.5px pitch, so there is no cell left to shrink — the cell is pinned at "a dot plus its gap" (`P9_LEGIT_SQ_MIN_M` 0.5 + `P9_LEGIT_GAP_MIN_M` 0.5) and the room is found by `"grow"` (the strip takes the height the pack needs), `"band"` (the 54px strip stands; the rest runs past the screen edge, clipped) or `"capped"` (grow, clamped to `P9_LEGIT_MAX_FRAC_M` of H, then the big tiers come down). **The gap floor is why:** at the ratio gap the phone's dots came out under a device pixel and tiled solid after `p9PlaceDot`'s snap — the strip read as one block. The same floor applies to the **extreme columns' `gapPx`** on mobile with the tiers on, for the same reason. The phone's extreme columns keep the **native pitch** with the tiers on (`P9_SCOPE_GROW_PITCH_M` false): growing it (the `p9ScopeMobileCell` solve, kept for reference) blew every dot up to fill the screen, and the button is a size *comparison* — the unit dot must read the same with it on or off. Room comes the way desktop finds it: outward, then `p9ScopeSolveCols`'s cap. That solve, when on, is held the same way the legit plan is — keyed on the geometry only, so a drop never re-pitches the columns and resizes the dots already standing in them; a drop that no longer fits is answered by `p9ScopeSolveCols`'s cap-lowering. Both are cleared on a tier toggle and on a page flip. The plan is solved when the tiers go on and **held across drops**: a drop never resizes or moves the legit dots — the dropped ones just leave holes (the legend filter too: filtered dots keep their slot and shrink away in place). It is packed over the **whole camp**, not the dots legit at solve time, so every event holds a slot from the start and a returning dot (`p9ResetDrops` on @fold12's reverse) lands exactly where it stood — it used to append slot-less dots by a scan from the centre column, which packed the right camp against the divider instead of sending it home. Trade-off: tiers turned on *after* drops pack as if every dot were present (holes where the dropped ones are). Rebuilt only on a key change (viewport / knobs) or a tier toggle — page flips no longer clear it (see `p9ScopeSync`). **It lives on pages 9–13** (`currentPage` gate): page 9 for @fold10's reverse glide still in the air, and **page 13 because @fold13 still draws the strip** (`drawPage12` → `drawPage9`) as it fades out and back — without it the strip fell to its flat shuffle the moment @fold13 became the page, and the flip back to @fold12 snapped every legit dot into its pack at the end of the reverse; the strip
+cap; `P9_LEGIT_RISE_PAD` under it. `"pitch"` (**picked**) — every legit dot tiers, on its own ladder `P9_LEGIT_TIER_CELLS` (1, 2, 3, 6, **7, 9** — capped below the extreme columns' full ladder), in a seeded **shuffled** order so the pack never bands by group (the whole camp is shuffled once, `p9.legitMixOrder`, then filtered to the current legit dots — a drop only removes dots from the order, it never reshuffles it). **Mobile** has its own room modes (`P9_LEGIT_ROOM_M`, **shipped `"band"`**, picked on a compare/ harness since removed): the phone's strip is 54px at a 1.5px pitch, so there is no cell left to shrink — the cell is pinned at "a dot plus its gap" (`P9_LEGIT_SQ_MIN_M` 0.5 + `P9_LEGIT_GAP_MIN_M` 0.5) and the room is found by `"grow"` (the strip takes the height the pack needs), `"band"` (the 54px strip stands; the rest runs past the screen edge, clipped) or `"capped"` (grow, clamped to `P9_LEGIT_MAX_FRAC_M` of H, then the big tiers come down). **The gap floor is why:** at the ratio gap the phone's dots come out under a device pixel and tile solid after `p9PlaceDot`'s snap — the strip reads as one block. The same floor applies to the **extreme columns' `gapPx`** on mobile with the tiers on, for the same reason. The phone's extreme columns keep the **native pitch** with the tiers on (`P9_SCOPE_GROW_PITCH_M` false): growing it (the `p9ScopeMobileCell` solve, kept for reference) blows every dot up to fill the screen, and the button is a size *comparison* — the unit dot must read the same with it on or off. Room comes the way desktop finds it: outward, then `p9ScopeSolveCols`'s cap. That solve, when on, is held the same way the legit plan is — keyed on the geometry only, so a drop never re-pitches the columns and resizes the dots already standing in them; a drop that no longer fits is answered by `p9ScopeSolveCols`'s cap-lowering. Both are cleared by `p9ScopeSync()` — on a tier toggle, and on a page flip only when the tier flag moves or on a flip to `currentPage` < 11. The plan is solved when the tiers go on and **held across drops**: a drop never resizes or moves the legit dots — the dropped ones just leave holes (the legend filter too: filtered dots keep their slot and shrink away in place). It is packed over the **whole camp**, not the dots legit at solve time, so every event holds a slot from the start and a returning dot (`p9ResetDrops` on @fold12's reverse) lands exactly where it stood (appending slot-less dots by a scan from the centre column would pack the right camp against the divider instead of sending it home). Trade-off: tiers turned on *after* drops pack as if every dot were present (holes where the dropped ones are). Rebuilt only on a key change (viewport / knobs) or a tier toggle — a page flip that keeps the tier flag doesn't clear it (see `p9ScopeSync`). **It lives on `currentPage` 10–14** (`p9LegitTierPlan`'s gate): 10 (@fold9) for @fold10's reverse glide still in the air, 11–12 (@fold10/@fold11) where the landed field already sits on this strip, and **14 because @fold13 still draws the strip** (`drawPage12` → `drawPage9`) as it fades out and back — without it the strip would fall to its flat shuffle the moment @fold13 became the page, and the flip back to @fold12 would snap every legit dot into its pack at the end of the reverse; the strip
 keeps its height and the legit cell shrinks, in quarter-device-px steps, until the
 pack fits (dot floor `P9_LEGIT_PITCH_MIN_SQ` 1px). How the shrunk dots sit
 (`P9_LEGIT_PITCH_FILL`, **shipped `"fill"`**): `"shared"` — one cell for both camps,
@@ -379,8 +379,8 @@ The raised divider is `p9MidY` (base line `p9MidYBase` − the plan's `rise`); t
 shuffle geometry is always built off the **base** line, so switching the tiers
 never reshuffles the flat dots. The extreme columns sit on the raised line and fly
 with it; the line itself glides on the dots' flight window; `--p9-v2-legit-h` is
-republished from `drawPage9` when the line moves. Only on @fold12
-(`currentPage === 13`) — the glide geometry on @fold10/@fold11 stays flat.
+republished from `drawPage9` when the line moves. The rise follows the plan's own
+`currentPage` 10–14 gate (above); with the shipped modes (desktop `"pitch"`, mobile `"band"`) it is 0.
 
 - **Room — narrowest width that fits.** Tiers need roughly twice the cells, so
   the columns may grow **outward** toward the viewport edges at the native 4px
@@ -427,7 +427,7 @@ republished from `drawPage9` when the line moves. Only on @fold12
 - **The legit grid tiers too** (see above). Tiers off, its layout is the untouched
   *shuffled* free grid. Legit dots are seeded into the morph's from-map, so every
   legit dot flies to its packed spot and grows on the same clock as the columns.
-- **Morph.** Page 12 has no page7 anim loop, so the fold runs its own clock:
+- **Morph.** @fold12 has no page7 anim loop, so the fold runs its own clock:
   `p9.scopeMorph = {from, start, dir}` seeded from **every** entry in
   `p9.lastPositions`, extreme and legit alike (only the extreme ones change
   size), and driven by
@@ -466,17 +466,18 @@ republished from `drawPage9` when the line moves. Only on @fold12
   many seconds after it looks settled, so the snapshot taken when the reader left
   was a mid-animation layout and the reverse's hand-off re-packed the columns in one
   frame.
-- **Reset on page flip.** `p7SizeGridOnPage` forces `uniform: true` for pages 9–11
-  only when no reader override is set, and calls `p9ScopeSync()` only when the flag
-  actually moves (or on a flip above page 10). Tiers survive the @fold12 ↔ @fold13 trip.
+- **Reset on page flip.** `p7SizeGridOnPage` (page7.js) sets `uniform` from the scroll
+  fact (`fold11SizePast`) on `currentPage` 10–12 — on 11–12 a reader override
+  (`p7ScopeUserUniform`) outranks it — and leaves it alone on 13 (@fold12), where the
+  button is the only authority. It calls `p9ScopeSync()` only when the flag actually
+  moves, or on a flip to `currentPage` < 11. Tiers survive the @fold12 ↔ @fold13 trip.
 - **Mobile.** The desktop pill is hidden under 600px; the same toggle is a row in the
   מקרא panel (`fold6MobileScopeEl`, js/groups.js), and `p9ScopeSet` / `p9ScopeTiered`
   run on both breakpoints.
-  Mobile tiers differ in two ways (both `isMobile()`-gated, desktop untouched):
-  **the pitch grows** — `p9ScopeMobileCell` picks the largest `P9_SCOPE_CELL_STEPS_M`
-  multiple of `P9_CELL_M` at which both camps pack uncapped into their room and the column
-  height, and the in-block gap scales with it; and **the centre gap** drops to `P9_EXTREME_GAP_TIERED_M` (16px) plus the count-label
-  clearance, measured off the last drawn columns (`p9.scopeStats`).
+  Mobile tiers differ in one way (`isMobile()`-gated, desktop untouched): **the centre
+  gap** drops to `P9_EXTREME_GAP_TIERED_M` (16px) plus the count-label clearance, measured
+  off the last drawn columns (`p9.scopeStats`). The pitch stays native
+  (`P9_SCOPE_GROW_PITCH_M` false — see the legit-strip paragraph above).
 
 ## Dot migration — the two states
 
@@ -487,7 +488,7 @@ newCategoryIdx, newEventStagger, staggerEvents, baseLeft, baseRight}`.
 | | State 1 | State 2 |
 |---|---|---|
 | Condition | `p9.anim` was null at drop time | a previous drop was still animating |
-| Reposition | `STATE1_REPOSITION_MS` 2200 | `STATE2_REPOSITION_MS` 3400 |
+| Reposition | `STATE1_REPOSITION_MS` = `p9RepositionMs(count)`, tiered (`P9_REPOSITION_TIERS_*`: 2200 / 2200 / 1650 / 2200) | `STATE2_REPOSITION_MS` 3400 |
 | Sequencing | reposition finishes, *then* new dots fly (`phase2Start = now + REPOSITION_MS`) | new dots fly immediately, concurrent with the reposition (`phase2Start = now`) |
 
 > **State 1 is FINALIZED. Never touch it without explicit instruction.**
@@ -517,11 +518,11 @@ their **original** arrival times.
 **All branches lerp size, not just `plainGlide`.** `p9.lastPositions` records each dot's
 drawn size (`sq`, pre-DPR-snap) alongside `x`/`y`/`alpha`, and `p9PlaceDot` lerps from
 `from.sq` to the target size (`sizeOverride ?? SQ`) on the same per-dot eased clock as
-position. Without it, a dropped category's dots snapped from the legit resting size
+position. Without it, a dropped category's dots would snap from the legit resting size
 (`p9Metrics().legitSq` — 2px on ≤1600px desktop, 1px mobile) to the extreme grid's `SQ`
 on the first frame, before the flight began, and mirror-image on un-drop. On big desktop
-`legitSq === SQ`, so it's a no-op there — which is why the snap was only visible on the
-regular-desktop tier and mobile.
+`legitSq === SQ`, so it's a no-op there — the regular-desktop tier and mobile are where
+it matters.
 
 **Fly to the centre, then resize.** The flight lerps the dot's **centre**, not its top-left
 corner, and the drawn corner is recovered from that centre and the frame's *current* size.
@@ -542,8 +543,8 @@ Only the **tier** part (`SQ` ↔ crowd size, tiers on) is staged as below: the d
 the position beat is **compressed** into the first `P9_DROP_SIZE_START` (0.7) of its slot and
 is fully landed before the size beat runs over the remaining 30%; both slices come off the
 **raw** (pre-`p9Ease`) progress and are re-eased fresh. Slicing only the *size* off the tail
-of the shared clock was not enough: `p9Ease` is sine in-out, so raw 0.7 is already ~85% of the
-distance and the dot was still visibly drifting the last stretch while it grew. Measured at
+of the shared clock is not enough: `p9Ease` is sine in-out, so raw 0.7 is already ~85% of the
+distance and the dot would still be visibly drifting the last stretch while it grew. Measured at
 1440×900 with tiers on: size fraction 0.000 through 90% of travelled distance, all of it after
 the dot lands. On an un-drop the order is REVERSED, not mirrored — see "Removing a pill" below.
 A dot whose size doesn't change (big desktop, `legitSq === SQ`)
@@ -568,10 +569,10 @@ per-dot stagger, so on a big category nothing would resize for ~6s. `p9DropNow`,
 `P9_DROP_SIZE_MODE` and `P9_DROP_TIER_STAGGER_MS` are gone with them — **don't
 reintroduce**.
 
-The resize beat is a fixed **`P9_DROP_SIZE_MS` (450ms)** — @fold9's
-`P7_MORPH_SIZE_MS`, the same property — deliberately *not* a share of the drop's
-clock, for the same reason: a "30% tail" of a 13s staggered drop was a
-four-second grow. `P9_DROP_SIZE_START` (0.7) now only says *when* the size beat
+The resize beat is a fixed **`P9_DROP_SIZE_MS` (450ms)** — the same role as @fold9's
+`P7_MORPH_SIZE_MS` (335ms), a different value — deliberately *not* a share of the drop's
+clock, for the same reason: a "30% tail" of a 13s staggered drop would be a
+four-second grow. `P9_DROP_SIZE_START` (0.7) only says *when* the size beat
 starts, never how long it lasts, and it runs off wall time (`animSizeAt`, the
 absolute ms this dot's slot ends) rather than the clamped progress, so the
 window keeps its full length even past the end of the slot.
@@ -579,19 +580,19 @@ window keeps its full length even past the end of the slot.
 **Dropping back to legit** is much simpler: a flat `DOT_DURATION = 3000` ms plain glide
 with no stagger, and an 800 ms count-down animation running concurrently (started
 `COUNT_DELAY` 300 ms in, so the dots visibly launch first) — not after the flight, which
-left the numbers on screen ~4 s past the drop.
+would leave the numbers on screen ~4 s past the drop.
 
 Scroll-driven reset/restore (`p9ResetDrops` / `p9RestoreDrops`, driven from
 `page9UpdateFromScroll` with `page9SavedAboveIdxs`) both seed a plain 3000 ms glide.
 **The reset's flight survives the flip to @fold11**: the un-stick fires above the title's
-mid-screen flip, so the flight is in the air when `currentPage` becomes 11 — `drawNow`
-(js/core.js) keeps routing page 11 to `drawPage9` while `p9.anim` runs (and the bridge
+mid-screen flip, so the flight is in the air when `currentPage` becomes 12 — `drawNow`
+(js/core.js) keeps routing `currentPage` 12 to `drawPage9` while `p9.anim` runs (and the bridge
 glide is landed), and `p9RunAnimLoop` paints there too; `drawPage8`'s landed pass would
 otherwise paint every dot at its rest cell in one frame.
 
 **Scrolling into @fold13 does not freeze a running migration.** Every page9 animation
 loop (`p9RunAnimLoop`, `p9LineRunLoop`, both count loops, the count-position animator)
-paints while `p9PageVisible()` — currentPage 9 **or** 10 — because `drawPage12` renders
+paints while `p9PageVisible()` — `currentPage` 13 **or** 14 — because `drawPage12` renders
 through `drawPage9`, so a mid-flight drop keeps flying and finishes on @fold13's canvas.
 If @fold13's card reaches mid-screen mid-flight, `fold13Trigger`'s morph wins
 regardless: `updateFold13` snapshots the live `p9.lastPositions` (mid-flight spots) as
@@ -618,8 +619,8 @@ pointer and the keyboard can never drift apart.
   additionally ignores arrows aimed at a field, a `contenteditable`, or a `.page9-pill` (which has
   its own keyboard handler). **While a migration runs (`p9.anim`) the arrows are swallowed**
   — `preventDefault()` and return, no step: the hover is off then (`p9BulgeTick` gates on
-  `!p9.anim`), and returning BEFORE `preventDefault()` let the browser scroll ~20px a press
-  and carried the reader out of the fold into @fold13's fade mid-flight. Idle, it calls
+  `!p9.anim`), and returning BEFORE `preventDefault()` would let the browser scroll ~20px a press
+  and carry the reader out of the fold into @fold13's fade mid-flight. Idle, it calls
   `preventDefault()` only once it has a dot to move to.
 
 **Dot hover** (`p9HoverInit`): live on every fold the grids are drawn on — `p9HoverPageOk()`:
@@ -670,34 +671,34 @@ strip only — tiered, the dots already are their crowd size and `p9BulgeTick` r
 (`rawLeft` both ways, `rawTop`, and the flipped `top`) are computed from the dot's centre
 ±`halfX`, where `halfX = Math.max(p9HoverGrownSize(ev), pos.sq) / 2` — the same half-extent the
 hit box uses. With the flat square corner and edge are the same thing to the eye, but under
-«הצגת גודל האירועים» a block is tens of px wide and anchoring rightward to `pos.x` laid the box
-*on* the block (the mirrored side only looked right because `pos.x` **is** that side's edge).
+«הצגת גודל האירועים» a block is tens of px wide and anchoring rightward to `pos.x` would lay the box
+*on* the block (the mirrored side only looks right because `pos.x` **is** that side's edge).
 `p9BulgeSize` is live-eased, so the box tracks a growing bulge rather than jumping to its end
 size. Same fix, same reason as @fold9's size grid in `p7HoverInit` (`ownSq`/`halfX`,
 `page7.js`) — keep the two in step.
 
-Dimming: a dot hover drops everything else to `hoverDim(actor)` — `HOVER_DIM_OPACITY` 0.2
+Dimming: a dot hover drops everything else to `hoverDim(actor)` — `HOVER_DIM_OPACITY` 0.27
 unless that group overrides it in `HOVER_DIM_BY_ACTOR` (`js/core.js`); a pill hover drops
 non-matching dots to the same per-actor floor, only ramped: `1 - (1 - hoverDim(actor)) *
 hoverDimT` over `HOVER_DIM_MS` 80 with no easing curve at all — at `hoverDimT = 1` the two
-hover kinds dim identically. `p9HoverDimAnimate` also calls `updateGroups()` so the fold-6
-squares dim in step (their parity branch in `js/update-groups.js` mirrors the same formula).
-A fold-6 DOM square whose event's category is currently classified extreme is hidden
-outright on this fold (`opacity = 0` in that same branch, `currentPage >= 12`, also while any
+hover kinds dim identically. `p9HoverDimAnimate` also calls `updateGroups()` so @fold5's
+sample squares dim in step (their parity branch in `js/update-groups.js` mirrors the same formula).
+A sample square whose event's category is currently classified extreme is hidden
+outright on this fold (`opacity = 0` in that same branch, `currentPage >= 13`, also while any
 `p9.anim` runs) — the square only ever blends to its `p9LegitPosOf` band spot, so when its
-canvas twin flies to the extreme column it otherwise stays parked on the band as one
-permanently-bright dot (exempt from both the pill-hover dim and fold13's legit fade). The
+canvas twin flies to the extreme column it would otherwise stay parked on the band as one
+permanently-bright dot (exempt from both the pill-hover dim and @fold13's legit fade). The
 canvas twin, drawn at the same pixel underneath, represents the event instead.
 The dot tooltip/hover is fully suppressed mid-drag (`.dragging` on `.page9-sticky` bails
 `p9HoverInit`'s `onMove`) — a pill carried across the canvas doesn't light up dots under it.
 `commitDrop` is a no-op past re-docking the chip when the drop doesn't actually reclassify
 (extreme pill released back in the extreme zone, tray pill back in the tray) — running
-`commitDropState` there replayed the whole drop sequence for dots that weren't moving and
-scrambled any animation still in flight.
+`commitDropState` there would replay the whole drop sequence for dots that aren't moving and
+scramble any animation still in flight.
 A pill grabbed OUT of the extreme zone additionally **holds** the canvas half of its hover
 state (dim + category-only counts) for the whole drag via `p9.holdPillHoverDim`
 (`p9HoverInit`), released on pointerup by `p9.releasePillHoverDim` (not `setPillHover(null)`,
-whose `hoveredCatPill` early-return no-ops when the hold bypassed it) — otherwise the dots and count labels sprang back to
+whose `hoveredCatPill` early-return no-ops when the hold bypassed it) — otherwise the dots and count labels would spring back to
 their unhovered state the instant the drag started, before anything was reclassified.
 
 **Hover bulge** (`p9BulgeTick` / `p9BulgeSize`, page9.js — desktop only): the hovered
@@ -713,15 +714,15 @@ reads `p7.hoveredEvent`); it schedules its own `requestAnimationFrame(draw)` whi
 is still tweening, since `p9RunAnimLoop` only runs during `p9.anim` (and hover is off then).
 The size and shifted target are applied in `drawBandedCols` at the call into `p9PlaceDot`
 (`sizeOverride` + moved x/y) — `p9PlaceDot`'s animation branches, including the finalized
-state 1, are untouched. **Desktop: the bulge never crosses the divider** — the mirror of the
+state 1, are untouched. **Mobile's extreme columns stand `P9_COL_LINE_PAD_M` (2px) clear of the divider** (`p9ScopeBox`'s `anchorY = midY − 2`; desktop anchors on `midY`): on the line itself the 1px stroke ate the bottom row's gap and the dots touched it. **The bulge never crosses the divider, at both breakpoints (mobile picks ride the same column path)** — the mirror of the
 legit strip's `gridTopY` clamp: the grown dot's bottom edge is pinned to the resting bottom
 row's line (`anchorY − gap − size`), so it grows UPWARD past that point with x still centred,
 and a neighbour shoved downward is held on that same line instead of dipping under `midY`.
 The hovered dot is painted **last** (the `deferred` pattern from `drawJumbledBot`) so held
 neighbours never cover it. Mobile's picker-driven bulge keeps its unclamped path. `posMap` therefore records the pushed positions, so the hit-test
 follows the shoved dots; the hovered dot's hit box is its **grown** box and wins outright,
-otherwise the cursor sitting in the white space the bulge opened dropped the hover and the
-grid flickered between dimmed and full. The flipped tooltip hangs below the grown box
+otherwise the cursor sitting in the white space the bulge opened would drop the hover and the
+grid would flicker between dimmed and full. The flipped tooltip hangs below the grown box
 (`bestPos.sq`).
 
 **Tray-pill hover** (`p9CategoryTooltipInit`) is scoped to `#page9ZoneBelow` only, shows
@@ -734,7 +735,7 @@ The `pointerover` half is **desktop-only** (`if (isMobile()) return;`). On mobil
 
 ## Desktop layout V2
 
-The desktop layout in force today. The pills move to a bare band under the titles — no tray
+The shipping desktop layout. The pills sit in a bare band under the titles — no tray
 card, just a rule beneath them — the drop zone stays **vertical, in the center gap between the
 two extreme column-blocks**, and the legit shuffle keeps its ordinary free-dot grid in a **shorter strip**, so the same
 dots simply read denser. **Interaction, animation timing and the finalized state-1 drop are
@@ -776,15 +777,16 @@ is a `vh` fraction, so the header's own bottom outgrows the constant on a tall v
 
 ### Geometry
 
-Every V2 arm sits beside the existing mobile arm in the same four accessors; **no mobile arm
-was touched**.
+Every V2 arm sits beside the mobile arm in the same four accessors; **the mobile arms are
+separate code paths**.
 
 - `p9LegitGeometry` → **unchanged for V2**: `const bar = mobile`, so V2 falls through to the
   ordinary desktop free-dot grid hanging off the divider (`gridTopY = midY + LEGIT_LINE_PAD`,
   running to the bottom edge; the mobile spread strip halves that divider
   clearance to 1px — its finer 1px dots make the full 2px read as a blank band).
   `p9LegitBarH` stays mobile-only.
-- `p9MidY` → `max(p9ExtremeTopY(H) + P9_CELL*8, H - P9_LEGIT_H_V2)`; `P9_MID` is unused in V2.
+- `p9MidY` → `p9MidYBase` = `max(p9ExtremeTopY(H) + P9_CELL*8, H - p9LegitHV2())`, minus
+  the tier plan's `rise` when the tiers are on (see Crowd tiers); `P9_MID` is unused in V2.
   That is the *only* legit-grid change: a shorter strip, so `visibleRows` drops and the
   shuffle packs denser in the same pitch. The divider stroke still draws at `midY`.
 - `p9ExtremeTopY` → `p9TrayTopV2() + p9TrayH() + P9_TRAY_ZONE_GAP_V2 + P9_ZONE_GRID_GAP_V2 +
@@ -805,49 +807,50 @@ was touched**.
   `p9TrayGrid()`** (build loop, `p9MeasureTrayLayout`, `placePillInZone`, `p9ResetDrops`) —
   never the constant directly.
 - **Pill look (all desktop widths, `@media (min-width: 601px)` block after the tight tier in
-  style.css):** **16px, weight 400** — outranks the 20/18px tiers below, so the tiers no
-  longer change the font; a **4-dot (2×2) grip of 2.5px dots** (spans 5–6 hidden; the
-  collapsed-handle width is 7px); **no rule under the band** (`.page9-tray::after` hidden).
+  style.css):** **16px, weight 400** — its `.page9-layout-v2.page9-layout-v2` specificity
+  outranks the 18px and tight-tier font rules below, so neither changes the font; a
+  **4-dot (2×2) grip of 2.5px dots** (spans 5–6 hidden; the engaged handle width is 7px);
+  **no rule under the band** (`.page9-tray::after` is `display: none`).
   Pills are 16px side padding with an 8px gap between them. The row keeps **≥40px from each screen edge** (`P9_TRAY_EDGE_MARGIN`): when it would not, `p9MeasureTrayLayout` shrinks only the side padding (`--p9-pill-pad` on `<html>`, floor `P9_PILL_PAD_MIN` 6px) — text and gap never change. Labels are `white-space: nowrap` — a pill never wraps. The drag ghost gets the identical rules. Mobile keeps its own pill styles.
 - **Regular-desktop tier (≤1600px):** `window.innerWidth <= P9_DESKTOP_REGULAR_MAX` (1600,
-  `p9IsRegularDesktop()`). **TRIAL under judgment:** the tier currently keeps the single-row
-  `P9_TRAY_GRID_V2` with pills shrunk to **18px** by the `@media (max-width: 1600px)` rule in
-  style.css's V2 block (tray and zone pills both — the zone reserve is measured off tray
-  pills). The alternative — the **5/5 two-row** `P9_TRAY_GRID` at 20px,
-  row gap 18px→10px — is the documented fallback inside `p9TrayGrid()` if the trial is
-  rejected. The JS and CSS 1600s must stay in sync. Crossing the cutoff on resize
-  re-slots live via the existing resize → `p9RemeasureTray` → `p9ApplyTrayGrid` chain.
-  The tier also shrinks the **legit strip**: height `P9_LEGIT_H_V2_REGULAR` (110) instead of
+  `p9IsRegularDesktop()`). **TRIAL under judgment:** the tier keeps the single-row
+  `P9_TRAY_GRID_V2`. The `@media (max-width: 1600px)` rule in style.css's V2 block still
+  declares **18px** pills (and a 10px row gap, inert with row 2 empty), but the 16px
+  all-desktop rule above outranks the font, so it is dead CSS. The alternative — the
+  **5/5 two-row** `P9_TRAY_GRID` — is the documented fallback inside `p9TrayGrid()` if the
+  trial is rejected. The JS and CSS 1600s must stay in sync. Crossing the cutoff on resize
+  re-slots live via the resize → `p9RemeasureTray` → `p9ApplyTrayGrid` chain.
+  The tier's live effect is on the **legit strip**: height `P9_LEGIT_H_V2_REGULAR` (110) instead of
   `P9_LEGIT_H_V2` (150), read everywhere through `p9LegitHV2()`, **paired** with a finer legit
   pitch via `p9Metrics()` — `P9_LEGIT_CELL_REGULAR` 3 / `P9_LEGIT_SQ_REGULAR` 2 (base: 4/3).
-  The two must move together: at the base 4px pitch the ~14.5k events already need ≈150px on a
+  The two must move together: at the base 4px pitch the 12,283 events already need ≈150px on a
   ~1500px-wide viewport, and the shuffle never drops dots when short on room (`legitRows =
   max(visibleRows, rowsNeeded)`) — overflow rows clip invisibly below the viewport, so a
   shorter strip alone silently loses dots. Capacity goes with 1/cell², so 110px at 3px holds
-  more cells than 150px at 4px. All consumers (page8's glide end-size, the fold-11 handoff,
+  more cells than 150px at 4px. All consumers (page8's glide end-size, @fold11's bridge glide,
   the shuffle pools) read the pitch through `p9Metrics().legitCell`/`.legitSq` or the geometry
   object, so the tier propagates without per-consumer changes; the shuffle pools rebuild
   automatically when the cell count changes on resize.
-- **Tight tier (measured, no breakpoint):** when even the 18px single row is wider than
-  the viewport, pills drop to **16px** via `.page9-pills-tight`, toggled by
-  `p9MeasureTrayLayout` on `.page9-sticky` **and** on `<body>` (the drag ghost lives on
-  `<body>`, outside the panel's class scope — same reason the 18px media rule lists the
-  ghost separately; both 16px rules sit right after that media block in style.css).
-  There is deliberately no media query: the overflow point depends on the ten Hebrew
+- **Tight tier (measured, no breakpoint):** `p9MeasureTrayLayout` toggles
+  `.page9-pills-tight` on `.page9-sticky` **and** on `<body>` (the drag ghost lives on
+  `<body>`, outside the panel's class scope) when the single row is wider than the
+  viewport. Its CSS sets **16px** — the same size the all-desktop rule already forces at
+  every width, so the class changes nothing visible; the measurement below is what
+  remains live. There is deliberately no media query: the overflow point depends on the ten Hebrew
   labels' rendered widths, so the measure pass reads `trayRows[0].offsetWidth` with
   `white-space: nowrap` forced on the rows (tray pills can wrap, so a constrained grid
   would otherwise compress to fit and never report an overflow) and compares it to
   `document.documentElement.clientWidth`. The class is always **removed before the read**,
-  so the decision is made at the regular font in both directions — deciding from a 16px
-  measurement on the way back up would fit again and flap. The nowrap is **held through
+  so the decision is made at the untightened font in both directions — deciding from a
+  tightened measurement on the way back up would fit again and flap. The nowrap is **held through
   the track bake** and released only after the fixed tracks are written: releasing it
   right after the tight read let viewport pressure wrap the labels during the per-pill
-  offsetWidth reads, and the bake then sealed those narrow wrapped widths into the tracks
-  permanently — the same too-narrow-columns trap as the stale-track clearing above, via
-  viewport pressure instead of stale tracks. V2/desktop only (`p9IsV2()` gate); mobile
-  keeps its own 16px rule and scrolling row. Pills never wrap in any tier; below the
-  16px row's own natural width (~1300px viewport) the centered row overflows both screen
-  edges instead.
+  offsetWidth reads, and the bake would then seal those narrow wrapped widths into the
+  tracks permanently — the same too-narrow-columns trap as the stale-track clearing below,
+  via viewport pressure instead of stale tracks. V2/desktop only (`p9IsV2()` gate); mobile
+  keeps its own 16px rule and scrolling row. Pills never wrap in any tier; when the row is
+  still too wide, `P9_TRAY_EDGE_MARGIN` shrinks the side padding (see the pill-look bullet)
+  and past that floor the centered row overflows both screen edges.
 - Both `.page9-tray-row` wrappers are still built in every layout; V2 just leaves row 2
   empty and `.page9-layout-v2 .page9-tray-row:empty { display: none }` hides it, so a resize
   across 600px never has to rebuild DOM. `p9ApplyTrayGrid()` (called at the top of
@@ -860,15 +863,14 @@ was touched**.
   (sine in-out — the hero dots' own pop) delayed by `--p9-pop-i × 60ms`, where
   `--p9-pop-i` is set by `p9BuildPanel` from `P9_TRAY_GRID_V2[idx].col − 1` (0 = the
   rightmost pill, first in RTL reading order), so the crest travels **right → left**.
-  Un-crossing mirrors the delays (leftmost shrinks first). The bottom rule is a
-  `.page9-tray::after` (1px `rgba(90,90,90,0.18)`, full-bleed) scaled from
-  `transform-origin: right` over `9×60+280 = 820ms` **linear**, so its leading edge keeps
-  pace with the constant pill stagger. The rules are scoped to `.page9-tray .page9-pill`
-  so a pill docked in `#page9ZoneAbove` is unaffected; `prefers-reduced-motion` drops both
-  transitions. **The pop fires one fold early** — on `.pills-in`, not `.engaged`; see
+  Un-crossing mirrors the delays (leftmost shrinks first). The V2 block still carries a
+  `.page9-tray::after` bottom-rule draw-in (1px `rgba(90,90,90,0.18)`, full-bleed, scaled
+  from `transform-origin: right` over `9×60+280 = 820ms` linear), but it is **inert on
+  desktop**: the all-desktop pill-look rule sets that `::after` to `display: none`. The pop
+  rules are scoped to `.page9-tray .page9-pill` so a pill docked in `#page9ZoneAbove` is
+  unaffected; `prefers-reduced-motion` drops the transitions. **The pop fires one fold early** — on `.pills-in`, not `.engaged`; see
   "Two-beat reveal" below. **No card chrome** (per explicit request): full-bleed `width: 100vw`,
-  transparent background, no radius and no border other than that rule — the same
-  treatment the ≤600px block gives the mobile band. `.page9-tray-title` is hidden, padding is `14px 0`, and the
+  transparent background, no radius, no border and (on desktop) no rule. `.page9-tray-title` is hidden, padding is `14px 0`, and the
   `:has(.dragover)` card tint is neutralized (there's no card to tint) — **except while
   dragging a pill OUT of the extreme zone**: `p9BuildPanel`'s pointerdown puts
   `.dragging-from-above` on `.page9-sticky` for that direction, and then the legit band is
@@ -885,7 +887,8 @@ was touched**.
   it so it sits level with the columns it divides. The zone box also carries `max-height: 100%`,
   so when the full ten-pill reserve is taller than the band, it clamps to the band instead of
   poking past both ends. `--p9-v2-legit-h` is published by
-  `p9MeasureTrayLayout` from `P9_LEGIT_H_V2`, never hand-synced. `#page9ZoneAbove`'s
+  `p9MeasureTrayLayout` as `innerHeight − p9MidY(...)` (and republished from `drawPage9`
+  when the tier plan moves the line), never hand-synced. `#page9ZoneAbove`'s
   base `margin-bottom: 20px` goes to 0.
 - **When the clamped box is shorter than its stack, the zone scrolls** — `overflow-y: auto`
   on the V2 zone rule, active only in that circumstance (a short viewport where
@@ -949,7 +952,7 @@ was touched**.
   visually; the reserve still uses `maxPillWidth`, which is the widest of them.)
 - `p9MeasureTrayLayout` **releases the tray rows' fixed grid tracks before measuring**:
   the tracks it writes are baked px widths from the previous run, and a resize that grows
-  the pill font (crossing 1600px upward, 18px→20px, or 600px, 16px→20px) leaves labels wider
+  the pill labels (a font change across a breakpoint, or `--p9-pill-pad` relaxing) leaves labels wider
   than their baked track — they'd wrap and `offsetWidth` would re-bake the clamped wrapped
   width. Clearing first restores natural one-line widths for the reads; the tracks are
   re-applied from the fresh numbers at the end.
@@ -960,12 +963,12 @@ was touched**.
 
 - **page8's bridge glide** lerps its end dot size to `legitGeom.cell` whenever
   `legitGeom.mode === "bar"`, so dots land on the bar at exactly the
-  size `drawPage9` keeps drawing them — no 1px pop. That's a **mobile-only** path today
-  (V2 isn't a bar); V2 lands at `P9_SQ` and needs nothing
+  size `drawPage9` keeps drawing them — no 1px pop. That's a **mobile-only** path
+  (V2 isn't a bar); V2 lands at its legit size and needs nothing
   extra since page8 targets via `p9LegitGeometry`/`p9LegitPosOf`.
-- **`updateFold13`'s tray slide-out** (js/fold11.js) exits **upward** whenever the tray is a
-  top band — `isMobile() || p9IsV2()` — using `p9TrayTopV2()` as the offset in V2 (mobile
-  keeps its 112).
+- **`updateFold13` fades the tray in place** (js/fold11.js): an inline `opacity` of
+  `1 − eScroll` with `transition: none`, at both breakpoints, alongside the header, title
+  card, zone wrap and legend — no translate. Cleared at `eScroll = 0`.
 
 ## Mobile
 
@@ -982,7 +985,7 @@ would raise selection handles and the Copy bar *over* the drag. Nothing in the t
 reading material; the title card lives in `.text-col`, outside it, and stays selectable.
 This is the same suppression the graphic column carries for @fold8's loupe.
 
-- `p9Metrics()` → `{ SQ: 1, CELL: 2, legitCell: 1.5, legitSq: 1 }` with the spread flag on
+- `p9Metrics()` → `{ SQ: P9_SQ_M (1.5), CELL: P9_CELL_M (2), legitCell: 1.5, legitSq: 1 }` with the spread flag on
   (bar mode: `legitCell`/`legitSq` both `LEGIT_CELL_M` 1; desktop `{3, 4, LEGIT_CELL, 3}`).
   `legitSq` is the legit grid's own dot size — `drawJumbledBot` passes it through
   `p9PlaceDot`'s `sizeOverride`, and page8's glide lands its dots on it.
@@ -1000,7 +1003,7 @@ This is the same suppression the graphic column carries for @fold8's loupe.
 
 ### The dropped pill's ✕ — not enabled (desktop)
 
-**Not live.** A dropped pill ships with the 6-dot grip on the right and no ✕. The whole
+**Not live.** A dropped pill ships with the 4-dot (2×2) grip on the right and no ✕. The whole
 feature is built and kept behind one switch that nothing adds, because the decision is
 deferred, not made.
 
@@ -1009,7 +1012,7 @@ page9.js). That is the only change — every pill already carries a
 `<span class="page9-pill-x">` (`p9BuildPanel`, page9.js), `display: none` until the gated
 rules match. See the `OPTIONAL` block in style.css.
 
-**What it does when on.** The ✕ **replaces the 6-dot grip** at the pill's right-hand end
+**What it does when on.** The ✕ **replaces the 4-dot grip** at the pill's right-hand end
 (`order: -1` — lower order = further right in this RTL row), chosen over two left-hand
 placements. The reasoning: a dropped pill's one
 gesture is a click that returns it to the tray, which is what a ✕ announces and what a
@@ -1023,7 +1026,7 @@ the pill's own `pointerdown`, which is what starts a drag.
 
 Its box is `--p9-x-size` (24px) wide and **zero** tall. The height is the subtle part: a
 dropped pill is auto-height, so it takes the height of its tallest item — and a 24px ✕ box is
-taller than the label's line box, which grew the whole pill. At `height: 0` it contributes
+taller than the label's line box, which would grow the whole pill. At `height: 0` it contributes
 nothing on the cross axis; the pill's `align-items: center` centres the empty box on the
 label's line and the glyph overflows it evenly. Width still counts, which is the point: the ✕
 takes horizontal room, never vertical. At rest it is `currentColor` at 0.55 opacity, so it
@@ -1069,8 +1072,8 @@ instead of closing. On touch there is no "left the tray" to detect anyway. `show
 `#page9ZoneAbove`, which is inert here — that zone is `display: none` on mobile.
 
 **It paints above everything, on both breakpoints** — `z-index: 1006`, clearing the docked
-event tooltip (1000), the cards bumped over it (1001) and the open מקרא panel (1002). The
-number only bites because `#page9CatTooltip` is a direct `.layout` child rather than
+event tooltip (1000) and, on mobile, the title cards bumped over it (1004/1005); the מקרא
+layer (`.fold6-mlegend-layer`) is also 1006 on mobile. The number only bites because `#page9CatTooltip` is a direct `.layout` child rather than
 nested in `.graphic-col`, whose stacking context would trap it. Being
 `pointer-events: none`, sitting on top costs the card underneath nothing. The desktop
 ladder otherwise inverts (explicit instruction: title blocks over every tooltip) — the
@@ -1083,7 +1086,7 @@ The popover hangs below its pill **unconditionally on mobile and in desktop V2**
 (`p9IsV2() || isMobile() || above < 8`; only the `P9_LAYOUT_V2 = false` desktop path can
 place it above, and only when there's room) — both bands sit high, but not always so high
 that the fits-above test fails on its own; without the forced branch a one-line description
-on mobile passes it and angles up over the title while taller ones angle down (explicit
+on mobile would pass it and angle up over the title while taller ones angle down (explicit
 instruction: all angle down).
 `.is-below` moves its arrow from the box's bottom edge to its top so it still points at the
 pill.
@@ -1102,15 +1105,15 @@ pill.
 Figma node 290-409: two ~7px bars, one per camp, meeting at the viewport centre and running
 to the edges along the bottom. `p9LegitGeometry` returns a second shape for it —
 `mode: "bar"` — and `p9LegitPosOf` branches on that; everything downstream (page8's glide,
-the fold9 square lerp, fold11's outro) keeps calling the same two functions.
+@fold5's sample squares' blend, @fold13's fade in js/fold11.js) keeps calling the same two functions.
 
 - **Height is fixed, not derived:** `LEGIT_BAR_ROWS_M` 4 rows × `LEGIT_CELL_M` 1px = 4px, so
   `p9LegitBarH()` is a constant (it still takes `W`, ignored, so callers needn't branch).
   It sits flush with the viewport's bottom edge — `gridTopY` is `H - p9LegitBarH(W)`, with no
   tray term, the tray being a top band on mobile — and needs no CSS var; nothing in
   `style.css` reads the bar height.
-- **Real dots, oversubscribed.** Each half holds `cols × 4` ≈ 790 cells against 5,325 /
-  9,126 events, so several events share a cell and overdraw. That overdraw is what makes the
+- **Real dots, oversubscribed.** Each half holds `cols × 4` ≈ 790 cells against 5,552 /
+  6,731 events, so several events share a cell and overdraw. That overdraw is what makes the
   bar read as solid, and it lets the height be a design choice rather than a consequence of
   the dataset size.
 - **Bar dots draw at the pitch, not at `P9_SQ_M`.** `p9PlaceDot` takes a `sizeOverride`
@@ -1126,7 +1129,7 @@ the fold9 square lerp, fold11's outro) keeps calling the same two functions.
   exactly. The snap is applied **after** `posMap.set`, so recorded positions (and therefore
   the next animation's `from`) stay unquantized.
 - **At rest the bar isn't dots at all — it's one solid rect per segment.** Even with the
-  pitch + snap above, ~14k individually painted 1px dots all have to tile perfectly for a
+  pitch + snap above, ~12k individually painted 1px dots all have to tile perfectly for a
   colour boundary to read as one vertical line, and residual per-dot artifacts kept the
   seams ragged. So when `p9.anim` is null (`barAtRest` in `drawPage9`), `drawJumbledBot`
   passes `p9PlaceDot` a `recordOnly` flag — the full interpolation/`posMap` bookkeeping
@@ -1172,7 +1175,7 @@ the fold9 square lerp, fold11's outro) keeps calling the same two functions.
 - **The reflow animates for free.** Those surviving dots are already in `p9.anim.from`
   (a copy of `p9.lastPositions`, which `p9PlaceDot` fills for legit dots too), so they glide
   through `p9PlaceDot`'s "existing dot repositioning" branch; with no `orderIndex` passed it
-  degrades to an unstaggered glide. **No change to the FINALIZED state 1 was needed.**
+  degrades to an unstaggered glide. **The FINALIZED state 1 is untouched.**
 - The rank cache is keyed on `p9.sides.join(",")` — rebuilt on a tap, not on a resize
   (rank is resize-independent) and not per frame. The seeded shuffles are never built on
   mobile; `p9LegitGeometry` returns before them.
@@ -1193,10 +1196,10 @@ since a media query adds no specificity and a bare `.page9-handle` loses the cas
 
 **The selection circle** (`span.page9-pill-check`, built for every pill, `display: none` on
 desktop) is what makes that in-place toggle legible: a 12px `currentColor` **hard square** (`--p9-check-size` 12px,
-`--p9-check-radius` 0 — tuned by eye on device; it started as an 18px circle) on the pill's **right** edge — the first DOM child after the hidden handle, so RTL puts it in the slot the
+`--p9-check-radius` 0 — tuned by eye on device) on the pill's **right** edge — the first DOM child after the hidden handle, so RTL puts it in the slot the
 grip dots vacate, with the ⓘ on the left. The ⓘ beside it stays round, deliberately — one informs, the other records a choice. Empty
 outline at rest; `.is-extreme` fills it **solid black** on the pill's own **light grey**
-(`#E3E3E3`) — the fill is the whole signal. The pill deliberately does NOT take desktop's
+(`#E1E1E1`, `--line-light` — the same grey as the מקרא sheet's rows) — the fill is the whole signal. The pill deliberately does NOT take desktop's
 black dropped look on mobile: the square inside it is the thing that has to read as "ticked",
 and on black it could only be white — inverted from every other mark on the fold, so a
 *selected* pill looked like the odd one out. Grey lets the square go the same ink as the
@@ -1214,19 +1217,20 @@ go through it — querying `#page9ZoneAbove` directly would silently no-op on mo
 The **divider stroke draws on mobile too** (same right-to-left grow-in via
 `p9TriggerLine`/`page9LineT`), sitting at `p9MidY` on the top edge of the legit strip.
 `p9HoverInit` is off; the touch equivalent is the
-same press-and-hold loupe as `@fold8`, generalized from fold-8-only via `p7InspectPage()`
-(pages 7 **and** 9) and `p7InspectSource()` (which positions/half-size/`maxY` to read).
-`drawPage9` therefore ends with `p7InspectSync?.()`, and `keepEmptyFrame` in
-`js/update-groups.js` is `currentPage <= 12` so the docked empty tooltip frame carries through
-the bridge fold into `@fold12`.
+same press-and-hold loupe as `@fold8`, via `p7InspectPage()` (live while the timeline is
+live **or** `currentPage === 13`) and `p7InspectSource()` (which positions/half-size/`maxY`
+to read). `drawPage9` therefore ends with `p7InspectSync?.()`, and `keepEmptyFrame` in
+`js/update-groups.js` is `currentPage <= 14` so the docked empty tooltip frame carries through
+the bridge fold into `@fold12` and on through `@fold13`.
 
 ## Two-beat reveal — `.pills-in` (@fold11) then `.engaged` (@fold12)
 
 The panel does **not** arrive all at once, on **either breakpoint**. Two classes on
 `.page9-sticky`, two folds:
 
-- **`.pills-in` — @fold11's crossing.** `page8CheckScroll` (`js/page8-9-scroll.js`) already
-  watches `#page-12 .section-title` passing viewport centre; it toggles `.pills-in` there,
+- **`.pills-in` — @fold11's crossing.** `page8CheckScroll` (`js/page8-9-scroll.js`)
+  watches `#page-12 .section-title`'s centre passing the `foldFracNow("fold11")` line (0.75
+  of the viewport height); it toggles `.pills-in` there,
   **ungated** — desktop V2 and mobile both. That class makes the band `visible` and runs the
   pill pop-in described above — the band carries no chrome in V2, and mobile's rule is held
   back to @fold12 (it is an `::after`, not a `border-bottom`, exactly so it can be), so on
@@ -1234,7 +1238,7 @@ The panel does **not** arrive all at once, on **either breakpoint**. Two classes
   no pill is draggable (desktop) or tappable (mobile) yet. Scrolling back up removes it and
   the pills shrink away, mirrored. **On mobile they arrive at the top as a wrapped
   block, not as the finished row** — see [The block and the convoy](#the-block-and-the-convoy--mobile) below.
-  **The pills arrive bare** — no 6-dot grip handle on desktop, and on mobile neither the ⓘ
+  **The pills arrive bare** — no grip handle on desktop, and on mobile neither the ⓘ
   nor the selection circle. Nothing is classifiable on this fold, so those would advertise
   affordances the fold can't honour; all three are @fold12's beat instead (below), and the
   pill is narrower by exactly their footprint here.
@@ -1249,8 +1253,8 @@ The panel does **not** arrive all at once, on **either breakpoint**. Two classes
   **On mobile that is not one moment but two, per explicit instruction: the pill convoy
   plays alone, and only when it has parked does the rest arrive.** `.training` is the gate —
   p9TrainToggle holds it for the run, and every held-back piece keys off
-  `.engaged:not(.training)` in style.css: the `::after` rule (now on its own `--p9-rule-ms`
-  clock, no longer scaled over the convoy's length), `.page9-zone-wrap-extreme`,
+  `.engaged:not(.training)` in style.css: the `::after` rule (its own clock,
+  `var(--p9-rule-ms, 560ms)` linear — nothing sets the var), `.page9-zone-wrap-extreme`,
   `.page9-header`, and the two pill affordances. The docked frame's step-down is the one
   piece that is not CSS, so `p9TrainToggle`'s settle handler calls `p9SyncTooltipDrop()`
   directly — a reader who has stopped scrolling gets no further tick to fire it on.
@@ -1259,7 +1263,7 @@ The panel does **not** arrive all at once, on **either breakpoint**. Two classes
 
   Desktop and reduced motion are untouched by the split: neither ever gets `.training`
   (p9TrainToggle bails before adding it), so `:not(.training)` is always true and those rules
-  read exactly as plain `.engaged` did.
+  read exactly as plain `.engaged`.
 
 The two breakpoints share `--p9-pop-i` (`P9_TRAY_GRID_V2[idx].col - 1`, page9.js) — the same
 number mobile's flex `order` uses — so index 0 is the rightmost pill and the crest travels
@@ -1279,7 +1283,7 @@ layouts:
   line, all ten pills visible, popping **top to bottom** (`--p9-pop-col-i`). Two details are
   load-bearing rather than cosmetic:
 
-  - **Centred horizontally**, and sitting at the band's own `top: 116px` — so the column's
+  - **Centred horizontally**, and sitting at the band's own `top: 96px` — so the column's
     **top pill and @fold12's row share a level**. That is what makes the convoy read: the top
     cabin is already where it is going vertically, so its climb is a no-op and it simply
     slides, and every cabin below it rises to a line that was visible all along. The column
@@ -1308,9 +1312,8 @@ layouts:
   of it: both tray grids place every pill explicitly and ignore `order` entirely.
 
   The column's gap is **14px** and the finished row's **8px** — separate on purpose, both
-  tuned by eye on device (both were 6). **Removed — don't reintroduce:** the four-row wrapped
-  block this replaced, and centring the column (it makes "only up and left" impossible, see
-  above). It stays at the band's own `top: 116px` — the pills arrive at the
+  tuned by eye on device. **Removed — don't reintroduce:** the four-row wrapped
+  block this replaced. It stays at the band's own `top: 96px` — the pills arrive at the
   **top** of the screen and the convoy reshapes the run in place, rather than carrying it up
   from somewhere else. (A `66vh` waiting spot below the card was tried and **rejected**:
   don't reintroduce it.) At @fold11's own crossing the centred card starts just below the
@@ -1335,14 +1338,14 @@ layouts:
   `P9_TRAIN_ACROSS_SPEED` (3.2 px/ms) — so every cabin moves at the same pace and simply takes
   as long as its own distance needs. That is the second half of the no-collision guarantee,
   and it is a guarantee rather than a tuning. Vertically, equal speed means consecutive cabins
-  hold the column pitch they started with all the way up; a fixed duration made a cabin five
-  slots down cover five times the distance in the same time and close on the one above it.
+  hold the column pitch they started with all the way up; a fixed duration would make a cabin
+  five slots down cover five times the distance in the same time and close on the one above it.
   Horizontally, cabin *k*'s slot is one pill-pitch right of *k−1*'s and *k* departs later, so
   at equal speed *k* can never catch *k−1* — and the gap it settles into *is* the resting
-  pitch. A fixed duration made the long-haul cabins ~18× faster than the short ones and they
-  drove straight through the queue. **Removed — don't reintroduce:** a minimum leg duration
+  pitch. A fixed duration would make the long-haul cabins ~18× faster than the short ones and
+  drive them straight through the queue. **Removed — don't reintroduce:** a minimum leg duration
   (`P9_TRAIN_MIN_LEG_MS`). A floor slows *short* legs only, which is exactly where cabins are
-  closest together, and it broke the invariant it was meant to protect.
+  closest together, and it breaks the invariant it is meant to protect.
 
   `P9_TRAIN_LEAD_MS` is 90, the third leg of the guarantee: a cabin must clear the junction
   before the one behind climbs into it. Speeding the cabins up and shortening the lead
@@ -1350,8 +1353,7 @@ layouts:
   arrives is `ACROSS_SPEED × (lead + one slot's climb)`, and the climb term shrinks by exactly
   the factor `UP_SPEED` grows by, so raising both speeds leaves it unchanged and only
   `ACROSS_SPEED × lead` moves. The whole run measures **1140ms with zero overlapping pill
-  pairs**, tuned down from 1920ms (0.8/1.6/140) via 1430ms (1.2/2.4/110) — every step
-  re-measured for collisions rather than reasoned about.
+  pairs** — any retune is re-measured for collisions rather than reasoned about.
 
 **English page:** the convoy is the same one mirrored about the screen's centre line — the row starts at the left (`.lang-en #page9ZoneBelow` is `direction: ltr`), the queue within a column row is leftmost first (`p9TrainOrder`), and the cabins travelling RIGHT are the ones that climb first (`upFirst`, `p9TrainToggle`). Speeds, lead and phases are shared.
 
@@ -1365,36 +1367,34 @@ layouts:
   y (top to bottom, `P9_TRAIN_ROW_EPS` 6px of slack against sub-pixel noise), then by x
   descending as a tie-break. With one pill per row the tie-break never fires — it is kept
   because it is what makes the sort correct for any multi-column block. Each cabin leaves `P9_TRAIN_LEAD_MS` (90) after the
-  one ahead; the total is computed per run from the real distances and written to is published as `--p9-train-total` and is what the band's rule
-  scales in over.
+  one ahead; the total is computed per run from the real distances and published as
+  `--p9-train-total` on the sticky (no CSS rule reads it; the band's rule runs on
+  `--p9-rule-ms`).
 
 Standard **FLIP**, because the layout itself changes: measure the block, flip `.engaged`,
 measure the row, play the pills back from where they were. `p9TrainToggle` therefore owns the
 `.engaged` toggle (the measurement has to straddle it) and `page9UpdateFromScroll` calls it
 instead of toggling the class directly — falling back to a plain toggle on desktop, with no
 pills built yet, or under reduced motion. Nothing about DOM order or the flex `order`
-changes, only transforms, so the tap/drop machinery underneath is untouched. Departure order
+changes, only transforms, so the tap/drop machinery underneath is untouched.
 The reverse is the mirror in **both** senses: the order flips (the last cabin in is the first
 to pull out) *and* the phases swap, so it runs sideways back out of the row first and only
 then drops into the column. `.training` on the sticky suspends the pills' pop transition for the
 duration, per the house rule for anything JS repaints every frame.
 
-**`.training` also suppresses the band's own 0.85s slide**, and that one is load-bearing
-rather than tidiness. `p9TrainToggle` adds `.pills-in` itself, right before it measures, to
-cover an engage that never got a tick over @fold11's crossing — a jump, or a fast scroll
-straight into @fold12. With the transition live the tray would still be animating out of its
-hidden pose (`translate(-50%, calc(-100% - 116px))`, parked off the **top** edge) at measure
-time, and the FLIP would faithfully read the pills up there: every cabin then flew in from
-above the screen instead of rising out of the column. Suppressed, the class lands instantly
-and the measurement is the real column. Scoped to `.page9-tray` itself, so the band rule's
-`::after` scale-in over `--p9-train-total` is untouched. (`page9UpdateFromScroll` still adds
-`.pills-in` on engage as well; that call runs *after* this one, which is too late to be
-measured.)
+**`.training` also sets `transition: none` on the band itself** (`.page9-sticky.training
+.page9-tray`). The mobile band never translates (see below), so what this governs is its
+`visibility` transition. `p9TrainToggle` adds `.pills-in` itself, right before it measures,
+to cover an engage that never got a tick over @fold11's crossing — a jump, or a fast scroll
+straight into @fold12 — and with no transition the class lands instantly, so the
+measurement is the real column. Scoped to `.page9-tray` itself, so the band rule's
+`::after` scale-in is untouched. (`page9UpdateFromScroll` still adds `.pills-in` on engage
+as well; that call runs *after* this one, which is too late to be measured.)
 
 **`.training` must also lift `#page9ZoneBelow`'s `overflow`.** At rest the row is
 `overflow-x: auto` — that scroller is the whole point of the finished band — and that box
-*is* the row, so every pill translated outside it is clipped: seven of the ten flew through
-clipped space and simply vanished mid-journey. `.page9-sticky.training .page9-tray
+*is* the row, so every pill translated outside it is clipped: seven of the ten would fly through
+clipped space and vanish mid-journey. `.page9-sticky.training .page9-tray
 #page9ZoneBelow { overflow: visible }` for the run, the scroller back the moment the train
 settles. The third class is for specificity alone — the reverse run is `:not(.engaged)` the
 whole way, and that rule sets `overflow-x: hidden` at the same weight, so without it the
@@ -1403,40 +1403,41 @@ train would be clipped leaving @fold12 but not arriving.
 **`p9TrayH()` always reports the band's ROW height on mobile, never its live box.** The band
 has two shapes there, and everything downstream of that number — `p9DockTopM`, and through it
 `p9ExtremeTopY` and `p9MidY`, i.e. the whole mobile dot layout — is geometry the dots have to
-hold across *both* folds. Reading the live box let @fold11's ~506px column shove the dot field
-~440px down the screen, so the legit strip never appeared on that fold at all and the column
-landed on top of the dots; it only snapped right once @fold12 collapsed the band to a row. The
+hold across *both* folds. Reading the live box would let @fold11's ~506px column shove the dot
+field ~440px down the screen, so the legit strip would never appear on that fold and the column
+would land on top of the dots, snapping right only once @fold12 collapsed the band to a row. The
 row height is the same arithmetic the CSS does (the tray's padding plus one pill), and a pill
 is the same height in both shapes — the ⓘ sets it, and only its *width* collapses at @fold11.
 
 **The mobile band does NOT slide.** Its transform is the at-rest `translate(-50%, 0)` in
 both states and it is simply invisible until `.pills-in` — the same thing desktop V2 does,
 and load-bearing for two separate reasons. The entrance *is* the pills popping (scale 0→1);
-a band that also flew down from off the top edge read as the whole column "animating in from
-the top", and got louder the taller the column grew. And the slide took 0.85s, so a brisk
-scroll reached @fold12 while it was still running — the FLIP then measured the pills mid-air,
-up off the screen, and every cabin flew in on a diagonal. **Removed — don't reintroduce:**
+a band that also flies down from off the top edge reads as the whole column "animating in from
+the top", louder the taller the column grows. And a slide is still running when a brisk
+scroll reaches @fold12 — the FLIP would then measure the pills mid-air, up off the screen,
+and every cabin would fly in on a diagonal. **Removed — don't reintroduce:**
 `transform: translate(-50%, calc(-100% - 116px))` plus a `transform` transition on
-`.page9-tray` in the 600px block. (`js/fold11.js`'s inline slide-out at @fold13 is the one
-thing that still translates this band, which is why the `visibility` delay still outlasts it.)
+`.page9-tray` in the 600px block. Nothing translates this band — @fold13's exit is
+`updateFold13`'s in-place opacity fade (js/fold11.js).
 
-**Both breakpoints: the tray is `visibility: hidden` until it is revealed.** Its hidden resting
-state is a percentage of its OWN height (`translate(-50%, 100%)` on desktop,
-`translate(-50%, calc(-100% - 112px))` on mobile), and on a refresh that height isn't final
-yet: `p9MeasureTrayLayout` writes the rows' pixel height at `DOMContentLoaded` and **again**
-at `document.fonts.ready` (Assistant loads `display: swap`). Until then the box is too short
-for 100% to clear the edge, so the pill rows peek past it — and when the corrected height
-re-resolves the translate, the 0.85s `transform` transition *animates* that difference, so
-the tray visibly slides away while @fold1 is still on screen. `.page9-tray` therefore carries
-`visibility: hidden` with a `visibility 0s linear 0.85s` delay (so it outlasts the
-slide-out — `updateFold13` never removes `.engaged`), and `.page9-sticky.engaged .page9-tray`
-flips it visible with no delay. The ≤600px block re-declares both halves for the band. Don't
-drop the delay — the tray would vanish instantly mid-slide-out.
+**Both breakpoints: the tray is `visibility: hidden` until it is revealed.** On the
+`P9_LAYOUT_V2 = false` desktop path its hidden resting state is `translate(-50%, 100%)`, a
+percentage of its OWN height, and on a refresh that height isn't final yet:
+`p9MeasureTrayLayout` writes the rows' pixel height at `DOMContentLoaded` and **again** at
+`document.fonts.ready` (Assistant loads `display: swap`). Until then the box is too short for
+100% to clear the edge, so the pill rows would peek past it — and when the corrected height
+re-resolves the translate, the 0.85s `transform` transition would *animate* that difference,
+sliding the tray away while @fold1 is still on screen. `.page9-tray` therefore carries
+`visibility: hidden` with a `visibility 0s linear var(--tray-ms)` (0.85s) delay, so the band
+outlasts its own exit (the pills' shrink in V2 and on mobile, the slide on the legacy path),
+and the reveal rule (`.pills-in` in V2 and on mobile, `.engaged` on the legacy path) flips it
+visible with no delay. The ≤600px block re-declares both halves for the band. V2 and mobile
+never translate the tray.
 
 **The tray also ships at `opacity: 0`, lifted by `.is-measured`.** The `visibility` guard
-above is necessary but was observed *not sufficient* on mobile: on a phone refresh the tray,
-`#page9ZoneBelow` and the pills all painted over @fold1 and dropped out one at a time as each
-measurement landed. So `.page9-tray` carries a second, independent gate — `opacity: 0` in the
+above is necessary but *not sufficient* on mobile: on a phone refresh the tray,
+`#page9ZoneBelow` and the pills can paint over @fold1 and drop out one at a time as each
+measurement lands. So `.page9-tray` carries a second, independent gate — `opacity: 0` in the
 base rule, `.page9-tray.is-measured { opacity: 1 }` — and `p9RevealTray` (page9.js) adds that
 class one `requestAnimationFrame` after the `document.fonts.ready` measure pass, i.e. once the
 corrected height has actually been committed. Opacity specifically, **not** `display: none`:
@@ -1447,9 +1448,10 @@ would zero out. The reveal waits on **both** `document.fonts.ready` and `DOMCont
 `.is-measured` never lands, leaving every pill invisible for the whole visit. If
 `document.fonts` is missing the reveal falls back to `window load`, so the tray can never be
 stranded invisible. `.is-measured` is deliberately separate from `.engaged`
-— it only asserts "the hidden transform now really hides"; whether the tray is on screen stays
-`.engaged`'s job. Nothing writes an inline opacity on the tray (`updateFold13` fades the
-header, title card, zone wrap and legend, never this), so nothing competes with it.
+— it only asserts "the tray's height is now real"; whether the tray is on screen stays
+`.pills-in` / `.engaged`'s job. `updateFold13` (js/fold11.js) does write an inline opacity on
+the tray — `1 − eScroll` during @fold13's fade — which overrides `.is-measured` only while the
+fade runs and is cleared back to `''` at `eScroll = 0`, so the two never conflict at rest.
 
 ## Removed — don't reintroduce
 

@@ -302,8 +302,10 @@ In those ambiguous cases, prefer הפרות סדר.
 
 HAND-REVIEW RULES (Fortress log, 2026-10-03):
 - Taking over an inhabited house while the family is inside -> החזקה בכפייה.
-- Arson of houses, structures, vehicles or between houses (fire SET, not gunfire) -> פגיעה ברכוש,
-  never תקיפה בנשק חם (that is for live fire only).
+- Arson of houses, structures, vehicles or between houses (fire SET, not gunfire) with nobody
+  inside or directly endangered -> פגיעה ברכוש. Fire set to an INHABITED house or an OCCUPIED
+  vehicle, a Molotov thrown at people or houses with people in them, and fireworks thrown at
+  people are תקיפה בנשק חם — see the ARSON RULE and FIRE AT PEOPLE RULE in section 9.
 - "מטען" on an aid truck / convoy means CARGO, not an explosive: dumping or throwing the cargo is
   פגיעה ברכוש.
 - Waste, rubbish or "objects" thrown at a house -> הפרות סדר.
@@ -341,7 +343,7 @@ PASSIVE-VOICE RULE (source logs written from the victims' side):
 "A Palestinian was attacked / shot / run over", "stones were thrown", "a house was set on
 fire" with no attacker named means the MAIN ACTOR did it — classify the act, do not
 drop to a lower category because the sentence has no subject. A settlement security
-guard, security coordinator (רבש"ץ) or "settlers in uniform" count as the main actor.
+guard, security coordinator (רבש״ץ) or "settlers in uniform" count as the main actor.
 
 DISPLACEMENT-OUTCOME RULE:
 "The family left / the community was displaced after repeated attacks" with no concrete
@@ -439,8 +441,11 @@ Anything that burns or explodes, LAUNCHED OR THROWN AT A PERSON — a firework, 
 a flare, a burning torch, a Molotov cocktail — is תקיפה בנשק חם, the same class as gunfire,
 whether or not it hit. Fireworks fired DURING A RIOT OR CLASH WITH POLICE ("threw stones and
 fireworks and clashed with police", "threw stones at officers, fired fireworks") count as aimed
-at the police -> תקיפה בנשק חם. Only fireworks set off with no confrontation around them
-("fireworks were set off during the celebration / while chasing people out") stay as they are.
+at the police -> תקיפה בנשק חם. Fireworks set off with no person named as their target and no
+clash with police around them ("set off fireworks near the synagogue", "fireworks during the
+celebration", "set off fireworks while chasing people out") are NOT a hot-weapon attack: the
+fireworks count as הפרות סדר, and the event is classified by the main actor's other acts (if the
+same crowd also threw stones at people or buildings -> תקיפה בנשק קר).
 - stun grenade used with no identified human target -> הפרות סדר
 - bottles thrown generically during clashes with no clear human target -> הפרות סדר
 
@@ -512,42 +517,37 @@ Use פוגרום only when the MAIN ACTOR is explicitly a LARGE CROWD, MOB, MASS
 
 and the attack includes violence against people, homes, vehicles, businesses, or the civilian environment.
 
-פוגרום requires ALL FOUR, performed by the MAIN ACTOR and EACH STATED EXPLICITLY in the text
-(hand rule 2026-10-04 — a pogrom is a very heavy accusation; if any element has to be
-inferred, it is not a pogrom):
-1. A CROWD OF 30 OR MORE — "dozens", "hundreds", "thousands", or a stated number of 30+.
-   (15 or 20 attackers, "tens", "a group", "several settlers", or NO size stated at all is
-   NOT a crowd for this purpose — hand rule 2026-10-04.)
-2. VIOLENCE AGAINST PEOPLE — beatings, stone-throwing at people or inhabited houses,
-   gunfire, pepper spray — with victims present.
-3. FIRE — houses, tents, vehicles, fields or buildings in the community SET ON FIRE.
-4. PROPERTY DESTROYED — the fire or other acts damaged or destroyed homes, vehicles,
-   businesses or crops (stated, not assumed).
+פוגרום requires ALL FOUR of the following, performed by the MAIN ACTOR and EACH STATED
+EXPLICITLY in the text (hand rule 2026-10-04 — a pogrom is a very heavy accusation; if any
+element has to be inferred, or when in doubt, it is NOT a pogrom):
+1. A CROWD OF 30 OR MORE, WITH ITS SIZE GIVEN — "dozens", "hundreds", "thousands", or a stated
+   number of 30+. 15 or 20 attackers, "tens", "a group", "several settlers", or NO size stated
+   at all is NOT a crowd for this purpose — however severe the attack. ("Tens" is read as 30
+   when crowd sizes are counted, but it does NOT meet the pogrom crowd bar.)
+2. PALESTINIANS INJURED OR KILLED BY THE MAIN ACTOR — stated in the text. Injuries caused only by
+   soldiers or police, or only the attackers hurt, do not count; "no casualties" rules it out.
+   Beatings, stones or gunfire with no injury stated do not meet this element.
+3. FIRE, NAMED — homes, tents, vehicles, structures or fields in the community SET ON FIRE,
+   with what burned named (not just "set fire to property").
+4. CONCRETE DETAIL — enough specifics to judge the event (a one-line "wave of attacks including
+   arson, stones and assaults" with no specifics is NOT enough).
 
 All four during a raid on a village, community, neighbourhood or farm = פוגרום
 (e.g. 50 settlers beat residents injuring 2 AND burn 7 vehicles -> פוגרום; the same by
-20 settlers -> תקיפה פיזית, by a crowd of unstated size -> classify the acts themselves).
+20 settlers -> classify the acts themselves, by a crowd of unstated size -> classify the acts
+themselves).
 
 NOT a pogrom:
-- a crowd that only burns EMPTY property with nobody attacked -> פגיעה ברכוש
+- a crowd that only burns EMPTY property with nobody hurt -> פגיעה ברכוש
 - a crowd that only beats or stones people with no fire -> תקיפה פיזית / תקיפה בנשק קר
 - a mass march or demonstration in a city that turns violent (a flag march where
   marchers beat passers-by) -> classify the violence itself
 - "attacked a community" with no mechanism -> הפרות סדר
-- a small group (under 30) however violent, or a raid whose size is not stated
+- a small group (under 30) however violent, or a raid whose size is not stated, or "tens"
 
-When all four conditions hold, פוגרום is the answer (it is top of the hierarchy).
-
-POGROM STANDARD (user, 2026-10-04 — a pogrom is a very heavy accusation; when in doubt, it is
-NOT a pogrom). ALL of these must be stated in the text itself:
-- a crowd of 30+ with its size given (no stated size = not a pogrom, however severe);
-- Palestinians injured or killed BY THE MAIN ACTOR (injuries caused only by soldiers/police, or
-  only settlers hurt, do not count; "no casualties" rules it out);
-- fire set to homes, vehicles, structures or fields — named, not just "set fire to property";
-- enough concrete detail to judge (a one-line "wave of attacks including arson, stones and
-  assaults" with no specifics is NOT enough).
-Missing any one -> classify the most serious act described (gunfire -> תקיפה בנשק חם, stones or
-clubs at people -> תקיפה בנשק קר, beatings -> תקיפה פיזית, arson of property -> פגיעה ברכוש).
+Missing any one element -> classify the most serious act described (gunfire -> תקיפה בנשק חם,
+stones or clubs at people -> תקיפה בנשק קר, beatings -> תקיפה פיזית, arson of property ->
+פגיעה ברכוש). When all four hold, פוגרום is the answer (it is top of the hierarchy).
 
 
 SEVERITY HIERARCHY
@@ -573,7 +573,7 @@ Before returning the category, verify:
 1. Am I classifying an action performed by the supplied MAIN ACTOR?
 2. Did I accidentally use an action performed by a secondary actor?
 3. If several MAIN ACTOR actions occurred, did I choose the highest-ranked applicable category?
-4. Did I apply the special rules for threats/intimidation, stones (incl. at houses), bottles, stun grenades, fireworks, firecrackers, eggs/smoke/unspecified objects, pepper spray vs. chemicals vs. tear-gas launchers, "armed" without use, fire at houses, arson, injuries from property destruction, livestock, protest barriers, land appropriation vs. symbolic crossings, incursions into villages, brief seizure vs. sustained holding, ramming, and the four-part pogrom test?
+4. Did I apply the special rules for threats/intimidation, stones (incl. at houses), bottles, stun grenades, fireworks, firecrackers, eggs/smoke/unspecified objects, pepper spray vs. chemicals vs. tear-gas launchers, "armed" without use, fire at houses, arson, injuries from property destruction, livestock, protest barriers, land appropriation vs. symbolic crossings, incursions into villages, brief seizure vs. sustained holding, ramming, and the four-part pogrom test (stated crowd of 30+, Palestinians injured/killed by the main actor, named fire, concrete detail)?
 
 Return exactly one allowed event type.
 

@@ -369,6 +369,8 @@ def build_jobs(ws):
     desc_col = find_col(headers, ["Description", "description"], required=True)
     he_col = find_col(headers, ["description_he_medium"], required=False)
     recl_col = find_col(headers, ["reclassify"], required=False)
+    hidden_col = find_col(headers, ["hidden"], required=False)
+    dhand_col = find_col(headers, ["description_hand"], required=False)
 
     jobs = []
     for excel_row in range(2, ws.max_row + 1):
@@ -380,8 +382,18 @@ def build_jobs(ws):
         description = norm(ws.cell(excel_row, desc_col).value)
         if not description:
             continue
+        # Same live-row filter as 02/05/07: never a "not relevant" (or blank) actor,
+        # never a hidden row, never a row whose Hebrew was set by hand (a date in
+        # description_hand) — those are hand decisions a re-run must not overwrite.
+        if not actor or actor == "not relevant":
+            continue
+        if hidden_col and norm(ws.cell(excel_row, hidden_col).value):
+            continue
+        if dhand_col and norm(ws.cell(excel_row, dhand_col).value):
+            continue
         # ROW SELECTION: translate only rows with no Hebrew yet, or reclassify = yes
-        # (set by 04 after a split; 03 is the last step, so download clears it).
+        # (set by 04 after a split; 02 runs before this step and leaves the flag, so
+        # this step's download clears it — 05/06/07 select by their own columns).
         recl = norm(ws.cell(excel_row, recl_col).value).lower() == "yes" if recl_col else False
         if not recl and he_col and norm(ws.cell(excel_row, he_col).value):
             continue

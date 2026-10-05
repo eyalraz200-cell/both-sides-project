@@ -11,7 +11,7 @@ the mtimes of every `.html`/`.css`/`.js` file at the project root **and under `j
 (recursively)**; `reload.js` polls `/__mtime__` to auto-reload the browser on any change to
 them. It rebuilds `events.json` from the xlsx at startup and rewrites the committed file when
 the content changed (commit it — see [Data](Data.md)) — but does **not** watch the xlsx, so
-spreadsheet edits need a restart. The workbooks are ACLED-licensed and gitignored — local-only; without them the server serves the committed `events.json` as-is (see [Data](Data.md#data-licensing--the-xlsx-are-local-only-never-committed)). `--port` and `--watch` narrow a second
+spreadsheet edits need a restart. The workbook (`events.xlsx`) is ACLED-licensed and gitignored — local-only; without it the server serves the committed `events.json` as-is (see [Data](Data.md#data-licensing--the-xlsx-are-local-only-never-committed)). `--port` and `--watch` narrow a second
 instance (next section).
 
 ### One worktree + one server per chat (`--port 0`)
@@ -32,9 +32,9 @@ open that worktree's `_debug-panel.html` on the same port.
 
 ### Auto-reload is OFF by default (`reload.js`)
 
-Several Claude sessions edit this one checkout at once, and every save used to reload every
-open tab — so reading or tuning in one tab was interrupted by work happening in another.
-A tab now reloads itself **only** while its auto-reload switch is on:
+Several Claude sessions edit this one checkout at once, so reloading every open tab on
+every save would interrupt reading or tuning in one tab with work happening in another.
+A tab reloads itself **only** while its auto-reload switch is on:
 
 - The switch lives at the foot of the harness panel's rail, and as
   `window.setAutoReload(on)` on the page. It is **per tab** (`sessionStorage`), so one tab
@@ -85,8 +85,8 @@ Don't remove the gate.
 
 ## Link previews (Open Graph)
 
-Both entry points carry `og:*` + `twitter:*` meta tags in `<head>` so WhatsApp/X/Facebook
-render a preview card. There is one card per language, both **2400×1260** (2× of the
+All three pages — `index.html` (Hebrew), `en/index.html`, `ar/index.html` — carry `og:*` +
+`twitter:*` meta tags in `<head>` so WhatsApp/X/Facebook render a preview card. There is one card per language, both **2400×1260** (2× of the
 1200×630 card): `og-image-v3.png` (Hebrew, `index.html`) and `og-image-en-v2.png` (English,
 `en/index.html`; the Arabic page `ar/index.html` reuses `og-image-v3.png` until an Arabic card is shot). Both are headless shots of the artboard `_og-card.html` — the title in
 Discordia Regular on a dashed plate over two dot columns, with a secondary line in Assistant — «פרויקט בשיתוף» / "A project in partnership with" — and העין השביעית's wordmark (`seventh-eye-logo-wide.png`) under it; the description text also credits the partnership — at `?bare=1` (Hebrew) and
@@ -95,14 +95,14 @@ Chromium at `--window-size=1200,630 --force-device-scale-factor=2`. Platforms ca
 image by URL, so a changed card only reaches already-shared links under a new filename (hence the version suffix; bump it again on the next change).
 `og:image` must be an absolute URL, so the
 tags hardcode the live GitHub Pages base — `https://eyalraz200-cell.github.io/both-sides-project/`.
-If the site ever moves, those four URLs (two per file) are the only things to update; the
+If the site ever moves, those twelve URLs (four per file: `link rel="canonical"`, `og:url`,
+`og:image`, `twitter:image`) are the only things to update; the
 @fold15 share buttons build their URLs from `location.href` (`p12ShareInit`, page12.js) and
 follow the deploy automatically.
 
-`og:description` / `twitter:description` are the **same sentence on both pages**, and it
-quotes the event count as a **hardcoded number** (currently 10,418 — `len(events.json)`).
-Nothing recomputes it, so re-check it whenever either xlsx is regenerated or the preview
-card starts advertising a count the timeline no longer holds.
+`og:description` / `twitter:description` (and `<meta name="description">`) are written per
+language and say "thousands" of actions — no hardcoded event count, so regenerating the
+xlsx needs no edit here.
 
 ## Verifying a change
 
@@ -129,8 +129,9 @@ Switched off it is **gone — no dot, no chip** (**removed — don't reintroduce
 **DEV ONLY — it must NEVER appear on the deployed site** (explicit, binding instruction).
 The gate is `isLocalHost()` (js/core.js): js/nav.js only looks the element up when that is
 true, so on any public host `foldNumberBadge` is `null`, neither `.is-visible` nor
-`.is-dot` is ever added, and the base rule's `display: none` holds. Both the Ctrl+Shift+F
-listener and the picker live inside that same branch, so nothing can switch it back on — a
+`.is-dot` is ever added, and the base rule's `display: none` holds. Both the keyboard toggle
+(**bare `F`**, ignored while typing in a field, or **Ctrl+Shift+F**) and the picker live
+inside that same branch, so nothing can switch it back on — a
 stale `foldNumberBadgeVisible: "1"` in a visitor's `localStorage` included. `isLocalHost()`
 counts loopback, `file://`, `.local` Bonjour names and the private LAN ranges (a phone
 hitting the Mac at `http://192.168.x.x:8080` is still development); everything else is not
@@ -142,26 +143,20 @@ having run. Keep the two in sync.
 screen.** No `@fold` prefix, no page id, no label.
 
 **Clicking or tapping it opens the fold PICKER, on BOTH breakpoints** — a list of all 16
-folds that jumps to the one you pick (`foldPickerInit`, js/nav.js). It used to be
-mobile-only because Ctrl+Shift+F "covered" desktop, but that shortcut only toggles the
-badge and never navigates, so desktop had no fold jump at all. The badge is therefore
-`pointer-events: auto` now; it is a ~30×20 chip in a corner where no canvas interaction
+folds that jumps to the one you pick (`foldPickerInit`, js/nav.js). The keyboard toggle
+never navigates, so the picker is the fold jump on desktop too. The badge is
+`pointer-events: auto`; it is a ~30×20 chip in a corner where no canvas interaction
 lives (the drag zone, the timeline and the legend all sit further in). Rows are built from
-the sections themselves — the number plus that fold's own `.section-title`, with the
-`.copy-desktop` half of any breakpoint-split headline stripped out, falling back to the
-section id for the folds that carry no title card (@fold1 and @fold8) — so the list cannot
-drift out of step with `index.html`. The current fold is marked and scrolled to inside
+the sections themselves (hidden ones skipped) — the fold number plus that section's entry
+in `FOLD_NAMES` (js/nav.js, one plain-words name per section, `page-0` … `page-17`,
+falling back to the section id) — so the numbering cannot drift out of step with
+`index.html`. The current fold is marked and scrolled to inside
 the panel, so it opens oriented. A click outside, Escape, or picking a row dismisses it.
-The panel is capped at **340px** wide on desktop (a fixed box shrink-to-fits, and the long
-Hebrew titles stretched it most of the way across the viewport); mobile keeps its
-`calc(100vw - 24px)`.
+The panel is capped at **340px** wide on desktop (a fixed box shrink-to-fits, and long
+labels would stretch it across the viewport); mobile keeps its `calc(100vw - 24px)`.
 
-**Dismissing leaves a 7px dot, never nothing.** The panel's last row hides the badge and
-Ctrl+Shift+F still toggles it, but either way it collapses to a dot in the same corner
-rather than vanishing — clicking the dot brings the number back. Without that there was no
-way to switch the badge on again on a phone, which has neither Ctrl nor Shift. Same rule
-the harness panel's chip follows: never un-dismissable. The state persists in
-`localStorage` under `foldNumberBadgeVisible`.
+The panel's last row hides the badge. The state persists in `localStorage` under
+`foldNumberBadgeVisible`.
 
 The jump is **animated** (`FOLD_PICKER_SCROLL_MS`, 700ms, fixed duration rather than fixed
 speed), never an instant `scrollTo`, for the same reason harnesses must not jump on load: an
@@ -178,9 +173,7 @@ numbers in the source.
 
 1. Copy `~/.claude/templates/harness-panel.js` → `_debug-<thing>.js` in the project root.
    **Regenerating an existing harness from a newer template** = its head up to `END CONFIG`
-   + the template's tail — but a viewport-gated harness ends in `});`, not the template's
-   `})();`. Get that wrong and every global in the file dies with an opaque
-   "(intermediate value) is not a function" on load.
+   + the template's tail.
 2. Splice the new CONFIG between `var CONFIG = {` and the `END CONFIG` marker line.
    Fields: `title`, `sliders[{key, label, min, max, step, value, source}]`,
    `apply(v, mode, tab, on)`, `init(api)`, `custom(box, api, doc)`, `summary(v, mode)`,
@@ -191,22 +184,25 @@ numbers in the source.
    Copy / Reset / ↺ / undo need nothing extra); a segment's right edge drags its knob,
    the fields under the lanes take a typed ms. It is plain data, so it crosses the bus —
    unlike `custom`, which only the on-page panel can run.
-3. Insert `if (window.innerWidth < 900) return;   // desktop-only layout` immediately
-   after `(function () {`.
-4. Add `<script src="_debug-<thing>.js"></script>` at the end of `index.html`'s script
-   list.
+3. Set `CONFIG.viewport` (`'desktop'`, `'mobile'` or `'both'`) — the template gates the
+   injection itself.
+4. Add `"_debug-<thing>.js"` to the dev loader's array at the foot of `index.html`
+   (`["_debug-bus.js", "_debug-inspect.js", …]`, inside the local-host-only inline
+   script, after the bus and the inspector). Never a plain `<script>` tag outside that
+   block — it would ship to the deployed site. `_harness_files()` in server.py reads the
+   names from that array.
 5. Verify with `node --check` + `curl`.
 
 **Rules (non-negotiable):**
 
 - Floating, draggable, position remembered — and so are the **modes, slider values,
   toggles and active tab** (`localStorage`, per panel title, saved on every change and
-  restored on boot): the dev server auto-reloads the page on every file edit, and a harness
-  that forgot its state on reload made Copy report defaults the user never picked. Reset
+  restored on boot): a harness that forgot its state on a reload (auto-reload, `r`, or a
+  manual one) would make Copy report defaults the user never picked. Reset
   returns to the last checkpoint (the state at the last Copy, or the loaded state before any
   Copy) — never to the shipped values unless Shift is held. Buttons in fixed order: **Go · Copy · Reset ·
   Pop out · Hide** (`H` toggles hide; the chip is always clickable back).
-- **`remoteOnly: false` is the default** in `CONFIG` (user's standing choice, 2026-09-24):
+- **`remoteOnly: false` is the default** in `CONFIG` (user's standing choice):
   the harness paints its floating panel on the page. The `_debug-panel.html` tab still
   works alongside it. Set `remoteOnly: true` only on explicit request for a page with no
   chrome on it — then `H` summons the panel when no panel tab is open.
@@ -219,8 +215,9 @@ numbers in the source.
   jump in `init`. An instant jump skips pinned/scrubbed sections and latches them into
   their end state, so later folds sit stuck on screen and the page looks broken *because
   of the harness*.
-- Each knob is labeled with its `file:line` + current value; **Copy** puts a paste-ready
-  summary on the clipboard so numbers are never read off the screen by hand.
+- Each knob carries its `file:line` in `source` (not drawn — see below) and shows its
+  current value; **Copy** puts a paste-ready summary, `source` included, on the clipboard
+  so numbers are never read off the screen by hand.
 - **Copy carries only the knobs that are live.** A slider may declare `when(mode, T)`; a
   false answer keeps it out of the payload, and the `summary()` bake line lists only the
   keys the current combination reads. Every knob in the paste is one the pick depends on.
@@ -231,28 +228,24 @@ numbers in the source.
   combination. Changing a mode re-renders the list.
 - **Declare the breakpoint, don't hand-roll the gate.** `CONFIG.viewport` is `'mobile'`,
   `'desktop'` or `'both'` (the default), and the template injects the harness only where
-  its knobs mean something. The gate **waits** for the breakpoint rather than bailing —
-  DevTools device emulation is switched on after load, and a one-shot check made the
-  harness silently never exist (and never answer discovery, so it was missing from the
-  panel too) until a reload. The panel's rail marks anything that is not `'both'`. A
-  harness on the page but gated to the OTHER breakpoint still answers discovery as
-  **dormant**, and the rail lists it greyed with `mobile only` / `desktop only` — so an
-  empty-looking rail says why instead of reading as "nothing exists". The main area keeps
-  a hint (inspect an element) whenever nothing is open.
-- Gate the harness on the viewport it actually tunes — a desktop panel must not render on
-  a phone. **The gate WAITS, it does not bail.** DevTools device emulation is normally
-  switched on *after* the page has loaded, so a one-shot check at load time makes the
-  harness silently never exist (and never answer the `harness:__all__` discovery ping, so
-  it is missing from the panels tab too) until a reload. Wrap the body in a boot function
-  and let a `matchMedia` listener start it the moment the window crosses the breakpoint.
+  its knobs mean something — a desktop panel must not render on a phone. **The gate
+  WAITS, it does not bail:** DevTools device emulation is normally switched on *after*
+  load, so a one-shot check would make the harness silently never exist (and never answer
+  the `harness:__all__` discovery ping, so it would be missing from the panel tab too)
+  until a reload; a `matchMedia` listener starts it the moment the window crosses the
+  breakpoint. The panel's rail marks anything that is not `'both'`. A harness on the page
+  but gated to the OTHER breakpoint still answers discovery as **dormant**, and the rail
+  lists it greyed with `mobile only` / `desktop only` — so an empty-looking rail says why
+  instead of reading as "nothing exists". The main area keeps a hint (inspect an element)
+  whenever nothing is open.
 - If a harness tunes *when* something fires, draw the threshold on the page: a short tick
   in the margin plus a live marker, colored by state. Never a full-width rule across the
   artwork being judged.
 - Bake the **exact px** chosen. Never convert to vh/vw/clamp — the tuning viewport is
   unknown and a converted value re-evaluates differently.
-- Delete the file **and** its `<script>` tag once the decision is made. It never ships.
-  **A pasted Copy IS the decision:** bake the values and remove the harness in the same
-  turn, without asking and without leaving it "in case" (explicit instruction, 2026-09-28).
+- Delete the file **and** its name in the dev loader's array once the decision is made. It
+  never ships. **A pasted Copy IS the decision:** bake the values and remove the harness in
+  the same turn, without asking and without leaving it "in case" (explicit instruction).
 
 ### Pop out, and the remote panel tab
 
@@ -280,8 +273,7 @@ for — the **remote panel**:
   `who` on a shared `harness:__all__` channel; each harness answers with its title and
   becomes a row in the rail, **labelled with its fold** above its name (`@fold8` /
   `dot size and glow`) — `CONFIG.fold`, or lifted out of the Go label when that names one.
-  A vertical list stays readable as harnesses accumulate; the old top strip wrapped into a
-  block.
+  A vertical list stays readable as harnesses accumulate.
 - **Name a harness for a person, not for the filesystem.** `CONFIG.label` is what the rail
   shows — plain words for the thing being tuned (`axis draw-in`, `legend sheet colour`).
   `CONFIG.title` stays the bus channel and the Copy header, and stands in when no label is
@@ -290,8 +282,8 @@ for — the **remote panel**:
   the repo". The panel cannot touch files: it POSTs `/__trash__` and `server.py` appends the
   request (file, title, label, fold, time) to **`_debug-trash.json`** (untracked). A
   `UserPromptSubmit` hook in `.claude/settings.json` prints that queue to Claude at the
-  start of every message, so Claude removes the `_debug-*.js`, its `<script>` tag in
-  `index.html` and its wiki mentions together, then empties the queue to `[]`. The rail
+  start of every message, so Claude removes the `_debug-*.js`, its name in `index.html`'s
+  dev loader array and its wiki mentions together, then empties the queue to `[]`. The rail
   strikes the row through meanwhile and the harness hands itself back. A harness knows its
   own file from `document.currentScript` (captured below the config-end marker, so the
   splice recipe carries it).
@@ -302,10 +294,12 @@ for — the **remote panel**:
   entries for harnesses it built itself (matched by file/label), removes just those from the
   file, and leaves the rest, saying so in a line. Delete entries may be acted on by any chat.
 - **The rail shows what exists on disk, not what a tab remembers.** The panel polls
-  `/__harnesses__` (the `_debug-*.js` files `index.html` loads right now — `_harness_files()` in server.py scans the HTML for any quoted `_debug-*.js` name, so it reads both a plain `<script src>` tag and the name in the dev-host-only loader's array; a tag-only scan came back empty once the loader arrived and the rail hid every harness) every 3s and
-  hides — or drops — any row, live or dormant, whose file is not in that list. Auto-reload
-  is off, so a page tab loaded before a deletion keeps announcing the deleted harness until
-  it reloads; without this the ghost row came straight back.
+  `/__harnesses__` (the `_debug-*.js` files `index.html` loads right now — `_harness_files()`
+  in server.py scans the HTML for any quoted `_debug-*.js` name that exists on disk, which
+  is how it reads the dev-host-only loader's array) every 3s and hides — or drops — any
+  row, live or dormant, whose file is not in that list. Auto-reload is off, so a page tab
+  loaded before a deletion keeps announcing the deleted harness until it reloads; this
+  check is what keeps that ghost row away.
 - **Regenerating a harness from the template**: the file's head up to the config-end
   marker + the template's tail. Match that marker with `grep … | head -1` — a comment that
   merely mentions the marker's words once broke the splice.
@@ -349,13 +343,12 @@ for — the **remote panel**:
   page (phone, laptop tab, a headless probe) answers on the same title channel. Each
   harness tags its messages with a per-**tab** `inst` id (random once, then kept in
   `sessionStorage` so the dev server's auto-reload keeps the same id — a fresh id per load
-  left the tab addressing a dead host for the 6s grace period, silently dropping every
-  click in that window); the section locks onto the
-  first page that answers, addresses every command `to` that id, and ignores the others'
-  `desc`/`state` — otherwise the controls flip to whichever page spoke last. The other
-  pages appear in the section bar as `also <id>` buttons; click one to drive that page
-  instead. A silent host is replaced after ~6s. Pages drop commands addressed to another
-  id (except `hello`, so the list stays current) and drop anything carrying an `inst`.
+  would leave the tab addressing a dead host for the 6s grace period); the section locks
+  onto the first page that answers as its host and ignores the others' `desc`/`state` —
+  otherwise the controls flip to whichever page spoke last. The other pages appear as
+  `drive <id> instead` buttons; click one to make that page the host. A silent host is
+  replaced after ~6s. Pages honour `to` only on Copy (see above) and drop anything carrying
+  an `inst`.
 
 #### The transport: `_debug-bus.js` + `/__bus__`, not BroadcastChannel
 
@@ -377,10 +370,12 @@ made the real device the one place the panel could not reach.
   are harmless to leave, being dev-only.
 - Open it at `_debug-panel.html`. When Pop out fails it puts that URL on the clipboard and
   says so — the browser that blocked the popup will not open a tab for us either.
-- On a harness's first `hello` its in-page panel collapses to its chip; the mode/toggle
-  keys work from the remote tab too. Closing the tab brings every panel back via a 2s
-  heartbeat — except under `remoteOnly`, where it stays invisible and `H` is the way back (a closing tab's `beforeunload` message often never gets delivered), and each
-  chip is always the manual way back. Per-harness **Dock** hands one back on its own.
+- An on-page harness (`remoteOnly: false`) keeps its panel when a remote tab answers its
+  `hello`; under `remoteOnly` the panel collapses. The mode/toggle keys work from the
+  remote tab too. Closing the tab brings every panel back via a 2s heartbeat (a closing
+  tab's `beforeunload` message often never gets delivered) — except under `remoteOnly`,
+  where it stays invisible and `H` is the way back; each chip is always the manual way
+  back.
 - The discovery `who` repeats every 1.5s, so **reloading the project tab re-hands its
   harnesses to the remote** without reloading the remote. A title already known that
   answers again is a reloaded page and gets greeted a second time.
@@ -402,8 +397,8 @@ made the real device the one place the panel could not reach.
   (`{t:'reset', key}`), Shift-click = its shipped value (`ship: true`). The toolbar Reset
   still does the whole harness.
 - **Labels are what you see change**, in plain words (`gap between dots`, `wipe
-  duration`), never CSS names; the property and `file:line` live in `source`, shown small
-  under the knob and included in Copy.
+  duration`), never CSS names; the property and `file:line` live in `source`, which is not
+  drawn in the panel and is carried by Copy.
 - Slider ticks are coalesced to one `set` per key per 40ms and carry a `seq`;
   the harness drops a `set` older than the last one it applied for that key (parallel
   HTTP connections do not preserve order) and throttles its own `state` echo to one per
@@ -412,19 +407,9 @@ made the real device the one place the panel could not reach.
 - `server.py` speaks **HTTP/1.1** so the socket is reused between clicks; every response it
   writes by hand must therefore carry `Content-Length` or the client waits for an EOF that
   a kept-alive connection never sends.
-- **There is no "Dock"/"Hand back" button.** It used to return a harness to its in-page
-  panel, but under `remoteOnly: true` there is no in-page panel to return to —
-  pressing it just made the harness vanish. Close the tab (or press `H` on the page) to get
-  the in-page panel back.
+- **There is no "Dock"/"Hand back" button** — the remote toolbar is Go · Copy · Reset ·
+  Delete. Close the tab (or press `H` on the page) to get the in-page panel back.
 - `_debug-panel.html` is scaffolding like the rest — delete it with the last `_debug-*.js`.
-
-**Live right now:** none. On disk but not loaded (re-add its name to the scaffolding block to use it): `_debug-fold-timings-mobile-v3.js` (the panel resolves a harness as `_debug-<title>.js`, so `title` and file name must match — a renamed title with the old file name is silently dropped from the rail) (opening → timeline) — ten sliders, one per animation, each the animation's **full length in ms**; every phase constant inside it scales by the same ratio, and Copy lists the constants each length resolves to. One file per breakpoint, generated from one table; baking a length that differs between them means splitting that constant into a `*_DESKTOP`/`*_MOBILE` pair. The opening plays once, so reload to see it. Every open copy of the page follows the sliders (its `init` adopts any other page's `state` off the harness channel) — the panel tab drives ONE host per title, and with the page open in two places it was moving the copy nobody was watching. · `_debug-hint-band.js` (@fold8, mobile) — the picker's instruction band.
-A `compare/` mode pair for the placement (`above` the timeline, shipped, vs `below`) driving
-`P7_HINT_PLACE_MOBILE`, and two `manual/` sliders: `P7_HINT_Y_MOBILE` (the hint up/down) and
-`P7_FIELD_Y_MOBILE` (the whole timeline up/down). Both nudges are positive = down.
-Both invalidate `p7.lastH` before redrawing: the band is reserved out of the timeline's box, and
-`p7UpdateLayout` early-returns on an unchanged W/H, so without it the grid would not re-pack and
-the timeline would not move with the band.
 
 ### The element inspector (`_debug-inspect.js` + the panel's Element tab)
 
@@ -466,10 +451,9 @@ stylesheet value; edited rows carry an accent dot. `Esc` or **Clear** drops the 
 
 **The page-wide switches live in `_debug-bus.js`, not in a harness.** The rail's foot
 (dev fold badge, auto-reload) drives `js/nav.js`'s `setFoldBadgeVisible` and `reload.js`
-over the shared `harness:__all__` channel. That answer used to come from inside each
-`_debug-<thing>.js`, so deleting the last baked harness left the switches dead with
-nothing on the page listening; it is answered by the transport now (`page: true`, which
-the panel applies without listing a rail row). Same change in the templates.
+over the shared `harness:__all__` channel. It is answered by `_debug-bus.js` (`page: true`,
+which the panel applies without listing a rail row), so the switches keep working with no
+harness loaded. The templates do the same.
 
 ## Currently in the repo
 
@@ -491,19 +475,20 @@ whenever its owner is done with it.
 What the harnesses baked into — so a rebuilt one knows where its numbers land. Each value
 is the live one in code:
 
-- **`_debug-note-width.js`** (desktop, `@fold6`) → `FOLD6_NOTE_WIDTH` = **172** (`js/groups.js`).
-  One knob, the ACLED note's block width, driven through a `window.FOLD6_NOTE_WIDTH_OVERRIDE`
-  read in `updateGroups` that came out with the harness. Picked on a 982px-tall window, where
-  the two-paragraph copy measures 353px and its foot lands at 921px, 61px clear of the bottom
-  edge; the old 155 gave 392px and overran it. The panel carried a live readout of the height
-  and the overflow, because the foot is off-screen and cannot be judged by eye.
+- **`_debug-note-width.js`** (desktop, `@fold6`) → the ACLED note's narrowest block width,
+  read through `fold6NoteWidth()` (`js/groups.js`): `FOLD6_NOTE_WIDTH` **172**, or
+  `FOLD6_NOTE_WIDTH_SMALL` **190** on a viewport ≤ `FOLD6_NOTE_SMALL_DESKTOP_MAX_W` (1550)
+  wide (`FOLD6_NOTE_WIDTH_EN` 270 on the English page). `fold6NoteFitWidth()` widens it from
+  there on a window too short to hold it. A rebuild needs a live readout of the note's height
+  and overflow, because its foot is off-screen and cannot be judged by eye.
 
 | Constant | Live value | File |
 |---|---|---|
 | `FOLD2_CAMP_CENTER_GAP_PX` (@fold2/@fold3 half-gap: each camp's centre sits this many px either side of screen centre; mobile computes its own from `FOLD2_CAMP_EDGE_GAP_MOBILE_PX`, and @fold3 from `FOLD3_CAMP_EDGE_GAP_MOBILE_PX` 82) | 180 | `js/groups.js` |
 | `HOVER_DIM_OPACITY` (the shared hover-dim; `HOVER_DIM_BY_ACTOR` overrides per actor) | 0.27 | `js/core.js` |
-| `FOLD8_TOOLTIP_CLEARANCE_PX` (the hover demo's measured trigger crossing, desktop) | −517 |
-| `FOLD_FRAC_DESKTOP` (desktop trigger line per fold, all 11 keys) | 0.75 | `js/groups.js` |
+| `FOLD8_TOOLTIP_CLEARANCE_PX` (the hover demo's measured trigger crossing, desktop) | −517 | `js/groups.js` |
+| `FOLD_FRAC_DESKTOP` (desktop trigger line per fold, all 12 keys: fold2–7, fold9–11, fold13–15) | 0.75 | `js/groups.js` |
+| `FOLD_FRAC_MOBILE` (mobile trigger line per fold, same 12 keys) | 0.75, `fold4` 0.29 | `js/groups.js` |
 | `TOOLTIP_DOCK_BOTTOM_PX` (mobile docked frame's bottom inset) | −18 | `js/fold8-tooltip.js` |
 | `P7_VERT_MOBILE.slotTopPx` (mobile headline slot top) | 78 | `page7.js` |
 | `SBB_TIMELINE_LEFT_PX` (@fold8 outer dot edge, desktop) | 120 | `squareboundingbox.js` |
@@ -512,9 +497,10 @@ is the live one in code:
 | `P7_SCOPE_BTN_GAP` (scope pill above the right-hand legend) | 22 | `js/groups.js` |
 | `PAGE0_CUE_SCALE` / `PAGE0_CUE_DOT_MS` / `PAGE0_CUE_ROW_STAGGER_MS` / `PAGE0_CUE_EXIT_MS` (@fold1 idle scroll cue) | 0.3 / 940 / 22.5 / 260 | `js/fold1-intro.js` |
 | `P12_PAIR_GAP` / `P12_PAIR_SPREAD` / `P12_DOT_COUNT` (@fold15 couples) | 3 / 2.3 / 9250 | `page12.js` |
-| `FOLD3_BEAT_MS` (@fold3's beat windows, absolute ms) | see file | `js/groups.js` |
+| `FOLD3_BEAT_MS_DESKTOP` / `FOLD3_BEAT_MS_MOBILE` (@fold3's beat windows, absolute ms) | see file | `js/groups.js` |
+| `P7_HINT_PLACE_MOBILE` / `P7_HINT_Y_MOBILE` / `P7_FIELD_Y_MOBILE` (@fold8 mobile: instruction band `'above'` or `'below'` the timeline; band nudge; whole-timeline nudge — positive = down. Changing them needs `p7.lastH` invalidated, since the band is reserved out of the timeline's box) | `'above'` / 4 / −40 | `page7.js` |
 | Hero title/subtitle `font-size`, explicit `line-height`, `top: calc(50% - Npx)` | see file | `style.css` |
-| `GROUPS[].color` + `FOLD4_COALITION_ROWS` / `FOLD4_CHANGE_ROWS` (resolve groups by `actor` through `groupByActor()`, which logs an unknown actor; they keyed off a retyped hex until 2026-09-17, where a re-cased colour silently went `undefined`), `FOLD2_GROUP_CELL` (positions), `FOLD2_FILLER_COLORS` (fillers; a group moved onto a filler-override cell evicts it) | see file | `js/groups.js` |
+| `GROUPS[].color` + `FOLD4_COALITION_ROWS` / `FOLD4_CHANGE_ROWS` (resolve groups by `actor` through `groupByActor()`, which logs an unknown actor), `FOLD2_GROUP_CELL` (positions), `FOLD2_FILLER_COLORS` (fillers; a group moved onto a filler-override cell evicts it) | see file | `js/groups.js` |
 | `PAGE0_GROUP_SLOTS` / `PAGE0_DOT_COLORS` (hero dot arrangement, `{col, row}` with column-local `row`; `buildPage0DotColorSet` walks group slots upward on a short viewport and dedups with one shared `claimed` set across columns) | see file | `page1.js` |
 
 Tricks worth keeping for a rebuild: force a layout re-solve with `p7.lastH = -1;
@@ -566,7 +552,7 @@ Fix the offending element's own width; don't reach for `overflow-x: hidden` on `
 
 What to actually check, since most regressions here are directional:
 
-- Scroll folds 1–7 and 11 **both ways**. Every fold animation is a reversible trigger, so a
+- Scroll @fold1–@fold7 and @fold10/@fold11 **both ways**. Every fold animation is a reversible trigger, so a
   layout value that only looks right scrolling down is still broken.
 - Resize across 600px **mid-session**. The resize handler rebuilds the dot columns, re-picks
   the @fold2 fillers and clears the label-width cache; a value cached on the wrong side of

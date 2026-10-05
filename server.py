@@ -72,10 +72,10 @@ ACTOR_SIDE = {
 # Rows whose ONLY cited source(s) are in this set are dropped from the dataset;
 # rows that also cite any other outlet are kept. Multi-source cells are
 # ";"-separated, matched lowercase. The PLO Negotiations Affairs Department is
-# the sheet's largest source (5,056 rows, all settler events); the 4,036 rows
-# that cite nothing else are dropped, the 1,020 corroborated by another outlet
-# stay, and so do sole-source rows that a Fortress row corroborates (column
-# `corroborated_by`, 230 rows since 2026-10-05). Empty the set to ship every row.
+# the sheet's largest source (5,061 rows, all settler events); the 1,025
+# corroborated by another outlet stay, and so do the 230 sole-source rows a
+# Fortress row corroborates (column `corroborated_by`) — the other 3,806 are
+# dropped. Empty the set to ship every row.
 SOLE_SOURCE_EXCLUDE = {"plo negotiations affairs department"}
 
 # The timeline ends where the ACLED data ends, for now: rows dated after the
@@ -237,7 +237,7 @@ else:
 
 # Keep the committed static events.json (what GitHub Pages serves) in sync with
 # the xlsx: the deployed file once shipped without the `crowd` column, so every
-# dot read as tier 0 and @fold8's size grid never resized. Write only when the
+# dot read as tier 0 and @fold9's size grid never resized. Write only when the
 # content actually differs, so an unchanged xlsx leaves git status clean.
 def _sync_static_events():
     if not _EVENTS_FROM_XLSX:
@@ -320,8 +320,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def do_POST(self):
         route = self.path.split("?")[0]
-        n = int(self.headers.get("Content-Length") or 0)
         try:
+            n = int(self.headers.get("Content-Length") or 0)
+            if not 0 <= n <= 1_000_000:
+                raise ValueError("bad Content-Length")
             entry = json.loads(self.rfile.read(n) or b"{}")
         except ValueError:
             self.send_error(400)

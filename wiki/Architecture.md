@@ -1,10 +1,15 @@
 # Architecture
 
-## One entry point
+## Entry points
 
-**`index.html`** — the scrollytelling experience, served at the site root. Everything in
-this wiki is about this page. It pulls Assistant from Google Fonts and declares the two
-local Hadassah faces (`@font-face` in `style.css`).
+**`index.html`** — the scrollytelling experience, served at the site root — plus its two
+language twins, **`en/index.html`** and **`ar/index.html`** (each with `<base href="../">`,
+so all three load the same `style.css`, scripts and `events.json`). Three static methodology pages
+sit beside them (`methodology.html`, `en/methodology.html`, `ar/methodology.html`), and
+`project.html` is a redirect stub. The story pages pull Assistant from Google Fonts;
+`style.css` declares the local faces (`@font-face`, top of the file): two Hadassah weights
+and **Discordia**, which is the face the title blocks and hero title use. Hadassah is only
+preloaded (`document.fonts.load`, `js/bootstrap.js`).
 
 > **Removed — don't reintroduce:** the שקוף article/home page (the old `index.html` +
 > `trigger.css` + `images/protest.webp`, `related-knesset.jpg`, `related-march.jpg`) that
@@ -55,10 +60,35 @@ Arabic titles that overran it were shortened to one line — «التعديلا�
 the Arabic page draws in IBM Plex Sans Arabic through `CANVAS_FACE` (js/i18n.js) — every
 `ctx.font` that used to name Assistant goes through it.
 
-**Language menu:** the generated page gets `is-current` on its own row and `../` hrefs to the
-other two (`HEAD_PATCHES` in the script). Lines are re-applied by **content**, so an unrelated
-edit elsewhere in `index.html` doesn't break `--apply`. The 10,418 event descriptions are **not** translated — the
-Arabic tooltip shows the Hebrew `descHeMedium`.
+**Language menu:** the generated page gets `is-current` on its own row; the hrefs stay
+root-relative (`./`, `en/`, `ar/` — `<base href="../">` resolves them), via `HEAD_PATCHES` in the
+script. Lines are re-applied by **content**, so an unrelated edit elsewhere in `index.html`
+doesn't break `--apply`. `HEAD_PATCHES` adds only the Arabic faces' stylesheet (index.html
+already preconnects to both Google Fonts hosts) and rewrites only the `canonical` and `og:url`
+lines to `/ar/`.
+
+**hreflang:** all three pages carry the same four `<link rel="alternate" hreflang>` lines under
+`canonical` — `he` (the root), `en` (`/en/`), `ar` (`/ar/`) and `x-default` (the Hebrew root),
+absolute like canonical. They pass through `translate_ui_ar.py` unchanged. `sitemap.xml` lists
+all three pages and the three `methodology.html` pages.
+
+**Event descriptions are translated too**, outside this script: pipeline step 07
+(`07_short_english_and_arabic.py`, see [Data](Data.md)) writes a short English line
+(`description_en_short`) and an Arabic line (`description_ar`) per event, and `server.py`
+splits them into **`events-en.json`** / **`events-ar.json`** — `{ rowId: description }` maps next
+to `events.json`, which itself stays Hebrew-only. `initPage7()` (page7.js) awaits
+`p7LoadEnglishDescs(data)` before sorting: on a translated page it fetches the matching file
+(`isEnglish()` → `events-en.json`, `isArabic()` → `events-ar.json`; the Hebrew page fetches
+neither) and stores each description on its event as `descEn` — the "not Hebrew" slot for
+both languages; only the English text is run through `p7StripLeadingDate`. Every tooltip reads
+`p7EventDesc(ev)`, which returns `descEn` and falls back to the Hebrew `descHeMedium` if the
+file failed to load or a row has no translation.
+
+**Screen-reader and canvas strings** go through the same maps: the `#canvasA11ySummary` text
+(`p7BuildDataSummary`, page7.js), the canvas «טוען נתונים...», and @fold12's live
+announcement and ⓘ `aria-label` (page9.js). Sentences with a number or name in them use
+`trf(key, vars)` (js/i18n.js) — the key is the Hebrew with `{name}` slots, each language's
+value places the slots where its grammar wants them.
 
 **After a Hebrew copy change** the Arabic page is stale until the script is re-run — log it in
 [Translation-Pending](Translation-Pending.md) like the English.
@@ -72,9 +102,9 @@ at `/en/`, so the @fold15 share row shares the English link.
 
 All three pages carry a **language switch**: ONE button in the top-left corner (`#langWrap` → `.lang-switch`, a globe glyph + the current language's letters — «עב» / «EN» / «ع»; fixed, its TOP edge on the corner logo's top edge — 8px down / 12px in on the phone, where it is the globe alone (the letters are hidden), a 16px glyph with 6px around it (manual/-baked 2026-10-03), no tap highlight and no colour change on touch; 24px down / 24px in on desktop, globe + letters. At both breakpoints the card GROWS open over 180ms (grid-rows 0fr→1fr; `aria-hidden` + visibility instead of `hidden`, which would cut the transition); z-index 1007, above the mobile legend layer, below the gate). Clicking it opens a drop-down of the three languages (`#langMenu`, rows «עברית» / «English» / «العربية»; `js/lang-switch.js` — click outside or Escape closes). The look is the legend note's card (compare/ pick 2026-10-03 over an outlined box, a bare glyph and a darkened-page dialog): the tint over `--bg`, 16px corners, the note title's 600 `#767676` type (13px phone / 12px desktop), no chevron; the rows sit INSIDE the card, which grows around them. Each row is styled as the «הצגת גודל האירועים» control: 14px Assistant at rgba(0,0,0,.6), black on hover (180ms), with a 10px empty ring that fills dark for the current language and darkens its edge on hover — but never swells. The current language's row is black at rest and **not selectable** (`pointer-events: none`, `aria-disabled`, `tabindex=-1`); opening the menu focuses the first other row. The hrefs are `./`, `en/`, `ar/` on every page (the subpages carry `<base href="../">`).
 
-Both pages also carry **העין השביעית's logo** in the top-RIGHT corner (`.seventh-eye`, a fixed link to the7eye.org.il, `z-index: 1007` like the switch; 24px from the top and right on desktop, 8px from the top on the phone). **The desktop edge gap is one number, 20px** (compare/-baked 2026-10-02): the logo's `--se-right`, the EN button's `left` and the legend columns' `FOLD6_LEGEND_INSET_LEFT/RIGHT` (js/groups.js — the ACLED note follows the right column) all sit 20px off their edge. The artwork is a CSS **mask** (alpha-only PNG) over `.seventh-eye-mark`, so the mark's colour is its `background-color`; the `<a>` is an optional backing plate. Every value is a `--se-*` custom property set **per breakpoint** (phone in the base rule, desktop in the 601px block). **Hebrew page:** the wide lockup (`seventh-eye-logo-wide.png`) with the line «פרויקט בשיתוף» (`.seventh-eye-caption`) to its RIGHT, vertically centred (`--se-dir: row`; `--se-cap-y` is an optical nudge for Assistant's Hebrew letter body) — 120px wide / 14px text; this is the **desktop** layout and it stays on every fold until @fold13, where it fades out with the rest of the screen on the closing card's rise (`updateFold13`, js/fold11.js) and comes back when scrolling up. **Phone (both languages):** the same wide lockup, centred at the top of the screen with the line above it (`--se-dir: column`), 120px wide / 14px text (weight 400), 8px apart; it **fades out once scrolling starts** — `js/nav.js` flips `.is-scrolled` past `SEVENTH_EYE_FADE_SCROLL_PX` (8px) and the 600px block transitions opacity over `--se-fade-ms` (300ms), back in at the top. **English page, desktop:** the same wide lockup, `direction: ltr` so "In partnership with" sits to its LEFT (**removed — don't reintroduce:** the cropped stacked mark, `--se-crop`). Mark and line are both `#393239` at rest; on desktop, hovering turns the **mark only** to `#EC2A2C` over 150ms (`(hover: hover)` pointers). `--se-cap-display: none` switches the line off.
+All three pages also carry **העין השביעית's logo** in the top-RIGHT corner (`.seventh-eye`, a fixed link to the7eye.org.il, `z-index: 1007` like the switch; 24px from the top and right on desktop, 8px from the top on the phone). **The desktop edge gap is one number, 24px**: the logo's `--se-right`, the language switch's `left` (`.lang-wrap`) and the legend columns' `FOLD6_LEGEND_INSET_LEFT/RIGHT` (js/groups.js — the ACLED note follows the right column) all sit 24px off their edge. The artwork is a CSS **mask** (alpha-only PNG) over `.seventh-eye-mark`, so the mark's colour is its `background-color`; the `<a>` is an optional backing plate. Every value is a `--se-*` custom property set **per breakpoint** (phone in the base rule, desktop in the 601px block). **Hebrew page:** the wide lockup (`seventh-eye-logo-wide.png`) with the line «פרויקט בשיתוף» (`.seventh-eye-caption`) to its RIGHT, vertically centred (`--se-dir: row`; `--se-cap-y` is an optical nudge for Assistant's Hebrew letter body) — 120px wide / 14px text; this is the **desktop** layout and it stays on every fold until @fold13, where it fades out with the rest of the screen on the closing card's rise (`updateFold13`, js/fold11.js) and comes back when scrolling up. **Phone (both languages):** the same wide lockup, centred at the top of the screen with the line above it (`--se-dir: column`), 120px wide / 14px text (weight 400), 8px apart; it **fades out once scrolling starts** — `js/nav.js` flips `.is-scrolled` past `SEVENTH_EYE_FADE_SCROLL_PX` (8px) and the 600px block transitions opacity over `--se-fade-ms` (300ms), back in at the top. **English page, desktop:** the same wide lockup, `direction: ltr` so "In partnership with" sits to its LEFT (**removed — don't reintroduce:** the cropped stacked mark, `--se-crop`). Mark and line are both `#393239` at rest; on desktop, hovering turns the **mark only** to `#EC2A2C` over 150ms (`(hover: hover)` pointers). `--se-cap-display: none` switches the line off.
 
-What differs, all gated on `.lang-en` / `isEnglish()` (page7.js):
+What differs, all gated on `.lang-en` / `isEnglish()` (js/i18n.js):
 
 - **Title blocks and the event tooltip read left-to-right** (`.lang-en .text-card`,
   `.lang-en .page9-tooltip`, foot of `style.css`). Everything else keeps the shared look.
@@ -131,9 +161,12 @@ What differs, all gated on `.lang-en` / `isEnglish()` (page7.js):
 
 A second, static HTML page at the root: the complete methodology write-up (sources, filters,
 grouping, classification, crowd, translation, dedupe, review, limits, prompts). Hebrew,
-`dir="rtl"`, self-contained styles, no JS. Documented in [Data](Data.md#the-methodology-page--methodologyhtml);
+`dir="rtl"`, self-contained styles, and one inline script that opens the `<details>` matching
+the URL hash (so a link to a prompt lands on its text). Documented in [Data](Data.md#the-methodology-page--methodologyhtml);
 regenerate its prompt appendix with `python3 build_methodology.py`. Linked from the legend
-note and the @fold16 credits; `en/` and `ar/` reach it through their `<base href="../">`.
+note and the @fold16 credits. The English and Arabic story pages link their own twins,
+`en/methodology.html` and `ar/methodology.html` (`FOLD6_NOTE_MORE_HREF`, js/groups.js, and
+the credits card's link in each page's markup).
 
 ## Search / discoverability
 
@@ -141,9 +174,7 @@ The site is served by GitHub Pages at `https://eyalraz200-cell.github.io/both-si
 (no `CNAME`). The page carries a `<title>`, a `<meta name="description">`, a
 self-referencing absolute `<link rel="canonical">`, the OG/Twitter card set, a favicon and
 `lang="he"`. `robots.txt` (allow-all + the `Sitemap:` line) and `sitemap.xml` (the root and `methodology.html`)
-sit at the repo root; `index.html` also carries a JSON-LD `NewsArticle` block whose
-headline, author and date **mirror the visible `<h1>` and `.shk-byline`** — change one and
-change the other, or the markup contradicts the page.
+sit at the repo root.
 
 Two things that are easy to get wrong here:
 
@@ -154,7 +185,7 @@ Two things that are easy to get wrong here:
   production. See the comment in `index.html`.
 
 `index.html` is a canvas app: a crawler sees its ~16 `.section-title` scroll cards and
-nothing else, since all 10,418 events are painted. Anything that must be findable has to
+nothing else, since all 12,283 events are painted. Anything that must be findable has to
 exist as real markup on the page (the `.a11y-only` `<h1>`, the `<meta name="description">`).
 
 ## `index.html`'s layout
@@ -166,39 +197,46 @@ exist as real markup on the page (the `.a11y-only` `<h1>`, the `<meta name="desc
 │   ├── #page0DotsOverlay @fold1's fixed decorative dot columns
 │   └── #fold6SquaresOverlay  the 8 sample squares
 ├── #groupsOverlay        z-index 0, mobile 1003 — the 6 persistent group DOM nodes (see Groups-and-Legend)
-├── #page9Tooltip         shared event tooltip (page7 + page9 + @hidden-hover's demo)
+├── #langWrap             .lang-wrap, z-index 1007 — the language switch (js/lang-switch.js)
+├── .seventh-eye          z-index 1007 — העין השביעית's corner logo link
+├── #page9Tooltip         shared event tooltip (page7 + page9 + @fold5's phase-2 demo)
 ├── #page9CatTooltip      tray-pill tooltip
 ├── #fold6NoteLayer       z-index 2, desktop 1005 (above the 1004 title cards — the note paints in front of whatever it meets) — the ACLED source note is reparented here at init
-├── #fold6MobileLegendLayer  z-index 3 — the mobile מקרא bar (Groups-and-Legend)
+├── #fold6MobileLegendLayer  z-index 5, mobile 1006 — the mobile מקרא bar (Groups-and-Legend)
 └── .text-col             NO z-index (see below) — the 18 <section.text-section> scroll drivers (`#page-0` … `#page-17`)
 ```
 
 **`.graphic-col` traps z-index.** Anything that must stack above `.text-col` has to be a
 direct `.layout` child, not nested inside `.graphic-col` — that's why the event
-tooltip, the category tooltip, the ACLED note layer, @hidden-hover's fake cursor (`.fold7-cursor`, appended by js/groups.js; z-index **1003 on desktop — and the phone's hand, `.fold7-touch`, is 1003 too** — so the title block's 1004/1005 paints in front of it — mobile's hand `.fold7-touch` stays 1006) and **`#groupsOverlay`** live where they
-do. The groups moved out so the mobile stack could be **bar → groups → title blocks**; the
-overlay is `position: fixed; inset: 0`, so nothing about where its rows land changed, and it
-sits before `.text-col` in source order so its desktop `z-index: 0` still paints under the
-cards exactly as it did from inside the column. Without it
-the ACLED link was unclickable, the category tooltip lost to the tray, and the mobile
-docked event frame was untappable (every touch landed on `section#page-9`, so the
-עוד toggle looked dead). Don't "tidy" them back inside.
+tooltip, the category tooltip, the ACLED note layer, the language switch, the corner logo,
+@fold5's demo cursor (`.fold7-cursor`, appended by js/groups.js; z-index **1003** on
+desktop, and the phone's hand `.fold7-touch` is 1003 too — so the title block's 1004/1005
+paints in front of it) and **`#groupsOverlay`** live where they do. The mobile stack is
+**groups 1003 → title blocks 1004/1005 → מקרא layer 1006**; the groups overlay is
+`position: fixed; inset: 0` and sits before `.text-col` in source order, so its desktop
+`z-index: 0` paints under the cards. Nested inside `.graphic-col`, the ACLED link would be
+unclickable, the category tooltip would lose to the tray, and the mobile docked event frame
+would be untappable (every touch landing on `section#page-9`). Don't "tidy" them back inside.
 
 **`.text-col` carries no `z-index` on purpose.** Being positioned, it already paints above
 `.graphic-col` on tree order; leaving it `auto` keeps it from opening a stacking context,
-which is what lets `.text-card` lift itself (to 4) above the מקרא bar's layer on mobile.
-Add a `z-index` here and every descendant gets trapped under that layer again.
+which is what lets `.text-card` lift itself (to 1004 on mobile, 1005 for the cards that
+share the screen with the docked tooltip) into the same stacking order as the groups overlay
+and the מקרא layer — above the groups, below the מקרא. Add a `z-index` here and every
+descendant gets trapped inside it.
 
 ## Scripts and shared globals
 
 Loaded as plain `<script>` tags, in this order (`index.html`):
 
 ```
-squareboundingbox.js → page1.js → page7.js → page8.js → page9.js → page12.js
-→ js/core.js → js/nav.js → js/fold1-intro.js → js/page7-scrub.js
+js/i18n.js → squareboundingbox.js → page1.js → page7.js → page8.js → page9.js → page12.js
+→ js/core.js → js/nav.js → js/lang-switch.js → js/fold1-intro.js → js/page7-scrub.js
 → js/fold8-tooltip.js → js/groups.js → js/update-groups.js
-→ js/intro-gate.js → js/page8-9-scroll.js → js/fold11.js → js/bootstrap.js → reload.js
+→ js/page8-9-scroll.js → js/fold11.js → js/bootstrap.js → reload.js
 ```
+
+`en/index.html` and `ar/index.html` load the same list in the same order.
 
 There are no modules and no imports. Every file declares top-level `const`/`function`s
 into the shared global scope, and cross-file references resolve **at call time**, not at
@@ -223,14 +261,15 @@ Two places load order does matter:
 
 | File | Role |
 |---|---|
+| `js/i18n.js` | `tr()`, `isEnglish()` / `isArabic()`, the `I18N_EN` / `I18N_AR` tables — **must load first** |
 | `js/core.js` | Canvas + `ctx`, `PAGES[]` dispatch, `currentPage`, trivial draw fns, `draw`/`init`, dashed-frame SVG utilities |
 | `js/nav.js` | `.text-section` roster, `setActivePage`, the IntersectionObserver |
-| `js/fold1-intro.js` | @fold1 title scroll-lag, page-load entrance (the old logo fade timing still paces its end; `page0LogoEl` is null) |
+| `js/lang-switch.js` | Opens / closes / dismisses the language menu (`#langWrap`) |
+| `js/fold1-intro.js` | @fold1 title scroll-lag, page-load entrance (a logo-fade timing still paces its end; `page0LogoEl` is null) |
 | `js/page7-scrub.js` | `#page-9` scroll→date scrub + its scroll listener |
-| `js/fold8-tooltip.js` | @hidden-hover's tooltip typewriter demo (`fold8*` state + fns) |
+| `js/fold8-tooltip.js` | @fold5's (phase 2) tooltip typewriter demo (`fold8*` state + fns) |
 | `js/groups.js` | `GROUPS` roster, fold2 grid tables, `groupItems` DOM, FOLD6 square tables/elements, title-card refs, `makeTrigger`, **all fold triggers**, `watchCardThreshold` + checkers, legend/fold4/fold6-note constants |
 | `js/update-groups.js` | The `updateGroups` monolith, `layoutGroups`, groups/axis scroll wiring |
-| `js/intro-gate.js` | The work-in-progress gate — holds @fold1's entrance until the notice is dismissed |
 | `js/page8-9-scroll.js` | page8 title-center hold, page9 sticky/title scroll |
 | `js/fold11.js` | Outro morph (`updateFold13`) + the scroll gate |
 | `js/bootstrap.js` | Font-load bootstrap + resize handler — **must load last** |
@@ -242,67 +281,39 @@ Two places load order does matter:
 | `squareboundingbox.js` | Shared grid geometry (`SBB` — only `.top` is read, `SBB_TIMELINE`, `CENTER_GAP`) |
 | `reload.js` | Dev-only mtime poll → auto page reload |
 | `server.py` | Local dev server + xlsx → `events.json` generation |
+| `translate_ui_ar.py` | Generates `ar/index.html` + `I18N_AR` from the Hebrew/English pair (see the Arabic section above) |
+| `methodology.html`, `en/methodology.html`, `ar/methodology.html` | The static methodology pages (see above) |
+| `build_methodology.py` | Injects the `0N_*.py` prompts verbatim into all three methodology pages' appendix — run after every prompt edit |
 
-## The work-in-progress gate
+## Removed — don't reintroduce: the work-in-progress gate
 
-A first-time visitor lands on a darkened page behind a one-button notice
-(«הפרויקט נמצא בתהליך עבודה…» / «הבנתי, להמשך הפרויקט») and presses through it
-before anything plays. Markup: `.shk-gate` at the foot of `<body>`
-(`index.html`); behaviour: `js/intro-gate.js`; styling: the `.shk-gate` block
-at the end of `style.css`.
-
-- **@fold1's entrance is held, not restarted.** `js/bootstrap.js` hands
-  `playPage0Entrance` to `shkGateWait()` instead of calling it; the gate runs the
-  queued callback `SHK_GATE_FADE_MS` (240ms) after the button, once the backdrop
-  has finished clearing. That constant **mirrors the `.shk-gate` opacity
-  transition in `style.css`** — change one and change the other. With no gate,
-  `shkGateWait` runs its callback synchronously, exactly as the bare call did.
-- **Scroll is locked** via `html.shk-gate-open { overflow: hidden }` on both
-  `html` and `body`, plus a `scrollTo(0, 0)`. Not a scroll listener: every fold
-  is a function of scroll position, so letting the document move behind the gate
-  would burn through folds nobody saw.
-- **Once per browser.** `localStorage["shk-gate-seen"]`. The flag is read twice —
-  by `js/intro-gate.js`, and by an **inline `<head>` script** in `index.html`
-  that adds `.shk-gate-seen` to `<html>` before first paint so a returning
-  visitor never sees the notice flash. Keep the two key names in sync.
-- **The button is inside the frame**, under the sentence — the notice is one
-  title block, not a card with a control parked below it. It is @fold15's
-  dark-fill share button (`.page12-share.is-filled`): `#111` fill, `#fff` text,
-  a 1.5px `#111` edge, `#444` on hover over 180ms, set in the 14px Assistant the
-  mini-legend and `.p7-scope-btn` use. The `dark` and `min` styles swap it for
-  the outline half of the same button (white edge, fills white on hover), and
-  re-state `color: #fff` **on the `<h2>`** — `.section-title` sets `color: #111`
-  there, so a colour inherited from the frame never reaches the text.
-  Nothing is focused on open: a programmatic `focus()` paints `:focus-visible`
-  for mouse users too, ringing the filled button in a second black outline.
-- **Four looks**, switched by `data-gate-style` on `.shk-gate`: `doc` (default —
-  the piece's own dashed title card, `.section-title` + `.text-card-frame`, so
-  `updateTextCardFrameDashes()` draws its dash for free), `dark` (inverted card),
-  `squares` (light card under the six group colours **growing** in — never
-  fading, per the dot rule) and `min` (no card; text on the darkened page). Each
-  ships its own `--gate-dark` / `--gate-blur` backdrop defaults.
+The first-visit notice («הפרויקט נמצא בתהליך עבודה…» with its «הבנתי, להמשך
+הפרויקט» button, `.shk-gate`, `js/intro-gate.js`, the `shk-gate-seen` flag) is gone
+from all three pages, in every look. @fold1's entrance plays on load
+(`playPage0Entrance()` in `js/bootstrap.js`).
 
 ## Page dispatch
 
 ```js
-// index = HTML page id (`page-N`); @fold(N+1)
+// index = HTML section id (`page-N`), not the fold number
 const PAGES = [drawPage1,      // 0  @fold1
                drawBackground, // 1  @fold2
                drawBackground, // 2  @fold3
                drawFoldSplit,  // 3  @fold4
-               drawBackground, // 4  @fold5
+               drawFold7,      // 4  @fold5
                drawBackground, // 5  @hidden-acled
                drawFold7,      // 6  @hidden-hover
                drawFold9,      // 7  @fold6
-               drawPage7,      // 8  @fold8  — the pinned timeline
-               drawPage7,      // 9  @fold9 — the size grid
-               drawPage8,      // 10 @fold10 — owns the glide
-               drawPage8,      // 11 @fold11 — the glide plays over it
-               drawPage9,      // 12 @fold12 — drag-and-drop
-               drawPage12,     // 13 @fold13
-               drawPage12,     // 14 @fold14 — the partner credit
-               drawPage12,     // 15 @fold15
-               drawPage12];    // 16 @fold16
+               drawFold9,      // 8  @fold7
+               drawPage7,      // 9  @fold8  — the pinned timeline
+               drawPage7,      // 10 @fold9  — the size grid
+               drawPage8,      // 11 @fold10 — owns the glide
+               drawPage8,      // 12 @fold11 — the glide plays over it
+               drawPage9,      // 13 @fold12 — drag-and-drop
+               drawPage12,     // 14 @fold13
+               drawPage12,     // 15 @fold14 — the partner credit
+               drawPage12,     // 16 @fold15
+               drawPage12];    // 17 @fold16
 ```
 
 18 slots, one per `.text-section`, in `js/core.js`.
@@ -311,14 +322,14 @@ const PAGES = [drawPage1,      // 0  @fold1
 `rootMargin: "-50% 0px -50% 0px"` — i.e. a section becomes current when it crosses the
 viewport's vertical midline. It also handles the cross-fold handoffs:
 
-- `>=6 → <6` (leaving @hidden-hover or later for @hidden-acled or earlier): `p7ResetForReplay()` —
+- `>=4 → <4` (leaving @fold5 or later for @fold4 or earlier): `p7ResetForReplay()` —
   backstop only; the normal wipe happens in `drawFold7`/`drawFold9` once the reverse
   cascade finishes (see [Timeline](Timeline.md))
-- `11 → 12` (@fold11 → @fold12) while the glide is still mid-flight: seeds `p9.anim` from
-  `p8CaptureBlendedPositions(W, H, 0)` (`plainGlide: true`, plus `fromSQ: p7.SQ` — page8
+- `12 → 13` (@fold11 → @fold12) while the glide is still mid-flight: seeds `p9.anim` from
+  `p8CaptureBlendedPositions(W, H, 0)` (`plainGlide: true`, plus `fromSQ: p7.SQ` unless the size grid is on — page8
   shrinks the dots across the glide, so drawPage9 must keep lerping the size or they snap
   small at the handoff and the flight reads as dimmer)
-- `10|11 → 8` (@fold10/@fold11 → @fold8) while the glide has started: seeds `p7EntryAnim`
+- `10|11|12 → 9` (@fold9/@fold10/@fold11 → @fold8) while the glide has started: seeds `p7EntryAnim`
   from `p8CaptureBlendedPositions(W, H, 1)`
 
 Both seed the glide's **endpoint** positions with a back-dated `start`, never the current
@@ -329,22 +340,47 @@ It then sets `currentPage`, and calls `updateGroups()` and `draw()`.
 `draw()` dispatches to `PAGES[currentPage]`. Scroll-driven per-frame work is
 rAF-throttled behind passive `scroll` listeners (`page7Ticking` and friends).
 
+## Design tokens
+
+`style.css`'s top `:root` block holds the values the file repeats; rules use the `var()`, not
+the literal. Group colours, `#fff`/`#000`, `#F4F3F6`, z-indices, radii and one-off values stay
+literal.
+
+| Token | Value | Used for |
+|---|---|---|
+| `--bg` | `#FDFCFF` | page paper. Also read **once at load** by JS: `P7_PAPER` (page7.js — keep it a 6-digit hex, `P7_PAPER_RGB` parses it) and `FOLD12_GHOST_FILL` / `_MOBILE` (js/page8-9-scroll.js) |
+| `--card-w` | `min(456px, 100vw - 48px)` | title-card column (the mobile `min(480px, …)` values are separate literals) |
+| `--card-top` | `4.4vh` (mobile `:root` override: `40px`) | pinned title-card / page9-header top |
+| `--ink` | `#111` | `.section-title`, dark buttons, share/gate fills, `--pl-color` |
+| `--ink-soft` | `rgba(0,0,0,.81)` | group labels, the scope button and its filled state, current language row |
+| `--ink-note` | `rgba(0,0,0,.85)` | legend note / מקרא body text (not the loupe's ring shadow, which stays literal) |
+| `--muted-ui` | `#767676` | note titles, מקרא buttons, language switch |
+| `--line-light` | `#E1E1E1` | mobile: extreme pill fill/edge, מקרא row fill |
+| `--font-body` | `'Assistant', sans-serif` | every body/UI line, incl. `--se-cap-font` |
+| `--font-title` | `'Discordia', serif` | title blocks and the hero title |
+| `--font-ar` | `'IBM Plex Sans Arabic', 'Assistant', sans-serif` | Arabic body/UI text |
+| `--ui-fade-ms` | `180ms` | small CSS state flips: hover colours, language menu open/close, scope button |
+| `--tray-ms` / `--tray-ease` | `.85s` / `cubic-bezier(0.22, 1, 0.36, 1)` | @fold12 pill tray slide and its matching visibility delay (the gate squares' 520ms use the same curve as a literal) |
+| `--fade-ms` | `.35s` | @fold12 title card's stick fade (frame, fill, subtitle, mobile padding) |
+
+`.seventh-eye` carries its own `--se-ink: #393239`, feeding `--se-color` and `--se-cap-color` at
+both breakpoints. The `--se-*` and `--pl-*` blocks still restate every value per breakpoint on
+purpose (tuning one breakpoint never moves the other).
+
 ## Title blocks
 
 No text on the story pages is selectable, at either breakpoint: a `*, *::before, *::after` rule in `style.css` sets `user-select: none !important` (plus `-webkit-touch-callout: none`) on every element. The methodology pages (`methodology.html` and its `en/` / `ar/` twins) don't load `style.css`, so their text stays selectable. **Removed — don't reintroduce:** making the story text selectable.
 
-Each scrolling section's text is a `.section-text.text-card` — a normal-flow, 480px-wide,
-horizontally centered block that scrolls with the page (nothing pins). Visibility is an
-`.is-visible` class toggled by a scroll-linked `IntersectionObserver`, independent of
-`currentPage`.
+Each scrolling section's text is a `.section-text.text-card` — a normal-flow,
+`var(--card-w)`-wide (`min(456px, 100vw - 48px)`), horizontally centered block that scrolls
+with the page.
 
 The dashed white box is a **separate** class, `.text-card-frame`, applied only to the
 `<h2 class="section-title">` — never to sibling content like a legend. The dash is not
 `border-style: dashed` (too loose) and not a `border-image` (unreliable on wide, short
-boxes); it's a transparent CSS border of `--frame-border-w` (**1.25px at both breakpoints**, `manual/`-baked on desktop 2026-09-29 and matched on mobile — the
-1.5/1.25px trial of 2026-09-22 was reverted with the font change) plus an inline
+boxes); it's a transparent CSS border of `--frame-border-w` (**1.25px at both breakpoints**) plus an inline
 `<svg class="text-card-frame-dash">` rect drawn against a 1:1 viewBox, stroke
-`frameStrokeW()` (`FRAME_STROKE_W_DESKTOP` / `FRAME_STROKE_W_MOBILE`, both **1.25**; **mobile snaps it to whole device pixels** (`frameStrokeW()`: 4/3px on a 3× phone, 1.5px on 2×) and writes that width inline as `--frame-border-w` on each frame — a fractional stroke anti-aliases differently per side and read as a border thicker along the top and left; **the svg is placed and sized in JS** (`updateTextCardFrameDashes`: inline `top`/`left` = minus the frame's *computed* border width, `width`/`height` and the viewBox = the frame's real fractional size) — the browser snaps a fractional border (1.25px computes to 1px), so the stylesheet's `calc()` off `--frame-border-w` sat the svg a fraction of a px up-left of the box and a fraction too big, and the stroke read thicker along the top and left; desktop also has `FRAME_STROKE_OPACITY_DESKTOP`, **1**, written as the rect's `stroke-opacity`; `fitDashArray` keys its perimeter cache on a rect's own geometry, so a re-stroked frame re-fits its dashes instead of joining two where the path wraps;
+`frameStrokeW()` (`FRAME_STROKE_W_DESKTOP` / `FRAME_STROKE_W_MOBILE`, both **1.25**; **mobile snaps it to whole device pixels** (`frameStrokeW()`: 4/3px on a 3× phone, 1.5px on 2×) and writes that width inline as `--frame-border-w` on each frame — a fractional stroke anti-aliases differently per side and read as a border thicker along the top and left; **the svg is placed and sized in JS** (`updateTextCardFrameDashes`: inline `top`/`left` = minus the frame's *computed* border width, `width`/`height` and the viewBox = the frame's real fractional size) — the browser snaps a fractional border (1.25px computes to 1px), so a stylesheet `calc()` off `--frame-border-w` would sit the svg a fraction of a px up-left of the box and a fraction too big; desktop also has `FRAME_STROKE_OPACITY_DESKTOP`, **1**, written as the rect's `stroke-opacity`; `fitDashArray` keys its perimeter cache on a rect's own geometry, so a re-stroked frame re-fits its dashes instead of joining two where the path wraps;
 `js/core.js` — each must equal `--frame-border-w` at its breakpoint; the stroke attrs are
 rewritten on every bake so a resize across the breakpoint re-strokes), 2px-dash/2px-gap,
 inset by half the stroke with rx = 8 − half-stroke
@@ -353,24 +389,21 @@ so the outer edge sits on the box's 8px radius. `DASH_PERIOD = 4` plus
 `ResizeObserver` on every frame re-runs the bake whenever a frame's border box changes —
 it MUST observe with `{ box: "border-box" }`, not the default content-box: @fold12's
 mobile `.is-stuck` transition animates *padding*, which moves the border box while the
-content box stays put, so the default observer never fired for it. With the observer
-silent, a mid-stuck re-bake (iOS address-bar `resize`) froze the stuck-size viewBox in,
-and on scroll-back-up the dash faded back in stretched across the wider un-stuck frame
-while the white fill tracked the real box — fill leaking outside a distorted stroke.
+content box stays put, so a content-box observer never fires for it — and a mid-stuck
+re-bake (iOS address-bar `resize`) would freeze the stuck-size viewBox in, leaving the dash
+stretched across the wider un-stuck frame on scroll-back-up.
 
 `.section-title`'s base rule is shared by **every** card. **Desktop: `font: 400 18.5px/1.5 'Discordia'`**
 (Discordia Regular, a local `@font-face` at the top of `style.css`, `fonts/Discordia-Regular.otf`;
-Naipe Foundry, licensed via Hafontia) — the `_debug-typeface.js` harness pick of 2026-09-27 over
-Hadassah, Days, Fedra Serif Pro and Lava Pro, tuned at 1896×990. **Phone (≤600px): `font: 400 16px/1.5 'Discordia'`** (the phone typeface harness pick of 2026-09-29, over
-Hadassah, Days, Fedra Serif Pro and Lava Pro). No page overrides font-size or weight — with **one named
+Naipe Foundry, licensed via Hafontia). **Phone (≤600px): `font: 400 16px/1.5 'Discordia'`**. No page overrides font-size or weight — with **one named
 exception: @fold16's credits card, `#page-17 .section-title`, is 36px on desktop and 26px under
 the 600px breakpoint** (`style.css`), because it is the piece's closing headline over a
 near-viewport-tall card, not a caption. Any other title that looks differently sized at the same
-viewport width is a regression. The card column `--card-w` is `min(456px, 100vw - 48px)` (456, the
-title-width harness pick of 2026-09-27; phones resolve the `100vw - 48px` arm as before).
+viewport width is a regression. The card column `--card-w` is `min(456px, 100vw - 48px)` at
+both breakpoints (phones resolve the `100vw - 48px` arm).
 
 **@fold1's hero title** (`.page0-title`, `style.css`) follows the title blocks' face per breakpoint.
-**Desktop (hero harness bake, 2026-09-27):** Discordia 400, 40px/1.35, 185 wide, `left: calc(50% +
+**Desktop:** Discordia 400, 40px/1.35, 185 wide, `left: calc(50% +
 8.5px)`, `top: calc(50% - 270.8px)` (last baseline 22px above its dots, trimmed). Subtitle
 (`.page0-subtitle`): Assistant 300, 18px/1.48, 139 wide, `left: calc(50% - 11.5px)`, `top: calc(50% -
 186.7px)` (20px), wrapping on its own `<br>`s (4 lines). **The dot columns' gap is per breakpoint
@@ -379,10 +412,10 @@ columns' inner edges) / `PAGE0_DOT_COL_X_MOBILE` 13.5 (20px, the Figma-literal v
 `buildPage0AllDots()` re-derives `PAGE0_DOT_COLS` from it on every build. The texts sit relative to
 their column's inner edge (title box 1.5px inside the right column's edge, subtitle's right edge
 1.5px inside the left column's), so a gap change moves them with it.
-**Phone (≤600px block, phone hero harness bake 2026-09-29):** title Discordia 400, 32px/1.45,
+**Phone (≤600px block):** title Discordia 400, 32px/1.45,
 `width: min(185px, 50vw - 20px)`, left +8px, top −230.1px (last baseline 20px above its dots);
 subtitle 125 wide, left −10px, line-height 1.41, top −165.9px (20.5px); the phone keeps the 20px
-column gap; both mobile tops are anchored to **`--page0-half`** (half the viewport height pinned at the hero's first build, `page0BuildHeight()` in page1.js — so the bar collapsing moves nothing) and add `var(--page0-trim)` (the top-trimmed column's offset, `PAGE0_TRIM_MOBILE` in page1.js) plus `var(--page0-drop)` (0 on the phone now). The tops are solved for each font's metrics,
+column gap; both mobile tops are anchored to **`--page0-half`** (half the viewport height pinned at the hero's first build, `page0BuildHeight()` in page1.js — so the bar collapsing moves nothing) and add `var(--page0-trim)` (the top-trimmed column's offset, `PAGE0_TRIM_MOBILE` in page1.js) plus `var(--page0-drop)` (0 on the phone). The tops are solved for each font's metrics,
 so re-solve them whenever a face, size or leading changes.
 
 The 600px breakpoint's 16px is a width override applied
@@ -402,30 +435,29 @@ See also: [Folds](Folds.md), [Animation-System](Animation-System.md),
 ## Mobile / responsive
 
 One breakpoint, **600px**, declared in two places that must stay in sync: `MOBILE_BP` /
-`isMobile()` (`js/core.js`), `@media (max-width: 600px)` (the block at the end of
-`style.css`).
+`isMobile()` (`js/core.js`), and the `@media (max-width: 600px)` blocks in `style.css`.
+`isMobile()` is cached — see [Per-frame cost](#per-frame-cost--the-layout-read-rule).
 
-`isMobile()` reads `window.innerWidth` **live** rather than caching — every caller runs
-inside layout code that the existing `resize` handler (`js/bootstrap.js`) already re-runs,
-so a desktop↔mobile crossing is picked up for free.
-
-That same handler also **preserves the reader's fractional scroll position through a
-resize** (desktop only): the vh-sized sections mean a window-height change changes the
-document height while the browser keeps raw pixel `scrollY`, which visibly slid titles
-up/down as the window was dragged. `js/bootstrap.js` tracks `scrollY / scrollable-range` on
-every scroll and re-pins that fraction (instant `scrollTo`) at the end of its resize
-handler, after all re-layout has settled. Skipped under `isMobile()` — mobile browsers fire
-resize on plain scrolling (address-bar show/hide), and re-pinning there would fight the
-user's own scroll.
+The `resize` handler (`js/bootstrap.js`) **preserves the reader's fractional scroll
+position**: the vh-sized sections mean a window-height change changes the document height
+while the browser keeps raw pixel `scrollY`. `js/bootstrap.js` tracks `scrollY /
+scrollable-range` on every scroll and re-pins that fraction (instant `scrollTo`) at the end
+of its resize handler, after all re-layout has settled, at both breakpoints. Mobile
+height-only resizes (the URL bar) return early before it (below), so on a phone it runs
+only on a width change — a rotation or breakpoint crossing, which rebuilds a document of a
+different height (portrait ~20,000px, landscape ~9,700px); the fraction is what survives
+that. **Removed — don't reintroduce:** an `!isMobile()` guard on that restore (a phone
+rotated out and back landed four folds earlier).
 
 **A height-only resize on mobile skips the relayout entirely.** A phone fires
 `resize` continuously while its URL/bottom bar slides, and the handler's work — a fresh
 full-viewport canvas backing store, every page-0 dot element rebuilt, six labels
-re-measured — stalls the main thread long enough that the browser abandons the collapse and
-snaps the bar back, so it appeared to "refuse to collapse" on every scroll after the first.
-`js/bootstrap.js` compares `window.innerWidth` against the previous resize: under
-`isMobile()`, an unchanged width means bar movement and the handler does nothing but
-`draw()`. Nothing is lost — scroll geometry is `vh` (fixed on mobile, it does not track the
+re-measured — would stall the main thread long enough that the browser abandons the
+collapse and snaps the bar back. `js/bootstrap.js` compares `window.innerWidth` against the
+previous resize: under `isMobile()`, an unchanged width means bar movement and the handler
+only calls `draw()`, plus one debounced settle (180ms after the last tick) that runs
+`page0ApplyDrop()`, `layoutGroups()` and `draw()` so the hero follows the new bottom edge.
+Nothing is lost — scroll geometry is `vh` (fixed on mobile, it does not track the
 bar) and `draw()` re-syncs the canvas backing store on every paint anyway. A width change
 is a real rotation/breakpoint crossing and still runs the full handler. The timeline's
 layout cache applies the same rule: `p7UpdateLayout` (page7.js) returns early on mobile
@@ -438,65 +470,60 @@ and *re-checked on every `draw()` frame* against `clientWidth/Height × dpr` (ro
 same basis in both places — a fractional `getBoundingClientRect` would disagree and
 re-clear every frame). The per-frame check exists because iOS fires `resize` mid
 browser-bar slide: `init()` alone could bake the buffer at a height the canvas only passed
-through, after which every frame draws squeezed onto the stale buffer and its bottom band
-keeps old pixels forever (seen on device as a ghost second row of year-axis labels and
-crushed dot strips on scroll-up). Never size the buffer only from resize events.
+through, after which every frame would draw squeezed onto the stale buffer with old pixels
+left in its bottom band. Never size the buffer only from resize events.
 
-Most of the page needed nothing: `.graphic-col`/`#canvas` are already full-viewport, the
+Most of the page is breakpoint-agnostic: `.graphic-col`/`#canvas` are full-viewport, the
 canvas is DPR-aware, `SBB`/`SBB_TIMELINE` are fractions, every fold's Y is scaled from the
 982px `GROUPS_FRAME_H`, the SVG dash frames measure live, and input is Pointer Events
 throughout. What the breakpoint actually changes:
 
 | Value | Desktop | Mobile |
 |---|---|---|
-| `--card-w` (`style.css`) | 480px | `min(480px, 100vw - 48px)` |
+| `--card-w` (`style.css`) | `min(456px, 100vw - 48px)` | same rule (resolves to `100vw - 48px` on phones) |
 | `.text-section` gutter | 48px | 24px |
-| `.section-title` | 20px (`#page-17`: 36px) | 16px (`#page-17`: 26px) |
-| `.page0-title` / `.page0-subtitle` (hero) | title 42px/`1.31`, `top: calc(50% - 276px)`; subtitle 18px/`1.52`, `top: calc(50% - 189.1px)` | title 32px/**`1.45`**, `top: calc(50% - 228.6px)`; subtitle 18px (unchanged) /**`1.465`**, `top: calc(50% - 168.8px)` — baked 2026-09-12. **Mobile overrides the leading too, and must.** `line-height` is unitless, so dropping the title to 32px alone took its leading to 41.92 against the subtitle's unchanged 27.36: the desktop **2:1 nest** (55.02 / 27.36 = 2.011) that locks the two baseline grids fell to 1.532 and the subtitle's lines walked against the title's by ~12.8px per line down the block. The shipped pair is 46.4 / 26.37 = **1.760**, ~6.3px per line — picked by eye against live baseline rulers, not solved to a whole ratio. Each `top` is solved so that text's **last baseline** sits a trimmed gap above its own dot column (title 18.5px, subtitle 20.5px); the `50%` cancels viewport height out, so only the 390px width it was tuned at matters. **Leading and `top` are one setting** — move either and re-solve the other |
+| `.section-title` | Discordia 400 18.5px/1.5 (`#page-17`: 36px) | Discordia 400 16px/1.5 (`#page-17`: 26px) |
+| `.page0-title` / `.page0-subtitle` (hero) | title Discordia 40px/`1.35`, `top: calc(50% - 270.8px)`; subtitle 18px/`1.48`, `top: calc(50% - 186.7px)` | title Discordia 32px/`1.45`, `top` off `--page0-half` − 230.1px; subtitle 18px/`1.41`, − 165.9px — see [@fold1's hero title](#title-blocks) above. Each `top` is solved so that text's **last baseline** sits a fixed gap above its own dot column. **Leading and `top` are one setting** — move either and re-solve the other |
 | `.text-card-frame` padding | `21px 29px` | `16px 22px` (holds the 1.38 h:v ratio); exception: @fold12's title frame (`.page9-title-row`) runs `padding-block: 8px` — its single short line read as an oversized fill at 16px. The subtitle's `-8px` margin-top is derived from it (gap − 10) |
-| camp header → top swatch row (`js/update-groups.js`) | `FOLD4_HEADER_GAP` 44 frame-units center-to-center, `H`-scaled | `FOLD4_HEADER_GAP_MOBILE_PX` — a flat **24px visible** gap, measured off the header's rendered height |
-| camp gap (`campCenterGapPx`, `js/groups.js`) | flat 180px half-gap | a fixed **90px visible** gap between the blocks' facing edges (`FOLD2_CAMP_EDGE_GAP_MOBILE_PX`), i.e. a 97px half-gap at the 4-wide shape — chosen by eye. **@fold3 has its own**, `FOLD3_CAMP_EDGE_GAP_MOBILE_PX` **82**, lerped from @fold2's over `alignT` — see below |
+| camp header → top swatch row (constants in `js/groups.js`, applied in `js/update-groups.js`) | `FOLD4_HEADER_GAP` **36px** center-to-center (plain px, not `H`-scaled), lerped to @fold3's `FOLD3_HEADER_GAP` 42 over `alignT` | `FOLD4_HEADER_GAP_MOBILE_PX` — a flat **20px visible** gap, measured off the header's rendered height (`FOLD3_HEADER_GAP_MOBILE_PX` equals it; the English page's two-line headers use `FOLD4_HEADER_GAP_MOBILE_EN_PX`) |
+| camp gap (`campCenterGapPx`, `js/groups.js`) | flat 180px half-gap | a fixed **90px visible** gap between the blocks' facing edges (`FOLD2_CAMP_EDGE_GAP_MOBILE_PX`), i.e. a 94px half-gap at the 4-wide, 98px block — chosen by eye. **@fold3 has its own**, `FOLD3_CAMP_EDGE_GAP_MOBILE_PX` **82**, lerped from @fold2's over `alignT` — see below |
 | `.group-label` | 18px, `nowrap` | 16px, wraps, `width: max-content` + `max-width: 100px`, `direction: rtl` |
 | group-label font-size (inline, `js/update-groups.js`) | 18 column / 14 legend | 16 column / 12 legend — via `groupLabelColumnFontSize()` / `groupLabelLegendFontSize()` |
 | @fold3 row step (`fold3RowStep`) | 34px flat (`FOLD3_ROW_PITCH_DESKTOP_PX`, inside `updateGroups`) | per row: this row's tallest wrapped label + **13px** (`FOLD3_ROW_LABEL_GAP_PX`), floored at 32 (`FOLD3_MIN_ROW_PITCH_MOBILE_PX`) — equal visible gaps. Both mobile numbers are module-scope `var`s at the top of js/update-groups.js so a manual/ harness can drive them live; the desktop pitch deliberately stays a function-local `const`, so raising the mobile gap cannot reach it |
-| @hidden-hover legend row pitch (`fold6RowPitchPx()`) | 24px | measured — tallest wrapped legend label + 6px |
-| Mini-legend + ACLED note | Six DOM group rows over the canvas; the note sits above their top row | **The legend collapses into the מקרא sheet** — a **full-bleed bottom sheet** (`FOLD6_MLEGEND_POSE = "sheet"`, js/groups.js), not a floating corner card, whose title row is the מקרא button; the six group rows fly into it at `@fold4` and it **closes itself** shortly after they land. The ACLED credit lives **inside** the sheet as a collapsible «איסוף הנתונים» section (`fold6MobileDataHeadEl` / `fold6MobileDataBodyEl`) — **removed, don't reintroduce:** the bare `acleddata.com` link that used to sit in the opposite top-left corner. See [Groups-and-Legend](Groups-and-Legend.md#the-mobile-מקרא-bar) |
+| mini-legend row pitch (`fold6RowPitchPx()`) | 24px (`FOLD6_ROW_PITCH`) | measured — tallest wrapped legend label + 6px (`FOLD6_ROW_LABEL_GAP_PX`), floored at 24 |
+| Mini-legend + ACLED note | Six DOM group rows over the canvas; the note sits above their top row | **The legend collapses into the מקרא sheet** — a **full-bleed bottom sheet** (`FOLD6_MLEGEND_POSE = "sheet"`, js/groups.js), not a floating corner card, whose title row is the מקרא button; the six group rows fly into it at `@fold4` and it **closes itself** shortly after they land. The ACLED credit lives **inside** the sheet as a collapsible «איסוף הנתונים» section (`fold6MobileDataHeadEl` / `fold6MobileDataBodyEl`) — **removed, don't reintroduce:** the bare `acleddata.com` link that used to sit in the opposite top-left corner. See [Groups-and-Legend](Groups-and-Legend.md#the-mobile-מקרא-bar--a-full-bleed-bottom-sheet) |
 | `#page-17` (@fold16, the credits card) frame / title | sized from the viewport edges: `height: calc(100vh - 44px)` (22px gap top and bottom), width solved in JS by `p12CardWidthFit()` (page12.js, at load, on `document.fonts.ready` and on a debounced resize) — the narrowest width in 320–900px at which the copy still clears the bottom padding, which is also the width that FILLS the fixed height, since a narrower column is a taller one; the CSS `width: 520px` is that answer for a 982px-tall viewport and the fallback if the script never runs. 40px side padding, 42px top/bottom, copy vertically centred in whatever height is left over (`#page-17 .text-card` is `fit-content` so it stays centred) / 36px, 42px under it; the «נתונים ושיטת עבודה» heading (`.page12-body-heading`) is 600 with 8px under it at both widths | `min(450px, 100vw-48px)` border-box, height auto / 26px, 26px under it |
 
-**The camp gap is the load-bearing one.** `FOLD2_CAMP_CENTER_GAP_PX` (180) puts two 104px
+**The camp gap is the load-bearing one.** `FOLD2_CAMP_CENTER_GAP_PX` (180) puts two 98px
 blocks *plus* @fold3's outward-trailing labels at ~500–600px of required width. Everything
 that positions a camp — the @fold2 grid, @fold3's `campFold3X` column, and both camp
-headers — now goes through `campAnchorX`, which reads `campCenterGapPx(W)`. Never
+headers — goes through `campAnchorX`, which reads `campCenterGapPx(W)`. Never
 reintroduce a direct `W/2 ± FOLD2_CAMP_CENTER_GAP_PX` at a call site; the headers would
 detach from their blocks on a phone.
 
 **On mobile @fold3 runs a tighter gap than @fold2.** By @fold3 the blocks are gone and it's
 two label runs facing each other, where the shared 90px reads too wide.
-`FOLD3_CAMP_EDGE_GAP_MOBILE_PX` (**82**, picked by eye with a `manual/` harness on
-2026-09-12 — 48px of visible corridor on a 390px phone, down from 56) is passed to
+`FOLD3_CAMP_EDGE_GAP_MOBILE_PX` (**82**) is passed to
 `campCenterGapPx(W, edgeGapMobile)` as a lerp from @fold2's value over **`alignT`**, the beat
 that flies the rects into their column. So @fold2 keeps its own tuned number, the anchors
 never snap, and the camp headers (which ride `campAnchorX` too) stay centred over their camp
 throughout. Desktop passes no override and keeps one gap for both folds.
 
 **An inline style beats the stylesheet.** `updateGroups()` writes
-`label.style.fontSize` on every frame, so the mobile `.group-label { font-size: 13px }`
-rule was silently overridden and @fold3's labels rendered at the desktop 18px, wrapping
-to three lines inside a 32px row pitch. Both sizes now come from
-`groupLabelColumnFontSize()` / `groupLabelLegendFontSize()` (`js/groups.js`) — **the
-single source of truth. Never re-inline the numbers at the call site.**
+`label.style.fontSize` on every frame, so the stylesheet's `.group-label` font-size is
+overridden at both breakpoints. The sizes come from `groupLabelColumnFontSize()` /
+`groupLabelLegendFontSize()` (`js/groups.js`) — **the single source of truth. Never
+re-inline the numbers at the call site.**
 
-**Wrapped labels need a measured row pitch.** Once labels wrap, the flat pitches
-(`FOLD3_MIN_ROW_PITCH_PX` 32, `FOLD6_ROW_PITCH` 24) print rows over each other. `fold6RowPitchPx()`
-(`js/groups.js`) takes `Math.max(flat, tallest measured label + gap)`; `fold3RowStep`
-(`js/update-groups.js`) goes one further and sizes each step off that row's own wrapped label (whose first line
-sits on the row y, the rest hanging below), so the visible gap is equal between every
-pair of rows. Rows grow downward off a
-fixed top anchor shared with @fold2 (no re-centering — see Groups-and-Legend). On desktop the
-labels measure under the flat value and @fold2's row pitch is the same 32, so `max` leaves
-both at exactly their tuned numbers and nothing shifts. On mobile @fold2's pitch is 29, so
-the column lifts by half the difference — the surviving rect must not appear to jump when
-the column forms.
+**Wrapped labels need a measured row pitch.** Once labels wrap, a flat pitch prints rows
+over each other. `fold6RowPitchPx()` (`js/groups.js`) takes `Math.max(FOLD6_ROW_PITCH,
+tallest measured legend label + FOLD6_ROW_LABEL_GAP_PX)`; `fold3RowStep`
+(`js/update-groups.js`) sizes each mobile step off that row's own wrapped label (whose first
+line sits on the row y, the rest hanging below) plus `FOLD3_ROW_LABEL_GAP_PX`, floored at
+`FOLD3_MIN_ROW_PITCH_MOBILE_PX`, so the visible gap is equal between every pair of rows.
+Desktop's step is the flat `FOLD3_ROW_PITCH_DESKTOP_PX` (34) with no `max()` — its labels
+are `nowrap` one-liners. Rows grow downward off a fixed top anchor shared with @fold2
+(`fold3TopRowY = fold2TopRowY`, no re-centering — see Groups-and-Legend).
 
 **`width: max-content` on the mobile `.group-label` is load-bearing.** `.group-item` is
 `position: absolute` with no width, so an absolutely-positioned child with only a
@@ -536,26 +563,30 @@ same `sideT` that drives the side-swap, snapped at 0.5 (`text-align` has no in-b
 
 `--card-top` and every `.text-section` `min-height` use **`vh`, never `dvh`**: on mobile
 `vh` is pinned to the large viewport for the whole session, while `dvh` re-resolves each
-time the URL/bottom bar collapses — which resized every section, shifted every later
-fold's `offsetTop` by hundreds of px under a fixed `scrollY`, and threw the reader
-backwards through folds 8–10 (the timeline date alone jumped ~10 months per collapse).
+time the URL/bottom bar collapses — which would resize every section and shift every later
+fold's `offsetTop` by hundreds of px under a fixed `scrollY`, throwing the reader backwards
+through the timeline folds (@fold8–@fold10).
 
 ### No horizontal scroll, and no `overflow-x` guard
 
-Neither page has an `overflow-x` rule on `html` or `body`, and one must not be added.
-Both documents genuinely fit their viewport from 320px up — verified by measuring
+No story page has an `overflow-x` rule on `html` or `body`, and one must not be added.
+The documents genuinely fit their viewport from 320px up — verified by measuring
 `scrollWidth` at eight widths across the full scroll of each page (the recipe is in
 [Dev-Workflow](Dev-Workflow.md#checking-mobile)). Clamping with `overflow-x: hidden` would
 make that measurement useless and hide the next regression.
 
-Three fixed-width things were what actually overflowed, each fixed at the element:
+The fixed-width elements are kept inside the viewport at the element (≤600px):
 
-| Element | Was | Now (≤600px) |
-|---|---|---|
-| `.page9-tray-row` (`style.css`) | 5 fixed grid columns of 20px pills | `display: contents`; all 10 pills form one `nowrap` horizontally-scrolling row on `#page9ZoneBelow`, 16px pills, one line — see [Folds](Folds.md) |
-| `.page9-tray` (`style.css`) | bottom sheet: `bottom: 0`, slides up from below | band at `top: 112px` under the title card, slides down from above, no `.page9-tray-title`, rule on the bottom edge only; the docked tooltip frame drops below it (`p9TooltipDropTrigger`) — see [Folds](Folds.md) |
-| `.page9-title-row .text-card-frame` (`style.css`) | title box centered by `margin: 0 auto` | centered while scrolling, then flushed right **in `.is-stuck` only** — a measured `translateX(--p9-title-flush)` (`page9UpdateTitleFlush`, `js/page8-9-scroll.js`), side padding zeroed alongside it — see [Folds](Folds.md#fold13s-tray-on-mobile) |
-| `.page0-title` | flat `width: 185px` from `calc(50% + 8.5px)` | `min(185px, 50vw - 20px)` from `calc(50% + 8px)` |
+- **`.page9-tray-row`** is `display: contents`; all 10 pills form one `nowrap`
+  horizontally-scrolling row on `#page9ZoneBelow` (`overflow-x: auto`), 16px pills, one
+  line — see [Folds](Folds.md#fold12s-tray-on-mobile).
+- **`.page9-tray`** is a band at `top: 96px` (`P9_TRAY_TOP_M`, page9.js) under the title
+  card; the docked tooltip frame drops below it (`p9TooltipDropTrigger`).
+- **`.page9-title-row .text-card-frame`** is centered while scrolling, then flushed right
+  **in `.is-stuck` only** — a measured `translateX(--p9-title-flush)`
+  (`page9UpdateTitleFlush`, `js/page8-9-scroll.js`), side padding zeroed alongside it —
+  see [Folds](Folds.md#fold12s-tray-on-mobile).
+- **`.page0-title`** is `min(185px, 50vw - 20px)` wide from `calc(50% + 8px)`.
 
 RTL blocks overflow off the *left* edge — `scrollWidth` still catches it, but a check that
 only looks at `right > vw` does not.
@@ -584,8 +615,8 @@ What holds today:
   per-group and per-category counts, the total, and the date range. **Every figure is derived
   from the loaded `events.json`, never hardcoded** — the xlsx is rebuilt on each server start,
   so a hand-written number would go stale silently.
-- **Text contrast clears AA 4.5:1.** The two that didn't were fixed at the declaration and
-  carry their ratio in a comment: the ACLED note title `#767676` (was `#949494`, 3.03:1), its chevron `#7a7a7a` (was `#919191`).
+- **Text contrast clears AA 4.5:1.** The two greys closest to the line carry their ratio in a
+  comment at the declaration: the ACLED note title `#767676` and its chevron `#7a7a7a`.
   Tooltip fills go through `tooltipFill()` — see [Timeline](Timeline.md).
 
 - **@fold12 is keyboard-operable.** Pills are focusable `role="button"` toggles; Enter/Space
@@ -602,35 +633,28 @@ of times a second. Two classes of call are forbidden there, both because they fo
 browser to flush style/layout:
 
 - **`window.innerWidth` / `window.innerHeight`.** `isMobile()` and `viewportH()` (js/core.js)
-  are **cached**, refreshed from the same comparison on `resize`/`orientationchange`. The
-  listener is registered in `core.js`, the first `js/` file `index.html` loads, so it
-  updates before any other resize handler and no consumer sees a stale value. A mobile
-  URL-bar collapse fires resize with the width unchanged, so `isMobile()` correctly holds.
-  Never go back to reading `innerWidth` live: it was **14.4% of all CPU** on a throttled
-  phone scrolling the early folds — the single largest entry in the profile.
+  are **cached**, refreshed on `resize`/`orientationchange` by a listener registered in
+  `js/core.js`. It runs before every resize handler registered from `core.js` onward, but
+  **after** the ones `page9.js` and `page12.js` register at load (those files load earlier),
+  so a breakpoint-crossing resize hands `page9.js`'s `p9SyncSubtitle` the previous
+  `isMobile()` value. A mobile URL-bar collapse fires resize with the width unchanged, so
+  `isMobile()` correctly holds. Never go back to reading `innerWidth` live: on a throttled
+  phone it is the single largest entry in the scroll profile.
+  **One named exception:** `p7ZoomOutH()` (page7.js) reads `window.innerHeight` live on
+  mobile — iOS updates it as the bottom bar collapses but its `resize` can land after the
+  last scroll frame, so a cached height would leave the zoomed-out axis a bar short. It is a
+  few reads per frame, never per dot, and only while @fold8's zoom-out is engaged.
 - **Linear scans and DOM measurement** — `GROUPS.find()` per dot, `getTotalLength()` per
   frame, `offsetWidth` per row. Memoise, or hoist out of the loop.
 
-Measured on a 393×852 phone profile at 6× CPU throttle, scrolling folds 1–5: median frame
-**27.1ms → ~9ms**, frames over the 16.7ms budget **94% → ~13%**. The fixes, largest first:
-cached `isMobile()`; a cache on `p7EventForActorOccurrence` (uncached it ran 3216 times in a
-40-step scroll, each a linear scan over several thousand events); hoisting breakpoint reads
-out of `p7DrawSideSquares`/`p7OrchestrateRows`/`p7DrawTimelineSquares`; a per-row memo for
-the row cursor with one frame-wide timestamp; batching opaque squares into one `Path2D` per
-colour; cached `viewportH()` and memoised `fitDashArray()`.
+What keeps the early folds inside the frame budget on a phone: cached `isMobile()` and
+`viewportH()`; a cache on `p7EventForActorOccurrence` (otherwise a linear scan over the
+events per call); breakpoint reads hoisted out of
+`p7DrawSideSquares`/`p7OrchestrateRows`/`p7DrawTimelineSquares`; a per-row memo for the row
+cursor with one frame-wide timestamp; opaque squares batched into one `Path2D` per colour;
+memoised `fitDashArray()`.
 
-The pinned timeline (@fold8) stays the heaviest fold — ~22ms/frame at 6× throttle — but it is
-now dominated by **browser rasterisation of the full-screen canvas**, not by JS: 10,418
-squares on a 1179×2556 backing store. Further gains there need a rendering change, not
+The pinned timeline (@fold8) is the heaviest fold, and its cost is dominated by **browser
+rasterisation of the full-screen canvas**, not by JS: 12,283 squares on a phone-sized
+backing store (1179×2556 on a 3× phone). Further gains there need a rendering change, not
 another micro-optimisation. See [Timeline](Timeline.md) for the draw-loop specifics.
-
-
-**Resize keeps the reader's place on every breakpoint.** `js/bootstrap.js`'s resize
-handler restores `scrollAnchorFrac * scrollMax()` after the relayout. It used to do so
-only `if (!isMobile())`. Reaching that line already means the WIDTH changed — height-only
-mobile resizes (the URL bar) return early above it — i.e. a rotation or a breakpoint
-crossing, and those rebuild a document of a different height (portrait ~20,000px,
-landscape ~9,700px). The browser scales `scrollY` down on the way to landscape but never
-back up, so with the restore guarded to desktop a phone rotated out and back landed four
-folds earlier and stayed there. The fraction is what survives the change of height.
-**Removed — don't reintroduce:** the `!isMobile()` guard on that restore.

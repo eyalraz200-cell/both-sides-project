@@ -10,6 +10,8 @@
 # description_original / crowd_total), APPENDS one child row per extra action
 # (new row_id, split_from = parent), blanks event_type / description_he_medium
 # on every touched row and sets reclassify = yes so 02 and 03 pick them up.
+# Rows with a date in event_type_hand or description_hand are never sent, so a
+# split never undoes a hand decision.
 
 import importlib.util, json, os, re, sys
 from pathlib import Path
@@ -116,7 +118,7 @@ m.request_body = request_body
 SUB = re.compile(r"\b(some|a group|a number|several|a few|dozens|hundreds|tens|part|\d+)\s+of (the )?(protesters|demonstrators|activists|rioters|them|settlers|participants|marchers)|following the (main )?(protest|demonstration|rally)|after the (main )?(protest|demonstration|rally)|toward the end of the (protest|demonstration)|(separately|meanwhile|later),? (dozens|hundreds|some|a group|several)|(dozens|hundreds|some|several) (then |also |later )?(blocked|marched|clashed|set fire|lit|broke)", re.I)
 NUM = re.compile(r"\b(dozens|hundreds|thousands|tens of thousands|about [\d,]+|around [\d,]+|at least [\d,]+|over [\d,]+)\b", re.I)
 ACT = re.compile(r"\b(blocked|block traffic|clashed|broke through|set (fire|tires)|lit (a |)(bonfire|fire|tires)|burned tires|chained|stormed|broke into|threw)\b", re.I)
-SOLE_SOURCE_EXCLUDE = {"plo negotiations affairs department"}
+SOLE_SOURCE_EXCLUDE = {"plo negotiations affairs department"}   # same set as server.py: never shipped
 
 def build_jobs(ws):
     headers = [c.value for c in ws[1]]
@@ -124,6 +126,8 @@ def build_jobs(ws):
     c_id, c_actor, c_desc = col("row_id"), col("main_actor", req=True), col("Description", req=True)
     c_type, c_crowd, c_src, c_hid, c_ds = col("event_type"), col("crowd"), col("source"), col("hidden"), col("data_source")
     c_split = col("split_from")
+    c_corr = col("corroborated_by")
+    c_thand, c_dhand = col("event_type_hand"), col("description_hand")
     jobs = []
     for r in range(2, ws.max_row + 1):
         g = lambda c: m.norm(ws.cell(r, c).value) if c else ""
@@ -132,7 +136,11 @@ def build_jobs(ws):
         actor, desc = g(c_actor), g(c_desc)
         if not actor or actor == "not relevant" or not desc: continue
         srcs = {s.strip().lower() for s in g(c_src).split(";") if s.strip()}
-        if srcs and srcs <= SOLE_SOURCE_EXCLUDE: continue           # never shipped
+        if srcs and srcs <= SOLE_SOURCE_EXCLUDE and not g(c_corr): continue   # corroborated rows ship
+        # A hand-set type or Hebrew line is never undone: download would blank both and
+        # send the row back through 02/03 (CLAUDE.md: never re-run 02 over a row with a
+        # date in event_type_hand).
+        if g(c_thand) or g(c_dhand): continue
         # Second-pass gate (2026-10-03): any protest row above הפגנה לא אלימה with a crowd
         # figure and a sub-action verb, plus the original subset-wording / two-figures test.
         above = g(c_type) not in ("", "הפגנה לא אלימה")

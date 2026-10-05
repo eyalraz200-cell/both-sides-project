@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- One page: index.html is the scrollytelling project itself (a canvas app, so
-     a crawler sees only its scroll-card headings). Update lastmod when its CONTENT
-     changes; a date that never moves is ignored. -->
+<!-- The scrollytelling project in three languages (index.html, en/, ar/ — a canvas
+     app, so a crawler sees only its scroll-card headings) plus each language's
+     methodology page. Update lastmod when a page's CONTENT changes; a date that
+     never moves is ignored. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://eyalraz200-cell.github.io/both-sides-project/</loc>
@@ -10,8 +11,32 @@
     <priority>1.0</priority>
   </url>
   <url>
+    <loc>https://eyalraz200-cell.github.io/both-sides-project/en/</loc>
+    <lastmod>2026-10-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://eyalraz200-cell.github.io/both-sides-project/ar/</loc>
+    <lastmod>2026-10-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
     <loc>https://eyalraz200-cell.github.io/both-sides-project/methodology.html</loc>
     <lastmod>2026-10-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://eyalraz200-cell.github.io/both-sides-project/en/methodology.html</loc>
+    <lastmod>2026-10-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://eyalraz200-cell.github.io/both-sides-project/ar/methodology.html</loc>
+    <lastmod>2026-10-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>

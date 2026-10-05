@@ -1889,7 +1889,7 @@ function updateGroups() {
     // shrinks in place with no offset arithmetic — and it composes with
     // growScale instead of fighting @hidden-hover's swell.
     const filtF = typeof p7FilterSizeFactor === "function"
-      ? p7FilterSizeFactor({ actor: FOLD6_SQUARE_ACTORS[i] })
+      ? p7FilterSizeFactor({ actor: FOLD6_SQUARE_ACTORS[i] }, target ? target.y : undefined)
       : 1;
     const scaleT = growScale * filtF;
     if (target) {

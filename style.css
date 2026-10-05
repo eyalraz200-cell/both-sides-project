@@ -30,8 +30,11 @@
   white-space: nowrap;
 }
 
-/* Shared design tokens — the page background and the title-card geometry are
-   the values repeated most across the file; everything else stays literal. */
+/* Shared design tokens — the values repeated across the file: page background,
+   title-card geometry, ink/grey colours, type stacks and the CSS-transition
+   tempos. Group colours and one-off values stay literal. --bg is also read
+   once by JS at load (P7_PAPER in page7.js, FOLD12_GHOST_FILL* in
+   js/page8-9-scroll.js) so the canvas paper matches it. */
 :root {
   --bg: #FDFCFF;        /* flat page background, per Figma's intro cover */
   /* .text-card width — 480px on desktop, but never wider than the viewport
@@ -43,6 +46,21 @@
      sizes each time the bar collapses — the exact instability it was once
      (wrongly) used to prevent. */
   --card-top: 4.4vh;   /* pinned title-card / page9-header top offset */
+  /* Ink, greys and lines — the UI's recurring non-group colours. */
+  --ink: #111;                      /* .section-title's ink; dark buttons, share/gate fills */
+  --ink-soft: rgba(0, 0, 0, 0.81);  /* group labels, the scope button and its filled state */
+  --ink-note: rgba(0, 0, 0, 0.85);  /* the legend note / מקרא body text */
+  --muted-ui: #767676;              /* secondary grey: note titles, מקרא buttons, language switch */
+  --line-light: #E1E1E1;            /* mobile: extreme pill fill/edge, מקרא row fill */
+  /* Type stacks. */
+  --font-body: 'Assistant', sans-serif;                        /* every body/UI line */
+  --font-title: 'Discordia', serif;                            /* title blocks and the hero title */
+  --font-ar: 'IBM Plex Sans Arabic', 'Assistant', sans-serif;  /* Arabic body/UI text */
+  /* Motion — CSS-transition state flips only (JS-driven beats keep their own constants). */
+  --ui-fade-ms: 180ms;                       /* small UI flips: hover colours, menu open/close */
+  --tray-ms: .85s;                           /* @fold12 pill tray slide (and its visibility delay) */
+  --tray-ease: cubic-bezier(0.22, 1, 0.36, 1); /* the tray slide's ease-out curve */
+  --fade-ms: .35s;                           /* @fold12 title card's stick fade (frame, fill, subtitle) */
 }
 
 body {
@@ -69,7 +87,7 @@ body {
   top: 12px;
   left: 12px;
   z-index: 1000;
-  font: 600 13px 'Assistant', sans-serif;
+  font: 600 13px var(--font-body);
   color: #fff;
   background: rgba(0, 0, 0, 0.6);
   padding: 2px 7px;
@@ -141,7 +159,7 @@ body {
   width: 100%;
   box-sizing: border-box;
   padding: 7px 12px;
-  font: 400 12px 'Assistant', sans-serif;
+  font: 400 12px var(--font-body);
   color: rgba(255, 255, 255, 0.75);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -440,7 +458,7 @@ body {
   opacity: 0;
   pointer-events: none;
   text-align: center;
-  transition: opacity 0.35s ease-out;
+  transition: opacity var(--fade-ms) ease-out;
   margin-top: -21px;
 }
 
@@ -454,11 +472,11 @@ body {
    Transitions are on the base selectors so they apply in both directions
    (stuck → unstuck reverts smoothly, not a snap). */
 .page9-title-row .text-card .text-card-frame-dash {
-  transition: opacity 0.35s ease-out;
+  transition: opacity var(--fade-ms) ease-out;
 }
 
 .page9-title-row .text-card .text-card-frame {
-  transition: background 0.35s ease-out;
+  transition: background var(--fade-ms) ease-out;
 }
 
 .page9-title-row .text-card.is-stuck .text-card-frame-dash {
@@ -548,7 +566,7 @@ body {
   /* Mobile values (harness pick, 2026-09-22): 500 / 0.25. Desktop overrides
      BOTH properties in the min-width: 601px block below, so this base rule is
      effectively the mobile one. */
-  font: 500 16px 'Assistant', sans-serif;
+  font: 500 16px var(--font-body);
   /* Alpha, not the `opacity` property — that one is the stick reveal
      (0 → 1 on .is-stuck, ~line 274) and overwriting it would kill the fade. */
   color: rgba(0, 0, 0, 0.25);
@@ -668,8 +686,8 @@ body {
   /* Slowed from 0.6s per explicit feedback, same reasoning as .page9-header's
      own slowdown above — the engage slide-in read a touch quick. */
   visibility: hidden;
-  transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1),
-              visibility 0s linear 0.85s;
+  transition: transform var(--tray-ms) var(--tray-ease),
+              visibility 0s linear var(--tray-ms);
   /* Belt to the visibility brace above, because that brace was observed losing:
      on a phone refresh the tray, its zone and its pills all painted over @fold1
      and dropped out one at a time (12ms / 75ms / 542ms) exactly as each
@@ -708,7 +726,7 @@ body {
   transform: translate(-50%, 0); /* slides in */
   pointer-events: auto;
   visibility: visible;
-  transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1),
+  transition: transform var(--tray-ms) var(--tray-ease),
               visibility 0s linear 0s;
 }
 
@@ -731,7 +749,7 @@ body {
   position: absolute;
   top: 10px; /* G */
   right: calc(50% - 23px);
-  font: 600 16px 'Assistant', sans-serif;
+  font: 600 16px var(--font-body);
   color: rgba(0, 0, 0, 0.37);
   white-space: nowrap;
   margin: 0;
@@ -848,7 +866,7 @@ body {
    here shows nothing but the pills. */
 .page9-sticky.page9-layout-v2.pills-in .page9-tray {
   visibility: visible;
-  transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1),
+  transition: transform var(--tray-ms) var(--tray-ease),
               visibility 0s linear 0s;
 }
 /* The vacancy pops on the pill's clock (same --p9-pop-i, copied over in
@@ -1362,7 +1380,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font: 500 15px 'Assistant', sans-serif;
+  font: 500 15px var(--font-body);
   color: rgba(0, 0, 0, 0.5);
   white-space: nowrap;
   pointer-events: none;
@@ -1474,7 +1492,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      is the point — the ✕ takes horizontal room, never vertical. */
   height: 0;
   pointer-events: none;
-  font: 400 var(--p9-x-size)/1 'Assistant', sans-serif;
+  font: 400 var(--p9-x-size)/1 var(--font-body);
   color: currentColor;
   opacity: 0.55;
 }
@@ -1590,7 +1608,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   display: flex;
   align-items: center;
   gap: 6px;
-  font: 600 20px 'Assistant', sans-serif;
+  font: 600 20px var(--font-body);
   color: rgba(0, 0, 0, 0.5);
   background: #fff;
   border: 1px solid rgba(130, 130, 130, 0.3);
@@ -1834,7 +1852,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    .page9-cat-tooltip-desc, is 15px everywhere). The box was widened to 250px at
    the same time so the bigger face doesn't wrap descriptions onto more lines. */
 .page9-tooltip-date {
-  font: 700 14px 'Assistant', sans-serif;
+  font: 700 14px var(--font-body);
   color: #000;
   text-align: right;
   width: 100%;
@@ -1847,7 +1865,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      too, where the same text sits dark on white and simply reads a touch
      sturdier. Any value outside 300-800 would be browser-synthesised — keep it
      in range. */
-  font: 550 14px 'Assistant', sans-serif;
+  font: 550 14px var(--font-body);
   color: #000;
   text-align: right;
   width: 100%;
@@ -1942,7 +1960,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 }
 
 .page9-cat-tooltip-desc {
-  font: 400 15px 'Assistant', sans-serif;
+  font: 400 15px var(--font-body);
   color: #000;
   text-align: center;
   direction: rtl;
@@ -1990,8 +2008,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      3. index.html: drop the candidate family from the Google Fonts link
         (optional — harmless if left). */
 .section-title {
-  font: 400 18.5px/1.5 'Discordia', serif; /* 18.5: title-size compare pick 2026-09-27 (was 18) */
-  color: #111;
+  font: 400 18.5px/1.5 var(--font-title); /* 18.5: title-size compare pick 2026-09-27 (was 18) */
+  color: var(--ink);
   margin: 0 0 8px;
 }
 
@@ -2204,7 +2222,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   top: 0;
   width: 8px;
   height: 8px;
-  background: #767676;
+  background: var(--muted-ui);
   transform-origin: center;
   /* Resting opacity 0 for the same reason .groups-overlay stays off its
      `is-active` until bootstrap.js's first layoutGroups(): .fold6-square-wrap
@@ -2248,7 +2266,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   right: 8px;
   transform: translateY(-50%);
   white-space: nowrap;
-  font: 16px 'Assistant', sans-serif;
+  font: 16px var(--font-body);
   color: rgba(0, 0, 0, 0.9);
   opacity: 0;
 }
@@ -2490,10 +2508,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 }
 
 .page12-body {
-  font-family: 'Assistant', sans-serif;
+  font-family: var(--font-body);
   font-size: 16px;
   line-height: 1.6;
-  color: #111;
+  color: var(--ink);
   text-align: right;
 }
 
@@ -2535,7 +2553,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   justify-content: center;
   gap: 12px;
   margin-top: 16px;
-  font-family: 'Assistant', sans-serif;
+  font-family: var(--font-body);
 }
 
 /* Icon buttons (WhatsApp / X / Facebook / LinkedIn / copy link): inline SVG
@@ -2556,9 +2574,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   place-items: center;
   padding: 0;
   border-radius: 50%;
-  border: 1.5px solid #111;
+  border: 1.5px solid var(--ink);
   background: none;
-  color: #111;
+  color: var(--ink);
   cursor: pointer;
   text-decoration: none;
   font: inherit;
@@ -2575,12 +2593,12 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 .page12-share.is-outline .page12-share-btn:hover,
 .page12-share.is-outline .page12-share-btn:focus-visible,
 .page12-share.is-outline .page12-share-btn.is-copied {
-  background: #111;
+  background: var(--ink);
   color: #fff;
 }
 .page12-share.is-filled .page12-share-btn {
-  background: #111;
-  border-color: #111;
+  background: var(--ink);
+  border-color: var(--ink);
   color: #fff;
 }
 .page12-share.is-filled .page12-share-btn:hover,
@@ -2613,9 +2631,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   transform: translateX(-50%);
   padding: 2px 8px;
   border-radius: 4px;
-  background: #111;
+  background: var(--ink);
   color: #fff;
-  font: 400 12px/1.4 'Assistant', sans-serif;
+  font: 400 12px/1.4 var(--font-body);
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
@@ -2641,7 +2659,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   margin: 19px 0 0;   /* 38px gap, hairline centred in it — same as .page12-share */
   padding-top: 19px;
   border-top: 1px solid rgba(0, 0, 0, 0.15);
-  font: 400 14px/1.5 'Assistant', sans-serif;
+  font: 400 14px/1.5 var(--font-body);
   letter-spacing: 0.04em;
   color: rgba(0, 0, 0, 0.7);
   text-align: center;
@@ -2704,7 +2722,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      licensed, add the @font-face rule first, then this value may go up. */
   /* Desktop: Discordia, like the title blocks (typeface harness, 2026-09-27);
      the ≤600px block keeps Hadassah. */
-  font: 400 40px 'Discordia', serif; /* 40px, hero harness 2026-09-27 (was 42) */
+  font: 400 40px var(--font-title); /* 40px, hero harness 2026-09-27 (was 42) */
   /* 1.31 is what the browser's own `normal` already resolved to for this face
      (55px / 42px) — stated explicitly so the `top` above stays valid if the
      font file is ever swapped for one with different metrics. */
@@ -2732,7 +2750,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      tuned, deliberately not converted to a relative unit. */
   top: calc(50% - 186.7px); /* hero harness 2026-09-27: last baseline 20px above its dots (was -189.1) */
   width: 139px; /* hero harness 2026-09-27 (was 125); the ≤600px block keeps 125 */
-  font: 300 18px 'Assistant', sans-serif;
+  font: 300 18px var(--font-body);
   /* Opened up from the browser's `normal` (which resolved to 1.2778 here) —
      4 lines of 18px Assistant read tight against the title's much larger
      leading. Changing this moves the last baseline, so `top` above must be
@@ -2772,8 +2790,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   position: absolute;
   transform: translateY(-50%);
   white-space: nowrap;
-  font: 18px 'Assistant', sans-serif;
-  color: rgba(0, 0, 0, 0.81);
+  font: 18px var(--font-body);
+  color: var(--ink-soft);
 }
 
 /* Once a row has settled into the mini-legend, its label gets an OPAQUE plate
@@ -2819,7 +2837,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      without this the two Hebrew runs would lay out left-to-right relative to
      each other and the prefix would render on the wrong side. */
   direction: rtl;
-  font: 18px 'Assistant', sans-serif;
+  font: 18px var(--font-body);
   /* Tuned by eye (manual/ harness). 'Assistant' is loaded as a VARIABLE font
      (wght@300..800, index.html), so 660 is a real interpolated face, not a
      rounded-up 700 — an off-hundred value here is deliberate, don't "tidy" it
@@ -2841,9 +2859,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   position: absolute;
   direction: rtl;
   text-align: right; /* right-aligned: the note now sits under the RIGHT legend column and hugs its right edge (see fold6X / noteRightEdge in js/update-groups.js) */
-  font: 14px 'Assistant', sans-serif;
+  font: 14px var(--font-body);
   line-height: 1.4;
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--ink-note);
   white-space: pre-line; /* FOLD6_NOTE_TEXT's \n splits it into two paragraphs */
   opacity: 0;
 }
@@ -2858,7 +2876,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   position: absolute;
   direction: rtl;
   text-align: right;
-  font: 14px 'Assistant', sans-serif;
+  font: 14px var(--font-body);
   font-weight: 600;
   line-height: 1.4;
   /* Read by js/update-groups.js, not by any declaration here: the gap the
@@ -2868,7 +2886,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   --note-chevron-gap: 16px;
   --note-chevron-inset: 6px;
   /* 4.54:1 on white — #949494 was 3.03:1, under AA for body text. */
-  color: #767676;
+  color: var(--muted-ui);
   opacity: 0;
 }
 
@@ -2980,12 +2998,12 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   padding: 4px 0;
   border: 0;
   background: transparent;
-  color: rgba(0, 0, 0, 0.81);
+  color: var(--ink-soft);
   /* Same face, size and colour as a settled mini-legend label (.group-label,
      written to 14px by updateGroups) — and, like it, NO letter-spacing: the
      0.04em this carried as a pill made it read as a different typeface sitting
      right next to the rows it belongs to. */
-  font: 14px 'Assistant', sans-serif;
+  font: 14px var(--font-body);
   white-space: nowrap;
   cursor: pointer;
   pointer-events: auto;
@@ -3006,7 +3024,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      Pinning the line box keeps the height constant from the very first frame. */
   line-height: 17px;
   min-height: 25px;        /* the 17px line box + 4px padding, top and bottom */
-  transition: color 180ms ease;
+  transition: color var(--ui-fade-ms) ease;
 }
 /* The ring: an empty 10px circle that simply FILLS dark when the crowd sizes
    are showing — no tick inside it. At 10px a checkmark is a smudge, so the
@@ -3039,14 +3057,14 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      ring's 10px box, so growing the box would walk the whole control. */
   transform: translateY(calc(-1 * var(--p7-scope-ring-ink, 0px)))
              scale(calc(var(--p7-scope-ring-t, 1) * var(--p7-scope-ring-hover, 1)));
-  transition: background-color 180ms ease, border-color 180ms ease;
+  transition: background-color var(--ui-fade-ms) ease, border-color var(--ui-fade-ms) ease;
 }
 .p7-scope-btn:hover::before { border-color: rgba(0, 0, 0, 0.75); }
 /* Pressed = the size grid is ON. Kept in step with p7Grid.on (and aria-pressed)
    by updateGroups, so a scroll crossing that flips the grid also flips this. */
 .p7-scope-btn.is-on::before {
-  background-color: rgba(0, 0, 0, 0.81);
-  border-color: rgba(0, 0, 0, 0.81);
+  background-color: var(--ink-soft);
+  border-color: var(--ink-soft);
 }
 /* The size grid is desktop-only, so its switch is too. */
 @media (max-width: 600px) {
@@ -3186,8 +3204,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 
 
 /* ────────────────────────────────────────────────────────────────────────
-   Mobile (≤600px — the same breakpoint as isMobile() in js/core.js and as
-   trigger.css's article breakpoint; keep all three in sync).
+   Mobile (≤600px — the same breakpoint as isMobile() in js/core.js; keep the two
+   in sync).
 
    Only values that are hardcoded to a desktop width live here. Everything
    already viewport-relative — .graphic-col/#canvas, the fractional SBB
@@ -3224,7 +3242,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   .section-title {
     /* Phone: Discordia too (phone typeface harness, 2026-09-29), at its own
        16px — Discordia ships Regular only, so 400. */
-    font: 400 16px/1.5 'Discordia', serif;
+    font: 400 16px/1.5 var(--font-title);
   }
   .text-card-frame {
     padding: 16px 22px;
@@ -3458,7 +3476,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     padding: 2px 4px;
     border: 0;
     background: none;
-    font: 700 11px 'Assistant', sans-serif;
+    font: 700 11px var(--font-body);
     color: rgba(255, 255, 255, 0.75);
     cursor: pointer;
   }
@@ -3529,7 +3547,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     /* Longhands, not the `font` shorthand — same reason as everywhere else in
        this file: a shorthand would reset the size back out from under the
        line-height set with it. */
-    font-family: 'Assistant', sans-serif;
+    font-family: var(--font-body);
     font-weight: 400;
     font-size: 15px;
     line-height: 1.3;
@@ -3565,7 +3583,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     display: block;
     width: 100%;
     font-weight: 400;
-    font-family: 'Assistant', sans-serif;
+    font-family: var(--font-body);
     font-size: 15px;
     line-height: 19px;
     color: currentColor;
@@ -3775,9 +3793,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      value, the one that carries a tuning note. Both are mobile-only, so
      desktop is untouched either way. */
   .page9-pill.is-extreme {
-    background: #E1E1E1;
-    border-color: #E1E1E1;
-    color: #111;
+    background: var(--line-light);
+    border-color: var(--line-light);
+    color: var(--ink);
   }
   /* The 6 grip dots advertise a drag that doesn't exist here. Must repeat the
      base rule's two-class selector (.page9-pill .page9-handle, which sets
@@ -3807,7 +3825,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     position: relative;
     border-radius: 50%;
     border: 1px solid currentColor;
-    font: 600 10px 'Assistant', sans-serif;
+    font: 600 10px var(--font-body);
     line-height: 1;
     color: inherit;
     opacity: 0.75;
@@ -3883,8 +3901,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      the mark reads as part of the pill rather than as a hole punched in it. No
      glyph needed inside it; the fill is the whole signal. */
   .page9-pill.is-extreme .page9-pill-check {
-    background: #111;
-    border-color: #111;
+    background: var(--ink);
+    border-color: var(--ink);
     opacity: 1;
   }
 
@@ -3986,8 +4004,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        state the dashed border has faded in; while the card is still scrolling
        the box keeps its padding and reads as a proper box. Transitioned
        alongside that fade so the text glides to the edge instead of jumping. */
-    transition: background 0.35s ease-out, padding 0.35s ease-out,
-                transform 0.35s ease-out;
+    transition: background var(--fade-ms) ease-out, padding var(--fade-ms) ease-out,
+                transform var(--fade-ms) ease-out;
   }
   /* The ghost is a clone parked OUTSIDE .page9-title-row (a .layout child), so
      the slimmer padding above doesn't reach it — restated, so it is the same
@@ -4080,7 +4098,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        delay outlasts js/fold11.js's own inline slide-out, which is the one
        thing that DOES still translate this band (on the way out at @fold13). */
     visibility: hidden;
-    transition: visibility 0s linear 0.85s;
+    transition: visibility 0s linear var(--tray-ms);
   }
   /* Figma node 294-1272 has no "סוגי פעולות" label on the band — the subtitle
      directly above already names the gesture, and the label cost 12px of type
@@ -4600,10 +4618,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   .fold6-mlegend-btn {
     position: relative;
     direction: rtl;
-    font: 14px 'Assistant', sans-serif;
+    font: 14px var(--font-body);
     font-weight: 600;
     line-height: 1.4;
-    color: #767676;
+    color: var(--muted-ui);
     background: none;
     border: 0;
     /* No padding at all — the bare title is the whole control, and the pill is
@@ -4652,8 +4670,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     padding: 0;
     border: 0;
     background: none;
-    color: #767676;
-    font: 24px/1 'Assistant', sans-serif;
+    color: var(--muted-ui);
+    font: 24px/1 var(--font-body);
     cursor: pointer;
     opacity: 0;
     -webkit-tap-highlight-color: transparent;
@@ -4718,8 +4736,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     border-radius: 10px;
     background: none;
     direction: ltr;
-    font: 14px/17px 'Assistant', sans-serif;
-    color: rgba(0, 0, 0, 0.81);
+    font: 14px/17px var(--font-body);
+    color: var(--ink-soft);
     -webkit-tap-highlight-color: transparent;
   }
   .fold6-mlegend-scope[hidden] { display: none; }
@@ -4731,11 +4749,11 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     height: 10px;
     border-radius: 50%;
     border: 1px solid rgba(0, 0, 0, 0.45);
-    transition: background-color 180ms ease, border-color 180ms ease;
+    transition: background-color var(--ui-fade-ms) ease, border-color var(--ui-fade-ms) ease;
   }
   .fold6-mlegend-scope.is-on::before {
-    background-color: rgba(0, 0, 0, 0.81);
-    border-color: rgba(0, 0, 0, 0.81);
+    background-color: var(--ink-soft);
+    border-color: var(--ink-soft);
   }
 
   /* THE ACLED CARD — the group cards' shape, OUTLINE only (chosen in a compare/
@@ -4769,8 +4787,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     direction: rtl;
     text-align: right;
     /* 500, picked by eye — it heads a section rather than the panel. */
-    font: 500 14px/1.4 'Assistant', sans-serif;
-    color: #767676;
+    font: 500 14px/1.4 var(--font-body);
+    color: var(--muted-ui);
     -webkit-tap-highlight-color: transparent;
   }
   .fold6-mlegend-data-head::after {
@@ -4806,8 +4824,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     padding-top: 4px;
     direction: rtl;
     text-align: right;
-    font: 14px/1.4 'Assistant', sans-serif;
-    color: rgba(0, 0, 0, 0.85);
+    font: 14px/1.4 var(--font-body);
+    color: var(--ink-note);
   }
 
   .fold6-mlegend-rows {
@@ -4912,7 +4930,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     min-height: calc(var(--mlg-row-lines) * 1.15 * 14px + 2 * var(--mlg-row-pad-y));
     /* Grey, a shade off the legend's own tint behind it, with a 1px seat under
        each card (Figma 345:2312, darkened by eye). */
-    background: #e1e1e1;
+    background: var(--line-light);
     border: none;
     border-radius: 10px;
     box-shadow: 0 1px 0 rgba(0, 0, 0, 0.07);
@@ -4963,9 +4981,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      (.fold6-mlegend-row is align-items: flex-start), exactly like the canvas
      rows at @fold3. */
   .fold6-mlegend-label {
-    font: 14px 'Assistant', sans-serif;
+    font: 14px var(--font-body);
     line-height: 1.15;
-    color: rgba(0, 0, 0, 0.85);
+    color: var(--ink-note);
   }
 }
 
@@ -5015,6 +5033,11 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 .group-item.is-filtered-off {
   opacity: 0.28;
 }
+/* Hovering a filtered-out row lifts it a step (.28 → .4) — "this one comes
+   back on a click" — without reading as switched back on. */
+.group-item.is-filtered-off.is-filter-hover {
+  opacity: 0.4;
+}
 /* Hovering a click strip (@fold8+) says "this row is a button": the hovered
    row's label lifts to black and its swatch grows in place (transform, so the
    per-frame width/height/top writes are untouched), while every other row
@@ -5059,190 +5082,6 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 .group-item.is-filter-hover .group-swatch { transform: scale(1.5); }
 .groups-overlay.is-filter-hover-any .group-item:not(.is-filter-hover):not(.is-filtered-off) {
   opacity: 0.45;
-}
-
-/* ═══ THE WORK-IN-PROGRESS GATE ══════════════════════════════════════════════
-   The notice a first-time visitor presses through before @fold1's entrance
-   plays (markup: .shk-gate in index.html; behaviour: js/intro-gate.js).
-
-   Four looks, switched by [data-gate-style] on the same DOM — `doc` (the
-   dashed title card), `dark` (inverted card), `squares` (the six group
-   colours growing in above the text) and `min` (no card at all). The shared
-   base is everything below up to the per-style blocks. */
-
-/* Written as custom properties because the darkening is what gets tuned: the
-   _debug-gate.js harness drives these two and nothing else. --gate-dark is the
-   backdrop's alpha over the page, --gate-blur the blur behind it. */
-.shk-gate {
-  --gate-dark: 0.45;
-  --gate-blur: 2px;
-  position: fixed;
-  inset: 0;
-  z-index: 9000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  direction: rtl;
-  background: rgba(0, 0, 0, var(--gate-dark));
-  -webkit-backdrop-filter: blur(var(--gate-blur));
-  backdrop-filter: blur(var(--gate-blur));
-  /* A pure state flip (open → dismissed), so a CSS transition is right here —
-     nothing repaints this element per frame. The duration is mirrored by
-     SHK_GATE_FADE_MS in js/intro-gate.js, which fires the entrance when it
-     ends; change one and change the other. */
-  opacity: 0;
-  transition: opacity 240ms ease;
-}
-.shk-gate.is-open { opacity: 1; }
-/* The visitor has pressed through once already — the inline <head> script in
-   index.html adds this class before the first paint so the gate can't flash
-   on a return visit, and js/intro-gate.js then removes the element outright. */
-.shk-gate-seen .shk-gate { display: none; }
-/* While the gate is up the document must not scroll: every fold's animation is
-   a function of scroll position, so scrolling behind the gate would burn
-   through folds nobody saw. */
-.shk-gate-open, .shk-gate-open body { overflow: hidden; }
-
-.shk-gate-card {
-  width: var(--card-w);
-  max-width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-}
-
-/* ONE title block, button included. .text-card-frame is the scrolling cards'
-   own chrome used verbatim, so updateTextCardFrameDashes() (js/core.js) draws
-   its dash for free — the frame is a <div> here rather than the <h2> itself
-   only because it now wraps two children. */
-.shk-gate-frame {
-  max-width: 100%;
-  text-align: center;
-}
-.shk-gate-text { margin: 0; }
-
-/* @fold15's share row is the page's own dark-fill button (.page12-share.is-filled
-   — #111 fill, #fff text, #444 on hover, a 1.5px #111 edge), so this is that
-   button in a rectangular box rather than a new treatment. The face and size are
-   the mini-legend's / .p7-scope-btn's 14px Assistant, which is what everything
-   that isn't a title is set in on this page. */
-.shk-gate-btn {
-  margin-top: 18px;
-  font: 14px 'Assistant', sans-serif;
-  color: #fff;
-  background: #111;
-  border: 1.5px solid #111;
-  border-radius: 4px;
-  padding: 9px 20px;
-  cursor: pointer;
-  /* Pure state flips, so a CSS transition is right — the same 180ms ease the
-     .p7-scope-btn uses for its own hover. */
-  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
-}
-.shk-gate-btn:hover {
-  background: #444;
-  border-color: #444;
-}
-.shk-gate-btn:focus-visible { outline: 2px solid #111; outline-offset: 3px; }
-
-/* The six group colours (roster order, see GROUPS in js/groups.js). They GROW
-   in from nothing — the project's dots never arrive or leave by opacity — on a
-   short stagger, so the card announces the piece's own palette before the text
-   is read. Hidden in every style but `squares`. */
-.shk-gate-squares {
-  display: none;
-  gap: 8px;
-}
-.shk-gate-squares i {
-  display: block;
-  width: 14px;
-  height: 14px;
-  background: var(--sq);
-  transform: scale(0);
-  transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-.shk-gate.is-open .shk-gate-squares i { transform: scale(1); }
-.shk-gate-squares i:nth-child(1) { transition-delay: 120ms; }
-.shk-gate-squares i:nth-child(2) { transition-delay: 190ms; }
-.shk-gate-squares i:nth-child(3) { transition-delay: 260ms; }
-.shk-gate-squares i:nth-child(4) { transition-delay: 330ms; }
-.shk-gate-squares i:nth-child(5) { transition-delay: 400ms; }
-.shk-gate-squares i:nth-child(6) { transition-delay: 470ms; }
-
-/* ── style `doc` (default): the dashed title card, exactly as the scrolling
-      folds draw it — the gate reads as the piece's first title block. ── */
-.shk-gate[data-gate-style="doc"] .shk-gate-frame { background: #fff; }
-
-/* ── style `dark`: the card inverts. Same geometry, near-black fill and white
-      text — the tooltip/fold-badge end of the project's language. The dashed
-      frame is dropped (its stroke is hard-coded black in js/core.js and would
-      vanish on this fill); a hairline border stands in. The button inverts with
-      it: on a black card a #111 fill is invisible, so it becomes the outline
-      half of the same share-row button, filling white on hover. ── */
-.shk-gate[data-gate-style="dark"] { --gate-dark: 0.6; }
-.shk-gate[data-gate-style="dark"] .text-card-frame-dash { display: none; }
-/* .section-title sets `color: #111` ON THE <h2>, so an inherited colour from
-   the frame never reaches the text — it has to be re-stated here or the
-   sentence renders black on black. */
-.shk-gate[data-gate-style="dark"] .shk-gate-text { color: #fff; }
-.shk-gate[data-gate-style="dark"] .shk-gate-frame {
-  background: rgba(0, 0, 0, 0.92);
-  border-color: rgba(255, 255, 255, 0.22);
-  color: #fff;
-}
-.shk-gate[data-gate-style="dark"] .shk-gate-btn {
-  background: transparent;
-  border-color: rgba(255, 255, 255, 0.5);
-  color: #fff;
-}
-.shk-gate[data-gate-style="dark"] .shk-gate-btn:hover {
-  background: #fff;
-  border-color: #fff;
-  color: #111;
-}
-.shk-gate[data-gate-style="dark"] .shk-gate-btn:focus-visible { outline-color: #fff; }
-
-/* ── style `squares`: the plain light card, with the six group colours growing
-      in above it. ── */
-.shk-gate[data-gate-style="squares"] .shk-gate-squares { display: flex; }
-.shk-gate[data-gate-style="squares"] .text-card-frame-dash { display: none; }
-.shk-gate[data-gate-style="squares"] .shk-gate-frame {
-  background: var(--bg);
-  border-radius: 0;
-}
-.shk-gate[data-gate-style="squares"] .shk-gate-btn { border-radius: 0; }
-
-/* ── style `min`: no card. The sentence sits straight on the darkened page in
-      white, so the button loses its box too and becomes the outline variant —
-      the backdrop does all the work, and it leans darker. ── */
-.shk-gate[data-gate-style="min"] { --gate-dark: 0.72; }
-.shk-gate[data-gate-style="min"] .text-card-frame-dash { display: none; }
-/* .section-title sets `color: #111` ON THE <h2>, so an inherited colour from
-   the frame never reaches the text — it has to be re-stated here or the
-   sentence renders black on black. */
-.shk-gate[data-gate-style="min"] .shk-gate-text { color: #fff; }
-.shk-gate[data-gate-style="min"] .shk-gate-frame {
-  background: transparent;
-  padding: 0;
-  border-color: transparent;
-  color: #fff;
-}
-.shk-gate[data-gate-style="min"] .shk-gate-btn {
-  background: transparent;
-  border-color: rgba(255, 255, 255, 0.5);
-  color: #fff;
-}
-.shk-gate[data-gate-style="min"] .shk-gate-btn:hover {
-  background: #fff;
-  border-color: #fff;
-  color: #111;
-}
-.shk-gate[data-gate-style="min"] .shk-gate-btn:focus-visible { outline-color: #fff; }
-
-@media (max-width: 600px) {
-  .shk-gate { padding: 20px; }
 }
 
 /* MOBILE: while the reader's own press-and-hold is live — the timeline/@fold12
@@ -5304,16 +5143,16 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   cursor: pointer;
   /* The note title's own type: 14px Assistant 600 in its #767676 grey
      (.fold6-note-title); 13px on the phone, where the old letters were 13. */
-  font: 600 13px/1 'Assistant', sans-serif;
-  color: #767676;
+  font: 600 13px/1 var(--font-body);
+  color: var(--muted-ui);
   background: transparent;
   border: 0;
   border-radius: 16px;
   padding: 7px 12px;
-  transition: color 180ms ease;
+  transition: color var(--ui-fade-ms) ease;
 }
 @media (min-width: 601px) { .lang-switch { font-size: 12px; } }
-.lang-switch:hover, .is-open > .lang-switch { color: #111; }
+.lang-switch:hover, .is-open > .lang-switch { color: var(--ink); }
 .lang-switch-globe { width: 14px; height: 14px; display: block; }
 .lang-switch-code { display: block; line-height: 1; }
 /* PHONE: the globe alone. AFTER the base rule above — same specificity, so
@@ -5323,7 +5162,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      tap (explicit instruction): no tap highlight, and the colour change is
      desktop's hover only, so a touch leaves the glyph as it was. */
   .lang-switch { padding: 6px; gap: 0; -webkit-tap-highlight-color: transparent; }
-  .lang-switch:hover, .is-open > .lang-switch { color: #767676; }
+  .lang-switch:hover, .is-open > .lang-switch { color: var(--muted-ui); }
   .lang-switch-globe { width: 16px; height: 16px; }
   .lang-switch-code { display: none; }   /* phone: the globe alone */
 }
@@ -5346,8 +5185,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   grid-template-columns: 0fr;
   padding: 0;
   visibility: hidden;
-  transition: grid-template-rows 180ms ease, grid-template-columns 180ms ease,
-              padding 180ms ease, visibility 0s 180ms;
+  transition: grid-template-rows var(--ui-fade-ms) ease, grid-template-columns var(--ui-fade-ms) ease,
+              padding var(--ui-fade-ms) ease, visibility 0s var(--ui-fade-ms);
 }
 .lang-menu[hidden] { display: grid; }
 .lang-menu-rows { overflow: hidden; min-height: 0; min-width: 0; }
@@ -5356,8 +5195,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   grid-template-columns: 1fr;
   padding: 0 0 6px;
   visibility: visible;
-  transition: grid-template-rows 180ms ease, grid-template-columns 180ms ease,
-              padding 180ms ease;
+  transition: grid-template-rows var(--ui-fade-ms) ease, grid-template-columns var(--ui-fade-ms) ease,
+              padding var(--ui-fade-ms) ease;
 }
 .lang-menu-row {
   display: flex;
@@ -5366,16 +5205,16 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   /* The ring's centre sits on the globe's: desktop globe 14px behind 12px of
      padding → centre 19px, so the 10px ring starts 14px in. */
   padding: 6px 12px 6px 14px;
-  font: 14px/17px 'Assistant', sans-serif;
+  font: 14px/17px var(--font-body);
   /* Lighter than the scope button's .81 at rest, black on hover — the label
      darkens with its ring (explicit instruction, 2026-10-03). */
   color: rgba(0, 0, 0, 0.6);
   text-decoration: none;
   white-space: nowrap;
-  transition: color 180ms ease;
+  transition: color var(--ui-fade-ms) ease;
 }
 .lang-menu-row:hover { color: #000; }
-.lang-menu-row[lang="ar"] { font-family: 'IBM Plex Sans Arabic', 'Assistant', sans-serif; }
+.lang-menu-row[lang="ar"] { font-family: var(--font-ar); }
 .lang-menu-row::before {
   content: "";
   flex: 0 0 auto;
@@ -5384,12 +5223,12 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   border-radius: 50%;
   border: 1px solid rgba(0, 0, 0, 0.45);
   background: transparent;
-  transition: background-color 180ms ease, border-color 180ms ease;
+  transition: background-color var(--ui-fade-ms) ease, border-color var(--ui-fade-ms) ease;
 }
 .lang-menu-row:hover::before { border-color: rgba(0, 0, 0, 0.75); }
 .lang-menu-row.is-current::before {
-  background-color: rgba(0, 0, 0, 0.81);
-  border-color: rgba(0, 0, 0, 0.81);
+  background-color: var(--ink-soft);
+  border-color: var(--ink-soft);
 }
 /* The CURRENT language reads black at rest and is not a choice: no hover, no
    pointer, no click (it would only reload the page) — explicit instruction
@@ -5421,7 +5260,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   --se-w: 120px;                /* width of the mark; height follows the artwork */
   --se-top: 8px;
   --se-right: 12px;             /* desktop only — the phone centres it */
-  --se-color: #393239;          /* העין השביעית's own dark grey */
+  --se-ink: #393239;            /* העין השביעית's own dark grey — mark and line, both breakpoints */
+  --se-color: var(--se-ink);
   --se-opacity: 1;
   --se-plate: transparent;      /* backing plate fill */
   --se-pad: 0px;                /* plate padding around the mark */
@@ -5429,11 +5269,11 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   /* The «פרויקט בשיתוף» line. */
   --se-cap-size: 14px;
   --se-cap-weight: 400;
-  --se-cap-color: #393239;
+  --se-cap-color: var(--se-ink);
   --se-cap-opacity: 1;
   --se-cap-gap: 8px;            /* between the line and the mark */
   --se-cap-spacing: 0.04em;     /* letter-spacing */
-  --se-cap-font: 'Assistant', sans-serif;
+  --se-cap-font: var(--font-body);
   --se-cap-align: center;       /* right | center | left — only matters with --se-dir: column */
   --se-mark-ml: auto;           /* column only: which edge the mark follows (auto/0, auto/auto, 0/auto) */
   --se-mark-mr: auto;
@@ -5485,18 +5325,18 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     --se-w: 120px;
     --se-top: 24px;
     --se-right: 24px;             /* the one desktop edge gap — same as the legend and the EN button */
-    --se-color: #393239;
+    --se-color: var(--se-ink);
     --se-opacity: 1;
     --se-plate: transparent;
     --se-pad: 0px;
     --se-radius: 0px;
     --se-cap-size: 14px;
     --se-cap-weight: 300;
-    --se-cap-color: #393239;      /* matches the idle mark; does NOT follow it on hover */
+    --se-cap-color: var(--se-ink); /* matches the idle mark; does NOT follow it on hover */
     --se-cap-opacity: 1;
     --se-cap-gap: 12px;
     --se-cap-spacing: 0.04em;
-    --se-cap-font: 'Assistant', sans-serif;
+    --se-cap-font: var(--font-body);
     --se-cap-align: center;
     --se-mark-ml: 0;
     --se-mark-mr: 0;
@@ -5547,7 +5387,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 .partner-logo {
   --pl-h: 84px;                 /* height of the artwork; width follows it */
   --pl-gap: 20px;               /* between the text line and the logo */
-  --pl-color: #111111;          /* = .section-title's own colour */
+  --pl-color: var(--ink);          /* = .section-title's own colour */
   --pl-ms: auto;                /* auto / auto = centred; 0 / auto = starts at the text's edge */
   --pl-me: auto;
   --pl-opacity: 1;
@@ -5574,7 +5414,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     --pl-opacity: 1;
     --pl-h: 100px;
     --pl-gap: 24px;
-    --pl-color: #111111;
+    --pl-color: var(--ink);
     --pl-ms: auto;
     --pl-me: auto;
   }
@@ -5640,12 +5480,6 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 
 /* English pill tooltip reads left-to-right. */
 .lang-en .page9-cat-tooltip-desc {
-  direction: ltr;
-}
-
-/* English work-in-progress gate reads left-to-right (it stays centred). */
-.lang-en .shk-gate,
-.lang-en .shk-gate-text {
   direction: ltr;
 }
 
@@ -5797,9 +5631,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 .lang-ar .fold6-note,
 .lang-ar .fold6-mlegend-row,
 .lang-ar .p7-scope-btn,
-.lang-ar .shk-gate-btn,
 .lang-ar .seventh-eye-caption,
 .lang-ar .camp-header,
 .lang-ar .group-label {
-  font-family: 'IBM Plex Sans Arabic', 'Assistant', sans-serif;
+  font-family: var(--font-ar);
 }

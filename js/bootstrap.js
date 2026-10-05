@@ -15,12 +15,7 @@ Promise.all([
   // rows in the top-left corner during @fold1 on a refresh.
   groupsOverlayEl.classList.add("is-active");
   updateTextCardFrameDashes();
-  // HELD, not called: on a first visit the work-in-progress gate is covering
-  // the page, and @fold1's entrance is the piece's first impression — it plays
-  // once the visitor has pressed through, not behind a modal. With no gate
-  // (already dismissed once in this browser) shkGateWait runs it synchronously,
-  // exactly as a bare call did. See js/intro-gate.js.
-  shkGateWait(playPage0Entrance);
+  playPage0Entrance();
   // document.fonts.load() above resolves once the font is fetched, but the
   // browser can still apply it to already-laid-out text a tick later — a
   // font swap changes label widths (and can reflow a title onto a different

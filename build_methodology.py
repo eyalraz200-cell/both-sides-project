@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Inject the seven pipeline prompts into methodology.html and en/methodology.html, verbatim.
+"""Inject the seven pipeline prompts into methodology.html, en/methodology.html and
+ar/methodology.html, verbatim.
 
-methodology.html carries one marker pair per script:
+Each of the three pages carries one marker pair per script:
     <!-- prompt:0N_name.py --><pre>…</pre><!-- /prompt -->
 This rewrites what sits between each pair with the HTML-escaped INSTRUCTIONS
 string read from that script, so the public appendix can never drift from the

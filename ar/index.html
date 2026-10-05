@@ -19,6 +19,12 @@
        a second page. -->
   <meta name="description" content="جمعنا آلاف التحركات السياسية في الحيز العام على مدى السنوات الأربع الأخيرة. قرروا بأنفسكم — من هم المتطرفون من الجانبين؟ مشروع تفاعلي بالشراكة مع العين السابعة." />
   <link rel="canonical" href="https://eyalraz200-cell.github.io/both-sides-project/ar/" />
+  <!-- The three language versions point at each other (absolute, like canonical);
+       x-default is the Hebrew root. Identical lines on index.html, en/ and ar/. -->
+  <link rel="alternate" hreflang="he" href="https://eyalraz200-cell.github.io/both-sides-project/" />
+  <link rel="alternate" hreflang="en" href="https://eyalraz200-cell.github.io/both-sides-project/en/" />
+  <link rel="alternate" hreflang="ar" href="https://eyalraz200-cell.github.io/both-sides-project/ar/" />
+  <link rel="alternate" hreflang="x-default" href="https://eyalraz200-cell.github.io/both-sides-project/" />
   <!-- Open Graph / Twitter card — what WhatsApp, X, Facebook, LinkedIn render when
        the link is shared (the @fold15 share row relies on this). og:image must be an
        ABSOLUTE url; og-image-v3.png is a 2400×1260 (2× of the 1200×630 card) shot of _og-card.html.
@@ -34,24 +40,14 @@
   <meta property="og:image:alt" content="متطرفون من الجانبين — تحليل نشاط المعسكرات السياسية في إسرائيل" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="متطرفون من الجانبين" />
-  <meta name="twitter:description" content="جمعنا آلاف التحركات السياسية في الحيز العام على مدى السنوات الأربع الأخيرة. قرروا بأنفسكم — من هم المتطرفون من الجانبين؟ مشروع تفاعلي بالشراكة مع العين السابعة." />
+  <meta name="twitter:description" content="جمعنا آلاف التحركات السياسية في الحيز العام على مدى السنوات الأربع الأخيرة. قرروا بأنفسكم - من هم المتطرفون من الجانبين؟&#10;مشروع تفاعلي بالشراكة مع العين السابعة." />
   <meta name="twitter:image" content="https://eyalraz200-cell.github.io/both-sides-project/og-image-v3.png" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300..800&display=swap" rel="stylesheet" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Beiruti:wght@400&family=IBM+Plex+Sans+Arabic:wght@300;400;500;700&display=swap" />
-<link rel="stylesheet" href="style.css" />
-  <!-- Someone who already dismissed the work-in-progress gate (see .shk-gate at
-       the foot of <body>) must never see it flash. This has to run BEFORE the
-       first paint, which rules out doing it from js/intro-gate.js at the end of
-       the body — hence an inline head script. It only ever sets a class; the
-       gate's own script owns the flag's name (keep the two in sync). -->
-  <script>
-    try { if (localStorage.getItem("shk-gate-seen") === "1") document.documentElement.classList.add("shk-gate-seen"); } catch (e) {}
-  </script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Beiruti:wght@400&family=IBM+Plex+Sans+Arabic:wght@300;400;500;700&display=swap" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <!-- The page's one h1. Every visible heading is an <h2> inside a scrolling
@@ -205,7 +201,7 @@
       </section>
       <section class="text-section" data-page="8" id="page-8">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">وقعت الأحداث المعروضة منذ بداية 2023 وحتى اليوم.<br>يمكن تصفية المجموعات باستخدام وسيلة الإيضاح.</h2>
+          <h2 class="section-title text-card-frame">وقعت الأحداث المعروضة منذ بداية 2023 وحتى اليوم.<br>يمكن تصفية المجموعات باستخدام مفتاح الرموز.</h2>
         </div>
       </section>
       <section class="text-section page7-scrub" data-page="9" id="page-9"></section>
@@ -226,7 +222,7 @@
            @fold11 simply arrives with it already at rest. -->
       <section class="text-section" data-page="11" id="page-11">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">لأغراض المقارنة العددية، تُعرض كل المربعات بحجم موحد.<br>يمكن عرض حجم الأحداث باستخدام الزر في وسيلة الإيضاح.</h2>
+          <h2 class="section-title text-card-frame">لأغراض المقارنة العددية، تُعرض كل المربعات بحجم موحد.<br>يمكن عرض حجم الأحداث باستخدام الزر في مفتاح الرموز.</h2>
         </div>
       </section>
       <section class="text-section" data-page="12" id="page-12">
@@ -329,41 +325,6 @@
     </div>
   </div>
 
-  <!-- WORK-IN-PROGRESS GATE. The first thing a visitor sees: a darkened page
-       behind a short "please don't circulate this yet" card. @fold1's entrance
-       (playPage0Entrance) is HELD until the button is pressed — see
-       shkGateWait() in js/intro-gate.js and its one call site in
-       js/bootstrap.js — so the reveal plays for someone who is looking at it,
-       not behind a modal.
-
-       Static markup rather than JS-built so it is already painted on first
-       frame; the <html class="shk-gate-seen"> test in <head> is what keeps a
-       returning visitor from seeing it flash before the script can remove it.
-       data-gate-style picks the look (doc | dark | squares | min) — the four
-       candidates the _debug-gate.js harness flips between. -->
-  <div class="shk-gate" id="shkGate" data-gate-style="doc"
-       role="dialog" aria-modal="true" aria-labelledby="shkGateText">
-    <div class="shk-gate-card">
-      <!-- The six group colours, in roster order (see GROUPS, js/groups.js).
-           They GROW in — never fade — per the project's dot rule. -->
-      <div class="shk-gate-squares" aria-hidden="true">
-        <i style="--sq: #F9B624"></i><i style="--sq: #454545"></i><i style="--sq: #F024FF"></i><i style="--sq: #6B89FF"></i><i style="--sq: #FF1A94"></i><i style="--sq: #31CE1C"></i>
-      </div>
-      <!-- .section-title + .text-card-frame are the SAME shared rules the
-           scrolling title cards use, so the dashed frame is drawn for free by
-           updateTextCardFrameDashes() (js/core.js), which walks every
-           .text-card-frame on the page. The non-`doc` styles strip the frame's
-           fill/padding and hide its dash in CSS rather than dropping the class,
-           so the harness can flip between them with no DOM surgery. -->
-      <div class="text-card-frame shk-gate-frame">
-        <h2 class="section-title shk-gate-text" id="shkGateText">لا يزال المشروع قيد العمل، يرجى الامتناع عن تداوله في هذه المرحلة، شكرًا.</h2>
-        <!-- INSIDE the frame, under the sentence — the notice is one title
-             block, not a card with a control parked beneath it. -->
-        <button type="button" class="shk-gate-btn" id="shkGateBtn">فهمت، المتابعة إلى المشروع</button>
-      </div>
-    </div>
-  </div>
-
   <script src="js/i18n.js"></script>
   <script src="squareboundingbox.js"></script>
   <script src="page1.js"></script>
@@ -379,7 +340,6 @@
   <script src="js/fold8-tooltip.js"></script>
   <script src="js/groups.js"></script>
   <script src="js/update-groups.js"></script>
-  <script src="js/intro-gate.js"></script>
   <script src="js/page8-9-scroll.js"></script>
   <script src="js/fold11.js"></script>
   <script src="js/bootstrap.js"></script>

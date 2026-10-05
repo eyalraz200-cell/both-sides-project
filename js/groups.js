@@ -1916,14 +1916,8 @@ function fold7SquareAt(x, y, pad) {
 }
 window.addEventListener("mousemove", e => {
   if (isMobile() || !fold7HoverEnabled()) return;
-  for (let i = 0; i < fold6SquareEls.length; i++) {
-    const r = fold6SquareEls[i].sq.getBoundingClientRect();
-    if (e.clientX >= r.left - FOLD7_HOVER_PAD_PX && e.clientX <= r.right + FOLD7_HOVER_PAD_PX &&
-        e.clientY >= r.top - FOLD7_HOVER_PAD_PX && e.clientY <= r.bottom + FOLD7_HOVER_PAD_PX) {
-      fold7SquareHover(i);
-      return;
-    }
-  }
+  const i = fold7SquareAt(e.clientX, e.clientY, FOLD7_HOVER_PAD_PX);
+  if (i !== -1) fold7SquareHover(i);
 }, { passive: true });
 // Mobile: press-and-hold a square — the SAME gesture as the timeline's picker
 // (p7InspectInit, page7.js), mirrored piece by piece so the two feel identical:

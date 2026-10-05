@@ -64,12 +64,13 @@ function page8CheckScroll() {
 // `var` so a manual/ harness can drive these live.
 var FOLD12_GHOST_OPACITY = 0.15;   // manual/-baked 2026-09-28 (the flash's brightest point)
 var FOLD12_GHOST_TEXT    = true;        // false = the empty frame, text hidden
-var FOLD12_GHOST_FILL    = "#fdfcff";   // manual/-baked 2026-09-28
+// The ghost's fill is the page paper: style.css's --bg, read once at load.
+var FOLD12_GHOST_FILL    = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || "#FDFCFF";
 const FOLD12_GHOST_CARD_FRAC = 0.75;
 // Mobile's own set — matched to desktop for now.
 var FOLD12_GHOST_OPACITY_MOBILE = 0.15;
 var FOLD12_GHOST_TEXT_MOBILE    = true;
-var FOLD12_GHOST_FILL_MOBILE    = "#fdfcff";
+var FOLD12_GHOST_FILL_MOBILE    = FOLD12_GHOST_FILL;   // --bg too
 const FOLD12_GHOST_CARD_FRAC_MOBILE = 0.75;
 var FOLD12_GHOST_FLASH_MS_MOBILE = 3000;
 function fold12GhostOpacity()  { return isMobile() ? FOLD12_GHOST_OPACITY_MOBILE  : FOLD12_GHOST_OPACITY; }

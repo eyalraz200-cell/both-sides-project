@@ -7,8 +7,8 @@ date; the rules behind each one live in [Data](Data.md).
 - [x] Second split pass (70 rows → 84 children): classified, translated, crowds corrected, shipped (2026-10-03).
 
 ## Tail cut (temporary)
-- [ ] `server.py` drops every row dated after ACLED's last day (`last_acled`, 2026-07-03 today) —
-      633 Fortress rows are off the site **for now only**. Every pipeline step (actor, split,
+- [ ] `server.py` drops every row dated after ACLED's last day (`last_acled`, 2026-07-03) —
+      576 rows are off the site **for now only**. Every pipeline step (actor, split,
       type, Hebrew, English, Arabic, crowd) still runs over them so they are ready the day the
       cut is lifted. Lifting it = removing the `last_acled` check, not re-processing.
 
@@ -30,8 +30,8 @@ date; the rules behind each one live in [Data](Data.md).
 - [x] Hebrew terminology pass (2026-10-03, user's calls): משתמטים/השתמטות → עריקים/עריקות everywhere; ASCII `"` → ״; המהפכה המשפטית → הרפורמה המשפטית (both translated ACLED's "overhaul"); כיכר אל־קודס (Tamra) kept — a place name. ערבים־ישראלים → ערבים ישראלים.
 
 ## Classification
-- [ ] **244 Fortress rows un-hidden (2026-10-04)**: they were hidden as `dup of row-N`, but row-N is an ACLED row that never ships (PLO-only or hidden), so the event vanished from both sources. Rule now: a Fortress duplicate is hidden only when its ACLED match ships. The note is in `dedupe_note` («kept 2026-10-04»); backup in `_xlsx-archive/`. They need step 02 (164 rows), 05 (164), 06 (all 244) and 07 (all 244); `server.py` holds back any row with no `event_type` or an un-rewritten Fortress line, so they ship by themselves once processed. Restart + commit `events.json` after.
-- [x] Commit `events.json` / `events-en.json` + today's scripts, server and wiki (site is stale).
+- [x] **244 Fortress rows un-hidden (2026-10-04)** — resolved 2026-10-05 the other way round (the ACLED twins ship via `corroborated_by`; see the 2026-10-05 item below): they were hidden as `dup of row-N`, but row-N is an ACLED row that never ships (PLO-only or hidden), so the event vanished from both sources. Rule now: a Fortress duplicate is hidden only when its ACLED match ships. The note is in `dedupe_note` («kept 2026-10-04»); backup in `_xlsx-archive/`. They need step 02 (164 rows), 05 (164), 06 (all 244) and 07 (all 244); `server.py` holds back any row with no `event_type` or an un-rewritten Fortress line, so they ship by themselves once processed. Restart + commit `events.json` after.
+- [x] Commit `events.json` / `events-en.json` / `events-ar.json` + today's scripts, server and wiki (site is stale).
 - [x] Prompt check before the rerun (2026-10-04): 190 stratified ACLED rows run live; user ruled on block+clash, police clashes, counter-protesters, abduction vs in-place detention, road paving — all in the 02 prompt.
 - [x] Dot flagging round 1 (2026-10-04): pogrom crowd threshold raised to 30+ (a stated 15/20 or no size is not a crowd); 5 live pogroms reclassified by hand (rows 8668, 9523, 11015, 13442, 18628). 20 pogroms remain.
 - [x] Dot flagging round 2 (2026-10-04): עימותים / confrontations / scuffles without a described assault are הפרות סדר, not תקיפה פיזית; protesters who were attacked keep their own conduct; one participant's act ≠ the crowd's. 7 rows set by hand (13, 42, 1253, 1707, 3253, 4630, 4667).

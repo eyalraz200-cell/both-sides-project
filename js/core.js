@@ -24,8 +24,7 @@ function isLocalHost() {
 }
 
 // ── Mobile breakpoint ──
-// One shared breakpoint for the whole page, matching trigger.css's own 600px
-// article breakpoint. JS layout code that needs to scale a desktop px
+// One shared breakpoint for the whole page, 600px. JS layout code that needs to scale a desktop px
 // constant down on phones gates on isMobile(); CSS uses
 // `@media (max-width: 600px)`.
 //
@@ -39,7 +38,7 @@ function isLocalHost() {
 // frame. (Deliberately not matchMedia: on desktop `innerWidth` includes the
 // scrollbar and the media query does not, so the two disagree by a few px right
 // at the breakpoint.) This listener is registered in core.js, the first `js/`
-// file project.html loads, so it updates before any other resize handler runs
+// file index.html loads, so it updates before any other resize handler runs
 // and no consumer can see a stale value. A mobile URL-bar collapse fires resize
 // with the width unchanged, which correctly leaves the value alone.
 const MOBILE_BP = 600;

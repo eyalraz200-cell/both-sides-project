@@ -13,17 +13,19 @@ One object per event:
 | `actor` | Join key into `GROUPS`' `actor` field → the dot's color (`p7ActorColor`) |
 | `category` | Hebrew category string (the xlsx's `event_type`) → `CATEGORY_TO_IDX` (`page9.js`) |
 | `descHeMedium` | Per-event Hebrew description, shown in the hover tooltip |
-| `crowd` | Integer crowd estimate or `null` — from the **crowd size** column of a *second* workbook, see below. Drives the @fold8 hover bulge tier (`p7BulgeTier`, [Timeline](Timeline.md#the-hover-bulge--p7bulgetick--p7bulgelist--p7bulgeshift-page7js)) |
+| `crowd` | Integer crowd estimate or `null` — from the workbook's `crowd` column via `parse_crowd`, see below. Drives the crowd tier (`p7BulgeTier`): the @fold8 hover bulge ([Timeline](Timeline.md#the-hover-bulge--p7bulgetick--p7bulgelist--p7bulgeshift-page7js)) and @fold9's size grid ([Timeline](Timeline.md#the-size-grid--p7sizegridset-page7js)) |
 
 Committed dataset (`events.json` at the repo root, `crowd` field included): **12,283
-events — 5,552 left, 6,501 right** (2026-10-04), from **2023-01-01** to **2026-07-03** — the sheet rows
-minus the 4,036 dropped by `SOLE_SOURCE_EXCLUDE`, the 1,418 marked in the `hidden` column,
-and the 633 dated after the last ACLED event (`CUT_AFTER_LAST_ACLED`, all below).
+events — 5,552 left, 6,731 right** (2026-10-05), from **2023-01-01** to **2026-07-03** — the
+sheet's 18,499 rows minus the 1,804 marked in the `hidden` column, the 3,806 dropped by
+`SOLE_SOURCE_EXCLUDE`, the 19 still waiting on the pipeline (no `event_type`, or a Fortress
+line not yet rewritten), the 11 live `not relevant` rows, and the 576 dated after the last
+ACLED event (`CUT_AFTER_LAST_ACLED`, all below) — counted in `load_events()`'s order.
 
 **The timeline stops where ACLED stops, for now.** `load_events()` finds the latest date
 among rows whose `data_source` is `acled` (2026-07-03 today) and drops every row dated after
-it, whatever its source — The Fortress keeps posting weeks past ACLED's last export and
-those fortress-only dots used to trail alone at the axis's end. `CUT_AFTER_LAST_ACLED = False`
+it, whatever its source — The Fortress keeps posting weeks past ACLED's last export, and
+those fortress-only dots would trail alone at the axis's end. `CUT_AFTER_LAST_ACLED = False`
 in `server.py` ships the full tail again; a newer ACLED export moves the cut forward by itself.
 `peace movements` (תומכי עסקת חטופים ומתנגדי המלחמה) has **no event before 2023-10-07** —
 its first is 2023-10-14.
@@ -36,11 +38,12 @@ group appears on the timeline.
 
 `{ rowId: description }`: the workbook's `description_en_short` (step 07) where filled, else
 the `Description` column (ACLED's original English text). `events-ar.json` is the same map
-from `description_ar`, fetched only by the Arabic page. Written by `server.py` next to `events.json` on every start. Fetched
-**only** by the English page (`p7LoadEnglishDescs`, page7.js), which stores it as
-`descEn` on each event; `p7EventDesc(ev)` returns `descEn`, else `descHeMedium`.
-**Committed alongside `events.json`**, so the deployed English page has it — after changing
-the xlsx, restart the server and commit both. It is ACLED content verbatim, under the same
+from `description_ar`. Both are written by `server.py` next to `events.json` on every start,
+and fetched only by their own page (`p7LoadEnglishDescs`, page7.js, picks the file by
+`isEnglish()` / `isArabic()`), which stores the line as `descEn` on each event;
+`p7EventDesc(ev)` returns `descEn`, else `descHeMedium`. **Committed alongside
+`events.json`**, so the deployed translated pages have them — after changing the xlsx,
+restart the server and commit all three. It is ACLED content verbatim, under the same
 pending-approval status as `events.json`. If the file is missing the English page falls
 back to the Hebrew descriptions.
 
@@ -52,17 +55,19 @@ ACLED-licensed rows. ACLED forbids giving the public direct access to its conten
 are **gitignored (`*.xlsx`, `raw-*.csv`) and exist only on local disks** — the public repo's
 history was rewritten on 2026-09-22 to remove every past copy (along with
 `map/event-points.json` and `_debug-misclassified.json`, which carried per-event data).
-A clone without the workbooks still runs: `server.py` serves the committed `events.json`
+A clone without the workbooks still runs: `server.py` serves the committed JSON files
 unchanged and skips `_sync_static_events()`.
 
-`events.json` (date, actor, side, category, `descHeMedium`, crowd, rowId per event) is the
-**single committed derivative**, because GitHub Pages needs it client-side. ACLED's EULA
+The **committed derivatives** are exactly three, all written by `_sync_static_events()`
+(server.py) and needed client-side by GitHub Pages: `events.json` (date, actor, side,
+category, `descHeMedium`, crowd, rowId per event) and the two description maps
+`events-en.json` / `events-ar.json` (above). ACLED's EULA
 (acleddata.com/eula, read 2026-10-04) permits publishing "Derivative Materials" that are
 transformative and cannot be reverse-engineered into the source, and needs no prior approval;
 the attribution policy requires naming ACLED, disclosing the manipulation, not attributing the
 analysis to ACLED, and the citation form `ACLED, accessed on 10 July 2026. www.acleddata.com`
 (the raw exports' date). `methodology.html` carries all of that. Never add any other
-event-level export to the repo.
+event-level export to the repo beyond those three.
 
 ## The methodology page — `methodology.html`
 
@@ -73,7 +78,9 @@ The full public write-up of everything on this page, in Hebrew, served at the si
 js/groups.js, desktop and the mobile מקרא card alike — and from the @fold16 credits card).
 It is the **fourth and longest** of the four methodology tiers (@fold6 card → legend note →
 @fold16 credits → this page); each tier adds only what the one before left out. Self-contained
-(own `<style>`, Discordia title + Assistant body, `dir="rtl"`), no scripts.
+(own `<style>`, Discordia title + Assistant body, `dir="rtl"`) with one small inline script,
+shared by all three language versions: on load and on `hashchange` it opens the `<details>`
+a `#hash` link targets, so a «להנחיה המלאה» jump lands on the prompt text.
 
 Its appendix quotes the seven `0N_*.py` prompts **verbatim**: `python3 build_methodology.py`
 rewrites each `<!-- prompt:0N_name.py --><pre>…</pre><!-- /prompt -->` block from the script's
@@ -85,20 +92,32 @@ rounds) is hand-written — update it when this page's facts change.
 
 Seven standalone scripts at the repo root, each `submit <xlsx>` → `status` → `download`
 (writes `<name> - <step>.xlsx` next to the source; copy it back over `events.xlsx` by hand).
-Run in this order on new rows (every step skips rows whose only source is in `SOLE_SOURCE_EXCLUDE` — they never ship, so they are never paid for):
+Run in this order on new rows (every step skips rows whose only source is in `SOLE_SOURCE_EXCLUDE` unless `corroborated_by` is filled — they never ship, so they are never paid for — and every step skips rows carrying its own hand stamp, so a rerun never overwrites a hand decision). The appendix numbers the prompts by file (01…07), not by this run order:
 
 | Step | Writes | Rows it touches |
 |---|---|---|
-| `01_identify_main_actor.py` | `main_actor` (+ certainty / needs_review / reason) | every row with a `Description` — run it only on a sheet of NEW rows |
-| `04_split_subactions.py` | rewrites `Description` + `crowd` on the parent (originals kept in `description_original` / `crowd_total`), APPENDS one child row per extra action (`split_from` = parent `row_id`, fresh `row-N`), blanks `event_type` / `description_he_medium` on both and sets `reclassify = yes` | ACLED/manual rows whose text holds a second action by a subset of the main actor (two crowd figures, or "some / a group / dozens of the protesters"); never Fortress rows, hidden rows or PLO-only rows |
+| `01_identify_main_actor.py` | `main_actor` (+ certainty / needs_review / reason) | rows with a BLANK `main_actor` and a `Description` (Fortress rows: their Hebrew line); never a row with a date in `main_actor_hand`, never a hidden row |
+| `04_split_subactions.py` | rewrites `Description` + `crowd` on the parent (originals kept in `description_original` / `crowd_total`), APPENDS one child row per extra action (`split_from` = parent `row_id`, fresh `row-N`), blanks `event_type` / `description_he_medium` on both and sets `reclassify = yes` | ACLED/manual rows whose text holds a second action by a subset of the main actor (two crowd figures, or "some / a group / dozens of the protesters"); never Fortress rows, hidden rows, rows already split, or rows with a date in `event_type_hand` or `description_hand` (download would blank the hand-set type / Hebrew) |
 | `02_classify_event_type_no_intimidation.py` | `event_type` (+ certainty / needs_review / reason) | rows with a BLANK `event_type`, or `reclassify = yes`. **Rows with a date in `event_type_hand` are skipped** unless `reclassify = yes` |
-| `03_translate_hebrew_and_date.py` | `date`, `description_he_medium`; clears `reclassify` | rows with no Hebrew yet, or `reclassify = yes` |
+| `03_translate_hebrew_and_date.py` | `date`, `description_he_medium`; clears `reclassify` (02 runs first and leaves it set) | live rows (not hidden, actor set and not `not relevant`) with no Hebrew yet, or `reclassify = yes`; a date in `description_hand` skips the row |
 | `05_extract_crowd.py` | `crowd` in the sheet's own vocabulary (`about 2,000`, `dozens`, `2`) or the explicit `no report`, plus `crowd_reason` | live rows with a BLANK `crowd`: Fortress rows, split halves and manual rows always; ACLED rows only when the text carries a size cue (`CUE` regex) — the pre-2026-10-02 crowd run saw every ACLED row, so a cue-less blank is a decided unknown and gets `no report` by rule on download. A non-blank `crowd` cell is never touched (that is the hand override) |
 | `06_rewrite_fortress_desc.py` | Fortress rows only: `description_he_medium` rewritten in the ACLED register (actor named as subject, place from `location`, 70–110 chars, every fact kept; the log's own line moves to `description_he_original`) and a short English `Description` (80–140 chars, no date prefix — the length the English pass will later bring every ACLED row down to), plus `description_note` | live `the fortress` rows with a blank `description_he_original`; a date in `description_hand` skips the row |
 | `07_short_english_and_arabic.py` | `description_en_short` (the shipped English: the Hebrew line's facts at about its length, no date prefix, ACLED spellings) and `description_ar` (MSA translation of the Hebrew, fixed glossary in the prompt), plus `description_note`. `Description` is never touched — the classifiers read it | live rows with Hebrew and a blank `description_ar`; Fortress rows only after step 06 has rewritten them; a date in `description_hand` skips the row. Maps results back by `row_id` |
 
-The prompts in 01 and 02 carry the hand-review rules of 2026-10-03 (see the `main_actor`
-and `event_type` rows in the column table below). `crowd` after step 04 is the size of the
+The prompts in 01 and 02 carry the hand-review rules (see the `main_actor` and `event_type`
+rows in the column table below). In 01: `peace movements` is used only from 7 October 2023
+and covers hostage-deal / ceasefire / anti-war / anti-occupation protests (hostage-deal
+protests are never `protesters against government`); anti-occupation and joint Jewish-Arab
+protests dated before 7 October 2023 are `arab israelis`. In 02: arson of property with nobody
+in it is פגיעה ברכוש, while fire set to an inhabited house or occupied vehicle, a Molotov at an
+inhabited house, and fireworks / flares thrown at people (or fired during a clash with police)
+are תקיפה בנשק חם; fireworks set off with no target and no clash count as הפרות סדר and the
+event takes the main actor's other acts (row-4773: stones → תקיפה בנשק קר). פוגרום is ONE
+four-part test, every element stated: a crowd of 30+ with its size given ("tens", which
+`parse_crowd` reads as 30, does not count), Palestinians injured or killed by the main actor,
+named fire, and concrete detail; missing any → the most serious act described.
+
+`crowd` after step 04 is the size of the
 group that performed THAT event's action ("dozens" for the roadblock, "about 40,000" for the
 rally it split from); a subset described only as "some" / "a group" gets a blank crowd.
 
@@ -107,8 +126,9 @@ rally it split from); a subset described only as "some" / "a group" gets a blank
 ### `events.xlsx` — the ONE workbook (`EVENTS_XLSX`)
 
 Since 2026-10-02 there is a single workbook at the repo root, `events.xlsx` (sheet
-`raw-israel`, 14,456 data rows: 14,451 ACLED rows + 5 hand-added events,
-`row-15392`…`row-15396`, that carry no `acled_id`/geodata). It is the former `full_v4.xlsx`
+`raw-israel`, 18,499 data rows: 14,715 ACLED rows — 14,451 from the export + 264 split
+children from step 04 —, 6 manual rows — 5 hand-added events, `row-15392`…`row-15396`, that
+carry no `acled_id`/geodata, + 1 split child — and 3,778 Fortress rows). It is the former `full_v4.xlsx`
 with the `crowd` column merged in from the former `Events_with_description_he_medium.xlsx`
 (joined once, on the first 80 characters of the English `Description`; 2,811 rows carry a
 figure). Those two, `full_v3.xlsx` and the 2026-09-27 backup are parked in `_xlsx-archive/`
@@ -118,7 +138,7 @@ second workbook as a live dependency.
 `parse_crowd(raw)` turns the cell's free text (`crowd size=about 2,000`,
 `…=tens of thousands`, `no report`) into ONE integer estimate: the larger of any number in
 the text and the first word bucket in `CROWD_WORDS` (hundreds of thousands 300,000 · tens
-of thousands 30,000 · thousands 3,000 · hundreds 300 · dozens 50 · tens 30); blank → `null`. Distribution: < 100 — 837 · 100–999 — 985 · 1k–9,999 — 734 · ≥ 10k — 201.
+of thousands 30,000 · thousands 3,000 · hundreds 300 · dozens 50 · tens 30); a range resolves to its larger end; blank → `null`. Distribution over the 3,604 shipped events with a figure (2026-10-05): < 100 — 1,414 · 100–999 — 1,166 · 1k–9,999 — 821 · ≥ 10k — 203.
 
 Columns:
 
@@ -127,24 +147,26 @@ Columns:
 | `main_actor` | `actor` — lowercase strings matched verbatim by `GROUPS`. **Hand overrides:** 7 pre-Oct-7 joint Arab-Jewish / left protests were moved `peace movements` → `arab israelis` on 2026-09-27 (the pink group starts 7 Oct 2023), and a 2026-10-03 review moved ~30 more (anti-aid / anti-deal rows out of `peace movements` into `right wing protesters`, October Council and anti-Iran-war rows into `protesters against government`, Jewish nationalist violence in Jerusalem out of `settlers`). The rules are in `01_identify_main_actor.py`'s prompt. Every hand-set row carries its date in `main_actor_hand`; a classifier rerun must skip those rows |
 | `event_type` | `category` — Hebrew, 10 distinct values = `P9_CATEGORIES` one-to-one. **Hand overrides live only in this column** — the 2026-09-17 reclassification of 8 rows out of פוגרום (`row-7660`, `8108`, `8242`, `8717`, `9457`, `9715`, `12865`, `14679`; see commit `d43fcc3`) was lost once when the dataset moved to `full_v4.xlsx` and re-applied on 2026-10-03. A second hand pass on 2026-10-03 changed 63 more rows after an outlier review (stones at houses → נשק קר, "armed" without use → פיזית, eggs/smoke/objects → הפרות סדר, crowd of 30+ (raised from 20 on 2026-10-04) + violence + fire → פוגרום, tear-gas launchers → נשק חם, etc. — the rules now live in `02_classify_event_type_no_intimidation.py`'s prompt). **Every hand-set row carries the date in column `event_type_hand`**; a classifier rerun must skip those rows |
 | `date` | `date` |
-| `description_he_medium` | `descHeMedium` (2 rows empty → `null`) |
+| `description_he_medium` | `descHeMedium` (every shipped row has one; an empty cell would ship as `null`) |
 | `row_id` | `rowId` — the stable per-row handle JS pins to, and what a harness reports back for marking rows in the sheet |
-| `actor_type` | unused by code (hidden column J). Sub-type filled for three groups of rows: `anti judicial reform demonstrators` (2,094) and `anti government protesters` (373) — both `main_actor` `protesters against government` — and `hostage deal protesters` (2,146), whose `main_actor` is `peace movements` (so תומכי עסקת חטופים ומתנגדי המלחמה = left activists + hostage-deal protesters; the sub-type column keeps them distinguishable) |
-| `Description`, `location`, `fatalities` | unused; columns G–J are hidden in the sheet |
-| `data_source` | Column Q. Which dataset the row came from: `acled` (14,451), `manual` (the 5 hand-added rows), `the fortress` (3,778 rows, `row-15397`…`row-19174`, appended 2026-10-02 from `tiud-events-2026-09-29.xlsx` — a Hebrew settler-violence log, 2023-10-06 → 2026-09-28; `main_actor` was assigned by hand on 2026-10-02 — 3,746 `settlers`, 22 `right wing protesters` (aid-convoy blockades, Flag March assaults, Old City / al-Aqsa incidents), 10 `not relevant` (army- or state-led rows); 46 judgment calls carry `yes` in `main_actor_needs_review`, column U. `event_type` was filled by `02_classify_event_type_no_intimidation.py` on 2026-10-03 for the 2,352 live rows (57 flagged `event_type_needs_review = yes`); the model's Hebrew reasoning sits in `event_type_reason`. A sample review the same day moved 172 grazing incursions ניכוס שטח → הפרות סדר (appropriation now needs a tent/caravan/fence/outpost — rule added to the 02 prompt, with a passive-voice rule and a displacement-outcome rule) and fixed 8 sampled misfires; all stamped in `event_type_hand`. **Deduped against ACLED on 2026-10-03** by reading every pair within ±1 day (see `_dedupe/`, gitignored): 1,416 rows were `sure` duplicates of an ACLED event, 342 `unsure`, 2,020 have no ACLED counterpart; a second reading of the 342 the same day (`_dedupe/pass2/`, 12 readers, ±1-day ACLED window, told to prefer `sure` when place and act line up and nothing contradicts) resolved 293 `sure`, 38 `distinct`, 11 `unsure`, and the user decided those 11 (5 sure, 6 distinct; note ends `| user 2026-10-03`) — so 1,714 `sure` in all and no `unsure` left. **ACLED wins — when the ACLED row ships:** every `sure` Fortress row carries `dup of row-N` in its `hidden` column, so `load_events()` drops it; the 244 whose row-N is itself dropped (PLO-only or hidden) were un-hidden on 2026-10-04, since hiding them erased the event from both sources. `load_events()` also holds back any row with a blank `event_type`, or a Fortress row whose `description_he_original` is blank (not yet rewritten by step 06); `distinct` and `unsure` rows stay live. `dedupe_note` holds both readers' reasons (`| pass2: …`). The log's own internal duplicates (same incident twice in the Fortress sheet) were read on 2026-10-04: 87 rows carry `fortress dup of row-N` in `hidden`.) Not read by the site yet; distinct from `source`, which is the news outlet |
+| `actor_type` | unused by code (hidden column J). Sub-type filled for three groups of rows: `anti judicial reform demonstrators` (2,205) and `anti government protesters` (399) — both `main_actor` `protesters against government` — and `hostage deal protesters` (2,228; 2,222 of them `main_actor` `peace movements`, 4 `right wing protesters`, 2 `protesters against government`) (so תומכי עסקת חטופים ומתנגדי המלחמה = left activists + hostage-deal protesters; the sub-type column keeps them distinguishable) |
+| `Description` | ACLED's original English text (hidden column in the sheet). **Read by `load_events()`** as the English fallback for `events-en.json` where `description_en_short` is blank, and an input to the classifier scripts |
+| `location`, `fatalities` | unused; hidden in the sheet |
+| `data_source` | Column Q. Which dataset the row came from: `acled` (14,715, split children included), `manual` (the 5 hand-added rows + 1 split child), `the fortress` (3,778 rows, `row-15397`…`row-19174`, appended 2026-10-02 from `_xlsx-archive/tiud-events-2026-09-29.xlsx` — a Hebrew settler-violence log, 2023-10-06 → 2026-09-28; `main_actor` was assigned by hand on 2026-10-02 and refined by the ARMY ACTS review — today 3,727 `settlers`, 22 `right wing protesters` (aid-convoy blockades, Flag March assaults, Old City / al-Aqsa incidents), 29 `not relevant` (army- or state-led rows); 46 judgment calls carry `yes` in `main_actor_needs_review`, column U. `event_type` was filled by `02_classify_event_type_no_intimidation.py` on 2026-10-03 for the 2,352 live rows (57 flagged `event_type_needs_review = yes`); the model's Hebrew reasoning sits in `event_type_reason`. A sample review the same day moved 172 grazing incursions ניכוס שטח → הפרות סדר (appropriation now needs a tent/caravan/fence/outpost — rule added to the 02 prompt, with a passive-voice rule and a displacement-outcome rule) and fixed 8 sampled misfires; all stamped in `event_type_hand`. **Deduped against ACLED on 2026-10-03** by reading every pair within ±1 day (see `_dedupe/`, gitignored): 1,416 rows were `sure` duplicates of an ACLED event, 342 `unsure`, 2,020 have no ACLED counterpart; a second reading of the 342 the same day (`_dedupe/pass2/`, 12 readers, ±1-day ACLED window, told to prefer `sure` when place and act line up and nothing contradicts) resolved 293 `sure`, 38 `distinct`, 11 `unsure`, and the user decided those 11 (5 sure, 6 distinct; note ends `| user 2026-10-03`) — so 1,714 `sure` in all and no `unsure` left. **ACLED wins — when the ACLED row ships:** every `sure` Fortress row carries `dup of row-N` in its `hidden` column, so `load_events()` drops it. Where row-N is a PLO-only ACLED row, that ACLED row carries `corroborated_by` and ships instead (230 rows, see `source` below), so the event is never erased from both sources. `load_events()` also holds back any row with a blank `event_type`, or a Fortress row whose `description_he_original` is blank (not yet rewritten by step 06); `distinct` and `unsure` rows stay live. `dedupe_note` holds both readers' reasons (`| pass2: …`). The log's own internal duplicates (same incident twice in the Fortress sheet) were read on 2026-10-04: 87 rows carry `fortress dup of row-N` in `hidden`.) Not read by the site yet; distinct from `source`, which is the news outlet |
 | `acled_duplicate_of`, `acled_match`, `dedupe_note` | Columns V–X, Fortress rows only: the `row_id` of the ACLED row describing the same incident, `sure` / `unsure`, and the reader's one-line reason. The note also lists sibling Fortress rows that matched the same ACLED event — the Fortress sheet has ~145 internal duplicates (371 rows) |
 | `fortress_id`, `fortress_categories`, `fortress_links` | Columns R–T, Fortress rows only: the log's own row number (never confuse with `row_id`), its `·`-separated tags (25 distinct, multi-label), and its source URLs |
 | `corroborated_by` | ACLED rows only: the Fortress row id(s) that describe the same incident. A sole-source PLO row with this filled ships after all (`load_events()`), and every pipeline step processes it |
 | `event_type_prev` | The category a row had before the 2026-10-04 second pass of step 02 (`RERUN_ALL=1`), filled only where it changed — for review and undo. Not read by the site |
 | `crowd` | Column P. Free text (`about 2,000`, `tens of thousands`, `2`) or the explicit `no report` (= unknown, deliberate); **read by `load_events()`** via `parse_crowd` (`no report` → `null`). Filled by `05_extract_crowd.py`; the model's one-line quote sits in `crowd_reason` |
-| `hidden` | Column O, optional. **Read by `load_events()`**: any non-empty cell keeps the row in the workbook but drops it from `events.json`. Marked rows are also filled yellow in the sheet. 2 hand-marked (`row-7707`, `row-2145`) plus the 1,416 Fortress rows that duplicate an ACLED event (`dup of row-N`) |
-| `source` | `;`-separated outlet names, filled on every row (backfilled from the raw ACLED exports on 2026-09-23). **Read by `load_events()`**: a row whose *only* source(s) are in `SOLE_SOURCE_EXCLUDE` (`server.py`) is dropped. The set is `{plo negotiations affairs department}`: the sheet's largest source (5,056 rows, all settler events), and the rows that cite nothing else are excluded (3,806) — **unless column `corroborated_by` names a Fortress row describing the same incident** (230 rows, since 2026-10-05: the Fortress copies had been hidden as their duplicates, so the event had vanished from both sources; now the ACLED row ships and the Fortress row stays hidden as `dup of row-N (ACLED kept, corroborated)`). The 1,020 that cite another outlet too stay. Empty the set to ship every row. Origin split of the 96 outlets: `sources-by-origin.csv` (untracked) |
+| `hidden` | Column O, optional. **Read by `load_events()`**: any non-empty cell keeps the row in the workbook but drops it from `events.json`. Marked rows are also filled yellow in the sheet. 1,804 rows: 2 hand-marked (`row-7707`, `row-2145`), 1,715 Fortress rows that duplicate an ACLED event (`dup of row-N`), 87 Fortress rows that duplicate another Fortress row (`fortress dup of row-N`) |
+| `source` | `;`-separated outlet names, filled on every row (backfilled from the raw ACLED exports on 2026-09-23). **Read by `load_events()`**: a row whose *only* source(s) are in `SOLE_SOURCE_EXCLUDE` (`server.py`) is dropped. The set is `{plo negotiations affairs department}`: the sheet's largest source (5,061 rows, all settler events), and the rows that cite nothing else are excluded (3,806) — **unless column `corroborated_by` names a Fortress row describing the same incident** (230 rows, since 2026-10-05: the Fortress copies had been hidden as their duplicates, so the event had vanished from both sources; now the ACLED row ships and the Fortress row stays hidden as `dup of row-N (ACLED kept, corroborated)`). The 1,025 that cite another outlet too stay. Empty the set to ship every row. Origin split of the 96 outlets: `sources-by-origin.csv` (untracked) |
 
 ### The four geodata columns
 
 `events.xlsx` carries four geodata columns: `acled_id` (ACLED
 `event_id_cnty`, e.g. `ISR13526`), `latitude`, `longitude`, `geo_precision` (ACLED's 1 =
-named settlement, 2 = nearby stand-in, 3 = region centre only; 11,314 / 3,106 / 31 rows).
+named settlement, 2 = nearby stand-in, 3 = region centre only; 11,576 / 3,108 / 31 rows —
+step 04's split children inherit their parent's geodata and `acled_id`).
 Each row was matched against the raw ACLED exports (`raw-israel.csv`, `raw-palestine .csv`,
 repo root) on `(date, Description == notes, location)` — 14,451/14,451 matched, zero
 unmatched. Coordinates are settlement centroids: 904 distinct points across all rows.
@@ -158,8 +180,9 @@ file for events, but **nothing in the page consumes the geodata** (gitignored, s
 
 **There is no `side` column.** The camp split is derived from `main_actor` via
 `ACTOR_SIDE` in `server.py`, which must stay in sync with `FOLD4_COALITION_ROWS` /
-`FOLD4_CHANGE_ROWS` in `js/groups.js`. Every row maps to a known actor — zero rows are
-dropped; a row with an unmapped actor is skipped and reported as a startup warning.
+`FOLD4_CHANGE_ROWS` in `js/groups.js`. A row with an unmapped actor is skipped and reported
+as a startup warning — today only `not relevant` (11 live rows), which is off the site by
+design.
 
 `server.py`'s `load_events()` rebuilds the JSON **in memory on every server start**, and
 `/events.json` serves that — so local dev is always current with the xlsx.
@@ -167,8 +190,8 @@ dropped; a row with an unmapped actor is skipped and reported as a startup warni
 **The committed static `events.json` is auto-written on server start** (`_sync_static_events()`)
 whenever the generated content differs from the file on disk — same bytes as `/events.json`
 (`ensure_ascii=False`, single line), so an unchanged xlsx leaves git clean. Deployments that
-don't run `server.py` (GitHub Pages) read that file: after editing either xlsx, restart the
-server and **commit the rewritten `events.json`**. A stale copy with no `crowd` field makes
+don't run `server.py` (GitHub Pages) read that file: after editing the xlsx, restart the
+server and **commit the rewritten `events.json`** (and `events-en.json` / `events-ar.json`, which `_sync_static_events()` writes the same way). A stale copy with no `crowd` field makes
 `p7BulgeTier` return 0 for every event, and @fold9's size grid then never resizes anything.
 
 Note that `server.py`'s mtime watcher polls `.html`/`.css`/`.js` files only (at the root

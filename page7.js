@@ -19,7 +19,7 @@ const P7_CELL = P7_SQ + P7_GAP; // grid cell size
 // nothing. Declared this early because the P7_VERT/P7_VERT_MOBILE objects below
 // are built at load time and reference it — a const declared further down would
 // be in its temporal dead zone when they evaluate.
-const P7_PAPER = "#FDFCFF";
+const P7_PAPER = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || "#FDFCFF"; // read from style.css's --bg once at load (keep --bg a 6-digit hex: P7_PAPER_RGB parses it)
 // On mobile the square size is SOLVED per viewport, not fixed. A fixed pitch
 // has to be small enough for the smallest phone, which left every larger one
 // with capacity far above its event count — and since p7OrderFromCenter sizes
@@ -78,7 +78,6 @@ function p7Cell() { return p7Sq() * (1 + p7GapRatio()); }
 // Bounds of the vertical square solve (p7SolveVerticalSq) per breakpoint.
 function p7SqMax()  { return isMobile() ? P7_MOBILE_SQ_MAX  : P7_SQ; }
 function p7SqMin()  { return isMobile() ? P7_MOBILE_SQ_MIN  : 1.5; }
-function p7SqStep() { return isMobile() ? P7_MOBILE_SQ_STEP : 0.1; }
 // ─────────────────────────────────────────
 
 // Shared left-grid geometry — leftX0 comes from sbbTimelineLeftX (a fixed px on desktop,
@@ -912,19 +911,6 @@ function p7VertYearHeaderH() {
   return (ring ? P7_AXIS_MARKER_RADIUS * 2 + P7_VERT_YEAR_LABEL_GAP : 0) + (p7V().yearLabelPx + 3) + p7V().yearGapPad * 2
        + (p7AxisHasMobileAbove() ? P7_VERT_FIRST_EV_HEADROOM_PX : 0);
 }
-// The header as DRAWN. The first-event headroom exists to keep «2023» clear of
-// the pinned first plaque — and the squashed view has no plaques (`zoomFade`),
-// so it hands that band back as the beat runs: the year label ends up sitting
-// straight above the axis, and the field gets the height.
-//
-// Separate from p7VertYearHeaderH() on purpose: that one feeds p7SolveVerticalSq's
-// fit test and must stay a constant the SOLVE can rely on, or the layout would
-// re-solve differently depending on how far the beat had run.
-function p7VertYearHeaderDrawH() {
-  const base = p7VertYearHeaderH();
-  if (!p7ZoomOutT || !p7AxisHasMobileAbove()) return base;
-  return base - P7_VERT_FIRST_EV_HEADROOM_PX * p7ZoomOutT;
-}
 // The LIVE top edge — the pre-zoom-out layout, with no part of the beat in it.
 // p7VertTopY lerps between this and the squashed top; see the note there for why
 // the beat must not be mixed into the terms.
@@ -1189,7 +1175,7 @@ function p7DesktopFitView(W, H) {
   if (isMobile() || !p7VerticalAxis() || !p7.ready || !p7.vert || !p7.cellBase) return null;
   if (!Number.isFinite(W) || !Number.isFinite(H)) return null;
   const key = [W, H, p7.leftEvents.length, p7.rightEvents.length, p7.vert.totalRows, p7.cellBase,
-               window.devicePixelRatio || 1].join("|");
+               window.devicePixelRatio || 1, p7FitFilterKey()].join("|");
   if (p7DesktopFitViewCache && p7DesktopFitViewCache.key === key) return p7DesktopFitViewCache;
   const box  = sbbTimeline(H);
   const boxT = Math.round(H * box.top), boxH = Math.round(H * box.bottom) - boxT;
@@ -1198,7 +1184,7 @@ function p7DesktopFitView(W, H) {
   const fit  = p7DesktopFitSolve(sideW, boxH);
   const cols = Math.max(1, Math.floor(sideW / fit.cell));
   let vert;
-  try { p7FitProbeDpr = fit.dpr; vert = p7BuildVerticalLayout(Math.floor(boxH / fit.cell), cols, fit.cell); }
+  try { p7FitProbeDpr = fit.dpr; vert = p7BuildVerticalLayout(Math.floor(boxH / fit.cell), cols, fit.cell, p7FitVisible()); }
   finally { p7FitProbeDpr = null; }
   const len = vert.totalRows * fit.cell;
   const ky  = len / (p7.vert.totalRows * p7.cellBase);
@@ -1210,6 +1196,16 @@ function p7DesktopFitView(W, H) {
     top: boxT + Math.max(0, (boxH - len - p7VertYearHeaderH()) / 2),
   };
   return p7DesktopFitViewCache;
+}
+// The zoomed-out view packs only what the legend filter keeps, the same way
+// p7FilterRebuild re-packs the live grid. Unfiltered, a hidden group's dots
+// still held their fitted cells and the survivors landed around the holes.
+// The row plan is date-driven, so the axis rows are unchanged by this.
+function p7FitFilterKey() {
+  return (typeof p7FilterActive === "function" && p7FilterActive()) ? [...p7FilterOff].sort().join(",") : "";
+}
+function p7FitVisible() {
+  return p7FitFilterKey() ? (ev) => !p7FilterHiddenEv(ev) : undefined;
 }
 // A (fractional) row of the LIVE plan → the row the same DAY has in the fitted
 // one. rowStart is non-decreasing in the day index, so the day is a bisect.
@@ -1244,14 +1240,14 @@ function p7Squash(W, H) {
   const liveLen = p7.vert.totalRows * p7.cellBase;
   if (!(avail > 0) || !(avail < liveLen)) return null;   // nothing to zoom out of
   const key = [W, H, avail, liveLen, p7.cellBase, p7.leftEvents.length, p7.rightEvents.length,
-               window.devicePixelRatio || 1].join("|");
+               window.devicePixelRatio || 1, p7FitFilterKey()].join("|");
   if (p7SquashCache && p7SquashCache.key === key) return p7SquashCache;
   const gap   = p7CenterGap();
   const sideW = W / 2 - gap / 2 - sbbTimelineLeftX(W, H);
   const fit   = p7MobileFitSolve(sideW, avail + p7VertYearHeaderH(), P7_MOBILE_ZOOMOUT_SQ_MIN);
   const cols  = Math.max(1, Math.floor(sideW / fit.cell));
   let vert;
-  try { p7FitProbeDpr = fit.dpr; vert = p7BuildVerticalLayout(Math.floor(avail / fit.cell), cols, fit.cell); }
+  try { p7FitProbeDpr = fit.dpr; vert = p7BuildVerticalLayout(Math.floor(avail / fit.cell), cols, fit.cell, p7FitVisible()); }
   finally { p7FitProbeDpr = null; }
   p7SquashCache = {
     key, ky: vert.totalRows * fit.cell / liveLen, cell: fit.cell, sq: fit.sq, cols, vert, remap: true,
@@ -1349,10 +1345,20 @@ function p7ZoomOutYScale() {
 // p7.lastH (p7UpdateLayout's height-only early return) so live dots never
 // resize on a bar slide; only this fit tracks the bar. Desktop: p7.lastH, where
 // the two are the same thing.
-function p7ZoomOutH() { return isMobile() ? viewportH() : (p7.lastH || viewportH()); }
+// Read LIVE on mobile, not the resize-cached viewportH(): iOS Safari updates
+// innerHeight as the bottom bar collapses but its `resize` can land late (or
+// after the last scroll-driven frame), so the cached height left the view
+// solved for the bar-up screen and the axis ended a bar's height short.
+function p7ZoomOutH() { return isMobile() ? (window.innerHeight || viewportH()) : (p7.lastH || viewportH()); }
+// ...and repaint when the bar settles, even with no scroll frame to carry it.
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", () => {
+    if (isMobile() && p7ZoomOutT) p7StartAnimLoop();
+  }, { passive: true });
+}
 
 // Built on first use, not at parse time: makeTrigger lives in js/groups.js,
-// which project.html loads AFTER this file. Same lazy-resolve-at-call-time rule
+// which index.html loads AFTER this file. Same lazy-resolve-at-call-time rule
 // every other cross-file global here follows.
 let p7ZoomOutTrig = null;
 function p7ZoomOutTrigger() {
@@ -1980,8 +1986,12 @@ function p7BulgeTick() {
   //     existed to prevent. Every pick grows, by the same amount.
   //   - it runs while the SIZE GRID is off-limits above (`p7Grid.on ? null`),
   //     because page 12 is page9's own grid, not p7's.
-  const p9Pick = (typeof p7InspectPage === "function" && p7InspectPage() === 13 &&
+  // MOBILE, crowd tiers ON (the «הצגת גודל האירועים» pill): the dots already
+  // show their size, so the pick does not grow on top of it.
+  // (The dim below still keys off the pick itself — that is the highlight.)
+  const p9Held = (typeof p7InspectPage === "function" && p7InspectPage() === 13 &&
                   p7Inspect.dragging) ? p7Inspect.event : null;
+  const p9Pick = p7PickNoGrow() ? null : p9Held;
   if (p9Pick && !p7BulgeT.has(p9Pick)) p7BulgeT.set(p9Pick, { t: 0 });
   // Every ramp here: AT its target it stays put. `target > t ? up : down` sent
   // a value that had just reached 1 back down a step and up again the next
@@ -2014,7 +2024,7 @@ function p7BulgeTick() {
   // one and zeroes it every frame it isn't hovering a pill, so the picker's dim
   // would be stomped out from under it. Same duration, separate field.
   if (typeof p9 !== "undefined" && dt) {
-    const pickTarget = p9Pick ? 1 : 0;
+    const pickTarget = p9Held ? 1 : 0;
     const ds = dt / p7HoverDimMs();
     const cur = p9.pickDimT || 0;
     if (cur !== pickTarget) p9.pickDimT = pickTarget > cur ? Math.min(1, cur + ds) : Math.max(0, cur - ds);
@@ -2035,14 +2045,22 @@ function p7BulgeTick() {
 // phone), so through a whole hold the bulge sat at 1 against a target of 0
 // and the dim at 1 against 0: "active" every frame, a full 14k-dot repaint
 // every frame for as long as the finger was down. The stutter under the glass.
+function p7PickNoGrow() {
+  return isMobile() && typeof p9ScopeTiered === "function" && p9ScopeTiered();
+}
 function p7BulgeHovered() {
   if (p7Grid.on) return null;
-  return p7.hoveredEvent || (typeof p7Inspect !== "undefined" && p7Inspect.dragging ? p7Inspect.event : null);
+  if (p7.hoveredEvent) return p7.hoveredEvent;
+  if (typeof p7Inspect === "undefined" || !p7Inspect.dragging) return null;
+  // The @fold12 hold with the tiers on must not reach the swell this way either
+  // — page9's pick overdraw reads p7BulgeT, so a tier>=1 pick still grew.
+  if (p7PickNoGrow() && typeof p7InspectPage === "function" && p7InspectPage() === 13) return null;
+  return p7Inspect.event;
 }
 function p7BulgeActive() {
   const hovered = p7BulgeHovered();
   const p9Pick = (typeof p7InspectPage === "function" && p7InspectPage() === 13 &&
-                  typeof p7Inspect !== "undefined" && p7Inspect.dragging) ? p7Inspect.event : null;
+                  typeof p7Inspect !== "undefined" && p7Inspect.dragging && !p7PickNoGrow()) ? p7Inspect.event : null;
   for (const [ev, b] of p7BulgeT) {
     const target = (ev === hovered || ev === p9Pick) ? 1 : 0;
     if (b.t !== target) return true;
@@ -2118,8 +2136,16 @@ let p7GridUniform = false;
 function p7GridCellsFor(ev) { return P7_GRID_TIER_CELLS[p7BulgeTier(ev)]; }
 // The drawn cell — same centre, unit size while flattened.
 function p7GridFlatten(g, L) {
-  return (g && p7GridUniform) ? { cx: g.cx, cy: g.cy, sq: L.SQ } : g;
+  if (!g) return g;
+  if (p7GridUniform) return { cx: g.cx, cy: g.cy + p7GridDy, sq: L.SQ };
+  return p7GridDy ? { cx: g.cx, cy: g.cy + p7GridDy, sq: g.sq } : g;
 }
+// MOBILE: the grid is solved at the FROZEN layout height (p7.lastH), never the
+// live canvas height — the canvas is position:fixed inset:0, so it grows when
+// the bottom browser bar collapses, and solving at that height re-sized every
+// dot (much bigger with the bar down). The frozen block is instead slid by the
+// difference, so it keeps its baseline above the live bottom edge.
+let p7GridDy = 0;
 // How much of a side's width the block is allowed to use (it still hugs the
 // corridor). 1 = the whole side. Narrower reads as a block rather than a
 // full-bleed field — but width and square size trade off directly: the pack
@@ -2149,13 +2175,12 @@ let P7_GRID_UNIT_PX = 0;
 let P7_GRID_HEIGHT_FRAC = 1;    // manual/-baked 2026-09-08
 // Mobile gets its own pair, `manual/`-baked 2026-09-12 at 390x844 (the harness
 // tuned the frame in px: 316px wide, 554px tall of the 520px box). A phone has
-// the same 10418 dots in a third of the width, so the desktop 0.7 x 1 frame is
-// too small to breathe: the width goes nearly full-bleed. The height was
-// re-tuned to 0.88 on 2026-09-14 together with the lower baseline below (the
-// box got taller, so a smaller share keeps the block's top in place). The camp gap is shared
+// the same ~12k dots in a third of the width, so the desktop 0.7 x 1 frame is
+// too small to breathe: the width goes nearly full-bleed. The height share is
+// 1.25 of the box (manual/-baked 2026-10-05). The camp gap is shared
 // (4px reads the same at both sizes).
 let P7_GRID_MOBILE_WIDTH_FRAC  = 0.808;
-let P7_GRID_MOBILE_HEIGHT_FRAC = 0.88;   // manual/-baked 2026-09-14
+let P7_GRID_MOBILE_HEIGHT_FRAC = 1.25;   // manual/-baked 2026-10-05
 // The size grid's BASELINE, as px off the viewport's bottom edge, per
 // breakpoint. null = the timeline box's own bottom (sbbTimeline), which on a
 // phone still reserves the docked frame + last axis plaque the timeline needs.
@@ -2758,6 +2783,8 @@ function p7SpreadUnit(W, H) {
   return isFinite(CELL) ? CELL / (1 + p7GapRatio()) : 0;
 }
 function p7SizeGridLayout(W, H) {
+  if (isMobile() && p7.lastH) { p7GridDy = Math.round(H - p7.lastH); H = p7.lastH; }
+  else p7GridDy = 0;
   const key = p7GridKey(W, H);
   if (!p7Grid.layout || p7Grid.layout.key !== key) {
     let unit = P7_GRID_UNIT_PX > 0 ? P7_GRID_UNIT_PX : 0;
@@ -3178,13 +3205,28 @@ const p7FilterGhosts = new Map();
 // `var`: a manual/ harness drives them — the total is read live for that reason.
 var P7_FILTER_SHRINK_MS = 380;
 var P7_FILTER_FLY_MS = 900;
-function p7FilterMorphMs() { return P7_FILTER_SHRINK_MS + P7_FILTER_FLY_MS; }
+// The toggled group's dots don't shrink/grow all at once: each starts its size
+// beat up to this many ms late, so the group leaves and arrives as a fast
+// cascade — on the timeline from the corridor out to the sides
+// (p7FilterCascadeDelayX), on the later folds top→bottom when filtering out and
+// bottom→top when bringing a group back (p7FilterCascadeDelay).
+var P7_FILTER_CASCADE_MS = 350;
+function p7FilterMorphMs() { return P7_FILTER_SHRINK_MS + P7_FILTER_CASCADE_MS + P7_FILTER_FLY_MS; }
+function p7FilterCascadeDelay(cy) {
+  const H = p7.lastH || window.innerHeight || 1;
+  const f = Math.min(1, Math.max(0, cy / H));
+  return (p7FilterMorph && p7FilterMorph.restoring ? 1 - f : f) * P7_FILTER_CASCADE_MS;
+}
+function p7FilterCascadeDelayX(cx) {
+  const half = (p7.lastW || window.innerWidth || 2) / 2;
+  return Math.min(1, Math.abs(cx - half) / half) * P7_FILTER_CASCADE_MS;
+}
 // Size channel and position channel, run back to back. Each channel keeps its
 // OWN duration wherever it lands in the order — a size change is a short beat
 // and a flight is a long one, so swapping the order must not also swap the
 // tempos: a grow stretched over the flight's 900ms reads as a slow, detached
 // pop rather than a square appearing.
-function p7FilterChannels() {
+function p7FilterChannels(delay = 0) {
   if (!p7FilterMorph) return { size: 1, pos: 1 };
   const e = performance.now() - p7FilterMorph.start;
   const win = (start, len) => p9Ease(Math.min(1, Math.max(0, (e - start) / len)));
@@ -3194,14 +3236,14 @@ function p7FilterChannels() {
   // position channel — a dot's own destination can still differ from where it
   // stands (the filtered layout re-indexes it), and position never snaps.
   if (p7FilterMorph.skipFly) {
-    const t = win(0, P7_FILTER_SHRINK_MS);
-    return { pos: t, size: t };
+    return { pos: win(0, P7_FILTER_SHRINK_MS + P7_FILTER_CASCADE_MS),
+             size: win(delay, P7_FILTER_SHRINK_MS) };
   }
   return p7FilterMorph.restoring
     // Bringing a group back: the space opens first, then the dots grow into it.
-    ? { pos: win(0, P7_FILTER_FLY_MS), size: win(P7_FILTER_FLY_MS, P7_FILTER_SHRINK_MS) }
+    ? { pos: win(0, P7_FILTER_FLY_MS), size: win(P7_FILTER_FLY_MS + delay, P7_FILTER_SHRINK_MS) }
     // Filtering out: the dots shrink away first, then the gap closes.
-    : { size: win(0, P7_FILTER_SHRINK_MS), pos: win(P7_FILTER_SHRINK_MS, P7_FILTER_FLY_MS) };
+    : { size: win(delay, P7_FILTER_SHRINK_MS), pos: win(P7_FILTER_SHRINK_MS + P7_FILTER_CASCADE_MS, P7_FILTER_FLY_MS) };
 }
 function p7FilterActive()      { return p7FilterOff.size > 0; }
 function p7FilterHiddenEv(ev)  { return p7FilterOff.has(ev.actor); }
@@ -3220,14 +3262,15 @@ function p7FilterMorphToggled(ev) {
   if (!m) return false;
   return m.actors ? m.actors.has(ev.actor) : m.actor === ev.actor;
 }
-function p7FilterSizeFactor(ev) {
+// `y` (optional): the dot's y on screen, for the top↔bottom cascade.
+function p7FilterSizeFactor(ev, y) {
   const hidden = p7FilterActive() && p7FilterHiddenEv(ev);
   if (!p7FilterMorphActive() || !p7FilterMorphToggled(ev)) return hidden ? 0 : 1;
-  const t = p7FilterChannels().size;
+  const t = p7FilterChannels(y == null ? 0 : p7FilterCascadeDelay(y)).size;
   return p7FilterMorph.restoring ? t : 1 - t;
 }
 function p7FilterMorphDur(m) {
-  return m && m.skipFly ? P7_FILTER_SHRINK_MS : p7FilterMorphMs();
+  return m && m.skipFly ? P7_FILTER_SHRINK_MS + P7_FILTER_CASCADE_MS : p7FilterMorphMs();
 }
 function p7FilterMorphActive() {
   return !!p7FilterMorph && performance.now() - p7FilterMorph.start < p7FilterMorphDur(p7FilterMorph);
@@ -3591,8 +3634,7 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
       const delay = n > 1 ? (rowRank[i] / (n - 1)) * stagger : 0;
       const presence = p7Ease(Math.min(1, Math.max(0, (rowCursor - delay) / popMs)));
       if (presence <= 0) continue;
-      scale = 0.5 + 0.5 * presence;
-      alpha = presence;
+      scale = presence;   // dots arrive by size, never by fade (hard rule)
     } else if (i >= settledCount) {
       const mk = p7MonthKeyOf(events[i].date);
       if (mk !== groupMonthKey) {
@@ -3612,9 +3654,7 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
       const delay = countInGroup > 1 ? (localIdx / (countInGroup - 1)) * stagger : 0;
       const presence = p7Ease(Math.min(1, Math.max(0, (groupCursor - delay) / popMs)));
       if (presence <= 0) continue; // not popped in yet, or fully retreated
-      // Nothing pops from nothing: start at a visible (if small) size rather than 0.
-      scale = 0.5 + 0.5 * presence;
-      alpha = presence;
+      scale = presence;   // dots arrive by size, never by fade (hard rule)
     }
 
     // Rest position/size: the timeline cell, or — size grid ON (p7Grid) — the
@@ -3669,7 +3709,10 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     if (p7FilterMorph) {
       const from = p7FilterMorph.from.get(events[i]);
       if (from) {
-        const ch = p7FilterChannels();
+        const ch = p7FilterChannels(!evToggled ? 0
+          // @fold9's size grid is drawn here too, but it is not the timeline: it
+          // cascades top/bottom like the later folds, not corridor-out.
+          : gridOn ? p7FilterCascadeDelay(cy) : p7FilterCascadeDelayX(cx));
         const pt = evToggled ? 1 : ch.pos;
         cx = from.cx + (cx - from.cx) * pt;
         cy = from.cy + (cy - from.cy) * pt;
@@ -3715,8 +3758,8 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     drawX = cx - size / 2; drawY = cy - size / 2;   // shrink/grow stays centred
     const off  = 0;
     const fill = colorOf.get(events[i].actor) || '#888';
-    // The 1/dpr floor is a guard, not a routine path: the smallest real square
-    // is scale 0.5 on sq 1.25, still ~2 device px.
+    // The 1/dpr floor keeps a square that is just starting to grow from
+    // vanishing into a sub-pixel sliver.
     // Desktop snaps only once a square is SETTLED. Mid-pop, quantising the
     // grow to whole device pixels turns the smooth scale ramp into two or
     // three visible steps and the cascade reads as stuttering — worse than the
@@ -3809,7 +3852,7 @@ async function initPage7() {
 }
 
 // Text alternative for <canvas> — see the #canvasA11ySummary comment in
-// project.html. The scrolling <h2> cards are already real DOM, so a screen
+// index.html. The scrolling <h2> cards are already real DOM, so a screen
 // reader gets the argument of the piece for free; what it can't get is
 // anything the canvas draws. That's what this supplies: who the six groups
 // are and which camp each sits in, how many documented actions each has, the
@@ -3824,7 +3867,7 @@ function p7BuildDataSummary(data) {
 
   const en = isEnglish();
   const he = (n) => n.toLocaleString(en ? "en-US" : "he-IL");
-  const docd = en ? "documented actions" : "פעולות מתועדות";
+  const docd = tr("פעולות מתועדות");
   // events.json stores YYYY-MM-DD; the rest of the page shows DD-MM-YYYY.
   const date = (iso) => iso.split("-").reverse().join("-");
 
@@ -3854,23 +3897,15 @@ function p7BuildDataSummary(data) {
     .map(([cat, n]) => `<li>${tr(cat)}: ${he(n)}</li>`)
     .join("");
 
-  if (en) {
-    host.innerHTML =
-      `<h2>Text description of the data</h2>` +
-      `<p>The project shows ${he(data.length)} documented political actions that took place in public space ` +
-      `in Israel and the Palestinian territories, between ${date(p7.minDate)} and ${date(p7.maxDate)}. ` +
-      `The data come from ACLED. Each square in the visualisation is one action, and its colour marks the group that carried it out.</p>` +
-      `<h3>By camp and group</h3>` + campList +
-      `<h3>By type of action</h3><ul>${catList}</ul>`;
-    return;
-  }
+  // Every sentence goes through tr()/trf() (js/i18n.js), keyed by the Hebrew,
+  // so the English and Arabic pages read in their own language. The sources
+  // sentence matches the outro's (@fold16) «נתונים ושיטת עבודה».
   host.innerHTML =
-    `<h2>תיאור מילולי של הנתונים</h2>` +
-    `<p>הפרויקט מציג ${he(data.length)} פעולות פוליטיות מתועדות שהתרחשו במרחב הציבורי ` +
-    `בישראל ובשטחים, בין ${date(p7.minDate)} ל־${date(p7.maxDate)}. ` +
-    `הנתונים מגיעים מ־ACLED. כל ריבוע בהדמיה מייצג פעולה אחת, וצבעו מציין את הקבוצה שביצעה אותה.</p>` +
-    `<h3>חלוקה למחנות ולקבוצות</h3>` + campList +
-    `<h3>חלוקה לפי סוג הפעולה</h3><ul>${catList}</ul>`;
+    `<h2>${tr("תיאור מילולי של הנתונים")}</h2>` +
+    `<p>${trf("הפרויקט מציג {n} פעולות פוליטיות מתועדות שהתרחשו במרחב הציבורי בישראל ובשטחים, בין {from} ל־{to}. תיאורי האירועים ומועדיהם לקוחים ממאגר ACLED ומיומן אלימות המתנחלים של ״המבצר״. כל ריבוע בהדמיה מייצג פעולה אחת, וצבעו מציין את הקבוצה שביצעה אותה.",
+      { n: he(data.length), from: date(p7.minDate), to: date(p7.maxDate) })}</p>` +
+    `<h3>${tr("חלוקה למחנות ולקבוצות")}</h3>` + campList +
+    `<h3>${tr("חלוקה לפי סוג הפעולה")}</h3><ul>${catList}</ul>`;
 }
 
 function p7UpdateLayout(W, H) {
@@ -4163,7 +4198,7 @@ function p7OccurrenceOfRowId(rowId) {
 // The 8 real events @fold11's fold-6 squares fly to/become (FOLD6_SQUARE_ROW_IDS/
 // fold6SquareOccurrence, js/groups.js — referenced here only inside this function
 // body, never at load time, since page7.js loads before js/groups.js in
-// project.html) are never drawn by the real per-event cascade below — the
+// index.html) are never drawn by the real per-event cascade below — the
 // flying DOM square *is* that dot permanently, not a stand-in that hands off
 // to a separately-popping-in real one once it arrives. Resolved once
 // (event objects are stable references once events.json is loaded) and
@@ -4398,7 +4433,7 @@ function drawPage7(ctx, W, H) {
     ctx.font = "16px " + CANVAS_FACE;
     ctx.textAlign    = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("טוען נתונים...", W / 2, H / 2);
+    ctx.fillText(tr("טוען נתונים..."), W / 2, H / 2);
     return;
   }
 
@@ -4885,7 +4920,7 @@ const P7_AXIS_EVENTS_ALL = [
 // an event that never draws, and every `i` in this file would mean two things.
 //
 // The literal 600 duplicates MOBILE_BP rather than calling isMobile(): both live
-// in js/core.js, which project.html loads AFTER page7.js, so neither exists yet
+// in js/core.js, which index.html loads AFTER page7.js, so neither exists yet
 // at this line. Keep the two in step by hand.
 //
 // A browser dragged across the breakpoint mid-session keeps the set it loaded
@@ -5380,7 +5415,7 @@ function p7AxisCardMs() { return P7_AXIS_CARD_MS_MOBILE; }
 // re-derived from the live fill edge every frame and so behaved as a SCRUB:
 // nudging the scroll back and forth around an event's own row dragged its card
 // in and out with the scroll instead of playing one beat. Built lazily because
-// makeTrigger lives in js/groups.js, which project.html loads after this file.
+// makeTrigger lives in js/groups.js, which index.html loads after this file.
 const p7AxisCardTrigs = [], p7AxisFlyTrigs = [];
 // The LEAVE trigger — fired at reachRow + P7_AXIS_TRIGGER_ROW_OFFSET.
 function p7AxisCardTrigger(i) {
@@ -7399,7 +7434,7 @@ function p7PickRampActive() {
   const dragging = p7Inspect.dragging;
   const b = p7Inspect.event ? p7BulgeT.get(p7Inspect.event) : null;
   const dim = p9.pickDimT || 0;
-  if (dragging) return (b ? b.t < 1 : true) || dim < 1;
+  if (dragging) return (b ? b.t < 1 : !p7PickNoGrow()) || dim < 1;
   // On the way DOWN the event is already null (release clears it), so the ramp
   // has to watch the MAP rather than the current pick — otherwise the loop stops
   // the moment the dim lands and leaves the collapsing entry stranded in
@@ -7714,7 +7749,7 @@ function p7InspectInit() {
   const hintEl = document.createElement("div");
   hintEl.className = "p7-inspect-hint";
   // Typed in by p7HintTrigger (js/groups.js) once the frame has stepped down.
-  p7HintSpans = fold8SetupTypewriter(hintEl, "לחצו והחזיקו על נקודה להצגת פרטי האירוע");
+  p7HintSpans = fold8SetupTypewriter(hintEl, P7_INSPECT_HINT);
   fold8UpdateTypewriter(p7HintSpans, 0);
 
   tipEl.append(hintEl, moreEl);
@@ -7957,8 +7992,17 @@ function p7InspectInit() {
       // half a pitch past the dot's own rest box, i.e. one cell of travel
       // reaches the neighbour. @fold12's columns (no `pdx`) keep the swollen
       // box: their positions are display-space and the guard still earns its keep.
-      const restSpace = held.pdx !== undefined;
-      const stick = restSpace ? heldHalf + p7Cell() / 2
+      // @fold9's size grid is the same case: its blocks are already drawn at
+      // their real size (up to ~68px), so the swollen-box rule (× the loupe
+      // growth) held the pick far past the block's edge and the dots right
+      // above a big one could not be caught. Half a lattice cell of slack.
+      // MOBILE @fold12 too: the pick is DRAWN grown but hit-tested at its rest
+      // size, so a swollen top-tier dot no longer holds the finger across its
+      // whole grown box and its neighbours stay reachable (explicit ask 2026-10-05).
+      const p9Rest = isMobile() && currentPage === 13;
+      const restSpace = held.pdx !== undefined || (p7Grid.on && currentPage !== 13) || p9Rest;
+      const stick = restSpace ? heldHalf + (p9Rest ? p9Metrics().CELL
+                                 : (p7Grid.on && p7Grid.layout) ? p7Grid.layout.CELL : p7Cell()) / 2
                               : (held.sq || half * 2) * p7LoupeGrowth() / 2;
       if (Math.abs(mx - (held.x + heldHalf)) <= stick &&
           Math.abs(my - (held.y + heldHalf)) <= stick) {
@@ -8496,7 +8540,7 @@ function p7InspectInit() {
 // mechanism that doesn't move the page from script.
 
 // page7.js is the FIRST script on the page (before js/core.js — see
-// project.html), so unlike p7HoverInit above this can't run inline: it reads
+// index.html), so unlike p7HoverInit above this can't run inline: it reads
 // isMobile()/currentPage/tooltipDockMobile at init, none of which exist yet.
 // The scripts all sit at the end of <body>, so DOMContentLoaded is after them.
 document.addEventListener("DOMContentLoaded", p7InspectInit);
