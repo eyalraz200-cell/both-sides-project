@@ -46,9 +46,4 @@ date; the rules behind each one live in [Data](Data.md).
 
 ## Methodology copy (its own task)
 - [x] `methodology.html` — the full write-up, prompts injected by `build_methodology.py`; linked from the legend note and the @fold16 credits (2026-10-04).
-- [ ] The @fold6 card («תיאורי האירועים … לקוחים ברובם ממאגר ACLED…»), the legend note
-      (`FOLD6_NOTE_TEXT`, js/groups.js) and the @fold16 credits still describe an ACLED-only
-      dataset. Rewrite to name the Fortress log as the second source, say that its lines were
-      rephrased (step 06) and that duplicates were removed in ACLED's favour, and that crowd
-      sizes / descriptions were shortened and translated with OpenAI. Hebrew first, then a
-      Translation-Pending row; English and Arabic follow.
+- [x] Methodology copy at all four tiers (@fold6 card, legend note, @fold16 credits, methodology pages) names ACLED and HaMivtzar, the editing/translation and the project-owned analysis — he/en/ar (2026-10-05).

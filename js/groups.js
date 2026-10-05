@@ -2646,7 +2646,7 @@ function typedText(full, t) {
 // hardcoded font sizes above. FOLD6_TOP_ROW is the mini-legend's top-most row
 // of the RIGHT (coalition) column — the column the note hangs below.
 // English page: its own copy (three paragraphs), same ACLED-as-link split.
-const FOLD6_NOTE_TEXT = isEnglish() ? "Event descriptions and dates are mostly sourced from ACLED, an international research organization that tracks and maps protests and political violence based on reports from media outlets and local sources. The dataset includes events from the beginning of 2023 to the present in which Israeli citizens carried out political actions in public spaces in Israel and the Palestinian territories.\nThe assignment of events to groups and political camps, their classification, and severity ranking were defined for this project and are not part of ACLED’s methodology. Events were assigned and classified based on their descriptions using OpenAI models, which were also used to translate them into Hebrew. Apart from translation, the descriptions were not altered." : tr("תיאורי האירועים ומועדי התרחשותם לקוחים ברובם ממאגר ACLED, גוף מחקר בינלאומי המתעד וממפה אירועי מחאה ואלימות פוליטית על בסיס דיווחים מכלי תקשורת וממקורות מקומיים. נכללו אירועים מתחילת 2023 ועד היום, שבהם אזרחי ישראל ביצעו פעולות פוליטיות במרחב הציבורי בישראל ובשטחים.\nשיוך האירועים לקבוצות ולמחנות, סיווגם ומדרג החומרה הוגדרו במסגרת הפרויקט ואינם של ACLED. השיוך והסיווג נעשו על סמך תיאורי האירועים בעזרת מודלי בינה מלאכותית של OpenAI, ששימשו גם לתרגומם לעברית. מלבד התרגום, התיאורים לא שונו.");
+const FOLD6_NOTE_TEXT = isEnglish() ? "The project covers political actions carried out by Israeli citizens in public spaces, in Israel and the occupied territories, from the beginning of 2023. Most event descriptions and dates come from ACLED, an international research organization that documents and maps protest and political violence based on reports from media outlets and local sources. The HaMivtzar (“The Fortress”) database served as a supplementary source. The descriptions were edited and shortened while preserving the facts and context, and ACLED descriptions were translated into Hebrew; the English descriptions were translated from the edited Hebrew. Events were assigned to groups and political camps, actions were classified, and participant numbers were estimated as part of the project, based on the descriptions and using OpenAI language models. The project is responsible for this analysis, which was not produced on behalf of the data providers." : tr("הפרויקט כולל פעולות פוליטיות שביצעו אזרחי ישראל במרחב הציבורי, בישראל ובשטחים, מתחילת 2023. מרבית תיאורי האירועים ומועדיהם לקוחים ממאגר ACLED, גוף מחקר בינלאומי המתעד וממפה מחאה ואלימות פוליטית על בסיס דיווחי תקשורת ומקורות מקומיים. מאגר ״המבצר״ שימש מקור משלים. התיאורים נערכו וקוצרו תוך שמירה על העובדות וההקשר, ותיאורי ACLED תורגמו לעברית. שיוך האירועים לקבוצות ולמחנות, סיווג הפעולות והערכת מספר המשתתפים נעשו במסגרת הפרויקט על סמך התיאורים ובעזרת מודלי שפה של OpenAI. ניתוח זה הוא באחריות הפרויקט ואינו מטעם מקורות הנתונים.");
 // 172, picked in a manual/ harness against the two-paragraph copy on a 982px-tall
 // window, where the copy measures 372px at this width. This is the note's NARROWEST
 // width, not its only one: the note hangs DOWNWARD from a legend block centred
@@ -2781,6 +2781,16 @@ function fold6NoteSplitOnAcled() {
   const i = FOLD6_NOTE_TEXT.indexOf("ACLED");
   return [FOLD6_NOTE_TEXT.slice(0, i), FOLD6_NOTE_TEXT.slice(i + "ACLED".length)];
 }
+// The second source is a link too: the FIRST mention of the Fortress after the
+// ACLED link (its name per language). Splits the text after the ACLED link into
+// [before Fortress, after Fortress]; no mention → [whole, ""].
+const FOLD6_NOTE_FORTRESS_NAME = isEnglish() ? "HaMivtzar" : isArabic() ? "هاميفتسار" : "המבצר";
+const FOLD6_NOTE_FORTRESS_HREF = "https://www.zman.co.il/726358/";
+function fold6NoteSplitOnFortress(text) {
+  const i = text.indexOf(FOLD6_NOTE_FORTRESS_NAME);
+  if (i < 0) return [text, ""];
+  return [text.slice(0, i), text.slice(i + FOLD6_NOTE_FORTRESS_NAME.length)];
+}
 const fold6NoteEl = document.createElement("div");
 fold6NoteEl.className = "fold6-note";
 fold6NoteEl.style.width = `${fold6NoteWidth()}px`;
@@ -2794,7 +2804,8 @@ fold6NoteEl.style.width = `${fold6NoteWidth()}px`;
 const fold6NoteTitleEl = document.createElement("div");
 fold6NoteTitleEl.className = "fold6-note-title";
 const fold6NoteSegments = (() => {
-  const [before, after] = fold6NoteSplitOnAcled();
+  const [before, rest] = fold6NoteSplitOnAcled();
+  const [mid, after] = fold6NoteSplitOnFortress(rest);
   const mk = (tag, text, cls, href) => {
     const el = document.createElement(tag);
     if (cls) el.className = cls;
@@ -2813,7 +2824,9 @@ const fold6NoteSegments = (() => {
   // methodology.html; en/ and ar/ reach it through their <base href="../">.
   return [
     fold8SetupTypewriter(fold6NoteTitleEl, FOLD6_NOTE_TITLE_TEXT),
-    mk("span", before), mk("a", "ACLED", "fold6-note-link", "https://acleddata.com/"), mk("span", after),
+    mk("span", before), mk("a", "ACLED", "fold6-note-link", "https://acleddata.com/"),
+    mk("span", mid), mk("a", mid.length < rest.length ? FOLD6_NOTE_FORTRESS_NAME : "", "fold6-note-link", FOLD6_NOTE_FORTRESS_HREF),
+    mk("span", after),
     mk("span", "\n"), mk("a", FOLD6_NOTE_MORE_TEXT, "fold6-note-link", FOLD6_NOTE_MORE_HREF),
   ];
 })();
@@ -3135,14 +3148,21 @@ const fold6MobileDataBodyEl = document.createElement("div");
 fold6MobileDataBodyEl.className = "fold6-mlegend-data-body";
 {
   const inner = document.createElement("p");
-  const [before, after] = fold6NoteSplitOnAcled();
+  const [before, rest] = fold6NoteSplitOnAcled();
+  const [mid, after] = fold6NoteSplitOnFortress(rest);
   const link = document.createElement("a");
   link.className = "fold6-note-link";
   link.href = "https://acleddata.com/";
   link.target = "_blank";
   link.rel = "noopener";
   link.textContent = "ACLED";
-  inner.append(before, link, after);
+  const fort = document.createElement("a");
+  fort.className = "fold6-note-link";
+  fort.href = FOLD6_NOTE_FORTRESS_HREF;
+  fort.target = "_blank";
+  fort.rel = "noopener";
+  fort.textContent = mid.length < rest.length ? FOLD6_NOTE_FORTRESS_NAME : "";
+  inner.append(before, link, mid, fort, after);
   // Same «full methodology» link as the desktop note, as its own line.
   const more = document.createElement("a");
   more.className = "fold6-note-link";
