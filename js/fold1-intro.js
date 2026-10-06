@@ -269,7 +269,13 @@ function playPage0Entrance() {
     // below, so they never flash before the entrance starts.
     if (!page0ChromeShown) {
       const chromeT = p9Ease(Math.max(0, Math.min(1, (elapsed - page0TitleMs()) / PAGE0_CHROME_FADE_MS)));
-      PAGE0_CHROME_ELS.forEach((el) => { el.style.opacity = chromeT >= 1 ? "" : String(chromeT); });
+      // Scrolling mid-fade must not disturb it: the fade keeps its own clock.
+      // The one exception is the phone's logo, which is meant to go once the
+      // reader scrolls (.is-scrolled) — there the inline value is dropped so
+      // the class's own opacity transition carries it out from wherever it is.
+      PAGE0_CHROME_ELS.forEach((el) => {
+        el.style.opacity = chromeT >= 1 || el.classList.contains("is-scrolled") ? "" : String(chromeT);
+      });
       if (chromeT >= 1) page0ChromeShown = true;
     }
 

@@ -135,14 +135,16 @@ function updateFold13() {
   // phone already hides it once scrolling starts (.is-scrolled, js/nav.js), and
   // an inline opacity here would override that class back to visible.
   if (seventhEyeEl && !isMobile()) {
-    seventhEyeEl.style.opacity       = opacityVal;
+    // Not before @fold1's own fade-in has finished (page0ChromeShown) — at
+    // eScroll 0 this writes '' and would snap the corner to full mid-fade.
+    if (page0ChromeShown) seventhEyeEl.style.opacity = opacityVal;
     seventhEyeEl.style.pointerEvents = eScroll > 0 ? "none" : "";
   }
   // The language switch (#langWrap, fixed top-left on BOTH breakpoints — nothing
   // else ever hides it) fades with the rest of the chrome; pointer-events off
   // while faded so a tap on the empty corner can't open the menu.
   if (langWrapEl) {
-    langWrapEl.style.opacity       = opacityVal;
+    if (page0ChromeShown) langWrapEl.style.opacity = opacityVal;
     langWrapEl.style.pointerEvents = eScroll > 0 ? "none" : "";
   }
   // page12TitleCardEl (the fold13 card) stays visible throughout.

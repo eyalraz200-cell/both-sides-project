@@ -7,9 +7,8 @@ language twins, **`en/index.html`** and **`ar/index.html`** (each with `<base hr
 so all three load the same `style.css`, scripts and `events.json`). Three static methodology pages
 sit beside them (`methodology.html`, `en/methodology.html`, `ar/methodology.html`), and
 `project.html` is a redirect stub. The story pages pull Assistant from Google Fonts;
-`style.css` declares the local faces (`@font-face`, top of the file): two Hadassah weights
-and **Discordia**, which is the face the title blocks and hero title use. Hadassah is only
-preloaded (`document.fonts.load`, `js/bootstrap.js`).
+`style.css` declares the one local face (`@font-face`, top of the file): **Discordia**
+(Regular only), the face the title blocks and hero title use.
 
 > **Removed — don't reintroduce:** the שקוף article/home page (the old `index.html` +
 > `trigger.css` + `images/protest.webp`, `related-knesset.jpg`, `related-march.jpg`) that
@@ -37,7 +36,7 @@ whole lines and come back with the Hebrew line's markup verbatim.
 
 **Layout:** none of its own. Arabic is RTL, so the page runs on the Hebrew code path
 (`isEnglish()` is false everywhere); the only `.lang-ar` CSS is the font family, because
-Discordia / Hadassah / Assistant carry no Arabic glyphs: **Tajawal** wherever the Hebrew
+Discordia / Assistant carry no Arabic glyphs: **Tajawal** wherever the Hebrew
 page uses Discordia (`.section-title`, the hero title), **IBM Plex Sans Arabic** wherever it
 uses Assistant (both Google Fonts, foot of `style.css`), plus one size override: the Arabic
 face sits ~13% shorter than Discordia at equal px (Hebrew letters 0.68em vs the Arabic body

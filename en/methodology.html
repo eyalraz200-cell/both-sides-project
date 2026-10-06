@@ -42,6 +42,8 @@
     a { color: inherit; text-decoration: underline; text-underline-offset: 0.12em; text-decoration-thickness: 1px; }
     a:hover { text-decoration-thickness: 2px; }
     .latin { direction: ltr; unicode-bidi: isolate; }
+    /* ACLED's required article citation: English, so LTR and left-aligned on every twin. */
+    .ref { direction: ltr; text-align: left; unicode-bidi: isolate; }
     table { border-collapse: collapse; width: 100%; margin: 12px 0 18px; font-size: 15px; }
     th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--rule); }
     th { font-weight: 600; }
@@ -100,6 +102,8 @@
   <h2 id="sources">Data sources</h2>
   <p><a href="https://acleddata.com/" target="_blank" rel="noopener"><strong>ACLED</strong></a> is an international research organization that documents and maps protest and political violence based on reports from media outlets and local sources. Each record includes a date, location, event description, and sources.</p>
   <p>For this project, 14,451 records concerning Israel and the occupied territories from the beginning of 2023 onward were retrieved from the database. The data was accessed on 10 July 2026. Events meeting the project's criteria were selected from these records. In accordance with ACLED's terms of use, the raw data is not published; the website presents only the analytical layer built from it. Citation: ACLED, accessed on 10 July 2026. www.acleddata.com.</p>
+  <h3>Reference: article on the ACLED dataset</h3>
+  <p class="ref" lang="en">Clionadh Raleigh, Roudabeh Kishi, and Andrew Linke, “<a href="https://doi.org/10.1057/s41599-023-01559-4" target="_blank" rel="noopener">Political instability patterns are obscured by conflict dataset scope conditions, sources, and coding choices</a>,” <em>Humanities and Social Sciences Communications</em>, 25 February 2023. <a href="https://doi.org/10.1057/s41599-023-01559-4" target="_blank" rel="noopener">https://doi.org/10.1057/s41599-023-01559-4</a></p>
   <p><strong>The settler violence log maintained by “Fortress”</strong> served as a supplementary source for events in the West Bank. The log added to the project contained 3,778 records covering the period from 6 October 2023 to 28 September 2026. These records include descriptions in Hebrew, locations, and supporting references. All log records were checked against ACLED records for duplicates, and events appearing in both sources were counted once (see <a href="#dedupe">Duplicate detection</a>).</p>
   <p>In addition, five events were added manually based on news reports.</p>
   <p>The assignment to groups and political camps, action categories, and severity ranking were established for this project. They are not the original classifications used by ACLED or “Fortress”.</p>

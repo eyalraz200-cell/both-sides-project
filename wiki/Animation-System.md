@@ -151,7 +151,7 @@ Named exceptions, each because the shared tempo read wrong for that specific bea
 | `fold9FlyMs()` — `FOLD9_FLY_MS` (mobile) / `FOLD9_FLY_MS_DESKTOP` | 1500 / 1200 | Squares fly to their real dots |
 | `FOLD9_TOOLTIP_SHRINK_MS` / `_DELAY_MS` | 400 / 500 | Hold, then shrink |
 | `page0TitleMs()` / `page0PopMs()` / `page0LogoFadeMs()` (js/fold1-intro.js) | 1308 / 215 / 692 | Cover entrance |
-| `PAGE0_CHROME_FADE_MS` (js/fold1-intro.js) | 692 | Partner logo + language button fade in once the title has landed (`page0TitleMs()` in), both breakpoints; hidden at parse time so they never flash |
+| `PAGE0_CHROME_FADE_MS` (js/fold1-intro.js) | 692 | Partner logo + language button fade in once the title has landed (`page0TitleMs()` in), both breakpoints; hidden at parse time so they never flash Scrolling doesn't interrupt it: `updateFold13` (js/fold11.js) leaves both corners' opacity alone until `page0ChromeShown`, and the phone's logo drops its inline value once `.is-scrolled` so the class transition takes it out from mid-fade |
 
 **Bigger canvas glides:** `p7AnimTotalMs()` 1400 desktop / 550 mobile (one cascade unit —
 a row on the desktop vertical axis, a month on mobile; see [Timeline](Timeline.md)),

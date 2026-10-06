@@ -66,7 +66,10 @@ category, `descHeMedium`, crowd, rowId per event) and the two description maps
 transformative and cannot be reverse-engineered into the source, and needs no prior approval;
 the attribution policy requires naming ACLED, disclosing the manipulation, not attributing the
 analysis to ACLED, and the citation form `ACLED, accessed on 10 July 2026. www.acleddata.com`
-(the raw exports' date). `methodology.html` carries all of that. Never add any other
+(the raw exports' date), plus the dataset article reference (Raleigh, Kishi & Linke 2023,
+doi.org/10.1057/s41599-023-01559-4). `methodology.html` carries all of that — the article
+under its own `<h3>` right after the retrieval-date paragraph in «מקורות הנתונים», as an
+English `.ref` paragraph (LTR, left-aligned, title linked to the DOI) on all three twins. Never add any other
 event-level export to the repo beyond those three.
 
 ## The methodology page — `methodology.html`

@@ -1,13 +1,3 @@
-@font-face {
-  font-family: 'HadassahFriedlaender';
-  font-weight: 400;
-  src: url('fonts/HadassahFriedlaender-Regular-TRIAL.otf') format('opentype');
-}
-@font-face {
-  font-family: 'HadassahFriedlaender';
-  font-weight: 100;
-  src: url('fonts/HadassahFriedlaender-Thin-TRIAL.otf') format('opentype');
-}
 /* Discordia (Naipe Foundry, licensed via Hafontia) — the DESKTOP title-block and
    hero-title face since 2026-09-27 (typeface harness pick). Regular only. */
 @font-face {
@@ -2010,23 +2000,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   top: -6px;
 }
 
-/* Title cards, DESKTOP: Discordia Regular (400), 18.5px — the _debug-typeface.js
-   harness pick of 2026-09-27 (over Hadassah, Days, Fedra Serif Pro, Lava Pro).
-   The ≤600px block keeps the PHONE on HadassahFriedlaender Thin 100 / 16px
-   (never tuned on a phone — a desktop pick must not touch mobile). Both local
-   families are declared at the top of this file. line-height 1.5 opens up
-   the multi-line Hebrew cards. This is the shared
-   base for ALL title cards; no page should override font-size/weight here
-   individually.
-
-   TO GO BACK TO HADASSAH (the previous face, still in fonts/ with its
-   @font-face rules at the top of this file):
-     1. this rule:  font: 100 20px/1.5 'HadassahFriedlaender', serif;
-        (Thin 100 — the real Thin OTF; 16px mobile override is unchanged)
-     2. js/bootstrap.js: swap the Plex preload back to
-        document.fonts.load("100 16px 'HadassahFriedlaender'"),
-     3. index.html: drop the candidate family from the Google Fonts link
-        (optional — harmless if left). */
+/* Title cards: Discordia Regular (400), 18.5px desktop / 16px phone (the
+   ≤600px block). line-height 1.5 opens up the multi-line Hebrew cards. This is
+   the shared base for ALL title cards; no page should override font-size/weight
+   here individually. */
 .section-title {
   font: 400 18.5px/1.5 var(--font-title); /* 18.5: title-size compare pick 2026-09-27 (was 18) */
   color: var(--ink);
@@ -2732,17 +2709,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      `manual/` harness (wiki/Dev-Workflow.md). */
   top: calc(50% - 270.8px); /* hero harness 2026-09-27: last baseline 22px above its dots (was -276 / 23.7px) */
   width: 185px;
-  /* 400, not 600: fonts/ holds exactly two HadassahFriedlaender faces (Thin
-     100, Regular 400 — see the @font-face rules at the top of this file), so
-     a 600 request had no file behind it and the browser synthesised a fake
-     bold by smearing Regular at draw time. Synthetic bold is applied by the
-     rasteriser, not baked into the glyph outlines, so how much ink it lays
-     down can shift between rendering paths — which is what read as the hero
-     title changing weight during the reveal. 400 is a real drawn face with
-     fixed outlines and no such freedom. If retail weights above 400 are ever
-     licensed, add the @font-face rule first, then this value may go up. */
-  /* Desktop: Discordia, like the title blocks (typeface harness, 2026-09-27);
-     the ≤600px block keeps Hadassah. */
+  /* 400, not 600: Discordia ships Regular only, so a 600 request would make
+     the browser synthesise a fake bold, which read as the hero title changing
+     weight during the reveal. If heavier weights are ever licensed, add the
+     @font-face rule first, then this value may go up. */
   font: 400 40px var(--font-title); /* 40px, hero harness 2026-09-27 (was 42) */
   /* 1.31 is what the browser's own `normal` already resolved to for this face
      (55px / 42px) — stated explicitly so the `top` above stays valid if the
@@ -5747,7 +5717,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 
 /* ── Arabic version (ar/index.html, <html class="lang-ar">) ──────────────────
    Shares the Hebrew page's RTL layout entirely; only the faces change, because
-   Discordia / Hadassah / Assistant carry no Arabic glyphs. Both are Google
+   Discordia / Assistant carry no Arabic glyphs. Both are Google
    Fonts, linked from ar/index.html (translate_ui_ar.py writes the <link>):
    Tajawal (picked over Beiruti, Mada, Noto Sans Arabic and IBM Plex Sans Arabic
    with the ar-title-face compare harness, 2026-10-06) stands in wherever the Hebrew page uses Discordia (title blocks and
