@@ -5459,6 +5459,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    mask, so its colour is --pl-color. Height and gap are set per breakpoint —
    phone in the base rule, desktop in the 601px block. */
 .partner-title { text-align: center; }
+/* A little more air under the logos than the house 21px / 16px (manual/ pick 2026-10-06). */
+@media (min-width: 601px) { #page-15 .text-card-frame { padding-bottom: 26px; } }
+@media (max-width: 600px) { #page-15 .text-card-frame { padding-bottom: 20px; } }
 .partner-logo {
   --pl-h: 80px;                 /* height of the artwork; width follows it */
   --pl-gap: 20px;               /* between the text line and the logo */
