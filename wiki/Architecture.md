@@ -652,6 +652,10 @@ What holds today:
   group is the legend filter (keyboard-operable on both breakpoints), plus the legend labels.
   If it is ever revisited, the nearest 3:1 shades at the same hue are `#C38805` and `#28A817`.
 
+- **Accepted exception — no reflow fix for 601–959px desktop windows** (a laptop zoomed to
+  150–200%; WCAG 1.4.10). There, @fold12's pills overflow the window and the @fold16 credits
+  card is clipped. Judged an edge case (2026-10-06) and left as is.
+
 - **@fold12 is keyboard-operable.** Pills are focusable `role="button"` toggles; Enter/Space
   routes through the same `commitDrop`/`commitDropState` the pointer paths use, with an
   `aria-live` announcer and a `:focus-visible` ring — see

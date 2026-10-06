@@ -209,7 +209,7 @@ HEAD_PATCHES = [
     # index.html already preconnects to both Google Fonts hosts (for Assistant),
     # so only the Arabic faces' stylesheet is added.
     ('<link rel="stylesheet" href="style.css"', '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Beiruti:wght@400&family=IBM+Plex+Sans+Arabic:wght@300;400;500;700&display=swap" />\n  <link rel="stylesheet" href="style.css"'),
-    ('<html lang="he">', '<html lang="ar" class="lang-ar">\n<!-- Arabic version. Every relative url (css, scripts, events.json) resolves\n     against the site root, so this page shares all of them with index.html. -->\n<base href="../" />'),
+    ('<html lang="he" dir="rtl">', '<html lang="ar" dir="rtl" class="lang-ar">\n<!-- Arabic version. Every relative url (css, scripts, events.json) resolves\n     against the site root, so this page shares all of them with index.html. -->\n<base href="../" />'),
     ('<meta property="og:locale" content="he_IL" />', '<meta property="og:locale" content="ar_AR" />'),
     # canonical only — the hreflang alternates (he / en / ar / x-default) are the
     # same absolute urls on all three pages and pass through unchanged.

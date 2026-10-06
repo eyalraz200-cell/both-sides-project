@@ -588,7 +588,7 @@ body {
   font: 500 16px var(--font-body);
   /* Alpha, not the `opacity` property — that one is the stick reveal
      (0 → 1 on .is-stuck, ~line 274) and overwriting it would kill the fade. */
-  color: rgba(0, 0, 0, 0.25);
+  color: rgba(0, 0, 0, 0.54);   /* 4.56:1 on --bg — WCAG AA (compare/-picked 2026-10-06) */
   margin: 4px 0 0;
   white-space: nowrap;
 }
@@ -769,7 +769,7 @@ body {
   top: 10px; /* G */
   right: calc(50% - 23px);
   font: 600 16px var(--font-body);
-  color: rgba(0, 0, 0, 0.37);
+  color: rgba(0, 0, 0, 0.54);   /* AA 4.56:1 */
   white-space: nowrap;
   margin: 0;
 }
@@ -1400,18 +1400,19 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   left: 50%;
   transform: translate(-50%, -50%);
   font: 500 15px var(--font-body);
-  color: rgba(0, 0, 0, 0.5);
+  color: rgba(0, 0, 0, 0.54);   /* AA 4.56:1 */
   white-space: nowrap;
   pointer-events: none;
 }
+
 
 /* Desktop only: one step up from the shared 15px. Scoped above the 600px
    breakpoint so the mobile band — where the zone is narrower and the hint has
    far less room — keeps the smaller size. */
 @media (min-width: 601px) {
-  #page9ZoneAbove:empty::after { font-size: 16px; color: rgba(0, 0, 0, 0.25); }
+  #page9ZoneAbove:empty::after { font-size: 16px; font-weight: 300; color: rgba(0, 0, 0, 0.54); }
   /* Desktop-tuned subtitle (harness); mobile keeps the base 500 / 0.25. */
-  .page9-header-subtitle { font-weight: 400; color: rgba(0, 0, 0, 0.35); }
+  .page9-header-subtitle { font-weight: 400; color: rgba(0, 0, 0, 0.54); }
 }
 
 /* Dropped-chip chrome, per a series of explicit requests that moved it away
@@ -1599,7 +1600,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    every OTHER dropped pill's text a touch below its normal rgba(0,0,0,0.4)
    while one is singled out above, for a bit more contrast against it. */
 #page9ZoneAbove.has-hover-highlight .page9-pill:not(.is-hover-highlighted) {
-  color: rgba(0, 0, 0, 0.25);
+  color: rgba(0, 0, 0, 0.54);   /* AA 4.56:1 on #fff */
 }
 
 /* Extreme zone only — the legit zone below stays a valid drop target (you can
@@ -3049,6 +3050,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    used to stay laid out at opacity 0 — an invisible tab stop and click target
    before @fold10. updateGroups writes `hidden` every frame; this makes it real. */
 .p7-scope-btn[hidden] { display: none; }
+/* Keep the circle on its side under <html dir="rtl"> — the row was laid out LTR. */
+.p7-scope-btn { direction: ltr; }
 /* The ring: an empty 10px circle that simply FILLS dark when the crowd sizes
    are showing — no tick inside it. At 10px a checkmark is a smudge, so the
    fill alone carries the on/off state. */

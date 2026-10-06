@@ -1,10 +1,8 @@
 <!DOCTYPE html>
-<!-- lang="he" so screen readers use a Hebrew voice. NOT dir="rtl" at the root:
-     the stylesheet declares `direction: rtl` per block, and the flex rows that
-     don't (the @fold12 pill tray, .page9-zone) would reverse their inline
-     order under a root RTL. Setting it is still the right end state — it needs
-     an eyeball pass over folds 10–12 first. -->
-<html lang="he">
+<!-- lang + dir so screen readers, braille and the caret know the page is RTL.
+     The one flex row that would flip under a root RTL (.p7-scope-btn's circle)
+     is pinned with `direction: ltr` in style.css. -->
+<html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -362,7 +360,7 @@
       h.endsWith(".local") || /^10\./.test(h) || /^192\.168\./.test(h) ||
       /^172\.(1[6-9]|2\d|3[01])\./.test(h);
     if (!local) return;
-    ["_debug-bus.js", "_debug-inspect.js", "_debug-a11y-subtitle.js", "_debug-a11y-reflow.js", "_debug-a11y-select.js", "_debug-a11y-rtl.js"].forEach(function (src) {
+    ["_debug-bus.js", "_debug-inspect.js"].forEach(function (src) {
       // Cache-busted: VS Code's built-in browser keeps serving a stale harness
       // script despite the dev server's no-cache headers, replaying old state.
       document.write('<script src="' + src + '?v=' + Date.now() + '"><\/script>');
