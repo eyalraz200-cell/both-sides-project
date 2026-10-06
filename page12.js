@@ -408,7 +408,7 @@ function p12ShareInit() {
   // The card's own title (og:title, Hebrew) for the share text, not the tab's
   // English <title> — the text and the card the app fetches should agree.
   const ogT   = document.querySelector('meta[property="og:title"]');
-  const title = (ogT && ogT.content) || document.title || "קיצוניים משני הצדדים";
+  const title = (ogT && ogT.content) || document.title || "קיצונים משני הצדדים";
   const enc   = encodeURIComponent;
   const hrefs = {
     whatsapp: `https://wa.me/?text=${enc(title + " " + url)}`,
@@ -484,7 +484,7 @@ const P12_OUTRO_END = 22;
 function p12SpacingFit() {
   const H = window.innerHeight;
   // Solved on card 1's WRAPPER now, not the section: the closing statement
-  // continues as one 100vh .page13-follow block after it, so the wrapper's
+  // continues as three 100vh .page13-follow blocks after it, so the wrapper's
   // height is what puts card 2's centre 100vh below card 1's (and, down the
   // chain, @fold14's partner card 100vh below card 2's).
   const sec = document.getElementById("page-14");

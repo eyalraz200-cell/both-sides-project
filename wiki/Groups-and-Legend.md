@@ -349,6 +349,12 @@ and **un-type in place** at @fold4. They do **not** travel into the mini-legend 
 legend's columns carry no camp titles. There is no `e6` lerp on their position, size or
 weight; see [Folds](Folds.md) for the beat-mirroring mechanism.
 
+**Position: centred at @fold2, right-aligned on the dots at @fold3** (both breakpoints).
+@fold2 centres each header on its camp anchor (`campAnchorX`). Over @fold3's `alignT` it
+slides until its reading-start edge — right in Hebrew/Arabic, left on the English page
+(`fold3SwatchLeads()`) — sits on the column's outer dot edge (`fold3HeaderX`,
+js/update-groups.js: `campFold3X` + `CLUSTER_SWATCH_SIZE`, minus half the header's width).
+
 The gap down to the camp's top swatch row is measured two different ways. Desktop uses
 `FOLD4_HEADER_GAP` (36) as **plain px, header center → swatch center** — fixed, NOT
 frame-scaled (per explicit instruction it holds constant rather than multiplying by `H/982`
@@ -1383,7 +1389,7 @@ drag that begins on a row is still a drag. `pointerdown`/`move`/`up` on
 ### The rows are the mobile filter buttons
 
 `fold6MLegendRowTap` calls the same `p7FilterToggle` the desktop strips do, gated to the
-same folds (`currentPage` 9–13, i.e. @fold8–@fold12), then `p9FilterKick()` +
+same folds (`currentPage` 9–13, i.e. @fold8–@fold12) — and, like the desktop strips' `canFilter` (js/update-groups.js) and the keyboard path (`fold6LegendFilterActivate`), **not once @fold13's spread has begun** (`p9.fold13ExtremeMorphT > 0`, still page 13 for a quarter screen: `drawPage12` deals its targets among the shown dots and never shrinks by `p7FilterSizeFactor`, so a toggle there jumped the field) — then `p9FilterKick()` +
 `updateGroups()`. `p7FilterToggle` has no `isMobile()` gate — everything downstream (the
 shrink, the re-pack, the fly, @fold9's grid repack) is breakpoint-agnostic. `p7.vert` still
 gates it: with no vertical layout there is nothing to re-pack.

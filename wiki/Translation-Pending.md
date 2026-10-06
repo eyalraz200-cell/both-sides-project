@@ -12,6 +12,8 @@
 > too, never «وسيلة الإيضاح»), and every `I18N_AR` value added since the last API run — the
 > screen-reader strings, the loading text and the reworded action-type tooltips. All are in
 > `ar_translations.json`.
+> **Also user-supplied (2026-10-06):** the English and Arabic of @fold13's four closing cards
+> (`html:fold13-1`…`-4` in `ar_translations.json`).
 
 The Hebrew page is where copy gets written first. This file is the **ledger of Hebrew
 strings that have changed and whose English counterpart has not caught up yet**, so nothing
@@ -30,7 +32,7 @@ appendix is shared, via `build_methodology.py`) — log it here like any other c
 |---|---|---|---|
 | The phone's title for the first axis event is now «הכרזת הרפורמה המשפטית» (desktop keeps «הכרזת הרפורמה») | `labelMobile` on the 2023-01-04 entry of `P7_AXIS_EVENTS_ALL`, `page7.js` | `I18N_EN` has the new key, but it still maps to the old English, "Judicial Overhaul". Decide whether the phone's English title should change to match. | 2026-09-29 |
 | The two hidden sections' copy (`#page-5` @hidden-acled, `#page-6` @hidden-hover) is still Hebrew on `en/index.html` and `ar/index.html` — the lines are identical in all three files, so `translate_ui_ar.py` never pairs them | `index.html` `#page-5` / `#page-6` | English and Arabic for both cards (incl. `#page-6`'s `.copy-desktop` / `.copy-mobile` pair) before either section is un-hidden. | 2026-10-05 |
-| The Arabic share card is still the Hebrew one: `og:image` / `twitter:image` on `ar/index.html` point at `og-image-v3.png` | `ar/index.html` head (the og:image lines come through `translate_ui_ar.py` unchanged) | An Arabic card (`_og-card.html` with Arabic copy, like `og-image-en-v2.png` for English) and a `HEAD_PATCHES` entry pointing both tags at it. | 2026-10-05 |
+| The Arabic share card is still the Hebrew one: `og:image` / `twitter:image` on `ar/index.html` point at `og-image-v4.png` | `ar/index.html` head (the og:image lines come through `translate_ui_ar.py` unchanged) | An Arabic card (`_og-card.html` with Arabic copy, like `og-image-en-v2.png` for English) and a `HEAD_PATCHES` entry pointing both tags at it. | 2026-10-05 |
 
 ## The three surfaces English copy lives in
 

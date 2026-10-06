@@ -882,8 +882,20 @@ function updateGroups() {
   // .is-mfly-hidden. Both changed @fold2/@fold3's resting header-to-row gap.
   const headFlying = e6 > 0 && fold6MFlyEnabled()
     && !!fold6MFlyHeadTargetOf(CAMP_HEADER_TITLE_COALITION);
+  // @fold3's header x: its reading-start edge (right in Hebrew/Arabic, left in
+  // English) on the column's outer dot edge, lerped in over alignT so @fold2
+  // keeps the header centred on its block. The header is translate(-50%, -50%),
+  // so the centre is that edge ∓ half its width (the typewriter lays the full
+  // string out from frame one, so the width never changes mid-type).
+  const fold3HeaderX = (el, fold2X, isCoalition) => {
+    const colX = campFold3X(isCoalition ? FOLD4_COALITION_ROWS : FOLD4_CHANGE_ROWS);
+    const half = el.offsetWidth / 2;
+    const x3 = fold3SwatchLeads() ? colX + half : colX + CLUSTER_SWATCH_SIZE - half;
+    return fold2X + (x3 - fold2X) * alignT;
+  };
   const placeCampHeader = (el, fold2X, title) => {
     const tgt = headFlying ? fold6MFlyHeadTargetOf(title) : null;
+    fold2X = fold3HeaderX(el, fold2X, el === campHeaderCoalitionEl);
     // Same e6Fly as the flying rows — the headers ride the flight's own
     // low-ease-in curve, not the house e6, so the whole convoy moves as one.
     const x = tgt ? fold2X + (tgt.x - fold2X) * e6Fly : fold2X;
@@ -982,8 +994,14 @@ function updateGroups() {
     const pitch = fold6RowPitchPx();
     // …and on @fold7 from its crossing on (fold9FilterOpen, js/groups.js).
     const fold9Open = fold9FilterOpen();
+    // …but not once @fold13's spread has begun (still page 13 for a quarter
+    // screen): drawPage12 deals its targets among the shown dots and never
+    // scales by p7FilterSizeFactor, so a toggle there jumped the whole field and
+    // the group blinked out instead of shrinking. Same cut as the mobile rows
+    // (fold6MLegendRowTap, js/groups.js).
+    const spreadOn = typeof p9 !== "undefined" && (p9.fold13ExtremeMorphT ?? 0) > 0;
     const canFilter = live && ((currentPage >= 9 && currentPage <= 13) || fold9Open)
-      && typeof p7FilterOff !== "undefined";
+      && !spreadOn && typeof p7FilterOff !== "undefined";
     const filterLives = live && (currentPage >= 9 || fold9Open) && typeof p7FilterOff !== "undefined";
     GROUPS.forEach((g, gi) => {
       if (!g.fold6) return;

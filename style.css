@@ -2352,7 +2352,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      exactly how a 200vh attempt read as "stuck". Height here is spacing only
      while the wrapper is static; sticky turns it into hold time.
      The spacing is SOLVED by p12SpacingFit() (page12.js) on the wrapper as
-     50vh + half card 1, followed by one 100vh .page13-follow block — see
+     50vh + half card 1, followed by three 100vh .page13-follow blocks — see
      there. Don't replace it with a fixed vh: any fixed value is off by the
      half-card it ignores (the fade/gate/freeze all measure offsetTop, not this
      height, so they don't care). */
@@ -2360,11 +2360,12 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   padding: 0;
 }
 
-/* The closing statement's card 2 (index.html). An ordinary house title
-   block — centred in a 100vh run — placed after card 1's wrapper, whose
+/* The closing statement's cards 2-4 (index.html). Ordinary house title
+   blocks — each centred in a 100vh run — placed after card 1's wrapper, whose
    height is solved to 50vh + half card 1 (p12SpacingFit). So card centres sit
-   halfCard and 100vh + halfCard below the section top, and @fold14's partner
-   card 200vh + halfCard: 100vh apart, house rhythm. The gate,
+   halfCard, 100vh + halfCard, 200vh + halfCard and 300vh + halfCard below the
+   section top, and @fold14's partner card 400vh + halfCard: 100vh apart, house
+   rhythm. The gate,
    fold13ScrollT and .frozen all measure #page-14's offsetTop / the wrapper's
    top, so the extra height moves none of them. Carries the gutter itself
    because #page-14 zeroes the .text-section padding. */
@@ -2682,7 +2683,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   font: 400 14px/1.5 var(--font-body);
   letter-spacing: 0.04em;
   color: rgba(0, 0, 0, 0.7);
-  text-align: center;
+  text-align: right;   /* ranges with the body copy above it */
 }
 
 .page12-credits a {
@@ -5306,7 +5307,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    the7eye.org.il. The artwork is a MASK (alpha-only PNG), so the mark's colour
    is plain `background-color` on .seventh-eye-mark; the <a> around it is the
    optional backing plate. DESKTOP: the wide lockup in the corner with the line
-   «פרויקט בשיתוף» to its right. PHONE: the same lockup centred at the top,
+   «בשיתוף» to its right. PHONE: the same lockup centred at the top,
    line above, fading out on scroll. Every value is a custom property set per
    breakpoint (phone in the base rule, desktop in the 601px block), so tuning
    one never moves the other. */
@@ -5323,12 +5324,12 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   --se-plate: transparent;      /* backing plate fill */
   --se-pad: 0px;                /* plate padding around the mark */
   --se-radius: 0px;
-  /* The «פרויקט בשיתוף» line. */
+  /* The «בשיתוף» line. */
   --se-cap-size: 14px;
   --se-cap-weight: 400;
   --se-cap-color: var(--se-ink);
   --se-cap-opacity: 1;
-  --se-cap-gap: 8px;            /* between the line and the mark */
+  --se-cap-gap: 16px;           /* between the line and the mark (phone; manual/-baked 2026-10-06) */
   --se-cap-spacing: 0.04em;     /* letter-spacing */
   --se-cap-font: var(--font-body);
   --se-cap-align: center;       /* right | center | left — only matters with --se-dir: column */
@@ -5405,6 +5406,32 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     --se-cap-y: -1.25px;
   }
 }
+/* Shenkar's logo (mark + name, `shenkar-logo.png` as a MASK, painted the 7eye
+   grey), after the 7eye mark, with a thin divider between them — compare/-
+   picked 2026-10-06: 29px tall (the 7eye mark's own height), 16px either side
+   of the divider (the lockup's 12px flex gap + 4px margin). The divider is its
+   own element because a mask would clip a border on the logo.
+   Both breakpoints. */
+/* Both breakpoints. On the phone the lockup wraps: caption on its own row,
+   then mark | rule | Shenkar centred under it (see the 600px block). */
+@media all {
+  .shenkar-rule {
+    display: block;
+    align-self: stretch;
+    width: 1px;
+    margin: 0 4px;
+    background: rgba(57, 50, 57, 0.2);
+  }
+  .shenkar-mark {
+    display: block;
+    flex: none;
+    height: 29px;
+    aspect-ratio: 1022 / 301;
+    background-color: var(--se-ink);
+    -webkit-mask: url("shenkar-logo.png") center / contain no-repeat;
+    mask: url("shenkar-logo.png") center / contain no-repeat;
+  }
+}
 /* PHONE: centred instead of cornered (same wide lockup), and gone once the
    reader scrolls — js/nav.js flips .is-scrolled past SEVENTH_EYE_FADE_SCROLL_PX.
    A pure state flip, so a CSS transition. Text, not a dot: it may fade. */
@@ -5415,6 +5442,24 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     transform: translateX(-50%);
     transition: opacity var(--se-fade-ms);
   }
+  /* A grid, not a flex row: the caption spans the top, then two EQUAL halves
+     either side of the divider (1fr auto 1fr — at max-content width the two
+     1fr tracks size to the wider logo), so the divider sits at the lockup's
+     centre; each logo hugs it from its own half, so both sit exactly
+     --se-rule-gap from the line. */
+  .seventh-eye {
+    --se-rule-gap: 16px;        /* gap from each logo to the divider (manual/-baked 2026-10-06) */
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    column-gap: var(--se-rule-gap);
+    row-gap: var(--se-cap-gap);
+    width: max-content;
+  }
+  .seventh-eye-caption { grid-column: 1 / -1; }
+  .seventh-eye-mark { margin: 0; justify-self: end; }
+  .seventh-eye .shenkar-rule { margin: 0; }
+  .seventh-eye .shenkar-mark { justify-self: start; }
   .seventh-eye.is-scrolled {
     opacity: 0;
     pointer-events: none;
@@ -5424,8 +5469,11 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    the line beside it keeps its idle colour. A pure state flip, so a CSS
    transition. */
 @media (min-width: 601px) and (hover: hover) {
-  .seventh-eye-mark { transition: background-color 150ms; }
-  .seventh-eye:hover .seventh-eye-mark { background-color: #EC2A2C; }
+  /* Each logo is its own link, so each reddens on its own hover — 7eye's
+     red — the same #EC2A2C for both. */
+  .seventh-eye-mark, .shenkar-mark { transition: background-color 150ms; }
+  .seventh-eye-mark:hover { background-color: #EC2A2C; }
+  .shenkar-mark:hover { background-color: #EC2A2C; }
 }
 /* English page, DESKTOP: the SAME wide lockup as the Hebrew corner (the
    artwork the user calls "logo2" — put back 2026-10-02; the cropped stacked
@@ -5442,7 +5490,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    phone in the base rule, desktop in the 601px block. */
 .partner-title { text-align: center; }
 .partner-logo {
-  --pl-h: 84px;                 /* height of the artwork; width follows it */
+  --pl-h: 80px;                 /* height of the artwork; width follows it */
   --pl-gap: 20px;               /* between the text line and the logo */
   --pl-color: var(--ink);          /* = .section-title's own colour */
   --pl-ms: auto;                /* auto / auto = centred; 0 / auto = starts at the text's edge */
@@ -5452,12 +5500,39 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   opacity: var(--pl-opacity);
   height: var(--pl-h);
   aspect-ratio: 600 / 788;
-  margin-block-start: var(--pl-gap);
-  margin-inline-start: var(--pl-ms);
-  margin-inline-end: var(--pl-me);
+  flex: none;
   background-color: var(--pl-color);
   -webkit-mask: url("seventh-eye-logo.png") center / contain no-repeat;
   mask: url("seventh-eye-logo.png") center / contain no-repeat;
+}
+/* The logos under the text, STACKED (compare/ + manual/-picked 2026-10-06,
+   both breakpoints): 7eye's stacked logo on top, a thin horizontal divider,
+   then Shenkar's mark + name (`shenkar-logo.png`, a mask in the same ink, its
+   own link). The divider is exactly as wide as the Shenkar logo. 18px either
+   side of the divider; the text-to-logos gap is the column's top margin. */
+.partner-logos {
+  --pls-h: 50px;                /* Shenkar logo height; the divider's width follows it */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  margin-block-start: 20px;
+}
+.partner-rule {
+  width: calc(var(--pls-h) * 1022 / 301);
+  height: 1px;
+  background: rgba(57, 50, 57, 0.2);
+}
+.partner-logo-shenkar {
+  flex: none;
+  height: var(--pls-h);
+  aspect-ratio: 1022 / 301;
+  background-color: var(--pl-color, var(--ink));
+  -webkit-mask: url("shenkar-logo.png") center / contain no-repeat;
+  mask: url("shenkar-logo.png") center / contain no-repeat;
+}
+@media (min-width: 601px) {
+  .partner-logos { margin-block-start: 24px; }
 }
 /* The words themselves, in their own span so their opacity (and, if ever
    tuned, size) can differ from the logo's without touching the frame.
@@ -5469,7 +5544,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 @media (min-width: 601px) {
   .partner-logo {
     --pl-opacity: 1;
-    --pl-h: 100px;
+    --pl-h: 80px;
     --pl-gap: 24px;
     --pl-color: var(--ink);
     --pl-ms: auto;
@@ -5477,8 +5552,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   }
 }
 @media (min-width: 601px) and (hover: hover) {
-  .partner-logo { transition: background-color 150ms; }
+  .partner-logo, .partner-logo-shenkar { transition: background-color 150ms; }
   .partner-logo:hover { background-color: #EC2A2C; }
+  .partner-logo-shenkar:hover { background-color: #EC2A2C; }   /* the same red as 7eye's */
 }
 
 /* English hero text reads left-to-right. Same boxes and positions as the Hebrew
@@ -5526,12 +5602,13 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 }
 
 /* English credits card (@fold16) reads left-to-right. */
-/* Only the body copy ranges left — the title and the credits stay centred, as
-   on the Hebrew card. */
+/* The body copy and the credits range left — the title stays centred, as on
+   the Hebrew card. */
 .lang-en #page-17 .text-card-frame {
   direction: ltr;
 }
-.lang-en #page-17 .page12-body {
+.lang-en #page-17 .page12-body,
+.lang-en #page-17 .page12-credits {
   text-align: left;
 }
 
@@ -5672,21 +5749,35 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    Shares the Hebrew page's RTL layout entirely; only the faces change, because
    Discordia / Hadassah / Assistant carry no Arabic glyphs. Both are Google
    Fonts, linked from ar/index.html (translate_ui_ar.py writes the <link>):
-   Beiruti stands in wherever the Hebrew page uses Discordia (title blocks and
+   Tajawal (picked over Beiruti, Mada, Noto Sans Arabic and IBM Plex Sans Arabic
+   with the ar-title-face compare harness, 2026-10-06) stands in wherever the Hebrew page uses Discordia (title blocks and
    the hero title), IBM Plex Sans Arabic wherever it uses Assistant. Sizes and
    weights stay the shared rules'. */
 .lang-ar .section-title,
 .lang-ar .page0-title {
-  font-family: 'Beiruti', 'Discordia', serif;
+  font-family: 'Tajawal', 'Discordia', serif;
 }
-/* Optical size match: Discordia's Hebrew letters stand 0.68em tall, Beiruti's
-   Arabic body 0.39em with alefs at 0.63em (measured with fontTools), so at the
+/* Optical size match: Discordia's Hebrew letters stand 0.68em tall, the Arabic
+   face's body far less (measured on Beiruti: 0.39em, alefs 0.63em), so at the
    shared 18.5px / 16px the Arabic titles read ~13% smaller. 21px / 18px lands
-   them at the same visual size — the one language-gated exception to the
+   them at the same visual size (kept for Tajawal — the compare harness pick) — the one language-gated exception to the
    .section-title single-size rule (#page-17 stays its own 36/26 exception). */
 .lang-ar .section-title { font-size: 21px; }
 @media (max-width: 600px) {
   .lang-ar .section-title { font-size: 18px; }
+}
+/* Arabic hero title + subtitle sit higher than the shared tops — Tajawal's
+   lines read closer to the dot columns — and move as one: 8px desktop, 6px
+   phone (ar-hero-lift manual harness, 2026-10-06). The shared tops minus that. */
+.lang-ar .page0-title { top: calc(50% - 278.8px); }    /* shared -270.8px */
+.lang-ar .page0-subtitle { top: calc(50% - 194.7px); } /* shared -186.7px */
+@media (max-width: 600px) {
+  .lang-ar .page0-title {
+    top: calc(var(--page0-half, 50vh) - 236.1px + var(--page0-drop, 0px) + var(--page0-trim, 0px)); /* shared -230.1px */
+  }
+  .lang-ar .page0-subtitle {
+    top: calc(var(--page0-half, 50vh) - 171.9px + var(--page0-drop, 0px) + var(--page0-trim, 0px)); /* shared -165.9px */
+  }
 }
 .lang-ar .page0-subtitle,
 .lang-ar .text-card,

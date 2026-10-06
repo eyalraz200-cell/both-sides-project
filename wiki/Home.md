@@ -1,6 +1,6 @@
 # Both Sides — project wiki
 
-Current-state documentation for the scrollytelling project ("קיצוניים משני הצדדים").
+Current-state documentation for the scrollytelling project ("קיצונים משני הצדדים").
 Everything here describes the **project as it is now** — no history narration; use
 `git log` for how things got here.
 

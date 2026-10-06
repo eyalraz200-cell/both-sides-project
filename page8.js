@@ -133,7 +133,13 @@ function p8TriggerReverse() {
   p8StartPhase(0);
 }
 
+// When page8 last painted — p7SizeGridSet reads it to tell whether the dots on
+// screen are page8's glide or page7's own frame (p7.lastPositionsAt).
+let p8LastDrawAt = 0;
+// When page8's landed pass last wrote p9.lastPositions (p7ScopeLandedFrom).
+let p8LandedPosAt = 0;
 function drawPage8(ctx, W, H) {
+  p8LastDrawAt = performance.now();
   if (!p7.ready) {
     drawBackground(ctx, W, H);
     return;
@@ -199,7 +205,12 @@ function drawPage8(ctx, W, H) {
       // size only. Position, as ever, never snaps.
       let filtF = typeof p7FilterSizeFactor === "function" ? p7FilterSizeFactor(e) : 1;
       if (filtF <= 0.002 && !(typeof p7FilterMorphActive === "function" && p7FilterMorphActive())) return;
-      const cell = positions[i];
+      // The timeline cell the glide falls back to is the FILTERED one when a
+      // filter is on — the cell page7 draws the dot in once the glide hands
+      // back. The unfiltered cell sent survivors to the wrong spot, then snapped.
+      const filt = (typeof p7FilterLayout !== "undefined" && p7FilterLayout)
+        ? (side === "left" ? p7FilterLayout.leftPos : p7FilterLayout.rightPos)[i] : -1;
+      const cell = filt >= 0 ? filt : positions[i];
       const col  = cell % cols;
       const row  = Math.floor(cell / cols);
       // @fold9 leaves the size grid ON across this fold (p7SizeGridOnPage,
@@ -219,9 +230,14 @@ function drawPage8(ctx, W, H) {
         g = { x: b.cx - b.sq / 2, y: b.cy - b.sq / 2, sq: b.sq };
       }
       p8TotalG++; if (!g) p8NullG++;
-      const fromX = g ? g.x : x0 + col * CELL;
-      const fromY = g ? g.y : topY + row * CELL;
-      const fromSQ = g ? g.sq : SQ;
+      let fromX = g ? g.x : x0 + col * CELL;
+      let fromY = g ? g.y : topY + row * CELL;
+      let fromSQ = g ? g.sq : SQ;
+      // A legend toggle while this glide is in the air: the start is blended on
+      // the filter's own clock exactly as page7 blends its dots (p7FilterGlideStart),
+      // so the re-packed survivors don't jump and the two draws agree at the hand-off.
+      const fs = typeof p7FilterGlideStart === "function" ? p7FilterGlideStart(e, fromX, fromY, fromSQ) : null;
+      if (fs) { fromX = fs.x; fromY = fs.y; fromSQ = fs.sq; }
 
       const target = p9LegitPosOf(e, indexOf, side, legitGeom);
       if (!target) return;
@@ -304,7 +320,7 @@ function drawPage8(ctx, W, H) {
     blendAndDraw(p7.rightEvents, p9.rightIndexOf, "right", p7.rightPos, rightX0);
     if (deferred) paint(deferred[0], deferred[1], deferred[2], deferred[3], deferred[4], 1);
   }
-  if (posMap && posMap.size) p9.lastPositions = posMap;   // never on the mobile bar's rect pass
+  if (posMap && posMap.size) { p9.lastPositions = posMap; p8LandedPosAt = performance.now(); }   // never on the mobile bar's rect pass
 
   // The year axis undraws in reverse of its build-in wipe (quick, 500ms —
   // p7AxisReverseOut/P7_AXIS_OUTRO_DURATION in page7.js) as this glide starts,
@@ -354,7 +370,10 @@ function p8CaptureBlendedPositions(W, H, tOverride) {
   const out = new Map();
   function capture(events, indexOf, side, positions, x0) {
     events.forEach((e, i) => {
-      const cell = positions[i];
+      // Same filtered fallback cell as the glide's own draw (blendAndDraw).
+      const filt = (typeof p7FilterLayout !== "undefined" && p7FilterLayout)
+        ? (side === "left" ? p7FilterLayout.leftPos : p7FilterLayout.rightPos)[i] : -1;
+      const cell = filt >= 0 ? filt : positions[i];
       const col  = cell % cols;
       const row  = Math.floor(cell / cols);
       let g = p7GridLiveRect(e, side === "left");
@@ -368,9 +387,14 @@ function p8CaptureBlendedPositions(W, H, tOverride) {
           x0 + col * CELL + p7.SQ / 2, topY + row * CELL + p7.SQ / 2, p7.SQ, side === "left");
         g = { x: b.cx - b.sq / 2, y: b.cy - b.sq / 2, sq: b.sq };
       }
-      const fromX = g ? g.x : x0 + col * CELL;
-      const fromY = g ? g.y : topY + row * CELL;
-      const fromSQ = g ? g.sq : p7.SQ;
+      let fromX = g ? g.x : x0 + col * CELL;
+      let fromY = g ? g.y : topY + row * CELL;
+      let fromSQ = g ? g.sq : p7.SQ;
+      // A legend toggle while this glide is in the air: the start is blended on
+      // the filter's own clock exactly as page7 blends its dots (p7FilterGlideStart),
+      // so the re-packed survivors don't jump and the two draws agree at the hand-off.
+      const fs = typeof p7FilterGlideStart === "function" ? p7FilterGlideStart(e, fromX, fromY, fromSQ) : null;
+      if (fs) { fromX = fs.x; fromY = fs.y; fromSQ = fs.sq; }
 
       const target = p9LegitPosOf(e, indexOf, side, legitGeom);
       if (!target) return;

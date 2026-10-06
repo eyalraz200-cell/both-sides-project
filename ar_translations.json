@@ -2,49 +2,49 @@
  {
   "id": "html:11",
   "kind": "html",
-  "he": "  <title>קיצוניים משני הצדדים</title>",
+  "he": "  <title>קיצונים משני הצדדים</title>",
   "en": "  <title>Extremists on Both Sides</title>",
   "ar": "  <title>متطرفون من الجانبين</title>"
  },
  {
   "id": "html:17",
   "kind": "html",
-  "he": "  <meta name=\"description\" content=\"אספנו אלפי פעולות פוליטיות במרחב הציבורי לאורך ארבע השנים האחרונות. קבעו בעצמכם — מי הם הקיצוניים משני הצדדים? פרויקט אינטראקטיבי בשיתוף העין השביעית.\" />",
+  "he": "  <meta name=\"description\" content=\"אספנו אלפי פעולות פוליטיות במרחב הציבורי לאורך ארבע השנים האחרונות. קבעו בעצמכם — מי הם הקיצונים משני הצדדים? פרויקט אינטראקטיבי בשיתוף העין השביעית.\" />",
   "en": "  <meta name=\"description\" content=\"We collected thousands of political actions carried out in public space over the past four years. Decide for yourself — who are the extremists on both sides? An interactive project in partnership with The Seventh Eye.\" />",
   "ar": "  <meta name=\"description\" content=\"جمعنا آلاف التحركات السياسية في الحيز العام على مدى السنوات الأربع الأخيرة. قرروا بأنفسكم — من هم المتطرفون من الجانبين؟ مشروع تفاعلي بالشراكة مع العين السابعة.\" />"
  },
  {
   "id": "html:25",
   "kind": "html",
-  "he": "  <meta property=\"og:title\" content=\"קיצוניים משני הצדדים\" />",
+  "he": "  <meta property=\"og:title\" content=\"קיצונים משני הצדדים\" />",
   "en": "  <meta property=\"og:title\" content=\"Extremists on Both Sides\" />",
   "ar": "  <meta property=\"og:title\" content=\"متطرفون من الجانبين\" />"
  },
  {
   "id": "html:26",
   "kind": "html",
-  "he": "  <meta property=\"og:description\" content=\"אספנו אלפי פעולות פוליטיות במרחב הציבורי לאורך ארבע השנים האחרונות. קבעו בעצמכם - מי הם הקיצוניים משני הצדדים?&#10;פרויקט אינטראקטיבי בשיתוף העין השביעית.\" />",
+  "he": "  <meta property=\"og:description\" content=\"אספנו אלפי פעולות פוליטיות במרחב הציבורי לאורך ארבע השנים האחרונות. קבעו בעצמכם - מי הם הקיצונים משני הצדדים?&#10;פרויקט אינטראקטיבי בשיתוף העין השביעית.\" />",
   "en": "  <meta property=\"og:description\" content=\"We collected thousands of political actions carried out in public space over the past four years. Decide for yourself - who are the extremists on both sides?&#10;An interactive project in partnership with The Seventh Eye.\" />",
   "ar": "  <meta property=\"og:description\" content=\"جمعنا آلاف التحركات السياسية في الحيز العام على مدى السنوات الأربع الأخيرة. قرروا بأنفسكم - من هم المتطرفون من الجانبين؟&#10;مشروع تفاعلي بالشراكة مع العين السابعة.\" />"
  },
  {
   "id": "html:31",
   "kind": "html",
-  "he": "  <meta property=\"og:image:alt\" content=\"קיצוניים משני הצדדים — ניתוח הפעילות של המחנות הפוליטיים בישראל\" />",
+  "he": "  <meta property=\"og:image:alt\" content=\"קיצונים משני הצדדים — ניתוח הפעילות של המחנות הפוליטיים בישראל\" />",
   "en": "  <meta property=\"og:image:alt\" content=\"Extremists on Both Sides — An analysis of political activity across Israel’s political camps\" />",
   "ar": "  <meta property=\"og:image:alt\" content=\"متطرفون من الجانبين — تحليل نشاط المعسكرات السياسية في إسرائيل\" />"
  },
  {
   "id": "html:33",
   "kind": "html",
-  "he": "  <meta name=\"twitter:title\" content=\"קיצוניים משני הצדדים\" />",
+  "he": "  <meta name=\"twitter:title\" content=\"קיצונים משני הצדדים\" />",
   "en": "  <meta name=\"twitter:title\" content=\"Extremists on Both Sides\" />",
   "ar": "  <meta name=\"twitter:title\" content=\"متطرفون من الجانبين\" />"
  },
  {
   "id": "html:34",
   "kind": "html",
-  "he": "  <meta name=\"twitter:description\" content=\"אספנו אלפי פעולות פוליטיות במרחב הציבורי לאורך ארבע השנים האחרונות. קבעו בעצמכם - מי הם הקיצוניים משני הצדדים?&#10;פרויקט אינטראקטיבי בשיתוף העין השביעית.\" />",
+  "he": "  <meta name=\"twitter:description\" content=\"אספנו אלפי פעולות פוליטיות במרחב הציבורי לאורך ארבע השנים האחרונות. קבעו בעצמכם - מי הם הקיצונים משני הצדדים?&#10;פרויקט אינטראקטיבי בשיתוף העין השביעית.\" />",
   "en": "  <meta name=\"twitter:description\" content=\"We collected thousands of political actions carried out in public space over the past four years. Decide for yourself - who are the extremists on both sides?&#10;An interactive project in partnership with The Seventh Eye.\" />",
   "ar": "  <meta name=\"twitter:description\" content=\"جمعنا آلاف التحركات السياسية في الحيز العام على مدى السنوات الأربع الأخيرة. قرروا بأنفسكم - من هم المتطرفون من الجانبين؟&#10;مشروع تفاعلي بالشراكة مع العين السابعة.\" />"
  },
@@ -86,14 +86,14 @@
  {
   "id": "html:113",
   "kind": "html",
-  "he": "    <a class=\"seventh-eye\" href=\"https://www.the7eye.org.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"פרויקט בשיתוף העין השביעית\"><span class=\"seventh-eye-caption\">פרויקט בשיתוף</span><span class=\"seventh-eye-mark\" aria-hidden=\"true\"></span></a>",
-  "en": "    <a class=\"seventh-eye\" href=\"https://www.the7eye.org.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"In partnership with The Seventh Eye\"><span class=\"seventh-eye-caption\">In partnership with</span><span class=\"seventh-eye-mark\" aria-hidden=\"true\"></span></a>",
-  "ar": "    <a class=\"seventh-eye\" href=\"https://www.the7eye.org.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"مشروع بالشراكة مع العين السابعة\"><span class=\"seventh-eye-caption\">مشروع بالشراكة مع</span><span class=\"seventh-eye-mark\" aria-hidden=\"true\"></span></a>"
+  "he": "    <div class=\"seventh-eye\"><span class=\"seventh-eye-caption\">בשיתוף</span><a class=\"seventh-eye-mark\" href=\"https://www.the7eye.org.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"העין השביעית\"></a><span class=\"shenkar-rule\" aria-hidden=\"true\"></span><a class=\"shenkar-mark\" href=\"https://www.shenkar.ac.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"שנקר\"></a></div>",
+  "en": "    <div class=\"seventh-eye\"><span class=\"seventh-eye-caption\">In partnership with</span><a class=\"seventh-eye-mark\" href=\"https://www.the7eye.org.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"The Seventh Eye\"></a><span class=\"shenkar-rule\" aria-hidden=\"true\"></span><a class=\"shenkar-mark\" href=\"https://www.shenkar.ac.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"Shenkar\"></a></div>",
+  "ar": "    <div class=\"seventh-eye\"><span class=\"seventh-eye-caption\">بالشراكة مع</span><a class=\"seventh-eye-mark\" href=\"https://www.the7eye.org.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"العين السابعة\"></a><span class=\"shenkar-rule\" aria-hidden=\"true\"></span><a class=\"shenkar-mark\" href=\"https://www.shenkar.ac.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"شنكار\"></a></div>"
  },
  {
   "id": "html:156",
   "kind": "html",
-  "he": "          <h1 class=\"page0-title\">קיצוניים משני הצדדים</h1>",
+  "he": "          <h1 class=\"page0-title\">קיצונים משני הצדדים</h1>",
   "en": "          <h1 class=\"page0-title\">Extremists<br />on Both<br />Sides</h1>",
   "ar": "          <h1 class=\"page0-title\">متطرفون<br />من<br />الجانبين</h1>"
  },
@@ -121,7 +121,7 @@
  {
   "id": "html:172",
   "kind": "html",
-  "he": "          <h2 class=\"section-title text-card-frame\">בשל פעילותן בשטח, קבוצות אלה נתפסות לרוב כקצוות הפוליטיים הקיצוניים של שני המחנות.</h2>",
+  "he": "          <h2 class=\"section-title text-card-frame\">בשל פעילותן בשטח, קבוצות אלה נתפסות לרוב כקצוות הפוליטיים הקיצונים של שני המחנות.</h2>",
   "en": "          <h2 class=\"section-title text-card-frame\">Because of their on-the-ground activity, these groups are often seen as representing the political extremes of the two camps.</h2>",
   "ar": "          <h2 class=\"section-title text-card-frame\">بسبب نشاطها الميداني، يُنظر إلى هذه المجموعات غالبًا على أنها الأطراف السياسية المتطرفة في المعسكرين.</h2>"
  },
@@ -135,9 +135,9 @@
  {
   "id": "html:197",
   "kind": "html",
-  "he": "          <h2 class=\"section-title text-card-frame\">תיאורי האירועים ומועדיהם לקוחים בעיקר ממאגר <a class=\"latin-acronym card-link\" href=\"https://acleddata.com/\" target=\"_blank\" rel=\"noopener\">ACLED</a>, גוף מחקר בינלאומי, ובחלקם ממאגר <a class=\"card-link\" href=\"https://www.zman.co.il/726358/\" target=\"_blank\" rel=\"noopener\">״המבצר״</a>. השיוך, הסיווג, העריכה והתרגום נעשו במסגרת הפרויקט בעזרת מודלי שפה של <span class=\"latin-acronym\">OpenAI</span>.<span class=\"copy-mobile\"> פרטים במקרא.</span></h2>",
-  "en": "          <h2 class=\"section-title text-card-frame\">The event descriptions and dates come mainly from <a class=\"latin-acronym card-link\" href=\"https://acleddata.com/\" target=\"_blank\" rel=\"noopener\">ACLED</a>, an international research organization, and partly from the “<a class=\"card-link\" href=\"https://www.zman.co.il/726358/\" target=\"_blank\" rel=\"noopener\">Fortress</a>” database. Assignment, classification, editing, and translation were carried out as part of the project using <span class=\"latin-acronym\">OpenAI</span> language models.<span class=\"copy-mobile\"> See the legend for details.</span></h2>",
-  "ar": "          <h2 class=\"section-title text-card-frame\">أوصاف الأحداث وتواريخها مأخوذة أساسًا من قاعدة بيانات <a class=\"latin-acronym card-link\" href=\"https://acleddata.com/\" target=\"_blank\" rel=\"noopener\">ACLED</a>، وهي مؤسسة بحثية دولية، وجزئيًا من قاعدة بيانات <a class=\"card-link\" href=\"https://www.zman.co.il/726358/\" target=\"_blank\" rel=\"noopener\">«الحصن»</a>. وجرى الإسناد والتصنيف والتحرير والترجمة ضمن المشروع باستخدام نماذج لغوية من <span class=\"latin-acronym\">OpenAI</span>.<span class=\"copy-mobile\"> للتفاصيل، انظر مفتاح الرموز.</span></h2>"
+  "he": "          <h2 class=\"section-title text-card-frame\">תיאורי האירועים ומועדיהם לקוחים בעיקר ממאגר <a class=\"latin-acronym card-link\" href=\"https://acleddata.com/\" target=\"_blank\" rel=\"noopener\">ACLED</a>, גוף מחקר בינלאומי, ובחלקם ממאגר ״<a class=\"card-link\" href=\"https://www.zman.co.il/726358/\" target=\"_blank\" rel=\"noopener\">המבצר</a>״.</h2>",
+  "en": "          <h2 class=\"section-title text-card-frame\">The event descriptions and dates come mainly from <a class=\"latin-acronym card-link\" href=\"https://acleddata.com/\" target=\"_blank\" rel=\"noopener\">ACLED</a>, an international research organization, and partly from the “<a class=\"card-link\" href=\"https://www.zman.co.il/726358/\" target=\"_blank\" rel=\"noopener\">Fortress</a>” database.</h2>",
+  "ar": "          <h2 class=\"section-title text-card-frame\">أوصاف الأحداث وتواريخها مأخوذة أساسًا من قاعدة بيانات <a class=\"latin-acronym card-link\" href=\"https://acleddata.com/\" target=\"_blank\" rel=\"noopener\">ACLED</a>، وهي مؤسسة بحثية دولية، وجزئيًا من قاعدة بيانات «<a class=\"card-link\" href=\"https://www.zman.co.il/726358/\" target=\"_blank\" rel=\"noopener\">الحصن</a>».</h2>"
  },
  {
   "id": "html:202",
@@ -189,25 +189,39 @@
   "ar": "            <p class=\"page9-tray-title\">أنواع التحركات</p>"
  },
  {
-  "id": "html:265",
+  "id": "html:fold13-1",
   "kind": "html",
-  "he": "            <h2 class=\"section-title text-card-frame\">בשנים האחרונות נשחקו נורמות ונחצו גבולות במאבקים הפוליטיים בישראל.&#x200F;</h2>",
-  "en": "            <h2 class=\"section-title text-card-frame\">In recent years, norms have eroded and lines have been crossed in Israel’s political struggles.</h2>",
-  "ar": "            <h2 class=\"section-title text-card-frame\">في السنوات الأخيرة، شهدت الصراعات السياسية في إسرائيل تآكلًا في الأعراف وتجاوزًا للحدود.&#x200F;</h2>"
+  "he": "            <h2 class=\"section-title text-card-frame\">נורמות פוליטיות רבות נפרצו כאן לאורך ארבע השנים האחרונות. את ההקצנה יש לבחון, לבקר ולאכוף באופן שקול מכל צידי המפה.&#x200F;</h2>",
+  "en": "            <h2 class=\"section-title text-card-frame\">Many political norms have been broken here over the past four years. Radicalization must be examined and challenged, and the law enforced fairly across the political spectrum.</h2>",
+  "ar": "            <h2 class=\"section-title text-card-frame\">انتُهكت هنا أعراف سياسية كثيرة خلال السنوات الأربع الماضية. ويجب إخضاع التطرّف للفحص والنقد، وتطبيق القانون بإنصاف على جميع أطراف الطيف السياسي.&#x200F;</h2>"
  },
  {
-  "id": "html:274",
+  "id": "html:fold13-2",
   "kind": "html",
-  "he": "            <h2 class=\"section-title text-card-frame\">לקראת הבחירות, חשוב לדרוש ממי שמבקשים את אמוננו להציב גבולות להקצנה - גם מהמחנה אותו הם מייצגים.&#x200F;</h2>",
-  "en": "            <h2 class=\"section-title text-card-frame\">Ahead of the election, it is important to demand that those who ask for our trust set limits on extremism – in their own camp too.</h2>",
-  "ar": "            <h2 class=\"section-title text-card-frame\">قبيل الانتخابات، من المهم أن نطالب من يسعون إلى نيل ثقتنا بأن يضعوا حدودًا للتطرف - أيضًا داخل المعسكر الذي يمثلونه.&#x200F;</h2>"
+  "he": "            <h2 class=\"section-title text-card-frame\">אזרחי ישראל ימשיכו להיות מעורבים פוליטית גם הרבה מעבר למערכת הבחירות הקרובה. אך באיזה אופן?&#x200F;</h2>",
+  "en": "            <h2 class=\"section-title text-card-frame\">Israeli citizens will remain politically engaged long after the upcoming election. But what form will that engagement take?</h2>",
+  "ar": "            <h2 class=\"section-title text-card-frame\">سيظلّ المواطنون الإسرائيليون منخرطين في السياسة حتى بعد الانتخابات المقبلة بوقت طويل. لكن بأيّ شكل؟&#x200F;</h2>"
+ },
+ {
+  "id": "html:fold13-3",
+  "kind": "html",
+  "he": "            <h2 class=\"section-title text-card-frame\">האם הממשלה הבאה תשכיל להיות קשובה לרחשי הציבור, לאכוף את החוק ולהפוך את המגמה המסוכנת? או האם היא תנצל את כוחה לאכיפה בררנית? או אף תעודד הקצנה נוספת?&#x200F;</h2>",
+  "en": "            <h2 class=\"section-title text-card-frame\">Will the next government listen to the public, uphold the law, and reverse this dangerous trend? Or will it use its power to enforce the law selectively - or even encourage further radicalization?</h2>",
+  "ar": "            <h2 class=\"section-title text-card-frame\">هل ستُحسن الحكومة المقبلة الإصغاء إلى نبض الشارع، وتطبيق القانون، وعكس هذا المسار الخطير؟ أم ستستغلّ سلطتها لتطبيق القانون بصورة انتقائية؟ بل هل ستشجّع على مزيد من التطرّف؟&#x200F;</h2>"
+ },
+ {
+  "id": "html:fold13-4",
+  "kind": "html",
+  "he": "            <h2 class=\"section-title text-card-frame\">ומה איתך? כיצד יעצבו הבחירות שלך - בקלפי ומחוצה לו - את התרבות הפוליטית הישראלית בשנים הבאות?&#x200F;</h2>",
+  "en": "            <h2 class=\"section-title text-card-frame\">And what about you? How will your choices - at the ballot box and beyond - shape Israeli political culture in the years ahead?</h2>",
+  "ar": "            <h2 class=\"section-title text-card-frame\">وماذا عنك؟ كيف ستُسهم اختياراتك - في صندوق الاقتراع وخارجه - في تشكيل الثقافة السياسية الإسرائيلية في السنوات المقبلة؟&#x200F;</h2>"
  },
  {
   "id": "html:284",
   "kind": "html",
-  "he": "          <h2 class=\"section-title text-card-frame partner-title\"><span class=\"partner-text\">הפרויקט נוצר בשיתוף</span> <a class=\"partner-logo\" href=\"https://www.the7eye.org.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"העין השביעית\"></a></h2>",
-  "en": "          <h2 class=\"section-title text-card-frame partner-title\"><span class=\"partner-text\">This project was created in collaboration with</span> <a class=\"partner-logo\" href=\"https://www.the7eye.org.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"The Seventh Eye\"></a></h2>",
-  "ar": "          <h2 class=\"section-title text-card-frame partner-title\"><span class=\"partner-text\">أُنجز المشروع بالتعاون مع</span> <a class=\"partner-logo\" href=\"https://www.the7eye.org.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"العين السابعة\"></a></h2>"
+  "he": "          <h2 class=\"section-title text-card-frame partner-title\"><span class=\"partner-text\">הפרויקט נוצר בשיתוף</span> <span class=\"partner-logos\"><a class=\"partner-logo\" href=\"https://www.the7eye.org.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"העין השביעית\"></a><span class=\"partner-rule\" aria-hidden=\"true\"></span><a class=\"partner-logo-shenkar\" href=\"https://www.shenkar.ac.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"שנקר\"></a></span></h2>",
+  "en": "          <h2 class=\"section-title text-card-frame partner-title\"><span class=\"partner-text\">This project was created in collaboration with</span> <span class=\"partner-logos\"><a class=\"partner-logo\" href=\"https://www.the7eye.org.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"The Seventh Eye\"></a><span class=\"partner-rule\" aria-hidden=\"true\"></span><a class=\"partner-logo-shenkar\" href=\"https://www.shenkar.ac.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"Shenkar\"></a></span></h2>",
+  "ar": "          <h2 class=\"section-title text-card-frame partner-title\"><span class=\"partner-text\">أُنجز المشروع بالتعاون مع</span> <span class=\"partner-logos\"><a class=\"partner-logo\" href=\"https://www.the7eye.org.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"العين السابعة\"></a><span class=\"partner-rule\" aria-hidden=\"true\"></span><a class=\"partner-logo-shenkar\" href=\"https://www.shenkar.ac.il/\" target=\"_blank\" rel=\"noopener\" aria-label=\"شنكار\"></a></span></h2>"
  },
  {
   "id": "html:293",
@@ -226,7 +240,7 @@
  {
   "id": "html:309",
   "kind": "html",
-  "he": "              <h2 class=\"section-title page12-title\">קיצוניים משני הצדדים</h2>",
+  "he": "              <h2 class=\"section-title page12-title\">קיצונים משני הצדדים</h2>",
   "en": "              <h2 class=\"section-title page12-title\">Extremists on Both Sides</h2>",
   "ar": "              <h2 class=\"section-title page12-title\">متطرفون من الجانبين</h2>"
  },
@@ -723,7 +737,7 @@
  {
   "id": "js:60",
   "kind": "js",
-  "he": "אירועים שסווגו כקיצוניים — גוש השינוי: {l}, קואליציית הימין: {r}.",
+  "he": "אירועים שסווגו כקיצונים — גוש השינוי: {l}, קואליציית הימין: {r}.",
   "en": "Events marked as extreme — the Change Bloc: {l}, the Right-Wing Coalition: {r}.",
   "ar": "الأحداث المصنّفة متطرفة — كتلة التغيير: {l}، ائتلاف اليمين: {r}."
  },

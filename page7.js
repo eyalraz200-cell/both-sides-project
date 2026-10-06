@@ -2072,14 +2072,20 @@ function p7BulgeActive() {
 }
 // The bulges that touch this side, resolved to centre + half-extra push + grown
 // size — one small array per draw call, not per square.
-function p7BulgeList(posMap0, positions, events, cols, x0, topY, CELL, SQ) {
+// `filtPos` (optional): the legend filter's re-pack for this side. A bulge must
+// sit on the cell its dot is DRAWN in — the filtered one — because every
+// neighbour measures its distance (p7BulgeShift) from its filtered cell too.
+// Centred on the unfiltered cell instead, a hover with a filter on pushed dots
+// nowhere near the pointer: on the way back up from @fold10 the whole block
+// squeezed in, then snapped out as the hover let go.
+function p7BulgeList(posMap0, positions, events, cols, x0, topY, CELL, SQ, filtPos) {
   p7BulgeTick(); // both sides call this per frame; the second call sees dt≈0
   const out = [];
   if (!p7BulgeT.size) return out;
   for (let i = 0; i < events.length && i < positions.length; i++) {
     const ev = events[i], b = p7BulgeT.get(ev);
     if (!b) continue;
-    const cell = positions[i];
+    const cell = (filtPos && filtPos[i] >= 0) ? filtPos[i] : positions[i];
     const e = p9Ease(b.t);
     const size = SQ * (1 + (P7_BULGE_MULT[p7BulgeTier(ev)] - 1) * e);
     out.push({ ev, col: cell % cols, row: Math.floor(cell / cols), size, push: (size - SQ) / 2 });
@@ -2480,7 +2486,17 @@ function p7GridPreclaim(L, isLeft) {
   // block of that colour. Pre-claiming the whole survivor set instead re-lays the
   // camp in list order, so a restored group comes back shuffled through the rest.
   const gate = p7Grid.solveVis || p7Grid.packVis;
-  const vis = gate ? events.filter(e => gate.has(e)) : events.filter(e => p7.lastPositions.has(e));
+  // The filter is checked on top of either gate: p7.lastPositions can be a frame
+  // recorded BEFORE a toggle made on @fold10+ (page7 doesn't draw there), so on
+  // the way back up a hidden group still claimed cells, the survivors flew to
+  // the wrong ones and snapped once page7 re-packed.
+  // NOT for the unit solve (solveVis): the grid is SIZED over everyone and only
+  // PACKED over the survivors (see p7GridRosterAll) — dropping the hidden group
+  // there resized every survivor whenever the filter changed.
+  const solving = !!p7Grid.solveVis && gate === p7Grid.solveVis;
+  const shown = (e) => solving || !(typeof p7FilterHiddenEv === "function" && p7FilterHiddenEv(e));
+  const vis = gate ? events.filter(e => gate.has(e) && shown(e))
+                   : events.filter(e => p7.lastPositions.has(e) && shown(e));
   if (!vis.length) return;
 
   const byId = new Map();
@@ -2655,6 +2671,13 @@ function p7GridRect(L, b, n, k, row, isLeft) {
 function p7GridCell(ev, isLeft) {
   const L = p7Grid.layout;
   if (!L) return null;
+  // A filtered-out dot never claims a cell. The pack is lazy — whoever asks
+  // first gets the next cell — and page8 asks for EVERY dot (its glide and
+  // p8CaptureBlendedPositions), so a hidden group was claiming its cells there:
+  // scrolling up out of @fold10 the survivors flew into a tall grid riddled
+  // with the hidden group's holes, then snapped into the dense block when
+  // page7 re-packed without it.
+  if (typeof p7FilterHiddenEv === "function" && p7FilterActive() && p7FilterHiddenEv(ev)) return null;
   p7GridPreclaim(L, isLeft);
   let g = L.pos.get(ev);
   if (g) return p7GridFlatten(g, L);
@@ -2957,8 +2980,22 @@ function p7MorphWin(ms, w) {
 // Blend one square from `from` to its rest cell under the current plan.
 // Returns { cx, cy, sq }.
 function p7MorphBlend(ev, from, cx, cy, sq, isLeft) {
+  // A morph whose clock has run out is OVER, wherever it is read. Only
+  // drawPage7 ever clears p7GridMorph, so on @fold10/@fold11 (page8 painting)
+  // a finished flatten stayed set — and the flatten's clock is its SIZE clock
+  // alone (p7MorphTotalMs), shorter than the position window, so the position
+  // never reached 1. Harmless while `from` is the rest cell (a flatten moves
+  // nothing), but a legend toggle there re-packs the grid: the rest cells
+  // moved, the glide started from part-way between, and page7's first frame
+  // (which clears the morph) snapped every re-packed dot home.
+  if (!p7GridMorph || performance.now() - p7GridMorph.start >= p7MorphTotalMs()) return { cx, cy, sq };
   const ms = p7GridMorphMs();
   const w = p7MorphWindows(p7BulgeTier(ev));
+  // A flatten / un-flatten that interrupted nothing (no `travel`) ends on its
+  // SIZE clock, shorter than the fly window — so a dot whose rest cell moved
+  // under it (a legend re-pack mid-morph) was still part-way when the morph
+  // ended, and snapped the rest. Its position finishes on the same clock.
+  if (p7GridMorph.flat && !p7GridMorph.travel) w.pos = [0, p7MorphTotalMs()];
   // The tier stagger exists so the BIG dots grow into room the flight has just
   // opened (see P7_MORPH_PUSH below) — it has nothing to offer a dot that ends
   // up SMALLER than it started. @fold9's smallest squares are exactly that:
@@ -3016,6 +3053,40 @@ function p7MorphBlend(ev, from, cx, cy, sq, isLeft) {
   }
   return { cx: outX, cy: outY, sq: outSq };
 }
+// Where the dots are ON SCREEN right now, as {x, y, sq} top-left rects — for
+// every morph that snapshots a `from`. Whoever painted LAST owns the screen:
+// on @fold10/@fold11 that is page8's glide, and p7.lastPositions is then a
+// frame from before the glide went down (a filtered-out group still in it,
+// every dot at its old cell). Morphing from that flew the field from the
+// wrong places and snapped at the end.
+//
+// Under page8 it is the glide's START (t = 0), not the blended spot: every
+// consumer of a `from` taken there reads it AS the glide's start —
+// p7GridLiveRect for a grid morph, p7FilterGlideStart for the filter — and
+// page7 takes over exactly when the glide is back at t = 0. The blended spot
+// made the glide fly to its cells and page7 then pull every dot back toward
+// where it had been mid-flight (a filter toggle on @fold10's reverse glide).
+function p7OnScreenPositions() {
+  const p8Owns = typeof p8LastDrawAt !== "undefined" && typeof p8CaptureBlendedPositions === "function"
+              && p8LastDrawAt > (p7.lastPositionsAt || 0) && typeof canvas !== "undefined";
+  return p8Owns ? p8CaptureBlendedPositions(canvas.clientWidth, canvas.clientHeight, 0) : p7.lastPositions;
+}
+// page8's glide start for `ev` under a running legend-filter morph, or null.
+// The same rules page7's own loop applies (p7DrawSideSquares): a dot hidden by
+// the toggle stays parked where it stood and only shrinks; the toggled
+// group's own dots arrive by size at their cell; every other dot blends from
+// its snapshot to its (re-packed) cell on the filter's position clock.
+// x/y are top-left, like page8's own start.
+function p7FilterGlideStart(ev, x, y, sq) {
+  if (!p7FilterMorph || !p7FilterMorphActive()) return null;
+  const from = p7FilterMorph.from.get(ev);
+  if (!from) return null;
+  if (p7FilterHiddenEv(ev)) return { x: from.cx - from.sq / 2, y: from.cy - from.sq / 2, sq: from.sq };
+  if (p7FilterMorphToggled(ev)) return null;
+  const t = p7FilterChannels().pos;
+  const cx = from.cx + (x + sq / 2 - from.cx) * t, cy = from.cy + (y + sq / 2 - from.cy) * t;
+  return { x: cx - sq / 2, y: cy - sq / 2, sq };
+}
 // `opts.uniform` picks WHICH grid: the tiered crowd-size one (@fold9) or the
 // flat one-cell-each one (@fold10). Omit it to keep whichever is current.
 // Changing it while the grid is already up is a real morph too — the dots
@@ -3033,7 +3104,7 @@ function p7SizeGridSet(on, opts) {
   // would snap instead of shrinking.
   if (!instant && p7.vert && currentPage >= 9 && currentPage <= 11) {
     // posMap entries carry their own drawn size (sq) — blended mid-morph.
-    for (const [ev, pos] of p7.lastPositions) {
+    for (const [ev, pos] of p7OnScreenPositions()) {
       const sq = pos.sq ?? p7.SQ;
       from.set(ev, { cx: pos.x + sq / 2, cy: pos.y + sq / 2, sq });
     }
@@ -3048,6 +3119,12 @@ function p7SizeGridSet(on, opts) {
   if (!sameGrid) {
     p7Grid.layout = null;   // repacked from whatever is on screen at this press
     p7Grid.packVis = null;  // back to the on-screen gate — the filter's own pre-claim is stale
+    // …except an INSTANT switch-on (re-entering @fold10–@fold13 from below,
+    // p7SizeGridOnPage): nothing has been drawn on the timeline since it went
+    // off, so "on screen" is p7.lastPositions from before — a group restored
+    // since then was missing from it and got appended as one solid clump.
+    // Every survivor, in the same list order the on-screen gate would use.
+    if (on && instant) p7Grid.packVis = new Set(p7GridRoster());
   }
   p7GridMorph = (!instant && from.size) ? { from, start: performance.now(), dir: (on || !wasOn) ? "on" : "off", flat: sameGrid, travel: sameGrid && inFlight } : null;
   p7BulgeT.clear();
@@ -3329,7 +3406,12 @@ function p7FilterCommit(restoring, actor) {
   if (typeof p9FilterSnapshot === "function") p9FilterSnapshot();
   const from = new Map();
   for (const [ev, g] of p7FilterGhosts) from.set(ev, { cx: g.cx, cy: g.cy, sq: g.sq });
-  for (const [ev, pos] of p7.lastPositions) {
+  for (const [ev, pos] of p7OnScreenPositions()) {
+    // A dot that was ALREADY hidden before this click is not on screen (page8's
+    // capture lists every event, hidden ones at a made-up cell): the ghosts
+    // above hold it at size 0. That is every other hidden group, plus — on a
+    // restore — the returning group itself.
+    if ((p7FilterHiddenEv(ev) && ev.actor !== actor) || (restoring && ev.actor === actor)) continue;
     const sq = pos.sq ?? p7.SQ;
     from.set(ev, { cx: pos.x + sq / 2, cy: pos.y + sq / 2, sq });
   }
@@ -3422,7 +3504,9 @@ function p7FilterReset() {
   const actors = new Set(p7FilterOff);
   const from = new Map();
   for (const [ev, g] of p7FilterGhosts) from.set(ev, { cx: g.cx, cy: g.cy, sq: g.sq });
-  for (const [ev, pos] of p7.lastPositions) {
+  for (const [ev, pos] of p7OnScreenPositions()) {
+    // Every group being restored was hidden: the ghosts above hold those.
+    if (actors.has(ev.actor)) continue;
     const sq = pos.sq ?? p7.SQ;
     from.set(ev, { cx: pos.x + sq / 2, cy: pos.y + sq / 2, sq });
   }
@@ -3489,7 +3573,7 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
   const bulgeFit = !!sqshPos && !!sqsh.remap && p7ZoomOutT >= 0.5;
   const bulges = bulgeFit
     ? p7BulgeList(posMap, sqshPos, events, sqsh.cols, x0, topY, sqsh.cell, SQ)
-    : p7BulgeList(posMap, positions, events, cols, x0, topY, CELL, SQ);
+    : p7BulgeList(posMap, positions, events, cols, x0, topY, CELL, SQ, filtSide);
   // Mobile squares are ~1.25–3 CSS px (p7SolveMobileSq) sitting at fractional
   // positions, so on a DPR>1 phone every edge lands mid-device-pixel and the
   // canvas antialiases it into a band of partial-alpha pixels. The loupe is a
@@ -3641,6 +3725,10 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     const claimedBulge = claimedEvents && claimedEvents.has(events[i]) &&
                          (p7BulgeT.get(events[i]) || { t: 0 }).t > 0;
     if (claimedEvents && claimedEvents.has(events[i]) && !claimedBulge) {
+      // A filtered-out claimed square is not on screen: kept out of posMap like
+      // every other hidden dot, or the hover / picker found it invisible on its
+      // unfiltered cell and the bulge pushed neighbours away from empty space.
+      if (evHidden) continue;
       const g = gridOn ? p7GridCell(events[i], isLeft) : null;
       posMap.set(events[i], g ? { x: g.cx - g.sq / 2, y: g.cy - g.sq / 2, alpha: 1, sq: g.sq } : { x: destX, y: destY, alpha: 1, sq: SQ });
       continue;
@@ -4137,6 +4225,18 @@ function p7TargetForActorOccurrence(actor, n, W, H) {
       if (destCell >= 0) {
         cx = x0 + (destCell % p7.cols) * p7.CELL + p7.SQ / 2;
         cy = topY + Math.floor(destCell / p7.cols) * p7.CELL + p7.SQ / 2;
+        // …and still through the end-of-fill zoom-out above, which this used to
+        // overwrite: with a filter on, the 8 squares stayed in the tall field
+        // while every canvas dot zoomed out. The fit view packs the same
+        // survivors (p7FitVisible), so its cell for this index is the filtered one.
+        if (fitView && fitView.remap) {
+          const fc = (isLeft ? fitView.vert.leftPos : fitView.vert.rightPos)[idx];
+          if (fc >= 0) {
+            const fx0 = isLeft ? fitView.leftX0 : fitView.rightX0;
+            cx = p7ZoomLerp(cx - sq / 2, fx0 + (fc % fitView.cols) * fitView.cell) + sq / 2;
+            cy = p7ZoomLerp(cy - sq / 2, topY + Math.floor(fc / fitView.cols) * fitView.cell) + sq / 2;
+          }
+        }
       }
     }
     if (p7Grid.on) {
@@ -4314,6 +4414,7 @@ function p7DrawTimelineSquares(ctx, W, H) {
     p7DrawSideSquares(ctx, p7.leftEvents,  p7.leftPos,  leftX0,  topY, cols, CELL, SQ, p7.leftEvents.length,  0, posMap);
     p7DrawSideSquares(ctx, p7.rightEvents, p7.rightPos, rightX0, topY, cols, CELL, SQ, p7.rightEvents.length, 0, posMap);
     p7.lastPositions = posMap;
+    p7.lastPositionsAt = performance.now();
     return;
   }
 
@@ -4453,6 +4554,7 @@ function p7DrawTimelineSquares(ctx, W, H) {
   p7DrawSideSquares(ctx, p7.rightEvents, p7.rightPos, rightX0, topY, cols, CELL, SQ, monthEndR, settledR, posMap);
 
   p7.lastPositions = posMap;
+  p7.lastPositionsAt = performance.now();
 }
 
 function drawPage7(ctx, W, H) {
@@ -5265,7 +5367,7 @@ function p7WrapLabel(ctx, text, maxWidth) {
 
 function p7AxisEventBounds(ctx, ev, i, W) {
   const x = p7AxisEventX[i] !== undefined ? p7AxisEventX[i] : p7AxisEventTrueX(ev, i, W);
-  const lines = p7WrapLabel(ctx, ev.label, p7AxisEventMaxWidth(ev));
+  const lines = [ev.label];   // axis event titles are ALWAYS one line (rule, 2026-10-06)
   // The collision extent is the whole title+date BLOCK, not just the title:
   // the date renders in its own (narrower) font but centred on the same axis,
   // so for a short title it can be the wider of the two — measuring only the
@@ -6510,7 +6612,7 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     const sideCard = !!SC;
     const titleType = sideCard ? SC.type : TY.title;
     ctx.font = p7VertFont(titleType);
-    const lines = p7WrapLabel(ctx, ev.label, maxWidth);
+    const lines = [ev.label];   // axis event titles are ALWAYS one line (rule, 2026-10-06)
     if (hl === 'band') {
       // Candidate A: a translucent band hanging under the event's rule
       // (p7DrawVertEventLines), full grid width, copy right-aligned at the
@@ -6806,7 +6908,7 @@ function p7DrawVertHeadlineSlot(ctx, W, H, now) {
   if (best < 0) return;
   const ev = P7_AXIS_EVENTS[best];
   ctx.font = p7VertFont(TY.title);
-  const lines = p7WrapLabel(ctx, ev.label, W - 2 * p7.leftX0);
+  const lines = [ev.label];   // axis event titles are ALWAYS one line (rule, 2026-10-06)
   const blockH = lines.length * TY.title.lh + (TY.showDate ? TY.date.lh + TY.gap : 0);
   // Two anchors (V.slotAnchor): 'grid' centres the block in the slotPx band
   // reserved under the grid (squareboundingbox.js:71 keeps that band clear);
@@ -6978,7 +7080,7 @@ function p7DrawVertDotCards(ctx, W, H, now) {
     if (op <= 0) return;
     const dotY = p7RowY(v.events[i].row, H);
     ctx.font = p7VertFont(SC.type);
-    const lines = p7WrapLabel(ctx, ev.label, maxW);
+    const lines = [ev.label];   // axis event titles are ALWAYS one line (rule, 2026-10-06)
     let tw = 0;
     lines.forEach(t => { tw = Math.max(tw, ctx.measureText(t).width); });
     const cw = Math.round(tw) + 2 * SC.padX, ch = lines.length * SC.type.lh + SC.padTop + SC.padBottom;

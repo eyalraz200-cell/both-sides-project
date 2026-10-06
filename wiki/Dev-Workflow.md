@@ -86,11 +86,17 @@ Don't remove the gate.
 ## Link previews (Open Graph)
 
 All three pages — `index.html` (Hebrew), `en/index.html`, `ar/index.html` — carry `og:*` +
-`twitter:*` meta tags in `<head>` so WhatsApp/X/Facebook render a preview card. There is one card per language, both **2400×1260** (2× of the
-1200×630 card): `og-image-v3.png` (Hebrew, `index.html`) and `og-image-en-v2.png` (English,
-`en/index.html`; the Arabic page `ar/index.html` reuses `og-image-v3.png` until an Arabic card is shot). Both are headless shots of the artboard `_og-card.html` — the title in
-Discordia Regular on a dashed plate over two dot columns, with a secondary line in Assistant — «פרויקט בשיתוף» / "A project in partnership with" — and העין השביעית's wordmark (`seventh-eye-logo-wide.png`) under it; the description text also credits the partnership — at `?bare=1` (Hebrew) and
-`?bare=1&lang=en` (English, where the plate hugs the wider title). Reshoot with a headless
+`twitter:*` meta tags in `<head>` so WhatsApp/X/Facebook render a preview card. There is one card per language, all **2400×1260** (2× of the
+1200×630 card): `og-image-v4.png` (Hebrew, `index.html`), `og-image-en-v3.png` (English,
+`en/index.html`) and `og-image-ar.png` (Arabic, `ar/index.html` — `translate_ui_ar.py`'s
+`HEAD_PATCHES` swap the Hebrew filename for it, so a regenerate keeps it). All three are headless
+shots of the artboard `_og-card.html` at `?bare=1`, `?bare=1&lang=en` and `?bare=1&lang=ar`: the
+title alone on the site's own title block over two dot columns. The plate IS `.text-card-frame`
+with its radius (8px) and padding (21px/29px) scaled by title size ÷ 18.5px (the site's
+`.section-title` size), but its border at the site's literal px — 1.25px stroke, 2-on-2-off dash on
+a perimeter-fitted 4px period — plus white fill, `#111` ink at line-height 1.5, width hugging the title — on the site's `#FDFCFF` ground. Discordia for
+Hebrew and English; the Arabic card uses Tajawal at the site's Arabic title ratio (21 / 18.5). The
+description text credits the partnership; the image carries no partner line. Reshoot with a headless
 Chromium at `--window-size=1200,630 --force-device-scale-factor=2`. Platforms cache the
 image by URL, so a changed card only reaches already-shared links under a new filename (hence the version suffix; bump it again on the next change).
 `og:image` must be an absolute URL, so the

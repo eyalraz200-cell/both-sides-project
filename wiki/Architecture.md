@@ -21,7 +21,7 @@ preloaded (`document.fonts.load`, `js/bootstrap.js`).
 Served at `/ar/`. **Generated, not hand-edited:** `translate_ui_ar.py` (repo root) builds it
 from `index.html` — the page is a copy with `<html lang="ar" class="lang-ar">`, `<base
 href="../">`, Arabic copy on every line that differs between the Hebrew and English pages,
-canonical / `og:url` at `/ar/`, Beiruti + IBM Plex Sans Arabic linked from Google Fonts, and the
+canonical / `og:url` at `/ar/`, Tajawal + IBM Plex Sans Arabic linked from Google Fonts, and the
 Hebrew page's og image (no Arabic share card has been shot yet — see
 [Dev-Workflow](Dev-Workflow.md)). The same run fills `I18N_AR` in `js/i18n.js` (between the
 `I18N_AR_START` / `I18N_AR_END` markers), keyed by the Hebrew string like `I18N_EN`; `tr()`
@@ -37,13 +37,13 @@ whole lines and come back with the Hebrew line's markup verbatim.
 
 **Layout:** none of its own. Arabic is RTL, so the page runs on the Hebrew code path
 (`isEnglish()` is false everywhere); the only `.lang-ar` CSS is the font family, because
-Discordia / Hadassah / Assistant carry no Arabic glyphs: **Beiruti** wherever the Hebrew
+Discordia / Hadassah / Assistant carry no Arabic glyphs: **Tajawal** wherever the Hebrew
 page uses Discordia (`.section-title`, the hero title), **IBM Plex Sans Arabic** wherever it
-uses Assistant (both Google Fonts, foot of `style.css`), plus one size override: Beiruti
-sits ~13% shorter than Discordia at equal px (Hebrew letters 0.68em vs the Arabic body
-0.39em / alefs 0.63em, measured), so **`.lang-ar .section-title` is 21px desktop / 18px
+uses Assistant (both Google Fonts, foot of `style.css`), plus one size override: the Arabic
+face sits ~13% shorter than Discordia at equal px (Hebrew letters 0.68em vs the Arabic body
+0.39em / alefs 0.63em, measured on Beiruti; 21/18 kept by eye for Tajawal), so **`.lang-ar .section-title` is 21px desktop / 18px
 under 600px** — the one language-gated exception to the single `.section-title` size.
-The hero title is not resized. Canvas-drawn text still uses the Hebrew faces (falls back
+The hero title is not resized, but the hero title + subtitle sit higher as one (`.lang-ar .page0-title` / `.page0-subtitle` `top`: 8px up on desktop, 6px on the phone). Canvas-drawn text still uses the Hebrew faces (falls back
 to the system Arabic font).
 
 **Hero line breaks** match the Hebrew's at both breakpoints — title 3 lines, subtitle 4 —
@@ -102,7 +102,7 @@ at `/en/`, so the @fold15 share row shares the English link.
 
 All three pages carry a **language switch**: ONE button in the top-left corner (`#langWrap` → `.lang-switch`, a globe glyph + the current language's letters — «עב» / «EN» / «ع»; fixed, its TOP edge on the corner logo's top edge — 8px down / 12px in on the phone, where it is the globe alone (the letters are hidden), a 16px glyph with 6px around it (manual/-baked 2026-10-03), no tap highlight and no colour change on touch; 24px down / 24px in on desktop, globe + letters. At both breakpoints the card GROWS open over 180ms (grid-rows 0fr→1fr; `aria-hidden` + visibility instead of `hidden`, which would cut the transition); z-index 1007, above the mobile legend layer, below the gate). Clicking it opens a drop-down of the three languages (`#langMenu`, rows «עברית» / «English» / «العربية»; `js/lang-switch.js` — click outside or Escape closes). The look is the legend note's card (compare/ pick 2026-10-03 over an outlined box, a bare glyph and a darkened-page dialog): the tint over `--bg`, 16px corners, the note title's 600 `#767676` type (13px phone / 12px desktop), no chevron; the rows sit INSIDE the card, which grows around them. Each row is styled as the «הצגת גודל האירועים» control: 14px Assistant at rgba(0,0,0,.6), black on hover (180ms), with a 10px empty ring that fills dark for the current language and darkens its edge on hover — but never swells. The current language's row is black at rest and **not selectable** (`pointer-events: none`, `aria-current="page"`, `tabindex=-1`); opening the menu focuses the first other row. **Semantics: a disclosure, not an ARIA menu** — `#langWrap` is itself a `<nav>` (localized `aria-label`: «שפה» / «Language» / «اللغة»; being the positioned card, it adds no box), the button carries `aria-expanded` + `aria-controls` and an `aria-label` that STARTS with its visible letters («עב – בחירת שפה» / «EN – Choose a language» / «عر – اختيار اللغة», WCAG 2.5.3), and the rows are plain links. Focus leaving the switch closes it (`focusout`; a press inside the card or a window blur doesn't). The hrefs are `./`, `en/`, `ar/` on every page (the subpages carry `<base href="../">`).
 
-All three pages also carry **העין השביעית's logo** in the top-RIGHT corner (`.seventh-eye`, a fixed link to the7eye.org.il, `z-index: 1007` like the switch; 24px from the top and right on desktop, 8px from the top on the phone). **The desktop edge gap is one number, 24px**: the logo's `--se-right`, the language switch's `left` (`.lang-wrap`) and the legend columns' `FOLD6_LEGEND_INSET_LEFT/RIGHT` (js/groups.js — the ACLED note follows the right column) all sit 24px off their edge. The artwork is a CSS **mask** (alpha-only PNG) over `.seventh-eye-mark`, so the mark's colour is its `background-color`; the `<a>` is an optional backing plate. Every value is a `--se-*` custom property set **per breakpoint** (phone in the base rule, desktop in the 601px block). **Hebrew page:** the wide lockup (`seventh-eye-logo-wide.png`) with the line «פרויקט בשיתוף» (`.seventh-eye-caption`) to its RIGHT, vertically centred (`--se-dir: row`; `--se-cap-y` is an optical nudge for Assistant's Hebrew letter body) — 120px wide / 14px text; this is the **desktop** layout and it stays on every fold until @fold13, where it fades out with the rest of the screen on the closing card's rise (`updateFold13`, js/fold11.js) and comes back when scrolling up. **Phone (both languages):** the same wide lockup, centred at the top of the screen with the line above it (`--se-dir: column`), 120px wide / 14px text (weight 400), 8px apart; it **fades out once scrolling starts** — `js/nav.js` flips `.is-scrolled` past `SEVENTH_EYE_FADE_SCROLL_PX` (8px) and the 600px block transitions opacity over `--se-fade-ms` (300ms), back in at the top. **English page, desktop:** the same wide lockup, `direction: ltr` so "In partnership with" sits to its LEFT (**removed — don't reintroduce:** the cropped stacked mark, `--se-crop`). Mark and line are both `#393239` at rest; on desktop, hovering turns the **mark only** to `#EC2A2C` over 150ms (`(hover: hover)` pointers). `--se-cap-display: none` switches the line off.
+All three pages also carry **העין השביעית's logo** in the top-RIGHT corner (a `div.seventh-eye` holding two links — the 7eye mark and the Shenkar mark, each reddening on its own desktop hover — followed by a thin divider `.shenkar-rule` and **Shenkar's logo** `.shenkar-mark`, `shenkar-logo.png` as a grey mask, 29px tall, 16px either side of the divider; on the phone the lockup is a grid — caption across the top, then two equal halves either side of the divider (`1fr auto 1fr`, `--se-rule-gap`), so the divider sits at the centre; each logo hugs it, both exactly `--se-rule-gap` (16px) from the line, 16px under «בשיתוף») (`.seventh-eye`, a fixed link to the7eye.org.il, `z-index: 1007` like the switch; 24px from the top and right on desktop, 8px from the top on the phone). **The desktop edge gap is one number, 24px**: the logo's `--se-right`, the language switch's `left` (`.lang-wrap`) and the legend columns' `FOLD6_LEGEND_INSET_LEFT/RIGHT` (js/groups.js — the ACLED note follows the right column) all sit 24px off their edge. The artwork is a CSS **mask** (alpha-only PNG) over `.seventh-eye-mark`, so the mark's colour is its `background-color`; the `<a>` is an optional backing plate. Every value is a `--se-*` custom property set **per breakpoint** (phone in the base rule, desktop in the 601px block). **Hebrew page:** the wide lockup (`seventh-eye-logo-wide.png`) with the line «בשיתוף» (`.seventh-eye-caption`) to its RIGHT, vertically centred (`--se-dir: row`; `--se-cap-y` is an optical nudge for Assistant's Hebrew letter body) — 120px wide / 14px text; this is the **desktop** layout and it stays on every fold until @fold13, where it fades out with the rest of the screen on the closing card's rise (`updateFold13`, js/fold11.js) and comes back when scrolling up. **Phone (both languages):** the same wide lockup, centred at the top of the screen with the line above it (`--se-dir: column`), 120px wide / 14px text (weight 400), 8px apart; it **fades out once scrolling starts** — `js/nav.js` flips `.is-scrolled` past `SEVENTH_EYE_FADE_SCROLL_PX` (8px) and the 600px block transitions opacity over `--se-fade-ms` (300ms), back in at the top. **English page, desktop:** the same wide lockup, `direction: ltr` so "In partnership with" sits to its LEFT (**removed — don't reintroduce:** the cropped stacked mark, `--se-crop`). Mark and line are both `#393239` at rest; on desktop, hovering turns the **mark only** to `#EC2A2C` over 150ms (`(hover: hover)` pointers). `--se-cap-display: none` switches the line off.
 
 What differs, all gated on `.lang-en` / `isEnglish()` (js/i18n.js):
 
@@ -508,8 +508,8 @@ two label runs facing each other, where the shared 90px reads too wide.
 `FOLD3_CAMP_EDGE_GAP_MOBILE_PX` (**82**) is passed to
 `campCenterGapPx(W, edgeGapMobile)` as a lerp from @fold2's value over **`alignT`**, the beat
 that flies the rects into their column. So @fold2 keeps its own tuned number, the anchors
-never snap, and the camp headers (which ride `campAnchorX` too) stay centred over their camp
-throughout. Desktop passes no override and keeps one gap for both folds.
+never snap, and the camp headers (which ride `campAnchorX` at @fold2 and the column's dot
+edge at @fold3) follow along. Desktop passes no override and keeps one gap for both folds.
 
 **An inline style beats the stylesheet.** `updateGroups()` writes
 `label.style.fontSize` on every frame, so the stylesheet's `.group-label` font-size is
@@ -545,8 +545,8 @@ the real `.group-label` class, so the wrapped width feeds the layout math automa
 **A wrapped label measures by its widest LINE, not its box.** On mobile `.group-label` is
 `width: max-content` capped at 100px (140px for the two groups carrying `labelCapMobile`),
 so a label that wraps has an `offsetWidth` of exactly the cap while its lines each break
-short of it. `campFold3X` centres the camp title over that width, so box-width left the
-title visibly off-centre from the ink — worst in גוש השינוי, whose two long labels both run
+short of it. `campFold3X` centres the rect-plus-label column on the camp anchor using that width, so box-width left the
+column visibly off-centre — worst in גוש השינוי, whose two long labels both run
 the 140px cap. `groupLabelWidth()` therefore measures a `Range` over the span's text node
 and takes the widest of its per-line client rects (`groupLabelInkWidth()`), falling back to
 `offsetWidth` if the API yields nothing. Desktop labels are `white-space: nowrap`, so the

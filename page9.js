@@ -3255,7 +3255,7 @@ function p9BuildPanel() {
     const countSide = evs => (evs || []).filter(e =>
       extremeIdx.has(CATEGORY_TO_IDX[e.category]) && p9CountsEvent(e)).length;
     const counts = p7.ready
-      ? " " + trf("אירועים שסווגו כקיצוניים — גוש השינוי: {l}, קואליציית הימין: {r}.",
+      ? " " + trf("אירועים שסווגו כקיצונים — גוש השינוי: {l}, קואליציית הימין: {r}.",
                   { l: countSide(p7.leftEvents), r: countSide(p7.rightEvents) })
       : "";
     p9Announce(

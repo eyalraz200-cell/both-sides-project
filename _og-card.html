@@ -2,13 +2,13 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8" />
-<title>og card — קיצוניים משני הצדדים</title>
+<title>og card — קיצונים משני הצדדים</title>
 <!-- SCAFFOLDING. The og:image artboard, rebuilt from Figma nodes 360:4558 /
      360:4146 / 360:3093 / 360:3939 as ONE parameterised card. Shot headless at
      1200x630 (2x for the committed png). Delete once the card is chosen and
      og-image-v2.png is baked — unless it earns its keep as the thing that can
      re-shoot the card when the palette changes. -->
-<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300..800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400&display=swap" />
 <style>
   /* Discordia — the site's desktop title face (style.css). Regular only. */
   @font-face {
@@ -42,7 +42,7 @@
        for the size it is actually looked at. 1 = literal parity with the site. */
     --dashscale: 2;
     --ink: #000;        /* border + type */
-    --paper: #fff;
+    --paper: #FDFCFF;   /* the site's page ground (--bg, style.css) */
 
     position: relative;
     width: 1200px; height: 630px;
@@ -63,28 +63,27 @@
   .col.b { margin-left: calc(var(--colgap) / 2); }
   .dot { width: var(--dot); height: var(--dot); flex: none; }
 
-  /* The title card. Its solid paper background is what hides the dots behind
-     it — the Figma file used a separate white knockout rect for the same job.
-     The border is TRANSPARENT and the visible dash is the SVG below, exactly
-     as .text-card-frame does it in style.css: a native `dashed` border draws
-     long dashes that stretch and mismatch at the corners, where the project's
-     dash is a fine 2-on-2-off stroke whose period is fitted to divide the
-     perimeter evenly. Same 2px stroke, same rx 7, same 4px period. */
+  /* The title card — the site's own title block (.text-card-frame in style.css
+     + updateTextCardFrameDashes in js/core.js), SCALED as one piece by
+     --dashscale = title size / 18.5px (the site's .section-title size): 8px
+     radius and 21px / 29px padding scale with the title, white fill,
+     #111 ink at line-height 1.5, and a width that hugs the title (fit-content).
+     The BORDER does not scale: 1.25px stroke, 2-on-2-off on a 4px period fitted
+     to the perimeter, exactly the site's px.
+     --dashscale and --cardr are derived from --fs in OG_RENDER, not set. */
   #plate {
-    --frame-border-w: calc(2px * var(--dashscale));
+    --frame-border-w: 1.25px;   /* the site's stroke, literal — see paintPlateDash */
     position: absolute; top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    width: var(--cardw);
+    width: max-content;
     box-sizing: border-box;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 28px;
-    padding: 43px 66px 39px;
-    background: var(--paper);
+    padding: calc(21px * var(--dashscale)) calc(29px * var(--dashscale));
+    background: #fff;
     border: var(--frame-border-w) solid transparent;
     border-radius: var(--cardr);
   }
   /* An abs-pos child's containing block is the PADDING box, so plain inset:0
-     would sit 2px inside the frame's real border box on every side. */
+     would sit a border-width inside the frame's real border box on every side. */
   #plate > svg.plate-dash {
     position: absolute;
     top: calc(-1 * var(--frame-border-w));
@@ -98,21 +97,16 @@
     font-family: 'Discordia', serif;
     font-weight: var(--fw);
     font-size: var(--fs);
-    line-height: 1;
-    color: var(--ink);
+    line-height: 1.5;
+    color: #111;
     white-space: nowrap;
   }
-  /* Partner credit — «פרויקט בשיתוף» + העין השביעית's wordmark, a secondary
-     line in Assistant under the Discordia title. Sizes tuned by eye against
-     the WhatsApp preview (2026-10-04). */
-  #plate .partner { display: flex; align-items: center; gap: 18px;
-    font: 400 40px 'Assistant', sans-serif; line-height: 1; color: var(--ink); opacity: .6; white-space: nowrap; }
-  /* Assistant's line box sits its letters ~4px below the box centre, so the
-     words are lifted to share the eye's optical centre line. */
-  #plate .partner span { position: relative; top: -4px; }
-  /* Tuned by eye: the Hebrew line reads 7px right of true centre. */
-  html[lang="he"] #plate .partner { transform: translateX(7px); }
-  #plate .partner img { height: 72px; display: block; }
+  /* Arabic: Tajawal, the site's Arabic title face, at the site's Arabic title
+     ratio (.lang-ar .section-title is 21px against the shared 18.5px). */
+  html[lang="ar"] #plate h1 {
+    font-family: 'Tajawal', 'Discordia', serif;
+    font-size: calc(var(--fs) * 21 / 18.5);
+  }
 </style>
 </head>
 <body>
@@ -122,23 +116,20 @@
     <div class="col b" id="colB"></div>
     <div id="plate">
       <svg class="plate-dash" aria-hidden="true"><rect/></svg>
-      <h1>קיצוניים משני הצדדים</h1>
-      <div class="partner"><span>פרויקט בשיתוף</span><img src="seventh-eye-logo-wide.png" alt="העין השביעית"></div>
+      <h1>קיצונים משני הצדדים</h1>
     </div>
   </div>
-  <!-- ?lang=en — the English card (og-image-en.png, used by en/index.html).
-       Same artboard, same dots; only the title and its direction change. -->
+  <!-- ?lang=en / ?lang=ar — the English and Arabic cards (og-image-en-*.png,
+       og-image-ar.png). Same artboard, same dots; only the title, its
+       direction and (Arabic) its face change. -->
   <script>
   if (/[?&]lang=en/.test(location.search)) {
     document.documentElement.lang = 'en';
     document.documentElement.dir = 'ltr';
     document.querySelector('#plate h1').textContent = 'Extremists on Both Sides';
-    document.querySelector('#plate .partner span').textContent = 'A project in partnership with';
-    /* The English title is wider than --cardw allows, so the plate hugs the
-       text instead, with the side margin the Hebrew title ends up with. */
-    var enPlate = document.getElementById('plate');
-    enPlate.style.width = 'auto';
-    enPlate.style.paddingLeft = enPlate.style.paddingRight = '48px';
+  } else if (/[?&]lang=ar/.test(location.search)) {
+    document.documentElement.lang = 'ar';
+    document.querySelector('#plate h1').textContent = 'متطرفون من الجانبين';
   }
   </script>
 
@@ -192,7 +183,7 @@ window.OG_DROPS = {
    divides the perimeter EVENLY — that even division is the whole trick, and
    it is why the corners never land mid-dash. */
 var DASH_PERIOD = 4;      /* the project's period, before --dashscale */
-var DASH_STROKE = 2;      /* the project's stroke, before --dashscale */
+var DASH_STROKE = 1.25;   /* the site's stroke (FRAME_STROKE_W_DESKTOP, js/core.js), before --dashscale */
 function paintPlateDash() {
   var plate = document.getElementById('plate');
   var svg = plate.querySelector('svg.plate-dash');
@@ -202,8 +193,9 @@ function paintPlateDash() {
   svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
   rect.setAttribute('fill', 'none');
   rect.setAttribute('stroke', getComputedStyle(plate).getPropertyValue('--ink').trim() || '#000');
-  var k = parseFloat(getComputedStyle(plate).getPropertyValue('--dashscale')) || 1;
-  var sw = DASH_STROKE * k;
+  /* Stroke and dash are the site's LITERAL px (not scaled with the title):
+     the fine dotted line is the look, and scaling it made chunky dashes. */
+  var sw = DASH_STROKE;
   rect.setAttribute('stroke-width', sw);
   /* Inset by HALF the stroke: SVG centres a stroke on its path, so a fat one
      drawn at x=1 would hang half its width outside the plate's box. */
@@ -214,7 +206,7 @@ function paintPlateDash() {
   var r = Math.max(0, parseFloat(getComputedStyle(plate).getPropertyValue('--cardr')) - ins);
   rect.setAttribute('rx', r); rect.setAttribute('ry', r);
   var len = rect.getTotalLength ? rect.getTotalLength() : 0;
-  var want = DASH_PERIOD * k;
+  var want = DASH_PERIOD;
   var period = len ? len / Math.max(1, Math.round(len / want)) : want;
   rect.setAttribute('stroke-dasharray', (period / 2) + ' ' + (period / 2));
 }
@@ -229,7 +221,11 @@ window.OG_RENDER = function (opts) {
     if (opts[k] != null) card.style.setProperty('--' + k, opts[k] + 'px');
   });
   if (opts.fw != null) card.style.setProperty('--fw', opts.fw);
-  if (opts.dashscale != null) card.style.setProperty('--dashscale', opts.dashscale);
+  /* The plate is the site's title block scaled by title size / 18.5px — the
+     dash, stroke, radius and padding all follow the title, never set alone. */
+  var k = parseFloat(getComputedStyle(card).getPropertyValue('--fs')) / 18.5;
+  card.style.setProperty('--dashscale', k);
+  card.style.setProperty('--cardr', (8 * k) + 'px');
 
   /* Enough squares to overflow 630px at the loosest pitch, then clipped. */
   var pitch = parseFloat(getComputedStyle(card).getPropertyValue('--pitch'));

@@ -51,7 +51,7 @@ HEBREW = re.compile(r"[֐-׿]")
 
 INSTRUCTIONS = r"""
 You are translating the user-facing text of an interactive data-journalism website
-("Extremists on Both Sides" / «קיצוניים משני הצדדים») from Hebrew into Arabic.
+("Extremists on Both Sides" / «קיצונים משני הצדדים») from Hebrew into Arabic.
 
 ABOUT THE PROJECT
 
@@ -84,7 +84,7 @@ HOW TO SOUND
   that is not in the source, in either direction.
 - Group names are the site's own labels and must stay descriptive and even-handed, not
   slogans; keep the camps' names parallel in form.
-- "Extreme" / "extremists" (קיצוני / קיצוניים) is the project's key word and the site's
+- "Extreme" / "extremists" (קיצוני / קיצונים) is the project's key word and the site's
   title; choose one Arabic rendering (e.g. متطرف / متطرفون) and use it everywhere.
 - Address the reader in the plural, formal second person, as the Hebrew does.
 
@@ -208,13 +208,16 @@ HEAD_PATCHES = [
      '<a class="lang-menu-row is-current" aria-current="page" tabindex="-1" href="ar/" lang="ar" hreflang="ar">'),
     # index.html already preconnects to both Google Fonts hosts (for Assistant),
     # so only the Arabic faces' stylesheet is added.
-    ('<link rel="stylesheet" href="style.css"', '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Beiruti:wght@400&family=IBM+Plex+Sans+Arabic:wght@300;400;500;700&display=swap" />\n  <link rel="stylesheet" href="style.css"'),
+    ('<link rel="stylesheet" href="style.css"', '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400&family=IBM+Plex+Sans+Arabic:wght@300;400;500;700&display=swap" />\n  <link rel="stylesheet" href="style.css"'),
     ('<html lang="he" dir="rtl">', '<html lang="ar" dir="rtl" class="lang-ar">\n<!-- Arabic version. Every relative url (css, scripts, events.json) resolves\n     against the site root, so this page shares all of them with index.html. -->\n<base href="../" />'),
     ('<meta property="og:locale" content="he_IL" />', '<meta property="og:locale" content="ar_AR" />'),
     # canonical only — the hreflang alternates (he / en / ar / x-default) are the
     # same absolute urls on all three pages and pass through unchanged.
     ('<link rel="canonical" href="https://eyalraz200-cell.github.io/both-sides-project/"', '<link rel="canonical" href="https://eyalraz200-cell.github.io/both-sides-project/ar/"'),
     ('<meta property="og:url" content="https://eyalraz200-cell.github.io/both-sides-project/"', '<meta property="og:url" content="https://eyalraz200-cell.github.io/both-sides-project/ar/"'),
+    # The Arabic share card (_og-card.html?lang=ar, Tajawal title) — the comment and both image tags.
+    ('og-image-v4.png is a 2400×1260 (2× of the 1200×630 card) shot of _og-card.html.', 'og-image-ar.png is a 2400×1260 (2× of the 1200×630 card) shot of _og-card.html?lang=ar.'),
+    ('both-sides-project/og-image-v4.png" />', 'both-sides-project/og-image-ar.png" />'),
 ]
 
 

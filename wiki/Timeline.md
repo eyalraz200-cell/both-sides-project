@@ -7,6 +7,11 @@ two camps and every dot's row is its date (see "The vertical axis" below):
 horizontal bottom axis with the `p7OrderFromCenter` fill order is the disabled fallback
 (`enabled` false), kept as a code path.
 
+
+> **Rule — axis event cards are always ONE line**, at both breakpoints: an event's title is
+> never wrapped (`const lines = [ev.label]` in every title path of page7.js). A title that
+> doesn't fit is shortened, not wrapped. Descriptions still wrap.
+
 ## Data and state
 
 `initPage7()` fetches `events.json`, sorts by `date` (lexicographic on `YYYY-MM-DD` =
@@ -1264,6 +1269,7 @@ a direct `.layout` child, **not** a `.groups-overlay` one: that overlay is
 `!p7GridUniform && (p7Grid.on || p9PageVisible())` every frame — the
 `p9PageVisible()` half is what lights the pill on @fold12, where page7's grid is off, so a scroll crossing that flips the
 grid flips the button's look with it. Desktop is `.p7-scope-btn`; mobile is the מקרא panel's `.fold6-mlegend-scope` row (same `p7ScopeToggle`, same `is-on` rule).
+On the landed bridge (@fold10 after its fly, @fold11) a press seeds `p9ScopeSet`'s `from` with what is drawn — `p7ScopeLandedFrom`: page8's landed `p9.lastPositions` when written in the last 100ms (`p8LandedPosAt`), else page8's resting capture (the mobile bar's rect pass records nothing) — so a second press mid-morph continues from where the dots are, not from the old endpoint.
 
 **On:** every square currently on screen grows to its crowd tier and flies to
 a cell in a packed grid where nothing overlaps and every neighbour gap is the
@@ -1728,6 +1734,50 @@ again to bring it back. Multiple groups can be off at once.
   spill-down packing as the unfiltered layout. `p7FilterRebuild()` runs it on
   every toggle and at the end of `p7UpdateLayout` (a resize changes rows/cols, so
   a stale filtered layout would point at other cells).
+- **A filtered-out dot never claims a size-grid cell.** `p7GridCell` returns null
+  for it. The pack is lazy (first asker gets the next cell) and page8 asks for every
+  dot — its glide and `p8CaptureBlendedPositions` — so without this a hidden group
+  claimed cells on the way back up from @fold10: the survivors flew into a tall grid
+  full of its holes, then snapped into the dense block when page7 re-packed.
+- **The hover bulge sits on the filtered cell** (`p7BulgeList`'s `filtPos`), the
+  same cell its neighbours measure from — centred on the unfiltered one, a hover
+  with a filter on pushed dots far from the pointer.
+- **Every `from` snapshot reads what is on screen: `p7OnScreenPositions()`** — page8's
+  blended positions when its glide painted last (`p8LastDrawAt` vs `p7.lastPositionsAt`),
+  else `p7.lastPositions`. Used by the grid switch (`p7SizeGridSet`), the filter click
+  (`p7FilterCommit`, which skips dots hidden before the click — the ghosts hold those)
+  and the reset (`p7FilterReset`). A stale page7 frame flew the field from the wrong places.
+  Under page8 it is the glide's **start** (`p8CaptureBlendedPositions(W, H, 0)`), because
+  every consumer reads such a `from` as the glide's start and page7 takes over at t = 0.
+- **A toggle while page8's glide is in the air** blends the glide's start on the filter's
+  own clock (`p7FilterGlideStart`, read by page8's `blendAndDraw` and
+  `p8CaptureBlendedPositions`) — the same rules page7's loop applies: the hidden group
+  parks where it stood and shrinks, the toggled group arrives by size, every other dot
+  blends from its snapshot to its re-packed cell. Without it the glide flew to the new
+  cells and page7's first frame pulled the field back toward the click-time spots.
+- **A finished grid morph is over wherever it is read.** `p7MorphBlend` returns the rest
+  cell once `p7GridMorph`'s clock has run out. Only `drawPage7` clears the morph, and the
+  flatten's clock is its size clock alone (shorter than the position window), so on
+  @fold10/@fold11 a finished flatten kept dots part-way from `from` — harmless until a
+  filter toggle re-packed the grid, then the glide started off-cell and page7's first
+  frame snapped them home. **This was the "fold 10 → fold 9 snap".**
+  Likewise a flatten / un-flatten that interrupted nothing finishes its **position** on its
+  size clock (`w.pos = [0, p7MorphTotalMs()]` when `flat && !travel`), so a rest cell moved
+  by a re-pack mid-morph is reached exactly as the morph ends instead of snapped to.
+- **The size grid is sized over everyone, packed over the survivors.** `p7GridPreclaim`
+  drops hidden dots for every gate except the unit solve's `solveVis`.
+- **An instant switch-on packs every survivor** (`p7SizeGridSet`: `packVis =
+  p7GridRoster()` when `on && instant`, i.e. re-entering @fold10–@fold13 from below) — the
+  on-screen gate there is a page7 frame from before, which lacked any group restored since.
+- **The 8 sample squares** (`p7TargetForActorOccurrence`) take the filtered cell *through*
+  the end-of-fill zoom-out lerp, and a hidden one is kept out of `p7.lastPositions` (no
+  invisible hover target, no bulge from empty space).
+- **A filter set on @fold10+ holds on the way back up.** The size grid's pack
+  (`p7SizeGridLayout`) drops hidden groups on top of its gate — `p7.lastPositions`
+  can predate a toggle made where page7 doesn't draw — and page8's glide (and
+  `p8CaptureBlendedPositions`) falls back to the **filtered** timeline cell
+  (`p7FilterLayout`), not the unfiltered one. Either gap sent survivors to the
+  wrong cells, then snapped when page7 re-packed.
 - **The zoomed-out view re-packs with the filter too.** `p7DesktopFitView` and
   mobile's `p7Squash` solve their own layout, so they pass the same predicate
   (`p7FitVisible()`) and key their caches on the hidden set (`p7FitFilterKey()`).

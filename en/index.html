@@ -27,21 +27,21 @@
   <link rel="alternate" hreflang="x-default" href="https://eyalraz200-cell.github.io/both-sides-project/" />
   <!-- Open Graph / Twitter card — what WhatsApp, X, Facebook, LinkedIn render when
        the link is shared (the @fold15 share row relies on this). og:image must be an
-       ABSOLUTE url; og-image-en-v2.png is a 2400×1260 (2× of the 1200×630 card) shot of _og-card.html?lang=en.
+       ABSOLUTE url; og-image-en-v3.png is a 2400×1260 (2× of the 1200×630 card) shot of _og-card.html?lang=en.
        Served from GitHub Pages at /both-sides-project/. -->
   <meta property="og:type" content="article" />
   <meta property="og:locale" content="en_US" />
   <meta property="og:title" content="Extremists on Both Sides" />
   <meta property="og:description" content="We collected thousands of political actions carried out in public space over the past four years. Decide for yourself - who are the extremists on both sides?&#10;An interactive project in partnership with The Seventh Eye." />
   <meta property="og:url" content="https://eyalraz200-cell.github.io/both-sides-project/en/" />
-  <meta property="og:image" content="https://eyalraz200-cell.github.io/both-sides-project/og-image-en-v2.png" />
+  <meta property="og:image" content="https://eyalraz200-cell.github.io/both-sides-project/og-image-en-v3.png" />
   <meta property="og:image:width" content="2400" />
   <meta property="og:image:height" content="1260" />
   <meta property="og:image:alt" content="Extremists on Both Sides — An analysis of political activity across Israel’s political camps" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Extremists on Both Sides" />
   <meta name="twitter:description" content="We collected thousands of political actions carried out in public space over the past four years. Decide for yourself - who are the extremists on both sides?&#10;An interactive project in partnership with The Seventh Eye." />
-  <meta name="twitter:image" content="https://eyalraz200-cell.github.io/both-sides-project/og-image-en-v2.png" />
+  <meta name="twitter:image" content="https://eyalraz200-cell.github.io/both-sides-project/og-image-en-v3.png" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -113,7 +113,7 @@
       </div>
     </nav>
     <!-- העין השביעית's logo, top-right; a mask-painted link (style.css, .seventh-eye). -->
-    <a class="seventh-eye" href="https://www.the7eye.org.il/" target="_blank" rel="noopener" aria-label="In partnership with The Seventh Eye"><span class="seventh-eye-caption">In partnership with</span><span class="seventh-eye-mark" aria-hidden="true"></span></a>
+    <div class="seventh-eye"><span class="seventh-eye-caption">In partnership with</span><a class="seventh-eye-mark" href="https://www.the7eye.org.il/" target="_blank" rel="noopener" aria-label="The Seventh Eye"></a><span class="shenkar-rule" aria-hidden="true"></span><a class="shenkar-mark" href="https://www.shenkar.ac.il/" target="_blank" rel="noopener" aria-label="Shenkar"></a></div>
     <div class="fold-number-badge" id="foldNumberBadge" aria-hidden="true"></div>
     <!-- Hover tooltip for the event dots (date + Hebrew description) —
          positioned/shown by p9HoverInit (page9.js), p7HoverInit/p7InspectInit
@@ -201,7 +201,7 @@
       </section>
       <section class="text-section" data-page="7" id="page-7">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame">The event descriptions and dates come mainly from <a class="latin-acronym card-link" href="https://acleddata.com/" target="_blank" rel="noopener">ACLED</a>, an international research organization, and partly from the “<a class="card-link" href="https://www.zman.co.il/726358/" target="_blank" rel="noopener">Fortress</a>” database. Assignment, classification, editing, and translation were carried out as part of the project using <span class="latin-acronym">OpenAI</span> language models.<span class="copy-mobile"> See the legend for details.</span></h2>
+          <h2 class="section-title text-card-frame">The event descriptions and dates come mainly from <a class="latin-acronym card-link" href="https://acleddata.com/" target="_blank" rel="noopener">ACLED</a>, an international research organization, and partly from the “<a class="card-link" href="https://www.zman.co.il/726358/" target="_blank" rel="noopener">Fortress</a>” database.</h2>
         </div>
       </section>
       <section class="text-section" data-page="8" id="page-8">
@@ -269,16 +269,26 @@
       <section class="text-section" data-page="14" id="page-14">
         <div class="page12-sticky-center">
           <div class="section-text text-card">
-            <h2 class="section-title text-card-frame">In recent years, norms have eroded and lines have been crossed in Israel’s political struggles.</h2>
+            <h2 class="section-title text-card-frame">Many political norms have been broken here over the past four years. Radicalization must be examined and challenged, and the law enforced fairly across the political spectrum.</h2>
           </div>
         </div>
-        <!-- The closing statement continues as one more house title block,
-             centred in its own 100vh run (.page13-follow). Inside #page-14
+        <!-- The closing statement continues as three more house title
+             blocks, each centred in its own 100vh run (.page13-follow). Inside #page-14
              so no fold ids shift; card 1 above stays the section's first
              .text-card-frame, which p12SpacingFit solves the wrapper from. -->
         <div class="page13-follow">
           <div class="section-text text-card">
-            <h2 class="section-title text-card-frame">Ahead of the election, it is important to demand that those who ask for our trust set limits on extremism – including in the camp they represent.</h2>
+            <h2 class="section-title text-card-frame">Israeli citizens will remain politically engaged long after the upcoming election. But what form will that engagement take?</h2>
+          </div>
+        </div>
+        <div class="page13-follow">
+          <div class="section-text text-card">
+            <h2 class="section-title text-card-frame">Will the next government listen to the public, uphold the law, and reverse this dangerous trend? Or will it use its power to enforce the law selectively - or even encourage further radicalization?</h2>
+          </div>
+        </div>
+        <div class="page13-follow">
+          <div class="section-text text-card">
+            <h2 class="section-title text-card-frame">And what about you? How will your choices - at the ballot box and beyond - shape Israeli political culture in the years ahead?</h2>
           </div>
         </div>
       </section>
@@ -288,7 +298,7 @@
            the title. -->
       <section class="text-section" data-page="15" id="page-15">
         <div class="section-text text-card">
-          <h2 class="section-title text-card-frame partner-title"><span class="partner-text">This project was created in collaboration with</span> <a class="partner-logo" href="https://www.the7eye.org.il/" target="_blank" rel="noopener" aria-label="The Seventh Eye"></a></h2>
+          <h2 class="section-title text-card-frame partner-title"><span class="partner-text">This project was created in collaboration with</span> <span class="partner-logos"><a class="partner-logo" href="https://www.the7eye.org.il/" target="_blank" rel="noopener" aria-label="The Seventh Eye"></a><span class="partner-rule" aria-hidden="true"></span><a class="partner-logo-shenkar" href="https://www.shenkar.ac.il/" target="_blank" rel="noopener" aria-label="Shenkar"></a></span></h2>
         </div>
       </section>
       <!-- @fold15 — the share block: its own title block between the closing

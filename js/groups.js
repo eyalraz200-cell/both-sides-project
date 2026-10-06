@@ -1182,6 +1182,8 @@ function fold6LegendFilterActivate(g) {
   // legend filters, so the rows answer from the moment it says so.
   if (currentPage !== 9 && currentPage !== 10 && currentPage !== 11 && currentPage !== 12 && currentPage !== 13
       && !fold9FilterOpen()) return;
+  // Keyboard path too: the strips are hidden once @fold13's spread begins.
+  if (typeof p9 !== "undefined" && (p9.fold13ExtremeMorphT ?? 0) > 0) return;
   p7FilterToggle(g.actor);
   // Just filtered OUT under the pointer: the row highlight goes with it.
   if (p7FilterOff.has(g.actor) && fold6LegendHoverActor === g.actor) fold6LegendHoverDimTrigger.trigger(0);
@@ -2411,6 +2413,17 @@ const p7ScopeOnTrigger    = makeTrigger(P7_SCOPE_HOVER_MS, (...a) => updateGroup
 p7ScopeBtnEl.addEventListener("mouseenter", () => p7ScopeHoverTrigger.trigger(1));
 p7ScopeBtnEl.addEventListener("mouseleave", () => p7ScopeHoverTrigger.trigger(0));
 // Shared by the desktop button and the mobile legend's row (fold6MobileScopeEl).
+// What the landed bridge is SHOWING, for a size-button morph's `from`. page8's
+// landed pass records exactly what it drew (p9.lastPositions — the running
+// morph and the hover bulge included); its resting target is only the fallback,
+// for the mobile bar's rect pass, which records nothing. Seeding from the target
+// every time made a second press mid-morph snap the strip back to the old
+// endpoint before the new morph began.
+function p7ScopeLandedFrom(W, H) {
+  const fresh = typeof p8LandedPosAt !== "undefined" && performance.now() - p8LandedPosAt < 100
+    && p9.lastPositions && p9.lastPositions.size;
+  return fresh ? p9.lastPositions : p8CaptureBlendedPositions(W, H, 1);
+}
 function p7ScopeToggle() {
   // Toggles the TIERS, not the grid: the squares stay packed either way — the
   // grid going "off" would fly them back onto the timeline, which is not what
@@ -2456,7 +2469,7 @@ function p7ScopeToggle() {
     // t = 1 and p9ScopeRunLoop repaints these pages while it runs. Without
     // this the flag flipped and the strip snapped to the new endpoint.
     const W = canvas.clientWidth, H = canvas.clientHeight;
-    p9.lastPositions = p8CaptureBlendedPositions(W, H, 1);
+    p9.lastPositions = p7ScopeLandedFrom(W, H);
     p7ScopeUserUniform = !p7GridUniform;
     p9ScopeSet(!p7GridUniform);
   } else if (currentPage < 13) {
@@ -2494,7 +2507,7 @@ function p7ScopeFlushPending() {
   // is already the truth and page8's capture would be the wrong layer.
   if (currentPage !== 13) {
     const W = canvas.clientWidth, H = canvas.clientHeight;
-    p9.lastPositions = p8CaptureBlendedPositions(W, H, 1);
+    p9.lastPositions = p7ScopeLandedFrom(W, H);
   }
   p9ScopeSet(uniform);
   if (typeof updateGroups === "function") updateGroups();
@@ -2672,9 +2685,10 @@ const fold4HeaderSpansCoalition = fold8SetupTypewriter(
 const fold4HeaderSpansChange = fold8SetupTypewriter(
   campHeaderChangeEl, CAMP_HEADER_TITLE_CHANGE);
 
-// Both headers are centered over their own camp block (Figma node 279:1342
-// centers each title on its grid), so they override .camp-header's
-// default right-edge translate(-100%, -50%) anchor.
+// Both headers are anchored on their own centre (Figma node 279:1342 centres
+// each title on its @fold2 grid; @fold3 then slides it so its right edge sits
+// on the dots — fold3HeaderX, js/update-groups.js), so they override
+// .camp-header's default right-edge translate(-100%, -50%) anchor.
 campHeaderCoalitionEl.style.transform = "translate(-50%, -50%)";
 campHeaderChangeEl.style.transform = "translate(-50%, -50%)";
 
@@ -4616,6 +4630,8 @@ fold6MobileLegendEl.addEventListener("pointermove", (e) => {
 function fold6MLegendRowTap(row) {
   if (!row || typeof p7FilterToggle !== "function") return false;
   if (currentPage < 9 || currentPage > 13) return false;
+  // Not once @fold13's spread has begun — see canFilter in js/update-groups.js.
+  if (typeof p9 !== "undefined" && (p9.fold13ExtremeMorphT ?? 0) > 0) return false;
   const entry = fold6MobileRowEls.find((r) => r.row === row);
   if (!entry) return false;
   const actor = entry.g.actor;

@@ -447,6 +447,10 @@ COPYQ = WATCH_DIR / "_debug-copy.json"
 
 def copy_queue(entry):
     """Append a Copy payload; one entry per press, same harness replaces its older one."""
+    # The panel also mirrors its state on every change (t:'live'). Those are
+    # NOT Copy presses — queueing them made every tweak read as a final pick.
+    if entry.get("t") == "live":
+        return 0
     try:
         q = json.loads(COPYQ.read_text()) if COPYQ.exists() else []
     except ValueError:
