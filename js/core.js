@@ -37,9 +37,9 @@ function isLocalHost() {
 // value is identical to the live read, just not recomputed thousands of times a
 // frame. (Deliberately not matchMedia: on desktop `innerWidth` includes the
 // scrollbar and the media query does not, so the two disagree by a few px right
-// at the breakpoint.) This listener is registered in core.js, the first `js/`
-// file index.html loads, so it updates before any other resize handler runs
-// and no consumer can see a stale value. A mobile URL-bar collapse fires resize
+// at the breakpoint.) Note that the page*.js files load BEFORE
+// core.js, so a resize listener registered there runs ahead of this one and
+// must call refreshBreakpointCache() itself first (page9.js does). A mobile URL-bar collapse fires resize
 // with the width unchanged, which correctly leaves the value alone.
 const MOBILE_BP = 600;
 let _isMobileCached = window.innerWidth <= MOBILE_BP;

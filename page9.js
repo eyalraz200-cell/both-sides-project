@@ -4197,7 +4197,12 @@ function p9SyncSubtitle() {
 // Same cross-script ordering caveat as p9MeasureTrayLayout above — isMobile()
 // isn't defined yet while page9.js is still running.
 document.addEventListener("DOMContentLoaded", p9SyncSubtitle);
-window.addEventListener("resize", p9SyncSubtitle);
+// page9.js loads BEFORE js/core.js, so these resize listeners are registered
+// ahead of core's breakpoint-cache refresh and would read a STALE isMobile()
+// — one resize late. Crossing 600px and coming back left the panel on the
+// wrong layout (no .page9-layout-v2 on a desktop window: the old bottom tray).
+// Refresh the cache first; it is idempotent, so core's own pass is harmless.
+window.addEventListener("resize", () => { refreshBreakpointCache(); p9SyncSubtitle(); });
 // A resize that crosses the 600px breakpoint flips the layout variant (one
 // tray row vs two, a different measured height); and even within V2, the
 // header's --card-top is a vh fraction, so p9TrayTopV2's floor moves with the
