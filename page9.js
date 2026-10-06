@@ -632,6 +632,8 @@ function p9RunAnimLoop() {
 var P9_FILTER_REPACK_MS = 1900;
 function p9FilterSnapshot() {
   if (!p9PageVisible() || !p9.lastPositions?.size) return;
+  // Reduced motion: no re-pack flight — the next draw lands the column.
+  if (prefersReducedMotion()) { if (typeof draw === "function") draw(); return; }
   // NOT a plain glide: the shape wanted here is the tier-staggered "existing
   // dot repositioning" branch of p9PlaceDot — the one that runs when a drop
   // sends dots up from legit to fill the extreme column — so the dots trickle
@@ -3190,7 +3192,8 @@ function p9LiveRegion() {
   p9LiveEl.className = "a11y-only";
   p9LiveEl.setAttribute("aria-live", "polite");
   p9LiveEl.setAttribute("aria-atomic", "true");
-  document.body.appendChild(p9LiveEl);
+  // Inside <main> (axe `region`); off-screen either way.
+  (document.getElementById("textCol") || document.body).appendChild(p9LiveEl);
   return p9LiveEl;
 }
 // Writing the same text twice is not a change, so a repeat (a second «link
@@ -3661,7 +3664,9 @@ function p9BuildPanel() {
     descA11y.id          = `p9PillDesc${idx}`;
     descA11y.className   = "a11y-only";
     descA11y.textContent = tr(P9_CATEGORY_DESC[idx]);
-    document.body.appendChild(descA11y);
+    // Inside <main>, not <body>: off-screen either way, but outside a
+    // landmark axe flags it (`region`).
+    (document.getElementById("textCol") || document.body).appendChild(descA11y);
     pill.setAttribute("aria-describedby", descA11y.id);
 
     // Permanent column within its own tray row (see P9_TRAY_GRID/trayRows

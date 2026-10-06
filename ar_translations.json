@@ -651,6 +651,27 @@
   "ar": "وصف نصي للبيانات"
  },
  {
+  "id": "js:p7key-0",
+  "kind": "js",
+  "he": "ציר הזמן של האירועים",
+  "en": "Event timeline",
+  "ar": "الخط الزمني للأحداث"
+ },
+ {
+  "id": "js:p7key-1",
+  "kind": "js",
+  "he": "השתמשו במקשי החיצים כדי לעבור בין האירועים: למעלה ולמטה לפי התאריך, ימינה ושמאלה בין המחנות, Home ו־End לאירוע הראשון והאחרון, Escape לסגירה.",
+  "en": "Use the arrow keys to move between events: up and down by date, left and right between the camps, Home and End for the first and last event, Escape to close.",
+  "ar": "استخدموا مفاتيح الأسهم للتنقل بين الأحداث: إلى الأعلى والأسفل حسب التاريخ، يمينًا ويسارًا بين المعسكرين، Home وEnd للحدث الأول والأخير، وEscape للإغلاق."
+ },
+ {
+  "id": "js:p7key-2",
+  "kind": "js",
+  "he": "אירועי מפתח על ציר הזמן",
+  "en": "Key events on the timeline",
+  "ar": "أحداث رئيسية على الخط الزمني"
+ },
+ {
   "id": "js:53",
   "kind": "js",
   "he": "פעולות מתועדות",

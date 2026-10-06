@@ -160,9 +160,9 @@
     <tr><td class="num">2</td><td>إغلاق طريق</td><td>إغلاق طريق، أو تقاطع، أو مدخل، أو مسار وصول، في إطار احتجاج.</td><td class="num">1,007</td></tr>
     <tr><td class="num">3</td><td>إخلال بالنظام العام</td><td>اضطرابات، أو مواجهات، أو تهديدات مباشرة لا يرافقها فعل، أو اقتحام قرية تلته مواجهات.</td><td class="num">1,035</td></tr>
     <tr><td class="num">4</td><td>إضرار بالممتلكات</td><td>إتلاف متعمّد، أو إحراق مبنى أو مركبة خاليين، أو سرقة، أو إيذاء حيوانات وإتلاف مزروعات.</td><td class="num">1,748</td></tr>
-    <tr><td class="num">5</td><td>استيلاء على أرض</td><td>إقامة بؤرة استيطانية، أو تسييج أرض، أو حرثها، أو وضع منشآت بهدف السيطرة عليها.</td><td class="num">587</td></tr>
+    <tr><td class="num">5</td><td>استيلاء على أرض</td><td>إقامة بؤرة استيطانية، أو تسييج أرض، أو حرثها، أو وضع منشآت، أو الاستيلاء على منزل، بهدف السيطرة عليها.</td><td class="num">594</td></tr>
     <tr><td class="num">6</td><td>اعتداء جسدي</td><td>عنف جسدي مباشر من دون سلاح، يرد وصفه صراحة.</td><td class="num">1,140</td></tr>
-    <tr><td class="num">7</td><td>احتجاز قسري</td><td>اختطاف شخص، أو احتجازه، أو نقله إلى مكان آخر خلافًا لإرادته.</td><td class="num">32</td></tr>
+    <tr><td class="num">7</td><td>احتجاز قسري</td><td>اختطاف شخص، أو احتجازه، أو نقله إلى مكان آخر خلافًا لإرادته. لا يُعدّ الاستيلاء على منزل احتجازًا قسريًا إلا إذا ذُكر أن أشخاصًا احتُجزوا داخله.</td><td class="num">25</td></tr>
     <tr><td class="num">8</td><td>اعتداء بسلاح أبيض</td><td>استخدام سكين، أو هراوة، أو رذاذ الفلفل ضد أشخاص؛ أو رشق أشخاص أو مركبات أو منازل بالحجارة؛ أو الدهس.</td><td class="num">1,364</td></tr>
     <tr><td class="num">9</td><td>اعتداء بسلاح ناري</td><td>إطلاق النار أو تصويب سلاح؛ أو استخدام قنبلة يدوية متشظّية أو متفجّرة، أو عبوة ناسفة، أو زجاجة حارقة؛ أو توجيه ألعاب نارية نحو أشخاص. أما القنبلة الصوتية الملقاة على أشخاص فتُعدّ اعتداءً بسلاح أبيض.</td><td class="num">510</td></tr>
     <tr><td class="num">10</td><td>أعمال شغب</td><td>حشد من 30 شخصًا على الأقل، مذكور حجمه، يهاجم تجمّعًا سكنيًا، ويصيب فلسطينيين أو يقتلهم، ويحرق منازل أو مركبات أو منشآت أو حقولًا.</td><td class="num">15</td></tr>
@@ -733,7 +733,11 @@ Do NOT infer תקיפה פיזית merely because:
 In those ambiguous cases, prefer הפרות סדר.
 
 HAND-REVIEW RULES (Fortress log, 2026-10-03):
-- Taking over an inhabited house while the family is inside -&gt; החזקה בכפייה.
+- Taking over a house, building or residential cave (&quot;seized a Palestinian-owned house&quot;, &quot;took
+  over a house&quot;, &quot;occupied a house after expelling its owner&quot;) -&gt; ניכוס שטח. It becomes
+  החזקה בכפייה ONLY when the text says people were INSIDE AND HELD there during the takeover
+  (&quot;took over a house while the family was inside&quot;). &quot;Inhabited&quot;, &quot;home to a family&quot; or
+  &quot;residential&quot; describe the building, not people held — still ניכוס שטח (user rule 2026-10-06).
 - Arson of houses, structures, vehicles or between houses (fire SET, not gunfire) with nobody
   inside or directly endangered -&gt; פגיעה ברכוש. Fire set to an INHABITED house or an OCCUPIED
   vehicle, a Molotov thrown at people or houses with people in them, and fireworks thrown at

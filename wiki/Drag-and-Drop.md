@@ -1257,6 +1257,11 @@ the bridge fold into `@fold12` and on through `@fold13`.
 The panel does **not** arrive all at once, on **either breakpoint**. Two classes on
 `.page9-sticky`, two folds:
 
+**Mobile pill fill:** on @fold11 (`:not(.engaged)`) the pills are filled with the page's
+`--bg`; on @fold12 the fill eases to white over the convoy's own length (`.training`'s
+`background-color` transition on `--p9-train-total`, `p9Ease`'s curve), never a snap.
+Selected (`.is-extreme`) pills keep their grey. Desktop is unchanged.
+
 - **`.pills-in` — @fold11's crossing.** `page8CheckScroll` (`js/page8-9-scroll.js`)
   watches `#page-12 .section-title`'s centre passing the `foldFracNow("fold11")` line (0.75
   of the viewport height); it toggles `.pills-in` there,

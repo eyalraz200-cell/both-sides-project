@@ -214,6 +214,17 @@ setting mid-session takes effect on the next beat. Consumers:
   instead of flashing it.
 - **`p9TrainToggle`** (`page9.js`) just flips the `engaged` class, skipping mobile's
   animated pill train.
+- **`playPage0Entrance`** (`js/fold1-intro.js`) jumps @fold1's entrance to its last frame;
+  **`page0LagDamping()` / `page0OpacityDamping()`** return 1, so the hero title sits exactly
+  where the scroll puts it instead of trailing it.
+- **`p7SizeGridSet`** (`page7.js`) forces `instant` — @fold9's size morph and @fold10's
+  size-down land at once.
+- **`p7FilterToggle`** and its restore (`page7.js`) leave `p7FilterMorph` null — the legend
+  filter's shrink-and-fly lands re-packed; **`p9FilterSnapshot`** (`page9.js`) skips @fold12's
+  re-pack flight the same way.
+- **`p8CurrentT`** (`page8.js`) returns the phase's target — the @fold10→@fold11 bridge glide
+  lands at once both ways; **`setActivePage`** (`js/nav.js`) skips `p7EntryAnim`, the reverse
+  glide's continuation onto the timeline.
 
 The CSS half is the blanket `@media (prefers-reduced-motion: reduce)` block in `style.css`,
 which collapses every transition/animation to `0.01ms` with `animation-iteration-count: 1`.
@@ -221,11 +232,12 @@ Near-zero rather than `none` so `transitionend`/`animationend` still fire and th
 still lands. It's safe to apply that broadly only because of the rule above — JS-repainted
 elements carry no CSS transition to fight with.
 
+**Rule:** time-based autoplay snaps; motion whose position *is* the scroll position stays.
+
 **Deliberately NOT reduced:** @fold8's scrubbed timeline *is* the scroll position — the
 content, not decoration around it, and freezing it would leave nothing to read. Nor
-page9.js's finalized state-1 drop animation. The page8 glide (fired by @fold10's crossing,
-playing over @fold11) is a fixed-duration phase on its own wall-clock (`p8StartPhase`),
-outside `makeTrigger`, so it does not take the reduced-motion snap either.
+page9.js's finalized state-1 drop/migration animation on @fold12 (`p9.anim` set inside the
+drop commit) — finalized, so it still plays.
 
 ## Dots never fade
 

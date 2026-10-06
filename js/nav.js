@@ -321,7 +321,8 @@ function setActivePage(page) {
     // exactly, with no dead stop at the handoff. This direction continues the
     // REVERSE glide, so it replays the reverse's own (shorter) clock —
     // P8_REVERSE_DURATION, not the forward's 3000ms.
-    p7EntryAnim = {
+    // Reduced motion: no glide back — the squares stand at their cells.
+    if (!prefersReducedMotion()) p7EntryAnim = {
       from: p8CaptureBlendedPositions(W, H, 1),
       start: performance.now() - P8_REVERSE_DURATION * (1 - p8CurrentT()),
       duration: P8_REVERSE_DURATION,
@@ -367,6 +368,16 @@ var SEVENTH_EYE_FADE_SCROLL_PX = 8;   // scrolled further than this = gone
 (function () {
   const el = document.querySelector(".seventh-eye");
   if (!el) return;
+  // Landmark home for the fixed corner link (axe `region`): a display:contents
+  // <aside>, so it adds no box — the link keeps its own fixed position and
+  // stacking exactly as before. Named by the link's own label.
+  if (!el.parentElement.matches("aside")) {
+    const aside = document.createElement("aside");
+    aside.style.display = "contents";
+    aside.setAttribute("aria-label", el.getAttribute("aria-label") || "");
+    el.replaceWith(aside);
+    aside.appendChild(el);
+  }
   const sync = () => el.classList.toggle("is-scrolled", window.scrollY > SEVENTH_EYE_FADE_SCROLL_PX);
   window.addEventListener("scroll", sync, { passive: true });
   sync();

@@ -48,6 +48,10 @@ const PAGE0_FADE_VH = 0.4; // fraction of one viewport height
 const PAGE0_OPACITY_DAMPING = 0.12;
 const PAGE0_SCROLL_LAG_DAMPING = 0.12; // same tempo as the opacity lag, so both read as one motion
 const PAGE0_SCROLL_LAG_MAX_PX = 150; // caps how far the lag can trail behind the live scroll position
+// Reduced motion: no trailing — damping 1 means the title sits exactly where
+// the scroll puts it (the scroll-linked position itself stays).
+function page0LagDamping()     { return prefersReducedMotion() ? 1 : PAGE0_SCROLL_LAG_DAMPING; }
+function page0OpacityDamping() { return prefersReducedMotion() ? 1 : PAGE0_OPACITY_DAMPING; }
 let page0LogoOpacity = null; // null until first driven, either by entrance or scroll fade
 let page0LaggedScrollFrac = null;
 let page0TitleTakenOver = false; // see playPage0Entrance below
@@ -91,7 +95,7 @@ function page0ApplyTitleScrollLag() {
   if (page0LaggedScrollFrac === null) {
     page0LaggedScrollFrac = fracTarget;
   } else {
-    page0LaggedScrollFrac += (fracTarget - page0LaggedScrollFrac) * PAGE0_SCROLL_LAG_DAMPING;
+    page0LaggedScrollFrac += (fracTarget - page0LaggedScrollFrac) * page0LagDamping();
     const maxFracGap = PAGE0_SCROLL_LAG_MAX_PX / page0BuildHeight();
     page0LaggedScrollFrac = Math.max(fracTarget - maxFracGap, Math.min(fracTarget + maxFracGap, page0LaggedScrollFrac));
   }
@@ -101,8 +105,8 @@ function page0ApplyTitleScrollLag() {
   // catch-up reads as one motion with the lag rather than a second effect.
   // Snapped to 0 under half a pixel — below that it's invisible and only
   // costs a transform write every frame forever.
-  page0HandoverTitlePx *= 1 - PAGE0_SCROLL_LAG_DAMPING;
-  page0HandoverSubtitlePx *= 1 - PAGE0_SCROLL_LAG_DAMPING;
+  page0HandoverTitlePx *= 1 - page0LagDamping();
+  page0HandoverSubtitlePx *= 1 - page0LagDamping();
   if (Math.abs(page0HandoverTitlePx) < 0.5) page0HandoverTitlePx = 0;
   if (Math.abs(page0HandoverSubtitlePx) < 0.5) page0HandoverSubtitlePx = 0;
   page0TitleEl.style.transform = `translateY(${-scrollDrivenPx + parallaxPx + page0HandoverTitlePx}px)`;
@@ -142,7 +146,7 @@ function page0ApplyLogoScrollFade() {
   const opacityTarget = page0OpacityTarget();
   page0LogoOpacity = page0LogoOpacity === null
     ? opacityTarget
-    : page0LogoOpacity + (opacityTarget - page0LogoOpacity) * PAGE0_OPACITY_DAMPING;
+    : page0LogoOpacity + (opacityTarget - page0LogoOpacity) * page0OpacityDamping();
   if (page0LogoEl) page0LogoEl.style.opacity = String(page0LogoOpacity);
 }
 
@@ -204,7 +208,8 @@ function playPage0Entrance() {
   const start = performance.now();
 
   function frame() {
-    const elapsed = performance.now() - start;
+    // Reduced motion: jump the whole entrance to its last frame.
+    const elapsed = prefersReducedMotion() ? 1e9 : performance.now() - start;
     // Per frame, not captured once: the durations are live `var`s, and with the
     // gate already dismissed this starts before a harness has applied its values.
     const dotsDoneMs = page0TitleMs() + maxRow * page0RowStaggerMs() + page0PopMs();

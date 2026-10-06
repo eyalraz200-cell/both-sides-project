@@ -770,8 +770,14 @@ over `totalRows × CELL`:
 
 ## Hover
 
-`p7HoverInit()` runs at module load. `doHitTest()` returns early on mobile (it only runs
-`hideSquare()` and the picker sync `p7InspectSync()` there — no hover layer). On desktop it
+`p7HoverInit()` runs at module load. `doHitTest()` returns early on a touch-width layout
+(it only runs `hideSquare()` and the picker sync `p7InspectSync()` there — no hover layer)
+**unless `p7FineHover()`** — `(hover: hover) and (pointer: fine)`, i.e. a real mouse in a
+window under 600px. That case takes the desktop hit-test, the tooltip lands in the docked
+frame (`tooltipDockMobile`), and the picker's `sync()` counts `p7.hoveredEvent` as an event
+(`p7RecheckHover`/pointermove re-run `p7InspectSync()` after it); the two hover-instruction
+cards (`#page-4`, `#page-6`) show their `.copy-desktop` sentence under the same media query
+(style.css). Real phones report `hover: none`, so their path is unchanged. On desktop it
 bails unless `p7TimelineLive()` holds — `currentPage` 9 or 10, or 11 until @fold10's size
 beat is past (`!fold11SizePast()`) — and also bails while a bridge glide is mid-flight in
 either direction (`p8PhaseStart` non-null, page8.js) or a size-grid morph is running
@@ -1163,6 +1169,23 @@ stand-down the re-sync's `instant: true` would set the END state of both beats o
 that frame — the squares snapping to their tiered rest cells under a field still
 flying. `fold11SizeApply` owns the flags for the length of its sequence; the next
 flip re-syncs.
+
+### Keyboard access (`p7KeyInit`, page7.js)
+
+While `p7TimelineLive()` holds (@fold8, @fold9), `p7KeySyncFocusable()` gives `#canvas`
+`tabindex=0`, `role="application"`, the label «ציר הזמן של האירועים» and
+`aria-describedby="p7KeyHint"` (an `.a11y-only` span in `<main>` with the key instructions);
+off those folds it goes back to `role="img"` + its index.html label, no tabindex. Synced on
+scroll and on every hover re-check. Keys (canvas `keydown` only, so nothing else loses its
+arrows): **Up/Down** previous/next event by date across both camps (the axis is vertical);
+**Left/Right** jump to the camp drawn on that side at the nearest date; **Home/End**
+first/last; **Escape** (and blur) clears. The set is `p7KeyList()` — `p7.lastPositions`
+inside the viewport, minus `p7FilterHiddenEv`, date-sorted. Stepping is ignored mid-morph /
+mid-glide (`p7KeyLive`). Desktop and a narrow mouse window drive the ordinary hover through a
+synthetic pointer (`p7KeyHoverAt`); a touch-width layout shows the docked frame
+(`p7InspectKeyShow`, no loupe/grow). The read — «date — group: description» — goes to the
+page's polite live region (`p9Announce`) 250ms after the last key. The only visual is
+`#canvas:focus-visible`'s inset 2px ring (style.css).
 
 ## @fold10 — flatten in place, then fly (`fold11SizeApply`, js/groups.js)
 

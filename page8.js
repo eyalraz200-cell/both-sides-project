@@ -74,6 +74,9 @@ let p8PhaseDur      = P8_TRANSITION_DURATION; // full-traverse ms for the curren
 // month cascade, which mirrors its order on reverse rather than restarting cold.
 function p8CurrentT() {
   if (p8PhaseStart === null) return p8PhaseFromT;
+  // Reduced motion: the glide is a fixed-duration autoplay (not scrubbed), so
+  // it lands at once; p8RunAnimLoop settles on the next frame.
+  if (prefersReducedMotion()) return p8PhaseToT;
   const span = p8PhaseToT - p8PhaseFromT;
   if (span === 0) return p8PhaseToT;
   const localT = Math.min(1, (performance.now() - p8PhaseStart) / (p8PhaseDur * Math.abs(span)));

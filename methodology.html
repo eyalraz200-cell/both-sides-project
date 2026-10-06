@@ -161,9 +161,9 @@
     <tr><td class="num">2</td><td>חסימת כביש</td><td>חסימת כביש, צומת, כניסה או נתיב גישה כחלק ממחאה.</td><td class="num">1,007</td></tr>
     <tr><td class="num">3</td><td>הפרות סדר</td><td>התפרעות, עימותים, איומים ישירים ללא פעולה ממשית, חדירה לכפר שבעקבותיה פרצו עימותים.</td><td class="num">1,035</td></tr>
     <tr><td class="num">4</td><td>פגיעה ברכוש</td><td>נזק מכוון, הצתת מבנה או רכב ריקים, גניבה, פגיעה בבעלי חיים ובגידולים.</td><td class="num">1,748</td></tr>
-    <tr><td class="num">5</td><td>ניכוס שטח</td><td>הקמת מאחז, גידור, חריש או הצבת מבנים לשם שליטה בקרקע.</td><td class="num">587</td></tr>
+    <tr><td class="num">5</td><td>ניכוס שטח</td><td>הקמת מאחז, גידור, חריש, הצבת מבנים או השתלטות על בית לשם שליטה בקרקע.</td><td class="num">594</td></tr>
     <tr><td class="num">6</td><td>תקיפה פיזית</td><td>אלימות גופנית ישירה ללא נשק, המתוארת במפורש.</td><td class="num">1,140</td></tr>
-    <tr><td class="num">7</td><td>החזקה בכפייה</td><td>חטיפה, החזקת אדם או העברתו למקום אחר בניגוד לרצונו.</td><td class="num">32</td></tr>
+    <tr><td class="num">7</td><td>החזקה בכפייה</td><td>חטיפה, החזקת אדם או העברתו למקום אחר בניגוד לרצונו. השתלטות על בית נחשבת החזקה בכפייה רק כשמצוין שאנשים הוחזקו בתוכו.</td><td class="num">25</td></tr>
     <tr><td class="num">8</td><td>תקיפה בנשק קר</td><td>סכין, אלה או גז פלפל נגד אנשים; אבנים לעבר אנשים, רכבים או בתים; דריסה.</td><td class="num">1,364</td></tr>
     <tr><td class="num">9</td><td>תקיפה בנשק חם</td><td>ירי או כיוון נשק, רימון רסס או נפץ (רימון הלם לעבר אנשים הוא נשק קר), מטען, בקבוק תבערה, זיקוקים לעבר אנשים.</td><td class="num">510</td></tr>
     <tr><td class="num">10</td><td>פוגרום</td><td>קהל של 30 ומעלה, שגודלו מצוין, שתוקף יישוב, פוצע או הורג פלסטינים ומצית בתים, רכבים, מבנים או שדות.</td><td class="num">15</td></tr>
@@ -733,7 +733,11 @@ Do NOT infer תקיפה פיזית merely because:
 In those ambiguous cases, prefer הפרות סדר.
 
 HAND-REVIEW RULES (Fortress log, 2026-10-03):
-- Taking over an inhabited house while the family is inside -&gt; החזקה בכפייה.
+- Taking over a house, building or residential cave (&quot;seized a Palestinian-owned house&quot;, &quot;took
+  over a house&quot;, &quot;occupied a house after expelling its owner&quot;) -&gt; ניכוס שטח. It becomes
+  החזקה בכפייה ONLY when the text says people were INSIDE AND HELD there during the takeover
+  (&quot;took over a house while the family was inside&quot;). &quot;Inhabited&quot;, &quot;home to a family&quot; or
+  &quot;residential&quot; describe the building, not people held — still ניכוס שטח (user rule 2026-10-06).
 - Arson of houses, structures, vehicles or between houses (fire SET, not gunfire) with nobody
   inside or directly endangered -&gt; פגיעה ברכוש. Fire set to an INHABITED house or an OCCUPIED
   vehicle, a Molotov thrown at people or houses with people in them, and fireworks thrown at

@@ -3022,6 +3022,8 @@ function p7MorphBlend(ev, from, cx, cy, sq, isLeft) {
 // re-pack in place, they don't visit the timeline in between.
 function p7SizeGridSet(on, opts) {
   on = !!on;
+  // Reduced motion: the morph is time-based autoplay, so land it instantly.
+  if (typeof prefersReducedMotion === "function" && prefersReducedMotion()) opts = { ...(opts || {}), instant: true };
   const uniform = opts && "uniform" in opts ? !!opts.uniform : p7GridUniform;
   if (on === p7Grid.on && uniform === p7GridUniform) return;
   const instant = opts && opts.instant;
@@ -3357,7 +3359,8 @@ function p7FilterCommit(restoring, actor) {
     p7Grid.packVis = new Set(p7GridRoster());
     p7GridClearSide(p7FilterSideOf(actor));
   }
-  p7FilterMorph = from.size
+  // Reduced motion: no shrink-and-fly — the field lands re-packed at once.
+  p7FilterMorph = (from.size && !prefersReducedMotion())
     ? { from, start: performance.now(), restoring: !!restoring, actor, skipFly: p7FilterSoloOnSide(actor) }
     : null;
   p7BulgeT.clear();
@@ -3426,7 +3429,8 @@ function p7FilterReset() {
   p7FilterOff.clear();
   p7FilterRebuild();          // no filter left: p7FilterLayout goes null
   p7Grid.packVis = null;
-  p7FilterMorph = from.size
+  // Reduced motion: no shrink-and-fly — the field lands re-packed at once.
+  p7FilterMorph = (from.size && !prefersReducedMotion())
     ? { from, start: performance.now(), restoring: true, actor: null, actors, skipFly: false }
     : null;
   p7BulgeT.clear();
@@ -3923,7 +3927,11 @@ function p7BuildDataSummary(data) {
     `<p>${trf("הפרויקט מציג {n} פעולות פוליטיות מתועדות שהתרחשו במרחב הציבורי בישראל ובשטחים, בין {from} ל־{to}. תיאורי האירועים ומועדיהם לקוחים ממאגר ACLED ומיומן אלימות המתנחלים של ״המבצר״. כל ריבוע בהדמיה מייצג פעולה אחת, וצבעו מציין את הקבוצה שביצעה אותה.",
       { n: he(data.length), from: date(p7.minDate), to: date(p7.maxDate) })}</p>` +
     `<h3>${tr("חלוקה למחנות ולקבוצות")}</h3>` + campList +
-    `<h3>${tr("חלוקה לפי סוג הפעולה")}</h3><ul>${catList}</ul>`;
+    `<h3>${tr("חלוקה לפי סוג הפעולה")}</h3><ul>${catList}</ul>` +
+    // The nine events marked on the year axis — the full roster
+    // (P7_AXIS_EVENTS_ALL), since the phone's axis drops three of them.
+    `<h3>${tr("אירועי מפתח על ציר הזמן")}</h3><ul>${P7_AXIS_EVENTS_ALL
+      .map(ev => `<li>${date(ev.date)}: ${tr(ev.label)} — ${tr(ev.desc)}</li>`).join("")}</ul>`;
 }
 
 function p7UpdateLayout(W, H) {
@@ -7213,7 +7221,12 @@ function p7HoverInit() {
     // (p7AxisTapHit), so the tapped card opened for one frame and shut again.
     // There is no pointer here to have moved off anything; the tap's own hover
     // stands until it is tapped off, or until p7HoverInit's page-change clear.
-    if (isMobile()) { hideSquare(); p7InspectSync(); return; }
+    // EXCEPT a real mouse in a narrow window (a zoomed or squeezed desktop
+    // browser, WCAG 1.4.10): p7FineHover() reads the input, not the width, so
+    // it takes the desktop hit-test below and shows the event in the docked
+    // frame (the picker's sync() treats p7.hoveredEvent as an event). Real
+    // phones report hover:none, so they never leave this branch.
+    if (isMobile() && !p7FineHover()) { hideSquare(); p7InspectSync(); return; }
     // Also fully off while @fold11's bridge glide (page8.js) is mid-flight in
     // either direction (p8PhaseStart non-null): scrolling back up from @fold11
     // lands currentPage on 7 while the dots are still flying back to their
@@ -7369,18 +7382,55 @@ function p7HoverInit() {
     doHitTest();
   }
 
+  // Narrow window + mouse: the docked frame belongs to the picker's sync()
+  // (resting hint vs. event), so it re-reads the hover after every hit-test.
+  // Only reachable when p7FineHover() let the mobile branch through, so real
+  // phones never run it.
+  // The frame's opacity/position (tooltipDockTransform) are set by the
+  // picker's showEvent, so the hovered event is handed to it — and released
+  // when the hover ends.
+  function hitTestAndSync() {
+    doHitTest();
+    if (!(isMobile() && p7FineHover())) return;
+    const h = p7.hoveredEvent;
+    if (h) { if (p7Inspect.event !== h && p7InspectKeyShow) p7InspectKeyShow(h); }
+    else if (p7Inspect.event && !p7Inspect.dragging && p7InspectKeyRelease) p7InspectKeyRelease();
+    else p7InspectSync();
+  }
+
   // Expose so callers outside this closure (scroll handler, animation loop)
   // can re-run the hit-test after the canvas redraws.
-  p7RecheckHover = doHitTest;
+  p7RecheckHover = () => { hitTestAndSync(); p7KeySyncFocusable(); };
+  // Keyboard stepping (p7KeyInit below) drives this same hover: a synthetic
+  // pointer at the chosen dot's centre. The current hover is dropped first —
+  // the hovered dot's hit box is enlarged and wins outright, so a point aimed
+  // at its neighbour would otherwise hand the hover straight back.
+  p7KeyHoverAt = (cx, cy) => {
+    if (p7.hoveredEvent) { p7.hoveredEvent = null; }
+    lastCX = cx; lastCY = cy;
+    hitTestAndSync();
+  };
+  p7KeyHoverClear = () => { lastCX = null; lastCY = null; hide(); hitTestAndSync(); };
 
   // Listens on window for the same reason page9.js's p9HoverInit does: other
   // DOM overlays can sit on top of the canvas depending on scroll position.
-  window.addEventListener("pointermove", onMove);
+  window.addEventListener("pointermove", (e) => {
+    if (isMobile() && p7FineHover()) { lastCX = e.clientX; lastCY = e.clientY; hitTestAndSync(); }
+    else onMove(e);
+  });
   window.addEventListener("scroll", () => {
     if (!p7TimelineLive()) hide();
     p7InspectSync();
   }, { passive: true });
 }
+// True for a real mouse/trackpad (hover-capable, fine pointer), whatever the
+// window width. Read live: a hybrid laptop can switch. Real phones and
+// tablets report hover:none / pointer:coarse.
+const P7_FINE_HOVER_MQ = typeof window.matchMedia === "function"
+  ? window.matchMedia("(hover: hover) and (pointer: fine)") : null;
+function p7FineHover() { return !!P7_FINE_HOVER_MQ && P7_FINE_HOVER_MQ.matches; }
+// Set by p7HoverInit; used by the keyboard stepper (p7KeyInit).
+let p7KeyHoverAt = null, p7KeyHoverClear = null;
 
 p7HoverInit();
 
@@ -7581,6 +7631,10 @@ function p7HintBandInit() {
   if (p7HintBandEl) return p7HintBandEl;
   p7HintBandEl = document.createElement("div");
   p7HintBandEl.className = "p7-hint-band";
+  // aria-hidden: a touch-gesture instruction painted over the chart; the
+  // keyboard/screen-reader instructions are the canvas's own description
+  // (#p7KeyHint). Also keeps it out of axe's landmark check (`region`).
+  p7HintBandEl.setAttribute("aria-hidden", "true");
   const line = document.createElement("div");
   line.className = "p7-inspect-hint";
   p7BandSpans = fold8SetupTypewriter(line, P7_INSPECT_HINT);
@@ -8280,7 +8334,10 @@ function p7InspectInit() {
       tipEl.classList.remove("is-hint");
       return;
     }
-    const hasEvent = !!p7Inspect.event;
+    // p7.hoveredEvent: a real mouse in a narrow window (p7FineHover) hovers
+    // into this same frame. Always null on a touch phone (doHitTest's mobile
+    // branch clears it), so the phone's states are unchanged.
+    const hasEvent = !!p7Inspect.event || !!p7.hoveredEvent;
     // NOT while @fold6's frame is still collapsing at its @hidden-hover spot
     // (tooltipFitFold7: the first half of the fly, js/fold8-tooltip.js). The
     // page flips to 8 the moment the fly trigger starts, and is-picker hides the
@@ -8540,8 +8597,159 @@ function p7InspectInit() {
   window.addEventListener("touchend", onEnd);
   window.addEventListener("touchcancel", onEnd);
 
+  // Keyboard stepping on a touch-width layout (p7KeyInit) shows its event in
+  // the same docked frame the hold does — no loupe, no grow, just the read.
+  p7InspectKeyShow = (ev) => { showEvent(ev); sync(); };
+  p7InspectKeyRelease = () => { if (p7Inspect.event) release(); sync(); };
+
   sync();
 }
+let p7InspectKeyShow = null, p7InspectKeyRelease = null;
+
+/* =========================================================================
+   KEYBOARD ACCESS (@fold8's timeline, @fold9's size grid) — WCAG 2.1.1
+   =========================================================================
+   The canvas takes focus (tabindex=0) only while the timeline is the live
+   fold (p7TimelineLive), and then reads the arrows:
+     Up / Down     previous / next event by date, across both camps — the
+                   axis is vertical, so the arrows follow it
+     Left / Right  jump to the camp drawn on that side of the axis, at the
+                   nearest date to the current event
+     Home / End    first / last event on screen
+     Escape        close
+   The set is what is on screen right now (p7.lastPositions, inside the
+   viewport) minus the legend filter's hidden groups, so the keys never land
+   on something the reader can't see. Desktop (and a narrow window driven by a
+   mouse) shows the ordinary hover through a synthetic pointer (p7KeyHoverAt);
+   a touch-width layout shows the docked frame (p7InspectKeyShow). Either way
+   the tooltip is aria-hidden, so the read goes out through the page's one
+   polite live region (p9Announce, page9.js) — debounced, so a held key says
+   where it STOPS. Nothing changes on screen until a key is pressed; the only
+   keyboard-only visual is the inset :focus-visible ring (style.css). */
+const P7_KEY_LABEL = "ציר הזמן של האירועים";
+const P7_KEY_HINT  = "השתמשו במקשי החיצים כדי לעבור בין האירועים: למעלה ולמטה לפי התאריך, ימינה ושמאלה בין המחנות, Home ו־End לאירוע הראשון והאחרון, Escape לסגירה.";
+let p7KeyEvent = null;
+let p7KeyFocusable = null;
+function p7KeyTouchLayout() { return isMobile() && !p7FineHover(); }
+function p7KeyLive() {
+  return p7TimelineLive() && p7GridMorph === null &&
+    !(typeof p8PhaseStart !== "undefined" && p8PhaseStart !== null);
+}
+// On-screen, unfiltered dots in date order (ISO strings sort as dates; the
+// sort is stable, so same-day dots keep their drawn order).
+function p7KeyList() {
+  const H = window.innerHeight, W = window.innerWidth, out = [];
+  for (const [ev, pos] of p7.lastPositions) {
+    if (p7FilterHiddenEv(ev)) continue;
+    const sq = pos.sq ?? p7.SQ;
+    const cy = pos.y + sq / 2, cx = pos.x + sq / 2;
+    if (cy < 0 || cy > H || cx < 0 || cx > W) continue;
+    out.push(ev);
+  }
+  return out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+}
+function p7KeyGroupLabel(ev) {
+  const g = typeof GROUPS !== "undefined" && GROUPS.find(g => g.actor === ev.actor);
+  return g ? tr(g.label) : "";
+}
+function p7KeyShow(ev) {
+  p7KeyEvent = ev;
+  if (p7KeyTouchLayout()) {
+    if (p7InspectKeyShow) p7InspectKeyShow(ev);
+  } else if (p7KeyHoverAt) {
+    const pos = p7.lastPositions.get(ev);
+    const rect = document.getElementById("canvas").getBoundingClientRect();
+    const sq = pos.sq ?? p7.SQ;
+    p7KeyHoverAt(rect.left + pos.x + sq / 2, rect.top + pos.y + sq / 2);
+  }
+  clearTimeout(p7KeyShow.to);
+  p7KeyShow.to = setTimeout(() => {
+    if (p7KeyEvent !== ev || typeof p9Announce !== "function") return;
+    const g = p7KeyGroupLabel(ev);
+    p9Announce(`${p7FormatDateDMY(ev.date)} — ${g ? g + ": " : ""}${p7EventDesc(ev)}`);
+  }, 250);
+}
+function p7KeyClear() {
+  if (!p7KeyEvent) return;
+  p7KeyEvent = null;
+  clearTimeout(p7KeyShow.to);
+  if (p7KeyTouchLayout()) { if (p7InspectKeyRelease) p7InspectKeyRelease(); }
+  else if (p7KeyHoverClear) p7KeyHoverClear();
+}
+// tabindex + role follow the fold. role=application while focusable so a
+// screen reader in browse mode hands the arrows to the page; the plain img
+// role (and its label from index.html) the rest of the time.
+function p7KeySyncFocusable() {
+  const c = document.getElementById("canvas");
+  if (!c) return;
+  const on = p7TimelineLive();
+  if (on === p7KeyFocusable) return;
+  p7KeyFocusable = on;
+  if (on) {
+    if (!c.dataset.imgLabel) c.dataset.imgLabel = c.getAttribute("aria-label") || "";
+    c.tabIndex = 0;
+    c.setAttribute("role", "application");
+    c.setAttribute("aria-label", tr(P7_KEY_LABEL));
+    c.setAttribute("aria-describedby", "p7KeyHint");
+  } else {
+    c.removeAttribute("tabindex");
+    c.setAttribute("role", "img");
+    if (c.dataset.imgLabel !== undefined) c.setAttribute("aria-label", c.dataset.imgLabel);
+    c.removeAttribute("aria-describedby");
+    p7KeyClear();
+  }
+}
+function p7KeyInit() {
+  const c = document.getElementById("canvas");
+  if (!c) return;
+  // Landmark for the canvas column (axe `region`): role only, no box change,
+  // named by the canvas's own label.
+  const col = c.closest(".graphic-col");
+  if (col && !col.hasAttribute("role")) {
+    col.setAttribute("role", "region");
+    col.setAttribute("aria-labelledby", "canvas");
+  }
+  // The description lives inside <main> (axe `region`), off-screen.
+  const hint = document.createElement("span");
+  hint.id = "p7KeyHint";
+  hint.className = "a11y-only";
+  hint.textContent = tr(P7_KEY_HINT);
+  (document.getElementById("textCol") || document.body).appendChild(hint);
+
+  c.addEventListener("keydown", (e) => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const k = e.key;
+    if (k === "Escape") { if (p7KeyEvent) { e.preventDefault(); p7KeyClear(); } return; }
+    if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End"].includes(k)) return;
+    e.preventDefault();   // the arrows must not scroll the page out of the fold
+    if (!p7KeyLive()) return;
+    const list = p7KeyList();
+    if (!list.length) return;
+    let i = p7KeyEvent ? list.indexOf(p7KeyEvent) : -1;
+    let next = null;
+    if (k === "Home") next = list[0];
+    else if (k === "End") next = list[list.length - 1];
+    else if (k === "ArrowDown") next = list[i < 0 ? 0 : Math.min(list.length - 1, i + 1)];
+    else if (k === "ArrowUp") next = list[i < 0 ? list.length - 1 : Math.max(0, i - 1)];
+    else {
+      const side = k === "ArrowLeft" ? "left" : "right";
+      const cur = i >= 0 ? list[i] : null;
+      if (cur && cur.side === side) return;
+      const ref = cur ? Date.parse(cur.date) : null;
+      let bestD = Infinity;
+      for (const ev of list) {
+        if (ev.side !== side) continue;
+        const d = ref === null ? 0 : Math.abs(Date.parse(ev.date) - ref);
+        if (d < bestD) { bestD = d; next = ev; if (ref === null) break; }
+      }
+    }
+    if (next && next !== p7KeyEvent) p7KeyShow(next);
+  });
+  c.addEventListener("blur", p7KeyClear);
+  window.addEventListener("scroll", p7KeySyncFocusable, { passive: true });
+  p7KeySyncFocusable();
+}
+document.addEventListener("DOMContentLoaded", p7KeyInit);
 
 // --- Removed: the momentum brake (2026-09-05) --------------------------------
 // p7BrakeInit used to take over a flick's deceleration on the picker folds

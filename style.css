@@ -227,6 +227,19 @@ body {
   width: 100%;
   height: 100%;
 }
+/* Keyboard-only ring: the canvas takes focus on @fold8/@fold9 (p7KeyInit,
+   page7.js). Inset, since the canvas IS the viewport. */
+#canvas:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: -4px;
+}
+/* A mouse in a narrow window hovers the timeline (p7FineHover, page7.js), so
+   the two hover-instruction cards say "hover", not "press and hold". Only
+   these two — the other .copy-mobile spans are about the phone's legend. */
+@media (max-width: 600px) and (hover: hover) and (pointer: fine) {
+  #page-4 .copy-desktop, #page-6 .copy-desktop { display: inline; }
+  #page-4 .copy-mobile,  #page-6 .copy-mobile  { display: none; }
+}
 
 /* No z-index on purpose. As a positioned element it already paints above
    .graphic-col (z-index 0) on tree order, and leaving it z-index:auto means it
@@ -4177,7 +4190,13 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      written per frame, so the pop transition above has to get out of the way —
      the house rule for anything JS repaints every frame. */
   .page9-sticky.training .page9-tray .page9-pill {
-    transition: none;
+    transition: background-color var(--p9-train-total, 1500ms) cubic-bezier(0.37, 0, 0.63, 1);
+  }
+  /* @fold11's column: the pills wear the page's own ground, so they read as
+     outlines on it. The fill turns white across the convoy (the transition
+     just above, on the train's own length) — never a snap. */
+  .page9-sticky:not(.engaged) .page9-tray .page9-pill:not(.is-extreme) {
+    background-color: var(--bg);
   }
   /* The BAND's own 0.85s slide goes too, and that one is load-bearing rather
      than tidiness: p9TrainToggle adds `.pills-in` right before it measures, to

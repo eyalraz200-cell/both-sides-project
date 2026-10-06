@@ -301,7 +301,11 @@ Do NOT infer תקיפה פיזית merely because:
 In those ambiguous cases, prefer הפרות סדר.
 
 HAND-REVIEW RULES (Fortress log, 2026-10-03):
-- Taking over an inhabited house while the family is inside -> החזקה בכפייה.
+- Taking over a house, building or residential cave ("seized a Palestinian-owned house", "took
+  over a house", "occupied a house after expelling its owner") -> ניכוס שטח. It becomes
+  החזקה בכפייה ONLY when the text says people were INSIDE AND HELD there during the takeover
+  ("took over a house while the family was inside"). "Inhabited", "home to a family" or
+  "residential" describe the building, not people held — still ניכוס שטח (user rule 2026-10-06).
 - Arson of houses, structures, vehicles or between houses (fire SET, not gunfire) with nobody
   inside or directly endangered -> פגיעה ברכוש. Fire set to an INHABITED house or an OCCUPIED
   vehicle, a Molotov thrown at people or houses with people in them, and fireworks thrown at

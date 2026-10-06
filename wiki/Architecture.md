@@ -621,6 +621,11 @@ What holds today:
   rule are `aria-hidden`. `.p7-scope-btn[hidden]` is `display: none` (its own
   `display: flex` used to beat the UA rule). The dashed card frame SVG
   (`.text-card-frame-dash`, js/core.js) is `aria-hidden` + `focusable="false"`.
+- **Landmarks (axe `region`), all without moving a pixel:** `.graphic-col` gets
+  `role="region"` + `aria-labelledby="canvas"` (`p7KeyInit`); `.seventh-eye` is wrapped at
+  init in a `display: contents` `<aside>` named by its own label (js/nav.js); the pill
+  descriptions `#p9PillDesc*`, the `p9Announce` live region and `#p7KeyHint` are appended to
+  `<main>`; `.p7-hint-band` (the touch-gesture line) is `aria-hidden`.
 - **`.a11y-only`** (`style.css`, next to the `*` reset) is the off-screen utility: a clipped
   1px box, **not** `display: none`/`visibility: hidden`, which would drop the element from
   the accessibility tree too.
@@ -630,12 +635,22 @@ What holds today:
   cards are already real DOM, so the argument of the piece is readable for free; the summary
   supplies only what the canvas draws — the camp/group roster (read off
   `FOLD4_COALITION_ROWS`/`FOLD4_CHANGE_ROWS`, so it can't disagree with the legend), the
-  per-group and per-category counts, the total, and the date range. **Every figure is derived
+  per-group and per-category counts, the total, the date range, and the nine axis events
+  (`P7_AXIS_EVENTS_ALL`: date, label, description — all nine, though the phone draws six).
+  While the timeline is live the canvas is keyboard-operable instead (see
+  [Timeline](Timeline.md) → Keyboard access). **Every figure is derived
   from the loaded `events.json`, never hardcoded** — the xlsx is rebuilt on each server start,
   so a hand-written number would go stale silently.
 - **Text contrast clears AA 4.5:1.** The two greys closest to the line carry their ratio in a
   comment at the declaration: the ACLED note title `#767676` and its chevron `#7a7a7a`.
   Tooltip fills go through `tooltipFill()` — see [Timeline](Timeline.md).
+
+- **Accepted exception — the group palette is kept as designed.** Against `--bg` two group
+  colours sit under the 3:1 non-text line (WCAG 1.4.11): תנועות התנחלות `#F9B624` 1.75:1 and
+  גורמים ערבים ישראלים `#31CE1C` 2.06:1 (the other four pass, `#6B89FF` at 3.09). This is a
+  deliberate decision (2026-10-06): the palette stays, no outlines. The non-colour path to a
+  group is the legend filter (keyboard-operable on both breakpoints), plus the legend labels.
+  If it is ever revisited, the nearest 3:1 shades at the same hue are `#C38805` and `#28A817`.
 
 - **@fold12 is keyboard-operable.** Pills are focusable `role="button"` toggles; Enter/Space
   routes through the same `commitDrop`/`commitDropState` the pointer paths use, with an

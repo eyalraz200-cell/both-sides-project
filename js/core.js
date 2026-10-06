@@ -62,13 +62,19 @@ window.addEventListener("orientationchange", refreshBreakpointCache, { passive: 
 // isMobile() is: the OS setting can flip mid-session, and every caller is
 // already inside a loop or a trigger that re-reads it on the next beat.
 //
-// What this DOES turn off: the fixed-duration fold beats (see makeTrigger in
-// js/groups.js, which collapses its duration to 0 and lands every fold on its
-// end state instantly) and CSS transitions (see the reduced-motion block in
-// style.css). What it deliberately does NOT turn off: motion that IS the
-// scroll position — @fold8's scrubbed timeline and @fold11's glide are the
-// content, not decoration around it, and freezing them would leave nothing to
-// read. Nor page9.js's drop animation, which is finalized.
+// What this DOES turn off — every TIME-based autoplay animation, which lands
+// on its end state at once: the fixed-duration fold beats (makeTrigger in
+// js/groups.js collapses its duration to 0), CSS transitions (the
+// reduced-motion block in style.css), @fold1's entrance and its title's
+// scroll-lag trailing (js/fold1-intro.js — the title still sits where the
+// scroll puts it, it just stops trailing), @fold9/@fold10's size-grid morph
+// (p7SizeGridSet), the legend filter's shrink-and-fly (p7FilterToggle and its
+// restore; p9FilterSnapshot on @fold12), and @fold10→@fold11's bridge glide
+// both ways (p8CurrentT, page8.js; p7EntryAnim, js/nav.js).
+// What it deliberately does NOT turn off: motion whose position IS the scroll
+// position — @fold8's scrubbed timeline fill is the content, not decoration
+// around it, and freezing it would leave nothing to read. Nor page9.js's
+// drop/migration animation on @fold12 (state 1), which is finalized.
 const REDUCED_MOTION_MQ =
   typeof window.matchMedia === "function"
     ? window.matchMedia("(prefers-reduced-motion: reduce)")
