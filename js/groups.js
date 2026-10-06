@@ -1961,6 +1961,8 @@ function fold7SquareAt(x, y, pad) {
 }
 window.addEventListener("mousemove", e => {
   if (isMobile() || !fold7HoverEnabled()) return;
+  // A title block in front of the squares owns the pointer (pointOverTitleBlock, js/core.js).
+  if (pointOverTitleBlock(e.clientX, e.clientY)) return;
   const i = fold7SquareAt(e.clientX, e.clientY, FOLD7_HOVER_PAD_PX);
   if (i !== -1) fold7SquareHover(i);
 }, { passive: true });

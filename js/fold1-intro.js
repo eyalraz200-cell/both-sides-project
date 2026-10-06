@@ -199,6 +199,11 @@ function page0LogoFadeMs() { return isMobile() ? PAGE0_LOGO_FADE_MS_MOBILE : PAG
 // is declared further down, right after GROUPS itself, since GROUPS doesn't
 // exist yet at this point in the script.
 
+// Partner logo + language button: fade-in length, both breakpoints.
+const PAGE0_CHROME_FADE_MS = 692;
+const PAGE0_CHROME_ELS = [document.querySelector(".seventh-eye"), document.getElementById("langWrap")].filter(Boolean);
+PAGE0_CHROME_ELS.forEach((el) => { el.style.opacity = "0"; });
+let page0ChromeShown = false;
 function playPage0Entrance() {
   const decorRows = PAGE0_DECORATIVE_DOT_ELS.map((d) => d.syncedRow);
   const groupRows = GROUPS.map((g) => PAGE0_GROUP_DOT_ANCHORS[g.color] && PAGE0_GROUP_DOT_ANCHORS[g.color].syncedRow)
@@ -258,6 +263,15 @@ function playPage0Entrance() {
       page0PopT[i] = p9Ease(rowRaw);
     });
     updateGroups();
+
+    // The two fixed corners — partner logo and language button — fade in once
+    // the title has landed (compare/-picked 2026-10-06). Hidden at parse time
+    // below, so they never flash before the entrance starts.
+    if (!page0ChromeShown) {
+      const chromeT = p9Ease(Math.max(0, Math.min(1, (elapsed - page0TitleMs()) / PAGE0_CHROME_FADE_MS)));
+      PAGE0_CHROME_ELS.forEach((el) => { el.style.opacity = chromeT >= 1 ? "" : String(chromeT); });
+      if (chromeT >= 1) page0ChromeShown = true;
+    }
 
     if (!page0EntranceDone) {
       const logoT = p9Ease(Math.max(0, Math.min(1, (elapsed - dotsDoneMs) / page0LogoFadeMs())));

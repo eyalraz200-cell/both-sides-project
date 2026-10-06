@@ -3636,7 +3636,11 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     // on-screen position (page8's grid blend, page9's drag-and-drop, fold13's
     // morph) still find one — just skips this loop's own drawing/stagger
     // bookkeeping for it.
-    if (claimedEvents && claimedEvents.has(events[i])) {
+    // …except while it is swelling under the pointer: the DOM square can't grow,
+    // so the canvas draws the bulged dot (it shows around the 3px square).
+    const claimedBulge = claimedEvents && claimedEvents.has(events[i]) &&
+                         (p7BulgeT.get(events[i]) || { t: 0 }).t > 0;
+    if (claimedEvents && claimedEvents.has(events[i]) && !claimedBulge) {
       const g = gridOn ? p7GridCell(events[i], isLeft) : null;
       posMap.set(events[i], g ? { x: g.cx - g.sq / 2, y: g.cy - g.sq / 2, alpha: 1, sq: g.sq } : { x: destX, y: destY, alpha: 1, sq: SQ });
       continue;
@@ -7239,6 +7243,9 @@ function p7HoverInit() {
         (typeof p8PhaseStart !== "undefined" && p8PhaseStart !== null) ||
         p7GridMorph !== null) { hide(); return; }
 
+    // A title block painted over the dot owns the pointer: no hover through it.
+    if (pointOverTitleBlock(lastCX, lastCY)) { hide(); return; }
+
     const rect = canvasEl.getBoundingClientRect();
     const mx = lastCX - rect.left;
     const my = lastCY - rect.top;
@@ -7272,7 +7279,7 @@ function p7HoverInit() {
     // most room to move inside. Fixed 2026-09-08.
     const hov = p7.hoveredEvent, hovB = hov && p7BulgeT.get(hov);
     const hovGrow = hovB ? (SQ_BULGE(hov) - p7.SQ) * p9Ease(hovB.t) / 2 : 0;
-    for (const [ev, pos] of p7.lastPositions) {
+    for (const [ev, pos] of p7HoverScanList()) {
       // pos.sq is the square's own drawn size (size grid / mid-morph); the
       // timeline's squares all share p7.SQ.
       const ownHalf = (pos.sq ?? p7.SQ) / 2;
@@ -7481,9 +7488,28 @@ function p7AxisCardsOnThisFold() {
 // Where the timeline's dots can be hovered (desktop) or picked (mobile): @fold8,
 // @fold9, and @fold10 right up to its own crossing (fold11SizeApply, js/groups.js)
 // — past it the dots size down and fly, and a tooltip would ride a moving target.
+// The hit-test's scan list. @fold7 paints no timeline yet (p7.lastPositions is
+// empty there): its only dots are the 8 LANDED sample squares, which are DOM
+// (.fold6-square), so their live rects stand in, in canvas space.
+function p7HoverScanList() {
+  if (currentPage !== 8 || p7.lastPositions.size) return p7.lastPositions;
+  const m = new Map(), claimed = p7GetClaimedEvents();
+  if (!claimed || typeof fold6SquareEls === "undefined") return m;
+  const c = document.getElementById("canvas").getBoundingClientRect();
+  FOLD6_SQUARE_ACTORS.forEach((actor, i) => {
+    const ev = p7EventForActorOccurrence(actor, fold6SquareOccurrence(i));
+    const r = fold6SquareEls[i] && fold6SquareEls[i].sq.getBoundingClientRect();
+    if (ev && r && r.width) m.set(ev, { x: r.left - c.left, y: r.top - c.top, alpha: 1, sq: r.width });
+  });
+  return m;
+}
 function p7TimelineLive() {
   if (typeof currentPage === "undefined") return false;
   if (currentPage === 9 || currentPage === 10) return true;
+  // @fold7 (#page-8): once the 8 sample squares have LANDED on the timeline they
+  // are its only dots, and they stay hoverable (fold7's own square hover ends
+  // when the fly starts, js/groups.js fold7HoverEnabled).
+  if (currentPage === 8) return typeof fold9FlyTrigger !== "undefined" && fold9FlyTrigger.currentRaw() >= 1;
   return currentPage === 11 && typeof fold11SizePast === "function" && !fold11SizePast();
 }
 

@@ -5079,8 +5079,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    click never matches :focus-visible, so nothing changes for the pointer. */
 .fold6-legend-filter:focus:not(:focus-visible) { outline: none; }
 .fold6-legend-filter:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 2px;
+  /* Quiet ring: 1px grey at ~3.3:1 on --bg (the 3:1 a focus indicator needs). */
+  outline: 1px solid rgba(0, 0, 0, 0.45);
+  outline-offset: 1px;
+  border-radius: 4px;
 }
 /* A group filtered out of the timeline. Set on .group-item, which never
    receives an inline opacity, so this can't be fought by the per-frame writes;

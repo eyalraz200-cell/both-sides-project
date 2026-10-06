@@ -4358,7 +4358,8 @@ function p9HoverInit() {
     // carrying a pill across the canvas shouldn't light up dot tooltips
     // under the ghost on its way to a zone.
     if (!p9HoverPageOk() || p9.anim || isMobile() ||
-        document.querySelector(".page9-sticky")?.classList.contains("dragging")) { hide(); return; }
+        document.querySelector(".page9-sticky")?.classList.contains("dragging") ||
+        pointOverTitleBlock(e.clientX, e.clientY)) { hide(); return; }
 
     const rect = canvasEl.getBoundingClientRect();
     const mx = e.clientX - rect.left;

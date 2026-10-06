@@ -625,3 +625,22 @@ function setTooltipColor(el, color, fill) {
   el.style.color = color;
   el.style.setProperty("--tip-fill", fill || tooltipFill(color));
 }
+
+// True when a visible title block (.text-card-frame — the bordered box, incl.
+// @fold12's ghost) sits under the viewport point. Dot hovers bail on it: a card
+// painted in front of a dot owns the pointer. Rects first; style only on a hit.
+function pointOverTitleBlock(x, y) {
+  for (const el of document.getElementsByClassName("text-card-frame")) {
+    const r = el.getBoundingClientRect();
+    if (!r.width || x < r.left || x > r.right || y < r.top || y > r.bottom) continue;
+    // Opacity doesn't inherit in computed style — a card fading out does so on
+    // the frame or an ancestor, so walk up to the section.
+    let shown = getComputedStyle(el).visibility !== "hidden";
+    for (let n = el; shown && n && n !== document.body; n = n.parentElement) {
+      if (parseFloat(getComputedStyle(n).opacity) <= 0.05) shown = false;
+      if (n.classList.contains("text-section")) break;
+    }
+    if (shown) return true;
+  }
+  return false;
+}

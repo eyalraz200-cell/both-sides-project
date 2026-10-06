@@ -513,6 +513,7 @@ label can centre over its own circle).
   the single-line baseline, so the date never moves. `maxWidth: null` = one line.
   Every line and the date are drawn `textAlign: "center"` on the block centre `lineX`.
   Widths are hand-tuned per event; harness recipe in [Dev-Workflow](Dev-Workflow.md).
+- **No hover through a title block.** Where a visible card frame (`.text-card-frame`, incl. @fold12's ghost) sits over a dot, the pointer belongs to the card: `pointOverTitleBlock(x, y)` (js/core.js) makes `doHitTest` here, page9's `onMove` and @fold5–7's sample-square hover (js/groups.js `mousemove`) skip the hover.
 - **Hovering a regular timeline square reveals the whole roster** — while
   `hoverActive` (`p7.hoveredEvent` set, i.e. a per-event square is hovered, NOT an axis
   dot), every **already-reached** headline event's **label** is forced visible, so the
