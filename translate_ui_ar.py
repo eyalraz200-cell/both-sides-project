@@ -216,8 +216,8 @@ HEAD_PATCHES = [
     ('<link rel="canonical" href="https://eyalraz200-cell.github.io/both-sides-project/"', '<link rel="canonical" href="https://eyalraz200-cell.github.io/both-sides-project/ar/"'),
     ('<meta property="og:url" content="https://eyalraz200-cell.github.io/both-sides-project/"', '<meta property="og:url" content="https://eyalraz200-cell.github.io/both-sides-project/ar/"'),
     # The Arabic share card (_og-card.html?lang=ar, Tajawal title) — the comment and both image tags.
-    ('og-image-v4.png is a 2400×1260 (2× of the 1200×630 card) shot of _og-card.html.', 'og-image-ar.png is a 2400×1260 (2× of the 1200×630 card) shot of _og-card.html?lang=ar.'),
-    ('both-sides-project/og-image-v4.png" />', 'both-sides-project/og-image-ar.png" />'),
+    ('og-image-v5.png is a 2400×1260 (2× of the 1200×630 card) shot of _og-card.html.', 'og-image-ar-v2.png is a 2400×1260 (2× of the 1200×630 card) shot of _og-card.html?lang=ar.'),
+    ('both-sides-project/og-image-v5.png" />', 'both-sides-project/og-image-ar-v2.png" />'),
 ]
 
 

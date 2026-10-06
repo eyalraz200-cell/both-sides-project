@@ -71,13 +71,16 @@
      The BORDER does not scale: 1.25px stroke, 2-on-2-off on a 4px period fitted
      to the perimeter, exactly the site's px.
      --dashscale and --cardr are derived from --fs in OG_RENDER, not set. */
+  /* Padding and border tuned by eye against the phone-size WhatsApp preview
+     (2026-10-06), px on the 1200x630 card; these override the scaled defaults. */
+  #card { --padv: 32px; --padh: 64px; --sw: 2.5px; --dash: 3px; --gap: 5.5px; --cardr: 20px; --sop: 1; }
   #plate {
-    --frame-border-w: 1.25px;   /* the site's stroke, literal — see paintPlateDash */
+    --frame-border-w: var(--sw, 1.25px);   /* the site's stroke, literal — see paintPlateDash */
     position: absolute; top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     width: max-content;
     box-sizing: border-box;
-    padding: calc(21px * var(--dashscale)) calc(29px * var(--dashscale));
+    padding: var(--padv, calc(21px * var(--dashscale))) var(--padh, calc(29px * var(--dashscale)));
     background: #fff;
     border: var(--frame-border-w) solid transparent;
     border-radius: var(--cardr);
@@ -195,7 +198,12 @@ function paintPlateDash() {
   rect.setAttribute('stroke', getComputedStyle(plate).getPropertyValue('--ink').trim() || '#000');
   /* Stroke and dash are the site's LITERAL px (not scaled with the title):
      the fine dotted line is the look, and scaling it made chunky dashes. */
-  var sw = DASH_STROKE;
+  var cs = getComputedStyle(plate);
+  var sw = parseFloat(cs.getPropertyValue('--sw')) || DASH_STROKE;
+  var dashOn = parseFloat(cs.getPropertyValue('--dash')) || DASH_PERIOD / 2;
+  var dashOff = parseFloat(cs.getPropertyValue('--gap')) || DASH_PERIOD / 2;
+  var sop = cs.getPropertyValue('--sop').trim();
+  rect.setAttribute('stroke-opacity', sop === '' ? 1 : sop);
   rect.setAttribute('stroke-width', sw);
   /* Inset by HALF the stroke: SVG centres a stroke on its path, so a fat one
      drawn at x=1 would hang half its width outside the plate's box. */
@@ -206,9 +214,11 @@ function paintPlateDash() {
   var r = Math.max(0, parseFloat(getComputedStyle(plate).getPropertyValue('--cardr')) - ins);
   rect.setAttribute('rx', r); rect.setAttribute('ry', r);
   var len = rect.getTotalLength ? rect.getTotalLength() : 0;
-  var want = DASH_PERIOD;
+  var want = dashOn + dashOff;
   var period = len ? len / Math.max(1, Math.round(len / want)) : want;
-  rect.setAttribute('stroke-dasharray', (period / 2) + ' ' + (period / 2));
+  /* Stretched to fit the perimeter, keeping the dash : gap ratio. */
+  var f = period / want;
+  rect.setAttribute('stroke-dasharray', (dashOn * f) + ' ' + (dashOff * f));
 }
 
 window.OG_RENDER = function (opts) {
@@ -225,7 +235,6 @@ window.OG_RENDER = function (opts) {
      dash, stroke, radius and padding all follow the title, never set alone. */
   var k = parseFloat(getComputedStyle(card).getPropertyValue('--fs')) / 18.5;
   card.style.setProperty('--dashscale', k);
-  card.style.setProperty('--cardr', (8 * k) + 'px');
 
   /* Enough squares to overflow 630px at the loosest pitch, then clipped. */
   var pitch = parseFloat(getComputedStyle(card).getPropertyValue('--pitch'));
