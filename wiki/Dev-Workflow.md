@@ -100,7 +100,7 @@ description text credits the partnership; the image carries no partner line. Res
 Chromium at `--window-size=1200,630 --force-device-scale-factor=2`. Platforms cache the
 image by URL, so a changed card only reaches already-shared links under a new filename (hence the version suffix; bump it again on the next change).
 `og:image` must be an absolute URL, so the
-tags hardcode the live GitHub Pages base — `https://eyalraz200-cell.github.io/both-sides-project/`.
+tags hardcode the live base — `https://both-sides.the7eye.org.il/`.
 If the site ever moves, those twelve URLs (four per file: `link rel="canonical"`, `og:url`,
 `og:image`, `twitter:image`) are the only things to update; the
 @fold15 share buttons build their URLs from `location.href` (`p12ShareInit`, page12.js) and

@@ -172,7 +172,7 @@ the credits card's link in each page's markup).
 
 ## Search / discoverability
 
-The site is served by GitHub Pages at `https://eyalraz200-cell.github.io/both-sides-project/`
+The site is served by GitHub Pages at `https://both-sides.the7eye.org.il/` (the `CNAME`; the old `eyalraz200-cell.github.io/both-sides-project/` 301s there)
 (no `CNAME`). The page carries a `<title>`, a `<meta name="description">`, a
 self-referencing absolute `<link rel="canonical">`, the OG/Twitter card set, a favicon and
 `lang="he"`. `robots.txt` (allow-all + the `Sitemap:` line) and `sitemap.xml` (the root and `methodology.html`)
