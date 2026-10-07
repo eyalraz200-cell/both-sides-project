@@ -197,8 +197,8 @@ def js_str(s):
 
 HEAD_PATCHES = [
     # The Arabic page has its own share image (Arabic title on the card).
-    ("og-image-v10.png is a 2400×1260 (2× of the 1200×630 card): a drawn two-sided dot field with this page's title centred on it.", "og-image-ar-v10.png is a 2400×1260 (2× of the 1200×630 card): a drawn two-sided dot field with this page's title centred on it."),
-    ('both-sides.the7eye.org.il/og-image-v10.png"', 'both-sides.the7eye.org.il/og-image-ar-v10.png"'),
+    ("og-image-v11.png is a 2400×1260 (2× of the 1200×630 card): a drawn two-sided dot field with this page's title centred on it.", "og-image-ar-v11.png is a 2400×1260 (2× of the 1200×630 card): a drawn two-sided dot field with this page's title centred on it."),
+    ('both-sides.the7eye.org.il/og-image-v11.png"', 'both-sides.the7eye.org.il/og-image-ar-v11.png"'),
     # Language menu (js/lang-switch.js): the Hebrew row is current on index.html;
     # the Arabic page marks its own row. Hrefs stay root-relative (./, en/, ar/):
     # <base href="../"> already resolves them from the site root, so ../ would
