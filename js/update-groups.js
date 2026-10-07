@@ -1659,6 +1659,14 @@ function updateGroups() {
     // rest of the grid dims around the hovered dot.
     if (typeof p7 !== "undefined" && p7.hoveredEvent && targetEvent) {
       if (targetEvent !== p7.hoveredEvent) opacity *= hoverDim(targetEvent.actor);
+    } else if (typeof p7 !== "undefined" && targetEvent && p7.hoverDimT > 0
+               && typeof p7Inspect !== "undefined" && p7Inspect.event) {
+      // The PHONE's pick: p7.hoveredEvent stays null there, the picked dot is
+      // p7Inspect.event and the dim is the p7.hoverDimT ramp (p7BulgeTick) —
+      // the same rule p7DrawSideSquares applies to the canvas dots. Without this
+      // the 8 never dimmed on a phone, on any fold (fixed 2026-10-08).
+      if (targetEvent !== p7Inspect.event)
+        opacity *= 1 - (1 - hoverDim(targetEvent.actor)) * p7.hoverDimT;
     }
     // Same parity for @fold12's own hover-dim (p9.hoveredEvent/hoveredCategoryIdx/
     // hoverDimT, page9.js's p9PlaceDot) — these squares are also drawn a second
@@ -1680,6 +1688,11 @@ function updateGroups() {
         const stillHighlighted = p9.hoverDimCategoryIdx !== null &&
           CATEGORY_TO_IDX[targetEvent.category] === p9.hoverDimCategoryIdx;
         if (!stillHighlighted) opacity *= dimFactor;
+      } else if ((p9.pickDimT || 0) > 0 && typeof p7Inspect !== "undefined" && p7Inspect.event) {
+        // @fold12's PHONE pick (p9.pickDimT, p7BulgeTick) — the clause
+        // p9PlaceDot's canvas dots take; the DOM square mirrors it.
+        if (targetEvent !== p7Inspect.event)
+          opacity *= 1 - (1 - hoverDim(targetEvent.actor)) * p9.pickDimT;
       }
     }
     // Fourth, lowest: a hovered legend ROW (fold6LegendHoverActor, js/groups.js)

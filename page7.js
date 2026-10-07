@@ -2033,6 +2033,7 @@ function p7BulgeTick() {
   // @fold12's own dim ramp. NOT p9.hoverDimT: page9's pill-hover rAF owns that
   // one and zeroes it every frame it isn't hovering a pill, so the picker's dim
   // would be stomped out from under it. Same duration, separate field.
+  const dimBefore = p7.hoverDimT, pickBefore = typeof p9 !== "undefined" ? (p9.pickDimT || 0) : 0;
   if (typeof p9 !== "undefined" && dt) {
     const pickTarget = p9Held ? 1 : 0;
     const ds = dt / p7HoverDimMs();
@@ -2048,6 +2049,12 @@ function p7BulgeTick() {
                                             : Math.max(0, p7.hoverDimT - ds);
   }
   if (p7BulgeT.size === 0 && p7.hoverDimT === dimTarget) p7BulgeLastTick = 0;
+  // PHONE: the 8 claimed DOM squares carry the same dim (js/update-groups.js),
+  // but draw() never touches DOM — re-place them on every frame either ramp
+  // moves, so they dim and recover in step with the canvas dots around them.
+  if (isMobile() && typeof updateGroups === "function" &&
+      (p7.hoverDimT !== dimBefore || (typeof p9 !== "undefined" && (p9.pickDimT || 0) !== pickBefore)))
+    updateGroups();
 }
 // "Still animating" has to answer against the SAME targets p7BulgeTick drives,
 // or the loop never settles. It used to read p7.hoveredEvent alone — but the
@@ -3755,8 +3762,23 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
         // picker's scan on the timeline fold — the opposite of the intent.
         const fill = colorOf.get(events[i].actor) || '#888';
         const rs = Math.max(1 / dpr, q(pos.sq));
-        if (fill !== batchFill) { flush(); batch = new Path2D(); batchFill = fill; }
-        batch.rect(q(pos.x), q(pos.y), rs, rs);
+        // Dimmed exactly like every other dot while something ELSE is picked
+        // (the rule below, p7.hoverDimT): the DOM square above it dims through
+        // updateGroups, and an opaque twin underneath showed straight through it.
+        let a = 1;
+        if (p7.hoverDimT > 0) {
+          const pointed = p7.hoveredEvent || (p7Inspect.dragging ? p7Inspect.event : null);
+          if (events[i] !== pointed) a = 1 - (1 - hoverDim(events[i].actor)) * p7.hoverDimT;
+        }
+        if (a >= 1) {
+          if (fill !== batchFill) { flush(); batch = new Path2D(); batchFill = fill; }
+          batch.rect(q(pos.x), q(pos.y), rs, rs);
+        } else {
+          flush();
+          if (a !== lastAlpha) { ctx.globalAlpha = a; lastAlpha = a; }
+          if (fill !== lastFill) { ctx.fillStyle = fill; lastFill = fill; }
+          ctx.fillRect(q(pos.x), q(pos.y), rs, rs);
+        }
       }
       continue;
     }
