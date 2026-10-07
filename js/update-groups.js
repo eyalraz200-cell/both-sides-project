@@ -1935,7 +1935,17 @@ function updateGroups() {
       : 1;
     const scaleT = growScale * filtF;
     if (target) {
-      const rest = fold6SquareRest(i, W, H);   // the wrap's own snapped anchor
+      // The wrap's own snapped anchor — read back from WHERE IT WAS PLACED
+      // (layoutFold6Squares), not recomputed from the live H. On the phone a
+      // browser-bar slide changes H on every tick but layoutGroups only re-places
+      // the wrap 180ms after the slide settles (js/bootstrap.js); recomputing
+      // the rest from the new H against a wrap still parked at the old one
+      // displaced all 8 by half the bar's height, then snapped them back —
+      // the squares "jumping" with the bar (fixed 2026-10-08). The same
+      // function places the wrap, so the two can no longer disagree.
+      const placed = wrap.style.left !== "" && wrap.style.top !== "";
+      const rest = placed ? { x: parseFloat(wrap.style.left), y: parseFloat(wrap.style.top) }
+                          : fold6SquareRest(i, W, H);
       const restX = rest.x, restY = rest.y;
       const dx = (target.x - restX) * moveT + growOffset;
       const dy = (target.y - restY) * moveT + growOffset;

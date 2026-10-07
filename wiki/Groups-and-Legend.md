@@ -388,6 +388,11 @@ are both fixed px, so on a phone an H-scaled distance would swing with the URL b
   card at `foldFrac("fold7")`) to their real timeline dots — `fold6SquareOccurrence(i)` says
   which chronological occurrence of that actor each stands in for. The real cascade never
   draws those 8 events (`p7GetClaimedEvents`), so the DOM square just stays once it lands.
+  The translate is `target − rest`, where `rest` is read back from the wrap's **placed**
+  `style.left/top` (set by `layoutFold6Squares`), never recomputed from the live H: on the
+  phone a browser-bar slide changes H every tick while the wrap is re-placed only after the
+  slide settles (js/bootstrap.js), and the two heights disagreeing displaced all 8 by half
+  the bar's height until they snapped back.
 - **shrink with the @fold11 glide** — as page8's blend carries them down to the legit
   band, both position *and size* lerp by the same ease (`js/update-groups.js`): the end
   size is the band's own rule (`legitGeom.cell` in bar mode, else `p9Metrics().legitSq`),
