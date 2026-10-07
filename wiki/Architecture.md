@@ -703,3 +703,10 @@ backing store (1179×2556 on a 3× phone). Further gains there need a rendering 
 another micro-optimisation. See [Timeline](Timeline.md) for the draw-loop specifics.
 
 - **Mobile horizontal overflow** is locked three ways under 600px: `html, body { overflow-x: clip }` and `html { touch-action: pan-y }` (style.css), plus a passive scroll listener in js/nav.js that snaps `scrollX` back to 0. Every off-screen measuring element (`groupLabelMeasureEl`, `fold6RowMeasureEl`, `fold6NoteTitleMeasureEl`, the js/groups.js probe, page7.js's `measEl`) is parked at `top:-9999px`, never `left:-9999px` — on an RTL page, content to the LEFT of the origin is scrollable overflow, and iOS ignores `clip`/`hidden` on the root for touch panning. That is what let the phone pan sideways after the picker's press-and-hold (launch eve, 2026-10-07). Desktop keeps `pan-x pan-y`.
+
+## Hover rules are real-pointer only
+
+Every `:hover` rule in `style.css` sits inside an `@media (hover: hover)` block. iOS Safari treats a
+tap whose `:hover` visibly changes the page (the share buttons' name label, a colour flip) as a hover
+and needs a SECOND tap to follow the link, so an ungated `:hover` makes links on the phone need two taps.
+A new hover rule goes inside such a block.

@@ -1298,8 +1298,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 }
 /* Hovering a dropped pill lifts it with the same shadow the tray's pills get
    (.page9-tray .page9-pill:hover) — same affordance, it's still grabbable. */
+@media (hover: hover) {
 .page9-sticky.page9-layout-v2 #page9ZoneAbove .page9-pill:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
 }
 
 /* Once dropped into the extreme zone, pills stack centered on the divider's
@@ -1539,9 +1541,11 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    not just `color` — at rest it is 0.55 opacity over a half-black label, so
    recolouring alone barely registers. No transition, matching the pill's own
    chrome (only its box-shadow moves on hover). */
+@media (hover: hover) {
 .page9-x-affordance #page9ZoneAbove .page9-pill:hover .page9-pill-x {
   color: #000;
   opacity: 1;
+}
 }
 /* ===== end optional ✕ ==================================================== */
 
@@ -1668,8 +1672,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   text-box-edge: cap alphabetic;
 }
 
+@media (hover: hover) {
 .page9-tray .page9-pill:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
 }
 
 .page9-pill:active {
@@ -2055,7 +2061,6 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   text-underline-offset: 0.12em;
   text-decoration-thickness: 1px;
 }
-.card-link:hover,
 .card-link:focus-visible {
   text-decoration-thickness: 2px;
 }
@@ -2608,7 +2613,6 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 .page12-share-btn.is-copied .page12-share-ico-link { display: none; }
 .page12-share-btn.is-copied .page12-share-ico-done { display: block; }
 
-.page12-share.is-outline .page12-share-btn:hover,
 .page12-share.is-outline .page12-share-btn:focus-visible,
 .page12-share.is-outline .page12-share-btn.is-copied {
   background: var(--ink);
@@ -2619,7 +2623,6 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   border-color: var(--ink);
   color: #fff;
 }
-.page12-share.is-filled .page12-share-btn:hover,
 .page12-share.is-filled .page12-share-btn:focus-visible {
   background: #444;
   border-color: #444;
@@ -2634,13 +2637,15 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   border-color: var(--brand);
   color: #fff;
 }
-.page12-share.is-brand .page12-share-btn:hover,
 .page12-share.is-brand .page12-share-btn:focus-visible {
   box-shadow: inset 0 0 0 100px rgba(0, 0, 0, 0.12);
 }
 
 /* The platform name on hover — a small dark label above the button. A pure
-   state flip, so it may fade. */
+   state flip, so it may fade. EVERY :hover in this file sits inside a
+   (hover: hover) block: iOS Safari treats a tap whose :hover visibly changes
+   the page (this label, a colour flip) as a hover and needs a SECOND tap to
+   follow the link. */
 .page12-share-btn::after {
   content: attr(data-tip);
   position: absolute;
@@ -2657,7 +2662,6 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   opacity: 0;
   transition: opacity 0.15s;
 }
-.page12-share-btn:hover::after,
 .page12-share-btn:focus-visible::after,
 .page12-share-btn.is-copied::after {
   opacity: 1;
@@ -3085,7 +3089,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
              scale(calc(var(--p7-scope-ring-t, 1) * var(--p7-scope-ring-hover, 1)));
   transition: background-color var(--ui-fade-ms) ease, border-color var(--ui-fade-ms) ease;
 }
+@media (hover: hover) {
 .p7-scope-btn:hover::before { border-color: rgba(0, 0, 0, 0.75); }
+}
 /* Pressed = the size grid is ON. Kept in step with p7Grid.on (and aria-pressed)
    by updateGroups, so a scroll crossing that flips the grid also flips this. */
 .p7-scope-btn.is-on::before {
@@ -5210,7 +5216,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   transition: color var(--ui-fade-ms) ease;
 }
 @media (min-width: 601px) { .lang-switch { font-size: 12px; } }
-.lang-switch:hover, .is-open > .lang-switch { color: var(--ink); }
+.is-open > .lang-switch { color: var(--ink); }
+@media (hover: hover) { .lang-switch:hover { color: var(--ink); } }
 .lang-switch-globe { width: 14px; height: 14px; display: block; }
 .lang-switch-code { display: block; line-height: 1; }
 /* PHONE: the globe alone. AFTER the base rule above — same specificity, so
@@ -5271,7 +5278,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   white-space: nowrap;
   transition: color var(--ui-fade-ms) ease;
 }
+@media (hover: hover) {
 .lang-menu-row:hover { color: #000; }
+}
 /* No focus ring when the menu opens by click/tap (js/lang-switch.js focuses a
    row) — keyboard navigation still gets one via :focus-visible. */
 .lang-menu-row:focus, .lang-switch:focus { outline: none; }
@@ -5286,7 +5295,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   background: transparent;
   transition: background-color var(--ui-fade-ms) ease, border-color var(--ui-fade-ms) ease;
 }
+@media (hover: hover) {
 .lang-menu-row:hover::before { border-color: rgba(0, 0, 0, 0.75); }
+}
 .lang-menu-row.is-current::before {
   background-color: var(--ink-soft);
   border-color: var(--ink-soft);
@@ -5869,3 +5880,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 .lang-ar .group-label {
   font-family: var(--font-ar);
 }
+@media (hover: hover) { .card-link:hover { text-decoration-thickness: 2px; } }
+@media (hover: hover) { .page12-share.is-outline .page12-share-btn:hover { background: var(--ink);  color: #fff; } }
+@media (hover: hover) { .page12-share.is-filled .page12-share-btn:hover { background: #444;  border-color: #444; } }
+@media (hover: hover) { .page12-share.is-brand .page12-share-btn:hover { box-shadow: inset 0 0 0 100px rgba(0, 0, 0, 0.12); } }
+@media (hover: hover) { .page12-share-btn:hover::after { opacity: 1; } }
