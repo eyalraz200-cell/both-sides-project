@@ -1323,7 +1323,10 @@ camps' packs meet on the centre line instead of straddling the corridor.
   `p7TargetForActorOccurrence` moves. It returns the packed cell
   (`p7GridCell`) blended through `p7MorphBlend` whenever the grid is on or a
   morph is running, so the 8 fly with the field instead of staying parked on
-  their timeline cell.
+  their timeline cell. **Mobile exception:** while the picker's hold is live
+  (`p7Inspect.dragging`), `p7DrawSideSquares` paints the 8 on the canvas too
+  (`claimedInLoupe`, same cell and colour, under their DOM squares) — the glass
+  is a blit of the canvas, so a DOM-only square was invisible inside it.
   **These 8 never re-derive the field's math — they call the same function the
   canvas calls.** Their glide blend reads `p8Beats(rawT)` (page8.js) and uses
   `posE` for position and `sizeE` for size, exactly as `blendAndDraw` does;
