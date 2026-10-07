@@ -573,9 +573,9 @@ time the URL/bottom bar collapses — which would resize every section and shift
 fold's `offsetTop` by hundreds of px under a fixed `scrollY`, throwing the reader backwards
 through the timeline folds (@fold8–@fold10).
 
-### No horizontal scroll, and no `overflow-x` guard
+### No horizontal scroll
 
-No story page has an `overflow-x` rule on `html` or `body`, and one must not be added.
+Desktop has no `overflow-x` rule on `html` or `body`, and one must not be added there; the phone's lock is described under «Mobile horizontal overflow» below.
 The documents genuinely fit their viewport from 320px up — verified by measuring
 `scrollWidth` at eight widths across the full scroll of each page (the recipe is in
 [Dev-Workflow](Dev-Workflow.md#checking-mobile)). Clamping with `overflow-x: hidden` would
@@ -702,4 +702,4 @@ rasterisation of the full-screen canvas**, not by JS: 12,283 squares on a phone-
 backing store (1179×2556 on a 3× phone). Further gains there need a rendering change, not
 another micro-optimisation. See [Timeline](Timeline.md) for the draw-loop specifics.
 
-- **Mobile horizontal overflow** is clipped on `html, body` (`overflow-x: clip`, under 600px, style.css). Without it, anything wider than the viewport made iOS show a sideways scroll indicator at the bottom.
+- **Mobile horizontal overflow** is locked three ways under 600px: `html, body { overflow-x: clip }` and `html { touch-action: pan-y }` (style.css), plus a passive scroll listener in js/nav.js that snaps `scrollX` back to 0. Every off-screen measuring element (`groupLabelMeasureEl`, `fold6RowMeasureEl`, `fold6NoteTitleMeasureEl`, the js/groups.js probe, page7.js's `measEl`) is parked at `top:-9999px`, never `left:-9999px` — on an RTL page, content to the LEFT of the origin is scrollable overflow, and iOS ignores `clip`/`hidden` on the root for touch panning. That is what let the phone pan sideways after the picker's press-and-hold (launch eve, 2026-10-07). Desktop keeps `pan-x pan-y`.

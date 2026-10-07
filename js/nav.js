@@ -364,6 +364,13 @@ sections.forEach(sec => sectionObserver.observe(sec));
 // top of the hero and fades away once scrolling starts; the class is flipped at
 // every width, but only the 600px block in style.css reacts to it (desktop keeps
 // the logo in its corner on every fold). `var` so a harness can retune it live.
+// Phone only: the page must never sit scrolled sideways. style.css locks
+// touch-action to pan-y under 600px; this catches whatever still gets through
+// (iOS after the picker's press-and-hold let the page pan right, 2026-10-07).
+window.addEventListener("scroll", () => {
+  if (isMobile() && window.scrollX !== 0) window.scrollTo(0, window.scrollY);
+}, { passive: true });
+
 var SEVENTH_EYE_FADE_SCROLL_PX = 8;   // scrolled further than this = gone
 (function () {
   const el = document.querySelector(".seventh-eye");

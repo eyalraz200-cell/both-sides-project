@@ -8008,7 +8008,7 @@ function p7InspectInit() {
   const measEl = document.createElement("div");
   measEl.setAttribute("aria-hidden", "true");
   Object.assign(measEl.style, {
-    position: "absolute", left: "-9999px", top: "0",
+    position: "absolute", left: "0", top: "-9999px",
     visibility: "hidden", pointerEvents: "none", whiteSpace: "normal",
   });
   document.body.appendChild(measEl);

@@ -69,6 +69,12 @@ body {
    working. */
 @media (max-width: 600px) {
   html, body { overflow-x: clip; }
+  /* …and the finger may only pan vertically. iOS let a sideways pan through
+     after the picker's press-and-hold (2026-10-07, launch eve) — `clip` alone
+     didn't stop it, so the touch itself is locked to the y axis. Desktop keeps
+     `pan-x pan-y` from the base rule above. js/nav.js snaps scrollX back to 0
+     as the last line of defence. */
+  html { touch-action: pan-y; }
 }
 /* NO text selection anywhere on the story pages (explicit instruction
    2026-10-05) — every element, with !important so no later rule switches it

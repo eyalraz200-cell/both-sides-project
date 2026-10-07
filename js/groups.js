@@ -386,7 +386,7 @@ const page0PopT = GROUPS.map(() => 0);
 // fallback-face measurement would place the grids a few px off.
 const groupLabelMeasureEl = document.createElement("span");
 groupLabelMeasureEl.className = "group-label";
-groupLabelMeasureEl.style.cssText = "visibility:hidden;left:-9999px;top:0";
+groupLabelMeasureEl.style.cssText = "visibility:hidden;left:0;top:-9999px";
 // The text a group's label actually RENDERS — a group may carry a shorter
 // `labelMobile` for the phone, where @fold3's column and the מקרא card's own cap
 // are narrow enough that the full name wraps to an extra line. Every consumer of
@@ -1699,7 +1699,7 @@ function fold8MeasureTooltipHeight() {
   // .is-visible is what flips it to display:flex; .is-mirrored matches the
   // variant @hidden-hover actually shows (same border-radius, same box width).
   probe.classList.add("is-visible", "is-mirrored");
-  probe.style.cssText += ";visibility:hidden;left:-9999px;top:-9999px;opacity:1;transform:none;";
+  probe.style.cssText += ";visibility:hidden;left:0;top:-9999px;opacity:1;transform:none;";
   const dateEl = probe.querySelector(".page9-tooltip-date");
   const descEl = probe.querySelector(".page9-tooltip-desc");
   if (dateEl) dateEl.textContent = p7FormatDateDMY(event.date);
@@ -3040,7 +3040,7 @@ const fold6NoteTitleMeasureEl = document.createElement("div");
 fold6NoteTitleMeasureEl.className = "fold6-note-title";
 fold6NoteTitleMeasureEl.setAttribute("aria-hidden", "true");
 fold6NoteTitleMeasureEl.style.cssText =
-  "position:absolute;left:-9999px;top:0;width:auto;white-space:nowrap;opacity:0;pointer-events:none";
+  "position:absolute;left:0;top:-9999px;width:auto;white-space:nowrap;opacity:0;pointer-events:none";
 fold6NoteTitleMeasureEl.textContent = FOLD6_NOTE_TITLE_TEXT;
 fold6NoteLayerEl.appendChild(fold6NoteTitleMeasureEl);
 // Hidden, permanently off-screen clone of the TOP row's *settled* label
@@ -3053,7 +3053,7 @@ fold6NoteLayerEl.appendChild(fold6NoteTitleMeasureEl);
 // staying put and just fading in.
 const fold6RowMeasureEl = document.createElement("span");
 fold6RowMeasureEl.className = "group-label";
-fold6RowMeasureEl.style.cssText = "visibility:hidden; left:-9999px; top:-9999px; font-size:14px; font-weight:400;";
+fold6RowMeasureEl.style.cssText = "visibility:hidden; left:0; top:-9999px; font-size:14px; font-weight:400;";
 fold6RowMeasureEl.textContent = groupLabelText(FOLD6_TOP_ROW);
 groupsOverlayEl.appendChild(fold6RowMeasureEl);
 const fold6NoteRuleEl = document.createElement("div");
