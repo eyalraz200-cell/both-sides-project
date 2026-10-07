@@ -3962,12 +3962,16 @@ async function initPage7() {
     p7.leftEvents  = data.filter(e => e.side === "left");
     p7.rightEvents = data.filter(e => e.side === "right");
     p7.minDate     = data[0].date;
-    // The axis runs to TODAY, not to the last event: the closing date card
-    // (P7_AXIS_EVENTS_ALL) then sits at the true end of the line and the axis
-    // stretches by itself as the days pass between weekly data refreshes.
-    // p7.dataEndDate keeps the last event's date for the text summary.
-    p7.dataEndDate = data[data.length - 1].date;
-    p7.maxDate     = p7TodayIso() > p7.dataEndDate ? p7TodayIso() : p7.dataEndDate;
+    p7.maxDate     = data[data.length - 1].date;
+    p7.dataEndDate = p7.maxDate;
+    // The closing card shows the LAST UPDATED date — the last event in the data —
+    // and so sits exactly at the axis's end. Patched here, once the data is in,
+    // on both rosters (the filtered one holds copies).
+    [P7_AXIS_EVENTS_ALL, P7_AXIS_EVENTS].forEach((list) => {
+      const last = list[list.length - 1];
+      last.date  = p7.maxDate;
+      last.label = p7FormatDateDMY(p7.maxDate, ".");
+    });
     p7.currentDate = p7PreStartDate();   // nothing reached until engagement
     p7.ready       = true;
     p7BuildDataSummary(data);
@@ -5050,11 +5054,11 @@ const P7_AXIS_EVENTS_ALL = [
     desc: "שחרור עשרים החטופים החיים שנותרו בעזה במסגרת הסכם הפסקת אש." },
   { date: "2026-07-17", label: "התפזרות הכנסת ה-25", maxWidth: null,
     desc: "אישור התפזרות הכנסת לקראת הבחירות באוקטובר." },
-  // The closing card: the reader's own date, computed at load (local time) — the
-  // data is refreshed weekly, so the axis always ends "now". It is always at or
-  // past maxDate (the last event in the data), so it parks at the axis's END (see
-  // the clamp in p7AxisEventTrueX); the +26 holds it clear of that end rather
-  // than flush to it.
+  // The closing card: the LAST UPDATED date — the last event in the data. Its
+  // date and title are placeholders here (today) and are overwritten with
+  // p7.maxDate when events.json loads (p7Load…, the `last.date =` patch), so the
+  // card always sits at the axis's END and moves with every weekly refresh; the
+  // +26 holds it clear of that end rather than flush to it.
   // `above` because it's the LAST event: parked at the axis's far end, a
   // downward card would open into (and past) that end with nothing below it
   // to hold it. Opening upward keeps the whole card on the axis.
