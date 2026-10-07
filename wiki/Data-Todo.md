@@ -12,9 +12,14 @@ date; the rules behind each one live in [Data](Data.md).
       now runs to 2026-10-02. Left for the user: 33 `unsure` Fortress twins (live;
       `acled_match = unsure`, listed in `_acled-filter/dedupe-2026-10-07.log`), 13 new rows
       flagged `needs_review`, 356 ACLED text edits to old rows in
-      `_acled-filter/changes-2026-10-07.csv` (sheet untouched); 10 new rows still without
-      `description_en_short`/`description_ar` (step 07 judged them too long twice + 1 error —
-      English falls back to ACLED's text, Arabic shows Hebrew until a hand pass).
+      `_acled-filter/changes-2026-10-07.csv` (sheet untouched); 6 new rows still without
+      `description_en_short`/`description_ar` (step 07 judges them too long on every pass —
+      English falls back to ACLED's text, Arabic shows Hebrew until a hand pass). Audit
+      2026-10-07 also left 4 `not relevant` calls for the user to confirm against past rulings:
+      row-20085 (Druze protest asking the government to help Syria's Druze — 37 older Druze
+      protests are `protesters against government`), row-21914 (Standing Together at Lapid's
+      home urging an opposition alliance), row-21210 (Damon Prison vigil for Palestinian
+      prisoners), row-21090 (left-wing protest at a chief rabbi's installation).
 - [ ] **ACLED Partner-tier trial ends 2027-04-06** — renew or the fetch stops.
 - [ ] `08_dedupe_fortress.py` (OpenAI, same rules as `_dedupe/INSTRUCTIONS.md`), run **right
       after the fetch, before step 01**: new ACLED rows vs Fortress rows within ±1 day; a `sure`
