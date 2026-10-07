@@ -211,6 +211,11 @@ HEAD_PATCHES = [
     ('<link rel="stylesheet" href="style.css"', '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400&family=IBM+Plex+Sans+Arabic:wght@300;400;500;700&display=swap" />\n  <link rel="stylesheet" href="style.css"'),
     ('<html lang="he" dir="rtl">', '<html lang="ar" dir="rtl" class="lang-ar">\n<!-- Arabic version. Every relative url (css, scripts, events.json) resolves\n     against the site root, so this page shares all of them with index.html. -->\n<base href="../" />'),
     ('<meta property="og:locale" content="he_IL" />', '<meta property="og:locale" content="ar_AR" />'),
+    # Shenkar's links (corner mark, @fold14 logo, credits) go to its English
+    # site on the en/ar pages (explicit instruction 2026-10-07).
+    ('href="https://www.shenkar.ac.il/"', 'href="https://www.shenkar.ac.il/en/"'),
+    # …and The Seventh Eye's to its English topic page.
+    ('href="https://www.the7eye.org.il/"', 'href="https://www.the7eye.org.il/topic/the-seventh-eye-in-english"'),
     # canonical only — the hreflang alternates (he / en / ar / x-default) are the
     # same absolute urls on all three pages and pass through unchanged.
     ('<link rel="canonical" href="https://eyalraz200-cell.github.io/both-sides-project/"', '<link rel="canonical" href="https://eyalraz200-cell.github.io/both-sides-project/ar/"'),
