@@ -87,10 +87,10 @@ Don't remove the gate.
 
 All three pages — `index.html` (Hebrew), `en/index.html`, `ar/index.html` — carry `og:*` +
 `twitter:*` meta tags in `<head>` so WhatsApp/X/Facebook render a preview card. All three use ONE
-image, **`og-image-v7.png`, 2400×1260** (2× of the 1200×630 card): the pinned timeline's dot field
+image, **`og-image-v8.png`, 2400×1260** (2× of the 1200×630 card): the pinned timeline's dot field
 alone — no title, no axis, no cards — so it needs no per-language version. It was shot from a
 throwaway copy of the site with the axis, years, cards and chrome switched off and the field filling
-the screen; nothing in the project produces it. The older images (`og-image-v6.png`, an earlier crop of the same field, and the title-on-plate cards `og-image-v5.png`,
+the screen, rendered at the magnified resolution so the squares stay sharp; nothing in the project produces it. The older images (`og-image-v6.png` / `og-image-v7.png`, earlier crops of the same field — v7 soft from a stretched magnify, and the title-on-plate cards `og-image-v5.png`,
 `og-image-en-v4.png`, `og-image-ar-v2.png`, from `_og-card.html`) stay in the repo only so links
 shared under them keep their image. Platforms cache the
 image by URL, so a changed card only reaches already-shared links under a new filename (hence the version suffix; bump it again on the next change).
