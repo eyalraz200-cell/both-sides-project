@@ -3734,13 +3734,7 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     // so the canvas draws the bulged dot (it shows around the 3px square).
     const claimedBulge = claimedEvents && claimedEvents.has(events[i]) &&
                          (p7BulgeT.get(events[i]) || { t: 0 }).t > 0;
-    // …and while the phone's loupe is live: the glass is a blit of THIS canvas,
-    // so a DOM-only square is invisible inside it — the reader could land the
-    // finger on one of the 8 and see an empty cell in the magnifier. The canvas
-    // paints the dot under the DOM square for the length of the hold (same
-    // cell, same colour, so nothing changes on the page itself). Mobile only.
-    const claimedInLoupe = isMobile() && p7Inspect.dragging;
-    if (claimedEvents && claimedEvents.has(events[i]) && !claimedBulge && !claimedInLoupe) {
+    if (claimedEvents && claimedEvents.has(events[i]) && !claimedBulge) {
       // A filtered-out claimed square is not on screen: kept out of posMap like
       // every other hidden dot, or the hover / picker found it invisible on its
       // unfiltered cell and the bulge pushed neighbours away from empty space.
