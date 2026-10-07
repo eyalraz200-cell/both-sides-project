@@ -187,11 +187,15 @@ numbers in the source.
    unlike `custom`, which only the on-page panel can run.
 3. Set `CONFIG.viewport` (`'desktop'`, `'mobile'` or `'both'`) — the template gates the
    injection itself.
-4. Add `"_debug-<thing>.js"` to the dev loader's array at the foot of `index.html`
-   (`["_debug-bus.js", "_debug-inspect.js", …]`, inside the local-host-only inline
-   script, after the bus and the inspector). Never a plain `<script>` tag outside that
-   block — it would ship to the deployed site. `_harness_files()` in server.py reads the
-   names from that array.
+4. **The site ships with no dev loader** (removed for launch, 2026-10-07). To load a
+   harness, first copy `harness-bus.js` → `_debug-bus.js` and `harness-inspect.js` →
+   `_debug-inspect.js` from `~/.claude/templates/`, then re-add the local-host-only inline
+   loader at the foot of `index.html`, after `reload.js`. It must use the same host test
+   as `isLocalHost()` in js/core.js, and its array is `["_debug-bus.js",
+   "_debug-inspect.js", "_debug-<thing>.js"]`, written through `document.write` with a
+   `?v=Date.now()` cache-buster. Never a plain `<script>` tag outside that block — it
+   would ship to the deployed site. `_harness_files()` in server.py reads the names from
+   that array. Remove the loader again before deploying.
 5. Verify with `node --check` + `curl`.
 
 **Rules (non-negotiable):**
