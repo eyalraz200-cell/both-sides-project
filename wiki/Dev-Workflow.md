@@ -86,18 +86,13 @@ Don't remove the gate.
 ## Link previews (Open Graph)
 
 All three pages — `index.html` (Hebrew), `en/index.html`, `ar/index.html` — carry `og:*` +
-`twitter:*` meta tags in `<head>` so WhatsApp/X/Facebook render a preview card. There is one card per language, all **2400×1260** (2× of the
-1200×630 card): `og-image-v5.png` (Hebrew, `index.html`), `og-image-en-v4.png` (English,
-`en/index.html`) and `og-image-ar-v2.png` (Arabic, `ar/index.html` — `translate_ui_ar.py`'s
-`HEAD_PATCHES` swap the Hebrew filename for it, so a regenerate keeps it). All three are headless
-shots of the artboard `_og-card.html` at `?bare=1`, `?bare=1&lang=en` and `?bare=1&lang=ar`: the
-title alone on the site's own title block over two dot columns. The plate is the site's title block (`.text-card-frame`): white fill, `#111` ink at line-height 1.5,
-width hugging the title, a dotted border fitted to the perimeter — with padding and border tuned by eye
-against the phone-size WhatsApp preview (`#card` vars in `_og-card.html`, px on the 1200×630 card):
-32px above/below, 64px left/right, 2.5px stroke, 3px dash / 5.5px gap, 20px radius, full opacity — on the site's `#FDFCFF` ground. Discordia for
-Hebrew and English; the Arabic card uses Tajawal at the site's Arabic title ratio (21 / 18.5). The
-description text credits the partnership; the image carries no partner line. Reshoot with a headless
-Chromium at `--window-size=1200,630 --force-device-scale-factor=2`. Platforms cache the
+`twitter:*` meta tags in `<head>` so WhatsApp/X/Facebook render a preview card. All three use ONE
+image, **`og-image-v6.png`, 2400×1260** (2× of the 1200×630 card): the pinned timeline's dot field
+alone — no title, no axis, no cards — so it needs no per-language version. It was shot from a
+throwaway copy of the site with the axis, years, cards and chrome switched off and the field filling
+the screen; nothing in the project produces it. The older title-on-plate cards (`og-image-v5.png`,
+`og-image-en-v4.png`, `og-image-ar-v2.png`, from `_og-card.html`) stay in the repo only so links
+shared under them keep their image. Platforms cache the
 image by URL, so a changed card only reaches already-shared links under a new filename (hence the version suffix; bump it again on the next change).
 `og:image` must be an absolute URL, so the
 tags hardcode the live base — `https://both-sides.the7eye.org.il/`.

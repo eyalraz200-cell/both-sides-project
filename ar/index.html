@@ -25,21 +25,21 @@
   <link rel="alternate" hreflang="x-default" href="https://both-sides.the7eye.org.il/" />
   <!-- Open Graph / Twitter card — what WhatsApp, X, Facebook, LinkedIn render when
        the link is shared (the @fold15 share row relies on this). og:image must be an
-       ABSOLUTE url; og-image-ar-v2.png is a 2400×1260 (2× of the 1200×630 card) shot of _og-card.html?lang=ar.
+       ABSOLUTE url; og-image-v6.png is a 2400×1260 (2× of the 1200×630 card) — the timeline field alone, no text, shared by all three languages.
        Served from GitHub Pages at /both-sides-project/. -->
   <meta property="og:type" content="article" />
   <meta property="og:locale" content="ar_AR" />
   <meta property="og:title" content="متطرفون من الجانبين" />
   <meta property="og:description" content="جمعنا آلاف التحركات السياسية في الحيز العام على مدى السنوات الأربع الأخيرة. قرروا بأنفسكم - من هم المتطرفون من الجانبين؟&#10;مشروع تفاعلي من إعداد إيال راز بالشراكة مع العين السابعة وشنكار." />
   <meta property="og:url" content="https://both-sides.the7eye.org.il/ar/" />
-  <meta property="og:image" content="https://both-sides.the7eye.org.il/og-image-ar-v2.png" />
+  <meta property="og:image" content="https://both-sides.the7eye.org.il/og-image-v6.png" />
   <meta property="og:image:width" content="2400" />
   <meta property="og:image:height" content="1260" />
   <meta property="og:image:alt" content="متطرفون من الجانبين — تحليل نشاط المعسكرات السياسية في إسرائيل" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="متطرفون من الجانبين" />
   <meta name="twitter:description" content="جمعنا آلاف التحركات السياسية في الحيز العام على مدى السنوات الأربع الأخيرة. قرروا بأنفسكم - من هم المتطرفون من الجانبين؟&#10;مشروع تفاعلي من إعداد إيال راز بالشراكة مع العين السابعة وشنكار." />
-  <meta name="twitter:image" content="https://both-sides.the7eye.org.il/og-image-ar-v2.png" />
+  <meta name="twitter:image" content="https://both-sides.the7eye.org.il/og-image-v6.png" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -358,28 +358,5 @@
   <script src="js/fold11.js"></script>
   <script src="js/bootstrap.js"></script>
   <script src="reload.js"></script>
-  <!-- SCAFFOLDING — the harness transport (must load BEFORE any _debug-*.js),
-       requested ONLY on a dev host. GitHub Pages builds with Jekyll, which
-       refuses to serve any path beginning with an underscore, so every
-       _debug-* tag that reaches production is a guaranteed 404 in a real
-       visitor's console. The alternative fix — a .nojekyll file — would make
-       Pages serve them instead, i.e. ship the whole harness rig to visitors,
-       which the project's own rule forbids. Same host test as isLocalHost()
-       in js/core.js and reload.js's private copy; keep the three in sync.
-       Add further _debug-* tags INSIDE this block, never outside it. -->
-  <script>
-  (function () {
-    var h = location.hostname;
-    var local = h === "localhost" || h === "127.0.0.1" || h === "[::1]" || h === "" ||
-      h.endsWith(".local") || /^10\./.test(h) || /^192\.168\./.test(h) ||
-      /^172\.(1[6-9]|2\d|3[01])\./.test(h);
-    if (!local) return;
-    ["_debug-bus.js", "_debug-inspect.js"].forEach(function (src) {
-      // Cache-busted: VS Code's built-in browser keeps serving a stale harness
-      // script despite the dev server's no-cache headers, replaying old state.
-      document.write('<script src="' + src + '?v=' + Date.now() + '"><\/script>');
-    });
-  })();
-  </script>
 </body>
 </html>
