@@ -3962,7 +3962,12 @@ async function initPage7() {
     p7.leftEvents  = data.filter(e => e.side === "left");
     p7.rightEvents = data.filter(e => e.side === "right");
     p7.minDate     = data[0].date;
-    p7.maxDate     = data[data.length - 1].date;
+    // The axis runs to TODAY, not to the last event: the closing date card
+    // (P7_AXIS_EVENTS_ALL) then sits at the true end of the line and the axis
+    // stretches by itself as the days pass between weekly data refreshes.
+    // p7.dataEndDate keeps the last event's date for the text summary.
+    p7.dataEndDate = data[data.length - 1].date;
+    p7.maxDate     = p7TodayIso() > p7.dataEndDate ? p7TodayIso() : p7.dataEndDate;
     p7.currentDate = p7PreStartDate();   // nothing reached until engagement
     p7.ready       = true;
     p7BuildDataSummary(data);
@@ -4023,7 +4028,7 @@ function p7BuildDataSummary(data) {
   host.innerHTML =
     `<h2>${tr("תיאור מילולי של הנתונים")}</h2>` +
     `<p>${trf("הפרויקט מציג {n} פעולות פוליטיות מתועדות שהתרחשו במרחב הציבורי בישראל ובשטחים, בין {from} ל־{to}. תיאורי האירועים ומועדיהם לקוחים ממאגר ACLED ומיומן אלימות המתנחלים של ״המבצר״. כל ריבוע בהדמיה מייצג פעולה אחת, וצבעו מציין את הקבוצה שביצעה אותה.",
-      { n: he(data.length), from: date(p7.minDate), to: date(p7.maxDate) })}</p>` +
+      { n: he(data.length), from: date(p7.minDate), to: date(p7.dataEndDate) })}</p>` +
     `<h3>${tr("חלוקה למחנות ולקבוצות")}</h3>` + campList +
     `<h3>${tr("חלוקה לפי סוג הפעולה")}</h3><ul>${catList}</ul>` +
     // The events marked on the year axis — the full roster (P7_AXIS_EVENTS_ALL),
