@@ -106,7 +106,7 @@ events (`p7GetClaimedEvents`), so the DOM square simply stays. The fly is indepe
 the fly so a fast scroll into `#page-9` doesn't strand it.
 The tooltip holds `FOLD9_TOOLTIP_SHRINK_DELAY_MS` (500 ms) after square 0 lands, then
 shrinks over `FOLD9_TOOLTIP_SHRINK_MS` (400 ms); reversing un-latches immediately and
-cancels the pending timer. **Desktop: once @fold7's card is a whole screen above the top edge the tooltip is simply gone (just off the top is too early — it is still riding its dot onto the timeline)** (`fold8DemoWayPast` → `forceHide`, checked every scroll by `checkFold8DemoWayPast`), whatever its fly/hold/shrink clocks are still doing — a fast scroll never leaves it over later folds.
+cancels the pending timer. **Desktop: once the demo's own dot (square 0) is out of sight the tooltip is simply gone** (`fold8DemoWayPast` → `forceHide`, checked every scroll by `checkFold8DemoWayPast`), whatever its fly/hold/shrink clocks are still doing — a fast scroll never leaves it over later folds.
 
 
 ## Mobile status

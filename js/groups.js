@@ -2527,16 +2527,15 @@ function p7ScopeCancelPending() {
 // @fold14's partner card pops the newcomers in (checkFold14Pop); @fold15's share
 // card flies the couples (checkFold14Pair) — each on its own house crossing.
 
-// DESKTOP: once @fold7's card is a whole screen above the top edge the reader
-// is way past @fold5's demo (just off the top is too early — the tooltip is
-// still riding its dot onto the timeline there), so its tooltip is simply not there — gone at once,
-// whatever its own hold/shrink/fly clocks are still doing (explicit
-// instruction 2026-10-07). Read by updateGroups' forceHide; the check below
-// repaints on the flip, since nothing else may be animating then.
-const fold8DemoPastCardEl = document.querySelector("#page-8 .text-card");
+// DESKTOP: once the demo's own dot (square 0, the one the tooltip rides) is
+// out of sight, @fold5's tooltip is simply not there — gone at once, whatever
+// its fly/hold/shrink clocks are still doing; while the dot is on screen they
+// play as built (explicit instruction 2026-10-07). Read by updateGroups'
+// forceHide; the check below repaints on the flip.
 function fold8DemoWayPast() {
-  return !isMobile() && !!fold8DemoPastCardEl
-    && fold8DemoPastCardEl.getBoundingClientRect().bottom < -window.innerHeight;
+  if (isMobile() || typeof fold6SquareEls === "undefined" || !fold6SquareEls[0]) return false;
+  const r = fold6SquareEls[0].sq.getBoundingClientRect();
+  return r.bottom < 0 || r.top > window.innerHeight;
 }
 let fold8DemoWayPastLast = null;
 function checkFold8DemoWayPast() {
