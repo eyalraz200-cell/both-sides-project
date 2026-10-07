@@ -5,10 +5,30 @@ date; the rules behind each one live in [Data](Data.md).
 
 ## In flight
 - [x] Second split pass (70 rows → 84 children): classified, translated, crowds corrected, shipped (2026-10-03).
+- [x] ACLED refresh automation (2026-10-07): `00_fetch_acled.py` (API pull + the five-actor
+      fetch filter + append/flag/hide by `acled_id`) and `run_pipeline.py` (all seven steps
+      unattended, then `server.py --sync-only`). See [Data](Data.md#refresh-automation).
+- [x] First real run of the automation (2026-10-07): fetch → 08 dedupe → 01–07 → json, site
+      now runs to 2026-10-02. Left for the user: 33 `unsure` Fortress twins (live;
+      `acled_match = unsure`, listed in `_acled-filter/dedupe-2026-10-07.log`), 13 new rows
+      flagged `needs_review`, 356 ACLED text edits to old rows in
+      `_acled-filter/changes-2026-10-07.csv` (sheet untouched); 10 new rows still without
+      `description_en_short`/`description_ar` (step 07 judged them too long twice + 1 error —
+      English falls back to ACLED's text, Arabic shows Hebrew until a hand pass).
+- [ ] **ACLED Partner-tier trial ends 2027-04-06** — renew or the fetch stops.
+- [ ] `08_dedupe_fortress.py` (OpenAI, same rules as `_dedupe/INSTRUCTIONS.md`), run **right
+      after the fetch, before step 01**: new ACLED rows vs Fortress rows within ±1 day; a `sure`
+      match hides the Fortress row as `dup of row-N`. **Decided 2026-10-07: PLO-only ACLED rows
+      are not dedupe candidates** — they never ship, so a Fortress row matching one stays live
+      and no new `corroborated_by` is written (the existing 230 stay as they are). Unsure pairs
+      go to the review email. Built and run 2026-10-07.
+- [ ] Fortress updates: one-time file for now (through 2026-09-28); it will be updated in the
+      future, mechanism unknown (2026-10-07). When it is, new Fortress rows need their own
+      fetch and the same dedupe run the other way (new Fortress vs ACLED).
 
 ## Tail cut (temporary)
-- [ ] `server.py` drops every row dated after ACLED's last day (`last_acled`, 2026-07-03) —
-      576 rows are off the site **for now only**. Every pipeline step (actor, split,
+- [ ] `server.py` drops every row dated after ACLED's last day (`last_acled`, 2026-10-02 since
+      the 2026-10-07 refresh) — the Fortress tail past it is off the site **for now only**. Every pipeline step (actor, split,
       type, Hebrew, English, Arabic, crowd) still runs over them so they are ready the day the
       cut is lifted. Lifting it = removing the `last_acled` check, not re-processing.
 

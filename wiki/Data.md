@@ -15,15 +15,21 @@ One object per event:
 | `descHeMedium` | Per-event Hebrew description, shown in the hover tooltip |
 | `crowd` | Integer crowd estimate or `null` — from the workbook's `crowd` column via `parse_crowd`, see below. Drives the crowd tier (`p7BulgeTier`): the @fold8 hover bulge ([Timeline](Timeline.md#the-hover-bulge--p7bulgetick--p7bulgelist--p7bulgeshift-page7js)) and @fold9's size grid ([Timeline](Timeline.md#the-size-grid--p7sizegridset-page7js)) |
 
-Committed dataset (`events.json` at the repo root, `crowd` field included): **12,283
-events — 5,552 left, 6,731 right** (2026-10-05), from **2023-01-01** to **2026-07-03** — the
-sheet's 18,499 rows minus the 1,804 marked in the `hidden` column, the 3,806 dropped by
-`SOLE_SOURCE_EXCLUDE`, the 19 still waiting on the pipeline (no `event_type`, or a Fortress
-line not yet rewritten), the 11 live `not relevant` rows, and the 576 dated after the last
-ACLED event (`CUT_AFTER_LAST_ACLED`, all below) — counted in `load_events()`'s order.
+Committed dataset (`events.json` at the repo root, `crowd` field included): **13,876
+events — 5,761 left, 8,115 right** (2026-10-07, first automated refresh), from **2023-01-01**
+to **2026-10-02** — the sheet's 20,609 rows (16,825 ACLED, 3,778 Fortress, 6 manual) minus
+the 2,139 marked in the `hidden` column, the rows whose only source is in
+`SOLE_SOURCE_EXCLUDE`, the few still waiting on the pipeline (no `event_type`, or a Fortress
+line not yet rewritten), the live `not relevant` rows, and anything dated after the last
+ACLED event (`CUT_AFTER_LAST_ACLED`, all below) — counted in `load_events()`'s order. The
+2026-10-07 refresh added 2,718 ACLED rows (`row-19440`…, July–October 2026; 800 PLO-only,
+36 `not relevant`, 13 flagged for review) and 23 split children; 1,536 events are dated after
+the old 2026-07-03 end. Shipped settler events run ~410/month from July against ~240 before —
+ACLED's own Palestine settler-actor count rose from 455 (June) to 565–586 (Aug–Sep), and
+the old hand+AI filter trimmed more than the five-actor rule does.
 
 **The timeline stops where ACLED stops, for now.** `load_events()` finds the latest date
-among rows whose `data_source` is `acled` (2026-07-03 today) and drops every row dated after
+among rows whose `data_source` is `acled` (2026-10-02 today) and drops every row dated after
 it, whatever its source — The Fortress keeps posting weeks past ACLED's last export, and
 those fortress-only dots would trail alone at the axis's end. `CUT_AFTER_LAST_ACLED = False`
 in `server.py` ships the full tail again; a newer ACLED export moves the cut forward by itself.
@@ -91,10 +97,76 @@ rewrites each `<!-- prompt:0N_name.py --><pre>…</pre><!-- /prompt -->` block f
 or the public appendix lies about what the model was told. The prose (counts, dates, review
 rounds) is hand-written — update it when this page's facts change.
 
+## Refresh automation — `00_fetch_acled.py` + `run_pipeline.py`
+
+Two scripts at the repo root turn an ACLED refresh into two commands (added 2026-10-07):
+
+1. **`python3 00_fetch_acled.py`** (`--dry-run` reports only; `--since YYYY-MM-DD`
+   overrides the window). Logs in to ACLED's API with `ACLED_EMAIL` / `ACLED_PASSWORD` (from
+   the env or the gitignored `.env`; the account is on a **Partner-tier trial until
+   2027-04-06**, after which the account reverts to Open and this endpoint may stop
+   answering — the script warns 30 days ahead and fails loudly after), reads only the Israel +
+   Palestine events **added or edited since the last run** — ACLED's `timestamp` (last-edit
+   time) past the value stored in `_acled-filter/last-fetch.json`; the first run starts from
+   the July 2026 export's newest edit (`FIRST_RUN_TS`, 2026-07-10). ACLED corrects and merges
+   old events too, and this picks those up without re-reading the table. Deletions come from
+   ACLED's deleted-events endpoint (`/api/deleted/read`, by `deleted_timestamp`); if that
+   endpoint fails the run says so and applies no deletions. Then:
+   - **The fetch filter** keeps a row only when `actor1` is one of `Protesters (Israel)`,
+     `Rioters (Israel)`, `Settlers (Israel)`, `Settlement Emergency Squad`,
+     `Unidentified Armed Group (Israel)` (`KEEP_ACTORS`). This is the user's July 2026 hand
+     filter reverse-engineered from `_acled-filter/` (gitignored: the raw exports and the two
+     hand-filtered tables); measured against it the rule misses 13 of ~12,400 live events —
+     accepted 2026-10-07. Checked the same day on ACLED's 2026-07-04 → 10-01 data (4,720
+     rows, 1,985 kept): the dropped rows that name an Israeli group carry it only as target
+     or companion (Palestinians stoning settlers; army escorting settlers; 39 Palestinian
+     rioters clashing with settler rioters, coded Palestinian-side first) — all types the hand
+     filter dropped too; the user chose to keep the rule as is. It is only the cheap net: step 01 still reads every row and marks
+     `not relevant` (police demolitions, foreign actors…). Every `actor1` value the script
+     has never seen (`_acled-filter/seen-actors.txt`) is printed with a count, so a renamed or
+     new ACLED actor cannot slip past silently — add it to `KEEP_ACTORS` if it belongs.
+   - Matches on `event_id_cnty` = `acled_id`: a **new id** is appended as a fresh `row-N`
+     (`data_source = acled`, geodata, `crowd` prefilled from ACLED's `crowd size=` tag only when it is a figure — since 2026 ACLED mostly tags a category (small, medium…), which is left blank for step 05 to read from the text; every
+     pipeline column blank); a **known id whose text changed** is listed in
+     `_acled-filter/changes-<date>.csv` and the sheet is left alone (hand stamps must
+     survive; decide by hand — a known id whose `actor1` ACLED recoded outside the filter is
+     listed there too); a known id **on the deleted list** gets `hidden = acled deleted
+     <date>`. The workbook is backed up to `_xlsx-archive/events-before-fetch-<date>.xlsx`
+     first.
+   Only events dated from `DATASET_START` (2023-01-01) are read — the first run on 2026-10-07
+   pulled 631 pre-2023 rows that ACLED had merely re-edited; they were deleted again.
+2. **`python3 08_dedupe_fortress.py events.xlsx`** (`--dry-run` to only print) — the Fortress
+   dedupe, run right after the fetch. Every live ACLED row with a blank `dedupe_note` (not
+   hidden, not PLO-only — PLO-only rows never ship, so a Fortress twin of one just stays live,
+   decided 2026-10-07) is sent with the live Fortress rows dated ±1 day, synchronous
+   `gpt-5.6-terra` calls (8 threads, ~1 s each), same rules as `_dedupe/INSTRUCTIONS.md`.
+   `sure` → the Fortress row gets `hidden = dup of row-N`, `acled_duplicate_of`,
+   `acled_match = sure`, `dedupe_note` (`… | 08 <date>`), and the ACLED row's `dedupe_note`
+   names the twin; `unsure` → the Fortress row keeps shipping but carries `acled_match =
+   unsure` + the note, for review; `none` → ACLED `dedupe_note = no fortress twin`. ACLED
+   rows checked from the Fortress side on 2026-10-03 carry `read from the Fortress side |
+   2026-10-03`. So `dedupe_note` is on ACLED rows too now — it is the "already checked" stamp.
+   First run 2026-10-07: 1,365 ACLED rows, 414 sure (335 Fortress rows hidden — some matched
+   twice), 33 unsure left live, 846 none.
+3. **`python3 run_pipeline.py`** (`--from 02`, `--only 07`, `--xlsx <copy>` to test on a copy
+   without touching the json) runs the seven steps below in
+   order with no hand copying: `submit events.xlsx` → polls `status` every 2 min (calls
+   `retry_failed` on a failed chunk, gives up after 6 h with a resume hint) → `download` →
+   moves `events - <suffix>.xlsx` over `events.xlsx` (the previous workbook goes to
+   `_xlsx-archive/`). A step with nothing to send is skipped; a step whose state file shows a
+   batch already submitted for this workbook and not yet downloaded is resumed, not
+   resubmitted (so a crashed run never pays twice). Steps run from the workbook's folder —
+   that is where they keep their `*_state.json` and `*_batches/`. At the end it runs
+   `python3 server.py --sync-only` (rewrite the three json files and exit — the running dev
+   server is never touched) and prints the json diff plus the live / still-pending /
+   flagged-for-review counts. **Then a human looks at the review flags and commits** —
+   publishing is deliberately not automated.
+
 ## Classification pipeline (`0N_*.py`, OpenAI Batch API)
 
 Seven standalone scripts at the repo root, each `submit <xlsx>` → `status` → `download`
-(writes `<name> - <step>.xlsx` next to the source; copy it back over `events.xlsx` by hand).
+(writes `<name> - <step>.xlsx` next to the source; `run_pipeline.py` copies it back over
+`events.xlsx`, or do it by hand when running a single step).
 Run in this order on new rows (every step skips rows whose only source is in `SOLE_SOURCE_EXCLUDE` unless `corroborated_by` is filled — they never ship, so they are never paid for — and every step skips rows carrying its own hand stamp, so a rerun never overwrites a hand decision). The appendix numbers the prompts by file (01…07), not by this run order:
 
 | Step | Writes | Rows it touches |

@@ -9,6 +9,7 @@ WATCH_EXTS = {".html", ".css", ".js"}
 #   python3 server.py                     → :8080, reloads on any html/css/js at the
 #     project root or under js/ (the xlsx is NOT watched — restart after editing it)
 #   python3 server.py --port 0               → a free port (one server PER WORKTREE / chat)
+#   python3 server.py --sync-only  → rewrite events*.json from the xlsx and exit (run_pipeline.py)
 #   python3 server.py --port 8081 --watch page9.js,js  → a SECOND instance serving the
 #     same files, whose auto-reload only fires for those paths. Point one browser tab
 #     at :8081 to work on one fold without every unrelated edit (another chat, another
@@ -260,6 +261,8 @@ def _sync_static_events():
         print("  events-ar.json rewritten from the xlsx")
 
 _sync_static_events()
+if "--sync-only" in sys.argv:        # run_pipeline.py: rewrite the json, don't serve
+    sys.exit(0)
 
 # ---------------------------------------------------------------- harness bus --
 # Dev-only message relay for the `_debug-*.js` harness panels. BroadcastChannel only

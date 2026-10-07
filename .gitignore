@@ -42,3 +42,4 @@ short_en_ar_state.json
 
 # Harness scaffolding — local only, never on the site.
 _debug-*
+_acled-filter/
