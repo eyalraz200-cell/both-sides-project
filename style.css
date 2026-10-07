@@ -5464,15 +5464,19 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     transform: translateX(-50%);
     transition: opacity var(--se-fade-ms);
   }
-  /* A grid, not a flex row: one row of five — ER | 7eye | Shenkar with a
-     divider between each — every item exactly --se-rule-gap from its line. */
+  /* A grid, not a flex row: one row of five with ER in the CENTRE — 7eye on
+     the right, Shenkar on the left, a divider either side of ER. The two
+     outer tracks are equal 1fr halves (at max-content width they size to the
+     wider logo), so ER sits at the lockup's centre — the screen's centre —
+     and each logo hugs its divider, every item --se-rule-gap from its line.
+     Columns run right→left (the lockup is rtl). */
   .seventh-eye {
     /* Tightened for ER's arrival (2026-10-07): at 16px / 120px / 29px the
        five-item row ran into the language button on a 360px phone. */
-    --se-rule-gap: 10px;        /* gap from each item to its divider */
+    --se-rule-gap: 12px;        /* gap from each item to its divider (manual/-baked 2026-10-07) */
     --se-w: 104px;              /* 7eye mark width (was 120) */
     display: grid;
-    grid-template-columns: repeat(5, auto);
+    grid-template-columns: 1fr auto auto auto 1fr;
     align-items: center;
     column-gap: var(--se-rule-gap);
     row-gap: var(--se-cap-gap);
@@ -5480,23 +5484,23 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   }
   /* No «בשיתוף» caption on the phone (all three languages) — the logos alone. */
   .seventh-eye-caption { display: none; }
-  .seventh-eye-mark { margin: 0; justify-self: end; }
-  .seventh-eye .shenkar-rule { margin: 0; }
-  .seventh-eye .shenkar-mark { justify-self: start; height: 25px; }   /* was 29 — see --se-rule-gap */
-  .er-mark { font-size: 15px; }
+  .seventh-eye-mark { margin: 0; justify-self: end; grid-column: 1; grid-row: 1; }
+  .seventh-eye .shenkar-rule { margin: 0; grid-row: 1; }
+  .seventh-eye .seventh-eye-mark + .shenkar-rule { grid-column: 2; }
+  .er-mark { font-size: 22px; grid-column: 3; grid-row: 1; }   /* manual/-baked 2026-10-07 */
+  .seventh-eye .er-mark + .shenkar-rule { grid-column: 4; }
+  .seventh-eye .shenkar-mark { justify-self: start; height: 25px; grid-column: 5; grid-row: 1; }   /* was 29 — see --se-rule-gap */
   .seventh-eye.is-scrolled {
     opacity: 0;
     pointer-events: none;
   }
 }
-/* Hover (desktop, real pointers only): the mark alone turns the brand's red;
-   the line beside it keeps its idle colour. A pure state flip, so a CSS
-   transition. */
+/* Hover (desktop, real pointers only): the mark alone turns the brand's red,
+   INSTANTLY — no transition (a 150ms fade read as flashing as the cursor
+   crossed a logo's edge, explicit instruction 2026-10-07). */
 @media (min-width: 601px) and (hover: hover) {
   /* Each logo is its own link, so each reddens on its own hover — 7eye's
      red — the same #EC2A2C for both. */
-  .seventh-eye-mark, .shenkar-mark { transition: background-color 150ms; }
-  .er-mark { transition: color 150ms; }
   .er-mark:hover { color: #EC2A2C; }
   .seventh-eye-mark:hover { background-color: #EC2A2C; }
   .shenkar-mark:hover { background-color: #EC2A2C; }
@@ -5521,9 +5525,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 /* A little more air under the logos than the house 21px / 16px (manual/ pick 2026-10-06),
    and the same above ER, so the stack sits evenly in its frame. */
 @media (min-width: 601px) { #page-15 .text-card-frame { padding-block: 26px; } }
-@media (max-width: 600px) { #page-15 .text-card-frame { padding-block: 20px; } }
+@media (max-width: 600px) { #page-15 .text-card-frame { padding-block: 26px; } }   /* phone: manual/-baked 2026-10-07 */
 .partner-logo {
-  --pl-h: 80px;                 /* height of the artwork; width follows it */
+  --pl-h: 63px;                 /* height of the artwork; width follows it (phone: manual/-baked 2026-10-07; desktop 80 below) */
   --pl-gap: 20px;               /* between the text line and the logo */
   --pl-color: var(--ink);          /* = .section-title's own colour */
   --pl-ms: auto;                /* auto / auto = centred; 0 / auto = starts at the text's edge */
@@ -5584,8 +5588,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   direction: ltr;
 }
 @media (max-width: 600px) { .partner-er { font-size: 32px; } }
+/* Phone: Shenkar 32px tall, 21px either side of each divider (manual/-baked
+   2026-10-07); desktop keeps the 50px / 18px base. */
+@media (max-width: 600px) { .partner-logos { --pls-h: 32px; gap: 21px; } }
 @media (min-width: 601px) and (hover: hover) {
-  .partner-er { transition: color 150ms; }
   .partner-er:hover { color: #EC2A2C; }
 }
 /* The words themselves, in their own span so their opacity (and, if ever
@@ -5606,7 +5612,6 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   }
 }
 @media (min-width: 601px) and (hover: hover) {
-  .partner-logo, .partner-logo-shenkar { transition: background-color 150ms; }
   .partner-logo:hover { background-color: #EC2A2C; }
   .partner-logo-shenkar:hover { background-color: #EC2A2C; }   /* the same red as 7eye's */
 }
