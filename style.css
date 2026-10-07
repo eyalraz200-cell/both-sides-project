@@ -3,7 +3,8 @@
 @font-face {
   font-family: 'Discordia';
   font-weight: 400;
-  src: url('fonts/Discordia-Regular.otf') format('opentype');
+  src: url('fonts/Discordia-Regular.woff2') format('woff2'),
+       url('fonts/Discordia-Regular.woff') format('woff');
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }

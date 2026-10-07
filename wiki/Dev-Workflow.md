@@ -470,8 +470,7 @@ good. `_debug-mobile-window.js` also stays: it is a node launcher for a phone-si
 Chromium window, run by hand and loaded by no page.
 
 `_debug-fonts/` is the typeface work's candidate library, gitignored and left in place. The
-faces the site actually ships live in `fonts/` (`Discordia-Regular.otf`,
-HadassahFriedlaender) — `style.css` never points at `_debug-fonts/`, so that folder can go
+face the site actually ships lives in `fonts/` (`Discordia-Regular.woff2` / `.woff`) — `style.css` never points at `_debug-fonts/`, so that folder can go
 whenever its owner is done with it.
 
 

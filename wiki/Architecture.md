@@ -398,7 +398,7 @@ re-bake (iOS address-bar `resize`) would freeze the stuck-size viewBox in, leavi
 stretched across the wider un-stuck frame on scroll-back-up.
 
 `.section-title`'s base rule is shared by **every** card. **Desktop: `font: 400 18.5px/1.5 'Discordia'`**
-(Discordia Regular, a local `@font-face` at the top of `style.css`, `fonts/Discordia-Regular.otf`;
+(Discordia Regular, a local `@font-face` at the top of `style.css`, `fonts/Discordia-Regular.woff2` + `.woff`, the licensed web files;
 Naipe Foundry, licensed via Hafontia). **Phone (≤600px): `font: 400 16px/1.5 'Discordia'`**. No page overrides font-size or weight — with **one named
 exception: @fold16's credits card, `#page-17 .section-title`, is 36px on desktop and 26px under
 the 600px breakpoint** (`style.css`), because it is the piece's closing headline over a
