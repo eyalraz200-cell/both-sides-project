@@ -3739,14 +3739,25 @@ function p7DrawSideSquares(ctx, events, positions, x0, topY, cols, CELL, SQ, mon
     // finger on one of the 8 and see an empty cell in the magnifier. The canvas
     // paints the dot under the DOM square for the length of the hold (same
     // cell, same colour, so nothing changes on the page itself). Mobile only.
-    const claimedInLoupe = isMobile() && p7Inspect.dragging;
-    if (claimedEvents && claimedEvents.has(events[i]) && !claimedBulge && !claimedInLoupe) {
+    const claimedInLoupe = isMob && p7Inspect.dragging;
+    if (claimedEvents && claimedEvents.has(events[i]) && !claimedBulge) {
       // A filtered-out claimed square is not on screen: kept out of posMap like
       // every other hidden dot, or the hover / picker found it invisible on its
       // unfiltered cell and the bulge pushed neighbours away from empty space.
       if (evHidden) continue;
       const g = gridOn ? p7GridCell(events[i], isLeft) : null;
-      posMap.set(events[i], g ? { x: g.cx - g.sq / 2, y: g.cy - g.sq / 2, alpha: 1, sq: g.sq } : { x: destX, y: destY, alpha: 1, sq: SQ });
+      const pos = g ? { x: g.cx - g.sq / 2, y: g.cy - g.sq / 2, alpha: 1, sq: g.sq } : { x: destX, y: destY, alpha: 1, sq: SQ };
+      posMap.set(events[i], pos);
+      if (claimedInLoupe) {
+        // Painted HERE, at the posMap cell, never by falling through into the
+        // cascade below: that path drops a dot whose row the cascade hasn't
+        // reached (`continue` before posMap.set), which took the 8 OUT of the
+        // picker's scan on the timeline fold — the opposite of the intent.
+        const fill = colorOf.get(events[i].actor) || '#888';
+        const rs = Math.max(1 / dpr, q(pos.sq));
+        if (fill !== batchFill) { flush(); batch = new Path2D(); batchFill = fill; }
+        batch.rect(q(pos.x), q(pos.y), rs, rs);
+      }
       continue;
     }
 
