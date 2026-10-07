@@ -5505,14 +5505,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   .seventh-eye-mark:hover { background-color: #EC2A2C; }
   .shenkar-mark:hover { background-color: #EC2A2C; }
 }
-/* English page, DESKTOP: the SAME wide lockup as the Hebrew corner (the
-   artwork the user calls "logo2" — put back 2026-10-02; the cropped stacked
-   mark it briefly wore is removed, don't reintroduce), only reading
-   left-to-right so the line sits to the mark's LEFT. The English phone is the
-   same as the Hebrew phone: the wide lockup, line above, centred. */
-@media (min-width: 601px) {
-  .lang-en .seventh-eye { direction: ltr; }
-}
+/* English + Arabic: the corner lockup keeps the Hebrew page's ORDER (ER at
+   the far right, then 7eye, then Shenkar) — .seventh-eye is rtl on every
+   page (explicit instruction 2026-10-07). */
 
 /* @fold14's title block: «הפרויקט נוצר בשיתוף», then the STACKED artwork (eye
    above the name, uncropped) on its own line, both centred in the block. A
@@ -5548,11 +5543,11 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    own link). The divider is exactly as wide as the Shenkar logo. 18px either
    side of the divider; the text-to-logos gap is the column's top margin. */
 .partner-logos {
-  --pls-h: 50px;                /* Shenkar logo height; the divider's width follows it */
+  --pls-h: 44px;                /* Shenkar logo height; the divider's width follows it (desktop, manual/-baked 2026-10-07) */
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 18px;
+  gap: 21px;                    /* desktop, manual/-baked 2026-10-07 */
   margin-block-start: 20px;
 }
 .partner-rule {
@@ -5588,9 +5583,15 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   direction: ltr;
 }
 @media (max-width: 600px) { .partner-er { font-size: 32px; } }
-/* Phone: Shenkar 32px tall, 21px either side of each divider (manual/-baked
-   2026-10-07); desktop keeps the 50px / 18px base. */
-@media (max-width: 600px) { .partner-logos { --pls-h: 32px; gap: 21px; } }
+/* Phone: Shenkar 35px tall, 21px either side of each divider; desktop is
+   the 44px / 21px base. */
+@media (max-width: 600px) { .partner-logos { --pls-h: 35px; gap: 21px; } }   /* phone: desktop's 44 scaled by the 7eye logo's 63/80 */
+/* «הפרויקט נוצר על ידי» above the stack: the title's own face, on its own
+   line, no rule under it. Desktop 16px with 40px down to ER (manual/-baked
+   2026-10-07 — the one sized sub-span inside a title, by explicit pick);
+   the phone keeps the title's own 16px, 32px down. */
+.partner-head { display: block; margin-bottom: 32px; }   /* phone: desktop's 40 × 63/80 */
+@media (min-width: 601px) { .partner-head { font-size: 16px; margin-bottom: 40px; } }
 @media (min-width: 601px) and (hover: hover) {
   .partner-er:hover { color: #EC2A2C; }
 }
