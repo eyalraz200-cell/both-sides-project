@@ -9,6 +9,12 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* No pinch-zoom: it magnifies the visual viewport while the canvas + scroll
+   triggers stay laid out for the layout viewport. iOS ignores
+   user-scalable=no, so touch-action does it there. Browser page zoom
+   (Safari aA, Chrome text scaling) still works — it reflows the layout. */
+html { touch-action: pan-x pan-y; }
+
 /* Present to screen readers, absent from the layout. Clipped to a 1px box
    rather than display:none/visibility:hidden — those two remove the element
    from the accessibility tree as well, which defeats the point. */
@@ -5481,6 +5487,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    mask, so its colour is --pl-color. Height and gap are set per breakpoint —
    phone in the base rule, desktop in the 601px block. */
 .partner-title { text-align: center; }
+/* The name never breaks across lines — it fits on the first line or wraps
+   whole onto its own (explicit instruction 2026-10-07). */
+@media (max-width: 600px) { .partner-text .card-link { white-space: nowrap; } }
 /* A little more air under the logos than the house 21px / 16px (manual/ pick 2026-10-06). */
 @media (min-width: 601px) { #page-15 .text-card-frame { padding-bottom: 26px; } }
 @media (max-width: 600px) { #page-15 .text-card-frame { padding-bottom: 20px; } }

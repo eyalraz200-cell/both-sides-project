@@ -2527,7 +2527,27 @@ function p7ScopeCancelPending() {
 // @fold14's partner card pops the newcomers in (checkFold14Pop); @fold15's share
 // card flies the couples (checkFold14Pair) — each on its own house crossing.
 
+// DESKTOP: once @fold7's card is a whole screen above the top edge the reader
+// is way past @fold5's demo (just off the top is too early — the tooltip is
+// still riding its dot onto the timeline there), so its tooltip is simply not there — gone at once,
+// whatever its own hold/shrink/fly clocks are still doing (explicit
+// instruction 2026-10-07). Read by updateGroups' forceHide; the check below
+// repaints on the flip, since nothing else may be animating then.
+const fold8DemoPastCardEl = document.querySelector("#page-8 .text-card");
+function fold8DemoWayPast() {
+  return !isMobile() && !!fold8DemoPastCardEl
+    && fold8DemoPastCardEl.getBoundingClientRect().bottom < -window.innerHeight;
+}
+let fold8DemoWayPastLast = null;
+function checkFold8DemoWayPast() {
+  const past = fold8DemoWayPast();
+  if (past === fold8DemoWayPastLast) return;
+  fold8DemoWayPastLast = past;
+  updateGroups();
+}
+
 function checkGroupTriggers() {
+  checkFold8DemoWayPast();
   checkFold2(); checkFold3(); checkFold6(); checkSquaresReveal(); checkAcledNote(); checkMLegendJump(); checkNoteUntype(); checkLegendCollapse(); checkFold7Label(); checkFold7Cursor(); checkFold8SquareDim(); checkFold8Tooltip(); checkFold8DemoGrow(); checkFold9(); checkFold9LegendPeek(); checkFold9Axis(); checkFold9FilterFlash(); checkFold9Fly(); checkFold10Grid(); checkFold11Size(); checkFold13(); checkFold14Pop(); checkFold14Pair();
 }
 

@@ -1755,7 +1755,7 @@ function updateGroups() {
       // frame mid-fade (the "tooltip snaps" bug). Through page 10 the frame's
       // exit belongs to updateFold13's scroll fade instead.
       const keepEmptyFrame = isMobile() && currentPage <= 14;
-      const forceHide = !event || (shrinkT >= 1 && !keepEmptyFrame);
+      const forceHide = !event || (shrinkT >= 1 && !keepEmptyFrame) || fold8DemoWayPast();
       const wantShow = !forceHide && tooltipT > 0.001;
 
       if (wantShow && fold8SequenceEvent !== event) {

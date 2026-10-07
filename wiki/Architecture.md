@@ -601,6 +601,8 @@ Per-fold mobile state is the table in [Folds](Folds.md#mobile-status).
 
 ## Accessibility
 
+**Pinch-zoom is off on the three story pages** (viewport meta `maximum-scale=1.0, user-scalable=no` + `html { touch-action: pan-x pan-y }` in `style.css` for iOS, which ignores the meta). Pinch magnifies the visual viewport while the canvas and scroll triggers stay on the layout viewport, so it broke the layout. Browser page zoom (Safari's aA menu, Chrome's text scaling) still works because it reflows. The methodology pages keep pinch-zoom (plain text).
+
 What holds today:
 
 - **`index.html` is `lang="he"`** and deliberately has **no root `dir="rtl"`** — the stylesheet declares `direction: rtl`
