@@ -627,6 +627,10 @@ function p7MobileFitSolve(sideW, sideH, sqFloor) {
     cell = Math.ceil(sq * (1 + ratio) * px - 1e-6) / px;
   }
   if (sq >= cell) cell = sq + 1 / px;   // a 1x display at the floor: keep one px of gap
+  // Before events.json lands (p7.minDate is still "") every table row is NaN and
+  // nothing wins — return the floor at the default span instead of throwing.
+  // The next frame after the data arrives solves for real (the table key changes).
+  if (!best) return { sq, cell, dpr: P7_VERT.daysPerRow, gapRatio: cell / sq - 1 };
   const fitsH = t => t.rows * cell <= roomH + 1e-6;
   table.forEach((t) => {
     if (fitsH(t) && (t.peak + 1) * cell <= sideW + 1e-6 && t.rows > best.rows) best = t;
