@@ -17,7 +17,7 @@ white box around just the `<h2>` is `.text-card-frame`.
 **`@dragcards` / "draggable events"** — the category **pills** (`.page9-pill`,
 `P9_CATEGORIES`) in `@fold12`'s tray. **Not** the per-event canvas dots.
 
-**"Axis events"** — the `P7_AXIS_EVENTS` headline events on the year axis (9 on desktop, 6 on
+**"Axis events"** — the `P7_AXIS_EVENTS` headline events on the year axis (10 on desktop, 7 on
 mobile — the `hideOnMobile` entries drop out): side plaques
 beside the vertical axis on desktop (each with a `desc` that types in on hover — see
 [Timeline](Timeline.md) "Description on hover"), the top slot on mobile. A passed event

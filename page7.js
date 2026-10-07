@@ -4026,9 +4026,11 @@ function p7BuildDataSummary(data) {
       { n: he(data.length), from: date(p7.minDate), to: date(p7.maxDate) })}</p>` +
     `<h3>${tr("חלוקה למחנות ולקבוצות")}</h3>` + campList +
     `<h3>${tr("חלוקה לפי סוג הפעולה")}</h3><ul>${catList}</ul>` +
-    // The nine events marked on the year axis — the full roster
-    // (P7_AXIS_EVENTS_ALL), since the phone's axis drops three of them.
+    // The events marked on the year axis — the full roster (P7_AXIS_EVENTS_ALL),
+    // since the phone's axis drops three of them; the desc-less "today" card is
+    // the axis's end, not an event, so it is left out.
     `<h3>${tr("אירועי מפתח על ציר הזמן")}</h3><ul>${P7_AXIS_EVENTS_ALL
+      .filter(ev => ev.desc)
       .map(ev => `<li>${date(ev.date)}: ${tr(ev.label)} — ${tr(ev.desc)}</li>`).join("")}</ul>`;
 }
 
@@ -5006,6 +5008,12 @@ function p7AxisYearTicks() {
 // `desc` is the description that types into the plaque on hover (desktop side
 // plaques only — see P7_AXIS_DESC_* below); the source's trailing «מקור» is
 // deliberately omitted.
+// Today as YYYY-MM-DD in the reader's LOCAL time (toISOString is UTC and would
+// read yesterday for part of the night in Israel).
+function p7TodayIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 const P7_AXIS_EVENTS_ALL = [
   // Nudged left to clear the "2023" year ring — 04.01 sits only 3 days from
   // minDate, so at its true x its dot all but touches the axis's right anchor.
@@ -5035,8 +5043,13 @@ const P7_AXIS_EVENTS_ALL = [
     desc: "פתיחת המבצע הישראלי נגד מטרות גרעין וצבא באיראן, ובעקבותיו ירי איראני לעבר ישראל." },
   { date: "2025-10-13", label: "שחרור החטופים מעזה", maxWidth: null,
     desc: "שחרור עשרים החטופים החיים שנותרו בעזה במסגרת הסכם הפסקת אש." },
-  // Past maxDate (2026-07-03) — parks at the axis's left end (see the clamp in
-  // p7AxisEventTrueX); the +26 holds it clear of that end rather than flush to it.
+  { date: "2026-07-17", label: "התפזרות הכנסת ה-25", maxWidth: null,
+    desc: "אישור התפזרות הכנסת לקראת הבחירות באוקטובר." },
+  // The closing card: the reader's own date, computed at load (local time) — the
+  // data is refreshed weekly, so the axis always ends "now". It is always at or
+  // past maxDate (the last event in the data), so it parks at the axis's END (see
+  // the clamp in p7AxisEventTrueX); the +26 holds it clear of that end rather
+  // than flush to it.
   // `above` because it's the LAST event: parked at the axis's far end, a
   // downward card would open into (and past) that end with nothing below it
   // to hold it. Opening upward keeps the whole card on the axis.
@@ -5044,8 +5057,10 @@ const P7_AXIS_EVENTS_ALL = [
   // centred plaque straddles the line's end. It hangs BELOW the dot instead —
   // see p7AxisEvMobileBelow. (`above: true` is the DESKTOP rule for the same
   // event and is unrelated; desktop opens its card upward there.)
-  { date: "2026-07-17", label: "התפזרות הכנסת ה-25", maxWidth: null, xOffset: 26, above: true, mobileBelow: true,
-    desc: "אישור התפזרות הכנסת לקראת הבחירות באוקטובר." },
+  // No `desc`: nothing to type in on hover.
+  // Its title IS the date (DD.MM.YYYY, the axis cards' own date format), so it
+  // needs no translation and passes through tr() unchanged on every page.
+  { date: p7TodayIso(), label: p7FormatDateDMY(p7TodayIso(), "."), maxWidth: null, xOffset: 26, above: true, mobileBelow: true, desc: "" },
 ];
 
 // The list the whole file actually uses — `hideOnMobile` entries dropped under

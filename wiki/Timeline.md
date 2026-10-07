@@ -435,7 +435,7 @@ label can centre over its own circle).
   `P7_AXIS_YEAR_LABEL_OFFSET_MOBILE` **5**, so the year reads as attached to its own tick);
   on the vertical axis they sit beside it (see "Vertical axis" below). Faint until reached. Reachedness for rings uses the
   **raw** `currentDate` x, not the lagged `curX`.
-- **Headline events** — `P7_AXIS_EVENTS`, **9 on desktop / 6 on mobile**, chronological.
+- **Headline events** — `P7_AXIS_EVENTS`, **10 on desktop / 7 on mobile**, chronological. The last is the **closing date card**: its title is the reader's own date (DD.MM.YYYY via `p7FormatDateDMY`, so it needs no translation), its date, computed at load (`p7TodayIso()`, local time), so the axis always ends "now"; it is at or past `maxDate`, parks at the axis's end (`xOffset: 26`) and carries the last-card flags (`above`, `mobileBelow`) that התפזרות הכנסת ה-25 held until the 2026-10-07 data refresh moved the axis end to 2026-10-02. It has no `desc`, so it opens nothing on hover and is left out of the screen-reader list of axis events.
   The roster literal is `P7_AXIS_EVENTS_ALL`; `P7_AXIS_EVENTS` is it with `hideOnMobile`
   entries dropped under the 600px breakpoint. Three are dropped because at the
   mobile square/zoom the plaques crowd each other: **הפיגוע בעלי**, **ביטול עילת הסבירות**,
@@ -469,8 +469,8 @@ label can centre over its own circle).
   off the very card the reserve exists for. Only that layer
   is extended; the dots and the axis line still stop at the box edge.
 - **`mobileBelow`** — the mirror, and the same opt-out of the side/fly path: the plaque hangs
-  **below** its dot, centred on the axis. Only **התפזרות הכנסת ה-25** carries it — that event
-  is past `maxDate`, so its dot is pinned to the very END of the axis (`row = totalRows`),
+  **below** its dot, centred on the axis. Only the closing date card carries it — that card
+  is at or past `maxDate`, so its dot is pinned to the very END of the axis (`row = totalRows`),
   where a side or dot-centred plaque straddles the line's end. Note its separate `above: true`
   is the **desktop** rule for the same event and is unrelated.
   Its knock-on: **the year label has to clear the plaque, not just the ring.**
@@ -483,7 +483,7 @@ label can centre over its own circle).
   (הכרזת הרפורמה 2023-01-04, הפיגוע בעלי 2023-06-20, ביטול עילת הסבירות
   2023-07-24, מתקפת 7 באוקטובר 2023-10-07, מות ששת החטופים
   2024-09-01, חידוש הלחימה בעזה 2025-03-18, מבצע ״עם כלביא״ 2025-06-13, שחרור החטופים מעזה 2025-10-13,
-  התפזרות הכנסת ה-25 2026-07-17). Since `eventSide 'alternate'` is index-based,
+  התפזרות הכנסת ה-25 2026-07-17, closing card = the reader's date). Since `eventSide 'alternate'` is index-based,
   adding/removing an entry flips the side of every later event.
   All entries
   — render as **filled dots at their true date x**, plus an optional
@@ -495,7 +495,7 @@ label can centre over its own circle).
   raw date (only binds on − nudges; + nudges still fire on the date). Two use one:
   the first (`-14`, to clear the "2023" anchor) and the last (`+26`, see below).
 - **Events past `maxDate`** — an event dated after the dataset's last event (only
-  התפזרות הכנסת ה-25 2026-07-17, vs `maxDate` 2026-07-03) is **clamped at both ends**:
+  the closing date card — today vs `maxDate` 2026-10-02, the last event in the data) is **clamped at both ends**:
   `p7AxisEventTrueX` clamps its x into `[P7_AXIS_MARGIN, W - P7_AXIS_MARGIN]` so it parks
   at the axis's left end instead of floating past it, and `p7UpdateAxisEventTriggers(W)`
   switches that event's reached-test from dates to **x**: reached once the growing fill
@@ -715,7 +715,7 @@ over `totalRows × CELL`:
   mobile keeps the `P7_AXIS_*_FONT` constants): title 500 14px, line height 19, black;
   date 400 14px, line height 19, black at 0.3, **but `showDate` is false — the block is the title alone**
   (no date line; the axis's years give the time). `gap` 0 extra px between title and date when a date is shown. With `anchor 'edge'` the dot-to-block gap would be `card.gap` plus whichever card pad faces the dot. **Default side**: a headline hangs under its dot (the card opens downward); an event
-  flagged `above: true` in `P7_AXIS_EVENTS` (only התפזרות הכנסת ה-25 — the
+  flagged `above: true` in `P7_AXIS_EVENTS` (only the closing date card — the
   last event, parked at the axis's far end, where a downward card would open past that end)
   sits **above** its dot (bottom edge
   `P7_VERT_EVENT_TEXT_GAP` above the dot, punch from the block's top down to the dot's
