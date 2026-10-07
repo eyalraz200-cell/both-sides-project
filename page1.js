@@ -148,7 +148,7 @@ const PAGE0_DOT_COLORS = [
 //
 // Only ever called from buildPage0AllDots() below, itself called from
 // js/groups.js — GROUPS doesn't exist yet when page1.js itself runs.
-function buildPage0DotColorSet(counts) {
+function buildPage0DotColorSet(counts, visible = counts) {
   const cols = counts.map((n) => new Array(n).fill(null));
 
   PAGE0_GROUP_SLOTS.forEach((s, i) => {
@@ -156,7 +156,10 @@ function buildPage0DotColorSet(counts) {
     if (!slots || !slots.length) return;
     // A short viewport can end a column above the arranged row — walk upward
     // to the nearest free slot rather than dropping the group entirely.
-    let row = Math.min(s.row, slots.length - 1);
+    // `visible` caps it further: a group dot must start ON SCREEN (the phone
+    // builds rows past the bottom edge for the bar collapse), since it is the
+    // one that flies to its camp at @fold2.
+    let row = Math.min(s.row, slots.length - 1, (visible[s.col] || slots.length) - 1);
     while (row >= 0 && slots[row]) row--;
     if (row >= 0) slots[row] = GROUPS[i].color;
   });
@@ -227,6 +230,11 @@ function buildPage0DotColorSet(counts) {
 // never reads these. `var` so a harness can retune them live.
 var PAGE0_TRIM_MOBILE = 1;        // compare/ pick 2026-10-02: the bottom stays put, the columns start one step lower
 var PAGE0_TRIM_FROM_MOBILE = "top";
+// PHONE: how far the whole hero (dot columns + title + subtitle) sits below
+// where it is built — everything on @fold1 except the corner logos and the
+// language button. Desktop never reads it. `var` so a harness can drive it.
+var PAGE0_SHIFT_MOBILE = 74;   // manual/-baked 2026-10-06
+function page0Shift() { return isMobile() ? PAGE0_SHIFT_MOBILE : 0; }
 function page0Trim() { return isMobile() ? Math.max(0, Math.round(PAGE0_TRIM_MOBILE)) : 0; }
 
 // THE HEIGHT THE HERO IS BUILT FOR. Desktop: the live viewport. PHONE: the
@@ -293,7 +301,7 @@ function buildPage0AllDots() {
   // PAGE0_TRIM_MOBILE) drops whole lattice steps, so what is left stays on the
   // same 17px lattice either way.
   const spans = PAGE0_DOT_COLS.map(({ startOffsetY }) => {
-    let first = vh / 2 - page0DotBaseOffsetY() + startOffsetY;
+    let first = vh / 2 - page0DotBaseOffsetY() + startOffsetY + page0Shift();
     const reach = vh + (isMobile() ? PAGE0_BAR_ALLOWANCE_PX : 0);
     let n = Math.max(0, Math.ceil((reach - first) / PAGE0_DOT_STEP));
     const cut = Math.min(page0Trim(), n);
@@ -306,7 +314,11 @@ function buildPage0AllDots() {
   // this to the phone tops), so their measured gap to the first dot survives.
   const trimPx = PAGE0_TRIM_FROM_MOBILE === "top" ? Math.min(page0Trim(), spans[0].n + page0Trim()) * PAGE0_DOT_STEP : 0;
   document.documentElement.style.setProperty("--page0-trim", `${isMobile() ? trimPx : 0}px`);
-  const colorsByCol = buildPage0DotColorSet(counts);
+  document.documentElement.style.setProperty("--page0-shift", `${page0Shift()}px`);
+  // Rows whose dot sits wholly above the bottom edge (with a step of air), per column.
+  const visible = spans.map((sp) => Math.max(1, Math.min(sp.n,
+    Math.floor((vh - PAGE0_DOT_STEP - PAGE0_DOT_SQ / 2 - sp.first) / PAGE0_DOT_STEP) + 1)));
+  const colorsByCol = buildPage0DotColorSet(counts, visible);
 
   PAGE0_DOT_COLS.forEach(({ centerX, offsetX, startOffsetY }, colIndex) => {
     const firstCenterY = spans[colIndex].first;

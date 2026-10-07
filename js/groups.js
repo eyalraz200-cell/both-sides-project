@@ -303,13 +303,20 @@ const FOLD2_FILLER_COLORS = [
 
 let fold2FillerDots = [];
 function assignFold2Fillers() {
-  const pool = PAGE0_DECORATIVE_DOT_ELS;
+  // Phone: only dots that start ON SCREEN may fly into the camp grids — the phone
+  // builds rows past the bottom edge (for the bar collapse, and lower still
+  // with PAGE0_SHIFT_MOBILE), and a filler picked from there flew in from
+  // below the fold. A step of air under the last eligible dot.
+  const pageH = page0BuildHeight();
+  PAGE0_DECORATIVE_DOT_ELS.forEach((d) => { d.isFold2Filler = false; });
+  // PHONE ONLY: desktop's columns end at the viewport edge, so it keeps the full pool.
+  const pool = !isMobile() ? PAGE0_DECORATIVE_DOT_ELS : PAGE0_DECORATIVE_DOT_ELS.filter(
+    (d) => d.anchor.top + PAGE0_DOT_SQ <= pageH - PAGE0_DOT_STEP);
   // Re-derived here rather than once at load, so a change to FOLD2_GRID_COLS is
   // picked up by the same call the resize handler already makes.
   FOLD2_FILLER_CELLS = fold2FillerCells();
   const need = FOLD2_FILLER_CELLS.length;
   fold2FillerDots = [];
-  pool.forEach((d) => { d.isFold2Filler = false; });
   if (!pool.length) return;
   const step = pool.length / need;
   const used = new Set();
@@ -2680,9 +2687,40 @@ groupsOverlayEl.appendChild(campHeaderChangeEl);
 // header would visibly slide left as it typed. The two-span version lays the
 // full string out from the first frame and only moves characters between the
 // visible and the transparent span, so the header sits still.
-const fold4HeaderSpansCoalition = fold8SetupTypewriter(
+// A title carrying a \n (English: two lines on the phone) gets one typewriter
+// pair PER LINE, each in its own .camp-header-line, so @fold3 can slide each
+// line from centred to left-aligned (campHeaderAlignLines, update-groups.js).
+// The \n itself becomes a .camp-header-sep space: shown wherever the title
+// sits on one line, hidden where the lines stack.
+function campHeaderSetupTypewriter(el, fullText) {
+  if (!fullText.includes("\n")) return fold8SetupTypewriter(el, fullText);
+  el.textContent = "";
+  const lines = fullText.split("\n").map((text, i) => {
+    if (i) {
+      const sep = document.createElement("span");
+      sep.className = "camp-header-sep";
+      sep.textContent = " ";
+      el.appendChild(sep);
+    }
+    const lineEl = document.createElement("span");
+    lineEl.className = "camp-header-line";
+    el.appendChild(lineEl);
+    return { el: lineEl, spans: fold8SetupTypewriter(lineEl, text) };
+  });
+  return { lines, fullText };
+}
+function campHeaderUpdateTypewriter(tw, count) {
+  if (!tw.lines) return fold8UpdateTypewriter(tw, count);
+  let offset = 0;
+  for (const line of tw.lines) {
+    const n = line.spans.fullText.length;
+    fold8UpdateTypewriter(line.spans, Math.max(0, Math.min(n, count - offset)));
+    offset += n + 1;   // + the \n
+  }
+}
+const fold4HeaderSpansCoalition = campHeaderSetupTypewriter(
   campHeaderCoalitionEl, CAMP_HEADER_TITLE_COALITION);
-const fold4HeaderSpansChange = fold8SetupTypewriter(
+const fold4HeaderSpansChange = campHeaderSetupTypewriter(
   campHeaderChangeEl, CAMP_HEADER_TITLE_CHANGE);
 
 // Both headers are anchored on their own centre (Figma node 279:1342 centres
@@ -3426,7 +3464,6 @@ function fold6MFlyLen() {
   return Math.max(0.01, Math.min(1 - fold6MFlyStart(), FOLD6_MFLY_MS / fold4GlideMs()));
 }
 function fold6MFlyStart() {
-  const openShare = (FOLD6_MLEGEND_WIDTH_MS + FOLD6_MLEGEND_OPEN_MS) / fold4GlideMs();
   // The arrival span is a slice of the EASED progress (the bar rides `vis`,
   // which is fold6Trigger.currentT()), while this window is cut from the RAW
   // one — so the arrival has to be converted before the two can be added.
@@ -3435,9 +3472,11 @@ function fold6MFlyStart() {
   // while the sheet was still growing.
   const inSpan = fold6MLegendInSpan();
   const arriveRaw = inSpan <= 0 ? 0 : Math.acos(1 - 2 * inSpan) / Math.PI;
-  const holdShare = FOLD6_MFLY_HOLD_MS / fold4GlideMs();
+  // The rows take off AS THE SHEET STARTS OPENING, not after it has opened
+  // (explicit instruction 2026-10-07) — the panel is laid out at its final
+  // size from the first frame, so the targets are already right.
   // Never past 0.8 — the rows still need most of the fold to make the trip.
-  return Math.min(0.8, arriveRaw + openShare + holdShare);
+  return Math.min(0.8, arriveRaw);
 }
 let fold6MobileLegendVis = null;
 // THE REVERSE'S LAST BEAT IS SEEN, NOT CUT. With no arrival span the bar's
@@ -3899,6 +3938,14 @@ function fold6SetMobileLegendOpen(open, opts) {
     if (!open) {
       fold6MobilePanelEl.hidden = true;
       fold6MobileLegendEl.classList.remove("is-open");
+      // The ACLED note closes with the sheet — snapped shut while hidden, so the
+      // next open shows it collapsed (explicit instruction 2026-10-07).
+      if (fold6MDataOpen || fold6MDataT > 0) {
+        if (fold6MDataRaf) cancelAnimationFrame(fold6MDataRaf);
+        fold6MDataRaf = 0; fold6MDataOpen = false; fold6MDataT = 0;
+        fold6MobileDataHeadEl.setAttribute("aria-expanded", "false");
+        fold6MDataPaint();
+      }
     }
     // Painted AFTER the panel is hidden: the pill and title are placed off the
     // bar's height, which the hidden panel has just changed.
@@ -4393,7 +4440,7 @@ function fold6MFlySetRowsShown(t) {
 // it, and the hand-off is over once the close lands. @fold5 and @hidden-acled have
 // their own later open/close beats (fold6MLegendAutoBeat) — this is only the
 // tail of the hand-off. `var`: a manual/ harness drives it.
-var FOLD6_MFLY_CLOSE_GAP_MS = 500;
+var FOLD6_MFLY_CLOSE_GAP_MS = 250;
 function fold6MFlyArrive(t) {
   if (!fold6MLegendIntroActive) return;
   fold6MFlySetRowsShown(t);
@@ -4542,8 +4589,15 @@ let fold6MLegendDrag = null;
 let fold6MLegendDragMoved = false;
 const FOLD6_MLEGEND_DRAG_SLOP_PX = 6;
 
+// @fold4 (mobile) shows the sheet as an EXAMPLE only — it opens and closes on
+// its own and ignores every tap (explicit instruction 2026-10-07).
+function fold6MLegendDisplayOnly() {
+  return isMobile() && currentPage <= 3;
+}
+
 fold6MobileLegendBtnEl.addEventListener("click", (e) => {
   e.stopPropagation();
+  if (fold6MLegendDisplayOnly()) { e.preventDefault(); return; }
   // Pointer taps are handled in pointerup; this is the keyboard path (Enter or
   // Space on the focused button, which reports detail 0). Without the guard the
   // sheet toggled twice for one tap on devices that still emit the click.
@@ -4565,7 +4619,7 @@ function fold6MLegendDragPaint() {
 }
 
 fold6MobileLegendEl.addEventListener("pointerdown", (e) => {
-  if (e.button) return;
+  if (e.button || fold6MLegendDisplayOnly()) return;
   fold6MLegendDragMoved = false;
   fold6StopMLegendIntro();
   if (fold6MLegendOpenRaf) cancelAnimationFrame(fold6MLegendOpenRaf);
@@ -4689,6 +4743,7 @@ fold6MobileLegendEl.addEventListener("pointercancel", fold6MLegendDragEnd);
 // listens on the document rather than on a backdrop element (there is none; the
 // artwork stays visible and interactive while the panel is open).
 document.addEventListener("click", (e) => {
+  if (fold6MLegendDisplayOnly()) return;
   if (fold6MLegendOpenWant && !fold6MobileLegendEl.contains(e.target)) {
     fold6StopMLegendIntro();
     fold6SetMobileLegendOpen(false);

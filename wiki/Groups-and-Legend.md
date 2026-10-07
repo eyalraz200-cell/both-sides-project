@@ -903,6 +903,9 @@ still opening, and the flight aims at the rows' REST positions).
   bar — the bar contains the panel; an open or opening card is left alone) in with
   `fold8TooltipGrowEase` as its own beat ahead of the open. The `@fold4` intro below still
   waits for the *unmapped* progress to reach 1.
+- **MOBILE: the מקרא drawer is display-only through `@fold4`** (`fold6MLegendDisplayOnly`,
+  `currentPage <= 3`): its pointerdown, its button click and the outside-tap close all ignore
+  input there, so a tap can't open, hold or dim it — it is an example, not a control.
 - **MOBILE: the מקרא drawer collapses at `@fold4`** (explicit instruction).
   `FOLD6_MLEGEND_HOLD_OPEN` (js/groups.js) is **`false`**: `fold6MFlyArrive` shuts the panel
   `FOLD6_MFLY_CLOSE_GAP_MS` (500) after the rows land, `fold6MLegendAutoBeat`'s `want` is
@@ -963,6 +966,8 @@ still opening, and the flight aims at the rows' REST positions).
   writing the body's height/opacity per frame and repainting the card with it. The bar
   captures every pointer, so the header tap and the link are resolved in `fold6MLegendDragEnd`
   (`d.onData`, `d.link` → `window.open`), not by their own clicks.
+  **Closing the sheet closes the note**: when the sheet's close lands (`fold6SetMobileLegendOpen`'s
+  `finish`, panel hidden) the note snaps shut, so the next open shows it collapsed.
   **Removed — don't reintroduce:** the mobile corner link (`fold6MobileAcledLinkEl`,
   `.fold6-macled-link`).
   The desktop note's nodes are separate from this section and are hidden on mobile.
@@ -1205,14 +1210,14 @@ still opening, and the flight aims at the rows' REST positions).
   instruction — "first legend opens, then groups fly"). In order: the מקרא button arrives
   (`FOLD6_MLEGEND_ARRIVE_MS`, **0** — skipped, so the sheet's open is the first thing seen);
   the sheet widens (`FOLD6_MLEGEND_WIDTH_MS`, **210**) then grows
-  (`FOLD6_MLEGEND_OPEN_MS`, **270**); it holds (`FOLD6_MFLY_HOLD_MS`, **263**); the rows fly
-  (`FOLD6_MFLY_MS`, **860**); and `FOLD6_MFLY_CLOSE_GAP_MS` (**500**) later `fold6MFlyArrive`
+  (`FOLD6_MLEGEND_OPEN_MS`, **270**) — and the rows fly (`FOLD6_MFLY_MS`, **860**) from the
+  moment the sheet STARTS opening, alongside its open (no hold; `FOLD6_MFLY_HOLD_MS` still
+  counts toward the trigger's length but no longer delays the release); and `FOLD6_MFLY_CLOSE_GAP_MS` (**250**) later `fold6MFlyArrive`
   closes the sheet and the intro ends. The flight is a `{start, len}` window on the trigger's **raw** progress
   (`fold6MFlyStart()` / `fold6MFlyLen()`), derived from those durations against
   `fold4GlideMs()`, so retiming any step retimes the release. **The arrival is measured
   in EASED progress while the window is cut from RAW** — `fold6MFlyStart` converts through
-  the inverse sine ease; adding them directly releases the rows ~0.06 early, while the sheet
-  is still growing.
+  the inverse sine ease.
   - **A TAP GETS ITS OWN, FASTER PAIR** — `FOLD6_MLEGEND_TAP_WIDTH_MS` (**90**) /
     `FOLD6_MLEGEND_TAP_OPEN_MS` (**190**), picked by `fold6MLegendWidthMs()` /
     `fold6MLegendOpenMs()` off `fold6MLegendIntroActive`. The numbers above are tuned for a
@@ -1260,8 +1265,8 @@ still opening, and the flight aims at the rows' REST positions).
   therefore plays out as @fold5 comes up rather than while this fold is still centred.
 - **The rows' flight starts late going DOWN; coming BACK it waits for the sheet, then takes
   the rest of the unwind** (`fold6MFlyT`, js/update-groups.js). Forward, the flight is the
-  `{fold6MFlyStart(), fold6MFlyLen()}` window on the trigger's raw progress — the sheet opens
-  first, then the rows fly. The reverse is **not** that window mirrored (played backwards a
+  `{fold6MFlyStart(), fold6MFlyLen()}` window on the trigger's raw progress — the rows take off
+  as the sheet starts opening. The reverse is **not** that window mirrored (played backwards a
   late window is an early one, and the rows would sit parked at their `@fold3` spot,
   mid-screen, for the rest). Instead the reverse leg **holds** the rows in the panel for the
   share of the trigger the sheet's open takes (`hold` = `(FOLD6_MLEGEND_WIDTH_MS +

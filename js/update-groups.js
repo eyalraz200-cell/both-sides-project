@@ -906,6 +906,21 @@ function updateGroups() {
     if (tgt) fold6MFlyPaintHeadClone(title, el, e6Fly >= 1);
     else if (fold6MFlyClones.size) fold6MFlyHideHeadClone(title, el);
   };
+  // English PHONE: the two-line titles are centred at @fold2 and slide to
+  // left-aligned over @fold3's alignT — each line moves left by its share of
+  // the centring slack, so its start edge lands on the box's left edge (which
+  // fold3HeaderX has put on the dots). Other pages/breakpoints: no offset.
+  const campHeaderAlignLines = (tw) => {
+    if (!tw.lines) return;
+    const on = isMobile() && isEnglish();
+    const boxW = on ? tw.lines[0].el.parentElement.clientWidth : 0;
+    for (const line of tw.lines) {
+      const w = line.spans.revealed.offsetWidth + line.spans.hidden.offsetWidth;
+      line.el.style.transform = on ? `translateX(${-(boxW - w) / 2 * alignT}px)` : "";
+    }
+  };
+  campHeaderAlignLines(fold4HeaderSpansCoalition);
+  campHeaderAlignLines(fold4HeaderSpansChange);
   placeCampHeader(campHeaderCoalitionEl, campAnchorX(true), CAMP_HEADER_TITLE_COALITION);
   placeCampHeader(campHeaderChangeEl, campAnchorX(false), CAMP_HEADER_TITLE_CHANGE);
   if (isMobile()) fold6PlaceMobileLegend();
@@ -933,9 +948,9 @@ function updateGroups() {
   const untypeCoalition = headFlying ? 1 : 1 - fold6BeatT("headerCoalition");
   const untypeChange    = headFlying ? 1 : 1 - fold6BeatT("headerChange");
 
-  fold8UpdateTypewriter(fold4HeaderSpansCoalition, Math.round(
+  campHeaderUpdateTypewriter(fold4HeaderSpansCoalition, Math.round(
     headerCoalitionT * untypeCoalition * CAMP_HEADER_TITLE_COALITION.length));
-  fold8UpdateTypewriter(fold4HeaderSpansChange, Math.round(
+  campHeaderUpdateTypewriter(fold4HeaderSpansChange, Math.round(
     headerChangeT * untypeChange * CAMP_HEADER_TITLE_CHANGE.length));
 
   // The reveal itself is the typing, so opacity only ramps over the beat's

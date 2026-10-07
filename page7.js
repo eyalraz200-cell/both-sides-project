@@ -1919,7 +1919,13 @@ function p7StartAnimLoop() {
 // 2px pitch away from each other. var on mobile — a manual/ harness drives it.
 const P7_BULGE_MS_DESKTOP = 120;
 var   P7_BULGE_MS_MOBILE  = 200;   // manual/-baked 2026-09-17
-function p7BulgeMs() { return isMobile() ? P7_BULGE_MS_MOBILE : P7_BULGE_MS_DESKTOP; }
+// MOBILE, the SMALL dots (crowd tiers 0–2) swell a bit quicker under the glass
+// — at 200ms their short trip read as slow (explicit instruction 2026-10-07).
+var   P7_BULGE_MS_MOBILE_SMALL = 160;
+function p7BulgeMs(ev) {
+  if (!isMobile()) return P7_BULGE_MS_DESKTOP;
+  return ev && p7BulgeTier(ev) <= 2 ? P7_BULGE_MS_MOBILE_SMALL : P7_BULGE_MS_MOBILE;
+}
 const P7_BULGE_HOLD  = 12;   // cells with the gap kept exact
 const P7_BULGE_REACH = 30;   // cells where the push has faded to zero
 // Both breakpoints push on the same 12/30-cell profile. What made a phone
@@ -2015,7 +2021,7 @@ function p7BulgeTick() {
   }
   for (const [ev, b] of p7BulgeT) {
     const target = (ev === hovered || ev === p9Pick) ? 1 : 0;
-    const step = dt / p7BulgeMs();
+    const step = dt / p7BulgeMs(ev);
     if (target === 1 && relaxing) continue;   // wait for the field to settle
     if (b.t !== target) b.t = target > b.t ? Math.min(1, b.t + step) : Math.max(0, b.t - step);
     if (b.t === 0 && target === 0) p7BulgeT.delete(ev);
@@ -6498,6 +6504,12 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     if (isMobile()) {
       state.reachedT = p7AxisFlyTrigger(i).currentT();
       reached = state.triggeredAt !== null && state.leavingAt === null;
+      // The marker's COLOUR goes black when the FILL reaches it, not on the
+      // card's fly trigger (explicit instruction 2026-10-07) — its own short
+      // lerp toward the live fill edge; size still rides reachedT.
+      const fillTarget = y <= curY ? 1 : 0;
+      state.fillT = (state.fillT || 0) + (fillTarget - (state.fillT || 0)) * P7_AXIS_HOVER_ANIM_SPEED;
+      if (Math.abs(fillTarget - state.fillT) < 0.001) state.fillT = fillTarget;
     } else {
       // DESKTOP: the original lerp toward the live fill edge — but never ahead
       // of the build-in wipe: the marker grows in as the line reaches its row
@@ -6568,7 +6580,7 @@ function p7DrawAxisEventsVertical(ctx, W, H, axisX, curY, hoverActive, highlight
     const markerColor = hoverActive
       ? (isHighlighted ? P7_AXIS_HOVER_COLOR : P7_AXIS_BG_COLOR)
       : isAxisHovered ? P7_AXIS_HOVER_COLOR
-      : p7AxisMarkerUnreached() ? p7AxisMarkerColorAt(state.reachedT)
+      : p7AxisMarkerUnreached() ? p7AxisMarkerColorAt(isMobile() ? state.fillT : state.reachedT)
       : P7_AXIS_FILLED_COLOR;
     p7.axisEventPositions.set(ev, { x: axisX, y, radius: markerRadius, color: markerColor });
     // Half-dot cards draw the dot themselves (only its inner half); the full

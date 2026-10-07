@@ -56,6 +56,13 @@
 body {
   background: var(--bg);
 }
+/* Mobile: something on the page is wider than the viewport, so iOS draws a
+   horizontal scroll indicator at the bottom. `clip` (not `hidden`) blocks the
+   sideways scroll without making body a scroll container, so sticky keeps
+   working. */
+@media (max-width: 600px) {
+  html, body { overflow-x: clip; }
+}
 /* NO text selection anywhere on the story pages (explicit instruction
    2026-10-05) — every element, with !important so no later rule switches it
    back on, plus no iOS long-press callout. The methodology pages
@@ -2678,6 +2685,15 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    11px) — subtitle uses the same left + translateX(-100%) right-edge-anchor
    trick Figma's own node uses, rather than a literal `right` value, to stay
    center-relative. */
+/* Both start the page already in their entrance pose (the same transform
+   js/fold1-intro.js writes on its first frame), so the first paint — which
+   can land before the scripts run — never shows them at rest for a frame
+   before they jump below the screen and fly up. NOT visibility: toggling
+   that on a fixed, transformed element made iPhone Safari drop the layer and
+   repaint it in strips mid-flight. */
+.page0-title { transform: translateY(100vh); }
+.page0-subtitle { transform: translateX(-100%) translateY(calc(100vh - 107px)); }
+
 .page0-title {
   /* position: fixed (not absolute, despite the general note above about
      .page0-title/.page0-subtitle staying normal-flow) — same reasoning and
@@ -2733,7 +2749,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   /* position: fixed — same reasoning as .page0-title above. */
   position: fixed;
   left: calc(50% - 11.5px); /* hero harness 2026-09-27: 26px column gap (was -10 at the 20px gap); the ≤600px block keeps -10 */
-  transform: translateX(-100%);
+  /* transform: the entrance pose is set above (.page0-subtitle, with the title). */
   /* 189.1, not the old 179: the line-height below opened the 4 lines up, and
      `top` is re-solved so the LAST BASELINE lands 20px above its dot column's
      top edge (the trimmed gap — see .page0-title). Both numbers were picked by
@@ -3710,7 +3726,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
        from under the bar. --page0-drop is 0 on the phone now (kept for the desktop path);
        --page0-trim moves the text down with a top-trimmed column
        (PAGE0_TRIM_MOBILE) so the baseline-to-dot gap below survives. */
-    top: calc(var(--page0-half, 50vh) - 230.1px + var(--page0-drop, 0px) + var(--page0-trim, 0px)); /* phone harness 2026-09-29: Discordia, last baseline 20px above its dots (was -228.6 / 18.5px Hadassah) */
+    top: calc(var(--page0-half, 50vh) - 230.1px + var(--page0-drop, 0px) + var(--page0-trim, 0px) + var(--page0-shift, 0px)); /* phone harness 2026-09-29: Discordia, last baseline 20px above its dots (was -228.6 / 18.5px Hadassah) */
   }
 
   /* The subtitle keeps its 18px and its 125px width here — only the leading and
@@ -3724,7 +3740,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     /* Same trimmed solve as the title: -167.8 puts the last baseline 20.5px
        above its own dot column's top edge. Re-solve this whenever the leading
        above moves — the two are one setting. */
-    top: calc(var(--page0-half, 50vh) - 165.9px + var(--page0-drop, 0px) + var(--page0-trim, 0px)); /* re-solved 2026-09-29 for line-height 1.41: last baseline 20.5px above its dots (was -168.8) */
+    top: calc(var(--page0-half, 50vh) - 165.9px + var(--page0-drop, 0px) + var(--page0-trim, 0px) + var(--page0-shift, 0px)); /* re-solved 2026-09-29 for line-height 1.41: last baseline 20.5px above its dots (was -168.8) */
   }
 
   /* The pinned title card rests 4.4vh (~37px on an 844px phone) from the top
@@ -5147,15 +5163,16 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   position: fixed;
   top: 12px;
   left: 12px;
-  z-index: 1007;
+  z-index: 1010;   /* above every other overlay, logos (1007) included */
   direction: ltr;
   border-radius: 16px;
   /* OPAQUE, like .fold6-note-card: the tint over --bg, so nothing scrolling
      under the card shows through it. */
   background: linear-gradient(rgba(0, 0, 0, 0.035), rgba(0, 0, 0, 0.035)), var(--bg);
 }
-/* The card's TOP edge sits on the corner logo's top edge (--se-top on
-   .seventh-eye: 8px phone, 24px desktop) — explicit instruction 2026-10-03.
+/* Desktop: the card's TOP edge sits on the corner logo's top edge (--se-top
+   24px) — explicit instruction 2026-10-03. Phone: 8px, while the logos sit at
+   12px (explicit instruction 2026-10-06).
    left 24px on desktop mirrors the logo's 24px from the right (--se-right) —
    both moved 20 → 24 on 2026-10-02, with the legend columns
    (FOLD6_LEGEND_INSET_*, js/groups.js) — one shared desktop edge gap. */
@@ -5242,6 +5259,9 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
   transition: color var(--ui-fade-ms) ease;
 }
 .lang-menu-row:hover { color: #000; }
+/* No focus ring when the menu opens by click/tap (js/lang-switch.js focuses a
+   row) — keyboard navigation still gets one via :focus-visible. */
+.lang-menu-row:focus, .lang-switch:focus { outline: none; }
 .lang-menu-row[lang="ar"] { font-family: var(--font-ar); }
 .lang-menu-row::before {
   content: "";
@@ -5286,7 +5306,7 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
      above it; it fades away once scrolling starts (see the
      600px block below). */
   --se-w: 120px;                /* width of the mark; height follows the artwork */
-  --se-top: 8px;
+  --se-top: 12px;               /* phone (manual/-baked 2026-10-06); the language button stays at 8 */
   --se-right: 12px;             /* desktop only — the phone centres it */
   --se-ink: #393239;            /* העין השביעית's own dark grey — mark and line, both breakpoints */
   --se-color: var(--se-ink);
@@ -5426,7 +5446,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     row-gap: var(--se-cap-gap);
     width: max-content;
   }
-  .seventh-eye-caption { grid-column: 1 / -1; }
+  /* No «בשיתוף» caption on the phone (all three languages) — the logos alone. */
+  .seventh-eye-caption { display: none; }
   .seventh-eye-mark { margin: 0; justify-self: end; }
   .seventh-eye .shenkar-rule { margin: 0; }
   .seventh-eye .shenkar-mark { justify-self: start; }
@@ -5621,13 +5642,13 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 @media (max-width: 600px) {
   .lang-en .page0-title {
     font-size: 24px;
-    top: calc(var(--page0-half, 50vh) - 197.9px + var(--page0-drop, 0px) + var(--page0-trim, 0px));
+    top: calc(var(--page0-half, 50vh) - 197.9px + var(--page0-drop, 0px) + var(--page0-trim, 0px) + var(--page0-shift, 0px));
   }
   /* …and the subtitle comes down a step with it: 16px (shared: 18px). `top`
      re-solved the same way, for the same last baseline. */
   .lang-en .page0-subtitle {
     font-size: 16px;
-    top: calc(var(--page0-half, 50vh) - 154.4px + var(--page0-drop, 0px) + var(--page0-trim, 0px));
+    top: calc(var(--page0-half, 50vh) - 154.4px + var(--page0-drop, 0px) + var(--page0-trim, 0px) + var(--page0-shift, 0px));
   }
 }
 
@@ -5644,6 +5665,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
     direction: ltr;
     line-height: 1.15;
   }
+  /* One block per line, so @fold3 can slide each from centred to left-aligned
+     (campHeaderAlignLines, js/update-groups.js); the joining space is dropped. */
+  .lang-en .camp-header-line { display: block; }
+  .lang-en .camp-header-sep { display: none; }
 }
 
 /* English page, PHONE only — left-to-right reading order. */
@@ -5746,10 +5771,10 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 .lang-ar .page0-subtitle { top: calc(50% - 194.7px); } /* shared -186.7px */
 @media (max-width: 600px) {
   .lang-ar .page0-title {
-    top: calc(var(--page0-half, 50vh) - 236.1px + var(--page0-drop, 0px) + var(--page0-trim, 0px)); /* shared -230.1px */
+    top: calc(var(--page0-half, 50vh) - 236.1px + var(--page0-drop, 0px) + var(--page0-trim, 0px) + var(--page0-shift, 0px)); /* shared -230.1px */
   }
   .lang-ar .page0-subtitle {
-    top: calc(var(--page0-half, 50vh) - 171.9px + var(--page0-drop, 0px) + var(--page0-trim, 0px)); /* shared -165.9px */
+    top: calc(var(--page0-half, 50vh) - 171.9px + var(--page0-drop, 0px) + var(--page0-trim, 0px) + var(--page0-shift, 0px)); /* shared -165.9px */
   }
 }
 .lang-ar .page0-subtitle,
@@ -5764,6 +5789,8 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
 .lang-ar .page9-cat-tooltip-desc,
 .lang-ar .fold6-note,
 .lang-ar .fold6-mlegend-row,
+.lang-ar .fold6-mlegend-label,
+.lang-ar .fold6-mlegend-btn,
 .lang-ar .p7-scope-btn,
 .lang-ar .seventh-eye-caption,
 .lang-ar .camp-header,
