@@ -87,8 +87,8 @@ Don't remove the gate.
 
 All three pages — `index.html` (Hebrew), `en/index.html`, `ar/index.html` — carry `og:*` +
 `twitter:*` meta tags in `<head>` so WhatsApp/X/Facebook render a preview card. One image per
-language, all **2400×1260** (2× of the 1200×630 card): `og-image-v13.png` (Hebrew), `og-image-en-v13.png`
-(English) and `og-image-ar-v13.png` (Arabic — `translate_ui_ar.py`'s `HEAD_PATCHES` swap the Hebrew
+language, all **2400×1260** (2× of the 1200×630 card): `og-image-v14.png` (Hebrew), `og-image-en-v14.png`
+(English) and `og-image-ar-v14.png` (Arabic — `translate_ui_ar.py`'s `HEAD_PATCHES` swap the Hebrew
 filename for it, so a regenerate keeps it). All three are the same DRAWN dot field — not real data: a
 made-up two-sided timeline (the six group colours, each camp in its own three, 50 / 50, jaggedness and
 long rows dialled by hand; the left camp drifts blue at the top → pink at the bottom, the right camp
@@ -97,7 +97,7 @@ title on a white block in the site's dotted frame; the dots open around the fram
 above and below and never sit beside it (Discordia for Hebrew and English, Tajawal at the site's 21 / 18.5 ratio for Arabic). The title is
 centred on its ink's visual centre (the alpha-weighted mean row), so capitals, tall letters and
 descenders read evenly in every language. They were drawn in a throwaway generator page outside the
-project; nothing in the repo produces them. Older images (`og-image-v5`…`v12`, `og-image-en-v9`…`v12`, `og-image-ar-v9`…`v12`, `og-image-en-v4`,
+project; nothing in the repo produces them. Older images (`og-image-v5`…`v13`, `og-image-en-v9`…`v13`, `og-image-ar-v9`…`v13`, `og-image-en-v4`,
 `og-image-ar-v2`) stay only so links shared under them keep their picture. Platforms cache the
 image by URL, so a changed card only reaches already-shared links under a new filename (hence the version suffix; bump it again on the next change).
 `og:image` must be an absolute URL, so the
