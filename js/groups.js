@@ -37,7 +37,7 @@ const GROUPS = [
     fold4: { x: 725,  y: 514, swatchFirst: true }, fold6: { x: 31, y: 560 } },
   { color: "#F9B624", label: "תנועות התנחלות באיו״ש",           actor: "settlers",
     fold4: { x: 887,  y: 488, swatchFirst: true }, fold6: { x: 31, y: 512 } },
-  { color: "#F024FF", label: "קבוצות ימין לאומיות",      actor: "right wing protesters",
+  { color: "#F024FF", label: "קבוצות ימין שמרניות",      actor: "right wing protesters",
     fold4: { x: 887,  y: 514, swatchFirst: true }, fold6: { x: 31, y: 560 },
     // Per-group wrap cap for the מקרא CARD (not @fold3 — that is labelCapMobile).
     // This is the ONE label whose shape would otherwise change on the @fold4
@@ -108,7 +108,7 @@ const FOLD4_CHANGE_ROWS    = ["peace movements", "protesters against government"
 // MOBILE ONLY: two pairs of rows trade places within their camp (per explicit
 // instruction, 2026-09-12) —
 //   גוש השינוי:  מתנגדי הרפורמה המשפטית ומדיניות הממשלה ↔ תומכי עסקת חטופים ומתנגדי המלחמה
-//   קואליציית הימין:  מפגינים חרדים ↔ קבוצות ימין לאומיות
+//   קואליציית נתניהו:  מפגינים חרדים ↔ קבוצות ימין שמרניות
 // so mobile reads settlers / right-wing / haredi and peace / reform / arab,
 // top→bottom. Expressed as a swap of the SHARED order rather than a second set
 // of fold6.y values, because that order is what every legend layout derives
@@ -242,7 +242,7 @@ function campCenterGapPx(W, edgeGapMobile) {
 const FOLD2_GROUP_CELL = [
   { row: 0, col: 1 },  // #31CE1C  גורמים ערבים ישראלים   (change)
   { row: 0, col: 3 },  // #F9B624  תנועות התנחלות          (coalition)
-  { row: 2, col: 0 },  // #F024FF  קבוצות ימין לאומיות     (coalition)
+  { row: 2, col: 0 },  // #F024FF  קבוצות ימין שמרניות     (coalition)
   { row: 2, col: 0 },  // #6B89FF  מתנגדי הרפורמה המשפטית ומדיניות הממשלה (change)
   { row: 0, col: 0 },  // #FF1A94  תומכי עסקת חטופים ומתנגדי המלחמה              (change)
   { row: 1, col: 1 },  // #454545  מפגינים חרדים           (coalition)
@@ -640,7 +640,7 @@ function groupColorByActor(actor) {
 //   7  row-6795  2023-01-01  settlers
 // The earliest rows are lopsided, so this leaves the right column one grey and
 // three identical yellows, and neither תומכי עסקת חטופים ומתנגדי המלחמה (first event only 2023-02-27)
-// nor קבוצות ימין לאומיות (2023-01-10) appears among the squares at all — a fact
+// nor קבוצות ימין שמרניות (2023-01-10) appears among the squares at all — a fact
 // of the data, accepted. Swapping an id here is the whole edit; keep
 // FOLD6_SQUARE_ACTORS and FOLD6_SQUARE_LABELS in step with it.
 const FOLD6_SQUARE_ROW_IDS = [
@@ -2591,7 +2591,7 @@ const FOLD6_LEGEND_TOP_MOBILE = 24;
 // above if it's ever tweaked.
 // (FOLD4_COALITION_ROWS/FOLD4_CHANGE_ROWS themselves are declared up by
 // GROUPS — @fold2's own grid roster needs them before this point.)
-const CAMP_HEADER_TITLE_COALITION = tr("קואליציית הימין");
+const CAMP_HEADER_TITLE_COALITION = tr("קואליציית נתניהו");
 const CAMP_HEADER_TITLE_CHANGE    = tr("גוש השינוי");
 // Plain px from each column's own top-row center up to its header's center —
 // fixed, NOT frame-scaled (it used to multiply by H/GROUPS_FRAME_H, which made

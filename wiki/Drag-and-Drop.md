@@ -251,7 +251,7 @@ Two supporting pieces:
   the share row's «הקישור הועתק» in page12.js write to the same region). The visible result of a
   classification is a canvas animation and a count, neither of which is in the accessibility
   tree, so the line is «‹pill› — סווגה כפעולה קיצונית. N מתוך 10 מסווגות כקיצוניות.» plus the
-  canvas's per-camp counts: «אירועים שסווגו כקיצונים — גוש השינוי: {l}, קואליציית הימין: {r}.»
+  canvas's per-camp counts: «אירועים שסווגו כקיצונים — גוש השינוי: {l}, קואליציית נתניהו: {r}.»
   (left side = גוש השינוי, legend filter respected via `p9CountsEvent`). Everything is read
   off the pills' **current placement**, not `p9.sides`, so it's correct when called from
   `placePillInZone` (every desktop path) and from the mobile in-place class toggle, both of

@@ -95,7 +95,7 @@ Figma source: file `QASHSt1u7b6m6ASgrUPswf` ("Design"). Screens are revised one 
 
 `GROUPS` in `js/groups.js` is **6 groups**, three per camp:
 
-- **קואליציית הימין (coalition):** תנועות התנחלות באיו״ש `#F9B624` (`settlers`), מפגינים חרדים `#454545` (`haredi jews`), קבוצות ימין לאומיות `#F024FF` (`right wing protesters`) (top→bottom)
+- **קואליציית נתניהו (coalition):** תנועות התנחלות באיו״ש `#F9B624` (`settlers`), מפגינים חרדים `#454545` (`haredi jews`), קבוצות ימין שמרניות `#F024FF` (`right wing protesters`) (top→bottom)
 - **גוש השינוי (change):** מתנגדי הרפורמה המשפטית ומדיניות הממשלה `#6B89FF` (`protesters against government`, mobile renders the shorter `labelMobile` «מתנגדי הרפורמה ומדיניות הממשלה»), תומכי עסקת חטופים ומתנגדי המלחמה `#FF1A94` (`peace movements`), גורמים ערבים ישראלים `#31CE1C` (`arab israelis`) (top→bottom)
 
 That top→bottom order is **desktop's**. Mobile swaps two pairs (`MOBILE_ROW_SWAPS`, js/groups.js): settlers / right-wing / haredi, and peace / reform / arab — @fold3's column and the מקרא sheet both read it through `campRowOrder`.

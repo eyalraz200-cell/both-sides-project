@@ -17,12 +17,12 @@ const I18N_EN = {
   // Camps
   // The \n is a line break on the PHONE only (.lang-en .camp-header is
   // `pre` under 600px); everywhere else it collapses to a space.
-  "קואליציית הימין": "The Right-Wing\nCoalition",
+  "קואליציית נתניהו": "The Netanyahu\nCoalition",
   "גוש השינוי": "The Change\nBloc",
   // Groups
   "גורמים ערבים ישראלים": "Arab Israeli actors",
   "תנועות התנחלות באיו״ש": "West Bank settler movements",
-  "קבוצות ימין לאומיות": "Nationalist right-wing groups",
+  "קבוצות ימין שמרניות": "Conservative right-wing groups",
   "מתנגדי הרפורמה המשפטית ומדיניות הממשלה": "Coalition policy and judicial overhaul opponents",
   "מתנגדי הרפורמה ומדיניות הממשלה": "Coalition policy and judicial overhaul opponents",
   "תומכי עסקת חטופים ומתנגדי המלחמה": "Hostage deal supporters and Gaza war opponents",
@@ -90,7 +90,7 @@ const I18N_EN = {
   "סווגה כפעולה קיצונית": "marked as an extreme action",
   "הוחזרה לפעולות לגיטימיות": "returned to legitimate actions",
   "{total} מתוך {n} מסווגות כקיצוניות.": "{total} of {n} marked as extreme.",
-  "אירועים שסווגו כקיצונים — גוש השינוי: {l}, קואליציית הימין: {r}.": "Events marked as extreme — the Change Bloc: {l}, the Right-Wing Coalition: {r}.",
+  "אירועים שסווגו כקיצונים — גוש השינוי: {l}, קואליציית נתניהו: {r}.": "Events marked as extreme — the Change Bloc: {l}, the Netanyahu Coalition: {r}.",
   "כדי להמשיך, סווגו לפחות סוג פעולה אחד כקיצוני.": "To continue, mark at least one type of action as extreme.",
   // Action types
   "הפגנה לא אלימה": "Non-violent protest",
@@ -111,11 +111,11 @@ const I18N_EN = {
 // Arabic in place if you must, but re-running the script overwrites the block.
 const I18N_AR = {
   // I18N_AR_START
-  "קואליציית הימין": "ائتلاف اليمين",
+  "קואליציית נתניהו": "ائتلاف نتنياهو",
   "גוש השינוי": "كتلة التغيير",
   "גורמים ערבים ישראלים": "عناصر من مواطني إسرائيل العرب",
   "תנועות התנחלות באיו״ש": "حركات المستوطنين في الضفة الغربية",
-  "קבוצות ימין לאומיות": "مجموعات يمينية قومية",
+  "קבוצות ימין שמרניות": "مجموعات يمينية محافظة",
   "מתנגדי הרפורמה המשפטית ומדיניות הממשלה": "معارضو التعديلات القضائية وسياسة الحكومة",
   "מתנגדי הרפורמה ומדיניות הממשלה": "معارضو التعديلات القضائية وسياسة الحكومة",
   "תומכי עסקת חטופים ומתנגדי המלחמה": "مؤيدو صفقة الرهائن ومعارضو الحرب في غزة",
@@ -174,7 +174,7 @@ const I18N_AR = {
   "סווגה כפעולה קיצונית": "صُنّف تحركًا متطرفًا",
   "הוחזרה לפעולות לגיטימיות": "أُعيد إلى التحركات المشروعة",
   "{total} מתוך {n} מסווגות כקיצוניות.": "{total} من أصل {n} مصنّفة متطرفة.",
-  "אירועים שסווגו כקיצונים — גוש השינוי: {l}, קואליציית הימין: {r}.": "الأحداث المصنّفة متطرفة — كتلة التغيير: {l}، ائتلاف اليمين: {r}.",
+  "אירועים שסווגו כקיצונים — גוש השינוי: {l}, קואליציית נתניהו: {r}.": "الأحداث المصنّفة متطرفة — كتلة التغيير: {l}، ائتلاف نتنياهو: {r}.",
   "כדי להמשיך, סווגו לפחות סוג פעולה אחד כקיצוני.": "للمتابعة، صنّفوا نوع تحرك واحدًا على الأقل كتحرك متطرف.",
   "הפגנה לא אלימה": "مظاهرة سلمية",
   "חסימת כביש": "إغلاق طريق",

@@ -60,7 +60,7 @@ outlet "The Seventh Eye" (העין השביעית). It maps over 12,000 document
 carried out in public space, from the beginning of 2023 to today, by Israeli citizens in
 Israel and the occupied territories. Each action is one square on screen. The actions
 are grouped into two opposing camps, three groups each:
-- "The right-wing coalition": West Bank settler movements, Haredi (ultra-Orthodox)
+- "The Netanyahu coalition": West Bank settler movements, Haredi (ultra-Orthodox)
   protesters, nationalist right-wing groups.
 - "The change bloc": opponents of the judicial overhaul and government policy,
   hostage-deal supporters and opponents of the Gaza war, Arab citizens of Israel.

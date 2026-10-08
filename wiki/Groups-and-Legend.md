@@ -8,13 +8,13 @@ anywhere, hero dots included. Any doc claiming 8/10/12 groups is stale.
 
 `GROUPS` is the source of truth for colors, labels and the `actor` join key.
 
-**קואליציית הימין (coalition column, screen-right), top → bottom:**
+**קואליציית נתניהו (coalition column, screen-right), top → bottom:**
 
 | Color | Label | `actor` |
 |---|---|---|
 | `#F9B624` | תנועות התנחלות באיו״ש | `settlers` |
 | `#454545` | מפגינים חרדים | `haredi jews` |
-| `#F024FF` | קבוצות ימין לאומיות | `right wing protesters` |
+| `#F024FF` | קבוצות ימין שמרניות | `right wing protesters` |
 
 **גוש השינוי (change column, screen-left), top → bottom:**
 
@@ -53,7 +53,7 @@ values in `GROUPS`.
 
 **Mobile swaps two pairs.** Under the breakpoint the order is the desktop sort with
 `MOBILE_ROW_SWAPS` (`js/groups.js`) applied — מתנגדי הרפורמה המשפטית ומדיניות הממשלה ↔ תומכי עסקת חטופים
-ומתנגדי המלחמה in גוש השינוי, and מפגינים חרדים ↔ קבוצות ימין לאומיות in קואליציית הימין — so
+ומתנגדי המלחמה in גוש השינוי, and מפגינים חרדים ↔ קבוצות ימין שמרניות in קואליציית נתניהו — so
 mobile reads **תנועות התנחלות / קבוצות ימין / מפגינים חרדים** and **תומכי עסקת חטופים /
 מתנגדי הרפורמה / גורמים ערבים ישראלים**, top→bottom. Everything that derives the order goes
 through one helper, `campRowOrder(camp, mobile)`: @fold3's column (`legendRow`) and the
@@ -426,7 +426,7 @@ odd the right, the same convention `FOLD6_SQUARES_OFFSET` lays out.
 
 **A consequence of the "earliest" rule, not a bug:** the opening days are lopsided, so the
 right column is 1 grey + 3 identical yellows, and two of the six group colors never appear
-among the squares at all — תומכי עסקת חטופים ומתנגדי המלחמה's first event is 2023-02-27 and קבוצות ימין לאומיות's
+among the squares at all — תומכי עסקת חטופים ומתנגדי המלחמה's first event is 2023-02-27 and קבוצות ימין שמרניות's
 is 2023-01-10. Swapping indices 5/7 for `row-22` / `row-377` is a one-line roster change if
 that ever reads badly.
 

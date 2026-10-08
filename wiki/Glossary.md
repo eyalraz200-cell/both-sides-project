@@ -54,7 +54,7 @@ See [Animation-System](Animation-System.md).
 must always animate continuously, while color/opacity/label visibility may move on their
 own timing.
 
-**Camp headers** — קואליציית הימין / גוש השינוי (`.camp-header`). They type in at
+**Camp headers** — קואליציית נתניהו / גוש השינוי (`.camp-header`). They type in at
 `@fold2` and un-type in place at `@fold4`; they never travel into the legend.
 
 **The 8 squares** — `#fold6SquaresOverlay`'s sample squares, which grow in at `@fold5`

@@ -287,6 +287,13 @@
   "ar": "                <p><a class=\"card-link\" href=\"ar/methodology.html\" target=\"_blank\" rel=\"noopener\">منهجية العمل الكاملة</a>: المصادر، وقواعد الاختيار، والتصنيف، والترجمة، ورصد التكرار، والتعليمات الكاملة للنماذج.</p>"
  },
  {
+  "id": "html:report",
+  "kind": "html",
+  "he": "                <p>מצאתם טעות? כתבו לנו ל־<a class=\"card-link\" href=\"mailto:extremists.on.both.sides@gmail.com\">extremists.on.both.sides@gmail.com</a> וציינו את תאריך האירוע, הקבוצה ומה כתוב בו.</p>",
+  "en": "                <p>Found a mistake? Write to us at <a class=\"card-link\" href=\"mailto:extremists.on.both.sides@gmail.com\">extremists.on.both.sides@gmail.com</a> and include the event's date, the group and what it says.</p>",
+  "ar": "                <p>وجدتم خطأً؟ راسلونا على <a class=\"card-link\" href=\"mailto:extremists.on.both.sides@gmail.com\">extremists.on.both.sides@gmail.com</a> واذكروا تاريخ الحدث والمجموعة وما ورد فيه.</p>"
+ },
+ {
   "id": "html:318",
   "kind": "html",
   "he": "              <p class=\"page12-credits\">מחקר, עיצוב ופיתוח: איל רז (<a href=\"https://eyalraz.com/\" target=\"_blank\" rel=\"noopener\">eyalraz.com</a>)<br>ליווי, הנחייה והכוונה: מושון זר־אביב<br>ייעוץ עיתונאי: אורן פרסיקו<br>תודה לרקפת כנען, בית הספר לתקשורת חזותית שנקר, <a href=\"https://www.shenkar.ac.il/\" target=\"_blank\" rel=\"noopener\">שנקר - הנדסה. עיצוב. אמנות.</a><br>תודה לצוות <a href=\"https://www.zman.co.il/fortress/\" target=\"_blank\" rel=\"noopener\">המבצר</a> · ענת סרגוסטי, מיקי רוזנטל, אמיר שפרלינג, רונית אנטלר ואחרים<br>מסד נתונים: <a href=\"https://acleddata.com/\" target=\"_blank\" rel=\"noopener\">ACLED</a>, <a href=\"https://www.zman.co.il/fortress/\" target=\"_blank\" rel=\"noopener\">המבצר</a></p>",
@@ -296,9 +303,9 @@
  {
   "id": "js:0",
   "kind": "js",
-  "he": "קואליציית הימין",
-  "en": "The Right-Wing\nCoalition",
-  "ar": "ائتلاف اليمين"
+  "he": "קואליציית נתניהו",
+  "en": "The Netanyahu\nCoalition",
+  "ar": "ائتلاف نتنياهو"
  },
  {
   "id": "js:1",
@@ -324,9 +331,9 @@
  {
   "id": "js:4",
   "kind": "js",
-  "he": "קבוצות ימין לאומיות",
-  "en": "Nationalist right-wing groups",
-  "ar": "مجموعات يمينية قومية"
+  "he": "קבוצות ימין שמרניות",
+  "en": "Conservative right-wing groups",
+  "ar": "مجموعات يمينية محافظة"
  },
  {
   "id": "js:5",
@@ -737,9 +744,9 @@
  {
   "id": "js:60",
   "kind": "js",
-  "he": "אירועים שסווגו כקיצונים — גוש השינוי: {l}, קואליציית הימין: {r}.",
-  "en": "Events marked as extreme — the Change Bloc: {l}, the Right-Wing Coalition: {r}.",
-  "ar": "الأحداث المصنّفة متطرفة — كتلة التغيير: {l}، ائتلاف اليمين: {r}."
+  "he": "אירועים שסווגו כקיצונים — גוש השינוי: {l}, קואליציית נתניהו: {r}.",
+  "en": "Events marked as extreme — the Change Bloc: {l}, the Netanyahu Coalition: {r}.",
+  "ar": "الأحداث المصنّفة متطرفة — كتلة التغيير: {l}، ائتلاف نتنياهو: {r}."
  },
  {
   "id": "js:61",

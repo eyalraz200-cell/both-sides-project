@@ -3250,12 +3250,12 @@ function p9BuildPanel() {
     // the pills' NEW placement rather than p9ExtremeCountsNow()/p9.sides: this
     // runs before commitDropState writes the side, and the drawn label is
     // still mid count-up then anyway. Same legend-filter rule as the canvas
-    // (p9CountsEvent). left = גוש השינוי, right = קואליציית הימין (ACTOR_SIDE).
+    // (p9CountsEvent). left = גוש השינוי, right = קואליציית נתניהו (ACTOR_SIDE).
     const extremeIdx = new Set(extremePills.map(p => Number(p.dataset.idx)));
     const countSide = evs => (evs || []).filter(e =>
       extremeIdx.has(CATEGORY_TO_IDX[e.category]) && p9CountsEvent(e)).length;
     const counts = p7.ready
-      ? " " + trf("אירועים שסווגו כקיצונים — גוש השינוי: {l}, קואליציית הימין: {r}.",
+      ? " " + trf("אירועים שסווגו כקיצונים — גוש השינוי: {l}, קואליציית נתניהו: {r}.",
                   { l: countSide(p7.leftEvents), r: countSide(p7.rightEvents) })
       : "";
     p9Announce(
