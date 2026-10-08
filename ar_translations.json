@@ -289,9 +289,9 @@
  {
   "id": "html:report",
   "kind": "html",
-  "he": "                <p>מצאתם טעות? כתבו לנו ל־<a class=\"card-link\" href=\"mailto:extremists.on.both.sides@gmail.com\">extremists.on.both.sides@gmail.com</a> וציינו את תאריך האירוע, הקבוצה ומה כתוב בו.</p>",
-  "en": "                <p>Found a mistake? Write to us at <a class=\"card-link\" href=\"mailto:extremists.on.both.sides@gmail.com\">extremists.on.both.sides@gmail.com</a> and include the event's date, the group and what it says.</p>",
-  "ar": "                <p>وجدتم خطأً؟ راسلونا على <a class=\"card-link\" href=\"mailto:extremists.on.both.sides@gmail.com\">extremists.on.both.sides@gmail.com</a> واذكروا تاريخ الحدث والمجموعة وما ورد فيه.</p>"
+  "he": "                <p>מצאתם טעות? כתבו לנו ל־<a class=\"card-link\" href=\"mailto:extremists.on.both.sides@gmail.com\">extremists.on.both.sides@gmail.com</a> וציינו את תאריך ותיאור האירוע, הקבוצה שאליה שויך והתיקון הנדרש.</p>",
+  "en": "                <p>Found a mistake? Write to us at <a class=\"card-link\" href=\"mailto:extremists.on.both.sides@gmail.com\">extremists.on.both.sides@gmail.com</a> and include the event's date and description, the group it was assigned to, and the correction needed.</p>",
+  "ar": "                <p>وجدتم خطأً؟ راسلونا على <a class=\"card-link\" href=\"mailto:extremists.on.both.sides@gmail.com\">extremists.on.both.sides@gmail.com</a> واذكروا تاريخ الحدث ووصفه، والمجموعة التي نُسب إليها، والتصحيح المطلوب.</p>"
  },
  {
   "id": "html:318",
