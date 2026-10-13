@@ -20,7 +20,7 @@ sit beside them (`methodology.html`, `en/methodology.html`, `ar/methodology.html
 Served at `/ar/`. **Generated, not hand-edited:** `translate_ui_ar.py` (repo root) builds it
 from `index.html` — the page is a copy with `<html lang="ar" class="lang-ar">`, `<base
 href="../">`, Arabic copy on every line that differs between the Hebrew and English pages,
-canonical / `og:url` at `/ar/`, Tajawal + IBM Plex Sans Arabic linked from Google Fonts, and the
+canonical / `og:url` at `/ar/`, Noto Naskh Arabic + IBM Plex Sans Arabic linked from Google Fonts, and the
 Hebrew page's og image (no Arabic share card has been shot yet — see
 [Dev-Workflow](Dev-Workflow.md)). The same run fills `I18N_AR` in `js/i18n.js` (between the
 `I18N_AR_START` / `I18N_AR_END` markers), keyed by the Hebrew string like `I18N_EN`; `tr()`
@@ -36,13 +36,13 @@ whole lines and come back with the Hebrew line's markup verbatim.
 
 **Layout:** none of its own. Arabic is RTL, so the page runs on the Hebrew code path
 (`isEnglish()` is false everywhere); the only `.lang-ar` CSS is the font family, because
-Discordia / Assistant carry no Arabic glyphs: **Tajawal** wherever the Hebrew
+Discordia / Assistant carry no Arabic glyphs: **Noto Naskh Arabic** wherever the Hebrew
 page uses Discordia (`.section-title`, the hero title), **IBM Plex Sans Arabic** wherever it
 uses Assistant (both Google Fonts, foot of `style.css`; any rule that sets its own `font:` shorthand — e.g. `.fold6-mlegend-label` — must be listed there too, or the מקרא labels revert to Assistant the moment the flying rows hand off), plus one size override: the Arabic
 face sits ~13% shorter than Discordia at equal px (Hebrew letters 0.68em vs the Arabic body
-0.39em / alefs 0.63em, measured on Beiruti; 21/18 kept by eye for Tajawal), so **`.lang-ar .section-title` is 21px desktop / 18px
+0.39em / alefs 0.63em, measured on Beiruti; 21.5/19 set by eye for Noto Naskh), so **`.lang-ar .section-title` is 21.5px desktop / 19px
 under 600px** — the one language-gated exception to the single `.section-title` size.
-The hero title is not resized, but the hero title + subtitle sit higher as one (`.lang-ar .page0-title` / `.page0-subtitle` `top`: 8px up on desktop, 6px on the phone). Canvas-drawn text still uses the Hebrew faces (falls back
+The hero title + subtitle sit higher as one (`.lang-ar .page0-title` / `.page0-subtitle` `top`: 8px up on desktop, 6px on the phone), and the hero title is **41px desktop / 33px phone** (shared 40 / 32), grown upward: its `top` rises a further 4.05px / 4.35px (three lines × 1px × line-height) so the gap to the dots below is unchanged. Canvas-drawn text still uses the Hebrew faces (falls back
 to the system Arabic font).
 
 **Hero line breaks** match the Hebrew's at both breakpoints — title 3 lines, subtitle 4 —

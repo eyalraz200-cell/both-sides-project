@@ -5830,31 +5830,36 @@ body.page9-pills-tight .page9-pill.page9-pill-ghost {
    Shares the Hebrew page's RTL layout entirely; only the faces change, because
    Discordia / Assistant carry no Arabic glyphs. Both are Google
    Fonts, linked from ar/index.html (translate_ui_ar.py writes the <link>):
-   Tajawal (picked over Beiruti, Mada, Noto Sans Arabic and IBM Plex Sans Arabic
-   with the ar-title-face compare harness, 2026-10-06) stands in wherever the Hebrew page uses Discordia (title blocks and
+   Noto Naskh Arabic (picked over Tajawal and Noto Sans Arabic with the
+   ar-title-font compare harness, 2026-10-13) stands in wherever the Hebrew page uses Discordia (title blocks and
    the hero title), IBM Plex Sans Arabic wherever it uses Assistant. Sizes and
    weights stay the shared rules'. */
 .lang-ar .section-title,
 .lang-ar .page0-title {
-  font-family: 'Tajawal', 'Discordia', serif;
+  font-family: 'Noto Naskh Arabic', 'Discordia', serif;
 }
 /* Optical size match: Discordia's Hebrew letters stand 0.68em tall, the Arabic
    face's body far less (measured on Beiruti: 0.39em, alefs 0.63em), so at the
-   shared 18.5px / 16px the Arabic titles read ~13% smaller. 21px / 18px lands
-   them at the same visual size (kept for Tajawal — the compare harness pick) — the one language-gated exception to the
+   shared 18.5px / 16px the Arabic titles read smaller. 21.5px / 19px lands
+   Noto Naskh at the same visual size (ar-title-font compare harness, 2026-10-13) — the one language-gated exception to the
    .section-title single-size rule (#page-17 stays its own 36/26 exception). */
-.lang-ar .section-title { font-size: 21px; }
+.lang-ar .section-title { font-size: 21.5px; }
 @media (max-width: 600px) {
-  .lang-ar .section-title { font-size: 18px; }
+  .lang-ar .section-title { font-size: 19px; }
 }
 /* Arabic hero title + subtitle sit higher than the shared tops — Tajawal's
    lines read closer to the dot columns — and move as one: 8px desktop, 6px
    phone (ar-hero-lift manual harness, 2026-10-06). The shared tops minus that. */
-.lang-ar .page0-title { top: calc(50% - 278.8px); }    /* shared -270.8px */
+/* Arabic hero title is 41px desktop / 33px phone (shared 40 / 32) and grows
+   UPWARD: its top rises by the extra height (3 lines x 1px x line-height —
+   4.05px desktop at 1.35, 4.35px phone at 1.45) so the gap to the dots below
+   stays put (ar-title-font harness, 2026-10-13). */
+.lang-ar .page0-title { top: calc(50% - 282.85px); font-size: 41px; }    /* shared -270.8px */
 .lang-ar .page0-subtitle { top: calc(50% - 194.7px); } /* shared -186.7px */
 @media (max-width: 600px) {
   .lang-ar .page0-title {
-    top: calc(var(--page0-half, 50vh) - 236.1px + var(--page0-drop, 0px) + var(--page0-trim, 0px) + var(--page0-shift, 0px)); /* shared -230.1px */
+    top: calc(var(--page0-half, 50vh) - 240.45px + var(--page0-drop, 0px) + var(--page0-trim, 0px) + var(--page0-shift, 0px)); /* shared -230.1px */
+    font-size: 33px;
   }
   .lang-ar .page0-subtitle {
     top: calc(var(--page0-half, 50vh) - 171.9px + var(--page0-drop, 0px) + var(--page0-trim, 0px) + var(--page0-shift, 0px)); /* shared -165.9px */
