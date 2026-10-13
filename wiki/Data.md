@@ -172,7 +172,7 @@ Two scripts at the repo root turn an ACLED refresh into two commands (added 2026
    one. The rows a run appended are known from `new_rows` in `_acled-filter/last-fetch.json`.
 5. **Schedule** (launchd; the plists live in `launchd/` and are loaded once by hand with `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/<name>.plist` after copying them there): `com.bothsides.refresh-weekly`
    runs `refresh_weekly.sh` (fetch → pipeline → issue) **Wednesdays 09:00**;
-   `com.bothsides.approve-hourly` runs `approve_hourly.sh` every hour. Logs in
+   `com.bothsides.approve-hourly` runs `approve_hourly.sh` every hour — the approve check, plus a **catch-up**: if `_acled-filter/last-fetch.json` is older than 7 days (the Mac was shut down on Wednesday, so launchd skipped the calendar job — a sleeping Mac runs it on wake, a shut-down one does not) it runs `refresh_weekly.sh` itself. `_acled-filter/refresh.lock` (the running pid) stops two refreshes overlapping. Logs in
    `_acled-filter/launchd-*.log`. The Mac has to be awake; a missed slot runs at the next
    wake. Tiud (the Fortress gatherer) is **not** scheduled yet — monthly, by hand for now.
 
