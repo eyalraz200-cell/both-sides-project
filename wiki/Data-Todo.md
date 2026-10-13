@@ -27,9 +27,8 @@ date; the rules behind each one live in [Data](Data.md).
       are not dedupe candidates** — they never ship, so a Fortress row matching one stays live
       and no new `corroborated_by` is written (the existing 230 stay as they are). Unsure pairs
       go to the review email. Built and run 2026-10-07.
-- [ ] Fortress updates: one-time file for now (through 2026-09-28); it will be updated in the
-      future, mechanism unknown (2026-10-07). When it is, new Fortress rows need their own
-      fetch and the same dedupe run the other way (new Fortress vs ACLED).
+- [x] Fortress updates (2026-10-13): המבצר handed over Tiud, their gatherer; it runs here monthly — `refresh_monthly.sh` (collect → `00_fetch_tiud.py` → `08 --direction fortress` → pipeline). See [Data](Data.md#the-fortress-track--tiud-runs-here-monthly). The `fortress-log` GitHub repo and `Fortress-Feed-Brief.md` / `Fortress-Handover-Prompt.md` are obsolete.
+- [ ] 2023 backfill for the Fortress (Jan–Sep 2023, Tiud's own range starts 2023-10-06): `TIUD_RANGE_START=2023-01-01 … --from=2023-01 --to=2023-09 --skip-classify`, cap $45, 3–4 h. Started by mistake on 2026-10-13 and killed after a minute — a few January 2023 events are in Tiud's database from it. Run only when the user says.
 
 ## Tail cut (temporary)
 - [ ] `server.py` drops every row dated after ACLED's last day (`last_acled`, 2026-10-02 since

@@ -17,3 +17,8 @@ if [[ ! -e $LAST ]] || [[ -n $(find $LAST -mtime +7) ]]; then
   echo "==== $(date) catch-up: weekly refresh overdue"
   ./refresh_weekly.sh >> _acled-filter/launchd-weekly.log 2>&1
 fi
+LAST_TIUD=_acled-filter/last-tiud.json                 # the monthly Fortress refresh, same idea (> 35 days)
+if [[ -e $LAST_TIUD ]] && [[ -n $(find $LAST_TIUD -mtime +35) ]]; then
+  echo "==== $(date) catch-up: monthly Fortress refresh overdue"
+  ./refresh_monthly.sh >> _acled-filter/launchd-monthly.log 2>&1
+fi

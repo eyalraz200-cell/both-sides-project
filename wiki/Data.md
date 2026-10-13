@@ -171,10 +171,43 @@ Two scripts at the repo root turn an ACLED refresh into two commands (added 2026
    issue number sits in `_acled-filter/pending-issue.json`; a new run supersedes an open
    one. The rows a run appended are known from `new_rows` in `_acled-filter/last-fetch.json`.
 5. **Schedule** (launchd; the plists live in `launchd/` and are loaded once by hand with `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/<name>.plist` after copying them there): `com.bothsides.refresh-weekly`
-   runs `refresh_weekly.sh` (fetch → pipeline → issue) **Wednesdays 09:00**;
+   runs `refresh_weekly.sh` (fetch → pipeline → issue) **Wednesdays 09:00**; `com.bothsides.refresh-monthly` runs `refresh_monthly.sh` (the Fortress track above) **the 10th at 09:00**;
    `com.bothsides.approve-hourly` runs `approve_hourly.sh` every hour — the approve check, plus a **catch-up**: if `_acled-filter/last-fetch.json` is older than 7 days (the Mac was shut down on Wednesday, so launchd skipped the calendar job — a sleeping Mac runs it on wake, a shut-down one does not) it runs `refresh_weekly.sh` itself. `_acled-filter/refresh.lock` (the running pid) stops two refreshes overlapping. Logs in
    `_acled-filter/launchd-*.log`. The Mac has to be awake; a missed slot runs at the next
-   wake. Tiud (the Fortress gatherer) is **not** scheduled yet — monthly, by hand for now.
+   wake.
+
+## The Fortress track — Tiud runs here, monthly
+
+The Fortress log is no longer a file the user receives: its gatherer, **Tiud** (a Node/TypeScript
+project handed over by המבצר on 2026-10-12, installed at `../Tiud`, database at
+`~/Library/Application Support/tiud/data/tiud.sqlite`, its own `CLAUDE.md` + `docs/context/`
+are its wiki), runs on this Mac. Monthly, `refresh_monthly.sh` (launchd
+`com.bothsides.refresh-monthly`, the 10th at 09:00; `approve_hourly.sh` catches up after 35
+days) does:
+
+1. **Collect** — `node scripts/run-ts.mjs scripts/overnight-collect.ts 15 5 --from=<last month>
+   --skip-classify` in `../Tiud`: GPT-5.6 Sol with web search over Tiud's 22 Israeli sources
+   (NGOs, media; OCHA for discovery only), one Israeli source verifies, ~$5, an hour. Its
+   prompt (`src/core/llm/prompts.ts`) got our rules on 2026-10-13: the full account
+   (`description_long`) is mandatory; the short line keeps attacker count, means, victims,
+   damage, soldiers; one place-name spelling; threats / trespass / herding / blocking access /
+   outposts count as events. `--skip-classify` (added here) drops Tiud's own shortening +
+   categories — our pipeline does that. `TIUD_RANGE_START=2023-01-01` with `--from=2023-01
+   --to=2023-09` is the one-off 2023 backfill (Tiud's own range starts 2023-10-06).
+2. **Export** — `00_fetch_tiud.py`: Tiud's main-list events keyed by Tiud's event `id` in
+   the sheet column **`tiud_id`** (added 2026-10-13; the old rows were matched once by date +
+   the log's line, 3,729 of 3,778; `fortress_id` is the legacy report-row number, unused for
+   new rows). New → appended as `the fortress` rows with the FULL Hebrew account in
+   `description_he_medium` (step 06 moves it to `description_he_original`), Tiud's place
+   name, sources (` · `), links, killed. Left Tiud's main list → `hidden = tiud dropped
+   <date>`. Text changed after we processed it → `_acled-filter/tiud-changes-<date>.csv`.
+   Appended range in `_acled-filter/last-tiud.json` (notify.py reads it).
+3. **Dedupe** — `08_dedupe_fortress.py events.xlsx --direction fortress`: new Fortress rows
+   (blank `dedupe_note`) vs the SHIPPING ACLED rows ±1 day. Sure → the Fortress row is hidden
+   `dup of row-N`; unsure → `acled_match = unsure`, stays live; none → `no acled twin`.
+4. **Pipeline** — `run_pipeline.py` as on the weekly track: 01 actor (reads the Hebrew) → 02
+   type → 05 crowd → **06 rewrite** (now told the original may be a multi-report account to
+   condense; 70–110 chars, up to 160 when the facts need it) → 07 EN/AR → json → issue.
 
 ## Classification pipeline (`0N_*.py`, OpenAI Batch API)
 

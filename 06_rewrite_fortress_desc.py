@@ -31,6 +31,13 @@ You receive: MAIN ACTOR, DATE, PLACE (the log's location cell — a Palestinian 
 town, area or a settlement/outpost), SOURCE TAGS (the log's own labels), EVENT TYPE
 (already decided — do not contradict it), and the ORIGINAL LINE.
 
+The ORIGINAL LINE is either the log's own short line (one terse sentence, often passive)
+or — for rows gathered since October 2026 — the full account of the report: several
+sentences, sometimes the accounts of two or three reports joined one after another, so the
+same fact may appear twice in different words. Treat it as ONE event: merge the accounts,
+keep each fact once, and ignore remarks about the report itself ("the embedded report
+mistakenly shows the year 2025", "the report also mentioned other incursions").
+
 TARGET REGISTER (examples of the dataset's Hebrew):
 - מתנחלים ישראלים תקפו רועה צאן פלסטיני בוואדי קלט בעת שרעה את צאנו, וגנבו ממנו 250 כבשים.
 - מתנחלים ישראלים הציבו קרוואן על אדמה בבעלות פלסטינית בכפר קוסרא.
@@ -38,7 +45,9 @@ TARGET REGISTER (examples of the dataset's Hebrew):
 - מתנחלים ישראלים תקפו בגז פלפל שני פלסטינים באזור שיב אל־ביר בבית פוריכ, וגרמו להם לכוויות.
 
 RULES FOR THE HEBREW (`description_he`)
-1. One or two sentences, past tense, 70–110 characters. Never shorter than the original.
+1. One or two sentences, past tense, 70–110 characters — up to 160 when the original holds
+   several distinct facts that rule 4 obliges you to keep. Never shorter than a short
+   original; a long original is condensed, not copied.
 2. The ACTOR is the grammatical subject and is named explicitly, at the start: "מתנחלים
    ישראלים", "מתנחלים חמושים", "מתנחל", "פעילי ימין" (MAIN ACTOR = right wing protesters),
    "מתנחלים מהמאחז הסמוך" if the original says so. Turn passive originals ("בית נפרץ ורכוש

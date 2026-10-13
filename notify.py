@@ -43,12 +43,19 @@ def build_body():
         return not r[c["hidden"]] and r[c["main_actor"]] not in (None, "not relevant")
 
     today_s = str(today)
-    rng = (json.loads(last.read_text()).get("new_rows") or {}) if last.exists() else {}
-    lo, hi = rng.get("from", 10**9), rng.get("to", -1)
+    # the row ranges the latest ACLED fetch and the latest Tiud export appended (today's runs only)
+    ranges = []
+    for f in (last, FILTER_DIR / "last-tiud.json"):
+        if f.exists():
+            d = json.loads(f.read_text())
+            if d.get("run") == today_s and d.get("new_rows"):
+                ranges.append((d["new_rows"]["from"], d["new_rows"]["to"]))
     def rid(r):
         v = str(r[c["row_id"]] or "")
         return int(v.split("-")[1]) if v.startswith("row-") else -1
-    new = [r for r in rows[1:] if lo <= rid(r) <= hi or (r[c["split_from"]] and lo <= int(str(r[c["split_from"]]).split("-")[1]) <= hi)]
+    def in_run(n):
+        return any(lo <= n <= hi for lo, hi in ranges)
+    new = [r for r in rows[1:] if in_run(rid(r)) or (r[c["split_from"]] and in_run(int(str(r[c["split_from"]]).split("-")[1])))]
     new_live = [r for r in new if live(r)]
     flagged = [r for r in new_live if r[c["event_type_needs_review"]] == "yes" or r[c["main_actor_needs_review"]] == "yes"]
     unsure = [r for r in rows[1:] if r[c["acled_match"]] == "unsure" and today_s in str(r[c["dedupe_note"]] or "")]
