@@ -3,6 +3,18 @@
 The running list of data work agreed with the user. Strike items as they land and note the
 date; the rules behind each one live in [Data](Data.md).
 
+## Pinned (2026-10-13)
+- [ ] **First Fortress-track run on real data:** 297 Tiud rows are in the sheet (`row-22181`…
+      `row-22477`, 132 from Sep–Oct 2026 + ~165 from January 2023), unpublished until
+      `08_dedupe_fortress.py events.xlsx --direction fortress` (~$0.40) and `run_pipeline.py`
+      (~$1.50) run. Needs the user's go.
+- [ ] **Fortress 2023 backfill, 2023-01-01 → 2023-10-06** (Tiud's own range starts on
+      2023-10-06; the site starts 2023-01-01): `TIUD_RANGE_START=2023-01-01 … --from=2023-01
+      --to=2023-10 --skip-classify`, cap $45, 3–4 h. Only January is partly in (the aborted
+      start). Needs the user's go.
+- [ ] **ACLED's latest week:** the sheet's ACLED data ends 2026-10-02; ACLED is at ~10-07
+      and publishes weekly. The Wednesday job (first: 2026-10-14) closes the gap by itself.
+
 ## In flight
 - [x] Second split pass (70 rows → 84 children): classified, translated, crowds corrected, shipped (2026-10-03).
 - [x] ACLED refresh automation (2026-10-07): `00_fetch_acled.py` (API pull + the five-actor
