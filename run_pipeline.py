@@ -132,7 +132,8 @@ def regenerate_and_report():
         print(f"live rows {len(live)}, still missing type/Hebrew {len(pending)}, flagged for review {len(review)}")
     except Exception as e:  # reporting only
         print("  (summary skipped:", e, ")")
-    print("Next: look at the review flags, restart the dev server, commit events*.json.")
+    print("Opening the review issue…")
+    subprocess.run([sys.executable, "notify.py"], cwd=ROOT)
 
 
 def main():

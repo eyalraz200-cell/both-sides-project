@@ -254,8 +254,11 @@ def main():
             w.writerows(changed)
         print(f"Changed texts → {p} (sheet untouched; decide by hand)")
 
+    first_new = max_id + 1
     def remember():
-        LAST_FETCH_FILE.write_text(json.dumps({"timestamp": newest_ts, "run": str(today)}) + "\n")
+        # new_rows: the row-id range this run appended — notify.py builds the review issue from it
+        LAST_FETCH_FILE.write_text(json.dumps({"timestamp": newest_ts, "run": str(today),
+                                               "new_rows": {"from": first_new, "to": first_new + len(new) - 1}}) + "\n")
         SEEN_ACTORS_FILE.write_text("\n".join(sorted(seen | set(counts))) + "\n")
     if not new and not gone:
         remember()

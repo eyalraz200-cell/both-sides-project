@@ -159,8 +159,22 @@ Two scripts at the repo root turn an ACLED refresh into two commands (added 2026
    that is where they keep their `*_state.json` and `*_batches/`. At the end it runs
    `python3 server.py --sync-only` (rewrite the three json files and exit — the running dev
    server is never touched) and prints the json diff plus the live / still-pending /
-   flagged-for-review counts. **Then a human looks at the review flags and commits** —
-   publishing is deliberately not automated.
+   flagged-for-review counts, then **`notify.py`** opens the review issue.
+4. **Review by GitHub issue** (`notify.py` → `approve_check.py`, added 2026-10-13). The run
+   opens an issue labelled `refresh` in the project repo (title "Data refresh <date>: N new
+   events"; body: counts, the flagged rows and unsure Fortress twins as row id + our own
+   Hebrew line — the repo is public, so never ACLED's text), and GitHub e-mails the user's
+   notification address (extremists.on.both.sides@gmail.com). `approve_check.py` runs
+   hourly: the newest comment on the issue by the repo owner decides — **approve / אשר /
+   go / publish / yes** commits the three json files, pushes, comments the commit and
+   closes the issue; **no / hold / לא** closes it unpublished; anything else waits. The
+   issue number sits in `_acled-filter/pending-issue.json`; a new run supersedes an open
+   one. The rows a run appended are known from `new_rows` in `_acled-filter/last-fetch.json`.
+5. **Schedule** (launchd; the plists live in `launchd/` and are loaded once by hand with `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/<name>.plist` after copying them there): `com.bothsides.refresh-weekly`
+   runs `refresh_weekly.sh` (fetch → pipeline → issue) **Wednesdays 09:00**;
+   `com.bothsides.approve-hourly` runs `approve_hourly.sh` every hour. Logs in
+   `_acled-filter/launchd-*.log`. The Mac has to be awake; a missed slot runs at the next
+   wake. Tiud (the Fortress gatherer) is **not** scheduled yet — monthly, by hand for now.
 
 ## Classification pipeline (`0N_*.py`, OpenAI Batch API)
 
