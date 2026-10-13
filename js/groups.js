@@ -3084,13 +3084,30 @@ fold6NoteLayerEl.inert = true;
 // (explicit instruction). The note and the group rows are two independent
 // hover zones now: this one opens the note and leaves the six labels closed,
 // just as the column hit boxes open the labels and leave the note closed
-// (fold6LegendHoverSync). The title and the card skin are included as targets
-// because once the body has un-typed they are all that is left to aim at.
-[fold6NoteEl, fold6NoteTitleEl, fold6NoteCardEl].forEach((el) => {
+// (fold6LegendHoverSync).
+// Two kinds of target. The TITLE (and the card skin) OPEN the note: once the
+// body has un-typed they are the collapsed card, and the only thing to aim at.
+// The BODY only HOLDS it open: its box keeps the full laid-out height even
+// while its text is gone, so a pointer crossing the blank space under the
+// collapsed title used to pop the note open from nowhere. So entering the body
+// counts only while some body is actually showing (not fully un-typed, or
+// already re-typing). Leaving either target closes — moving title → body
+// fires leave-then-enter, and the enter re-arms because the close is still
+// mid-flight, so the note stays open while the pointer is anywhere on it.
+function fold6NoteBodyShown() {
+  return fold6NoteUntypeTrigger.currentRaw() < 1 || fold6NoteHoverTrigger.currentRaw() > 0;
+}
+[fold6NoteTitleEl, fold6NoteCardEl].forEach((el) => {
   el.addEventListener("mouseenter", () => {
     if (isMobile()) return;
     fold6NoteHoverTrigger.trigger(1);
   });
+});
+fold6NoteEl.addEventListener("mouseenter", () => {
+  if (isMobile() || !fold6NoteBodyShown()) return;
+  fold6NoteHoverTrigger.trigger(1);
+});
+[fold6NoteEl, fold6NoteTitleEl, fold6NoteCardEl].forEach((el) => {
   el.addEventListener("mouseleave", () => {
     if (isMobile()) return;
     fold6NoteHoverTrigger.trigger(0);

@@ -622,12 +622,15 @@ un-type; both are slices of the same running total, so the first type-in still r
 stream. **Hovering the note types the body back — and nothing else** (explicit instruction). The note
 and the group rows are **two independent hover zones**: the note's own hit target (`.fold6-note` /
 `.fold6-note-title` opt back into `pointer-events` inside the otherwise click-through note
-layer, and the typewriter keeps the block at full size so the hit area never shrinks; the
-**card** is part of that target too) opens the note and leaves the six labels closed, and the
+layer) opens the note and leaves the six labels closed, and the
 legend columns' hit boxes (`fold6LegendHoverSync`) open **all six labels together — never one
 row on its own** — and leave the note closed. The two regions are disjoint by construction: the
 column boxes stop `FOLD6_LEGEND_HOVER_PAD` below the bottom row and the note hangs below that,
-so a pointer is never inside both. It runs on its **own** trigger,
+so a pointer is never inside both. **Only the collapsed card opens it** — the title row and the
+card skin are the opening targets; the body block (`.fold6-note`, which keeps its full laid-out
+height while un-typed) only *holds* the note open, so entering it counts only while some body is
+showing (`fold6NoteBodyShown`: un-type raw < 1 or hover raw > 0). Once open the note stays open
+while the pointer is anywhere on the title or the body, and closes on leaving either. It runs on its **own** trigger,
 `fold6NoteHoverTrigger` / `FOLD6_NOTE_HOVER_MS` = **700ms**, rather than the group labels'
 `fold6LabelHoverTrigger` (420ms) — explicit instruction: it doesn't have to land with them and
 wants more breathing time, there being far more text here than in a label and a card opening
