@@ -266,6 +266,10 @@ INPUT LANGUAGE: the description may be a Hebrew line from a settler-violence log
 English; apply the same rules. Such lines are settler events unless they fit ARMY ACTS above or
 name Jewish right-wing activists outside the West Bank (aid-convoy blockades, Flag March, Old City,
 al-Aqsa) — those are `right wing protesters`.
+In such a line the log's own words for the perpetrators — "אזרחים ישראלים", "ישראלים", "רעולי פנים",
+"צעירי גבעות", "נוער הגבעות", "מתפרעים", "תוקפים" — all mean settlers when the act is in the West Bank
+(a village, its lands, a road near a settlement). Do not return `not relevant` because the line says
+"Israeli civilians" instead of "settlers"; the log never means ordinary civilians by that.
 """
 
 SOLE_SOURCE_EXCLUDE = {"plo negotiations affairs department"}   # same set as server.py: never shipped

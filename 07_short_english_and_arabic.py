@@ -62,6 +62,13 @@ ARABIC (`description_ar`)
 - Place names: the standard Arabic name for Arab towns and villages (حوارة, ترمسعيا,
   مسافر يطا, أم الفحم); Israeli places in their usual Arabic transliteration (تل أبيب,
   شارع كابلان, هرتسليا).
+- PROPER NAMES (reviewer rule, 2026-10-13): Hebrew names of organisations, forums,
+  protest groups, databases, media outlets and Israeli military operations are
+  TRANSLITERATED into Arabic letters, never translated by meaning — the reader must
+  see a name, not ordinary words. ״המבצר״ = «هامفتسار» (never الحصن); מבצע ״עם כלביא״ =
+  عملية «عام كلافي». Keep an ESTABLISHED Arabic name where Arabic news desks have one
+  (الليكود, الكنيست, حماس, نقف معًا for עומדים ביחד, السيوف الحديدية for חרבות ברזל);
+  when unsure, transliterate and add the meaning in parentheses once.
 - Numbers in Western digits (200, 10,000).
 - NEVER add a word the Hebrew does not justify: no "Israeli", "in Gaza", "Palestinian" unless it is there.
 

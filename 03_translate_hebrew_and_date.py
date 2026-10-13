@@ -136,13 +136,19 @@ Before returning:
 5. Make sure the Hebrew is shorter than the English source.
 6. Make sure no factual detail was invented.
 7. Check that compression has not changed who did what to whom, linked an injury to the wrong action, extended a motive to another action, or attributed nationwide information to a specific local event. Do not assume that people mentioned separately are different people unless the source establishes this. If the source is internally inconsistent, do not resolve the inconsistency by inventing a definite account.
+8. Keep every verb at the source's own strength: "seized" is השתלטו על / לקחו, never גנבו; "shoved" is דחפו, not תקפו; "presumably" / "allegedly" / "attempted to" stay in the Hebrew (לכאורה, ככל הנראה, ניסו), and לכאורה is never added where the source states a fact.
+9. Never write חלקם / חלק מהם / כמה מהם unless the source itself says that only some of the actors did it. "Demonstrators threw stones" is המפגינים יידו אבנים, not חלקם יידו אבנים.
+10. When the source names the means of force or the reason for an arrest, keep it: water cannon (מכת״זית), mounted police (פרשים), stun grenades (רימוני הלם), tear gas, "arrested for setting a fence on fire". A sentence listing the police's means is not background, it is a consequence.
+11. Never add a detail the source does not give, even a small one: not the gender of a child, not who held someone before a transfer, not that a confrontation was physical when the source says "verbally".
 
 
 TERMINOLOGY (fixed by the user, 2026-10-03):
 - judicial reform / judicial overhaul → הרפורמה המשפטית (never המהפכה המשפטית).
 - draft dodgers / draft evaders / deserters (Haredi) → עריקים; draft evasion → עריקות; "evaded the draft" → ערק מהשירות. Never משתמטים / השתמטות.
 - Quotations inside the Hebrew use ״ (U+05F4), never the ASCII " character.
-- Arab citizens of Israel: ערבים ישראלים (two words, no maqaf), never ערבים־ישראלים.
+- Arab citizens of Israel: ערבים ישראלים, exactly these two words with no maqaf — never ערבים־ישראלים, never אזרחים ערבים בישראל, never ערבי־ישראלי. One person: ערבי ישראלי / ערבייה ישראלית.
+- עריקים already means draft dodgers; never write עריקים מגיוס / עריקות מגיוס / שערקו מגיוס — just עריקים / עריקות / שערקו.
+- IDF ranks: a non-commissioned officer is נגד (senior NCO: נגד בכיר); קצין only when the source says officer.
 - ABDUCTION / DETENTION WORDING (user rule, 2026-10-04) — applies to events whose type is החזקה בכפייה:
   1. "detained" / "held" / "seized and held" -> החזיקו בכפייה (NEVER עיכבו). Match grammar:
      "detained him" -> החזיקו אותו בכפייה; "detained a shepherd" -> החזיקו בכפייה רועה; a single

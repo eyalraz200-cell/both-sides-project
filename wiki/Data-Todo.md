@@ -4,16 +4,22 @@ The running list of data work agreed with the user. Strike items as they land an
 date; the rules behind each one live in [Data](Data.md).
 
 ## Pinned (2026-10-13)
-- [ ] **First Fortress-track run on real data:** 297 Tiud rows are in the sheet (`row-22181`…
-      `row-22477`, 132 from Sep–Oct 2026 + ~165 from January 2023), unpublished until
-      `08_dedupe_fortress.py events.xlsx --direction fortress` (~$0.40) and `run_pipeline.py`
-      (~$1.50) run. Needs the user's go.
-- [ ] **Fortress 2023 backfill, 2023-01-01 → 2023-10-06** (Tiud's own range starts on
-      2023-10-06; the site starts 2023-01-01): `TIUD_RANGE_START=2023-01-01 … --from=2023-01
-      --to=2023-10 --skip-classify`, cap $45, 3–4 h. Only January is partly in (the aborted
-      start). Needs the user's go.
-- [ ] **ACLED's latest week:** the sheet's ACLED data ends 2026-10-02; ACLED is at ~10-07
-      and publishes weekly. The Wednesday job (first: 2026-10-14) closes the gap by itself.
+- [x] **First Fortress-track run on real data** (2026-10-13): 438 Tiud rows deduped against
+      ACLED (201 hidden as `dup of row-N`, 6 `unsure` left live), the rest through 01–07 and
+      shipped.
+- [x] **Fortress 2023 backfill, 2023-01-01 → 2023-10-06** (2026-10-13): two Tiud runs (the
+      aborted $7 one plus a $4.26 Aug–Oct run) left 180 main-list events for Jan–Oct 2023,
+      all exported, deduped and shipped. 56 unverified 2023 candidates sit in Tiud's `pending`
+      list; they enter only if a later run verifies them.
+- [x] **ACLED's latest week** (2026-10-13): fetched to 2026-10-09 (317 new rows, 93 text
+      edits applied — 14 rows redone, 79 wording-only), shipped. The Wednesday job carries on.
+- [ ] **Short EN/AR still blank** on 7 rows step 07 judges too long on every pass
+      (`row-4636`, `4642`, `7087`, `20169`, `20308`, `21179`, `21954`): English falls back to
+      ACLED's text, Arabic shows Hebrew until a hand pass.
+- [ ] **Hebrew re-translation**: 121 rows the two gpt-6-astra fidelity checks of 2026-10-13
+      flagged were re-translated with the fidelity rules added to the step 03 prompt the same
+      day; the other ~13,800 shipped rows keep their earlier Hebrew (a full re-run ≈ $10, not
+      ordered).
 
 ## In flight
 - [x] Second split pass (70 rows → 84 children): classified, translated, crowds corrected, shipped (2026-10-03).

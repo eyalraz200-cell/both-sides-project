@@ -15,10 +15,11 @@ One object per event:
 | `descHeMedium` | Per-event Hebrew description, shown in the hover tooltip |
 | `crowd` | Integer crowd estimate or `null` — from the workbook's `crowd` column via `parse_crowd`, see below. Drives the crowd tier (`p7BulgeTier`): the @fold8 hover bulge ([Timeline](Timeline.md#the-hover-bulge--p7bulgetick--p7bulgelist--p7bulgeshift-page7js)) and @fold9's size grid ([Timeline](Timeline.md#the-size-grid--p7sizegridset-page7js)) |
 
-Committed dataset (`events.json` at the repo root, `crowd` field included): **13,876
-events — 5,761 left, 8,115 right** (2026-10-07, first automated refresh), from **2023-01-01**
-to **2026-10-02** — the sheet's 20,609 rows (16,825 ACLED, 3,778 Fortress, 6 manual) minus
-the 2,139 marked in the `hidden` column, the rows whose only source is in
+Committed dataset (`events.json` at the repo root, `crowd` field included): **14,300
+events — 5,801 left, 8,499 right** (2026-10-13 refresh: ACLED to 2026-10-09 plus the first
+Fortress-track run and the 2023 Fortress backfill), from **2023-01-01** to **2026-10-09** —
+the sheet's 21,403 rows (17,181 ACLED, 4,216 Fortress, 6 manual) minus
+the 2,345 marked in the `hidden` column, the rows whose only source is in
 `SOLE_SOURCE_EXCLUDE`, the few still waiting on the pipeline (no `event_type`, or a Fortress
 line not yet rewritten), the live `not relevant` rows, and anything dated after the last
 ACLED event (`CUT_AFTER_LAST_ACLED`, all below) — counted in `load_events()`'s order. The
@@ -127,10 +128,16 @@ Two scripts at the repo root turn an ACLED refresh into two commands (added 2026
      new ACLED actor cannot slip past silently — add it to `KEEP_ACTORS` if it belongs.
    - Matches on `event_id_cnty` = `acled_id`: a **new id** is appended as a fresh `row-N`
      (`data_source = acled`, geodata, `crowd` prefilled from ACLED's `crowd size=` tag only when it is a figure — since 2026 ACLED mostly tags a category (small, medium…), which is left blank for step 05 to read from the text; every
-     pipeline column blank); a **known id whose text changed** is listed in
-     `_acled-filter/changes-<date>.csv` and the sheet is left alone (hand stamps must
-     survive; decide by hand — a known id whose `actor1` ACLED recoded outside the filter is
-     listed there too); a known id **on the deleted list** gets `hidden = acled deleted
+     pipeline column blank); a **known id whose text changed** is applied in place: when the
+     new text is wording-only (`difflib` ratio ≥ `SMALL_CHANGE` = 0.95) only `Description` is
+     refreshed; a real change also blanks `description_he_medium`, `crowd`,
+     `description_en_short`, `description_ar` and sets `reclassify = yes`, so the next pipeline
+     run redoes the row (type too, unless `event_type_hand` is set). Split and hidden rows are
+     never touched. Every changed text is listed with its action in
+     `_acled-filter/changes-<date>.csv` (rows marked `by hand`, including a known id whose
+     `actor1` ACLED recoded outside the filter, need a decision); `00_fetch_acled.py
+     --apply-changes <csv>` replays such a file onto the sheet without the API. A known id
+     **on the deleted list** gets `hidden = acled deleted
      <date>`. The workbook is backed up to `_xlsx-archive/events-before-fetch-<date>.xlsx`
      first.
    Only events dated from `DATASET_START` (2023-01-01) are read — the first run on 2026-10-07

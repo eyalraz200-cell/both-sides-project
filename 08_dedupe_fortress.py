@@ -99,8 +99,14 @@ def judge(client, ev, cands, direction="acled"):
 def main():
     if len(sys.argv) < 2:
         sys.exit(__doc__)
+    env = Path(__file__).resolve().parent / ".env"          # same loader as run_pipeline.py
+    if env.exists():
+        for line in env.read_text().splitlines():
+            if "=" in line and not line.lstrip().startswith("#"):
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
     if not os.getenv("OPENAI_API_KEY"):
-        sys.exit("OPENAI_API_KEY is not set.")
+        sys.exit("OPENAI_API_KEY is not set (env or .env).")
     src = Path(sys.argv[1]).resolve()
     dry = "--dry-run" in sys.argv
     direction = "fortress" if "--direction" in sys.argv and sys.argv[sys.argv.index("--direction") + 1] == "fortress" else "acled"

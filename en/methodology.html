@@ -453,7 +453,11 @@ Unattributed killings during clashes in a village that settlers entered stay `se
 INPUT LANGUAGE: the description may be a Hebrew line from a settler-violence log instead of ACLED
 English; apply the same rules. Such lines are settler events unless they fit ARMY ACTS above or
 name Jewish right-wing activists outside the West Bank (aid-convoy blockades, Flag March, Old City,
-al-Aqsa) — those are `right wing protesters`.</pre><!-- /prompt --></details>
+al-Aqsa) — those are `right wing protesters`.
+In such a line the log&#x27;s own words for the perpetrators — &quot;אזרחים ישראלים&quot;, &quot;ישראלים&quot;, &quot;רעולי פנים&quot;,
+&quot;צעירי גבעות&quot;, &quot;נוער הגבעות&quot;, &quot;מתפרעים&quot;, &quot;תוקפים&quot; — all mean settlers when the act is in the West Bank
+(a village, its lands, a road near a settlement). Do not return `not relevant` because the line says
+&quot;Israeli civilians&quot; instead of &quot;settlers&quot;; the log never means ordinary civilians by that.</pre><!-- /prompt --></details>
 
   <details id="prompt-02"><summary>Instruction 2: Classifying the action type <span class="note latin">02_classify_event_type_no_intimidation.py</span></summary>
 <!-- prompt:02_classify_event_type_no_intimidation.py --><pre lang="en" dir="ltr">You are classifying the TYPE OF EVENT.
@@ -1142,13 +1146,19 @@ Before returning:
 5. Make sure the Hebrew is shorter than the English source.
 6. Make sure no factual detail was invented.
 7. Check that compression has not changed who did what to whom, linked an injury to the wrong action, extended a motive to another action, or attributed nationwide information to a specific local event. Do not assume that people mentioned separately are different people unless the source establishes this. If the source is internally inconsistent, do not resolve the inconsistency by inventing a definite account.
+8. Keep every verb at the source&#x27;s own strength: &quot;seized&quot; is השתלטו על / לקחו, never גנבו; &quot;shoved&quot; is דחפו, not תקפו; &quot;presumably&quot; / &quot;allegedly&quot; / &quot;attempted to&quot; stay in the Hebrew (לכאורה, ככל הנראה, ניסו), and לכאורה is never added where the source states a fact.
+9. Never write חלקם / חלק מהם / כמה מהם unless the source itself says that only some of the actors did it. &quot;Demonstrators threw stones&quot; is המפגינים יידו אבנים, not חלקם יידו אבנים.
+10. When the source names the means of force or the reason for an arrest, keep it: water cannon (מכת״זית), mounted police (פרשים), stun grenades (רימוני הלם), tear gas, &quot;arrested for setting a fence on fire&quot;. A sentence listing the police&#x27;s means is not background, it is a consequence.
+11. Never add a detail the source does not give, even a small one: not the gender of a child, not who held someone before a transfer, not that a confrontation was physical when the source says &quot;verbally&quot;.
 
 
 TERMINOLOGY (fixed by the user, 2026-10-03):
 - judicial reform / judicial overhaul → הרפורמה המשפטית (never המהפכה המשפטית).
 - draft dodgers / draft evaders / deserters (Haredi) → עריקים; draft evasion → עריקות; &quot;evaded the draft&quot; → ערק מהשירות. Never משתמטים / השתמטות.
 - Quotations inside the Hebrew use ״ (U+05F4), never the ASCII &quot; character.
-- Arab citizens of Israel: ערבים ישראלים (two words, no maqaf), never ערבים־ישראלים.
+- Arab citizens of Israel: ערבים ישראלים, exactly these two words with no maqaf — never ערבים־ישראלים, never אזרחים ערבים בישראל, never ערבי־ישראלי. One person: ערבי ישראלי / ערבייה ישראלית.
+- עריקים already means draft dodgers; never write עריקים מגיוס / עריקות מגיוס / שערקו מגיוס — just עריקים / עריקות / שערקו.
+- IDF ranks: a non-commissioned officer is נגד (senior NCO: נגד בכיר); קצין only when the source says officer.
 - ABDUCTION / DETENTION WORDING (user rule, 2026-10-04) — applies to events whose type is החזקה בכפייה:
   1. &quot;detained&quot; / &quot;held&quot; / &quot;seized and held&quot; -&gt; החזיקו בכפייה (NEVER עיכבו). Match grammar:
      &quot;detained him&quot; -&gt; החזיקו אותו בכפייה; &quot;detained a shepherd&quot; -&gt; החזיקו בכפייה רועה; a single
@@ -1376,6 +1386,13 @@ ARABIC (`description_ar`)
 - Place names: the standard Arabic name for Arab towns and villages (حوارة, ترمسعيا,
   مسافر يطا, أم الفحم); Israeli places in their usual Arabic transliteration (تل أبيب,
   شارع كابلان, هرتسليا).
+- PROPER NAMES (reviewer rule, 2026-10-13): Hebrew names of organisations, forums,
+  protest groups, databases, media outlets and Israeli military operations are
+  TRANSLITERATED into Arabic letters, never translated by meaning — the reader must
+  see a name, not ordinary words. ״המבצר״ = «هامفتسار» (never الحصن); מבצע ״עם כלביא״ =
+  عملية «عام كلافي». Keep an ESTABLISHED Arabic name where Arabic news desks have one
+  (الليكود, الكنيست, حماس, نقف معًا for עומדים ביחד, السيوف الحديدية for חרבות ברזל);
+  when unsure, transliterate and add the meaning in parentheses once.
 - Numbers in Western digits (200, 10,000).
 - NEVER add a word the Hebrew does not justify: no &quot;Israeli&quot;, &quot;in Gaza&quot;, &quot;Palestinian&quot; unless it is there.
 

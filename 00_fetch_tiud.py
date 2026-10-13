@@ -79,6 +79,16 @@ def read_tiud():
     return ev
 
 
+def account(e):
+    """The Hebrew text we ship to the pipeline: Tiud's short line, then its long account
+    when that adds something — the long field is sometimes only a remark ("the number of
+    animals was not published"), so the short line is never dropped."""
+    s, l = e["short"], e["long"]
+    if not l or l == s or l.startswith(s):
+        return l or s
+    return f"{s}\n{l}"
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
@@ -134,7 +144,7 @@ def main():
         # the old rows hold Tiud's SHORT line as their original; only a text that matches
         # neither Tiud's short line nor its long account counts as changed
         ours = (g(r, "description_he_original") or "").strip()
-        if ours not in (e["short"], e["long"]):
+        if ours not in (e["short"], e["long"], account(e)):
             changed.append((g(r, "row_id"), i, ours[:200], (e["long"] or e["short"])[:300]))
     print(f"new {len(new)}, left Tiud's main list {len(gone)}, text changed after processing {len(changed)}")
     if args.dry_run:
@@ -158,7 +168,7 @@ def main():
         row = [None] * len(header)
         row[c["row_id"] - 1] = f"row-{max_id}"
         row[c["date"] - 1] = dt.datetime.fromisoformat(e["date"])
-        row[c["description_he_medium"] - 1] = e["long"] or e["short"]
+        row[c["description_he_medium"] - 1] = account(e)
         row[c["location"] - 1] = e["loc"]
         row[c["fatalities"] - 1] = int(e["killed"])
         row[c["source"] - 1] = " · ".join(e["sources"])

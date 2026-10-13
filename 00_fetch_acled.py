@@ -21,13 +21,18 @@ What it does, in order:
        new id            → appended as a fresh `row-N`, data_source=acled, blank pipeline
                            columns (steps 01→07 pick it up; `crowd` prefilled from ACLED's
                            `crowd size=` tag only when it is a figure, not a category)
-       known id, text changed → listed in _acled-filter/changes-<date>.csv, sheet untouched
+       known id, text changed → applied: a wording-only edit (similarity ≥ SMALL_CHANGE) just
+         refreshes the English; a real change also blanks the Hebrew, crowd and short translations
+         and sets reclassify = yes so the pipeline redoes the row (type too, unless event_type_hand
+         is set). Split or hidden rows are left for a hand decision. All listed with their action
+         in _acled-filter/changes-<date>.csv; --apply-changes <csv> replays such a file offline
                            (hand stamps must survive; the user decides)
        known id, actor1 recoded out of KEEP_ACTORS → listed in the changes csv too
        id on ACLED's deleted list → `hidden` = "acled deleted <date>" (row kept, drops from site)
 Nothing here calls OpenAI. Run `run_pipeline.py` next.
 """
 import argparse
+import difflib
 import csv
 import json
 import datetime as dt
@@ -119,6 +124,30 @@ def fetch(token, since_ts, url=READ_URL, ts_field="timestamp"):
 
 
 # ---------------------------------------------------------------- workbook
+SMALL_CHANGE = 0.95     # SequenceMatcher ratio at or above which ACLED's edit is wording only
+
+
+def apply_text_change(rows, c, old, new):
+    """ACLED rewrote the text of a row we carry. Returns the action taken, for the changes csv."""
+    parent = next((r for r in rows if not r[c["split_from"]].value), rows[0])
+    if len(rows) > 1 or parent[c["split_from"]].value:
+        return "by hand (split row)"
+    if parent[c["hidden"]].value:
+        return "by hand (hidden row)"
+    ratio = difflib.SequenceMatcher(None, old, new).ratio()
+    parent[c["Description"]].value = new
+    if parent[c["description_original"]].value:
+        parent[c["description_original"]].value = new
+    if ratio >= SMALL_CHANGE:
+        return f"wording only ({ratio:.2f}): English refreshed"
+    for k in ("description_he_medium", "description_en_short", "description_ar", "crowd"):
+        parent[c[k]].value = None
+    if parent[c["event_type_hand"]].value:
+        return f"rewritten ({ratio:.2f}): Hebrew, crowd, translations redone; type kept (hand-set)"
+    parent[c["reclassify"]].value = "yes"
+    return f"rewritten ({ratio:.2f}): type, Hebrew, crowd, translations redone"
+
+
 def col_index(header):
     return {name: i for i, name in enumerate(header)}
 
@@ -164,6 +193,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--since", help="YYYY-MM-DD edit date to read from (default: last run)")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--apply-changes", metavar="CSV", help="replay a changes-<date>.csv onto the sheet, no API")
     args = ap.parse_args()
     load_env()
     today = dt.date.today()
@@ -188,6 +218,19 @@ def main():
             if not vals[c["split_from"]]:
                 last_acled = max(last_acled, to_date(vals[c["date"]]))
     FILTER_DIR.mkdir(exist_ok=True)
+    if args.apply_changes:
+        done = 0
+        with open(args.apply_changes, newline="") as f:
+            for r in csv.DictReader(f):
+                rows = by_acled.get(r["acled_id"])
+                if not rows or r["sheet_text"] == "actor1 now outside the filter":
+                    print(f"  {r['row_id']}: by hand"); continue
+                action = apply_text_change(rows, c, r["sheet_text"], r["acled_text_now"])
+                done += not action.startswith("by hand")
+                print(f"  {r['row_id']}: {action}")
+        wb.save(XLSX)
+        print(f"Applied {done} text changes. Next: python3 run_pipeline.py")
+        return
     if args.since:
         since_ts = int(dt.datetime.fromisoformat(args.since).timestamp())
     elif LAST_FETCH_FILE.exists():
@@ -220,13 +263,14 @@ def main():
             print(f"  {n:5d}  {a}{'   <- KEPT' if a in KEEP_ACTORS else ''}")
 
     kept = [ev for ev in events if ev["actor1"] in KEEP_ACTORS]
-    new, changed = [], []
+    new, changed, applied = [], [], 0
     for ev in events:
         if ev["actor1"] not in KEEP_ACTORS:
             if ev["event_id_cnty"] in by_acled:     # ACLED recoded a row we already carry
                 r0 = by_acled[ev["event_id_cnty"]][0]
                 changed.append((r0[c["row_id"]].value, ev["event_id_cnty"],
-                                "actor1 now outside the filter", f"{ev['actor1']}: {ev['notes']}"))
+                                "actor1 now outside the filter", f"{ev['actor1']}: {ev['notes']}",
+                                "by hand (actor recoded)"))
             continue
         rows = by_acled.get(ev["event_id_cnty"])
         if not rows:
@@ -235,12 +279,14 @@ def main():
         parent = next((r for r in rows if not r[c["split_from"]].value), rows[0])
         old = parent[c["description_original"]].value or parent[c["Description"]].value or ""
         if old.strip() != ev["notes"].strip():
-            changed.append((parent[c["row_id"]].value, ev["event_id_cnty"], old, ev["notes"]))
+            action = apply_text_change(rows, c, old, ev["notes"])
+            applied += not action.startswith("by hand")
+            changed.append((parent[c["row_id"]].value, ev["event_id_cnty"], old, ev["notes"], action))
     gone = [d["event_id_cnty"] for d in deleted if d["event_id_cnty"] in by_acled
             and not any(r[c["hidden"]].value for r in by_acled[d["event_id_cnty"]])]
 
-    print(f"\nKept by actor rule: {len(kept)}  →  new {len(new)}, text changed {len(changed)}, "
-          f"gone from ACLED {len(gone)}")
+    print(f"\nKept by actor rule: {len(kept)}  →  new {len(new)}, text changed {len(changed)} "
+          f"(applied {applied}), gone from ACLED {len(gone)}")
     if args.dry_run:
         for ev in new[:15]:
             print(f"  + {ev['event_date']} {ev['actor1']}: {ev['notes'][:100]}")
@@ -250,9 +296,9 @@ def main():
         p = FILTER_DIR / f"changes-{today}.csv"
         with p.open("w", newline="") as f:
             w = csv.writer(f)
-            w.writerow(["row_id", "acled_id", "sheet_text", "acled_text_now"])
+            w.writerow(["row_id", "acled_id", "sheet_text", "acled_text_now", "action"])
             w.writerows(changed)
-        print(f"Changed texts → {p} (sheet untouched; decide by hand)")
+        print(f"Changed texts → {p} (rows marked 'by hand' were left as they are)")
 
     first_new = max_id + 1
     def remember():
@@ -260,7 +306,7 @@ def main():
         LAST_FETCH_FILE.write_text(json.dumps({"timestamp": newest_ts, "run": str(today),
                                                "new_rows": {"from": first_new, "to": first_new + len(new) - 1}}) + "\n")
         SEEN_ACTORS_FILE.write_text("\n".join(sorted(seen | set(counts))) + "\n")
-    if not new and not gone:
+    if not new and not gone and not applied:
         remember()
         print("Nothing to write.")
         return
@@ -277,7 +323,8 @@ def main():
         ws.append(new_row(header, f"row-{max_id}", ev))
     wb.save(XLSX)
     remember()
-    print(f"Appended {len(new)} rows (row-{max_id - len(new) + 1}…row-{max_id}), hid {len(gone)}. "
+    print(f"Appended {len(new)} rows (row-{max_id - len(new) + 1}…row-{max_id}), hid {len(gone)}, "
+          f"refreshed {applied} edited texts. "
           f"Next: python3 run_pipeline.py")
 
 
