@@ -337,6 +337,12 @@ HAND-REVIEW RULES (Fortress log, 2026-10-03):
   arrested, and whatever the arrest was "on suspicion of".
 - When the PROTESTERS were the ones attacked (rioters / passers-by / counter-protesters hit
   them), classify the protesters' own conduct only (usually הפגנה לא אלימה).
+- WHO THE ACT WAS AIMED AT decides whose act it is (reader report 2026-10-13). A person the
+  source calls "a demonstrator", "a protester" or "a man at the protest" who acts AGAINST the
+  main actor's crowd — "a demonstrator pepper-sprayed protesters", "a protester attacked the
+  marchers" — is a counter-protester or bystander, NOT the main actor, whatever label the
+  source gives him. His act never raises the main actor's category. Only an act aimed at
+  police, officials, passers-by or the other side counts as the main actor's.
 - One participant's act inside a mass demonstration ("a protester slapped an MK") does not
   make the crowd's event an assault -> הפרות סדר at most.
 - Protesters who "clashed with counter-protesters", with no violent act described for the
