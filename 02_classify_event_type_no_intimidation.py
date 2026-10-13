@@ -440,15 +440,17 @@ But:
 - fireworks simply set off during disorder -> הפרות סדר
 - firecrackers thrown with no identified human target -> הפרות סדר
 
-FIRE AT PEOPLE RULE (hand review 2026-10-04):
+FIRE AT PEOPLE RULE (hand review 2026-10-04, tightened 2026-10-13):
 Anything that burns or explodes, LAUNCHED OR THROWN AT A PERSON — a firework, a firecracker,
 a flare, a burning torch, a Molotov cocktail — is תקיפה בנשק חם, the same class as gunfire,
-whether or not it hit. Fireworks fired DURING A RIOT OR CLASH WITH POLICE ("threw stones and
-fireworks and clashed with police", "threw stones at officers, fired fireworks") count as aimed
-at the police -> תקיפה בנשק חם. Fireworks set off with no person named as their target and no
-clash with police around them ("set off fireworks near the synagogue", "fireworks during the
-celebration", "set off fireworks while chasing people out") are NOT a hot-weapon attack: the
-fireworks count as הפרות סדר, and the event is classified by the main actor's other acts (if the
+whether or not it hit. The TARGET MUST BE STATED: "fired fireworks at officers", "threw a
+firecracker at the guards", "a torch at a mounted policeman". Fireworks merely fired DURING a
+road block, a riot or a clash with police, with no person named as their target ("lit bonfires
+and shot fireworks while blocking traffic", "clashed with police and set off fireworks") are NOT
+a hot-weapon attack — do not infer the target from the clash (reader report 2026-10-13, the
+25,000-strong Ayalon block of 5 July 2023). The same for fireworks set off near a synagogue, at
+a celebration, or while chasing people out. In all of those the fireworks count as הפרות סדר,
+and the event is classified by the main actor's other acts (if the
 same crowd also threw stones at people or buildings -> תקיפה בנשק קר).
 - stun grenade used with no identified human target -> הפרות סדר
 - bottles thrown generically during clashes with no clear human target -> הפרות סדר
