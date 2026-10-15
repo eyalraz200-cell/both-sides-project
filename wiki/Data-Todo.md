@@ -21,6 +21,13 @@ date; the rules behind each one live in [Data](Data.md).
       day; the other ~13,800 shipped rows keep their earlier Hebrew (a full re-run ≈ $10, not
       ordered).
 
+## Schedule
+- [x] **launchd could not read the project folder** (2026-10-15): macOS privacy protection.
+      Fixed the same day — Full Disk Access granted to zsh, Python.app, git, gh and node, and
+      the plists now start `/bin/zsh <script>` rather than the script file (see
+      [Data](Data.md#refresh-automation)). The first Wednesday run (2026-10-14) was lost;
+      the next is 2026-10-21 09:00.
+
 ## In flight
 - [x] Second split pass (70 rows → 84 children): classified, translated, crowds corrected, shipped (2026-10-03).
 - [x] ACLED refresh automation (2026-10-07): `00_fetch_acled.py` (API pull + the five-actor

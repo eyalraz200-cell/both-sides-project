@@ -2,7 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>Label</key><string>com.bothsides.refresh-monthly</string>
-  <key>ProgramArguments</key><array><string>/Users/eyalraz/Documents/Work/Both Sides/both sides project/refresh_monthly.sh</string></array>
+  <key>ProgramArguments</key><array><string>/bin/zsh</string><string>/Users/eyalraz/Documents/Work/Both Sides/both sides project/refresh_monthly.sh</string></array>
   <key>StartCalendarInterval</key><dict><key>Day</key><integer>10</integer><key>Hour</key><integer>9</integer><key>Minute</key><integer>0</integer></dict>
   <key>StandardOutPath</key><string>/Users/eyalraz/Documents/Work/Both Sides/both sides project/_acled-filter/launchd-monthly.log</string>
   <key>StandardErrorPath</key><string>/Users/eyalraz/Documents/Work/Both Sides/both sides project/_acled-filter/launchd-monthly.log</string>

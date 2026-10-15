@@ -180,7 +180,7 @@ Two scripts at the repo root turn an ACLED refresh into two commands (added 2026
 5. **Schedule** (launchd; the plists live in `launchd/` and are loaded once by hand with `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/<name>.plist` after copying them there): `com.bothsides.refresh-weekly`
    runs `refresh_weekly.sh` (fetch → pipeline → issue) **Wednesdays 09:00**; `com.bothsides.refresh-monthly` runs `refresh_monthly.sh` (the Fortress track above) **the 10th at 09:00**;
    `com.bothsides.approve-hourly` runs `approve_hourly.sh` every hour — the approve check, plus a **catch-up**: if `_acled-filter/last-fetch.json` is older than 7 days (the Mac was shut down on Wednesday, so launchd skipped the calendar job — a sleeping Mac runs it on wake, a shut-down one does not) it runs `refresh_weekly.sh` itself. `_acled-filter/refresh.lock` (the running pid) stops two refreshes overlapping. Logs in
-   `_acled-filter/launchd-*.log`. The Mac has to be awake; a missed slot runs at the next
+   `_acled-filter/launchd-*.log`. **macOS privacy protection blocks launchd jobs from `~/Documents`** (`can't open input file` / `Operation not permitted`) unless two things hold: `/bin/zsh`, the Python.app bundle (`/Library/Frameworks/Python.framework/Versions/3.14/Resources/Python.app`), `/opt/homebrew/bin/git`, `/opt/homebrew/bin/gh` and `/usr/local/bin/node` are in System Settings → Privacy & Security → Full Disk Access (granted 2026-10-15), AND each plist's `ProgramArguments` is `/bin/zsh <script>` — starting the script file directly makes macOS attribute the access to the script, which can never be granted. The Mac has to be awake; a missed slot runs at the next
    wake.
 
 ## The Fortress track — Tiud runs here, monthly

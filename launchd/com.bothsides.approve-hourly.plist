@@ -2,7 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>Label</key><string>com.bothsides.approve-hourly</string>
-  <key>ProgramArguments</key><array><string>/Users/eyalraz/Documents/Work/Both Sides/both sides project/approve_hourly.sh</string></array>
+  <key>ProgramArguments</key><array><string>/bin/zsh</string><string>/Users/eyalraz/Documents/Work/Both Sides/both sides project/approve_hourly.sh</string></array>
   <key>StartInterval</key><integer>3600</integer>
   <key>StandardOutPath</key><string>/Users/eyalraz/Documents/Work/Both Sides/both sides project/_acled-filter/launchd-approve.log</string>
   <key>StandardErrorPath</key><string>/Users/eyalraz/Documents/Work/Both Sides/both sides project/_acled-filter/launchd-approve.log</string>
