@@ -107,6 +107,12 @@ Rules:
   Keep "ACLED", "OpenAI", "GDELT", "ONS", "CAMEO / Goldstein Scale", "Crime Severity
   Score" and web addresses in Latin letters exactly as given. Names of people and
   institutions in the credits are transliterated into Arabic.
+- PROPER NAMES stay recognisable as names (reviewer rule, 2026-10-13): Hebrew names of
+  databases, projects, media outlets, organisations and Israeli military operations are
+  TRANSLITERATED, never translated by meaning — an Arabic reader must not take them for
+  ordinary words. Fixed renderings: ״המבצר״ = «هامفتسار» (never الحصن / القلعة);
+  מבצע ״עם כלביא״ = عملية «عام كلافي». An established Arabic name used by Arabic news
+  desks is kept (الليكود, الكنيست, نقف معًا for עומדים ביחד, العين السابعة for העין השביעית).
 - Numbers stay Western Arabic digits (0-9) as in the Hebrew.
 - Items of kind "html" are a whole line of HTML. Return the SAME line with ONLY the
   Hebrew text replaced by Arabic: every tag, attribute, class name, entity (&#10;,

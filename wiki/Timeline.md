@@ -65,7 +65,7 @@ the solve runs in three steps:
    width-bound solve leaves over goes into the axis rather than into empty bands around it.
 
 The per-span table (`p7FitTable()`: rows and busiest-row count) depends on the data only and
-is built once. `p7DesktopFitSolve(sideW, sideH)` is the solve itself and writes nothing;
+is built once. `p7DesktopFitSolve(sideW, sideH, mustFit)` is the solve itself and writes nothing (`mustFit` is the one-page view's floor waiver, above);
 `p7SolveDesktopFit` is the layout's entry point and stores its answer.
 
 **A year takes exactly the rows its days use.** With a fractional span, `ceil(days / span)`
@@ -122,7 +122,7 @@ the endpoint `p7VertTopY` lerps from.
 (`p7ZoomOutSync` → `p7ZoomOutTrigger`, `P7_ZOOMOUT_MS` 600, armed within
 `P7_ZOOMOUT_ARM_ROWS` of the end, reversible), and **both land on a fitted view, not a squash
 of the tall field** (`p7Squash` returns it, with `remap: true`). Desktop's is
-`p7DesktopFitView(W, H)` — the fit solved against the box's real height, centred in the box;
+`p7DesktopFitView(W, H)` — the fit solved against the box's real height, centred in the box, with `mustFit`: the 1.5px square floor yields when no span fits at it (a narrow window packs fewer columns, so more rows), so the one-page view never runs past the box bottom and the end-date plaque stays on screen;
 mobile's is `p7MobileFitSolve` against the zoomed-out height (`p7ZoomOutAvail`, square floor
 `P7_MOBILE_ZOOMOUT_SQ_MIN` 1). Each has its own square, pitch and days per row, and every dot
 flies from its cell in the tall field to its cell there.

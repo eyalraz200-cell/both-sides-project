@@ -1,6 +1,6 @@
 # Drag-and-drop categorization — `@fold12` (`#page-13`, `page9.js`)
 
-"מה נחשב בעיניכם לפעולה לגיטימית, ומה לפעולה קיצונית?" — the reader drags category pills into an "extreme" zone and
+"מה נחשב בעיניך לפעולה קיצונית?" — the reader drags category pills into an "extreme" zone and
 the matching event dots migrate above the divider line.
 
 > The sections from here down to **Hover** describe the desktop layout behind
@@ -28,7 +28,7 @@ card never pins and the fold deadlocks.
   because mobile classifies by ticking the pill's own selection circle in place, neither a
   drag nor a pick. **The headline is split by breakpoint too**, via the `.copy-desktop` /
   `.copy-mobile` span pair @hidden-hover uses: desktop keeps the two-clause
-  «מה נחשב בעיניכם לפעולה לגיטימית, ומה לפעולה קיצונית?», mobile gets
+  «מה נחשב בעיניך לפעולה קיצונית?», mobile gets
   «מהי פעולה קיצונית בעיניכם?» — its gesture is "mark the extreme ones", not "sort both
   piles", and the long form wraps to three lines on a phone. The desktop
   string is also `index.html`'s literal markup; JS overwrites it. It renders at

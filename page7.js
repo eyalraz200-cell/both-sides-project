@@ -702,7 +702,11 @@ function p7SolveDesktopFit(sideW, sideH) {
 }
 // The solve itself, writing nothing — the zoomed-out view (p7DesktopFitView)
 // asks it for the ONE-PAGE answer while the tall field's own is in force.
-function p7DesktopFitSolve(sideW, sideH) {
+// `mustFit` — the ONE-PAGE view (p7DesktopFitView): the whole timeline has to
+// land inside the box, end plaque included. There the square floor yields when
+// no row plan fits at it; the live solve (p7SolveDesktopFit) keeps the floor
+// and lets the camera window the overflow.
+function p7DesktopFitSolve(sideW, sideH, mustFit) {
   const table = p7FitTable();
   const ratio = P7_GAP / P7_SQ;
   const roomH = sideH - p7VertYearHeaderH();
@@ -719,8 +723,18 @@ function p7DesktopFitSolve(sideW, sideH) {
   // The floor: below it a square stops reading as one, so rows reach the wall
   // instead of the dots shrinking further.
   if (sq < p7SqMin()) {
-    sq   = Math.ceil(p7SqMin() * px - 1e-6) / px;
-    cell = Math.ceil(sq * (1 + ratio) * px - 1e-6) / px;
+    const floorSq   = Math.ceil(p7SqMin() * px - 1e-6) / px;
+    const floorCell = Math.ceil(floorSq * (1 + ratio) * px - 1e-6) / px;
+    // The one-page fit may NOT reach the wall: on a narrow window (fewer
+    // columns, so more rows — 1000×700 at 1x put 282 rows at a 3px cell into a
+    // 636px box) the fitted field ran past the box bottom and off the screen,
+    // and the end-date plaque with it. If no span fits at the floored cell,
+    // keep the solved (smaller) cell: it fits by construction, and a 1px dot on
+    // one page beats a cropped timeline.
+    const fitsAtFloor = table.some((t) =>
+      t.rows * floorCell <= roomH + 1e-6 && (t.peak + 1) * floorCell <= sideW + 1e-6);
+    if (!mustFit || fitsAtFloor) { sq = floorSq; cell = floorCell; }
+    else sq = Math.min(cell, Math.max(1 / px, sq));
   }
   table.forEach((t) => {
     if (t.rows * cell <= roomH + 1e-6 && (t.peak + 1) * cell <= sideW + 1e-6 && t.rows > best.rows) best = t;
@@ -1185,7 +1199,7 @@ function p7DesktopFitView(W, H) {
   const boxT = Math.round(H * box.top), boxH = Math.round(H * box.bottom) - boxT;
   const gap  = p7CenterGap();
   const sideW = W / 2 - gap / 2 - sbbTimelineLeftX(W, H);
-  const fit  = p7DesktopFitSolve(sideW, boxH);
+  const fit  = p7DesktopFitSolve(sideW, boxH, true);   // mustFit: one page, never past the box
   const cols = Math.max(1, Math.floor(sideW / fit.cell));
   let vert;
   try { p7FitProbeDpr = fit.dpr; vert = p7BuildVerticalLayout(Math.floor(boxH / fit.cell), cols, fit.cell, p7FitVisible()); }

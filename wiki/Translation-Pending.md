@@ -32,6 +32,7 @@ appendix is shared, via `build_methodology.py`) — log it here like any other c
 |---|---|---|---|
 | The phone's title for the first axis event is now «הכרזת הרפורמה המשפטית» (desktop keeps «הכרזת הרפורמה») | `labelMobile` on the 2023-01-04 entry of `P7_AXIS_EVENTS_ALL`, `page7.js` | `I18N_EN` has the new key, but it still maps to the old English, "Judicial Overhaul". Decide whether the phone's English title should change to match. | 2026-09-29 |
 | The two hidden sections' copy (`#page-5` @hidden-acled, `#page-6` @hidden-hover) is still Hebrew on `en/index.html` and `ar/index.html` — the lines are identical in all three files, so `translate_ui_ar.py` never pairs them | `index.html` `#page-5` / `#page-6` | English and Arabic for both cards (incl. `#page-6`'s `.copy-desktop` / `.copy-mobile` pair) before either section is un-hidden. | 2026-10-05 |
+| @fold12's desktop title is now «מה נחשב בעיניך לפעולה קיצונית?» (singular, no «לגיטימית» half) | `index.html` `#page-13` `.copy-desktop` | English set to "What do you consider an extreme action?" and Arabic to «ما الذي تعتبره تحركًا متطرفًا؟» by hand in the same turn — a translator should confirm both; the mobile title «מהי פעולה קיצונית בעיניכם?» is still plural | 2026-10-15 |
 
 ## The three surfaces English copy lives in
 
